@@ -1,0 +1,22 @@
+name: lint
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install tools
+        run: make tools
+      - name: build tools
+        run: make build
+      - name: run lint
+        run: make lint

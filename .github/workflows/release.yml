@@ -1,0 +1,43 @@
+name: release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    name: release vscode extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: install npx
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y npm nodejs
+          sudo npm -g install n
+          sudo n stable
+      - name: checkout
+        uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: extract version from tags
+        id: meta
+        run: |
+          echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+      - name: build extension
+        run: |
+          make build/vscode-extension
+        env:
+          VERSION: ${{ steps.meta.outputs.VERSION }}
+      - name: move built extension to publish directory
+        run: |
+          mkdir assets
+          mv ./lsp/client/vscode/grpc-federation-*.vsix assets/
+      - name: release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ./assets/*

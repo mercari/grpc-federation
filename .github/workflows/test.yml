@@ -1,0 +1,38 @@
+name: test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  build_and_generate:
+    name: build and generate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install tools
+        run: make tools
+      - name: build plugin
+        run: make build
+      - name: generate files
+        run: make generate
+      - name: check diff
+        run: git diff --exit-code
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install tools
+        run: make tools
+      - name: run test
+        run: make test
