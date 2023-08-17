@@ -1,0 +1,8 @@
+version: v1
+name: github.com/mercari/grpc-federation
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT

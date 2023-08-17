@@ -1,0 +1,81 @@
+{
+	"name": "grpc-federation",
+	"description": "grpc-federation language server",
+	"author": "Mercari, Inc",
+	"license": "MIT",
+	"version": "0.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mercari/grpc-federation"
+	},
+	"private": true,
+	"publisher": "mercari",
+	"categories": [],
+	"keywords": [
+		"multi-root ready"
+	],
+	"engines": {
+		"vscode": "^1.74.0"
+	},
+	"activationEvents": [
+		"onLanguage:grpc-federation"
+	],
+	"main": "./out/extension",
+	"contributes": {
+		"languages": [
+			{
+			  "id": "grpc-federation",
+			  "extensions": [
+				".proto"
+			  ],
+			  "aliases": [
+				"Protocol Buffers ( GRPC Federation )"
+			  ]
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "grpc-federation configuration",
+			"properties": {
+				"grpc-federation": {
+					"type": "object",
+					"description": "grpc-federation-language-server executable configuration",
+					"scope": "resource",
+					"properties": {
+						"path": {
+							"type": "string",
+							"default": "grpc-federation-language-server",
+							"description": "PATH to grpc-federation-language-server command"
+						},
+						"options": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							},
+							"default": [],
+							"description": "Command line options for grpc-federation-language-server"
+						}
+					}
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^7.0.0"
+	},
+	"devDependencies": {
+		"@types/mocha": "^9.1.0",
+		"@types/node": "^16.11.7",
+		"@typescript-eslint/eslint-plugin": "^5.42.0",
+		"@typescript-eslint/parser": "^5.42.0",
+		"@types/vscode": "^1.63.0",
+		"eslint": "^8.26.0",
+		"mocha": "^9.2.1",
+		"typescript": "^4.9.4"
+	}
+}

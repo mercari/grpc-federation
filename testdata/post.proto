@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package org.post;
+
+option go_package = "example/post;post";
+
+service PostService {
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+  rpc GetPosts(GetPostsRequest) returns (GetPostsResponse) {};
+  rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  Post post = 1;
+}
+
+message GetPostsRequest {
+  repeated string ids = 1;
+}
+
+message GetPostsResponse {
+  repeated Post posts = 1;
+}
+
+message CreatePostRequest {
+  CreatePost post = 1;
+}
+
+message CreatePostResponse {
+  Post post = 1;
+}
+
+message CreatePost {
+  string title = 1;
+  string content = 2;
+  string user_id = 3;
+}
+
+message Post {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string user_id = 4;
+}

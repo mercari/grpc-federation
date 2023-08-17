@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+import "post.proto";
+import "user.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { name: "post_service", service: "post.PostService" }
+    ]
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      { message: "A" },
+      { message: "B" },
+      { message: "C" }
+    ]
+  };
+}
+
+message A {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "post.PostService/GetPost"
+      request { field: "id", string: "foo" }
+      retry {
+        constant {
+          interval: "1"
+        }
+      }
+    }
+  };
+}
+
+message B {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "post.PostService/GetPost"
+      request { field: "id", string: "foo" }
+      retry {
+        exponential {
+          initial_interval: "2"
+        }
+      }
+    }
+  };
+}
+
+message C {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "post.PostService/GetPost"
+      request { field: "id", string: "foo" }
+      retry {
+        exponential {
+          max_interval: "3"
+        }
+      }
+    }
+  };
+}

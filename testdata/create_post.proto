@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { name: "post_service", service: "org.post.PostService" }
+    ]
+  };
+  rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {};
+}
+
+message CreatePostRequest {
+  string title = 1;
+  string content = 2;
+  string user_id = 3;
+}
+
+message CreatePostResponse {
+  option (grpc.federation.message) = {
+    messages {
+      name: "cp"
+      message: "CreatePost"
+      args: [
+        { name: "title", by: "$.title" },
+        { name: "content", by: "$.content" },
+        { name: "user_id", by: "$.user_id" }
+      ]
+    }
+    resolver: {
+      method: "org.post.PostService/CreatePost"
+      request {
+        field: "post"
+        by: "cp"
+      }
+      response { name: "p", field: "post" }
+    }
+  };
+  Post post = 1 [(grpc.federation.field).by = "p"];
+}
+
+message CreatePost {
+  string title = 1 [(grpc.federation.field).by = "$.title"];
+  string content = 2 [(grpc.federation.field).by = "$.content"];
+  string user_id = 3 [(grpc.federation.field).by = "$.user_id"];
+}
+
+message Post {
+  option (grpc.federation.message).alias = "org.post.Post";
+
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string user_id = 4;
+}

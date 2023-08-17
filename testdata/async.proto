@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "a", message: "A" },
+      { name: "b", message: "B" },
+      { name: "c", message: "C", args: [ { name: "a", by: "a.name" }] },
+      { name: "d", message: "D", args: [ { name: "b", by: "b.name" }] },
+      { name: "e", message: "E", args: [ { name: "c", by: "c.name" }, { name: "d", by: "d.name" } ] },
+      { name: "f", message: "F", args: [ { name: "c", by: "c.name" }, { name: "d", by: "d.name" } ] },
+      { name: "g", message: "G" },
+      { name: "h", message: "H", args: [ { name: "e", by: "e.name" }, { name: "f", by: "f.name" }, { name: "g", by: "g.name"} ]},
+      { name: "i", message: "I" },
+      { name: "j", message: "J", args: [ { name: "i", by: "i.name" }] }
+    ]
+  };
+  string hname = 1 [(grpc.federation.field).by = "h.name"];
+  string jname = 2 [(grpc.federation.field).by = "j.name"];
+}
+
+message A {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "aa", message: "AA" },
+      { name: "ab", message: "AB" }
+    ]
+  };
+  string name = 1 [(grpc.federation.field).string = "a"];
+}
+
+message AA {
+  string name = 1 [(grpc.federation.field).string = "aa"];
+}
+
+message AB {
+  string name = 1 [(grpc.federation.field).string = "ab"];
+}
+
+message B {
+  string name = 1 [(grpc.federation.field).string = "b"];
+}
+
+message C {
+  string name = 1 [(grpc.federation.field).string = "c"];
+}
+
+message D {
+  string name = 1 [(grpc.federation.field).string = "d"];
+}
+
+message E {
+  string name = 1 [(grpc.federation.field).string = "e"];
+}
+
+message F {
+  string name = 1 [(grpc.federation.field).string = "f"];
+}
+
+message G {
+  string name = 1 [(grpc.federation.field).string = "g"];
+}
+
+message H {
+  string name = 1 [(grpc.federation.field).string = "h"];
+}
+
+message I {
+  string name = 1 [(grpc.federation.field).string = "i"];
+}
+
+message J {
+  string name = 1 [(grpc.federation.field).string = "j"];
+}

@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+import "post.proto";
+import "user.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+        { service: "post.PostService" },
+        { service: "user.UserService" }
+    ]
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "post", message: "Post", args: [{ name: "id", by: "$.id" }]}
+    ]
+  };
+  Post post = 1 [(grpc.federation.field) = { by: "post" }];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "post.PostService/GetPost"
+      request: [
+        { field: "id", by: "$.id" }
+      ]
+      response: [ { name: "post", field: "post", autobind: true  } ]
+    }
+    messages: [
+      { name: "user", message: "User", args: [{ inline: "post" }]}
+    ]
+  };
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  User user = 4 [(grpc.federation.field) = { by: "user" }];
+}
+
+message User {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "user.UserService/GetUser"
+      request: [
+        { field: "id", by: "$.user_id" }
+      ]
+      response: [ { name: "user", field: "user", autobind: true  } ]
+    }
+  };
+  string id = 1;
+  string name = 2;
+}

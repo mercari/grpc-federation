@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "post/post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { name: "post_service", service: "org.post.PostService" }
+    ]
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "post", message: "Post", args: [{ name: "id", by: "$.id" }]}
+    ]
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "org.post.PostService/GetPost"
+      request: [
+        { field: "id", by: "$.id" }
+      ]
+      response: [ { name: "post", field: "post", autobind: true  } ]
+    }
+  };
+  string id = 1;
+  PostData data = 4;
+}
+
+enum PostType {
+  option (grpc.federation.enum).alias = "org.post.PostDataType";
+
+  POST_TYPE_UNKNOWN = 0 [(grpc.federation.enum_value).default = true];
+  POST_TYPE_FOO = 1 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_A"] }];
+  POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_B", "POST_TYPE_C"] }];
+}
+
+message PostData {
+  option (grpc.federation.message).alias = "org.post.PostData";
+
+  PostType type = 1;
+  string title = 2;
+  PostContent content = 3;
+}
+
+message PostContent {
+  option (grpc.federation.message).alias = "org.post.PostContent";
+
+  enum Category {
+    option (grpc.federation.enum).alias = "org.post.PostContent.Category";
+  
+    CATEGORY_A = 0;
+    CATEGORY_B = 1;
+  };
+
+  Category category = 1;
+  string head = 2;
+  string body = 3;
+  string dup_body = 4 [(grpc.federation.field).alias = "body"];
+}

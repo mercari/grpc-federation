@@ -1,0 +1,449 @@
+syntax = "proto3";
+
+package grpc.federation;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
+
+extend google.protobuf.ServiceOptions {
+  ServiceRule service = 70000;
+}
+
+extend google.protobuf.MethodOptions {
+  MethodRule method = 70000;
+}
+
+extend google.protobuf.MessageOptions {
+  MessageRule message = 70000;
+}
+
+extend google.protobuf.FieldOptions {
+  FieldRule field = 70000;
+}
+
+extend google.protobuf.EnumOptions {
+  EnumRule enum = 70000;
+}
+
+extend google.protobuf.EnumValueOptions {
+  EnumValueRule enum_value = 70000;
+}
+
+message EnumRule {
+  // alias mapping between enums defined in other packages and enums defined on the federation service side.
+  // The alias is the FQDN ( <package-name>.<enum-name> ) to the enum.
+  // If this definition exists, type conversion is automatically performed before the enum value assignment operation.
+  // If a enum with this option has a value that is not present in the enum specified by alias, and the alias option is not specified for that value, an error is occurred.
+  string alias = 1;
+}
+
+message EnumValueRule {
+  // specifies the default value of the enum.
+  // All values other than those specified in alias will be default values.
+  bool default = 1;
+  // alias can be used when alias is specified in grpc.federation.enum option,
+  // and specifies the value name to be referenced among the enums specified in alias of enum option.
+  // multiple value names can be specified for alias.
+  repeated string alias = 2;
+}
+
+// ServiceRule define GRPC Federation rules for the service.
+message ServiceRule {
+  // dependencies defines a unique name for all services on which federation service depends.
+  // The name will be used when creating the gRPC client.
+  repeated ServiceDependency dependencies = 1;
+}
+
+// ServiceDependency assigns a uniquely determined name to the service.
+message ServiceDependency {
+  // name to be used when initializing the gRPC client.
+  string name = 1;
+  // service is the name of the dependent service.
+  string service = 2;
+}
+
+message MethodRule {
+  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
+  // If you want to handle this error, you need to implement a custom error handler in Go.
+  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
+  string timeout = 1;
+}
+
+// MessageRule define GRPC Federation rules for the message.
+message MessageRule {
+  // resolver defines how to call methods to obtain the values needed to compose the message.
+  Resolver resolver = 1;
+  // messages defines a list of dependent messages that must be retrieved to compose a message.
+  repeated Message messages = 2;
+  // if custom_resolver is true, the resolver for this message is implemented by Go.
+  // If there are any values retrieved by resolver or messages, they are passed as arguments for custom resolver.
+  // Each field of the message returned by the custom resolver is automatically bound.
+  // If you want to change the binding process for a particular field, set `custom_resolver=true` option for that field.
+  bool custom_resolver = 3;
+  // alias mapping between messages defined in other packages and messages defined on the federation service side.
+  // The alias is the FQDN ( <package-name>.<message-name> ) to the message.
+  // If this definition exists, type conversion is automatically performed before the field assignment operation.
+  // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
+  string alias = 4;
+}
+
+// Resolver define the gRPC method, how to call it, and which value to use in the return value.
+message Resolver {
+  // method specify the FQDN for the gRPC method. format is `<package-name>.<service-name>/<method-name>`.
+  string method = 1;
+  // request specify request parameters for the gRPC method.
+  repeated MethodRequest request = 2;
+  // response specify which value in the gRPC method response is referenced by which name.
+  repeated MethodResponse response = 3;
+  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
+  // If you want to handle this error, you need to implement a custom error handler in Go.
+  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
+  string timeout = 4;
+  // retry specifies the retry policy if the method call fails.
+  RetryPolicy retry = 5;
+}
+
+// RetryPolicy define the retry policy if the method call fails.
+message RetryPolicy {
+  oneof policy {
+    // retry according to the "constant" policy.
+    RetryPolicyConstant constant = 1;
+    // retry according to the "exponential backoff" policy.
+    // The following Go library is used in the implementation,
+    // so please refer to the library documentation for how to specify each parameter.
+    // https://pkg.go.dev/github.com/cenkalti/backoff/v4#section-readme.
+    RetryPolicyExponential exponential = 2;
+  }
+}
+
+// RetryPolicyConstant define "constant" based retry policy.
+message RetryPolicyConstant {
+  // interval value. ( default value is 1s ).
+  optional string interval = 1;
+  // max retry count. ( default value is 5. If zero is specified, it never stops )
+  optional uint64 max_retries = 2;
+}
+
+// RetryPolicyExponential define "exponential backoff" based retry policy.
+message RetryPolicyExponential {
+  // initial interval value. ( default value is "500ms" ).
+  optional string initial_interval = 1;
+  // randomization factor value. ( default value is 0.5 ).
+  optional double randomization_factor = 2;
+  // multiplier. ( default value is 1.5 ).
+  optional double multiplier = 3;
+  // max interval value. ( default value is "60s" ).
+  optional string max_interval = 4;
+  // max retry count. ( default value is 5. If zero is specified, it never stops ).
+  optional uint64 max_retries = 5;
+}
+
+// MethodRequest define parameters to be used for gRPC method request.
+message MethodRequest {
+  // field name of the request message.
+  string field = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  oneof value {
+    string by = 2;
+
+    // specify the single value in literal.
+
+    double double = 3;
+    float float = 4;
+    int32 int32 = 5;
+    int64 int64 = 6;
+    uint32 uint32 = 7;
+    uint64 uint64 = 8;
+    sint32 sint32 = 9;
+    sint64 sint64 = 10;
+    fixed32 fixed32 = 11;
+    fixed64 fixed64 = 12;
+    sfixed32 sfixed32 = 13;
+    sfixed64 sfixed64 = 14;
+    bool bool = 15;
+    string string = 16;
+    bytes bytes = 17;
+    MessageValue message = 18;
+    string enum = 19;
+    string env = 20;
+
+    // specify the list value in literal.
+
+    DoubleListValue double_list = 21;
+    FloatListValue float_list = 22;
+    Int32ListValue int32_list = 23;
+    Int64ListValue int64_list = 24;
+    Uint32ListValue uint32_list = 25;
+    Uint64ListValue uint64_list = 26;
+    Sint32ListValue sint32_list = 27;
+    Sint64ListValue sint64_list = 28;
+    Fixed32ListValue fixed32_list = 29;
+    Fixed64ListValue fixed64_list = 30;
+    SFixed32ListValue sfixed32_list = 31;
+    SFixed64ListValue sfixed64_list = 32;
+    BoolListValue bool_list = 33;
+    StringListValue string_list = 34;
+    BytesListValue bytes_list = 35;
+    MessageListValue message_list = 36;
+  }
+}
+
+// MethodResponse define which value of the method response is referenced.
+message MethodResponse {
+  // name specify the unique name that can be used in a `MessageRule` / `FieldRule` for the same message for a specific field in the response.
+  string name = 1;
+  // field name in response message.
+  string field = 2;
+  // autobind if the value referenced by `field` is a message type,
+  // the value of a field with the same name and type as the field name of its own message is automatically assigned to the value of the field in the message.
+  // If multiple autobinds are used at the same message,
+  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
+  bool autobind = 3;
+}
+
+// Message define dependent message.
+message Message {
+  // name specify a unique name for the dependent message.
+  string name = 1;
+  // message specify the message to be referred to by FQDN. format is `<package-name>.<message-name>`.
+  // <package-name> can be omitted when referring to messages in the same package.
+  string message = 2;
+  // repeated specify when multiple target messages are to be retrieved.
+  bool repeated = 3;
+  // args specify the parameters needed to retrieve the message. This is called the message argument.
+  repeated Argument args = 4;
+  // autobind the value of a field with the same name and type as the field name of this message is automatically assigned to the field value in the message.
+  // If multiple autobinds are used at the same message,
+  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
+  bool autobind = 5;
+}
+
+// Argument define message argument.
+message Argument {
+  // name of the message argument.
+  // Use this name to refer to the message argument.
+  // For example, if `foo` is specified as the name, it is referenced by `$.foo`.
+  string name = 1;
+
+  oneof value {
+    // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+    string by = 2;
+    // inline like by, it refers to the specified value and expands all fields beyond it.
+    // For this reason, the referenced value must always be of message type.
+    string inline = 3;
+
+    // specify the single value in literal.
+
+    double double = 4;
+    float float = 5;
+    int32 int32 = 6;
+    int64 int64 = 7;
+    uint32 uint32 = 8;
+    uint64 uint64 = 9;
+    sint32 sint32 = 10;
+    sint64 sint64 = 11;
+    fixed32 fixed32 = 12;
+    fixed64 fixed64 = 13;
+    sfixed32 sfixed32 = 14;
+    sfixed64 sfixed64 = 15;
+    bool bool = 16;
+    string string = 17;
+    bytes bytes = 18;
+    MessageValue message = 19;
+    string enum = 20;
+    string env = 21;
+
+    // specify the list value in literal.
+
+    DoubleListValue double_list = 22;
+    FloatListValue float_list = 23;
+    Int32ListValue int32_list = 24;
+    Int64ListValue int64_list = 25;
+    Uint32ListValue uint32_list = 26;
+    Uint64ListValue uint64_list = 27;
+    Sint32ListValue sint32_list = 28;
+    Sint64ListValue sint64_list = 29;
+    Fixed32ListValue fixed32_list = 30;
+    Fixed64ListValue fixed64_list = 31;
+    SFixed32ListValue sfixed32_list = 32;
+    SFixed64ListValue sfixed64_list = 33;
+    BoolListValue bool_list = 34;
+    StringListValue string_list = 35;
+    BytesListValue bytes_list = 36;
+    MessageListValue message_list = 37;
+  }
+}
+
+// FieldRule define GRPC Federation rules for the field of message.
+message FieldRule {
+  oneof value {
+    // If custom_resolver is true, the field binding process is to be implemented in Go.
+    // If there are any values retrieved by grpc.federation.message option, they are passed as arguments for custom resolver.
+    bool custom_resolver = 1;
+    // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+    string by = 2;
+
+    // specify the single value in literal.
+
+    double double = 3;
+    float float = 4;
+    int32 int32 = 5;
+    int64 int64 = 6;
+    uint32 uint32 = 7;
+    uint64 uint64 = 8;
+    sint32 sint32 = 9;
+    sint64 sint64 = 10;
+    fixed32 fixed32 = 11;
+    fixed64 fixed64 = 12;
+    sfixed32 sfixed32 = 13;
+    sfixed64 sfixed64 = 14;
+    bool bool = 15;
+    string string = 16;
+    bytes bytes = 17;
+    MessageValue message = 18;
+    string enum = 19;
+    string env = 20;
+  
+    // specify the list value in literal.
+  
+    DoubleListValue double_list = 21;
+    FloatListValue float_list = 22;
+    Int32ListValue int32_list = 23;
+    Int64ListValue int64_list = 24;
+    Uint32ListValue uint32_list = 25;
+    Uint64ListValue uint64_list = 26;
+    Sint32ListValue sint32_list = 27;
+    Sint64ListValue sint64_list = 28;
+    Fixed32ListValue fixed32_list = 29;
+    Fixed64ListValue fixed64_list = 30;
+    SFixed32ListValue sfixed32_list = 31;
+    SFixed64ListValue sfixed64_list = 32;
+    BoolListValue bool_list = 33;
+    StringListValue string_list = 34;
+    BytesListValue bytes_list = 35;
+    MessageListValue message_list = 36;
+
+    // alias can be used when alias is specified in grpc.federation.message option,
+    // and specifies the field name to be referenced among the messages specified in alias of message option.
+    // If the specified field has the same type or can be converted automatically, its value is assigned.
+    string alias = 37;
+  }
+}
+
+message MessageValue {
+  string name = 1;
+  repeated MessageFieldValue fields = 2;
+}
+
+message MessageFieldValue {
+  string field = 1;
+  oneof value {
+    // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+    string by = 2;
+
+    // specify the single value in literal.
+
+    double double = 3;
+    float float = 4;
+    int32 int32 = 5;
+    int64 int64 = 6;
+    uint32 uint32 = 7;
+    uint64 uint64 = 8;
+    sint32 sint32 = 9;
+    sint64 sint64 = 10;
+    fixed32 fixed32 = 11;
+    fixed64 fixed64 = 12;
+    sfixed32 sfixed32 = 13;
+    sfixed64 sfixed64 = 14;
+    bool bool = 15;
+    string string = 16;
+    bytes bytes = 17;
+    MessageValue message = 18;
+    string enum = 19;
+    string env = 20;
+  
+    // specify the list value in literal.
+  
+    DoubleListValue double_list = 21;
+    FloatListValue float_list = 22;
+    Int32ListValue int32_list = 23;
+    Int64ListValue int64_list = 24;
+    Uint32ListValue uint32_list = 25;
+    Uint64ListValue uint64_list = 26;
+    Sint32ListValue sint32_list = 27;
+    Sint64ListValue sint64_list = 28;
+    Fixed32ListValue fixed32_list = 29;
+    Fixed64ListValue fixed64_list = 30;
+    SFixed32ListValue sfixed32_list = 31;
+    SFixed64ListValue sfixed64_list = 32;
+    BoolListValue bool_list = 33;
+    StringListValue string_list = 34;
+    BytesListValue bytes_list = 35;
+    MessageListValue message_list = 36;
+  }
+}
+
+message DoubleListValue {
+  repeated double values = 1;
+}
+
+message FloatListValue {
+  repeated float values = 1;
+}
+
+message Int32ListValue {
+  repeated int32 values = 1;
+}
+
+message Int64ListValue {
+  repeated int64 values = 1;
+}
+
+message Uint32ListValue {
+  repeated uint32 values = 1;
+}
+
+message Uint64ListValue {
+  repeated uint64 values = 1;
+}
+
+message Sint32ListValue {
+  repeated sint32 values = 1;
+}
+
+message Sint64ListValue {
+  repeated sint64 values = 1;
+}
+
+message Fixed32ListValue {
+  repeated fixed32 values = 1;
+}
+
+message Fixed64ListValue {
+  repeated fixed64 values = 1;
+}
+
+message SFixed32ListValue {
+  repeated sfixed32 values = 1;
+}
+
+message SFixed64ListValue {
+  repeated sfixed64 values = 1;
+}
+
+message BoolListValue {
+  repeated bool values = 1;
+}
+
+message StringListValue {
+  repeated string values = 1;
+}
+
+message BytesListValue {
+  repeated bytes values = 1;
+}
+
+message MessageListValue {
+  repeated MessageValue values = 1;
+}

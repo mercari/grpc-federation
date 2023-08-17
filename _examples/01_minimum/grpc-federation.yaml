@@ -1,0 +1,8 @@
+imports:
+  - proto
+  - proto_deps
+src:
+  - proto
+out: .
+opt:
+  paths: source_relative

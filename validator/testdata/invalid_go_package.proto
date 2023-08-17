@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+import "post.proto";
+import "user.proto";
+
+option go_package = "a;b;c;d";

@@ -1,0 +1,178 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "google/protobuf/any.proto";
+import "grpc/federation/federation.proto";
+import "post.proto";
+import "user.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { name: "post_service", service: "org.post.PostService" },
+      { name: "user_service", service: "org.user.UserService" }
+    ]
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {
+    option (grpc.federation.method).timeout = "1m";
+  };
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      {
+        name: "post"
+        message: "Post"
+        args: [
+          { name: "id", by: "$.id" },
+          { name: "double_value", double: 1.23 },
+          { name: "float_value", float: 4.56 },
+          { name: "int32_value", int32: 1 },
+          { name: "int64_value", int64: 2 },
+          { name: "uint32_value", uint32: 3 },
+          { name: "uint64_value", uint64: 4 },
+          { name: "sint32_value", sint32: -1 },
+          { name: "sint64_value", sint64: -2 },
+          { name: "fixed32_value", fixed32: 5 },
+          { name: "fixed64_value", fixed64: 6 },
+          { name: "sfixed32_value", sfixed32: 7 },
+          { name: "sfixed64_value", sfixed64: 8 },
+          { name: "bool_value", bool: true },
+          { name: "string_value", string: "hello" },
+          { name: "bytes_value", bytes: "hello" },
+          {
+            name: "message_value"
+            message: {
+              name: "org.post.Post"
+              fields { field: "content", string: "xxxyyyzzz" }
+            }
+          },
+          { name: "double_list_value", double_list: {values: [1.23, 4.56]} },
+          { name: "float_list_value", float_list: {values: [7.89, 1.23]} },
+          { name: "int32_list_value", int32_list: {values: [1, 2, 3]} },
+          { name: "int64_list_value", int64_list: {values: [4, 5, 6]} },
+          { name: "uint32_list_value", uint32_list: {values: [7, 8, 9]} },
+          { name: "uint64_list_value", uint64_list: {values:[10, 11, 12]} },
+          { name: "sint32_list_value", sint32_list: {values:[-1, -2, -3]} },
+          { name: "sint64_list_value", sint64_list: {values:[-4, -5, -6]} },
+          { name: "fixed32_list_value", fixed32_list: {values:[11, 12, 13]} },
+          { name: "fixed64_list_value", fixed64_list: {values:[14, 15, 16]} },
+          { name: "sfixed32_list_value", sfixed32_list: {values:[-1, -2, -3]} },
+          { name: "sfixed64_list_value", sfixed64_list: {values:[-4, -5, -6]} },
+          { name: "bool_list_value", bool_list: {values:[false, true]} },
+          { name: "string_list_value", string_list: {values:["hello", "world"]} },
+          { name: "bytes_list_value", bytes_list: {values:["hello", "world"]} },
+          {
+            name: "message_list_value"
+            message_list: {
+              values:[
+                {
+                  name: "org.post.Post"
+                  fields { field: "content", string: "aaabbbccc" }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  };
+  org.federation.Post post = 1 [(grpc.federation.field).by = "post"];
+  string literal = 2 [(grpc.federation.field).string = "foo"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "org.post.PostService/GetPost"
+      request { field: "id", by: "$.id" }
+      response { name: "post", field: "post", autobind: true }
+      timeout: "10s"
+      retry {
+        constant {
+          interval: "2s"
+          max_retries: 3
+        }
+      }
+    }
+    messages { name: "user", message: "User", args: [{ inline: "post" }]}
+    messages { name: "z", message: "Z" }
+    messages { name: "m", message: "M", autobind: true }
+  };
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  User user = 4 [(grpc.federation.field).by = "user"];
+  string foo = 5;
+  int64 bar = 6;
+}
+
+enum UserType {
+  option (grpc.federation.enum).alias = "org.user.UserType";
+
+  USER_TYPE_1 = 0;
+  USER_TYPE_2 = 1;
+}
+
+message User {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "org.user.UserService/GetUser"
+      request { field: "id", by: "$.user_id" }
+      response { name: "user", field: "user", autobind: true  }
+      timeout: "20s"
+      retry {
+        exponential {
+          initial_interval: "1s"
+          randomization_factor: 0.7
+          multiplier: 1.7
+          max_interval: "30s"
+          max_retries: 3
+        }
+      }
+    }
+  };
+  string id = 1;
+  UserType type = 2;
+  string name = 3;
+  uint64 age = 4 [(grpc.federation.field).custom_resolver = true];
+  repeated string desc = 5;
+  Item main_item = 6;
+  repeated Item items = 7;
+  map<string,google.protobuf.Any> profile = 8;
+}
+
+message Item {
+  option (grpc.federation.message).alias = "org.user.Item";
+
+  enum ItemType {
+    option (grpc.federation.enum).alias = "org.user.Item.ItemType";
+
+    ITEM_TYPE_1 = 0;
+    ITEM_TYPE_2 = 1;
+    ITEM_TYPE_3 = 2;
+  };
+
+  string name = 1;
+  ItemType type = 2;
+  int64 value = 3;
+}
+
+message Z {
+  option (grpc.federation.message).custom_resolver = true;
+
+  string foo = 1;
+}
+
+message M {
+  string foo = 1 [(grpc.federation.field).string = "foo"];
+  int64 bar = 2 [(grpc.federation.field).int64 = 1];
+}

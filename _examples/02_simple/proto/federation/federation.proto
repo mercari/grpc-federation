@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package federation;
+
+import "google/protobuf/any.proto";
+import "grpc/federation/federation.proto";
+import "post/post.proto";
+import "user/user.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { name: "post_service", service: "post.PostService" },
+      { name: "user_service", service: "user.UserService" }
+    ]
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (.grpc.federation.message) = {
+    messages: [
+      { name: "post", message: "Post", args: [{ name: "id", by: "$.id" }]}
+    ]
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+  string str = 2 [(grpc.federation.field).string = "hello"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "post.PostService/GetPost"
+      request: [
+        { field: "id", by: "$.id" }
+      ]
+      response: [ { name: "post", field: "post", autobind: true  } ]
+      timeout: "10s"
+      retry {
+        constant {
+          interval: "2s"
+          max_retries: 3
+        }
+      }
+    }
+    messages: [
+      { name: "user", message: "User", args: [{ inline: "post" }]}
+    ]
+  };
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  User user = 4 [(grpc.federation.field).by = "user"];
+}
+
+message User {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "user.UserService/GetUser"
+      request: [
+        { field: "id", by: "$.user_id" }
+      ]
+      response: [ { name: "user", field: "user", autobind: true  } ]
+      timeout: "20s"
+      retry {
+        exponential {
+          initial_interval: "1s"
+          randomization_factor: 0.7
+          multiplier: 1.7
+          max_interval: "30s"
+          max_retries: 3
+        }
+      }
+    }
+  };
+  string id = 1;
+  string name = 2;
+  repeated Item items = 3;
+  map<string, google.protobuf.Any> profile = 4;
+}
+
+message Item {
+  option (grpc.federation.message).alias = "user.Item";
+
+  enum ItemType {
+    option (grpc.federation.enum).alias = "user.Item.ItemType";
+
+    ITEM_TYPE_UNSPECIFIED = 0;
+    ITEM_TYPE_1 = 1;
+    ITEM_TYPE_2 = 2;
+    ITEM_TYPE_3 = 3;
+  }
+  message Location {
+    option (grpc.federation.message).alias = "user.Item.Location";
+
+    string addr1 = 1;
+    string addr2 = 2;
+  }
+  string name = 1;
+  ItemType type = 2;
+  int64 value = 3;
+  Location location = 4;
+}

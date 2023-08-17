@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package org.post;
+
+option go_package = "example/post;post";
+
+service PostService {
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  Post post = 1;
+}
+
+message Post {
+  string id = 1;
+  PostData data = 2;
+}
+
+enum PostDataType {
+  POST_TYPE_A = 0;
+  POST_TYPE_B = 1;
+  POST_TYPE_C = 2;
+}
+
+enum FakePostDataType {
+  FAKE_POST_TYPE_A = 0;
+  FAKE_POST_TYPE_B = 1;
+  FAKE_POST_TYPE_C = 2;
+}
+  
+message PostData {
+  PostDataType type = 1;
+  string title = 2;
+  PostContent content = 3;
+}
+
+message FakePostData {
+  PostDataType type = 1;
+  string title = 2;
+  PostContent content = 3;
+}
+  
+message PostContent {
+  enum Category {
+    CATEGORY_A = 0;
+    CATEGORY_B = 1;
+  }
+  Category category = 1;
+  string head = 2;
+  string body = 3;
+}
+
+message FakePostContent {
+  enum FakeCategory {
+    CATEGORY_A = 0;
+    CATEGORY_B = 1;
+  }
+  FakeCategory category = 1;
+  string head = 2;
+  string body = 3;
+}

@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "a", message: "A", autobind: true },
+      { name: "b", message: "B", autobind: true }
+    ]
+  };
+  string id = 1;
+  string name = 2;
+}
+
+message A {
+  string id = 1 [(grpc.federation.field).string = "a-id"];
+  string name = 2 [(grpc.federation.field).string = "a-name"];
+}
+
+message B {
+  string id = 1 [(grpc.federation.field).string = "b-id"];
+}
