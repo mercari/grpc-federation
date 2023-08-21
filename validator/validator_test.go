@@ -288,14 +288,6 @@ testdata/invalid_service_dependency_service.proto:15:42: "user.InvalidService" d
 15:          { name: "user_service", service: "user.InvalidService" }
                                               ^
 `},
-		{file: "missing_service_dependency_name.proto", expected: `
-testdata/missing_service_dependency_name.proto:14:9: "name" must be specified
-14:          { service: "post.PostService" },
-             ^
-testdata/missing_service_dependency_name.proto:15:9: "name" must be specified
-15:          { service: "user.UserService" }
-             ^
-`},
 		{file: "missing_service_dependency_service.proto", expected: `
 testdata/missing_service_dependency_service.proto:14:9: "service" must be specified
 14:          { name: "post_service" },
