@@ -118,6 +118,9 @@ func (g *Generator) generate(ctx context.Context, protoPath string) ([]*resolver
 			return nil, err
 		}
 		outputPath := filepath.Join(g.cfg.Out, path)
+		if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+			return nil, err
+		}
 		if err := os.WriteFile(outputPath, federationOut, 0o600); err != nil {
 			return nil, err
 		}
