@@ -3,6 +3,7 @@ package compiler
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/mercari/grpc-federation/proto/grpc/federation"
 	"github.com/mercari/grpc-federation/source"
 )
 
@@ -24,6 +26,7 @@ import (
 // This allows you to do things like validate proto files without relying on protoc.
 type Compiler struct {
 	importPaths []string
+	autoImport  bool
 }
 
 // Option represents compiler option.
@@ -34,6 +37,14 @@ type Option func(*Compiler)
 func ImportPathOption(path ...string) Option {
 	return func(c *Compiler) {
 		c.importPaths = append(c.importPaths, path...)
+	}
+}
+
+// AutoImportOption if `grpc/federation/federation.proto` file does not exist on the import path, automatically imports it.
+// The version of the proto file is the same as the version when the compiler is built.
+func AutoImportOption() Option {
+	return func(c *Compiler) {
+		c.autoImport = true
 	}
 }
 
@@ -71,6 +82,10 @@ func (e *CompilerError) Error() string {
 	return fmt.Sprintf("%s\n%s", e.Err.Error(), strings.Join(errs, "\n"))
 }
 
+const (
+	grpcFederationFilePath = "grpc/federation/federation.proto"
+)
+
 // Compile compile the target Protocol Buffers file and produces all file descriptors.
 func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Option) ([]*descriptorpb.FileDescriptorProto, error) {
 	c.importPaths = c.importPaths[:]
@@ -91,7 +106,14 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 				if path == p {
 					return io.NopCloser(bytes.NewBuffer(file.Content())), nil
 				}
-				return os.Open(p)
+				f, err := os.Open(p)
+				if err != nil {
+					if c.autoImport && strings.HasSuffix(p, grpcFederationFilePath) {
+						return io.NopCloser(bytes.NewBuffer(federation.ProtoFile)), nil
+					}
+					return nil, err
+				}
+				return f, nil
 			},
 		}),
 		SourceInfoMode: protocompile.SourceInfoStandard,

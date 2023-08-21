@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/mercari/grpc-federation/compiler"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/source"
+	"github.com/mercari/grpc-federation/validator"
 )
 
 type Option func(*Generator) error
@@ -33,6 +35,7 @@ type Generator struct {
 	cfg                *Config
 	watcher            *Watcher
 	compiler           *compiler.Compiler
+	validator          *validator.Validator
 	codeGenerator      *CodeGenerator
 	importPaths        []string
 	postProcessHandler PostProcessHandler
@@ -42,6 +45,7 @@ func New(cfg Config) *Generator {
 	return &Generator{
 		cfg:           &cfg,
 		compiler:      compiler.New(),
+		validator:     validator.New(),
 		codeGenerator: NewCodeGenerator(),
 		importPaths:   cfg.Imports,
 	}
@@ -114,6 +118,9 @@ func (g *Generator) generate(ctx context.Context, protoPath string) ([]*resolver
 			return nil, err
 		}
 		outputPath := filepath.Join(g.cfg.Out, path)
+		if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+			return nil, err
+		}
 		if err := os.WriteFile(outputPath, federationOut, 0o600); err != nil {
 			return nil, err
 		}
@@ -138,7 +145,10 @@ func (g *Generator) compileProto(ctx context.Context, protoPath string) (*resolv
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source file: %w", err)
 	}
-	protos, err := g.compiler.Compile(ctx, file, compiler.ImportPathOption(g.importPaths...))
+	if outs := g.validator.Validate(ctx, file, validator.ImportPathOption(g.importPaths...), validator.AutoImportOption()); len(outs) != 0 {
+		return nil, errors.New(validator.Format(outs))
+	}
+	protos, err := g.compiler.Compile(ctx, file, compiler.ImportPathOption(g.importPaths...), compiler.AutoImportOption())
 	if err != nil {
 		return nil, err
 	}

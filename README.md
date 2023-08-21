@@ -295,9 +295,9 @@ message User {
 
 In this example, we will use the following three types of options provided by the gRPC Federation for implementation.
 
-- 1. `grpc.federation.service` option
-- 2. `grpc.federation.message` option
-- 3. `grpc.federation.field` option
+- `grpc.federation.service` option
+- `grpc.federation.message` option
+- `grpc.federation.field` option
 
 ## grpc.federation.service option
 
@@ -324,10 +324,10 @@ In the `grpc.federation.service` option, `dependencies` field is available to sp
 
  service FederationService {
    option (grpc.federation.service) = {
-+     dependencies: [
-+       { service: "post.PostService" },
-+       { service: "user.UserService" }
-+     ]
++    dependencies: [
++      { service: "post.PostService" },
++      { service: "user.UserService" }
++    ]
    };
    rpc GetPost (GetPostRequest) returns (GetPostReply) {}
  }
@@ -369,11 +369,11 @@ If you call the `GetPost` method of `post.PostService` service, write the follow
 ```diff
  message Post {
    option (grpc.federation.message) = {
-+     resolver {
-+       method: "post.PostService/GetPost"
-+       // assign "abcd" constant value to post_id field of GetPostRequest and call GetPost.
-+       request { field: "post_id", string: "abcd" }
-+     }
++    resolver {
++      method: "post.PostService/GetPost"
++      // assign "abcd" constant value to post_id field of GetPostRequest and call GetPost.
++      request { field: "post_id", string: "abcd" }
++    }
    };
  }
 ```
@@ -401,14 +401,14 @@ If you want to use the result of the `GetPost` method, use the `response` field 
      resolver {
        method: "post.PostService/GetPost"
        request { field: "post_id", by: "$.id" }
-+       response {
-+         // specify a name to refer the value for the `post` field.
-+         name: "res"
-+         // select `post` field from `GetPostReply` message in `post` package.
-+         field: "post"
-+         // automatically binds the fields ( `id` or `title` or `content` ) of `post` field to its own fields.
-+         autobind: true
-+       }
++      response {
++        // specify a name to refer the value for the `post` field.
++        name: "res"
++        // select `post` field from `GetPostReply` message in `post` package.
++        field: "post"
++        // automatically binds the fields ( `id` or `title` or `content` ) of `post` field to its own fields.
++        autobind: true
++      }
      }
    };
    string id = 1; // automatically binds the value of `res.id`.
@@ -540,10 +540,10 @@ The purpose of gRPC Federation is to build a response messsage. Therefore, the e
 
 ```diff
  message GetPostReply {
-+   option (grpc.federation.message) = {
-+     messages { name: "p", message: "Post", args { name: "id", by: "$.id" } }
-+   };
-+   Post post = 1 [(grpc.federation.field).by = "p"];
++  option (grpc.federation.message) = {
++    messages { name: "p", message: "Post", args { name: "id", by: "$.id" } }
++  };
++  Post post = 1 [(grpc.federation.field).by = "p"];
  }
 ```
 
