@@ -58,7 +58,7 @@ message ServiceRule {
 // ServiceDependency assigns a uniquely determined name to the service.
 message ServiceDependency {
   // name to be used when initializing the gRPC client.
-  string name = 1;
+  optional string name = 1;
   // service is the name of the dependent service.
   string service = 2;
 }

@@ -201,14 +201,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
 		Service: "org.post.PostService",
-		Name:    "post_service",
+		Name:    "",
 	})
 	if err != nil {
 		return nil, err
 	}
 	Org_User_UserServiceClient, err := cfg.Client.Org_User_UserServiceClient(FederationServiceClientConfig{
 		Service: "org.user.UserService",
-		Name:    "user_service",
+		Name:    "",
 	})
 	if err != nil {
 		return nil, err

@@ -357,8 +357,8 @@ func TestSimpleAggregation(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewServiceRuleBuilder().
-						AddDependency("post_service", ref.Service(t, "org.post", "PostService")).
-						AddDependency("user_service", ref.Service(t, "org.user", "UserService")).
+						AddDependency("", ref.Service(t, "org.post", "PostService")).
+						AddDependency("", ref.Service(t, "org.user", "UserService")).
 						Build(t),
 				).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).

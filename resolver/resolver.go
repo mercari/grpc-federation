@@ -292,15 +292,6 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string) *Serv
 }
 
 func (r *Resolver) resolveServiceDependency(ctx *context, def *federation.ServiceDependency) *ServiceDependency {
-	name := def.GetName()
-	if name == "" {
-		ctx.addError(
-			ErrWithLocation(
-				`"name" must be specified`,
-				source.ServiceDependencyNameLocation(ctx.fileName(), ctx.serviceName(), ctx.depIndex()),
-			),
-		)
-	}
 	var service *Service
 	serviceWithPkgName := def.GetService()
 	if serviceWithPkgName == "" {
@@ -333,7 +324,7 @@ func (r *Resolver) resolveServiceDependency(ctx *context, def *federation.Servic
 			}
 		}
 	}
-	return &ServiceDependency{Name: name, Service: service}
+	return &ServiceDependency{Name: def.GetName(), Service: service}
 }
 
 func (r *Resolver) resolveMethod(ctx *context, service *Service, methodDef *descriptorpb.MethodDescriptorProto) *Method {
