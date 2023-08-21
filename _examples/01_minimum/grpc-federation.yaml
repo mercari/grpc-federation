@@ -1,6 +1,5 @@
 imports:
   - proto
-  - proto_deps
 src:
   - proto
 out: .

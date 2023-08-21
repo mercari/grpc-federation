@@ -17,6 +17,7 @@ import (
 type Validator struct {
 	compiler      *compiler.Compiler
 	importPaths   []string
+	autoImport    bool
 	pathToFileMap map[string]*source.File
 }
 
@@ -44,13 +45,24 @@ func ImportPathOption(path ...string) ValidatorOption {
 	}
 }
 
+func AutoImportOption() ValidatorOption {
+	return func(v *Validator) {
+		v.autoImport = true
+	}
+}
+
 func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...ValidatorOption) []*ValidationOutput {
 	v.pathToFileMap = map[string]*source.File{}
 	v.importPaths = v.importPaths[:]
 	for _, opt := range opts {
 		opt(v)
 	}
-	protos, err := v.compiler.Compile(ctx, file, compiler.ImportPathOption(v.importPaths...))
+	var compilerOpts []compiler.Option
+	compilerOpts = append(compilerOpts, compiler.ImportPathOption(v.importPaths...))
+	if v.autoImport {
+		compilerOpts = append(compilerOpts, compiler.AutoImportOption())
+	}
+	protos, err := v.compiler.Compile(ctx, file, compilerOpts...)
 	if err != nil {
 		compilerErr, ok := err.(*compiler.CompilerError)
 		if !ok {
