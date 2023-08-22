@@ -254,7 +254,7 @@ func recoverError{{ $serviceName }}(v interface{}, rawStack []byte) *{{ $service
 			}
 			stack = append(stack, strings.TrimPrefix(line, "\t"))
 		}
-		return &FederationServiceRecoveredError{
+		return &{{ $serviceName }}RecoveredError{
 			Message: msg,
 			Stack:   stack,
 		}
@@ -268,7 +268,7 @@ func recoverError{{ $serviceName }}(v interface{}, rawStack []byte) *{{ $service
 		}
 		stack = append(stack, strings.TrimPrefix(line, "\t"))
 	}
-	return &FederationServiceRecoveredError{
+	return &{{ $serviceName }}RecoveredError{
 		Message: lines[0],
 		Stack:   stack,
 	}
@@ -299,7 +299,7 @@ func (s *{{ $serviceName }}) outputErrorLog(ctx context.Context, err error) {
 		)
 		return
 	}
-	var recoveredErr *FederationServiceRecoveredError
+	var recoveredErr *{{ $serviceName }}RecoveredError
 	if errors.As(err, &recoveredErr) {
 		trace := make([]interface{}, 0, len(recoveredErr.Stack))
 		for idx, stack := range recoveredErr.Stack {
@@ -317,7 +317,7 @@ func (s *{{ $serviceName }}) outputErrorLog(ctx context.Context, err error) {
 func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestType }}) (res {{ .ReturnType }}, e error) {
 	defer func() {
 		if r := recover(); r != nil {
-			e = recoverErrorFederationService(r, debug.Stack())
+			e = recoverError{{ $serviceName }}(r, debug.Stack())
 			s.outputErrorLog(ctx, e)
 		}
 	}()
