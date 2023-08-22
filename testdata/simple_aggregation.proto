@@ -12,8 +12,8 @@ option go_package = "example/federation;federation";
 service FederationService {
   option (grpc.federation.service) = {
     dependencies: [
-      { name: "post_service", service: "org.post.PostService" },
-      { name: "user_service", service: "org.user.UserService" }
+      { service: "org.post.PostService" },
+      { service: "org.user.UserService" }
     ]
   };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {
