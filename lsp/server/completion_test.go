@@ -119,6 +119,7 @@ func TestCompletion(t *testing.T) {
 			"google.protobuf.EnumValueDescriptorProto",
 			"google.protobuf.EnumValueOptions",
 			"google.protobuf.ExtensionRangeOptions",
+			"google.protobuf.ExtensionRangeOptions.Declaration",
 			"google.protobuf.FieldDescriptorProto",
 			"google.protobuf.FieldOptions",
 			"google.protobuf.FileDescriptorProto",

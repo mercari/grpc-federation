@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/bufbuild/protocompile"
@@ -96,7 +95,6 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 	path := file.Path()
 	dirName := filepath.Dir(path)
 	fileName := filepath.Base(path)
-
 	var r errorReporter
 
 	compiler := protocompile.Compiler{
@@ -130,29 +128,28 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 }
 
 func (c *Compiler) getProtoFiles(linkedFiles []linker.File) []*descriptorpb.FileDescriptorProto {
-	var allProtoFiles []*descriptorpb.FileDescriptorProto
+	var (
+		protos         []*descriptorpb.FileDescriptorProto
+		protoUniqueMap = make(map[string]struct{})
+	)
 	for _, linkedFile := range linkedFiles {
-		allProtoFiles = append(allProtoFiles, c.getFileDescriptors(linkedFile)...)
+		for _, proto := range c.getFileDescriptors(linkedFile) {
+			if _, exists := protoUniqueMap[proto.GetName()]; exists {
+				continue
+			}
+			protos = append(protos, proto)
+			protoUniqueMap[proto.GetName()] = struct{}{}
+		}
 	}
-	protoFileUniqueMap := map[string]*descriptorpb.FileDescriptorProto{}
-	for _, file := range allProtoFiles {
-		protoFileUniqueMap[file.GetName()] = file
-	}
-	protoFiles := make([]*descriptorpb.FileDescriptorProto, 0, len(protoFileUniqueMap))
-	for _, file := range protoFileUniqueMap {
-		protoFiles = append(protoFiles, file)
-	}
-	sort.Slice(protoFiles, func(i, j int) bool {
-		return protoFiles[i].GetName() < protoFiles[j].GetName()
-	})
-	return protoFiles
+	return protos
 }
 
 func (c *Compiler) getFileDescriptors(file protoreflect.FileDescriptor) []*descriptorpb.FileDescriptorProto {
-	protoFiles := []*descriptorpb.FileDescriptorProto{protoutil.ProtoFromFileDescriptor(file)}
+	var protoFiles []*descriptorpb.FileDescriptorProto
 	fileImports := file.Imports()
 	for i := 0; i < fileImports.Len(); i++ {
 		protoFiles = append(protoFiles, c.getFileDescriptors(fileImports.Get(i))...)
 	}
+	protoFiles = append(protoFiles, protoutil.ProtoFromFileDescriptor(file))
 	return protoFiles
 }

@@ -7,10 +7,32 @@ import (
 )
 
 type Config struct {
-	Imports []string      `yaml:"imports"`
-	Src     []string      `yaml:"src"`
-	Out     string        `yaml:"out"`
-	Option  *PluginOption `yaml:"opt"`
+	// Imports specify list of import path. This is the same as the list of paths specified by protoc's '-I' option.
+	Imports []string `yaml:"imports"`
+	// Src specifies the directory to be monitored when watch mode is enabled.
+	Src []string `yaml:"src"`
+	// Out specify the output destination for automatically generated code.
+	Out string `yaml:"out"`
+	// Option specify options to be passed gRPC Federation code generator.
+	Option *PluginOption `yaml:"opt"`
+	// AutoProtocGenGo automatically run protoc-gen-go at the time of editing proto. default is true.
+	AutoProtocGenGo *bool `yaml:"auto-protoc-gen-go"`
+	// AutoProtocGenGoGRPC automatically run protoc-gen-go-grpc at the time of editing proto. default is true.
+	AutoProtocGenGoGRPC *bool `yaml:"auto-protoc-gen-go-grpc"`
+}
+
+func (c *Config) GetAutoProtocGenGo() bool {
+	if c.AutoProtocGenGo == nil {
+		return true
+	}
+	return *c.AutoProtocGenGo
+}
+
+func (c *Config) GetAutoProtocGenGoGRPC() bool {
+	if c.AutoProtocGenGoGRPC == nil {
+		return true
+	}
+	return *c.AutoProtocGenGoGRPC
 }
 
 type PluginOption struct {
