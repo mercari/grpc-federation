@@ -4,7 +4,6 @@ go 1.21
 
 require (
 	github.com/bufbuild/protocompile v0.1.0
-	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/go-cmp v0.5.9
@@ -17,7 +16,7 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/sync v0.2.0
 	golang.org/x/tools v0.9.3
-	google.golang.org/protobuf v1.28.2-0.20220831092852-f930b1dc76e8
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
