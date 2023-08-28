@@ -72,8 +72,14 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 		}
 		return g.watcher.Run(ctx)
 	}
-	if _, err := g.generate(ctx, protoPath); err != nil {
+	svcs, err := g.generate(ctx, protoPath)
+	if err != nil {
 		return err
+	}
+	if len(svcs) != 0 && g.postProcessHandler != nil {
+		if err := g.postProcessHandler(ctx, protoPath, svcs); err != nil {
+			return err
+		}
 	}
 	return nil
 }
