@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -662,10 +663,30 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 		if autoBindField.Field.Type.Type != field.Type.Type {
 			continue
 		}
+		switch {
+		case autoBindField.ResponseField != nil:
+			autoBindField.ResponseField.Used = true
+		case autoBindField.MessageDependency != nil:
+			autoBindField.MessageDependency.Used = true
+		}
 		field.Rule = &FieldRule{
 			AutoBindField: autoBindField,
 		}
 	}
+}
+
+const namePattern = `^[a-zA-Z][a-zA-Z0-9_]*$`
+
+var nameRe = regexp.MustCompile(namePattern)
+
+func (r *Resolver) validateName(name string) error {
+	if name == "" {
+		return nil
+	}
+	if !nameRe.MatchString(name) {
+		return fmt.Errorf(`"%s" is invalid name. name should be in the following pattern: %s`, name, namePattern)
+	}
+	return nil
 }
 
 func (r *Resolver) validateMessages(ctx *context, msgs []*Message) {
@@ -1283,8 +1304,8 @@ func (r *Resolver) resolveMethodCall(ctx *context, resolverDef *federation.Resol
 
 	return &MethodCall{
 		Method:   method,
-		Request:  r.resolveRequest(ctx, pkg, method.Request, resolverDef.GetRequest()),
-		Response: r.resolveResponse(ctx, pkg, method.Response, resolverDef.GetResponse()),
+		Request:  r.resolveRequest(ctx, pkg, method, resolverDef.GetRequest()),
+		Response: r.resolveResponse(ctx, pkg, method, resolverDef.GetResponse()),
 		Timeout:  timeout,
 		Retry:    r.resolveRetry(ctx, resolverDef.GetRetry(), timeout),
 	}
@@ -1407,7 +1428,8 @@ func (r *Resolver) resolveRetryExponential(ctx *context, def *federation.RetryPo
 	}
 }
 
-func (r *Resolver) resolveRequest(ctx *context, pkg *Package, reqType *Message, requestDef []*federation.MethodRequest) *Request {
+func (r *Resolver) resolveRequest(ctx *context, pkg *Package, method *Method, requestDef []*federation.MethodRequest) *Request {
+	reqType := method.Request
 	args := make([]*Argument, 0, len(requestDef))
 	for idx, req := range requestDef {
 		fieldName := req.GetField()
@@ -1436,16 +1458,27 @@ func (r *Resolver) resolveRequest(ctx *context, pkg *Package, reqType *Message, 
 	return &Request{Args: args, Type: reqType}
 }
 
-func (r *Resolver) resolveResponse(ctx *context, pkg *Package, resType *Message, responseDef []*federation.MethodResponse) *Response {
+func (r *Resolver) resolveResponse(ctx *context, pkg *Package, method *Method, responseDef []*federation.MethodResponse) *Response {
+	resType := method.Response
 	fields := make([]*ResponseField, 0, len(responseDef))
 	for idx, res := range responseDef {
+		name := res.GetName()
+		if err := r.validateName(name); err != nil {
+			ctx.addError(ErrWithLocation(
+				err.Error(),
+				source.ResponseFieldLocation(ctx.fileName(), ctx.messageName(), idx),
+			))
+			continue
+		}
+		if name == "" {
+			name = "_" + r.protoFQDNToNormalizedName(method.FQDN())
+		}
 		fieldName := res.GetField()
 		if fieldName == "" {
 			fields = append(fields, &ResponseField{
-				Name:     res.GetName(),
+				Name:     name,
 				Type:     &Type{Type: types.Message, Ref: resType},
 				AutoBind: res.GetAutobind(),
-				Used:     res.GetAutobind(), // If autobind is true, `Used` flag be true.
 			})
 			continue
 		}
@@ -1459,14 +1492,24 @@ func (r *Resolver) resolveResponse(ctx *context, pkg *Package, resType *Message,
 			fieldType = resType.Field(fieldName).Type
 		}
 		fields = append(fields, &ResponseField{
-			Name:      res.GetName(),
+			Name:      name,
 			FieldName: fieldName,
 			Type:      fieldType,
 			AutoBind:  res.GetAutobind(),
-			Used:      res.GetAutobind(), // If autobind is true, `Used` flag be true.
 		})
 	}
 	return &Response{Fields: fields, Type: resType}
+}
+
+func (r *Resolver) protoFQDNToNormalizedName(fqdn string) string {
+	names := strings.Split(fqdn, ".")
+	formattedNames := make([]string, 0, len(names))
+	for _, name := range names {
+		name = strings.Replace(name, "-", "_", -1)
+		name = strings.Replace(name, "/", "_", -1)
+		formattedNames = append(formattedNames, name)
+	}
+	return strings.Join(formattedNames, "_")
 }
 
 func (r *Resolver) resolveMessages(ctx *context, baseMsg *Message, msgs []*federation.Message) []*MessageDependency {
@@ -1505,8 +1548,20 @@ func (r *Resolver) resolveMessages(ctx *context, baseMsg *Message, msgs []*feder
 		for idx, argDef := range msgDef.GetArgs() {
 			args = append(args, r.resolveMessageArgument(ctx.withArgIndex(idx), argDef))
 		}
+
+		name := msgDef.GetName()
+		if err := r.validateName(name); err != nil {
+			ctx.addError(ErrWithLocation(
+				err.Error(),
+				source.MessageDependencyMessageLocation(ctx.fileName(), ctx.messageName(), idx),
+			))
+			continue
+		}
+		if name == "" {
+			name = "_" + r.protoFQDNToNormalizedName(msg.FQDN())
+		}
 		deps = append(deps, &MessageDependency{
-			Name:     msgDef.GetName(),
+			Name:     name,
 			Message:  msg,
 			Args:     args,
 			AutoBind: msgDef.GetAutobind(),
@@ -1545,8 +1600,20 @@ func (r *Resolver) resolveMessageArgument(ctx *context, argDef *federation.Argum
 			)
 		}
 	}
+	name := argDef.GetName()
+	if err := r.validateName(name); err != nil {
+		ctx.addError(ErrWithLocation(
+			err.Error(),
+			source.MessageDependencyArgumentNameLocation(
+				ctx.fileName(),
+				ctx.messageName(),
+				ctx.depIndex(),
+				ctx.argIndex(),
+			),
+		))
+	}
 	return &Argument{
-		Name:  argDef.GetName(),
+		Name:  name,
 		Value: value,
 	}
 }

@@ -619,6 +619,25 @@ func MessageDependencyMessageLocation(fileName, msgName string, idx int) *Locati
 	}
 }
 
+// MessageDependencyArgumentNameLocation creates location for messages[*].args[*].name in grpc.federation.message.
+func MessageDependencyArgumentNameLocation(fileName, msgName string, idx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				Messages: &MessageDependencyOption{
+					Idx: idx,
+					Args: &ArgumentOption{
+						Idx:  argIdx,
+						Name: true,
+					},
+				},
+			},
+		},
+	}
+}
+
 // MessageDependencyArgumentByLocation creates location for messages[*].args[*].by in grpc.federation.message.
 func MessageDependencyArgumentByLocation(fileName, msgName string, idx, argIdx int) *Location {
 	return &Location{

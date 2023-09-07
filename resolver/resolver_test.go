@@ -1370,6 +1370,149 @@ func TestAlias(t *testing.T) {
 	}
 }
 
+func TestAutobind(t *testing.T) {
+	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "autobind.proto")))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Services))
+	}
+
+	fb := testutil.NewFileBuilder("autobind.proto")
+	ref := testutil.NewBuilderReferenceManager(getPostProtoBuilder(t), fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("UserArgument").
+				AddField("user_id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("User").
+				AddFieldWithRule(
+					"uid",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(
+						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t),
+					).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("PostArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("Post").
+				AddFieldWithAutoBind("id", resolver.StringType, ref.Field(t, "org.post", "Post", "id")).
+				AddFieldWithAutoBind("title", resolver.StringType, ref.Field(t, "org.post", "Post", "title")).
+				AddFieldWithAutoBind("content", resolver.StringType, ref.Field(t, "org.post", "Post", "content")).
+				AddFieldWithAutoBind("uid", resolver.StringType, ref.Field(t, "org.federation", "User", "uid")).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMethodCall(
+							testutil.NewMethodCallBuilder(ref.Method(t, "org.post", "PostService", "GetPost")).
+								SetRequest(
+									testutil.NewRequestBuilder().
+										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+										Build(t),
+								).
+								SetResponse(
+									testutil.NewResponseBuilder().
+										AddField("_org_post_PostService_GetPost", "post", ref.Type(t, "org.post", "Post"), true, true).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddMessageDependency(
+							"",
+							ref.Message(t, "org.federation", "User"),
+							testutil.NewMessageDependencyArgumentBuilder().
+								Inline(testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.post", "GetPostResponse"), ref.Type(t, "org.post", "Post"), "post").Build(t)).
+								Build(t),
+							true,
+							true,
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.post", "GetPostResponse")).
+								Add(ref.Message(t, "org.federation", "User")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("GetPost")).
+						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_User")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponse").
+				AddFieldWithAutoBind("id", resolver.StringType, ref.Field(t, "org.federation", "Post", "id")).
+				AddFieldWithAutoBind("title", resolver.StringType, ref.Field(t, "org.federation", "Post", "title")).
+				AddFieldWithAutoBind("content", resolver.StringType, ref.Field(t, "org.federation", "Post", "content")).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddMessageDependency(
+							"",
+							ref.Message(t, "org.federation", "Post"),
+							testutil.NewMessageDependencyArgumentBuilder().
+								Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+								Build(t),
+							true,
+							true,
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "Post")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Post")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod("GetPost", ref.Message(t, "org.federation", "GetPostRequest"), ref.Message(t, "org.federation", "GetPostResponse"), nil).
+				SetRule(
+					testutil.NewServiceRuleBuilder().
+						AddDependency("", ref.Service(t, "org.post", "PostService")).
+						Build(t),
+				).
+				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
+				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
+				Build(t),
+		)
+	federationFile := fb.Build(t)
+	federationService := federationFile.Services[0]
+
+	if diff := cmp.Diff(result.Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
 func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 	ub := testutil.NewFileBuilder("user.proto")
 	ref := testutil.NewBuilderReferenceManager(ub)
