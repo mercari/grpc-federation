@@ -675,14 +675,16 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 	}
 }
 
-var nameRe = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
+const namePattern = `^[a-zA-Z][a-zA-Z0-9_]*$`
+
+var nameRe = regexp.MustCompile(namePattern)
 
 func (r *Resolver) validateName(name string) error {
 	if name == "" {
 		return nil
 	}
 	if !nameRe.MatchString(name) {
-		return fmt.Errorf(`"%s" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-ZA-Z0-9_]+$`, name)
+		return fmt.Errorf(`"%s" is invalid name. name should be in the following pattern: %s`, name, namePattern)
 	}
 	return nil
 }
