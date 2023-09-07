@@ -505,6 +505,7 @@ func (b *MessageRuleBuilder) AddResolver(group resolver.MessageResolverGroup) *M
 	b.rule.Resolvers = append(b.rule.Resolvers, group)
 	return b
 }
+
 func (b *MessageRuleBuilder) Build(t *testing.T) *resolver.MessageRule {
 	t.Helper()
 	return b.rule

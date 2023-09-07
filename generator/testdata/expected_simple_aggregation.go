@@ -153,6 +153,7 @@ type Org_Federation_PostArgument struct {
 	Int32Value        int32
 	Int64ListValue    []int64
 	Int64Value        int64
+	M                 *M
 	MessageListValue  []*post.Post
 	MessageValue      *post.Post
 	Post              *post.Post
@@ -515,6 +516,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	s.logger.DebugContext(ctx, "resolve  org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
 	var (
 		sg        singleflight.Group
+		valueM    *M
 		valueMu   sync.RWMutex
 		valuePost *post.Post
 		valueUser *User
@@ -538,17 +540,20 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		     autobind: true
 		   }
 		*/
-		if _, err, _ := sg.Do("m_org.federation.M", func() (interface{}, error) {
+		resMIface, err, _ := sg.Do("m_org.federation.M", func() (interface{}, error) {
 			valueMu.RLock()
 			args := &Org_Federation_MArgument{
 				Client: s.client,
 			}
 			valueMu.RUnlock()
 			return s.resolve_Org_Federation_M(ctx, args)
-		}); err != nil {
+		})
+		if err != nil {
 			return nil, err
 		}
+		resM := resMIface.(*M)
 		valueMu.Lock()
+		valueM = resM // { name: "m", message: "M" ... }
 		valueMu.Unlock()
 		return nil, nil
 	})
@@ -647,6 +652,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
+	req.M = valueM
 	req.Post = valuePost
 	req.User = valueUser
 

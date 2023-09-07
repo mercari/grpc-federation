@@ -23,6 +23,7 @@ func TestGenerate(t *testing.T) {
 		{"custom_resolver"},
 		{"async"},
 		{"alias"},
+		{"autobind"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
