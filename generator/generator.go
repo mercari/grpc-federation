@@ -207,7 +207,11 @@ func (g *Generator) compileProto(ctx context.Context, protoPath string) (*Compil
 		return nil, fmt.Errorf("failed to create source file: %w", err)
 	}
 	if outs := g.validator.Validate(ctx, file, validator.ImportPathOption(g.importPaths...), validator.AutoImportOption()); len(outs) != 0 {
-		return nil, errors.New(validator.Format(outs))
+		out := validator.Format(outs)
+		if validator.ExistsError(outs) {
+			return nil, errors.New(out)
+		}
+		fmt.Fprint(os.Stdout, out)
 	}
 	protos, err := g.compiler.Compile(ctx, file, compiler.ImportPathOption(g.importPaths...), compiler.AutoImportOption())
 	if err != nil {
