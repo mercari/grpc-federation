@@ -419,6 +419,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		// (grpc.federation.field).custom_resolver = true
 		var err error
 		ret.{{ .Name }}, err = s.resolver.{{ .ResolverName }}(ctx, &{{ .RequestType }}{
+			Client: s.client,
 			{{ .MessageArgumentName }}: req,
 			{{- if $hasMsgCustomResolver }}
 			{{ .MessageName }}: ret,

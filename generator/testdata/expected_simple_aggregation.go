@@ -734,6 +734,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		// (grpc.federation.field).custom_resolver = true
 		var err error
 		ret.Age, err = s.resolver.Resolve_Org_Federation_User_Age(ctx, &Org_Federation_User_AgeArgument{
+			Client:                      s.client,
 			Org_Federation_UserArgument: req,
 		})
 		if err != nil {

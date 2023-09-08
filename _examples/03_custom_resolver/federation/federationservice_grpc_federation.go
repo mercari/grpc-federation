@@ -603,6 +603,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		// (grpc.federation.field).custom_resolver = true
 		var err error
 		ret.User, err = s.resolver.Resolve_Federation_Post_User(ctx, &Federation_Post_UserArgument{
+			Client:                  s.client,
 			Federation_PostArgument: req,
 		})
 		if err != nil {
@@ -679,6 +680,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		// (grpc.federation.field).custom_resolver = true
 		var err error
 		ret.Name, err = s.resolver.Resolve_Federation_User_Name(ctx, &Federation_User_NameArgument{
+			Client:                  s.client,
 			Federation_UserArgument: req,
 			Federation_User:         ret,
 		})

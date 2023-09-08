@@ -642,11 +642,11 @@ func (s *Service) logMapValue(value *resolver.Field) string {
 		if typ.Repeated {
 			return fmt.Sprintf("%s(value)", s.logValueFuncName(typ))
 		}
-		return fmt.Sprintf("%s(value).String()", s.logValueFuncName(typ))
+		return fmt.Sprintf("slog.StringValue(%s(value).String())", s.logValueFuncName(typ))
 	} else if typ.Type == types.Bytes {
-		return "string(value)"
+		return "slog.StringValue(string(value))"
 	}
-	return "value"
+	return "slog.AnyValue(value)"
 }
 
 func (s *Service) msgArgumentLogValue(field *resolver.Field) string {
