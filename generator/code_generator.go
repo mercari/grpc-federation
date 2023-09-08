@@ -582,6 +582,9 @@ func (s *Service) repeatedEnumToLogValueName(enum *resolver.Enum) string {
 }
 
 func (s *Service) logType(typ *resolver.Type) string {
+	if typ.Repeated {
+		return "Any"
+	}
 	switch typ.Type {
 	case types.Double, types.Float:
 		return "Float64"
@@ -615,6 +618,19 @@ func (s *Service) logValue(field *resolver.Field) string {
 	} else if typ.Type == types.Bytes {
 		return fmt.Sprintf("string(v.Get%s())", toPublicGoVariable(field.Name))
 	}
+	if field.Type.Repeated {
+		return base
+	}
+	switch field.Type.Type {
+	case types.Int32, types.Sint32, types.Sfixed32:
+		base = fmt.Sprintf("int64(%s)", base)
+	case types.Uint32, types.Fixed32:
+		base = fmt.Sprintf("uint64(%s)", base)
+	case types.Float:
+		base = fmt.Sprintf("float64(%s)", base)
+	case types.Bytes:
+		base = fmt.Sprintf("string(%s)", base)
+	}
 	return base
 }
 
@@ -643,6 +659,19 @@ func (s *Service) msgArgumentLogValue(field *resolver.Field) string {
 			return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
 		}
 		return fmt.Sprintf("%s(%s).String()", s.logValueFuncName(typ), base)
+	}
+	if field.Type.Repeated {
+		return base
+	}
+	switch field.Type.Type {
+	case types.Int32, types.Sint32, types.Sfixed32:
+		base = fmt.Sprintf("int64(%s)", base)
+	case types.Uint32, types.Fixed32:
+		base = fmt.Sprintf("uint64(%s)", base)
+	case types.Float:
+		base = fmt.Sprintf("float64(%s)", base)
+	case types.Bytes:
+		base = fmt.Sprintf("string(%s)", base)
 	}
 	return base
 }
