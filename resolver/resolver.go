@@ -790,6 +790,10 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 		fromEnumName := fromType.Enum.FQDN()
 		toEnum := toType.Enum
 		toEnumName := toEnum.FQDN()
+		if toEnumName == fromEnumName {
+			// assignment of the same type is okay.
+			return
+		}
 		var toEnumMessageName string
 		if toEnum.Message != nil {
 			toEnumMessageName = toEnum.Message.Name
