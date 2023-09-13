@@ -1168,7 +1168,7 @@ type CastOneof struct {
 
 func (f *CastField) ToOneof() *CastOneof {
 	toField := f.toType.OneofField
-	msg := f.toType.Ref
+	msg := f.toType.OneofField.Oneof.Message
 
 	fromField := f.fromType.OneofField
 	fromType := fromField.Type.Clone()
@@ -1178,6 +1178,7 @@ func (f *CastField) ToOneof() *CastOneof {
 	requiredCast := requiredCast(fromType, toType)
 	names := append(
 		msg.ParentMessageNames(),
+		msg.Name,
 		util.ToPublicGoVariable(toField.Name),
 	)
 	name := strings.Join(names, "_")
