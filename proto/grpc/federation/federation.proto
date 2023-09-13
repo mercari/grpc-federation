@@ -30,6 +30,10 @@ extend google.protobuf.EnumValueOptions {
   EnumValueRule enum_value = 70000;
 }
 
+extend google.protobuf.OneofOptions {
+  OneofRule oneof = 70000;
+}
+
 message EnumRule {
   // alias mapping between enums defined in other packages and enums defined on the federation service side.
   // The alias is the FQDN ( <package-name>.<enum-name> ) to the enum.
@@ -46,6 +50,9 @@ message EnumValueRule {
   // and specifies the value name to be referenced among the enums specified in alias of enum option.
   // multiple value names can be specified for alias.
   repeated string alias = 2;
+}
+
+message OneofRule {
 }
 
 // ServiceRule define GRPC Federation rules for the service.

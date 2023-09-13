@@ -429,6 +429,14 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			return nil, err
 		}
 	}
+	{{- else if .IsOneofField }}
+	{{ $name := .Name }}
+	switch {
+	{{- range .OneofFields }}
+	case {{ .Value }} != nil:
+		ret.{{ $name }} = {{ .Value }}
+	{{- end }}
+	}
 	{{- else }}
 	ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
 	{{- end }}
@@ -442,6 +450,8 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseType }} {
 	{{- if .IsSlice }}
 	{{- template "castRepeated" .ToSlice }}
+    {{- else if .IsOneof }}
+    {{- template "castOneof" .ToOneof }}
 	{{- else if .IsStruct }}
 	{{- template "castMessage" .ToStruct }}
 	{{- else if .IsEnum }}
@@ -510,6 +520,9 @@ return ret
 {{- end }}
 
 {{- define "castMessage" }}
+if from == nil {
+	return nil
+}
 return &{{ .Name }}{
 	{{- range .Fields }}
 	{{- if .RequiredCast }}
@@ -517,6 +530,19 @@ return &{{ .Name }}{
 	{{- else }}
 	{{ .ToFieldName }}: from.Get{{ .FromFieldName }}(),
 	{{- end }}
+	{{- end }}
+}
+{{- end }}
+
+{{- define "castOneof" }}
+if from == nil {
+	return nil
+}
+return &{{ .Name }}{
+	{{- if .RequiredCast }}
+	{{ .FieldName }}: s.{{ .CastName }}(from),
+	{{- else }}
+	{{ .FieldName }}: from,
 	{{- end }}
 }
 {{- end }}

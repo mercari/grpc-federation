@@ -142,6 +142,28 @@ func TestSimpleAggregation(t *testing.T) {
 						AddField("value", resolver.AnyType).
 						Build(t),
 				).
+				AddMessage(
+					testutil.NewMessageBuilder("AttrA").
+						AddFieldWithAlias("foo", resolver.StringType, ref.Field(t, "org.user", "User.AttrA", "foo")).
+						SetRule(
+							testutil.NewMessageRuleBuilder().
+								SetAlias(ref.Message(t, "org.user", "User.AttrA")).
+								SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
+								Build(t),
+						).
+						Build(t),
+				).
+				AddMessage(
+					testutil.NewMessageBuilder("AttrB").
+						AddFieldWithAlias("bar", resolver.BoolType, ref.Field(t, "org.user", "User.AttrB", "bar")).
+						SetRule(
+							testutil.NewMessageRuleBuilder().
+								SetAlias(ref.Message(t, "org.user", "User.AttrB")).
+								SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
+								Build(t),
+						).
+						Build(t),
+				).
 				AddFieldWithAutoBind("id", resolver.StringType, ref.Field(t, "org.user", "User", "id")).
 				AddFieldWithAutoBind("type", ref.Type(t, "org.federation", "UserType"), ref.Field(t, "org.user", "User", "type")).
 				AddFieldWithAutoBind("name", resolver.StringType, ref.Field(t, "org.user", "User", "name")).
@@ -150,6 +172,9 @@ func TestSimpleAggregation(t *testing.T) {
 				AddFieldWithAutoBind("main_item", ref.Type(t, "org.federation", "Item"), ref.Field(t, "org.user", "User", "main_item")).
 				AddFieldWithAutoBind("items", ref.RepeatedType(t, "org.federation", "Item"), ref.Field(t, "org.user", "User", "items")).
 				AddFieldWithTypeNameAndAutoBind(t, "profile", "ProfileEntry", true, ref.Field(t, "org.user", "User", "profile")).
+				AddFieldWithTypeNameAndAutoBind(t, "attr_a", "AttrA", false, ref.Field(t, "org.user", "User", "attr_a")).
+				AddFieldWithTypeNameAndAutoBind(t, "b", "AttrB", false, ref.Field(t, "org.user", "User", "b")).
+				AddOneof(testutil.NewOneofBuilder("attr").AddFieldNames("attr_a", "b").Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetMethodCall(
@@ -1547,6 +1572,16 @@ func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 						AddField("value", resolver.AnyType).
 						Build(t),
 				).
+				AddMessage(
+					testutil.NewMessageBuilder("AttrA").
+						AddField("foo", resolver.StringType).
+						Build(t),
+				).
+				AddMessage(
+					testutil.NewMessageBuilder("AttrB").
+						AddField("bar", resolver.BoolType).
+						Build(t),
+				).
 				AddField("id", resolver.StringType).
 				AddField("type", ref.Type(t, "org.user", "UserType")).
 				AddField("name", resolver.StringType).
@@ -1555,6 +1590,9 @@ func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddField("main_item", ref.Type(t, "org.user", "Item")).
 				AddField("items", ref.RepeatedType(t, "org.user", "Item")).
 				AddFieldWithTypeName(t, "profile", "ProfileEntry", true).
+				AddFieldWithTypeName(t, "attr_a", "AttrA", false).
+				AddFieldWithTypeName(t, "b", "AttrB", false).
+				AddOneof(testutil.NewOneofBuilder("attr").AddFieldNames("attr_a", "b").Build(t)).
 				Build(t),
 		).
 		AddMessage(

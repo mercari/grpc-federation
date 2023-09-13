@@ -18,9 +18,7 @@ func (f *Field) TypeConversionDecls() []*TypeConversionDecl {
 	}
 	fromType := f.SourceType()
 	toType := f.Type
-	decls := []*TypeConversionDecl{{From: fromType, To: toType}}
-	decls = append(decls, typeConversionDecls(fromType, toType)...)
-	return uniqueTypeConversionDecls(decls)
+	return uniqueTypeConversionDecls(typeConversionDecls(fromType, toType))
 }
 
 func (f *Field) RequiredTypeConversion() bool {

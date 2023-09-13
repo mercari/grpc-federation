@@ -71,6 +71,7 @@ type Message struct {
 	Option *MessageOption
 	Field  *Field
 	Enum   *Enum
+	Oneof  *Oneof
 }
 
 // Field represents message field location.
@@ -83,6 +84,14 @@ type Field struct {
 type FieldOption struct {
 	By    bool
 	Alias bool
+}
+
+type Oneof struct {
+	Name   string
+	Option *OneofOption
+}
+
+type OneofOption struct {
 }
 
 // MessageOption represents grpc.federation.message option location.
@@ -445,6 +454,19 @@ func MessageOptionLocation(fileName, msgName string) *Location {
 		Message: &Message{
 			Name:   msgName,
 			Option: &MessageOption{},
+		},
+	}
+}
+
+// OneofOptionLocation creates location for grpc.federaiton.oneof option.
+func OneofOptionLocation(fileName, msgName, oneofName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Oneof: &Oneof{
+				Name: oneofName,
+			},
 		},
 	}
 }

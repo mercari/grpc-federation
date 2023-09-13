@@ -233,7 +233,11 @@ func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
 	case types.Enum:
 		typ = enumTypeToText(baseSvc, t.Enum)
 	case types.Message:
-		typ = messageTypeToText(baseSvc, t.Ref)
+		if t.OneofField != nil {
+			typ = oneofTypeToText(baseSvc, t.OneofField)
+		} else {
+			typ = messageTypeToText(baseSvc, t.Ref)
+		}
 	default:
 		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Type)
 	}
@@ -241,6 +245,15 @@ func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
 		return "[]" + typ
 	}
 	return typ
+}
+
+func oneofTypeToText(baseSvc *resolver.Service, oneofField *resolver.OneofField) string {
+	msg := messageTypeToText(baseSvc, oneofField.Oneof.Message)
+	oneof := fmt.Sprintf("%s_%s", msg, toPublicGoVariable(oneofField.Field.Name))
+	if isOneofConflictName(oneofField) {
+		oneof += "_"
+	}
+	return oneof
 }
 
 func messageTypeToText(baseSvc *resolver.Service, msg *resolver.Message) string {
@@ -909,11 +922,18 @@ type ReturnField struct {
 	Name                  string
 	Value                 string
 	IsCustomResolverField bool
+	IsOneofField          bool
+	OneofFields           []*OneofField
 	ResolverName          string
 	RequestType           string
 	MessageName           string
 	MessageArgumentName   string
 	ProtoComment          string
+}
+
+type OneofField struct {
+	*ReturnField
+	GetValue string
 }
 
 type CastField struct {
@@ -924,6 +944,11 @@ type CastField struct {
 }
 
 func (f *CastField) RequestType() string {
+	if f.fromType.OneofField != nil {
+		typ := f.fromType.OneofField.Type.Clone()
+		typ.OneofField = nil
+		return toTypeText(f.service, typ)
+	}
 	return toTypeText(f.service, f.fromType)
 }
 
@@ -941,6 +966,10 @@ func (f *CastField) ResponseProtoFQDN() string {
 
 func (f *CastField) IsSlice() bool {
 	return f.fromType.Repeated
+}
+
+func (f *CastField) IsOneof() bool {
+	return f.fromType.OneofField != nil
 }
 
 func (f *CastField) IsStruct() bool {
@@ -1116,6 +1145,42 @@ func (f *CastField) toStructByAlias() *CastStruct {
 	}
 }
 
+type CastOneof struct {
+	Name         string
+	FieldName    string
+	CastName     string
+	RequiredCast bool
+}
+
+func (f *CastField) ToOneof() *CastOneof {
+	toField := f.toType.OneofField
+	msg := f.toType.Ref
+
+	fromField := f.fromType.OneofField
+	fromType := fromField.Type.Clone()
+	toType := toField.Type.Clone()
+	fromType.OneofField = nil
+	toType.OneofField = nil
+	requiredCast := requiredCast(fromType, toType)
+	names := append(
+		msg.ParentMessageNames(),
+		toPublicGoVariable(toField.Name),
+	)
+	name := strings.Join(names, "_")
+	if isOneofConflictName(toField) {
+		name += "_"
+	}
+	if f.service.GoPackage().ImportPath != msg.GoPackage().ImportPath {
+		name = fmt.Sprintf("%s.%s", msg.GoPackage().Name, name)
+	}
+	return &CastOneof{
+		Name:         name,
+		FieldName:    toPublicGoVariable(toField.Name),
+		RequiredCast: requiredCast,
+		CastName:     castFuncName(fromType, toType),
+	}
+}
+
 func (m *Message) CastFields() []*CastField {
 	var castFields []*CastField
 	for _, decl := range m.TypeConversionDecls() {
@@ -1173,6 +1238,9 @@ func (m *Message) CustomResolverArguments() []*Argument {
 func (m *Message) ReturnFields() []*ReturnField {
 	var returnFields []*ReturnField
 	for _, field := range m.Fields {
+		if field.Oneof != nil {
+			continue
+		}
 		if !field.HasRule() {
 			continue
 		}
@@ -1190,6 +1258,9 @@ func (m *Message) ReturnFields() []*ReturnField {
 		case rule.AutoBindField != nil:
 			returnFields = append(returnFields, m.autoBindFieldToReturnField(field, rule.AutoBindField))
 		}
+	}
+	for _, oneof := range m.Oneofs {
+		returnFields = append(returnFields, m.oneofValueToReturnField(oneof))
 	}
 	return returnFields
 }
@@ -1288,6 +1359,38 @@ func (m *Message) customResolverToReturnField(field *resolver.Field) *ReturnFiel
 		RequestType:           requestType,
 		MessageArgumentName:   fmt.Sprintf("%sArgument", msgName),
 		MessageName:           msgName,
+	}
+}
+
+func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
+	var oneofFields []*OneofField
+	for _, field := range oneof.Fields {
+		if !field.HasRule() {
+			continue
+		}
+		rule := field.Rule
+		switch {
+		case rule.Value != nil:
+			value := rule.Value
+			if value.Literal != nil {
+				oneofFields = append(oneofFields, &OneofField{
+					ReturnField: m.literalValueToReturnField(field, value.Literal),
+				})
+			} else {
+				oneofFields = append(oneofFields, &OneofField{
+					ReturnField: m.pathValueToReturnField(field, value),
+				})
+			}
+		case rule.AutoBindField != nil:
+			oneofFields = append(oneofFields, &OneofField{
+				ReturnField: m.autoBindFieldToReturnField(field, rule.AutoBindField),
+			})
+		}
+	}
+	return &ReturnField{
+		Name:         toPublicGoVariable(oneof.Name),
+		IsOneofField: true,
+		OneofFields:  oneofFields,
 	}
 }
 
@@ -1841,13 +1944,29 @@ func protoFQDNToPublicGoName(fqdn string) string {
 	formattedNames := make([]string, 0, len(names))
 	for _, name := range names {
 		name = strings.Replace(name, "-", "_", -1)
-		formattedNames = append(formattedNames, toPublicVariable(name))
+		formattedNames = append(formattedNames, toPublicGoVariable(name))
 	}
 	return strings.Join(formattedNames, "_")
 }
 
 func fullServiceName(svc *resolver.Service) string {
 	return protoFQDNToPublicGoName(svc.FQDN())
+}
+
+func isOneofConflictName(oneofField *resolver.OneofField) bool {
+	if oneofField.Type.Type != types.Message {
+		return false
+	}
+	// conflict type name and field name.
+	return toPublicGoVariable(oneofField.Name) == toPublicGoVariable(oneofField.Type.Ref.Name)
+}
+
+func fullOneofName(oneofField *resolver.OneofField) string {
+	goName := protoFQDNToPublicGoName(oneofField.FQDN())
+	if isOneofConflictName(oneofField) {
+		goName += "_"
+	}
+	return goName
 }
 
 func fullMessageName(msg *resolver.Message) string {
@@ -1880,10 +1999,12 @@ func castName(typ *resolver.Type) string {
 	if typ.Repeated {
 		ret = "repeated_"
 	}
-	switch typ.Type {
-	case types.Message:
+	switch {
+	case typ.OneofField != nil:
+		ret += fullOneofName(typ.OneofField)
+	case typ.Type == types.Message:
 		ret += fullMessageName(typ.Ref)
-	case types.Enum:
+	case typ.Type == types.Enum:
 		ret += fullEnumName(typ.Enum)
 	default:
 		ret += toTypeText(nil, &resolver.Type{Type: typ.Type})

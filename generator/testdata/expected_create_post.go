@@ -385,6 +385,9 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 
 // cast_Org_Federation_CreatePost__to__Org_Post_CreatePost cast from "org.federation.CreatePost" to "org.post.CreatePost".
 func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(from *CreatePost) *post.CreatePost {
+	if from == nil {
+		return nil
+	}
 	return &post.CreatePost{
 		Title:   from.GetTitle(),
 		Content: from.GetContent(),
@@ -394,6 +397,9 @@ func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreateP
 
 // cast_Org_Post_Post__to__Org_Federation_Post cast from "org.post.Post" to "org.federation.Post".
 func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *post.Post) *Post {
+	if from == nil {
+		return nil
+	}
 	return &Post{
 		Id:      from.GetId(),
 		Title:   from.GetTitle(),

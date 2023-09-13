@@ -85,6 +85,11 @@ func (s *UserServer) GetUser(ctx context.Context, req *user.GetUserRequest) (*us
 				{Name: "item2", Type: user.Item_ITEM_TYPE_2, Value: 2},
 			},
 			Profile: map[string]*anypb.Any{"user": profile},
+			Attr: &user.User_B{
+				B: &user.User_AttrB{
+					Bar: true,
+				},
+			},
 		},
 	}, nil
 }
@@ -171,14 +176,18 @@ func TestFederation(t *testing.T) {
 						},
 					},
 					{
-						Name:     "item2",
-						Type:     federation.Item_ITEM_TYPE_2,
-						Value:    2,
-						Location: &federation.Item_Location{},
+						Name:  "item2",
+						Type:  federation.Item_ITEM_TYPE_2,
+						Value: 2,
 					},
 				},
 				Profile: map[string]*anypb.Any{
 					"user": profile,
+				},
+				Attr: &federation.User_B{
+					B: &federation.User_AttrB{
+						Bar: true,
+					},
 				},
 			},
 		},
@@ -189,6 +198,8 @@ func TestFederation(t *testing.T) {
 		federation.User{},
 		federation.Item{},
 		federation.Item_Location{},
+		federation.User_B{},
+		federation.User_AttrB{},
 		anypb.Any{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)

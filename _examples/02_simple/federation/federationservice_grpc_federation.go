@@ -502,6 +502,13 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	ret.Items = s.cast_repeated_User_Item__to__repeated_Federation_Item(valueUser.GetItems()) // { name: "user", autobind: true }
 	ret.Profile = valueUser.GetProfile()                                                      // { name: "user", autobind: true }
 
+	switch {
+	case s.cast_User_User_AttrA___to__Federation_User_AttrA_(valueUser.GetAttrA()) != nil:
+		ret.Attr = s.cast_User_User_AttrA___to__Federation_User_AttrA_(valueUser.GetAttrA())
+	case s.cast_User_User_B__to__Federation_User_B(valueUser.GetB()) != nil:
+		ret.Attr = s.cast_User_User_B__to__Federation_User_B(valueUser.GetB())
+	}
+
 	s.logger.DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
 	return ret, nil
 }
@@ -533,6 +540,9 @@ func (s *FederationService) cast_User_Item_ItemType__to__Federation_Item_ItemTyp
 
 // cast_User_Item_Location__to__Federation_Item_Location cast from "user.Item.Location" to "federation.Item.Location".
 func (s *FederationService) cast_User_Item_Location__to__Federation_Item_Location(from *user.Item_Location) *Item_Location {
+	if from == nil {
+		return nil
+	}
 	return &Item_Location{
 		Addr1: from.GetAddr1(),
 		Addr2: from.GetAddr2(),
@@ -541,11 +551,54 @@ func (s *FederationService) cast_User_Item_Location__to__Federation_Item_Locatio
 
 // cast_User_Item__to__Federation_Item cast from "user.Item" to "federation.Item".
 func (s *FederationService) cast_User_Item__to__Federation_Item(from *user.Item) *Item {
+	if from == nil {
+		return nil
+	}
 	return &Item{
 		Name:     from.GetName(),
 		Type:     s.cast_User_Item_ItemType__to__Federation_Item_ItemType(from.GetType()),
 		Value:    from.GetValue(),
 		Location: s.cast_User_Item_Location__to__Federation_Item_Location(from.GetLocation()),
+	}
+}
+
+// cast_User_User_AttrA__to__Federation_User_AttrA cast from "user.User.AttrA" to "federation.User.AttrA".
+func (s *FederationService) cast_User_User_AttrA__to__Federation_User_AttrA(from *user.User_AttrA) *User_AttrA {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrA{
+		Foo: from.GetFoo(),
+	}
+}
+
+// cast_User_User_AttrB__to__Federation_User_AttrB cast from "user.User.AttrB" to "federation.User.AttrB".
+func (s *FederationService) cast_User_User_AttrB__to__Federation_User_AttrB(from *user.User_AttrB) *User_AttrB {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrB{
+		Bar: from.GetBar(),
+	}
+}
+
+// cast_User_User_AttrA___to__Federation_User_AttrA_ cast from "user.User.attr_a" to "federation.User.attr_a".
+func (s *FederationService) cast_User_User_AttrA___to__Federation_User_AttrA_(from *user.User_AttrA) *User_AttrA_ {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrA_{
+		AttrA: s.cast_User_User_AttrA__to__Federation_User_AttrA(from),
+	}
+}
+
+// cast_User_User_B__to__Federation_User_B cast from "user.User.b" to "federation.User.b".
+func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.User_AttrB) *User_B {
+	if from == nil {
+		return nil
+	}
+	return &User_B{
+		B: s.cast_User_User_AttrB__to__Federation_User_AttrB(from),
 	}
 }
 
@@ -613,6 +666,8 @@ func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
 		slog.String("name", v.GetName()),
 		slog.Any("items", s.logvalue_repeated_Federation_Item(v.GetItems())),
 		slog.Any("profile", s.logvalue_Federation_User_ProfileEntry(v.GetProfile())),
+		slog.Any("attr_a", s.logvalue_Federation_User_AttrA(v.GetAttrA())),
+		slog.Any("b", s.logvalue_Federation_User_AttrB(v.GetB())),
 	)
 }
 
@@ -622,6 +677,18 @@ func (s *FederationService) logvalue_Federation_UserArgument(v *Federation_UserA
 		slog.String("title", v.Title),
 		slog.String("content", v.Content),
 		slog.String("user_id", v.UserId),
+	)
+}
+
+func (s *FederationService) logvalue_Federation_User_AttrA(v *User_AttrA) slog.Value {
+	return slog.GroupValue(
+		slog.String("foo", v.GetFoo()),
+	)
+}
+
+func (s *FederationService) logvalue_Federation_User_AttrB(v *User_AttrB) slog.Value {
+	return slog.GroupValue(
+		slog.Bool("bar", v.GetBar()),
 	)
 }
 

@@ -746,6 +746,13 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	ret.Items = s.cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item(valueUser.GetItems()) // { name: "user", autobind: true }
 	ret.Profile = valueUser.GetProfile()                                                              // { name: "user", autobind: true }
 
+	switch {
+	case s.cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(valueUser.GetAttrA()) != nil:
+		ret.Attr = s.cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(valueUser.GetAttrA())
+	case s.cast_Org_User_User_B__to__Org_Federation_User_B(valueUser.GetB()) != nil:
+		ret.Attr = s.cast_Org_User_User_B__to__Org_Federation_User_B(valueUser.GetB())
+	}
+
 	s.logger.DebugContext(ctx, "resolved org.federation.User", slog.Any("org.federation.User", s.logvalue_Org_Federation_User(ret)))
 	return ret, nil
 }
@@ -766,10 +773,53 @@ func (s *FederationService) cast_Org_User_Item_ItemType__to__Org_Federation_Item
 
 // cast_Org_User_Item__to__Org_Federation_Item cast from "org.user.Item" to "org.federation.Item".
 func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *user.Item) *Item {
+	if from == nil {
+		return nil
+	}
 	return &Item{
 		Name:  from.GetName(),
 		Type:  s.cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from.GetType()),
 		Value: from.GetValue(),
+	}
+}
+
+// cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA cast from "org.user.User.AttrA" to "org.federation.User.AttrA".
+func (s *FederationService) cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from *user.User_AttrA) *User_AttrA {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrA{
+		Foo: from.GetFoo(),
+	}
+}
+
+// cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB cast from "org.user.User.AttrB" to "org.federation.User.AttrB".
+func (s *FederationService) cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from *user.User_AttrB) *User_AttrB {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrB{
+		Bar: from.GetBar(),
+	}
+}
+
+// cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_ cast from "org.user.User.attr_a" to "org.federation.User.attr_a".
+func (s *FederationService) cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(from *user.User_AttrA) *User_AttrA_ {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrA_{
+		AttrA: s.cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from),
+	}
+}
+
+// cast_Org_User_User_B__to__Org_Federation_User_B cast from "org.user.User.b" to "org.federation.User.b".
+func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from *user.User_AttrB) *User_B {
+	if from == nil {
+		return nil
+	}
+	return &User_B{
+		B: s.cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from),
 	}
 }
 
@@ -919,6 +969,8 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 		slog.Any("main_item", s.logvalue_Org_Federation_Item(v.GetMainItem())),
 		slog.Any("items", s.logvalue_repeated_Org_Federation_Item(v.GetItems())),
 		slog.Any("profile", s.logvalue_Org_Federation_User_ProfileEntry(v.GetProfile())),
+		slog.Any("attr_a", s.logvalue_Org_Federation_User_AttrA(v.GetAttrA())),
+		slog.Any("b", s.logvalue_Org_Federation_User_AttrB(v.GetB())),
 	)
 }
 
@@ -939,6 +991,18 @@ func (s *FederationService) logvalue_Org_Federation_UserType(v UserType) slog.Va
 		return slog.StringValue("USER_TYPE_2")
 	}
 	return slog.StringValue("")
+}
+
+func (s *FederationService) logvalue_Org_Federation_User_AttrA(v *User_AttrA) slog.Value {
+	return slog.GroupValue(
+		slog.String("foo", v.GetFoo()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_User_AttrB(v *User_AttrB) slog.Value {
+	return slog.GroupValue(
+		slog.Bool("bar", v.GetBar()),
+	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_User_ProfileEntry(v map[string]*anypb.Any) slog.Value {
