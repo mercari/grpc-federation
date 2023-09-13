@@ -538,15 +538,66 @@ func (s *FederationService) cast_User_Item_ItemType__to__Federation_Item_ItemTyp
 	}
 }
 
+// cast_User_Item_Location_AddrA__to__Federation_Item_Location_AddrA cast from "user.Item.Location.AddrA" to "federation.Item.Location.AddrA".
+func (s *FederationService) cast_User_Item_Location_AddrA__to__Federation_Item_Location_AddrA(from *user.Item_Location_AddrA) *Item_Location_AddrA {
+	if from == nil {
+		return nil
+	}
+
+	return &Item_Location_AddrA{
+		Foo: from.GetFoo(),
+	}
+}
+
+// cast_User_Item_Location_AddrB__to__Federation_Item_Location_AddrB cast from "user.Item.Location.AddrB" to "federation.Item.Location.AddrB".
+func (s *FederationService) cast_User_Item_Location_AddrB__to__Federation_Item_Location_AddrB(from *user.Item_Location_AddrB) *Item_Location_AddrB {
+	if from == nil {
+		return nil
+	}
+
+	return &Item_Location_AddrB{
+		Bar: from.GetBar(),
+	}
+}
+
+// cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_ cast from "user.Item.Location.addr_a" to "federation.Item.Location.addr_a".
+func (s *FederationService) cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(from *user.Item_Location_AddrA) *Item_Location_AddrA_ {
+	if from == nil {
+		return nil
+	}
+	return &Item_Location_AddrA_{
+		AddrA: s.cast_User_Item_Location_AddrA__to__Federation_Item_Location_AddrA(from),
+	}
+}
+
+// cast_User_Item_Location_B__to__Federation_Item_Location_B cast from "user.Item.Location.b" to "federation.Item.Location.b".
+func (s *FederationService) cast_User_Item_Location_B__to__Federation_Item_Location_B(from *user.Item_Location_AddrB) *Item_Location_B {
+	if from == nil {
+		return nil
+	}
+	return &Item_Location_B{
+		B: s.cast_User_Item_Location_AddrB__to__Federation_Item_Location_AddrB(from),
+	}
+}
+
 // cast_User_Item_Location__to__Federation_Item_Location cast from "user.Item.Location" to "federation.Item.Location".
 func (s *FederationService) cast_User_Item_Location__to__Federation_Item_Location(from *user.Item_Location) *Item_Location {
 	if from == nil {
 		return nil
 	}
-	return &Item_Location{
+
+	ret := &Item_Location{
 		Addr1: from.GetAddr1(),
 		Addr2: from.GetAddr2(),
 	}
+	switch {
+
+	case from.GetAddrA() != nil:
+		ret.Addr3 = s.cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(from.GetAddrA())
+	case from.GetB() != nil:
+		ret.Addr3 = s.cast_User_Item_Location_B__to__Federation_Item_Location_B(from.GetB())
+	}
+	return ret
 }
 
 // cast_User_Item__to__Federation_Item cast from "user.Item" to "federation.Item".
@@ -554,6 +605,7 @@ func (s *FederationService) cast_User_Item__to__Federation_Item(from *user.Item)
 	if from == nil {
 		return nil
 	}
+
 	return &Item{
 		Name:     from.GetName(),
 		Type:     s.cast_User_Item_ItemType__to__Federation_Item_ItemType(from.GetType()),
@@ -567,6 +619,7 @@ func (s *FederationService) cast_User_User_AttrA__to__Federation_User_AttrA(from
 	if from == nil {
 		return nil
 	}
+
 	return &User_AttrA{
 		Foo: from.GetFoo(),
 	}
@@ -577,6 +630,7 @@ func (s *FederationService) cast_User_User_AttrB__to__Federation_User_AttrB(from
 	if from == nil {
 		return nil
 	}
+
 	return &User_AttrB{
 		Bar: from.GetBar(),
 	}
@@ -642,6 +696,20 @@ func (s *FederationService) logvalue_Federation_Item_Location(v *Item_Location) 
 	return slog.GroupValue(
 		slog.String("addr1", v.GetAddr1()),
 		slog.String("addr2", v.GetAddr2()),
+		slog.Any("addr_a", s.logvalue_Federation_Item_Location_AddrA(v.GetAddrA())),
+		slog.Any("b", s.logvalue_Federation_Item_Location_AddrB(v.GetB())),
+	)
+}
+
+func (s *FederationService) logvalue_Federation_Item_Location_AddrA(v *Item_Location_AddrA) slog.Value {
+	return slog.GroupValue(
+		slog.String("foo", v.GetFoo()),
+	)
+}
+
+func (s *FederationService) logvalue_Federation_Item_Location_AddrB(v *Item_Location_AddrB) slog.Value {
+	return slog.GroupValue(
+		slog.Int64("bar", v.GetBar()),
 	)
 }
 

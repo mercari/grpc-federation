@@ -1067,6 +1067,12 @@ func (f *CastField) ToSlice() *CastSlice {
 type CastStruct struct {
 	Name   string
 	Fields []*CastStructField
+	Oneofs []*CastOneofStruct
+}
+
+type CastOneofStruct struct {
+	Name   string
+	Fields []*CastStructField
 }
 
 type CastStructField struct {
@@ -1077,71 +1083,78 @@ type CastStructField struct {
 }
 
 func (f *CastField) ToStruct() *CastStruct {
-	toMessage := f.toType.Ref
-	if toMessage.HasRule() && toMessage.Rule.Alias != nil {
-		return f.toStructByAlias()
-	}
-	fromMessage := f.fromType.Ref
+	toMsg := f.toType.Ref
+	fromMsg := f.fromType.Ref
+
 	var castFields []*CastStructField
-	for _, toField := range toMessage.Fields {
-		fromField := fromMessage.Field(toField.Name)
-		if fromField == nil {
+	for _, toField := range toMsg.Fields {
+		if toField.Type.OneofField != nil {
 			continue
 		}
-		fromType := fromField.Type
-		toType := toField.Type
-		if fromType.Type != toType.Type {
+		field := f.toStructField(toField, fromMsg)
+		if field == nil {
 			continue
 		}
-		requiredCast := requiredCast(fromType, toType)
-		castFields = append(castFields, &CastStructField{
-			ToFieldName:   toPublicGoVariable(toField.Name),
-			FromFieldName: toPublicGoVariable(fromField.Name),
-			RequiredCast:  requiredCast,
-			CastName:      castFuncName(fromType, toType),
+		castFields = append(castFields, field)
+	}
+
+	var castOneofStructs []*CastOneofStruct
+	for _, oneof := range toMsg.Oneofs {
+		var fields []*CastStructField
+		for _, toField := range oneof.Fields {
+			if toField.Type.OneofField == nil {
+				continue
+			}
+			field := f.toStructField(toField, fromMsg)
+			if field == nil {
+				continue
+			}
+			fields = append(fields, field)
+		}
+		castOneofStructs = append(castOneofStructs, &CastOneofStruct{
+			Name:   toPublicGoVariable(oneof.Name),
+			Fields: fields,
 		})
 	}
-	name := strings.Join(append(toMessage.ParentMessageNames(), toMessage.Name), "_")
-	if f.service.GoPackage().ImportPath != toMessage.GoPackage().ImportPath {
-		name = fmt.Sprintf("%s.%s", toMessage.GoPackage().Name, name)
+
+	name := strings.Join(append(toMsg.ParentMessageNames(), toMsg.Name), "_")
+	if f.service.GoPackage().ImportPath != toMsg.GoPackage().ImportPath {
+		name = fmt.Sprintf("%s.%s", toMsg.GoPackage().Name, name)
 	}
 	return &CastStruct{
 		Name:   name,
 		Fields: castFields,
+		Oneofs: castOneofStructs,
 	}
 }
 
-func (f *CastField) toStructByAlias() *CastStruct {
-	toMessage := f.toType.Ref
-	var castFields []*CastStructField
-	for _, toField := range toMessage.Fields {
-		if !toField.HasRule() {
-			continue
+func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Message) *CastStructField {
+	var (
+		fromField *resolver.Field
+		toType    *resolver.Type
+		fromType  *resolver.Type
+	)
+	if toField.HasRule() && toField.Rule.Alias != nil {
+		fromField = toField.Rule.Alias
+		fromType = fromField.Type
+		toType = toField.Type
+	} else {
+		fromField = fromMsg.Field(toField.Name)
+		if fromField == nil {
+			return nil
 		}
-		if toField.Rule.Alias == nil {
-			continue
-		}
-		fromField := toField.Rule.Alias
-		fromType := fromField.Type
-		toType := toField.Type
-		if fromType.Type != toType.Type {
-			continue
-		}
-		requiredCast := requiredCast(fromType, toType)
-		castFields = append(castFields, &CastStructField{
-			ToFieldName:   toPublicGoVariable(toField.Name),
-			FromFieldName: toPublicGoVariable(fromField.Name),
-			RequiredCast:  requiredCast,
-			CastName:      castFuncName(fromType, toType),
-		})
+		fromType = fromField.Type
+		toType = toField.Type
 	}
-	name := strings.Join(append(toMessage.ParentMessageNames(), toMessage.Name), "_")
-	if f.service.GoPackage().ImportPath != toMessage.GoPackage().ImportPath {
-		name = fmt.Sprintf("%s.%s", toMessage.GoPackage().Name, name)
+	if fromType.Type != toType.Type {
+		return nil
 	}
-	return &CastStruct{
-		Name:   name,
-		Fields: castFields,
+	requiredCast := requiredCast(fromType, toType)
+	return &CastStructField{
+		ToFieldName:   toPublicGoVariable(toField.Name),
+		FromFieldName: toPublicGoVariable(fromField.Name),
+		RequiredCast:  requiredCast,
+		CastName:      castFuncName(fromType, toType),
 	}
 }
 

@@ -776,6 +776,7 @@ func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *us
 	if from == nil {
 		return nil
 	}
+
 	return &Item{
 		Name:  from.GetName(),
 		Type:  s.cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from.GetType()),
@@ -788,6 +789,7 @@ func (s *FederationService) cast_Org_User_User_AttrA__to__Org_Federation_User_At
 	if from == nil {
 		return nil
 	}
+
 	return &User_AttrA{
 		Foo: from.GetFoo(),
 	}
@@ -798,6 +800,7 @@ func (s *FederationService) cast_Org_User_User_AttrB__to__Org_Federation_User_At
 	if from == nil {
 		return nil
 	}
+
 	return &User_AttrB{
 		Bar: from.GetBar(),
 	}

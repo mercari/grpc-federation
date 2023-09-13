@@ -523,15 +523,49 @@ return ret
 if from == nil {
 	return nil
 }
-return &{{ .Name }}{
+{{ $oneofFields := .Oneofs }}
+{{- if $oneofFields }}
+ret := &{{ .Name }}{
 	{{- range .Fields }}
+
 	{{- if .RequiredCast }}
 	{{ .ToFieldName }}: s.{{ .CastName }}(from.Get{{ .FromFieldName }}()),
 	{{- else }}
 	{{ .ToFieldName }}: from.Get{{ .FromFieldName }}(),
 	{{- end }}
+
 	{{- end }}
 }
+{{- range .Oneofs }}
+switch {
+	{{ $name := .Name }}
+	{{- range .Fields }}
+	case from.Get{{ .FromFieldName }}() != nil:
+	{{- if .RequiredCast }}
+	ret.{{ $name }} = s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+	{{- else }}
+	ret.{{ $name }} = from.Get{{ .FromFieldName }}()
+	{{- end }}
+	{{- end }}
+}
+{{- end }}
+return ret
+
+{{- else }}
+
+return &{{ .Name }}{
+	{{- range .Fields }}
+
+	{{- if .RequiredCast }}
+	{{ .ToFieldName }}: s.{{ .CastName }}(from.Get{{ .FromFieldName }}()),
+	{{- else }}
+	{{ .ToFieldName }}: from.Get{{ .FromFieldName }}(),
+	{{- end }}
+
+	{{- end }}
+}
+
+{{- end }}
 {{- end }}
 
 {{- define "castOneof" }}

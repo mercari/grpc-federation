@@ -113,6 +113,18 @@ message Item {
 
     string addr1 = 1;
     string addr2 = 2;
+    oneof addr3 {
+      AddrA addr_a = 3;
+      AddrB b = 4;
+    };
+    message AddrA {
+      option (grpc.federation.message).alias = "user.Item.Location.AddrA";
+      string foo = 1;
+    }
+    message AddrB {
+      option (grpc.federation.message).alias = "user.Item.Location.AddrB";
+      int64 bar = 1;
+    }
   }
   string name = 1;
   ItemType type = 2;

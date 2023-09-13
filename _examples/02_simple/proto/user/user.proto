@@ -54,6 +54,16 @@ message Item {
   message Location {
     string addr1 = 1;
     string addr2 = 2;
+    oneof addr3 {
+      AddrA addr_a = 3;
+      AddrB b = 4;
+    };
+    message AddrA {
+      string foo = 1;
+    }
+    message AddrB {
+      int64 bar = 1;
+    }
   }
   string name = 1;
   ItemType type = 2;

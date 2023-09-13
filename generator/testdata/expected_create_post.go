@@ -388,6 +388,7 @@ func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreateP
 	if from == nil {
 		return nil
 	}
+
 	return &post.CreatePost{
 		Title:   from.GetTitle(),
 		Content: from.GetContent(),
@@ -400,6 +401,7 @@ func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *po
 	if from == nil {
 		return nil
 	}
+
 	return &Post{
 		Id:      from.GetId(),
 		Title:   from.GetTitle(),
