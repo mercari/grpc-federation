@@ -77,24 +77,24 @@ func TestSimpleAggregation(t *testing.T) {
 				AddField("sfixed64_value", resolver.Sfixed64Type).
 				AddField("bool_value", resolver.BoolType).
 				AddField("string_value", resolver.StringType).
-				AddField("bytes_value", resolver.BytesType).
+				AddField("byte_string_value", resolver.BytesType).
 				AddField("message_value", ref.Type(t, "org.post", "Post")).
-				AddField("double_list_value", resolver.DoubleRepeatedType).
-				AddField("float_list_value", resolver.FloatRepeatedType).
-				AddField("int32_list_value", resolver.Int32RepeatedType).
-				AddField("int64_list_value", resolver.Int64RepeatedType).
-				AddField("uint32_list_value", resolver.Uint32RepeatedType).
-				AddField("uint64_list_value", resolver.Uint64RepeatedType).
-				AddField("sint32_list_value", resolver.Sint32RepeatedType).
-				AddField("sint64_list_value", resolver.Sint64RepeatedType).
-				AddField("fixed32_list_value", resolver.Fixed32RepeatedType).
-				AddField("fixed64_list_value", resolver.Fixed64RepeatedType).
-				AddField("sfixed32_list_value", resolver.Sfixed32RepeatedType).
-				AddField("sfixed64_list_value", resolver.Sfixed64RepeatedType).
-				AddField("bool_list_value", resolver.BoolRepeatedType).
-				AddField("string_list_value", resolver.StringRepeatedType).
-				AddField("bytes_list_value", resolver.BytesRepeatedType).
-				AddField("message_list_value", ref.RepeatedType(t, "org.post", "Post")).
+				AddField("doubles_value", resolver.DoubleRepeatedType).
+				AddField("floats_value", resolver.FloatRepeatedType).
+				AddField("int32s_value", resolver.Int32RepeatedType).
+				AddField("int64s_value", resolver.Int64RepeatedType).
+				AddField("uint32s_value", resolver.Uint32RepeatedType).
+				AddField("uint64s_value", resolver.Uint64RepeatedType).
+				AddField("sint32s_value", resolver.Sint32RepeatedType).
+				AddField("sint64s_value", resolver.Sint64RepeatedType).
+				AddField("fixed32s_value", resolver.Fixed32RepeatedType).
+				AddField("fixed64s_value", resolver.Fixed64RepeatedType).
+				AddField("sfixed32s_value", resolver.Sfixed32RepeatedType).
+				AddField("sfixed64s_value", resolver.Sfixed64RepeatedType).
+				AddField("bools_value", resolver.BoolRepeatedType).
+				AddField("strings_value", resolver.StringRepeatedType).
+				AddField("byte_strings_value", resolver.BytesRepeatedType).
+				AddField("messages_value", ref.RepeatedType(t, "org.post", "Post")).
 				Build(t),
 		).
 		AddMessage(
@@ -339,24 +339,24 @@ func TestSimpleAggregation(t *testing.T) {
 								Add("sfixed64_value", resolver.NewSfixed64Value(8)).
 								Add("bool_value", resolver.NewBoolValue(true)).
 								Add("string_value", resolver.NewStringValue("hello")).
-								Add("bytes_value", resolver.NewBytesValue([]byte("hello"))).
+								Add("byte_string_value", resolver.NewBytesValue([]byte("hello"))).
 								Add("message_value", resolver.NewMessageValue(ref.Type(t, "org.post", "Post"), map[string]*resolver.Value{"content": resolver.NewStringValue("xxxyyyzzz")})).
-								Add("double_list_value", resolver.NewDoubleListValue(1.23, 4.56)).
-								Add("float_list_value", resolver.NewFloatListValue(7.89, 1.23)).
-								Add("int32_list_value", resolver.NewInt32ListValue(1, 2, 3)).
-								Add("int64_list_value", resolver.NewInt64ListValue(4, 5, 6)).
-								Add("uint32_list_value", resolver.NewUint32ListValue(7, 8, 9)).
-								Add("uint64_list_value", resolver.NewUint64ListValue(10, 11, 12)).
-								Add("sint32_list_value", resolver.NewSint32ListValue(-1, -2, -3)).
-								Add("sint64_list_value", resolver.NewSint64ListValue(-4, -5, -6)).
-								Add("fixed32_list_value", resolver.NewFixed32ListValue(11, 12, 13)).
-								Add("fixed64_list_value", resolver.NewFixed64ListValue(14, 15, 16)).
-								Add("sfixed32_list_value", resolver.NewSfixed32ListValue(-1, -2, -3)).
-								Add("sfixed64_list_value", resolver.NewSfixed64ListValue(-4, -5, -6)).
-								Add("bool_list_value", resolver.NewBoolListValue(false, true)).
-								Add("string_list_value", resolver.NewStringListValue("hello", "world")).
-								Add("bytes_list_value", resolver.NewBytesListValue([]byte("hello"), []byte("world"))).
-								Add("message_list_value", resolver.NewMessageListValue(ref.RepeatedType(t, "org.post", "Post"), map[string]*resolver.Value{"content": resolver.NewStringValue("aaabbbccc")})).
+								Add("doubles_value", resolver.NewDoubleListValue(1.23, 4.56)).
+								Add("floats_value", resolver.NewFloatListValue(7.89, 1.23)).
+								Add("int32s_value", resolver.NewInt32ListValue(1, 2, 3)).
+								Add("int64s_value", resolver.NewInt64ListValue(4, 5, 6)).
+								Add("uint32s_value", resolver.NewUint32ListValue(7, 8, 9)).
+								Add("uint64s_value", resolver.NewUint64ListValue(10, 11, 12)).
+								Add("sint32s_value", resolver.NewSint32ListValue(-1, -2, -3)).
+								Add("sint64s_value", resolver.NewSint64ListValue(-4, -5, -6)).
+								Add("fixed32s_value", resolver.NewFixed32ListValue(11, 12, 13)).
+								Add("fixed64s_value", resolver.NewFixed64ListValue(14, 15, 16)).
+								Add("sfixed32s_value", resolver.NewSfixed32ListValue(-1, -2, -3)).
+								Add("sfixed64s_value", resolver.NewSfixed64ListValue(-4, -5, -6)).
+								Add("bools_value", resolver.NewBoolListValue(false, true)).
+								Add("strings_value", resolver.NewStringListValue("hello", "world")).
+								Add("byte_strings_value", resolver.NewBytesListValue([]byte("hello"), []byte("world"))).
+								Add("messages_value", resolver.NewMessageListValue(ref.RepeatedType(t, "org.post", "Post"), map[string]*resolver.Value{"content": resolver.NewStringValue("aaabbbccc")})).
 								Build(t),
 							false,
 							true,

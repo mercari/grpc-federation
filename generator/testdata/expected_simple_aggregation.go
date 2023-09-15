@@ -135,43 +135,43 @@ type Org_Federation_MArgument struct {
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type Org_Federation_PostArgument struct {
-	Client            *FederationServiceDependencyServiceClient
-	BoolListValue     []bool
-	BoolValue         bool
-	BytesListValue    [][]byte
-	BytesValue        []byte
-	DoubleListValue   []float64
-	DoubleValue       float64
-	Fixed32ListValue  []uint32
-	Fixed32Value      uint32
-	Fixed64ListValue  []uint64
-	Fixed64Value      uint64
-	FloatListValue    []float32
-	FloatValue        float32
-	Id                string
-	Int32ListValue    []int32
-	Int32Value        int32
-	Int64ListValue    []int64
-	Int64Value        int64
-	M                 *M
-	MessageListValue  []*post.Post
-	MessageValue      *post.Post
-	Post              *post.Post
-	Sfixed32ListValue []int32
-	Sfixed32Value     int32
-	Sfixed64ListValue []int64
-	Sfixed64Value     int64
-	Sint32ListValue   []int32
-	Sint32Value       int32
-	Sint64ListValue   []int64
-	Sint64Value       int64
-	StringListValue   []string
-	StringValue       string
-	Uint32ListValue   []uint32
-	Uint32Value       uint32
-	Uint64ListValue   []uint64
-	Uint64Value       uint64
-	User              *User
+	Client           *FederationServiceDependencyServiceClient
+	BoolValue        bool
+	BoolsValue       []bool
+	ByteStringValue  []byte
+	ByteStringsValue [][]byte
+	DoubleValue      float64
+	DoublesValue     []float64
+	Fixed32Value     uint32
+	Fixed32sValue    []uint32
+	Fixed64Value     uint64
+	Fixed64sValue    []uint64
+	FloatValue       float32
+	FloatsValue      []float32
+	Id               string
+	Int32Value       int32
+	Int32sValue      []int32
+	Int64Value       int64
+	Int64sValue      []int64
+	M                *M
+	MessageValue     *post.Post
+	MessagesValue    []*post.Post
+	Post             *post.Post
+	Sfixed32Value    int32
+	Sfixed32sValue   []int32
+	Sfixed64Value    int64
+	Sfixed64sValue   []int64
+	Sint32Value      int32
+	Sint32sValue     []int32
+	Sint64Value      int64
+	Sint64sValue     []int64
+	StringValue      string
+	StringsValue     []string
+	Uint32Value      uint32
+	Uint32sValue     []uint32
+	Uint64Value      uint64
+	Uint64sValue     []uint64
+	User             *User
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
@@ -412,64 +412,64 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	       { name: "sfixed64_value", sfixed64: 8 },
 	       { name: "bool_value", bool: true },
 	       { name: "string_value", string: "hello" },
-	       { name: "bytes_value", bytes: "hello" },
+	       { name: "byte_string_value", byte_string: "hello" },
 	       { name: "message_value", message: { name: "org.post.Post", fields: [{ field: "content", string: "xxxyyyzzz" }] } },
-	       { name: "double_list_value", double_list: { values: [1.23, 4.56] } },
-	       { name: "float_list_value", float_list: { values: [7.89, 1.23] } },
-	       { name: "int32_list_value", int32_list: { values: [1, 2, 3] } },
-	       { name: "int64_list_value", int64_list: { values: [4, 5, 6] } },
-	       { name: "uint32_list_value", uint32_list: { values: [7, 8, 9] } },
-	       { name: "uint64_list_value", uint64_list: { values: [10, 11, 12] } },
-	       { name: "sint32_list_value", sint32_list: { values: [-1, -2, -3] } },
-	       { name: "sint64_list_value", sint64_list: { values: [-4, -5, -6] } },
-	       { name: "fixed32_list_value", fixed32_list: { values: [11, 12, 13] } },
-	       { name: "fixed64_list_value", fixed64_list: { values: [14, 15, 16] } },
-	       { name: "sfixed32_list_value", sfixed32_list: { values: [-1, -2, -3] } },
-	       { name: "sfixed64_list_value", sfixed64_list: { values: [-4, -5, -6] } },
-	       { name: "bool_list_value", bool_list: { values: [false, true] } },
-	       { name: "string_list_value", string_list: { values: ["hello", "world"] } },
-	       { name: "bytes_list_value", bytes_list: { values: ["hello", "world"] } },
-	       { name: "message_list_value", message_list: { values: [{ name: "org.post.Post", fields: [{ field: "content", string: "aaabbbccc" }] }] } }
+	       { name: "doubles_value", doubles: [1.23, 4.56] },
+	       { name: "floats_value", floats: [7.89, 1.23] },
+	       { name: "int32s_value", int32s: [1, 2, 3] },
+	       { name: "int64s_value", int64s: [4, 5, 6] },
+	       { name: "uint32s_value", uint32s: [7, 8, 9] },
+	       { name: "uint64s_value", uint64s: [10, 11, 12] },
+	       { name: "sint32s_value", sint32s: [-1, -2, -3] },
+	       { name: "sint64s_value", sint64s: [-4, -5, -6] },
+	       { name: "fixed32s_value", fixed32s: [11, 12, 13] },
+	       { name: "fixed64s_value", fixed64s: [14, 15, 16] },
+	       { name: "sfixed32s_value", sfixed32s: [-1, -2, -3] },
+	       { name: "sfixed64s_value", sfixed64s: [-4, -5, -6] },
+	       { name: "bools_value", bools: [false, true] },
+	       { name: "strings_value", strings: ["hello", "world"] },
+	       { name: "byte_strings_value", byte_strings: ["hello", "world"] },
+	       { name: "messages_value", messages: [{ name: "org.post.Post", fields: [{ field: "content", string: "aaabbbccc" }] }] }
 	     ]
 	   }
 	*/
 	resPostIface, err, _ := sg.Do("post_org.federation.Post", func() (interface{}, error) {
 		valueMu.RLock()
 		args := &Org_Federation_PostArgument{
-			Client:            s.client,
-			Id:                req.Id,                                                                     // { name: "id", by: "$.id" }
-			DoubleValue:       1.23,                                                                       // { name: "double_value", double: 1.23 }
-			FloatValue:        4.56,                                                                       // { name: "float_value", float: 4.56 }
-			Int32Value:        1,                                                                          // { name: "int32_value", int32: 1 }
-			Int64Value:        2,                                                                          // { name: "int64_value", int64: 2 }
-			Uint32Value:       3,                                                                          // { name: "uint32_value", uint32: 3 }
-			Uint64Value:       4,                                                                          // { name: "uint64_value", uint64: 4 }
-			Sint32Value:       -1,                                                                         // { name: "sint32_value", sint32: -1 }
-			Sint64Value:       -2,                                                                         // { name: "sint64_value", sint64: -2 }
-			Fixed32Value:      5,                                                                          // { name: "fixed32_value", fixed32: 5 }
-			Fixed64Value:      6,                                                                          // { name: "fixed64_value", fixed64: 6 }
-			Sfixed32Value:     7,                                                                          // { name: "sfixed32_value", sfixed32: 7 }
-			Sfixed64Value:     8,                                                                          // { name: "sfixed64_value", sfixed64: 8 }
-			BoolValue:         true,                                                                       // { name: "bool_value", bool: true }
-			StringValue:       "hello",                                                                    // { name: "string_value", string: "hello" }
-			BytesValue:        []byte{104, 101, 108, 108, 111},                                            // { name: "bytes_value", bytes: "hello" }
-			MessageValue:      &post.Post{Content: "xxxyyyzzz"},                                           // { name: "message_value", message: { name: "org.post.Post", fields: [{ field: "content", string: "xxxyyyzzz" }] } }
-			DoubleListValue:   []float64{1.23, 4.56},                                                      // { name: "double_list_value", double_list: { values: [1.23, 4.56] } }
-			FloatListValue:    []float32{7.89, 1.23},                                                      // { name: "float_list_value", float_list: { values: [7.89, 1.23] } }
-			Int32ListValue:    []int32{1, 2, 3},                                                           // { name: "int32_list_value", int32_list: { values: [1, 2, 3] } }
-			Int64ListValue:    []int64{4, 5, 6},                                                           // { name: "int64_list_value", int64_list: { values: [4, 5, 6] } }
-			Uint32ListValue:   []uint32{7, 8, 9},                                                          // { name: "uint32_list_value", uint32_list: { values: [7, 8, 9] } }
-			Uint64ListValue:   []uint64{10, 11, 12},                                                       // { name: "uint64_list_value", uint64_list: { values: [10, 11, 12] } }
-			Sint32ListValue:   []int32{-1, -2, -3},                                                        // { name: "sint32_list_value", sint32_list: { values: [-1, -2, -3] } }
-			Sint64ListValue:   []int64{-4, -5, -6},                                                        // { name: "sint64_list_value", sint64_list: { values: [-4, -5, -6] } }
-			Fixed32ListValue:  []uint32{11, 12, 13},                                                       // { name: "fixed32_list_value", fixed32_list: { values: [11, 12, 13] } }
-			Fixed64ListValue:  []uint64{14, 15, 16},                                                       // { name: "fixed64_list_value", fixed64_list: { values: [14, 15, 16] } }
-			Sfixed32ListValue: []int32{-1, -2, -3},                                                        // { name: "sfixed32_list_value", sfixed32_list: { values: [-1, -2, -3] } }
-			Sfixed64ListValue: []int64{-4, -5, -6},                                                        // { name: "sfixed64_list_value", sfixed64_list: { values: [-4, -5, -6] } }
-			BoolListValue:     []bool{false, true},                                                        // { name: "bool_list_value", bool_list: { values: [false, true] } }
-			StringListValue:   []string{"hello", "world"},                                                 // { name: "string_list_value", string_list: { values: ["hello", "world"] } }
-			BytesListValue:    [][]byte{[]byte{104, 101, 108, 108, 111}, []byte{119, 111, 114, 108, 100}}, // { name: "bytes_list_value", bytes_list: { values: ["hello", "world"] } }
-			MessageListValue:  []*post.Post{&post.Post{Content: "aaabbbccc"}},                             // { name: "message_list_value", message_list: { values: [{ name: "org.post.Post", fields: [{ field: "content", string: "aaabbbccc" }] }] } }
+			Client:           s.client,
+			Id:               req.Id,                                                                     // { name: "id", by: "$.id" }
+			DoubleValue:      1.23,                                                                       // { name: "double_value", double: 1.23 }
+			FloatValue:       4.56,                                                                       // { name: "float_value", float: 4.56 }
+			Int32Value:       1,                                                                          // { name: "int32_value", int32: 1 }
+			Int64Value:       2,                                                                          // { name: "int64_value", int64: 2 }
+			Uint32Value:      3,                                                                          // { name: "uint32_value", uint32: 3 }
+			Uint64Value:      4,                                                                          // { name: "uint64_value", uint64: 4 }
+			Sint32Value:      -1,                                                                         // { name: "sint32_value", sint32: -1 }
+			Sint64Value:      -2,                                                                         // { name: "sint64_value", sint64: -2 }
+			Fixed32Value:     5,                                                                          // { name: "fixed32_value", fixed32: 5 }
+			Fixed64Value:     6,                                                                          // { name: "fixed64_value", fixed64: 6 }
+			Sfixed32Value:    7,                                                                          // { name: "sfixed32_value", sfixed32: 7 }
+			Sfixed64Value:    8,                                                                          // { name: "sfixed64_value", sfixed64: 8 }
+			BoolValue:        true,                                                                       // { name: "bool_value", bool: true }
+			StringValue:      "hello",                                                                    // { name: "string_value", string: "hello" }
+			ByteStringValue:  []byte{104, 101, 108, 108, 111},                                            // { name: "byte_string_value", byte_string: "hello" }
+			MessageValue:     &post.Post{Content: "xxxyyyzzz"},                                           // { name: "message_value", message: { name: "org.post.Post", fields: [{ field: "content", string: "xxxyyyzzz" }] } }
+			DoublesValue:     []float64{1.23, 4.56},                                                      // { name: "doubles_value", doubles: [1.23, 4.56] }
+			FloatsValue:      []float32{7.89, 1.23},                                                      // { name: "floats_value", floats: [7.89, 1.23] }
+			Int32sValue:      []int32{1, 2, 3},                                                           // { name: "int32s_value", int32s: [1, 2, 3] }
+			Int64sValue:      []int64{4, 5, 6},                                                           // { name: "int64s_value", int64s: [4, 5, 6] }
+			Uint32sValue:     []uint32{7, 8, 9},                                                          // { name: "uint32s_value", uint32s: [7, 8, 9] }
+			Uint64sValue:     []uint64{10, 11, 12},                                                       // { name: "uint64s_value", uint64s: [10, 11, 12] }
+			Sint32sValue:     []int32{-1, -2, -3},                                                        // { name: "sint32s_value", sint32s: [-1, -2, -3] }
+			Sint64sValue:     []int64{-4, -5, -6},                                                        // { name: "sint64s_value", sint64s: [-4, -5, -6] }
+			Fixed32sValue:    []uint32{11, 12, 13},                                                       // { name: "fixed32s_value", fixed32s: [11, 12, 13] }
+			Fixed64sValue:    []uint64{14, 15, 16},                                                       // { name: "fixed64s_value", fixed64s: [14, 15, 16] }
+			Sfixed32sValue:   []int32{-1, -2, -3},                                                        // { name: "sfixed32s_value", sfixed32s: [-1, -2, -3] }
+			Sfixed64sValue:   []int64{-4, -5, -6},                                                        // { name: "sfixed64s_value", sfixed64s: [-4, -5, -6] }
+			BoolsValue:       []bool{false, true},                                                        // { name: "bools_value", bools: [false, true] }
+			StringsValue:     []string{"hello", "world"},                                                 // { name: "strings_value", strings: ["hello", "world"] }
+			ByteStringsValue: [][]byte{[]byte{104, 101, 108, 108, 111}, []byte{119, 111, 114, 108, 100}}, // { name: "byte_strings_value", byte_strings: ["hello", "world"] }
+			MessagesValue:    []*post.Post{&post.Post{Content: "aaabbbccc"}},                             // { name: "messages_value", messages: [{ name: "org.post.Post", fields: [{ field: "content", string: "aaabbbccc" }] }] }
 		}
 		valueMu.RUnlock()
 		return s.resolve_Org_Federation_Post(ctx, args)
@@ -941,24 +941,24 @@ func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federati
 		slog.Int64("sfixed64_value", v.Sfixed64Value),
 		slog.Bool("bool_value", v.BoolValue),
 		slog.String("string_value", v.StringValue),
-		slog.String("bytes_value", string(v.BytesValue)),
+		slog.String("byte_string_value", string(v.ByteStringValue)),
 		slog.Any("message_value", s.logvalue_Org_Post_Post(v.MessageValue)),
-		slog.Any("double_list_value", v.DoubleListValue),
-		slog.Any("float_list_value", v.FloatListValue),
-		slog.Any("int32_list_value", v.Int32ListValue),
-		slog.Any("int64_list_value", v.Int64ListValue),
-		slog.Any("uint32_list_value", v.Uint32ListValue),
-		slog.Any("uint64_list_value", v.Uint64ListValue),
-		slog.Any("sint32_list_value", v.Sint32ListValue),
-		slog.Any("sint64_list_value", v.Sint64ListValue),
-		slog.Any("fixed32_list_value", v.Fixed32ListValue),
-		slog.Any("fixed64_list_value", v.Fixed64ListValue),
-		slog.Any("sfixed32_list_value", v.Sfixed32ListValue),
-		slog.Any("sfixed64_list_value", v.Sfixed64ListValue),
-		slog.Any("bool_list_value", v.BoolListValue),
-		slog.Any("string_list_value", v.StringListValue),
-		slog.Any("bytes_list_value", v.BytesListValue),
-		slog.Any("message_list_value", s.logvalue_repeated_Org_Post_Post(v.MessageListValue)),
+		slog.Any("doubles_value", v.DoublesValue),
+		slog.Any("floats_value", v.FloatsValue),
+		slog.Any("int32s_value", v.Int32sValue),
+		slog.Any("int64s_value", v.Int64sValue),
+		slog.Any("uint32s_value", v.Uint32sValue),
+		slog.Any("uint64s_value", v.Uint64sValue),
+		slog.Any("sint32s_value", v.Sint32sValue),
+		slog.Any("sint64s_value", v.Sint64sValue),
+		slog.Any("fixed32s_value", v.Fixed32sValue),
+		slog.Any("fixed64s_value", v.Fixed64sValue),
+		slog.Any("sfixed32s_value", v.Sfixed32sValue),
+		slog.Any("sfixed64s_value", v.Sfixed64sValue),
+		slog.Any("bools_value", v.BoolsValue),
+		slog.Any("strings_value", v.StringsValue),
+		slog.Any("byte_strings_value", v.ByteStringsValue),
+		slog.Any("messages_value", s.logvalue_repeated_Org_Post_Post(v.MessagesValue)),
 	)
 }
 

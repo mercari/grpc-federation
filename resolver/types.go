@@ -317,6 +317,8 @@ type Value struct {
 	PathType PathType
 	// Whether fields should be expanded when referencing types defined with Filtered.
 	Inline bool
+	// Env value from environment variable.
+	Env string
 	// Literal value
 	Literal *Literal
 	// A reference to the value specified in Path.
@@ -348,6 +350,8 @@ var (
 	BoolType             = &Type{Type: types.Bool}
 	StringType           = &Type{Type: types.String}
 	BytesType            = &Type{Type: types.Bytes}
+	EnumType             = &Type{Type: types.Enum}
+	EnvType              = &Type{Type: types.Env}
 	DoubleRepeatedType   = &Type{Type: types.Double, Repeated: true}
 	FloatRepeatedType    = &Type{Type: types.Float, Repeated: true}
 	Int32RepeatedType    = &Type{Type: types.Int32, Repeated: true}
@@ -363,4 +367,6 @@ var (
 	BoolRepeatedType     = &Type{Type: types.Bool, Repeated: true}
 	StringRepeatedType   = &Type{Type: types.String, Repeated: true}
 	BytesRepeatedType    = &Type{Type: types.Bytes, Repeated: true}
+	EnumRepeatedType     = &Type{Type: types.Enum, Repeated: true}
+	EnvRepeatedType      = &Type{Type: types.Env, Repeated: true}
 )
