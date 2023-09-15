@@ -15,6 +15,7 @@ import (
 
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
+	"github.com/mercari/grpc-federation/util"
 )
 
 type CodeGenerator struct {
@@ -91,7 +92,7 @@ func (dep *ServiceDependency) ClientName() string {
 
 func (dep *ServiceDependency) PrivateClientName() string {
 	svcName := fullServiceName(dep.Service)
-	return fmt.Sprintf("%sClient", toPrivateVariable(svcName))
+	return fmt.Sprintf("%sClient", util.ToPrivateVariable(svcName))
 }
 
 func (dep *ServiceDependency) ClientType() string {
@@ -136,7 +137,7 @@ func (r *CustomResolver) fullName() string {
 	ur := r.CustomResolver
 	msg := fullMessageName(ur.Message)
 	if ur.Field != nil {
-		return fmt.Sprintf("%s_%s", msg, toPublicGoVariable(ur.Field.Name))
+		return fmt.Sprintf("%s_%s", msg, util.ToPublicGoVariable(ur.Field.Name))
 	}
 	return msg
 }
@@ -233,7 +234,11 @@ func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
 	case types.Enum:
 		typ = enumTypeToText(baseSvc, t.Enum)
 	case types.Message:
-		typ = messageTypeToText(baseSvc, t.Ref)
+		if t.OneofField != nil {
+			typ = oneofTypeToText(baseSvc, t.OneofField)
+		} else {
+			typ = messageTypeToText(baseSvc, t.Ref)
+		}
 	default:
 		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Type)
 	}
@@ -241,6 +246,15 @@ func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
 		return "[]" + typ
 	}
 	return typ
+}
+
+func oneofTypeToText(baseSvc *resolver.Service, oneofField *resolver.OneofField) string {
+	msg := messageTypeToText(baseSvc, oneofField.Oneof.Message)
+	oneof := fmt.Sprintf("%s_%s", msg, util.ToPublicGoVariable(oneofField.Field.Name))
+	if oneofField.IsConflict() {
+		oneof += "_"
+	}
+	return oneof
 }
 
 func messageTypeToText(baseSvc *resolver.Service, msg *resolver.Message) string {
@@ -311,13 +325,13 @@ func (s *Service) Types() []*Type {
 								continue
 							}
 							typ.Fields = append(typ.Fields, &Field{
-								Name: toPublicGoVariable(responseField.Name),
+								Name: util.ToPublicGoVariable(responseField.Name),
 								Type: toTypeText(s.Service, responseField.Type),
 							})
 						}
 					}
 				} else if msgResolver.MessageDependency.Used {
-					fieldName := toPublicGoVariable(msgResolver.MessageDependency.Name)
+					fieldName := util.ToPublicGoVariable(msgResolver.MessageDependency.Name)
 					if typ.HasField(fieldName) {
 						continue
 					}
@@ -333,7 +347,7 @@ func (s *Service) Types() []*Type {
 		}
 		for _, field := range arg.Fields {
 			typ.Fields = append(typ.Fields, &Field{
-				Name: toPublicGoVariable(field.Name),
+				Name: util.ToPublicGoVariable(field.Name),
 				Type: toTypeText(s.Service, field.Type),
 			})
 		}
@@ -343,7 +357,7 @@ func (s *Service) Types() []*Type {
 		typeNameMap[argName] = struct{}{}
 		declTypes = append(declTypes, typ)
 		for _, field := range msg.CustomResolverFields() {
-			typeName := fmt.Sprintf("%s_%sArgument", msgName, toPublicGoVariable(field.Name))
+			typeName := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
 			fields := []*Field{{Name: argName, Type: fmt.Sprintf("*%s", argName)}}
 			if msg.HasCustomResolver() {
 				fields = append(fields, &Field{
@@ -607,7 +621,7 @@ func (s *Service) logType(typ *resolver.Type) string {
 
 func (s *Service) logValue(field *resolver.Field) string {
 	typ := field.Type
-	base := fmt.Sprintf("v.Get%s()", toPublicGoVariable(field.Name))
+	base := fmt.Sprintf("v.Get%s()", util.ToPublicGoVariable(field.Name))
 	if typ.Type == types.Message {
 		return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
 	} else if typ.Type == types.Enum {
@@ -616,7 +630,7 @@ func (s *Service) logValue(field *resolver.Field) string {
 		}
 		return fmt.Sprintf("%s(%s).String()", s.logValueFuncName(typ), base)
 	} else if typ.Type == types.Bytes {
-		return fmt.Sprintf("string(v.Get%s())", toPublicGoVariable(field.Name))
+		return fmt.Sprintf("string(v.Get%s())", util.ToPublicGoVariable(field.Name))
 	}
 	if field.Type.Repeated {
 		return base
@@ -651,7 +665,7 @@ func (s *Service) logMapValue(value *resolver.Field) string {
 
 func (s *Service) msgArgumentLogValue(field *resolver.Field) string {
 	typ := field.Type
-	base := fmt.Sprintf("v.%s", toPublicGoVariable(field.Name))
+	base := fmt.Sprintf("v.%s", util.ToPublicGoVariable(field.Name))
 	if typ.Type == types.Message {
 		return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
 	} else if typ.Type == types.Enum {
@@ -781,7 +795,7 @@ func (m *Method) ReturnTypeWithoutPtr() string {
 func (m *Method) ReturnTypeArguments() []string {
 	var args []string
 	for _, field := range m.Request.Fields {
-		args = append(args, toPublicGoVariable(field.Name))
+		args = append(args, util.ToPublicGoVariable(field.Name))
 	}
 	return args
 }
@@ -909,11 +923,18 @@ type ReturnField struct {
 	Name                  string
 	Value                 string
 	IsCustomResolverField bool
+	IsOneofField          bool
+	OneofFields           []*OneofField
 	ResolverName          string
 	RequestType           string
 	MessageName           string
 	MessageArgumentName   string
 	ProtoComment          string
+}
+
+type OneofField struct {
+	*ReturnField
+	GetValue string
 }
 
 type CastField struct {
@@ -924,6 +945,11 @@ type CastField struct {
 }
 
 func (f *CastField) RequestType() string {
+	if f.fromType.OneofField != nil {
+		typ := f.fromType.OneofField.Type.Clone()
+		typ.OneofField = nil
+		return toTypeText(f.service, typ)
+	}
 	return toTypeText(f.service, f.fromType)
 }
 
@@ -941,6 +967,10 @@ func (f *CastField) ResponseProtoFQDN() string {
 
 func (f *CastField) IsSlice() bool {
 	return f.fromType.Repeated
+}
+
+func (f *CastField) IsOneof() bool {
+	return f.fromType.OneofField != nil
 }
 
 func (f *CastField) IsStruct() bool {
@@ -1038,6 +1068,12 @@ func (f *CastField) ToSlice() *CastSlice {
 type CastStruct struct {
 	Name   string
 	Fields []*CastStructField
+	Oneofs []*CastOneofStruct
+}
+
+type CastOneofStruct struct {
+	Name   string
+	Fields []*CastStructField
 }
 
 type CastStructField struct {
@@ -1048,71 +1084,115 @@ type CastStructField struct {
 }
 
 func (f *CastField) ToStruct() *CastStruct {
-	toMessage := f.toType.Ref
-	if toMessage.HasRule() && toMessage.Rule.Alias != nil {
-		return f.toStructByAlias()
-	}
-	fromMessage := f.fromType.Ref
+	toMsg := f.toType.Ref
+	fromMsg := f.fromType.Ref
+
 	var castFields []*CastStructField
-	for _, toField := range toMessage.Fields {
-		fromField := fromMessage.Field(toField.Name)
-		if fromField == nil {
+	for _, toField := range toMsg.Fields {
+		if toField.Type.OneofField != nil {
 			continue
 		}
-		fromType := fromField.Type
-		toType := toField.Type
-		if fromType.Type != toType.Type {
+		field := f.toStructField(toField, fromMsg)
+		if field == nil {
 			continue
 		}
-		requiredCast := requiredCast(fromType, toType)
-		castFields = append(castFields, &CastStructField{
-			ToFieldName:   toPublicGoVariable(toField.Name),
-			FromFieldName: toPublicGoVariable(fromField.Name),
-			RequiredCast:  requiredCast,
-			CastName:      castFuncName(fromType, toType),
+		castFields = append(castFields, field)
+	}
+
+	var castOneofStructs []*CastOneofStruct
+	for _, oneof := range toMsg.Oneofs {
+		var fields []*CastStructField
+		for _, toField := range oneof.Fields {
+			if toField.Type.OneofField == nil {
+				continue
+			}
+			field := f.toStructField(toField, fromMsg)
+			if field == nil {
+				continue
+			}
+			fields = append(fields, field)
+		}
+		castOneofStructs = append(castOneofStructs, &CastOneofStruct{
+			Name:   util.ToPublicGoVariable(oneof.Name),
+			Fields: fields,
 		})
 	}
-	name := strings.Join(append(toMessage.ParentMessageNames(), toMessage.Name), "_")
-	if f.service.GoPackage().ImportPath != toMessage.GoPackage().ImportPath {
-		name = fmt.Sprintf("%s.%s", toMessage.GoPackage().Name, name)
+
+	name := strings.Join(append(toMsg.ParentMessageNames(), toMsg.Name), "_")
+	if f.service.GoPackage().ImportPath != toMsg.GoPackage().ImportPath {
+		name = fmt.Sprintf("%s.%s", toMsg.GoPackage().Name, name)
 	}
 	return &CastStruct{
 		Name:   name,
 		Fields: castFields,
+		Oneofs: castOneofStructs,
 	}
 }
 
-func (f *CastField) toStructByAlias() *CastStruct {
-	toMessage := f.toType.Ref
-	var castFields []*CastStructField
-	for _, toField := range toMessage.Fields {
-		if !toField.HasRule() {
-			continue
+func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Message) *CastStructField {
+	var (
+		fromField *resolver.Field
+		toType    *resolver.Type
+		fromType  *resolver.Type
+	)
+	if toField.HasRule() && toField.Rule.Alias != nil {
+		fromField = toField.Rule.Alias
+		fromType = fromField.Type
+		toType = toField.Type
+	} else {
+		fromField = fromMsg.Field(toField.Name)
+		if fromField == nil {
+			return nil
 		}
-		if toField.Rule.Alias == nil {
-			continue
-		}
-		fromField := toField.Rule.Alias
-		fromType := fromField.Type
-		toType := toField.Type
-		if fromType.Type != toType.Type {
-			continue
-		}
-		requiredCast := requiredCast(fromType, toType)
-		castFields = append(castFields, &CastStructField{
-			ToFieldName:   toPublicGoVariable(toField.Name),
-			FromFieldName: toPublicGoVariable(fromField.Name),
-			RequiredCast:  requiredCast,
-			CastName:      castFuncName(fromType, toType),
-		})
+		fromType = fromField.Type
+		toType = toField.Type
 	}
-	name := strings.Join(append(toMessage.ParentMessageNames(), toMessage.Name), "_")
-	if f.service.GoPackage().ImportPath != toMessage.GoPackage().ImportPath {
-		name = fmt.Sprintf("%s.%s", toMessage.GoPackage().Name, name)
+	if fromType.Type != toType.Type {
+		return nil
 	}
-	return &CastStruct{
-		Name:   name,
-		Fields: castFields,
+	requiredCast := requiredCast(fromType, toType)
+	return &CastStructField{
+		ToFieldName:   util.ToPublicGoVariable(toField.Name),
+		FromFieldName: util.ToPublicGoVariable(fromField.Name),
+		RequiredCast:  requiredCast,
+		CastName:      castFuncName(fromType, toType),
+	}
+}
+
+type CastOneof struct {
+	Name         string
+	FieldName    string
+	CastName     string
+	RequiredCast bool
+}
+
+func (f *CastField) ToOneof() *CastOneof {
+	toField := f.toType.OneofField
+	msg := f.toType.OneofField.Oneof.Message
+
+	fromField := f.fromType.OneofField
+	fromType := fromField.Type.Clone()
+	toType := toField.Type.Clone()
+	fromType.OneofField = nil
+	toType.OneofField = nil
+	requiredCast := requiredCast(fromType, toType)
+	names := append(
+		msg.ParentMessageNames(),
+		msg.Name,
+		util.ToPublicGoVariable(toField.Name),
+	)
+	name := strings.Join(names, "_")
+	if toField.IsConflict() {
+		name += "_"
+	}
+	if f.service.GoPackage().ImportPath != msg.GoPackage().ImportPath {
+		name = fmt.Sprintf("%s.%s", msg.GoPackage().Name, name)
+	}
+	return &CastOneof{
+		Name:         name,
+		FieldName:    util.ToPublicGoVariable(toField.Name),
+		RequiredCast: requiredCast,
+		CastName:     castFuncName(fromType, toType),
 	}
 }
 
@@ -1145,7 +1225,7 @@ func (m *Message) CustomResolverArguments() []*Argument {
 							continue
 						}
 						args = append(args, &Argument{
-							Name:  toPublicGoVariable(name),
+							Name:  util.ToPublicGoVariable(name),
 							Value: toUserDefinedVariable(name),
 						})
 						argNameMap[name] = struct{}{}
@@ -1157,7 +1237,7 @@ func (m *Message) CustomResolverArguments() []*Argument {
 					continue
 				}
 				args = append(args, &Argument{
-					Name:  toPublicGoVariable(name),
+					Name:  util.ToPublicGoVariable(name),
 					Value: toUserDefinedVariable(name),
 				})
 				argNameMap[name] = struct{}{}
@@ -1173,6 +1253,9 @@ func (m *Message) CustomResolverArguments() []*Argument {
 func (m *Message) ReturnFields() []*ReturnField {
 	var returnFields []*ReturnField
 	for _, field := range m.Fields {
+		if field.Oneof != nil {
+			continue
+		}
 		if !field.HasRule() {
 			continue
 		}
@@ -1191,6 +1274,9 @@ func (m *Message) ReturnFields() []*ReturnField {
 			returnFields = append(returnFields, m.autoBindFieldToReturnField(field, rule.AutoBindField))
 		}
 	}
+	for _, oneof := range m.Oneofs {
+		returnFields = append(returnFields, m.oneofValueToReturnField(oneof))
+	}
 	return returnFields
 }
 
@@ -1204,7 +1290,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	}
 
 	valueName := toUserDefinedVariable(name)
-	fieldName := toPublicGoVariable(field.Name)
+	fieldName := util.ToPublicGoVariable(field.Name)
 
 	var returnFieldValue string
 	if field.RequiredTypeConversion() {
@@ -1224,7 +1310,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 
 func (m *Message) literalValueToReturnField(field *resolver.Field, literal *resolver.Literal) *ReturnField {
 	return &ReturnField{
-		Name:  toPublicGoVariable(field.Name),
+		Name:  util.ToPublicGoVariable(field.Name),
 		Value: toGoLiteralValue(m.Service, literal.Type, literal.Value),
 		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
 			Prefix:         "// ",
@@ -1245,7 +1331,7 @@ func (m *Message) pathValueToReturnField(field *resolver.Field, value *resolver.
 		}
 		if first {
 			if value.PathType == resolver.MessageArgumentPathType {
-				selectors = append(selectors, toPublicGoVariable(sel))
+				selectors = append(selectors, util.ToPublicGoVariable(sel))
 			} else {
 				selectors = append(selectors, toUserDefinedVariable(sel))
 			}
@@ -1254,7 +1340,7 @@ func (m *Message) pathValueToReturnField(field *resolver.Field, value *resolver.
 		}
 		selectors = append(
 			selectors,
-			fmt.Sprintf("Get%s()", toPublicGoVariable(sel)),
+			fmt.Sprintf("Get%s()", util.ToPublicGoVariable(sel)),
 		)
 	}
 
@@ -1268,7 +1354,7 @@ func (m *Message) pathValueToReturnField(field *resolver.Field, value *resolver.
 		returnFieldValue = strings.Join(selectors, ".")
 	}
 	return &ReturnField{
-		Name:  toPublicGoVariable(field.Name),
+		Name:  util.ToPublicGoVariable(field.Name),
 		Value: returnFieldValue,
 		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
 			Prefix:         "// ",
@@ -1279,15 +1365,47 @@ func (m *Message) pathValueToReturnField(field *resolver.Field, value *resolver.
 
 func (m *Message) customResolverToReturnField(field *resolver.Field) *ReturnField {
 	msgName := fullMessageName(m.Message)
-	resolverName := fmt.Sprintf("Resolve_%s_%s", msgName, toPublicGoVariable(field.Name))
-	requestType := fmt.Sprintf("%s_%sArgument", msgName, toPublicGoVariable(field.Name))
+	resolverName := fmt.Sprintf("Resolve_%s_%s", msgName, util.ToPublicGoVariable(field.Name))
+	requestType := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
 	return &ReturnField{
-		Name:                  toPublicGoVariable(field.Name),
+		Name:                  util.ToPublicGoVariable(field.Name),
 		IsCustomResolverField: true,
 		ResolverName:          resolverName,
 		RequestType:           requestType,
 		MessageArgumentName:   fmt.Sprintf("%sArgument", msgName),
 		MessageName:           msgName,
+	}
+}
+
+func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
+	var oneofFields []*OneofField
+	for _, field := range oneof.Fields {
+		if !field.HasRule() {
+			continue
+		}
+		rule := field.Rule
+		switch {
+		case rule.Value != nil:
+			value := rule.Value
+			if value.Literal != nil {
+				oneofFields = append(oneofFields, &OneofField{
+					ReturnField: m.literalValueToReturnField(field, value.Literal),
+				})
+			} else {
+				oneofFields = append(oneofFields, &OneofField{
+					ReturnField: m.pathValueToReturnField(field, value),
+				})
+			}
+		case rule.AutoBindField != nil:
+			oneofFields = append(oneofFields, &OneofField{
+				ReturnField: m.autoBindFieldToReturnField(field, rule.AutoBindField),
+			})
+		}
+	}
+	return &ReturnField{
+		Name:         util.ToPublicGoVariable(oneof.Name),
+		IsOneofField: true,
+		OneofFields:  oneofFields,
 	}
 }
 
@@ -1506,7 +1624,7 @@ func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
 				selector = strings.Join(
 					[]string{
 						r.ResponseVariable(),
-						fmt.Sprintf("Get%s()", toPublicGoVariable(field.FieldName)),
+						fmt.Sprintf("Get%s()", util.ToPublicGoVariable(field.FieldName)),
 					}, ".",
 				)
 			}
@@ -1580,15 +1698,15 @@ func toValue(svc *resolver.Service, typ *resolver.Type, value *resolver.Value) s
 		}
 		if first {
 			if value.PathType == resolver.MessageArgumentPathType {
-				selectors = append(selectors, toPublicGoVariable(sel))
+				selectors = append(selectors, util.ToPublicGoVariable(sel))
 			} else {
-				selectors = append(selectors, toGoVariable(sel))
+				selectors = append(selectors, util.ToGoVariable(sel))
 			}
 			first = false
 		} else {
 			selectors = append(
 				selectors,
-				fmt.Sprintf("Get%s()", toPublicGoVariable(sel)),
+				fmt.Sprintf("Get%s()", util.ToPublicGoVariable(sel)),
 			)
 		}
 	}
@@ -1605,7 +1723,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	if value.Literal != nil {
 		return []*Argument{
 			{
-				Name:  toPublicGoVariable(name),
+				Name:  util.ToPublicGoVariable(name),
 				Value: toGoLiteralValue(r.Service, value.Literal.Type, value.Literal.Value),
 			},
 		}
@@ -1630,7 +1748,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		}
 		if first {
 			if value.PathType == resolver.MessageArgumentPathType {
-				selectors = append(selectors, toPublicGoVariable(sel))
+				selectors = append(selectors, util.ToPublicGoVariable(sel))
 			} else {
 				selectors = append(selectors, toUserDefinedVariable(sel))
 			}
@@ -1638,16 +1756,16 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		} else {
 			selectors = append(
 				selectors,
-				fmt.Sprintf("Get%s()", toPublicGoVariable(sel)),
+				fmt.Sprintf("Get%s()", util.ToPublicGoVariable(sel)),
 			)
 		}
 	}
 	if len(fieldNames) != 0 {
 		var args []*Argument
 		for _, fieldName := range fieldNames {
-			sels := append(selectors, fmt.Sprintf("Get%s()", toPublicGoVariable(fieldName)))
+			sels := append(selectors, fmt.Sprintf("Get%s()", util.ToPublicGoVariable(fieldName)))
 			args = append(args, &Argument{
-				Name:  toPublicGoVariable(fieldName),
+				Name:  util.ToPublicGoVariable(fieldName),
 				Value: strings.Join(sels, "."),
 			})
 		}
@@ -1659,7 +1777,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	if !requiredCast(fromType, toType) {
 		return []*Argument{
 			{
-				Name:  toPublicGoVariable(name),
+				Name:  util.ToPublicGoVariable(name),
 				Value: strings.Join(selectors, "."),
 			},
 		}
@@ -1667,7 +1785,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	castFuncName := castFuncName(fromType, toType)
 	return []*Argument{
 		{
-			Name: toPublicGoVariable(name),
+			Name: util.ToPublicGoVariable(name),
 			Value: fmt.Sprintf(
 				"s.%s(%s)", castFuncName, strings.Join(selectors, "."),
 			),
@@ -1717,7 +1835,7 @@ func toGoLiteralValue(svc *resolver.Service, typ *resolver.Type, value interface
 				fields,
 				fmt.Sprintf(
 					"%s: %s",
-					toPublicGoVariable(field.Name),
+					util.ToPublicGoVariable(field.Name),
 					toValue(svc, field.Type, v),
 				),
 			)
@@ -1771,11 +1889,7 @@ func generateGoContent(tmpl *template.Template, params interface{}) ([]byte, err
 var templates embed.FS
 
 func toUserDefinedVariable(name string) string {
-	return toGoVariable(fmt.Sprintf("value_%s", name))
-}
-
-func toPublicGoVariable(name string) string {
-	return toGoVariable(toPublicVariable(name))
+	return util.ToGoVariable(fmt.Sprintf("value_%s", name))
 }
 
 func toEnumValuePrefix(svc *resolver.Service, typ *resolver.Type) string {
@@ -1796,58 +1910,26 @@ func toEnumValueText(enumValuePrefix string, value string) string {
 	return fmt.Sprintf("%s_%s", enumValuePrefix, value)
 }
 
-func toPublicVariable(name string) string {
-	if len(name) == 0 {
-		return ""
-	}
-	if len(name) == 1 {
-		return strings.ToUpper(name)
-	}
-	return strings.ToUpper(string(name[0])) + name[1:]
-}
-
-func toPrivateVariable(name string) string {
-	if len(name) == 0 {
-		return ""
-	}
-	if len(name) == 1 {
-		return strings.ToLower(name)
-	}
-	return strings.ToLower(string(name[0])) + name[1:]
-}
-
-func toGoVariable(v string) string {
-	var (
-		isLargeChar bool
-		snakeV      []byte
-	)
-	for _, c := range v {
-		if c == '_' {
-			isLargeChar = true
-			continue
-		}
-		if isLargeChar {
-			snakeV = append(snakeV, bytes.ToUpper([]byte{byte(c)})...)
-			isLargeChar = false
-		} else {
-			snakeV = append(snakeV, byte(c))
-		}
-	}
-	return string(snakeV)
-}
-
 func protoFQDNToPublicGoName(fqdn string) string {
 	names := strings.Split(fqdn, ".")
 	formattedNames := make([]string, 0, len(names))
 	for _, name := range names {
 		name = strings.Replace(name, "-", "_", -1)
-		formattedNames = append(formattedNames, toPublicVariable(name))
+		formattedNames = append(formattedNames, util.ToPublicGoVariable(name))
 	}
 	return strings.Join(formattedNames, "_")
 }
 
 func fullServiceName(svc *resolver.Service) string {
 	return protoFQDNToPublicGoName(svc.FQDN())
+}
+
+func fullOneofName(oneofField *resolver.OneofField) string {
+	goName := protoFQDNToPublicGoName(oneofField.FQDN())
+	if oneofField.IsConflict() {
+		goName += "_"
+	}
+	return goName
 }
 
 func fullMessageName(msg *resolver.Message) string {
@@ -1880,10 +1962,12 @@ func castName(typ *resolver.Type) string {
 	if typ.Repeated {
 		ret = "repeated_"
 	}
-	switch typ.Type {
-	case types.Message:
+	switch {
+	case typ.OneofField != nil:
+		ret += fullOneofName(typ.OneofField)
+	case typ.Type == types.Message:
 		ret += fullMessageName(typ.Ref)
-	case types.Enum:
+	case typ.Type == types.Enum:
 		ret += fullEnumName(typ.Enum)
 	default:
 		ret += toTypeText(nil, &resolver.Type{Type: typ.Type})

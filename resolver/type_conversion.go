@@ -7,15 +7,7 @@ import (
 )
 
 func (decl *TypeConversionDecl) FQDN() string {
-	from := decl.From.FQDN()
-	to := decl.To.FQDN()
-	if decl.From.Repeated {
-		from += "repeated"
-	}
-	if decl.To.Repeated {
-		to += "repeated"
-	}
-	return from + to
+	return decl.From.FQDN() + decl.To.FQDN()
 }
 
 func typeConversionDecls(fromType, toType *Type) []*TypeConversionDecl {
@@ -52,6 +44,12 @@ func typeConversionDecls(fromType, toType *Type) []*TypeConversionDecl {
 		toType := toType.Clone()
 		fromType.Repeated = false
 		toType.Repeated = false
+		decls = append(decls, typeConversionDecls(fromType, toType)...)
+	case fromType.OneofField != nil:
+		fromType := fromType.Clone()
+		toType := toType.Clone()
+		fromType.OneofField = nil
+		toType.OneofField = nil
 		decls = append(decls, typeConversionDecls(fromType, toType)...)
 	case fromType.Type == types.Message:
 		for _, field := range toType.Ref.Fields {

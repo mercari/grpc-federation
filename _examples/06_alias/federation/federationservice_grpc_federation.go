@@ -390,6 +390,10 @@ func (s *FederationService) cast_Org_Post_PostContent_Category__to__Org_Federati
 
 // cast_Org_Post_PostContent__to__Org_Federation_PostContent cast from "org.post.PostContent" to "org.federation.PostContent".
 func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostContent(from *post.PostContent) *PostContent {
+	if from == nil {
+		return nil
+	}
+
 	return &PostContent{
 		Category: s.cast_Org_Post_PostContent_Category__to__Org_Federation_PostContent_Category(from.GetCategory()),
 		Head:     from.GetHead(),
@@ -414,6 +418,10 @@ func (s *FederationService) cast_Org_Post_PostDataType__to__Org_Federation_PostT
 
 // cast_Org_Post_PostData__to__Org_Federation_PostData cast from "org.post.PostData" to "org.federation.PostData".
 func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(from *post.PostData) *PostData {
+	if from == nil {
+		return nil
+	}
+
 	return &PostData{
 		Type:    s.cast_Org_Post_PostDataType__to__Org_Federation_PostType(from.GetType()),
 		Title:   from.GetTitle(),

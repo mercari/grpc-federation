@@ -66,6 +66,7 @@ type Message struct {
 	NestedMessages []*Message
 	Enums          []*Enum
 	Fields         []*Field
+	Oneofs         []*Oneof
 	Rule           *MessageRule
 }
 
@@ -151,10 +152,21 @@ type TypeConversionDecl struct {
 	To   *Type
 }
 
+type Oneof struct {
+	Name    string
+	Message *Message
+	Fields  []*Field
+}
+
 type Field struct {
-	Name string
-	Type *Type
-	Rule *FieldRule
+	Name  string
+	Type  *Type
+	Oneof *Oneof
+	Rule  *FieldRule
+}
+
+type OneofField struct {
+	*Field
 }
 
 type AutoBindField struct {
@@ -177,10 +189,11 @@ type FieldRule struct {
 }
 
 type Type struct {
-	Type     types.Type
-	Repeated bool
-	Ref      *Message
-	Enum     *Enum
+	Type       types.Type
+	Repeated   bool
+	Ref        *Message
+	Enum       *Enum
+	OneofField *OneofField
 }
 
 func (t *Type) Clone() *Type {
@@ -215,6 +228,9 @@ func (t *Type) FQDN() string {
 	var repeated string
 	if t.Repeated {
 		repeated = "repeated "
+	}
+	if t.OneofField != nil {
+		return repeated + t.OneofField.FQDN()
 	}
 	if t.Ref != nil {
 		return repeated + t.Ref.FQDN()

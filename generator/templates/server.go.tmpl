@@ -429,6 +429,14 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			return nil, err
 		}
 	}
+	{{- else if .IsOneofField }}
+	{{ $name := .Name }}
+	switch {
+	{{- range .OneofFields }}
+	case {{ .Value }} != nil:
+		ret.{{ $name }} = {{ .Value }}
+	{{- end }}
+	}
 	{{- else }}
 	ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
 	{{- end }}
@@ -442,6 +450,8 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseType }} {
 	{{- if .IsSlice }}
 	{{- template "castRepeated" .ToSlice }}
+    {{- else if .IsOneof }}
+    {{- template "castOneof" .ToOneof }}
 	{{- else if .IsStruct }}
 	{{- template "castMessage" .ToStruct }}
 	{{- else if .IsEnum }}
@@ -510,13 +520,63 @@ return ret
 {{- end }}
 
 {{- define "castMessage" }}
-return &{{ .Name }}{
+if from == nil {
+	return nil
+}
+{{ $oneofFields := .Oneofs }}
+{{- if $oneofFields }}
+ret := &{{ .Name }}{
 	{{- range .Fields }}
+
 	{{- if .RequiredCast }}
 	{{ .ToFieldName }}: s.{{ .CastName }}(from.Get{{ .FromFieldName }}()),
 	{{- else }}
 	{{ .ToFieldName }}: from.Get{{ .FromFieldName }}(),
 	{{- end }}
+
+	{{- end }}
+}
+{{- range .Oneofs }}
+switch {
+	{{ $name := .Name }}
+	{{- range .Fields }}
+	case from.Get{{ .FromFieldName }}() != nil:
+	{{- if .RequiredCast }}
+	ret.{{ $name }} = s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+	{{- else }}
+	ret.{{ $name }} = from.Get{{ .FromFieldName }}()
+	{{- end }}
+	{{- end }}
+}
+{{- end }}
+return ret
+
+{{- else }}
+
+return &{{ .Name }}{
+	{{- range .Fields }}
+
+	{{- if .RequiredCast }}
+	{{ .ToFieldName }}: s.{{ .CastName }}(from.Get{{ .FromFieldName }}()),
+	{{- else }}
+	{{ .ToFieldName }}: from.Get{{ .FromFieldName }}(),
+	{{- end }}
+
+	{{- end }}
+}
+
+{{- end }}
+{{- end }}
+
+{{- define "castOneof" }}
+if from == nil {
+	return nil
+}
+return &{{ .Name }}{
+	{{- if .RequiredCast }}
+	{{ .FieldName }}: s.{{ .CastName }}(from),
+	{{- else }}
+	{{ .FieldName }}: from,
 	{{- end }}
 }
 {{- end }}

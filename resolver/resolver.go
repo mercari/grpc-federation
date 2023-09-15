@@ -24,6 +24,7 @@ type Resolver struct {
 	enumToRuleMap              map[*Enum]*federation.EnumRule
 	enumValueToRuleMap         map[*EnumValue]*federation.EnumValueRule
 	fieldToRuleMap             map[*Field]*federation.FieldRule
+	oneofToRuleMap             map[*Oneof]*federation.OneofRule
 	cachedMessageMap           map[string]*Message
 	cachedEnumMap              map[string]*Enum
 	cachedMethodMap            map[string]*Method
@@ -42,6 +43,7 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 		enumToRuleMap:              make(map[*Enum]*federation.EnumRule),
 		enumValueToRuleMap:         make(map[*EnumValue]*federation.EnumValueRule),
 		fieldToRuleMap:             make(map[*Field]*federation.FieldRule),
+		oneofToRuleMap:             make(map[*Oneof]*federation.OneofRule),
 		cachedMessageMap:           make(map[string]*Message),
 		cachedEnumMap:              make(map[string]*Enum),
 		cachedMethodMap:            make(map[string]*Method),
@@ -432,8 +434,32 @@ func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string) *Mess
 	r.cachedMessageMap[fqdn] = msg
 	r.messageToRuleMap[msg] = rule
 	ctx = ctx.withMessage(msg)
-	msg.Fields = r.resolveFields(ctx, msgDef.GetField())
+	var oneofs []*Oneof
+	for _, oneofDef := range msgDef.GetOneofDecl() {
+		oneof := r.resolveOneof(ctx, oneofDef)
+		oneof.Message = msg
+		oneofs = append(oneofs, oneof)
+	}
+	msg.Fields = r.resolveFields(ctx, msgDef.GetField(), oneofs)
+	msg.Oneofs = oneofs
 	return msg
+}
+
+func (r *Resolver) resolveOneof(ctx *context, def *descriptorpb.OneofDescriptorProto) *Oneof {
+	rule, err := getOneofRule(def)
+	if err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				source.OneofOptionLocation(ctx.fileName(), ctx.messageName(), def.GetName()),
+			),
+		)
+	}
+	oneof := &Oneof{
+		Name: def.GetName(),
+	}
+	r.oneofToRuleMap[oneof] = rule
+	return oneof
 }
 
 func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
@@ -1158,10 +1184,10 @@ func (r *Resolver) resolveEnumValueAlias(ctx *context, enum *Enum, enumValueName
 	return value
 }
 
-func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDescriptorProto) []*Field {
+func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDescriptorProto, oneofs []*Oneof) []*Field {
 	fields := make([]*Field, 0, len(fieldsDef))
 	for _, fieldDef := range fieldsDef {
-		field := r.resolveField(ctx, fieldDef)
+		field := r.resolveField(ctx, fieldDef, oneofs)
 		if field == nil {
 			continue
 		}
@@ -1170,7 +1196,7 @@ func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDe
 	return fields
 }
 
-func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescriptorProto) *Field {
+func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescriptorProto, oneofs []*Oneof) *Field {
 	typ, err := r.resolveType(ctx, fieldDef.GetTypeName(), fieldDef.GetType(), fieldDef.GetLabel())
 	if err != nil {
 		ctx.addError(
@@ -1182,6 +1208,12 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 		return nil
 	}
 	field := &Field{Name: fieldDef.GetName(), Type: typ}
+	if fieldDef.OneofIndex != nil {
+		oneof := oneofs[fieldDef.GetOneofIndex()]
+		oneof.Fields = append(oneof.Fields, field)
+		field.Oneof = oneof
+		typ.OneofField = &OneofField{Field: field}
+	}
 	rule, err := getFieldRule(fieldDef)
 	if err != nil {
 		ctx.addError(

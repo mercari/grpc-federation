@@ -81,10 +81,26 @@ func (s *UserServer) GetUser(ctx context.Context, req *user.GetUserRequest) (*us
 			Id:   req.Id,
 			Name: fmt.Sprintf("name_%s", req.Id),
 			Items: []*user.Item{
-				{Name: "item1", Type: user.Item_ITEM_TYPE_1, Value: 1, Location: &user.Item_Location{Addr1: "foo", Addr2: "bar"}},
+				{
+					Name:  "item1",
+					Type:  user.Item_ITEM_TYPE_1,
+					Value: 1,
+					Location: &user.Item_Location{
+						Addr1: "foo",
+						Addr2: "bar",
+						Addr3: &user.Item_Location_B{
+							B: &user.Item_Location_AddrB{Bar: 1},
+						},
+					},
+				},
 				{Name: "item2", Type: user.Item_ITEM_TYPE_2, Value: 2},
 			},
 			Profile: map[string]*anypb.Any{"user": profile},
+			Attr: &user.User_B{
+				B: &user.User_AttrB{
+					Bar: true,
+				},
+			},
 		},
 	}, nil
 }
@@ -168,17 +184,26 @@ func TestFederation(t *testing.T) {
 						Location: &federation.Item_Location{
 							Addr1: "foo",
 							Addr2: "bar",
+							Addr3: &federation.Item_Location_B{
+								B: &federation.Item_Location_AddrB{
+									Bar: 1,
+								},
+							},
 						},
 					},
 					{
-						Name:     "item2",
-						Type:     federation.Item_ITEM_TYPE_2,
-						Value:    2,
-						Location: &federation.Item_Location{},
+						Name:  "item2",
+						Type:  federation.Item_ITEM_TYPE_2,
+						Value: 2,
 					},
 				},
 				Profile: map[string]*anypb.Any{
 					"user": profile,
+				},
+				Attr: &federation.User_B{
+					B: &federation.User_AttrB{
+						Bar: true,
+					},
 				},
 			},
 		},
@@ -189,6 +214,10 @@ func TestFederation(t *testing.T) {
 		federation.User{},
 		federation.Item{},
 		federation.Item_Location{},
+		federation.User_B{},
+		federation.User_AttrB{},
+		federation.Item_Location_B{},
+		federation.Item_Location_AddrB{},
 		anypb.Any{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)

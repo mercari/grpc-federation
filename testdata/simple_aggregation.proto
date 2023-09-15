@@ -148,6 +148,18 @@ message User {
   Item main_item = 6;
   repeated Item items = 7;
   map<string,google.protobuf.Any> profile = 8;
+  oneof attr {
+    AttrA attr_a = 9;
+    AttrB b = 10;
+  }
+  message AttrA {
+    option (grpc.federation.message).alias = "org.user.User.AttrA";
+    string foo = 1;
+  }
+  message AttrB {
+    option (grpc.federation.message).alias = "org.user.User.AttrB";
+    bool bar = 2;
+  }
 }
 
 message Item {

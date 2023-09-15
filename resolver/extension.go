@@ -155,6 +155,30 @@ func getFieldRule(field *descriptorpb.FieldDescriptorProto) (*federation.FieldRu
 	return rule, nil
 }
 
+func getOneofRule(oneof *descriptorpb.OneofDescriptorProto) (*federation.OneofRule, error) {
+	opts := oneof.GetOptions()
+	if opts == nil {
+		return nil, nil
+	}
+	if !proto.HasExtension(opts, federation.E_Oneof) {
+		return nil, nil
+	}
+	var oneofRule federation.OneofRule
+	if setRuleFromDynamicMessage(opts, &oneofRule) {
+		return &oneofRule, nil
+	}
+
+	ext := proto.GetExtension(opts, federation.E_Oneof)
+	if ext == nil {
+		return nil, fmt.Errorf("grpc.federation.oneof extension does not exist")
+	}
+	rule, ok := ext.(*federation.OneofRule)
+	if !ok {
+		return nil, fmt.Errorf("grpc.federation.oneof extension cannot not be converted from %T", ext)
+	}
+	return rule, nil
+}
+
 // setRuleFromDynamicMessage if each options are represented dynamicpb.Message type, convert and set it to rule instance.
 // NOTE: compile proto files by compiler package, extension is replaced by dynamicpb.Message.
 func setRuleFromDynamicMessage(opts proto.Message, rule proto.Message) bool {

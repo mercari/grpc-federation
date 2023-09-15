@@ -89,13 +89,25 @@ func (m *BuilderReferenceManager) Message(t *testing.T, pkgName, msgName string)
 			continue
 		}
 		for _, msg := range builder.file.Messages {
-			if msg.Name != msgName {
-				continue
+			foundMessage := m.message(msg, pkgName, msgName)
+			if foundMessage != nil {
+				return foundMessage
 			}
-			return msg
 		}
 	}
 	t.Fatalf("failed to find %s.%s message", pkgName, msgName)
+	return nil
+}
+
+func (m *BuilderReferenceManager) message(msg *resolver.Message, pkgName, msgName string) *resolver.Message {
+	if msg.FQDN() == fmt.Sprintf("%s.%s", pkgName, msgName) {
+		return msg
+	}
+	for _, nested := range msg.NestedMessages {
+		if msg := m.message(nested, pkgName, msgName); msg != nil {
+			return msg
+		}
+	}
 	return nil
 }
 
@@ -250,6 +262,18 @@ func (b *MessageBuilder) AddMessage(msg *resolver.Message) *MessageBuilder {
 	return b
 }
 
+func (b *MessageBuilder) AddOneof(oneof *resolver.Oneof) *MessageBuilder {
+	for idx, oneofField := range oneof.Fields {
+		field := b.msg.Field(oneofField.Name)
+		oneof.Fields[idx] = field
+		field.Oneof = oneof
+		field.Type.OneofField = &resolver.OneofField{Field: field}
+	}
+	b.msg.Oneofs = append(b.msg.Oneofs, oneof)
+	oneof.Message = b.msg
+	return b
+}
+
 func (b *MessageBuilder) AddEnum(enum *resolver.Enum) *MessageBuilder {
 	enum.Message = b.msg
 	b.msg.Enums = append(b.msg.Enums, enum)
@@ -270,6 +294,11 @@ func (b *MessageBuilder) getType(t *testing.T, name string) *resolver.Type {
 	}
 	t.Fatalf("failed to find %s type in %s message", name, b.msg.Name)
 	return nil
+}
+
+func (b *MessageBuilder) AddField(name string, typ *resolver.Type) *MessageBuilder {
+	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ})
+	return b
 }
 
 func (b *MessageBuilder) AddFieldWithTypeName(t *testing.T, name, typeName string, isRepeated bool) *MessageBuilder {
@@ -308,11 +337,6 @@ func (b *MessageBuilder) AddFieldWithTypeNameAndAutoBind(t *testing.T, name, typ
 			},
 		},
 	)
-	return b
-}
-
-func (b *MessageBuilder) AddField(name string, typ *resolver.Type) *MessageBuilder {
-	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ})
 	return b
 }
 
@@ -359,6 +383,30 @@ func (b *MessageBuilder) SetRule(rule *resolver.MessageRule) *MessageBuilder {
 func (b *MessageBuilder) Build(t *testing.T) *resolver.Message {
 	t.Helper()
 	return b.msg
+}
+
+type OneofBuilder struct {
+	oneof *resolver.Oneof
+}
+
+func NewOneofBuilder(name string) *OneofBuilder {
+	return &OneofBuilder{
+		oneof: &resolver.Oneof{
+			Name: name,
+		},
+	}
+}
+
+func (b *OneofBuilder) AddFieldNames(fields ...string) *OneofBuilder {
+	for _, field := range fields {
+		b.oneof.Fields = append(b.oneof.Fields, &resolver.Field{Name: field})
+	}
+	return b
+}
+
+func (b *OneofBuilder) Build(t *testing.T) *resolver.Oneof {
+	t.Helper()
+	return b.oneof
 }
 
 type EnumBuilder struct {

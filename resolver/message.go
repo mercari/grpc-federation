@@ -160,7 +160,8 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 					continue
 				}
 				fromType := arg.Value.Filtered
-				toType := request.Type.Field(arg.Name).Type
+				field := request.Type.Field(arg.Name)
+				toType := field.Type
 				decls = append(decls, typeConversionDecls(fromType, toType)...)
 			}
 		}

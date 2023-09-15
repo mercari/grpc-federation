@@ -32,6 +32,16 @@ message User {
   string name = 2;
   repeated Item items = 3;
   map<string, google.protobuf.Any> profile = 4;
+  oneof attr {
+    AttrA attr_a = 5;
+    AttrB b = 6;
+  }
+  message AttrA {
+    string foo = 1;
+  }
+  message AttrB {
+    bool bar = 2;
+  }
 }
 
 message Item {
@@ -44,6 +54,16 @@ message Item {
   message Location {
     string addr1 = 1;
     string addr2 = 2;
+    oneof addr3 {
+      AddrA addr_a = 3;
+      AddrB b = 4;
+    };
+    message AddrA {
+      string foo = 1;
+    }
+    message AddrB {
+      int64 bar = 1;
+    }
   }
   string name = 1;
   ItemType type = 2;
