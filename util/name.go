@@ -12,21 +12,21 @@ func ToPublicGoVariable(name string) string {
 func ToGoVariable(v string) string {
 	var (
 		isLargeChar bool
-		snakeV      []byte
+		camelV      []byte
 	)
 	for _, c := range v {
-		if c == '_' {
+		if c == '_' || c == '-' {
 			isLargeChar = true
 			continue
 		}
 		if isLargeChar {
-			snakeV = append(snakeV, bytes.ToUpper([]byte{byte(c)})...)
+			camelV = append(camelV, bytes.ToUpper([]byte{byte(c)})...)
 			isLargeChar = false
 		} else {
-			snakeV = append(snakeV, byte(c))
+			camelV = append(camelV, byte(c))
 		}
 	}
-	return string(snakeV)
+	return string(camelV)
 }
 
 func ToPublicVariable(name string) string {
