@@ -2,9 +2,9 @@
 
 # grpc.federation.service
 
-| field | type | required or optional | link |
-| ----- | ---- | ------------------- | ---- |
-| `dependencies` | repeated ServiceDependency | optional | [(grpc.federation.service).dependencies](##(grpc.federation.service).dependencies) |
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`dependencies`](#grpcfederationservicedependencies) | repeated ServiceDependency | optional |
 
 ## (grpc.federation.service).dependencies
 
@@ -20,24 +20,41 @@ service MyService {
 }
 ```
 
-| field | type | required or optional | link |
-| ----- | ---- | ------------------- | ---- |
-| `name` | string | optional | [(grpc.federation.service).dependencies.name](##(grpc.federation.service).dependencies.name) |
-| `service` | string | required | [(grpc.federation.service).dependencies.service](##(grpc.federation.service).dependencies.service) |
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`name`](#grpcfederationservicedependenciesname) | string | optional |
+| [`service`](#grpcfederationservicedependenciesservice) | string | required |
 
 ## (grpc.federation.service).dependencies.name
 
 Name to be used when initializing the gRPC client.
 
+```proto
+service MyService {
+  option (grpc.federation.service).dependencies = {
+    name: "foo"
+    service: "foopkg.FooService"
+  };
+}
+```
+
 ## (grpc.federation.service).dependencies.service
 
 Service is the name of the dependent service.
 
+```proto
+service MyService {
+  option (grpc.federation.service).dependencies = {
+    service: "foopkg.FooService"
+  };
+}
+```
+
 # grpc.federation.method
 
-| field | type | required or optional | link |
-| ----- | ---- | ------------------- | ---- |
-| `timeout` | string | optional | [(grpc.federation.method).timeout](##(grpc.federation.method).timeout) |
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`timeout`](#grpcfederationmethodtimeout) | string | optional |
 
 ## (grpc.federation.method).timeout
 
@@ -56,9 +73,9 @@ service MyService {
 
 # grpc.federation.enum
 
-| field | type | required or optional | link |
-| ----- | ---- | ------------------- | ---- |
-| `alias` | string | optional | [grpc.federation.enum.alias](##(grpc.federation.enum).alias) |
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`alias`](#grpcfederationenumalias) | string | optional |
 
 ## (grpc.federation.enum).alias
 
@@ -67,17 +84,56 @@ The `alias` is the FQDN ( `<package-name>.<enum-name>` ) to the enum.
 If this definition exists, type conversion is automatically performed before the enum value assignment operation.
 If a enum with this option has a value that is not present in the enum specified by alias, and the alias option is not specified for that value, an error is occurred.
 
+```proto
+package mypkg;
+
+enum FooEnum {
+  option (grpc.federation.enum).alias = "foopkg.FooEnum";
+
+  ENUM_VALUE_1 = 0;
+  ENUM_VALUE_2 = 1;
+}
+```
+
 # grpc.federation.enum_value
 
-| field | type | required or optional | link |
-| ----- | ---- | ------------------- | ---- |
-| `default` | bool | optional | |
-| `alias` | repeated string | optional | |
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`default`](#grpcfederationenum_valuedefault) | bool | optional |
+| [`alias`](#grpcfederationenum_valuealias) | repeated string | optional |
 
 ## (grpc.federation.enum_value).default
 
 Specifies the default value of the enum.
 All values other than those specified in alias will be default values.
+
+- myservice.proto
+
+```proto
+package mypkg;
+
+import "foo.proto";
+
+enum FooEnum {
+  option (grpc.federation.enum).alias = "foopkg.FooEnum";
+
+  ENUM_VALUE_UNKNOWN = 0 [(grpc.federation.enum_value).default = true];
+  ENUM_VALUE_1 = 1 [(grpc.federation.enum_value).alias = "FOO_VALUE_1"];
+  ENUM_VALUE_2 = 2 [(grpc.federation.enum_value).alias = "FOO_VALUE_2"];
+}
+```
+
+- foo.proto
+
+```proto
+package foopkg;
+
+enum FooEnum {
+  FOO_VALUE_1 = 0;
+  FOO_VALUE_2 = 1;
+  FOO_VALUE_3 = 2;
+}
+```
 
 ## (grpc.federation.enum_value).alias
 
@@ -85,14 +141,40 @@ All values other than those specified in alias will be default values.
 and specifies the value name to be referenced among the enums specified in alias of enum option.
 multiple value names can be specified for `alias`.
 
+- myservice.proto
+
+```proto
+package mypkg;
+
+import "foo.proto";
+
+enum FooEnum {
+  option (grpc.federation.enum).alias = "foopkg.FooEnum";
+
+  ENUM_VALUE_1 = 0 [(grpc.federation.enum_value).alias = "FOO_VALUE_1"];
+  ENUM_VALUE_2 = 1 [(grpc.federation.enum_value).alias = "FOO_VALUE_2"];
+}
+```
+
+- foo.proto
+
+```proto
+package foopkg;
+
+enum FooEnum {
+  FOO_VALUE_1 = 0;
+  FOO_VALUE_2 = 1;
+}
+```
+
 # grpc.federation.message
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `resolver` | Resolver | optional | [(grpc.federation.message).resolver](##(grpc.federation.message).resolver) |
-| `messages` | repeated Message | optional | [(grpc.federation.message).messages](##(grpc.federation.message).messages) |
-| `custom_resolver` | bool | optional | [(grpc.federation.message).custom_resolver](##(grpc.federation.message).custom_resolver) |
-| `alias` | string | optional | [(grpc.federation.message).alias](##(grpc.federation.message).alias) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`resolver`](#grpcfederationmessageresolver) | Resolver | optional |
+| [`messages`](#grpcfederationmessagemessages) | repeated Message | optional |
+| [`custom_resolver`](#grpcfederationmessagecustom_resolver) | bool | optional |
+| [`alias`](#grpcfederationmessagealias) | string | optional |
 
 ## (grpc.federation.message).resolver
 
@@ -108,19 +190,25 @@ message MyMessage {
  }
 ```
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `method` | string | required | [(grpc.federation.message).resolver.method](##(grpc.federation.message).resolver.method) |
-| `request` | repeated MethodRequest | optional | [(grpc.federation.message).resolver.request](##(grpc.federation.message).resolver.request) |
-| `response` | repeated MethodResponse | optional | [(grpc.federation.message).resolver.response](##(grpc.federation.message).resolver.response) |
-| `timeout` | string | optional | [(grpc.federation.message).resolver.timeout](##(grpc.federation.message).resolver.timeout) |
-| `retry` | RetryPolicy | optional | [(grpc.federation.message).resolver.retry](##(grpc.federation.message).resolver.retry) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`method`](#grpcfederationmessageresolvermethod) | string | required |
+| [`request`](#grpcfederationmessageresolverrequest) | repeated MethodRequest | optional |
+| [`response`](#grpcfederationmessageresolverresponse) | repeated MethodResponse | optional |
+| [`timeout`](#grpcfederationmessageresolvertimeout) | string | optional |
+| [`retry`](#grpcfederationmessageresolverretry) | RetryPolicy | optional |
 
 ## (grpc.federation.message).resolver.method
 
 Specify the FQDN for the gRPC method. format is `<package-name>.<service-name>/<method-name>`.
 
+- myservice.proto
+
 ```proto
+package mypkg;
+
+import "foo.proto";
+
 message MyMessage {
   option (grpc.federation.message) = {
     resolver {
@@ -130,16 +218,59 @@ message MyMessage {
 }
 ```
 
+- foo.proto
+
+```proto
+package foopkg;
+
+service FooService {
+  rpc GetFoo(GetFooRequest) returns (GetFooReply) {};
+}
+```
+
 ## (grpc.federation.message).resolver.request
 
 Specify the request parameters for the gRPC method.
 The `field` corresponds to the field name in the request message, and the `by` or `string` specifies which value is associated with the field.
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `field` | string | required | [(grpc.federation.message).resolver.request.field](##(grpc.federation.message).resolver.request.field) |
-| `by` | string | optional | [(grpc.federation.message).resolver.request.by](##(grpc.federation.message).resolver.request.by) |
-| `string` | string | optional | [(grpc.federation.message).resolver.request.string](##(grpc.federation.message).resolver.request.string) |
+- myservice.proto
+
+```proto
+package mypkg;
+
+import "foo.proto";
+
+message MyMessage {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "foopkg.FooService/GetFoo"
+      request: [
+        { field: "field1", string: "hello" }
+      ]
+    }
+  };
+}
+```
+
+- foo.proto
+
+```proto
+package foopkg;
+
+service FooService {
+  rpc GetFoo(GetFooRequest) returns (GetFooReply) {};
+}
+
+message GetFooRequest {
+  string field1 = 1;
+}
+```
+
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`field`](#grpcfederationmessageresolverrequestfield) | string | required |
+| [`by`](#grpcfederationmessageresolverrequestby) | string | optional |
+| [`string`](#grpcfederationmessageresolverrequeststring) | string | optional |
 
 In addition to `string`, you can write literals for any data type supported by proto, such as `int64` or `bool` .
 
@@ -157,11 +288,11 @@ The field name of the request message.
 
 Describe the information necessary to bind the result of the method call to the message field. Select and name the required information from the response message, and use the defined name when referencing the information in the message option.
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `name` | string | optional | [(grpc.federation.message).resolver.response.name](##(grpc.federation.message).resolver.response.name) |
-| `field` | string | optional | [(grpc.federation.message).resolver.response.field](##(grpc.federation.message).resolver.response.field) |
-| `autobind` | bool | optional | [(grpc.federation.message).resolver.response.autobind](##(grpc.federation.message).resolver.response.autobind) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`name`](#grpcfederationmessageresolverresponsename) | string | optional |
+| [`field`](#grpcfederationmessageresolverresponsefield) | string | optional |
+| [`autobind`](#grpcfederationmessageresolverresponseautobind) | bool | optional |
 
 ## (grpc.federation.message).resolver.response.name
 
@@ -199,19 +330,19 @@ message MyMessage {
 
 Specify the retry policy if the method call fails.
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `constant` | RetryPolicyConstant | optional | [(grpc.federation.message).resolver.retry.constant](##(grpc.federation.message).resolver.retry.constant) |
-| `exponential` | RetryPolicyExponential | optional | [(grpc.federation.message).resolver.retry.exponential](##(grpc.federation.message).resolver.retry.exponential) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`constant`](#grpcfederationmessageresolverretryconstant) | RetryPolicyConstant | optional |
+| [`exponential`](#grpcfederationmessageresolverretryexponential) | RetryPolicyExponential | optional |
 
 ## (grpc.federation.message).resolver.retry.constant
 
 Retry according to the "constant" policy.
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `inerval` | string | optional | [(grpc.federation.message).resolver.retry.constant.interval](##(grpc.federation.message).resolver.retry.constant.interval) |
-| `max_retries` | uint64 | optional | [(grpc.federation.message).resolver.retry.constant.max_retries](##(grpc.federation.message).resolver.retry.constant.max_retries) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`inerval`](#grpcfederationmessageresolverretryconstantinterval) | string | optional |
+| [`max_retries`](#grpcfederationmessageresolverretryconstantmax_retries) | uint64 | optional |
 
 ## (grpc.federation.message).resolver.retry.constant.interval
 
@@ -253,13 +384,13 @@ message MyMessage {
 
 ## (grpc.federation.message).resolver.retry.exponential
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `initial_interval` | string | optional | [(grpc.federation.message).resolver.retry.exponential.initial_interval](##(grpc.federation.message).resolver.retry.exponential.initial_interval) |
-| `randomization_factor` | double | optional | [(grpc.federation.message).resolver.retry.exponential.randomization_factor](##(grpc.federation.message).resolver.retry.exponential.randomization_factor) |
-| `multiplier` | double | optional | [(grpc.federation.message).resolver.retry.exponential.multiplier](##(grpc.federation.message).resolver.retry.exponential.multiplier) |
-| `max_interval` | string | optional | [(grpc.federation.message).resolver.retry.exponential.max_interval](##(grpc.federation.message).resolver.retry.exponential.max_interval) |
-| `max_retries` | uint64 | optional | [(grpc.federation.message).resolver.retry.exponential.max_retries](##(grpc.federation.message).resolver.retry.exponential.max_retries) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`initial_interval`](#grpcfederationmessageresolverretryexponentialinitial_interval) | string | optional |
+| [`randomization_factor`](#grpcfederationmessageresolverretryexponentialrandomization_factor) | double | optional |
+| [`multiplier`](#grpcfederationmessageresolverretryexponentialmultiplier) | double | optional |
+| [`max_interval`](#grpcfederationmessageresolverretryexponentialmax_interval) | string | optional |
+| [`max_retries`](#grpcfederationmessageresolverretryexponentialmax_retries) | uint64 | optional |
 
 ## (grpc.federation.message).resolver.retry.exponential.initial_interval
 
@@ -358,12 +489,12 @@ message MyMessage {
 
 ## (grpc.federation.message).messages
 
-| field | type | required or optional | link |
+| field | type | required or optional |
 | ----- | ---- | -------------------- | ---- |
-| `name` | string | optional | [(grpc.federation.message).messages.name](##(grpc.federation.message).messages.name) |
-| `message` | string | required | [(grpc.federation.message).messages.message](##(grpc.federation.message).messages.message) |
-| `args` | repeated Argument | optional | [[(grpc.federation.message).messages.args](##(grpc.federation.message).messages.args) |
-| `autobind` | bool | optional | [(grpc.federation.message).messages.autobind](##(grpc.federation.message).messages.autobind) |
+| [`name`](#grpcfederationmessagemessagesname) | string | optional |
+| [`message`](#grpcfederationmessagemessagesmessage) | string | required |
+| [`args`](#grpcfederationmessagemessagesargs) | repeated Argument | optional |
+| [`autobind`](#grpcfederationmessagemessagesautobind) | bool | optional |
 
 ## (grpc.federation.message).messages.name
 
@@ -378,12 +509,12 @@ Specify the message to be referred to by FQDN. format is `<package-name>.<messag
 
 Specify the parameters needed to retrieve the message. This is called the message argument.
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `name` | string | required | [(grpc.federation.message).messages.args.name](##(grpc.federation.message).messages.args.name) |
-| `by` | string | optional | [(grpc.federation.message).messages.args.by](##(grpc.federation.message).messages.args.by) |
-| `inline` | string | optional | [(grpc.federation.message).messages.args.inline](##(grpc.federation.message).messages.args.inline) |
-| `string` | string | optional | [(grpc.federation.message).messages.args.string](##(grpc.federation.message).messages.args.string) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`name`](#grpcfederationmessagemessagesargsname) | string | required |
+| [`by`](#grpcfederationmessagemessagesargsby) | string | optional |
+| [`inline`](#grpcfederationmessagemessagesargsinline) | string | optional |
+| [`string`](#grpcfederationmessagemessagesargsstring) | string | optional |
 
 In addition to `string`, you can write literals for any data type supported by proto, such as `int64` or `bool` .
 
@@ -425,12 +556,12 @@ If a message with this option has a field that is not present in the message spe
 
 # grpc.federation.field
 
-| field | type | required or optional | link |
-| ----- | ---- | -------------------- | ---- |
-| `by` | string | optional | [(grpc.federation.field).by](##(grpc.federation.field).by) |
-| `custom_resolver` | bool | optional | [(grpc.federation.field).custom_resolver](##(grpc.federation.field).custom_resolver) |
-| `alias` | string | optional | [(grpc.federation.field).alias](##(grpc.federation.field).alias) |
-| `string` | string | optional | [(grpc.federation.field).string](##(grpc.federation.field).string) |
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`by`](#grpcfederationfieldby) | string | optional |
+| [`custom_resolver`](#grpcfederationfieldcustom_resolver) | bool | optional |
+| [`alias`](#grpcfederationfieldalias) | string | optional |
+| [`string`](#grpcfederationfieldstring) | string | optional |
 
 ## (grpc.federation.field).by
 
