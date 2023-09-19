@@ -490,7 +490,7 @@ message MyMessage {
 ## (grpc.federation.message).messages
 
 | field | type | required or optional |
-| ----- | ---- | -------------------- | ---- |
+| ----- | ---- | -------------------- |
 | [`name`](#grpcfederationmessagemessagesname) | string | optional |
 | [`message`](#grpcfederationmessagemessagesmessage) | string | required |
 | [`args`](#grpcfederationmessagemessagesargs) | repeated Argument | optional |
