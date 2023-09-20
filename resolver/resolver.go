@@ -479,6 +479,10 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 		return nil
 	}
 	values := make([]*EnumValue, 0, len(def.GetValue()))
+	enum := &Enum{
+		File: file,
+		Name: def.GetName(),
+	}
 	for _, valueDef := range def.GetValue() {
 		valueName := valueDef.GetName()
 		rule, err := getEnumValueRule(valueDef)
@@ -490,11 +494,11 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 				),
 			)
 		}
-		enumValue := &EnumValue{Value: valueName}
+		enumValue := &EnumValue{Value: valueName, Enum: enum}
 		values = append(values, enumValue)
 		r.enumValueToRuleMap[enumValue] = rule
 	}
-
+	enum.Values = values
 	rule, err := getEnumRule(def)
 	if err != nil {
 		ctx.addError(
@@ -503,11 +507,6 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 				source.EnumLocation(ctx.fileName(), ctx.messageName(), name),
 			),
 		)
-	}
-	enum := &Enum{
-		File:   file,
-		Name:   def.GetName(),
-		Values: values,
 	}
 	r.cachedEnumMap[fqdn] = enum
 	r.enumToRuleMap[enum] = rule
@@ -748,8 +747,7 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 			continue
 		}
 		rule := field.Rule
-		switch {
-		case rule.Value != nil:
+		if rule.Value != nil {
 			value := rule.Value
 			switch {
 			case value.Literal != nil:
@@ -757,10 +755,12 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 			case value.Filtered != nil:
 				r.validateBindFieldType(ctx, value.Filtered, field)
 			}
-		case rule.AutoBindField != nil:
-			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field)
-		case rule.Alias != nil:
+		}
+		if rule.Alias != nil {
 			r.validateBindFieldType(ctx, rule.Alias.Type, field)
+		}
+		if rule.AutoBindField != nil {
+			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field)
 		}
 	}
 }
@@ -965,11 +965,15 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 			return &FieldRule{MessageCustomResolver: true}
 		}
 		if msg.Rule.Alias != nil {
-			return r.resolveFieldRuleByAutoAlias(ctx, msg, field)
+			alias := r.resolveFieldAlias(ctx, msg, field, "")
+			if alias == nil {
+				return nil
+			}
+			return &FieldRule{Alias: alias}
 		}
 		return nil
 	}
-	value, err := r.resolveFieldValue(ctx, ruleDef)
+	value, err := r.resolveValue(ctx, fieldRuleToCommonValueDef(ruleDef))
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -996,7 +1000,7 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 	}
 }
 
-func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field *Field) *FieldRule {
+func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field *Field) *Field {
 	if msg.Rule == nil {
 		return nil
 	}
@@ -1033,12 +1037,12 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 		)
 		return nil
 	}
-	return &FieldRule{Alias: aliasField}
+	return aliasField
 }
 
 func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, fieldAlias string) *Field {
 	if fieldAlias == "" {
-		return nil
+		return r.resolveFieldRuleByAutoAlias(ctx, msg, field)
 	}
 	if msg.Rule == nil || msg.Rule.Alias == nil {
 		ctx.addError(
@@ -1478,7 +1482,7 @@ func (r *Resolver) resolveRequest(ctx *context, pkg *Package, method *Method, re
 		} else {
 			argType = reqType.Field(fieldName).Type
 		}
-		value, err := r.resolveRequestValue(ctx, req)
+		value, err := r.resolveValue(ctx, methodRequestToCommonValueDef(req))
 		if err != nil {
 			ctx.addError(ErrWithLocation(
 				err.Error(),
@@ -1607,7 +1611,7 @@ func (r *Resolver) resolveMessages(ctx *context, baseMsg *Message, msgs []*feder
 }
 
 func (r *Resolver) resolveMessageArgument(ctx *context, argDef *federation.Argument) *Argument {
-	value, err := r.resolveMessageArgumentValue(ctx, argDef)
+	value, err := r.resolveValue(ctx, argumentToCommonValueDef(argDef))
 	if err != nil {
 		switch {
 		case len(argDef.GetBy()) != 0:
@@ -1674,13 +1678,78 @@ func (r *Resolver) resolveMessageLiteral(ctx *context, val *federation.MessageVa
 		if !t.Ref.HasField(fieldName) {
 			return nil, nil, fmt.Errorf(`"%s" field does not exist in %s message`, fieldName, msgName)
 		}
-		value, err := r.resolveMessageFieldValue(ctx, field)
+		value, err := r.resolveValue(ctx, messageFieldValueToCommonValueDef(field))
 		if err != nil {
 			return nil, nil, err
 		}
 		fieldMap[field.GetField()] = value
 	}
 	return t, fieldMap, nil
+}
+
+func (r *Resolver) resolveEnumValueLiteral(ctx *context, enumValueName string) (*EnumValue, error) {
+	pkg, err := r.lookupPackageFromTypeName(ctx, enumValueName)
+	if err != nil {
+		return nil, err
+	}
+	return r.lookupEnumValue(enumValueName, pkg)
+}
+
+func (r *Resolver) lookupPackageFromTypeName(ctx *context, name string) (*Package, error) {
+	if strings.Contains(name, ".") {
+		p, err := r.lookupPackage(name)
+		if err == nil {
+			return p, nil
+		}
+	}
+	file := ctx.file()
+	if file == nil {
+		return nil, fmt.Errorf(`cannot find package from "%s" name`, name)
+	}
+	return file.Package, nil
+}
+
+func (r *Resolver) lookupEnumValue(name string, pkg *Package) (*EnumValue, error) {
+	valueName := r.trimPackage(pkg, name)
+	isGlobalEnumValue := !strings.Contains(valueName, ".")
+	if isGlobalEnumValue {
+		for _, file := range pkg.Files {
+			for _, enum := range file.Enums {
+				for _, value := range enum.Values {
+					if value.Value == valueName {
+						return value, nil
+					}
+				}
+			}
+		}
+	} else {
+		for _, file := range pkg.Files {
+			for _, msg := range file.Messages {
+				if value := r.lookupEnumValueFromMessage(name, msg); value != nil {
+					return value, nil
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf(`cannot find enum value from "%s"`, name)
+}
+
+func (r *Resolver) lookupEnumValueFromMessage(name string, msg *Message) *EnumValue {
+	msgName := strings.Join(append(msg.ParentMessageNames(), msg.Name), ".")
+	for _, enum := range msg.Enums {
+		for _, value := range enum.Values {
+			valueName := fmt.Sprintf("%s.%s", msgName, value.Value)
+			if valueName == name {
+				return value
+			}
+		}
+	}
+	for _, msg := range msg.NestedMessages {
+		if value := r.lookupEnumValueFromMessage(name, msg); value != nil {
+			return value
+		}
+	}
+	return nil
 }
 
 func (r *Resolver) resolvePath(pathString string) (Path, PathType, error) {
@@ -2058,422 +2127,271 @@ func (r *Resolver) resolveMessageArgumentReferences(ctx *context, node *MessageD
 	return msgs
 }
 
-func (r *Resolver) resolveFieldValue(ctx *context, def *federation.FieldRule) (*Value, error) {
-	switch v := def.GetValue().(type) {
-	case *federation.FieldRule_CustomResolver:
-		return nil, nil
-	case *federation.FieldRule_By:
-		path, pathType, err := r.resolvePath(v.By)
+func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, error) {
+	const (
+		customResolverOpt = "custom_resolver"
+		aliasOpt          = "alias"
+		byOpt             = "by"
+		inlineOpt         = "inline"
+		doubleOpt         = "double"
+		doublesOpt        = "doubles"
+		floatOpt          = "float"
+		floatsOpt         = "floats"
+		int32Opt          = "int32"
+		int32sOpt         = "int32s"
+		int64Opt          = "int64"
+		int64sOpt         = "int64s"
+		uint32Opt         = "uint32"
+		uint32sOpt        = "uint32s"
+		uint64Opt         = "uint64"
+		uint64sOpt        = "uint64s"
+		sint32Opt         = "sint32"
+		sint32sOpt        = "sint32s"
+		sint64Opt         = "sint64"
+		sint64sOpt        = "sint64s"
+		fixed32Opt        = "fixed32"
+		fixed32sOpt       = "fixed32s"
+		fixed64Opt        = "fixed64"
+		fixed64sOpt       = "fixed64s"
+		sfixed32Opt       = "sfixed32"
+		sfixed32sOpt      = "sfixed32s"
+		sfixed64Opt       = "sfixed64"
+		sfixed64sOpt      = "sfixed64s"
+		boolOpt           = "bool"
+		boolsOpt          = "bools"
+		stringOpt         = "string"
+		stringsOpt        = "strings"
+		byteStringOpt     = "byte_string"
+		byteStringsOpt    = "byte_strings"
+		messageOpt        = "message"
+		messagesOpt       = "messages"
+		enumOpt           = "enum"
+		enumsOpt          = "enums"
+		envOpt            = "env"
+		envsOpt           = "envs"
+	)
+	var (
+		value    *Value
+		optNames []string
+	)
+	if def.CustomResolver != nil {
+		optNames = append(optNames, customResolverOpt)
+	}
+	if def.Alias != nil {
+		optNames = append(optNames, aliasOpt)
+	}
+	if def.By != nil {
+		path, pathType, err := r.resolvePath(def.GetBy())
 		if err != nil {
 			return nil, err
 		}
-		return &Value{Path: path, PathType: pathType}, nil
-	case *federation.FieldRule_Alias:
-		return nil, nil
-	case *federation.FieldRule_Double:
-		return NewDoubleValue(v.Double), nil
-	case *federation.FieldRule_Float:
-		return NewFloatValue(v.Float), nil
-	case *federation.FieldRule_Int32:
-		return NewInt32Value(v.Int32), nil
-	case *federation.FieldRule_Int64:
-		return NewInt64Value(v.Int64), nil
-	case *federation.FieldRule_Uint32:
-		return NewUint32Value(v.Uint32), nil
-	case *federation.FieldRule_Uint64:
-		return NewUint64Value(v.Uint64), nil
-	case *federation.FieldRule_Sint32:
-		return NewSint32Value(v.Sint32), nil
-	case *federation.FieldRule_Sint64:
-		return NewSint64Value(v.Sint64), nil
-	case *federation.FieldRule_Fixed32:
-		return NewFixed32Value(v.Fixed32), nil
-	case *federation.FieldRule_Fixed64:
-		return NewFixed64Value(v.Fixed64), nil
-	case *federation.FieldRule_Sfixed32:
-		return NewSfixed32Value(v.Sfixed32), nil
-	case *federation.FieldRule_Sfixed64:
-		return NewSfixed64Value(v.Sfixed64), nil
-	case *federation.FieldRule_Bool:
-		return NewBoolValue(v.Bool), nil
-	case *federation.FieldRule_String_:
-		return NewStringValue(v.String_), nil
-	case *federation.FieldRule_Bytes:
-		return NewBytesValue(v.Bytes), nil
-	case *federation.FieldRule_Message:
-		typ, value, err := r.resolveMessageLiteral(ctx, v.Message)
+		value = &Value{Path: path, PathType: pathType}
+		optNames = append(optNames, byOpt)
+	}
+	if def.Inline != nil {
+		path, pathType, err := r.resolvePath(def.GetInline())
 		if err != nil {
 			return nil, err
 		}
-		return NewMessageValue(typ, value), nil
-	case *federation.FieldRule_Enum:
-		return nil, fmt.Errorf("unimplemented enum literal value")
-	case *federation.FieldRule_Env:
-		return nil, fmt.Errorf("unimplemented env literal value")
-	case *federation.FieldRule_DoubleList:
-		return NewDoubleListValue(v.DoubleList.GetValues()...), nil
-	case *federation.FieldRule_FloatList:
-		return NewFloatListValue(v.FloatList.GetValues()...), nil
-	case *federation.FieldRule_Int32List:
-		return NewInt32ListValue(v.Int32List.GetValues()...), nil
-	case *federation.FieldRule_Int64List:
-		return NewInt64ListValue(v.Int64List.GetValues()...), nil
-	case *federation.FieldRule_Uint32List:
-		return NewUint32ListValue(v.Uint32List.GetValues()...), nil
-	case *federation.FieldRule_Uint64List:
-		return NewUint64ListValue(v.Uint64List.GetValues()...), nil
-	case *federation.FieldRule_Sint32List:
-		return NewSint32ListValue(v.Sint32List.GetValues()...), nil
-	case *federation.FieldRule_Sint64List:
-		return NewSint64ListValue(v.Sint64List.GetValues()...), nil
-	case *federation.FieldRule_Fixed32List:
-		return NewFixed32ListValue(v.Fixed32List.GetValues()...), nil
-	case *federation.FieldRule_Fixed64List:
-		return NewFixed64ListValue(v.Fixed64List.GetValues()...), nil
-	case *federation.FieldRule_Sfixed32List:
-		return NewSfixed32ListValue(v.Sfixed32List.GetValues()...), nil
-	case *federation.FieldRule_Sfixed64List:
-		return NewSfixed64ListValue(v.Sfixed64List.GetValues()...), nil
-	case *federation.FieldRule_BoolList:
-		return NewBoolListValue(v.BoolList.GetValues()...), nil
-	case *federation.FieldRule_StringList:
-		return NewStringListValue(v.StringList.GetValues()...), nil
-	case *federation.FieldRule_BytesList:
-		return NewBytesListValue(v.BytesList.GetValues()...), nil
-	case *federation.FieldRule_MessageList:
+		value = &Value{Path: path, PathType: pathType, Inline: true}
+		optNames = append(optNames, inlineOpt)
+	}
+	if def.Double != nil {
+		value = NewDoubleValue(def.GetDouble())
+		optNames = append(optNames, doubleOpt)
+	}
+	if def.Doubles != nil {
+		value = NewDoublesValue(def.GetDoubles()...)
+		optNames = append(optNames, doublesOpt)
+	}
+	if def.Float != nil {
+		value = NewFloatValue(def.GetFloat())
+		optNames = append(optNames, floatOpt)
+	}
+	if def.Floats != nil {
+		value = NewFloatsValue(def.GetFloats()...)
+		optNames = append(optNames, floatsOpt)
+	}
+	if def.Int32 != nil {
+		value = NewInt32Value(def.GetInt32())
+		optNames = append(optNames, int32Opt)
+	}
+	if def.Int32S != nil {
+		value = NewInt32sValue(def.GetInt32S()...)
+		optNames = append(optNames, int32sOpt)
+	}
+	if def.Int64 != nil {
+		value = NewInt64Value(def.GetInt64())
+		optNames = append(optNames, int64Opt)
+	}
+	if def.Int64S != nil {
+		value = NewInt64sValue(def.GetInt64S()...)
+		optNames = append(optNames, int64sOpt)
+	}
+	if def.Uint32 != nil {
+		value = NewUint32Value(def.GetUint32())
+		optNames = append(optNames, uint32Opt)
+	}
+	if def.Uint32S != nil {
+		value = NewUint32sValue(def.GetUint32S()...)
+		optNames = append(optNames, uint32sOpt)
+	}
+	if def.Uint64 != nil {
+		value = NewUint64Value(def.GetUint64())
+		optNames = append(optNames, uint64Opt)
+	}
+	if def.Uint64S != nil {
+		value = NewUint64sValue(def.GetUint64S()...)
+		optNames = append(optNames, uint64sOpt)
+	}
+	if def.Sint32 != nil {
+		value = NewSint32Value(def.GetSint32())
+		optNames = append(optNames, sint32Opt)
+	}
+	if def.Sint32S != nil {
+		value = NewSint32sValue(def.GetSint32S()...)
+		optNames = append(optNames, sint32sOpt)
+	}
+	if def.Sint64 != nil {
+		value = NewSint64Value(def.GetSint64())
+		optNames = append(optNames, sint64Opt)
+	}
+	if def.Sint64S != nil {
+		value = NewSint64sValue(def.GetSint64S()...)
+		optNames = append(optNames, sint64sOpt)
+	}
+	if def.Fixed32 != nil {
+		value = NewFixed32Value(def.GetFixed32())
+		optNames = append(optNames, fixed32Opt)
+	}
+	if def.Fixed32S != nil {
+		value = NewFixed32sValue(def.GetFixed32S()...)
+		optNames = append(optNames, fixed32sOpt)
+	}
+	if def.Fixed64 != nil {
+		value = NewFixed64Value(def.GetFixed64())
+		optNames = append(optNames, fixed64Opt)
+	}
+	if def.Fixed64S != nil {
+		value = NewFixed64sValue(def.GetFixed64S()...)
+		optNames = append(optNames, fixed64sOpt)
+	}
+	if def.Sfixed32 != nil {
+		value = NewSfixed32Value(def.GetSfixed32())
+		optNames = append(optNames, sfixed32Opt)
+	}
+	if def.Sfixed32S != nil {
+		value = NewSfixed32sValue(def.GetSfixed32S()...)
+		optNames = append(optNames, sfixed32sOpt)
+	}
+	if def.Sfixed64 != nil {
+		value = NewSfixed64Value(def.GetSfixed64())
+		optNames = append(optNames, sfixed64Opt)
+	}
+	if def.Sfixed64S != nil {
+		value = NewSfixed64sValue(def.GetSfixed64S()...)
+		optNames = append(optNames, sfixed64sOpt)
+	}
+	if def.Bool != nil {
+		value = NewBoolValue(def.GetBool())
+		optNames = append(optNames, boolOpt)
+	}
+	if def.Bools != nil {
+		value = NewBoolsValue(def.GetBools()...)
+		optNames = append(optNames, boolsOpt)
+	}
+	if def.String != nil {
+		value = NewStringValue(def.GetString())
+		optNames = append(optNames, stringOpt)
+	}
+	if def.Strings != nil {
+		value = NewStringsValue(def.GetStrings()...)
+		optNames = append(optNames, stringsOpt)
+	}
+	if def.ByteString != nil {
+		value = NewByteStringValue(def.GetByteString())
+		optNames = append(optNames, byteStringOpt)
+	}
+	if def.ByteStrings != nil {
+		value = NewByteStringsValue(def.GetByteStrings()...)
+		optNames = append(optNames, byteStringsOpt)
+	}
+	if def.Message != nil {
+		typ, val, err := r.resolveMessageLiteral(ctx, def.GetMessage())
+		if err != nil {
+			return nil, err
+		}
+		value = NewMessageValue(typ, val)
+		optNames = append(optNames, messageOpt)
+	}
+	if def.Messages != nil {
 		var (
-			typ    *Type
-			values []map[string]*Value
+			typ  *Type
+			vals []map[string]*Value
 		)
-		for _, msgValue := range v.MessageList.GetValues() {
-			t, value, err := r.resolveMessageLiteral(ctx, msgValue)
+		for _, msg := range def.GetMessages() {
+			t, val, err := r.resolveMessageLiteral(ctx, msg)
 			if err != nil {
 				return nil, err
 			}
 			if typ == nil {
 				typ = t
-			} else if typ != t {
-				return nil, fmt.Errorf(`"message_list" value unsupported multiple message type`)
+			} else if typ.Ref != t.Ref {
+				return nil, fmt.Errorf(`"messages" value unsupported multiple message type`)
 			}
-			values = append(values, value)
+			vals = append(vals, val)
 		}
 		typ.Repeated = true
-		return NewMessageListValue(typ, values...), nil
-	default:
-		return nil, fmt.Errorf(`"by" or literal value must be specified`)
+		value = NewMessagesValue(typ, vals...)
+		optNames = append(optNames, messagesOpt)
 	}
-}
-
-func (r *Resolver) resolveRequestValue(ctx *context, def *federation.MethodRequest) (*Value, error) {
-	switch v := def.GetValue().(type) {
-	case *federation.MethodRequest_By:
-		path, pathType, err := r.resolvePath(v.By)
+	if def.Enum != nil {
+		enumValue, err := r.resolveEnumValueLiteral(ctx, def.GetEnum())
 		if err != nil {
 			return nil, err
 		}
-		return &Value{Path: path, PathType: pathType}, nil
-	case *federation.MethodRequest_Double:
-		return NewDoubleValue(v.Double), nil
-	case *federation.MethodRequest_Float:
-		return NewFloatValue(v.Float), nil
-	case *federation.MethodRequest_Int32:
-		return NewInt32Value(v.Int32), nil
-	case *federation.MethodRequest_Int64:
-		return NewInt64Value(v.Int64), nil
-	case *federation.MethodRequest_Uint32:
-		return NewUint32Value(v.Uint32), nil
-	case *federation.MethodRequest_Uint64:
-		return NewUint64Value(v.Uint64), nil
-	case *federation.MethodRequest_Sint32:
-		return NewSint32Value(v.Sint32), nil
-	case *federation.MethodRequest_Sint64:
-		return NewSint64Value(v.Sint64), nil
-	case *federation.MethodRequest_Fixed32:
-		return NewFixed32Value(v.Fixed32), nil
-	case *federation.MethodRequest_Fixed64:
-		return NewFixed64Value(v.Fixed64), nil
-	case *federation.MethodRequest_Sfixed32:
-		return NewSfixed32Value(v.Sfixed32), nil
-	case *federation.MethodRequest_Sfixed64:
-		return NewSfixed64Value(v.Sfixed64), nil
-	case *federation.MethodRequest_Bool:
-		return NewBoolValue(v.Bool), nil
-	case *federation.MethodRequest_String_:
-		return NewStringValue(v.String_), nil
-	case *federation.MethodRequest_Bytes:
-		return NewBytesValue(v.Bytes), nil
-	case *federation.MethodRequest_Message:
-		typ, value, err := r.resolveMessageLiteral(ctx, v.Message)
-		if err != nil {
-			return nil, err
-		}
-		return NewMessageValue(typ, value), nil
-	case *federation.MethodRequest_Enum:
-		return nil, fmt.Errorf("unimplemented enum literal value")
-	case *federation.MethodRequest_Env:
-		return nil, fmt.Errorf("unimplemented env literal value")
-	case *federation.MethodRequest_DoubleList:
-		return NewDoubleListValue(v.DoubleList.GetValues()...), nil
-	case *federation.MethodRequest_FloatList:
-		return NewFloatListValue(v.FloatList.GetValues()...), nil
-	case *federation.MethodRequest_Int32List:
-		return NewInt32ListValue(v.Int32List.GetValues()...), nil
-	case *federation.MethodRequest_Int64List:
-		return NewInt64ListValue(v.Int64List.GetValues()...), nil
-	case *federation.MethodRequest_Uint32List:
-		return NewUint32ListValue(v.Uint32List.GetValues()...), nil
-	case *federation.MethodRequest_Uint64List:
-		return NewUint64ListValue(v.Uint64List.GetValues()...), nil
-	case *federation.MethodRequest_Sint32List:
-		return NewSint32ListValue(v.Sint32List.GetValues()...), nil
-	case *federation.MethodRequest_Sint64List:
-		return NewSint64ListValue(v.Sint64List.GetValues()...), nil
-	case *federation.MethodRequest_Fixed32List:
-		return NewFixed32ListValue(v.Fixed32List.GetValues()...), nil
-	case *federation.MethodRequest_Fixed64List:
-		return NewFixed64ListValue(v.Fixed64List.GetValues()...), nil
-	case *federation.MethodRequest_Sfixed32List:
-		return NewSfixed32ListValue(v.Sfixed32List.GetValues()...), nil
-	case *federation.MethodRequest_Sfixed64List:
-		return NewSfixed64ListValue(v.Sfixed64List.GetValues()...), nil
-	case *federation.MethodRequest_BoolList:
-		return NewBoolListValue(v.BoolList.GetValues()...), nil
-	case *federation.MethodRequest_StringList:
-		return NewStringListValue(v.StringList.GetValues()...), nil
-	case *federation.MethodRequest_BytesList:
-		return NewBytesListValue(v.BytesList.GetValues()...), nil
-	case *federation.MethodRequest_MessageList:
+		value = NewEnumValue(enumValue)
+		optNames = append(optNames, enumOpt)
+	}
+	if def.Enums != nil {
 		var (
-			typ    *Type
-			values []map[string]*Value
+			enumValues []*EnumValue
+			enum       *Enum
 		)
-		for _, msgValue := range v.MessageList.GetValues() {
-			t, value, err := r.resolveMessageLiteral(ctx, msgValue)
+		for _, enumName := range def.GetEnums() {
+			enumValue, err := r.resolveEnumValueLiteral(ctx, enumName)
 			if err != nil {
 				return nil, err
 			}
-			if typ == nil {
-				typ = t
-			} else if typ != t {
-				return nil, fmt.Errorf(`"message_list" value unsupported multiple message type`)
+			if enum == nil {
+				enum = enumValue.Enum
+			} else if enum != enumValue.Enum {
+				return nil, fmt.Errorf(`different enum values are used in enums: "%s" and "%s"`, enum.FQDN(), enumValue.Enum.FQDN())
 			}
-			values = append(values, value)
+			enumValues = append(enumValues, enumValue)
 		}
-		typ.Repeated = true
-		return NewMessageListValue(typ, values...), nil
-	default:
-		return nil, fmt.Errorf(`"by" or literal value must be specified`)
+		value = NewEnumsValue(enumValues...)
+		optNames = append(optNames, enumsOpt)
 	}
-}
-
-func (r *Resolver) resolveMessageArgumentValue(ctx *context, def *federation.Argument) (*Value, error) {
-	switch v := def.GetValue().(type) {
-	case *federation.Argument_By:
-		path, pathType, err := r.resolvePath(v.By)
-		if err != nil {
-			return nil, err
-		}
-		return &Value{Path: path, PathType: pathType}, nil
-	case *federation.Argument_Inline:
-		path, pathType, err := r.resolvePath(v.Inline)
-		if err != nil {
-			return nil, err
-		}
-		return &Value{Path: path, PathType: pathType, Inline: true}, nil
-	case *federation.Argument_Double:
-		return NewDoubleValue(v.Double), nil
-	case *federation.Argument_Float:
-		return NewFloatValue(v.Float), nil
-	case *federation.Argument_Int32:
-		return NewInt32Value(v.Int32), nil
-	case *federation.Argument_Int64:
-		return NewInt64Value(v.Int64), nil
-	case *federation.Argument_Uint32:
-		return NewUint32Value(v.Uint32), nil
-	case *federation.Argument_Uint64:
-		return NewUint64Value(v.Uint64), nil
-	case *federation.Argument_Sint32:
-		return NewSint32Value(v.Sint32), nil
-	case *federation.Argument_Sint64:
-		return NewSint64Value(v.Sint64), nil
-	case *federation.Argument_Fixed32:
-		return NewFixed32Value(v.Fixed32), nil
-	case *federation.Argument_Fixed64:
-		return NewFixed64Value(v.Fixed64), nil
-	case *federation.Argument_Sfixed32:
-		return NewSfixed32Value(v.Sfixed32), nil
-	case *federation.Argument_Sfixed64:
-		return NewSfixed64Value(v.Sfixed64), nil
-	case *federation.Argument_Bool:
-		return NewBoolValue(v.Bool), nil
-	case *federation.Argument_String_:
-		return NewStringValue(v.String_), nil
-	case *federation.Argument_Bytes:
-		return NewBytesValue(v.Bytes), nil
-	case *federation.Argument_Message:
-		typ, value, err := r.resolveMessageLiteral(ctx, v.Message)
-		if err != nil {
-			return nil, err
-		}
-		return NewMessageValue(typ, value), nil
-	case *federation.Argument_Enum:
-		return nil, fmt.Errorf("unimplemented enum literal value")
-	case *federation.Argument_Env:
-		return nil, fmt.Errorf("unimplemented env literal value")
-	case *federation.Argument_DoubleList:
-		return NewDoubleListValue(v.DoubleList.GetValues()...), nil
-	case *federation.Argument_FloatList:
-		return NewFloatListValue(v.FloatList.GetValues()...), nil
-	case *federation.Argument_Int32List:
-		return NewInt32ListValue(v.Int32List.GetValues()...), nil
-	case *federation.Argument_Int64List:
-		return NewInt64ListValue(v.Int64List.GetValues()...), nil
-	case *federation.Argument_Uint32List:
-		return NewUint32ListValue(v.Uint32List.GetValues()...), nil
-	case *federation.Argument_Uint64List:
-		return NewUint64ListValue(v.Uint64List.GetValues()...), nil
-	case *federation.Argument_Sint32List:
-		return NewSint32ListValue(v.Sint32List.GetValues()...), nil
-	case *federation.Argument_Sint64List:
-		return NewSint64ListValue(v.Sint64List.GetValues()...), nil
-	case *federation.Argument_Fixed32List:
-		return NewFixed32ListValue(v.Fixed32List.GetValues()...), nil
-	case *federation.Argument_Fixed64List:
-		return NewFixed64ListValue(v.Fixed64List.GetValues()...), nil
-	case *federation.Argument_Sfixed32List:
-		return NewSfixed32ListValue(v.Sfixed32List.GetValues()...), nil
-	case *federation.Argument_Sfixed64List:
-		return NewSfixed64ListValue(v.Sfixed64List.GetValues()...), nil
-	case *federation.Argument_BoolList:
-		return NewBoolListValue(v.BoolList.GetValues()...), nil
-	case *federation.Argument_StringList:
-		return NewStringListValue(v.StringList.GetValues()...), nil
-	case *federation.Argument_BytesList:
-		return NewBytesListValue(v.BytesList.GetValues()...), nil
-	case *federation.Argument_MessageList:
-		var (
-			typ    *Type
-			values []map[string]*Value
-		)
-		for _, msgValue := range v.MessageList.GetValues() {
-			t, value, err := r.resolveMessageLiteral(ctx, msgValue)
-			if err != nil {
-				return nil, err
-			}
-			if typ == nil {
-				typ = t
-			} else if typ != t {
-				return nil, fmt.Errorf(`"message_list" value unsupported multiple message type`)
-			}
-			values = append(values, value)
-		}
-		typ.Repeated = true
-		return NewMessageListValue(typ, values...), nil
-	default:
-		return nil, fmt.Errorf(`"by" or "inline" or literal value must be specified`)
+	if def.Env != nil {
+		value = NewEnvValue(EnvKey(def.GetEnv()))
+		optNames = append(optNames, envOpt)
 	}
-}
-
-func (r *Resolver) resolveMessageFieldValue(ctx *context, def *federation.MessageFieldValue) (*Value, error) {
-	switch v := def.GetValue().(type) {
-	case *federation.MessageFieldValue_By:
-		path, pathType, err := r.resolvePath(v.By)
-		if err != nil {
-			return nil, err
+	if def.Envs != nil {
+		envKeys := make([]EnvKey, 0, len(def.GetEnvs()))
+		for _, key := range def.GetEnvs() {
+			envKeys = append(envKeys, EnvKey(key))
 		}
-		return &Value{Path: path, PathType: pathType}, nil
-	case *federation.MessageFieldValue_Double:
-		return NewDoubleValue(v.Double), nil
-	case *federation.MessageFieldValue_Float:
-		return NewFloatValue(v.Float), nil
-	case *federation.MessageFieldValue_Int32:
-		return NewInt32Value(v.Int32), nil
-	case *federation.MessageFieldValue_Int64:
-		return NewInt64Value(v.Int64), nil
-	case *federation.MessageFieldValue_Uint32:
-		return NewUint32Value(v.Uint32), nil
-	case *federation.MessageFieldValue_Uint64:
-		return NewUint64Value(v.Uint64), nil
-	case *federation.MessageFieldValue_Sint32:
-		return NewSint32Value(v.Sint32), nil
-	case *federation.MessageFieldValue_Sint64:
-		return NewSint64Value(v.Sint64), nil
-	case *federation.MessageFieldValue_Fixed32:
-		return NewFixed32Value(v.Fixed32), nil
-	case *federation.MessageFieldValue_Fixed64:
-		return NewFixed64Value(v.Fixed64), nil
-	case *federation.MessageFieldValue_Sfixed32:
-		return NewSfixed32Value(v.Sfixed32), nil
-	case *federation.MessageFieldValue_Sfixed64:
-		return NewSfixed64Value(v.Sfixed64), nil
-	case *federation.MessageFieldValue_Bool:
-		return NewBoolValue(v.Bool), nil
-	case *federation.MessageFieldValue_String_:
-		return NewStringValue(v.String_), nil
-	case *federation.MessageFieldValue_Bytes:
-		return NewBytesValue(v.Bytes), nil
-	case *federation.MessageFieldValue_Message:
-		typ, value, err := r.resolveMessageLiteral(ctx, v.Message)
-		if err != nil {
-			return nil, err
-		}
-		return NewMessageValue(typ, value), nil
-	case *federation.MessageFieldValue_Enum:
-		return nil, fmt.Errorf("unimplemented enum literal value")
-	case *federation.MessageFieldValue_Env:
-		return nil, fmt.Errorf("unimplemented env literal value")
-	case *federation.MessageFieldValue_DoubleList:
-		return NewDoubleListValue(v.DoubleList.GetValues()...), nil
-	case *federation.MessageFieldValue_FloatList:
-		return NewFloatListValue(v.FloatList.GetValues()...), nil
-	case *federation.MessageFieldValue_Int32List:
-		return NewInt32ListValue(v.Int32List.GetValues()...), nil
-	case *federation.MessageFieldValue_Int64List:
-		return NewInt64ListValue(v.Int64List.GetValues()...), nil
-	case *federation.MessageFieldValue_Uint32List:
-		return NewUint32ListValue(v.Uint32List.GetValues()...), nil
-	case *federation.MessageFieldValue_Uint64List:
-		return NewUint64ListValue(v.Uint64List.GetValues()...), nil
-	case *federation.MessageFieldValue_Sint32List:
-		return NewSint32ListValue(v.Sint32List.GetValues()...), nil
-	case *federation.MessageFieldValue_Sint64List:
-		return NewSint64ListValue(v.Sint64List.GetValues()...), nil
-	case *federation.MessageFieldValue_Fixed32List:
-		return NewFixed32ListValue(v.Fixed32List.GetValues()...), nil
-	case *federation.MessageFieldValue_Fixed64List:
-		return NewFixed64ListValue(v.Fixed64List.GetValues()...), nil
-	case *federation.MessageFieldValue_Sfixed32List:
-		return NewSfixed32ListValue(v.Sfixed32List.GetValues()...), nil
-	case *federation.MessageFieldValue_Sfixed64List:
-		return NewSfixed64ListValue(v.Sfixed64List.GetValues()...), nil
-	case *federation.MessageFieldValue_BoolList:
-		return NewBoolListValue(v.BoolList.GetValues()...), nil
-	case *federation.MessageFieldValue_StringList:
-		return NewStringListValue(v.StringList.GetValues()...), nil
-	case *federation.MessageFieldValue_BytesList:
-		return NewBytesListValue(v.BytesList.GetValues()...), nil
-	case *federation.MessageFieldValue_MessageList:
-		var (
-			typ    *Type
-			values []map[string]*Value
-		)
-		for _, msgValue := range v.MessageList.GetValues() {
-			t, value, err := r.resolveMessageLiteral(ctx, msgValue)
-			if err != nil {
-				return nil, err
-			}
-			if typ == nil {
-				typ = t
-			} else if typ != t {
-				return nil, fmt.Errorf(`"message_list" value unsupported multiple message type`)
-			}
-			values = append(values, value)
-		}
-		typ.Repeated = true
-		return NewMessageListValue(typ, values...), nil
-	default:
-		return nil, fmt.Errorf(`"by" or literal value must be specified`)
+		value = NewEnvsValue(envKeys...)
+		optNames = append(optNames, envsOpt)
 	}
+	if len(optNames) == 0 {
+		return nil, fmt.Errorf("value must be specified")
+	}
+	if len(optNames) != 1 {
+		return nil, fmt.Errorf("multiple values cannot be specified at the same time: %s", strings.Join(optNames, ","))
+	}
+	return value, nil
 }
 
 func (r *Resolver) lookupRequestMessageFromResponseMessage(resMsg *Message) *Message {

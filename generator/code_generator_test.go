@@ -24,6 +24,7 @@ func TestGenerate(t *testing.T) {
 		{"async"},
 		{"alias"},
 		{"autobind"},
+		{"literal"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

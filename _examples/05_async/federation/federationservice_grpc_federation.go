@@ -1013,76 +1013,118 @@ func (s *FederationService) resolve_Org_Federation_J(ctx context.Context, req *O
 }
 
 func (s *FederationService) logvalue_Org_Federation_A(v *A) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_AA(v *AA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_AAArgument(v *Org_Federation_AAArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_AArgument(v *Org_Federation_AArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_AB(v *AB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_ABArgument(v *Org_Federation_ABArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_B(v *B) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_BArgument(v *Org_Federation_BArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_C(v *C) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_CArgument(v *Org_Federation_CArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("a", v.A),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_D(v *D) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_DArgument(v *Org_Federation_DArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("b", v.B),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_E(v *E) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_EArgument(v *Org_Federation_EArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("c", v.C),
 		slog.String("d", v.D),
@@ -1090,12 +1132,18 @@ func (s *FederationService) logvalue_Org_Federation_EArgument(v *Org_Federation_
 }
 
 func (s *FederationService) logvalue_Org_Federation_F(v *F) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_FArgument(v *Org_Federation_FArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("c", v.C),
 		slog.String("d", v.D),
@@ -1103,16 +1151,25 @@ func (s *FederationService) logvalue_Org_Federation_FArgument(v *Org_Federation_
 }
 
 func (s *FederationService) logvalue_Org_Federation_G(v *G) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_GArgument(v *Org_Federation_GArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("hname", v.GetHname()),
 		slog.String("jname", v.GetJname()),
@@ -1120,16 +1177,25 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_H(v *H) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_HArgument(v *Org_Federation_HArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("e", v.E),
 		slog.String("f", v.F),
@@ -1138,22 +1204,34 @@ func (s *FederationService) logvalue_Org_Federation_HArgument(v *Org_Federation_
 }
 
 func (s *FederationService) logvalue_Org_Federation_I(v *I) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_IArgument(v *Org_Federation_IArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_J(v *J) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_JArgument(v *Org_Federation_JArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("i", v.I),
 	)

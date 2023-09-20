@@ -202,7 +202,7 @@ testdata/missing_message_option.proto:43:32: "federation.User" message does not 
                                     ^
 `},
 		{file: "missing_method_request_value.proto", expected: `
-testdata/missing_method_request_value.proto:39:9: "by" or literal value must be specified
+testdata/missing_method_request_value.proto:39:9: value must be specified
 39:          { field: "id" }
              ^
 `},

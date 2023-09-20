@@ -430,18 +430,27 @@ func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.Any("data", s.logvalue_Org_Federation_PostData(v.GetData())),
@@ -449,12 +458,18 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federation_PostArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostContent(v *PostContent) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("category", s.logvalue_Org_Federation_PostContent_Category(v.GetCategory()).String()),
 		slog.String("head", v.GetHead()),
@@ -474,6 +489,9 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostC
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostData(v *PostData) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("type", s.logvalue_Org_Federation_PostType(v.GetType()).String()),
 		slog.String("title", v.GetTitle()),

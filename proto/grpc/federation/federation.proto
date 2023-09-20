@@ -39,13 +39,13 @@ message EnumRule {
   // The alias is the FQDN ( <package-name>.<enum-name> ) to the enum.
   // If this definition exists, type conversion is automatically performed before the enum value assignment operation.
   // If a enum with this option has a value that is not present in the enum specified by alias, and the alias option is not specified for that value, an error is occurred.
-  string alias = 1;
+  optional string alias = 1;
 }
 
 message EnumValueRule {
   // specifies the default value of the enum.
   // All values other than those specified in alias will be default values.
-  bool default = 1;
+  optional bool default = 1;
   // alias can be used when alias is specified in grpc.federation.enum option,
   // and specifies the value name to be referenced among the enums specified in alias of enum option.
   // multiple value names can be specified for alias.
@@ -74,25 +74,25 @@ message MethodRule {
   // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
   // If you want to handle this error, you need to implement a custom error handler in Go.
   // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
-  string timeout = 1;
+  optional string timeout = 1;
 }
 
 // MessageRule define GRPC Federation rules for the message.
 message MessageRule {
   // resolver defines how to call methods to obtain the values needed to compose the message.
-  Resolver resolver = 1;
+  optional Resolver resolver = 1;
   // messages defines a list of dependent messages that must be retrieved to compose a message.
   repeated Message messages = 2;
   // if custom_resolver is true, the resolver for this message is implemented by Go.
   // If there are any values retrieved by resolver or messages, they are passed as arguments for custom resolver.
   // Each field of the message returned by the custom resolver is automatically bound.
   // If you want to change the binding process for a particular field, set `custom_resolver=true` option for that field.
-  bool custom_resolver = 3;
+  optional bool custom_resolver = 3;
   // alias mapping between messages defined in other packages and messages defined on the federation service side.
   // The alias is the FQDN ( <package-name>.<message-name> ) to the message.
   // If this definition exists, type conversion is automatically performed before the field assignment operation.
   // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
-  string alias = 4;
+  optional string alias = 4;
 }
 
 // Resolver define the gRPC method, how to call it, and which value to use in the return value.
@@ -106,9 +106,9 @@ message Resolver {
   // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
   // If you want to handle this error, you need to implement a custom error handler in Go.
   // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
-  string timeout = 4;
+  optional string timeout = 4;
   // retry specifies the retry policy if the method call fails.
-  RetryPolicy retry = 5;
+  optional RetryPolicy retry = 5;
 }
 
 // RetryPolicy define the retry policy if the method call fails.
@@ -151,79 +151,107 @@ message MethodRequest {
   // field name of the request message.
   string field = 1;
   // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
-  oneof value {
-    string by = 2;
-
-    // specify the single value in literal.
-
-    double double = 3;
-    float float = 4;
-    int32 int32 = 5;
-    int64 int64 = 6;
-    uint32 uint32 = 7;
-    uint64 uint64 = 8;
-    sint32 sint32 = 9;
-    sint64 sint64 = 10;
-    fixed32 fixed32 = 11;
-    fixed64 fixed64 = 12;
-    sfixed32 sfixed32 = 13;
-    sfixed64 sfixed64 = 14;
-    bool bool = 15;
-    string string = 16;
-    bytes bytes = 17;
-    MessageValue message = 18;
-    string enum = 19;
-    string env = 20;
-
-    // specify the list value in literal.
-
-    DoubleListValue double_list = 21;
-    FloatListValue float_list = 22;
-    Int32ListValue int32_list = 23;
-    Int64ListValue int64_list = 24;
-    Uint32ListValue uint32_list = 25;
-    Uint64ListValue uint64_list = 26;
-    Sint32ListValue sint32_list = 27;
-    Sint64ListValue sint64_list = 28;
-    Fixed32ListValue fixed32_list = 29;
-    Fixed64ListValue fixed64_list = 30;
-    SFixed32ListValue sfixed32_list = 31;
-    SFixed64ListValue sfixed64_list = 32;
-    BoolListValue bool_list = 33;
-    StringListValue string_list = 34;
-    BytesListValue bytes_list = 35;
-    MessageListValue message_list = 36;
-  }
+  optional string by = 2;
+  // double literal value.
+  optional double double = 3;
+  // repeated double literal values.
+  repeated double doubles = 4;
+  // float literal value.
+  optional float float = 5;
+  // repeated float literal values.
+  repeated float floats = 6;
+  // int32 literal value.
+  optional int32 int32 = 7;
+  // repeated int32 literal values.
+  repeated int32 int32s = 8;
+  // int64 literal value.
+  optional int64 int64 = 9;
+  // repeated int64 literal values.
+  repeated int64 int64s = 10;
+  // uint32 literal value.
+  optional uint32 uint32 = 11;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 12;
+  // uint64 literal value.
+  optional uint64 uint64 = 13;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 14;
+  // sint32 literal value.
+  optional sint32 sint32 = 15;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 16;
+  // sint64 literal value.
+  optional sint64 sint64 = 17;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 18;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 19;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 20;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 21;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 22;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 23;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 24;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 25;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 26;
+  // bool literal value.
+  optional bool bool = 27;
+  // repeated bool literal values.
+  repeated bool bools = 28;
+  // string literal value.
+  optional string string = 29;
+  // repeated string literal values.
+  repeated string strings = 30;
+  // bytes literal value.
+  optional bytes byte_string = 31;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 32;
+  // message literal value.
+  optional MessageValue message = 33;
+  // repeated message literal values.
+  repeated MessageValue messages = 34;
+  // enum literal value.
+  optional string enum = 35;
+  // repeated enum literal values.
+  repeated string enums = 36;
+  // env literal value.
+  optional string env = 37;
+  // repeated env literal values.
+  repeated string envs = 38;
 }
 
 // MethodResponse define which value of the method response is referenced.
 message MethodResponse {
   // name specify the unique name that can be used in a `MessageRule` / `FieldRule` for the same message for a specific field in the response.
-  string name = 1;
+  optional string name = 1;
   // field name in response message.
-  string field = 2;
+  optional string field = 2;
   // autobind if the value referenced by `field` is a message type,
   // the value of a field with the same name and type as the field name of its own message is automatically assigned to the value of the field in the message.
   // If multiple autobinds are used at the same message,
   // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
-  bool autobind = 3;
+  optional bool autobind = 3;
 }
 
 // Message define dependent message.
 message Message {
   // name specify a unique name for the dependent message.
-  string name = 1;
+  optional string name = 1;
   // message specify the message to be referred to by FQDN. format is `<package-name>.<message-name>`.
   // <package-name> can be omitted when referring to messages in the same package.
   string message = 2;
-  // repeated specify when multiple target messages are to be retrieved.
-  bool repeated = 3;
   // args specify the parameters needed to retrieve the message. This is called the message argument.
-  repeated Argument args = 4;
+  repeated Argument args = 3;
   // autobind the value of a field with the same name and type as the field name of this message is automatically assigned to the field value in the message.
   // If multiple autobinds are used at the same message,
   // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
-  bool autobind = 5;
+  optional bool autobind = 4;
 }
 
 // Argument define message argument.
@@ -232,225 +260,254 @@ message Argument {
   // Use this name to refer to the message argument.
   // For example, if `foo` is specified as the name, it is referenced by `$.foo`.
   string name = 1;
-
-  oneof value {
-    // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
-    string by = 2;
-    // inline like by, it refers to the specified value and expands all fields beyond it.
-    // For this reason, the referenced value must always be of message type.
-    string inline = 3;
-
-    // specify the single value in literal.
-
-    double double = 4;
-    float float = 5;
-    int32 int32 = 6;
-    int64 int64 = 7;
-    uint32 uint32 = 8;
-    uint64 uint64 = 9;
-    sint32 sint32 = 10;
-    sint64 sint64 = 11;
-    fixed32 fixed32 = 12;
-    fixed64 fixed64 = 13;
-    sfixed32 sfixed32 = 14;
-    sfixed64 sfixed64 = 15;
-    bool bool = 16;
-    string string = 17;
-    bytes bytes = 18;
-    MessageValue message = 19;
-    string enum = 20;
-    string env = 21;
-
-    // specify the list value in literal.
-
-    DoubleListValue double_list = 22;
-    FloatListValue float_list = 23;
-    Int32ListValue int32_list = 24;
-    Int64ListValue int64_list = 25;
-    Uint32ListValue uint32_list = 26;
-    Uint64ListValue uint64_list = 27;
-    Sint32ListValue sint32_list = 28;
-    Sint64ListValue sint64_list = 29;
-    Fixed32ListValue fixed32_list = 30;
-    Fixed64ListValue fixed64_list = 31;
-    SFixed32ListValue sfixed32_list = 32;
-    SFixed64ListValue sfixed64_list = 33;
-    BoolListValue bool_list = 34;
-    StringListValue string_list = 35;
-    BytesListValue bytes_list = 36;
-    MessageListValue message_list = 37;
-  }
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  optional string by = 2;
+  // inline like by, it refers to the specified value and expands all fields beyond it.
+  // For this reason, the referenced value must always be of message type.
+  optional string inline = 3;
+  // double literal value.
+  optional double double = 4;
+  // repeated double literal values.
+  repeated double doubles = 5;
+  // float literal value.
+  optional float float = 6;
+  // repeated float literal values.
+  repeated float floats = 7;
+  // int32 literal value.
+  optional int32 int32 = 8;
+  // repeated int32 literal values.
+  repeated int32 int32s = 9;
+  // int64 literal value.
+  optional int64 int64 = 10;
+  // repeated int64 literal values.
+  repeated int64 int64s = 11;
+  // uint32 literal value.
+  optional uint32 uint32 = 12;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 13;
+  // uint64 literal value.
+  optional uint64 uint64 = 14;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 15;
+  // sint32 literal value.
+  optional sint32 sint32 = 16;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 17;
+  // sint64 literal value.
+  optional sint64 sint64 = 18;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 19;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 20;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 21;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 22;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 23;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 24;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 25;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 26;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 27;
+  // bool literal value.
+  optional bool bool = 28;
+  // repeated bool literal values.
+  repeated bool bools = 29;
+  // string literal value.
+  optional string string = 30;
+  // repeated string literal values.
+  repeated string strings = 31;
+  // bytes literal value.
+  optional bytes byte_string = 32;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 33;
+  // message literal value.
+  optional MessageValue message = 34;
+  // repeated message literal values.
+  repeated MessageValue messages = 35;
+  // enum literal value.
+  optional string enum = 36;
+  // repeated enum literal values.
+  repeated string enums = 37;
+  // env literal value.
+  optional string env = 38;
+  // repeated env literal values.
+  repeated string envs = 39;
 }
 
 // FieldRule define GRPC Federation rules for the field of message.
 message FieldRule {
-  oneof value {
-    // If custom_resolver is true, the field binding process is to be implemented in Go.
-    // If there are any values retrieved by grpc.federation.message option, they are passed as arguments for custom resolver.
-    bool custom_resolver = 1;
-    // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
-    string by = 2;
-
-    // specify the single value in literal.
-
-    double double = 3;
-    float float = 4;
-    int32 int32 = 5;
-    int64 int64 = 6;
-    uint32 uint32 = 7;
-    uint64 uint64 = 8;
-    sint32 sint32 = 9;
-    sint64 sint64 = 10;
-    fixed32 fixed32 = 11;
-    fixed64 fixed64 = 12;
-    sfixed32 sfixed32 = 13;
-    sfixed64 sfixed64 = 14;
-    bool bool = 15;
-    string string = 16;
-    bytes bytes = 17;
-    MessageValue message = 18;
-    string enum = 19;
-    string env = 20;
-  
-    // specify the list value in literal.
-  
-    DoubleListValue double_list = 21;
-    FloatListValue float_list = 22;
-    Int32ListValue int32_list = 23;
-    Int64ListValue int64_list = 24;
-    Uint32ListValue uint32_list = 25;
-    Uint64ListValue uint64_list = 26;
-    Sint32ListValue sint32_list = 27;
-    Sint64ListValue sint64_list = 28;
-    Fixed32ListValue fixed32_list = 29;
-    Fixed64ListValue fixed64_list = 30;
-    SFixed32ListValue sfixed32_list = 31;
-    SFixed64ListValue sfixed64_list = 32;
-    BoolListValue bool_list = 33;
-    StringListValue string_list = 34;
-    BytesListValue bytes_list = 35;
-    MessageListValue message_list = 36;
-
-    // alias can be used when alias is specified in grpc.federation.message option,
-    // and specifies the field name to be referenced among the messages specified in alias of message option.
-    // If the specified field has the same type or can be converted automatically, its value is assigned.
-    string alias = 37;
-  }
+  // If custom_resolver is true, the field binding process is to be implemented in Go.
+  // If there are any values retrieved by grpc.federation.message option, they are passed as arguments for custom resolver.
+  optional bool custom_resolver = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  optional string by = 2;
+  // alias can be used when alias is specified in grpc.federation.message option,
+  // and specifies the field name to be referenced among the messages specified in alias of message option.
+  // If the specified field has the same type or can be converted automatically, its value is assigned.
+  optional string alias = 3;
+  // double literal value.
+  optional double double = 4;
+  // repeated double literal values.
+  repeated double doubles = 5;
+  // float literal value.
+  optional float float = 6;
+  // repeated float literal values.
+  repeated float floats = 7;
+  // int32 literal value.
+  optional int32 int32 = 8;
+  // repeated int32 literal values.
+  repeated int32 int32s = 9;
+  // int64 literal value.
+  optional int64 int64 = 10;
+  // repeated int64 literal values.
+  repeated int64 int64s = 11;
+  // uint32 literal value.
+  optional uint32 uint32 = 12;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 13;
+  // uint64 literal value.
+  optional uint64 uint64 = 14;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 15;
+  // sint32 literal value.
+  optional sint32 sint32 = 16;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 17;
+  // sint64 literal value.
+  optional sint64 sint64 = 18;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 19;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 20;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 21;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 22;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 23;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 24;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 25;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 26;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 27;
+  // bool literal value.
+  optional bool bool = 28;
+  // repeated bool literal values.
+  repeated bool bools = 29;
+  // string literal value.
+  optional string string = 30;
+  // repeated string literal values.
+  repeated string strings = 31;
+  // bytes literal value.
+  optional bytes byte_string = 32;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 33;
+  // message literal value.
+  optional MessageValue message = 34;
+  // repeated message literal values.
+  repeated MessageValue messages = 35;
+  // enum literal value.
+  optional string enum = 36;
+  // repeated enum literal values.
+  repeated string enums = 37;
+  // env literal value.
+  optional string env = 38;
+  // repeated env literal values.
+  repeated string envs = 39;
 }
 
+// MessageValue represents message literal.
 message MessageValue {
+  // name specify the message name to be referred to by FQDN. format is `<package-name>.<message-name>`.
+  // <package-name> can be omitted when referring to messages in the same package.
   string name = 1;
+  // fields represents message's fields.
   repeated MessageFieldValue fields = 2;
 }
 
+// MessageFieldValue represents message's field.
 message MessageFieldValue {
   string field = 1;
-  oneof value {
-    // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
-    string by = 2;
-
-    // specify the single value in literal.
-
-    double double = 3;
-    float float = 4;
-    int32 int32 = 5;
-    int64 int64 = 6;
-    uint32 uint32 = 7;
-    uint64 uint64 = 8;
-    sint32 sint32 = 9;
-    sint64 sint64 = 10;
-    fixed32 fixed32 = 11;
-    fixed64 fixed64 = 12;
-    sfixed32 sfixed32 = 13;
-    sfixed64 sfixed64 = 14;
-    bool bool = 15;
-    string string = 16;
-    bytes bytes = 17;
-    MessageValue message = 18;
-    string enum = 19;
-    string env = 20;
-  
-    // specify the list value in literal.
-  
-    DoubleListValue double_list = 21;
-    FloatListValue float_list = 22;
-    Int32ListValue int32_list = 23;
-    Int64ListValue int64_list = 24;
-    Uint32ListValue uint32_list = 25;
-    Uint64ListValue uint64_list = 26;
-    Sint32ListValue sint32_list = 27;
-    Sint64ListValue sint64_list = 28;
-    Fixed32ListValue fixed32_list = 29;
-    Fixed64ListValue fixed64_list = 30;
-    SFixed32ListValue sfixed32_list = 31;
-    SFixed64ListValue sfixed64_list = 32;
-    BoolListValue bool_list = 33;
-    StringListValue string_list = 34;
-    BytesListValue bytes_list = 35;
-    MessageListValue message_list = 36;
-  }
-}
-
-message DoubleListValue {
-  repeated double values = 1;
-}
-
-message FloatListValue {
-  repeated float values = 1;
-}
-
-message Int32ListValue {
-  repeated int32 values = 1;
-}
-
-message Int64ListValue {
-  repeated int64 values = 1;
-}
-
-message Uint32ListValue {
-  repeated uint32 values = 1;
-}
-
-message Uint64ListValue {
-  repeated uint64 values = 1;
-}
-
-message Sint32ListValue {
-  repeated sint32 values = 1;
-}
-
-message Sint64ListValue {
-  repeated sint64 values = 1;
-}
-
-message Fixed32ListValue {
-  repeated fixed32 values = 1;
-}
-
-message Fixed64ListValue {
-  repeated fixed64 values = 1;
-}
-
-message SFixed32ListValue {
-  repeated sfixed32 values = 1;
-}
-
-message SFixed64ListValue {
-  repeated sfixed64 values = 1;
-}
-
-message BoolListValue {
-  repeated bool values = 1;
-}
-
-message StringListValue {
-  repeated string values = 1;
-}
-
-message BytesListValue {
-  repeated bytes values = 1;
-}
-
-message MessageListValue {
-  repeated MessageValue values = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  optional string by = 2;
+  // double literal value.
+  optional double double = 3;
+  // repeated double literal values.
+  repeated double doubles = 4;
+  // float literal value.
+  optional float float = 5;
+  // repeated float literal values.
+  repeated float floats = 6;
+  // int32 literal value.
+  optional int32 int32 = 7;
+  // repeated int32 literal values.
+  repeated int32 int32s = 8;
+  // int64 literal value.
+  optional int64 int64 = 9;
+  // repeated int64 literal values.
+  repeated int64 int64s = 10;
+  // uint32 literal value.
+  optional uint32 uint32 = 11;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 12;
+  // uint64 literal value.
+  optional uint64 uint64 = 13;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 14;
+  // sint32 literal value.
+  optional sint32 sint32 = 15;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 16;
+  // sint64 literal value.
+  optional sint64 sint64 = 17;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 18;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 19;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 20;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 21;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 22;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 23;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 24;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 25;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 26;
+  // bool literal value.
+  optional bool bool = 27;
+  // repeated bool literal values.
+  repeated bool bools = 28;
+  // string literal value.
+  optional string string = 29;
+  // repeated string literal values.
+  repeated string strings = 30;
+  // bytes literal value.
+  optional bytes byte_string = 31;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 32;
+  // message literal value.
+  optional MessageValue message = 33;
+  // repeated message literal values.
+  repeated MessageValue messages = 34;
+  // enum literal value.
+  optional string enum = 35;
+  // repeated enum literal values.
+  repeated string enums = 36;
+  // env literal value.
+  optional string env = 37;
+  // repeated env literal values.
+  repeated string envs = 38;
 }

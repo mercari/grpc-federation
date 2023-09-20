@@ -657,6 +657,9 @@ func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.U
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Federation_Post(v.GetPost())),
 		slog.String("str", v.GetStr()),
@@ -664,12 +667,18 @@ func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostRespon
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *Federation_GetPostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_Item(v *Item) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 		slog.String("type", s.logvalue_Federation_Item_ItemType(v.GetType()).String()),
@@ -693,6 +702,9 @@ func (s *FederationService) logvalue_Federation_Item_ItemType(v Item_ItemType) s
 }
 
 func (s *FederationService) logvalue_Federation_Item_Location(v *Item_Location) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("addr1", v.GetAddr1()),
 		slog.String("addr2", v.GetAddr2()),
@@ -702,18 +714,27 @@ func (s *FederationService) logvalue_Federation_Item_Location(v *Item_Location) 
 }
 
 func (s *FederationService) logvalue_Federation_Item_Location_AddrA(v *Item_Location_AddrA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("foo", v.GetFoo()),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_Item_Location_AddrB(v *Item_Location_AddrB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Int64("bar", v.GetBar()),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
@@ -723,12 +744,18 @@ func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_PostArgument(v *Federation_PostArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("name", v.GetName()),
@@ -740,6 +767,9 @@ func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_UserArgument(v *Federation_UserArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 		slog.String("title", v.Title),
@@ -749,12 +779,18 @@ func (s *FederationService) logvalue_Federation_UserArgument(v *Federation_UserA
 }
 
 func (s *FederationService) logvalue_Federation_User_AttrA(v *User_AttrA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("foo", v.GetFoo()),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_User_AttrB(v *User_AttrB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Bool("bar", v.GetBar()),
 	)
@@ -772,6 +808,9 @@ func (s *FederationService) logvalue_Federation_User_ProfileEntry(v map[string]*
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("type_url", v.GetTypeUrl()),
 		slog.String("value", string(v.GetValue())),

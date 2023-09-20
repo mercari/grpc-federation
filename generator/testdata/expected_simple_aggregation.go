@@ -135,43 +135,11 @@ type Org_Federation_MArgument struct {
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type Org_Federation_PostArgument struct {
-	Client            *FederationServiceDependencyServiceClient
-	BoolListValue     []bool
-	BoolValue         bool
-	BytesListValue    [][]byte
-	BytesValue        []byte
-	DoubleListValue   []float64
-	DoubleValue       float64
-	Fixed32ListValue  []uint32
-	Fixed32Value      uint32
-	Fixed64ListValue  []uint64
-	Fixed64Value      uint64
-	FloatListValue    []float32
-	FloatValue        float32
-	Id                string
-	Int32ListValue    []int32
-	Int32Value        int32
-	Int64ListValue    []int64
-	Int64Value        int64
-	M                 *M
-	MessageListValue  []*post.Post
-	MessageValue      *post.Post
-	Post              *post.Post
-	Sfixed32ListValue []int32
-	Sfixed32Value     int32
-	Sfixed64ListValue []int64
-	Sfixed64Value     int64
-	Sint32ListValue   []int32
-	Sint32Value       int32
-	Sint64ListValue   []int64
-	Sint64Value       int64
-	StringListValue   []string
-	StringValue       string
-	Uint32ListValue   []uint32
-	Uint32Value       uint32
-	Uint64ListValue   []uint64
-	Uint64Value       uint64
-	User              *User
+	Client *FederationServiceDependencyServiceClient
+	Id     string
+	M      *M
+	Post   *post.Post
+	User   *User
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
@@ -396,80 +364,14 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	   {
 	     name: "post"
 	     message: "Post"
-	     args: [
-	       { name: "id", by: "$.id" },
-	       { name: "double_value", double: 1.23 },
-	       { name: "float_value", float: 4.56 },
-	       { name: "int32_value", int32: 1 },
-	       { name: "int64_value", int64: 2 },
-	       { name: "uint32_value", uint32: 3 },
-	       { name: "uint64_value", uint64: 4 },
-	       { name: "sint32_value", sint32: -1 },
-	       { name: "sint64_value", sint64: -2 },
-	       { name: "fixed32_value", fixed32: 5 },
-	       { name: "fixed64_value", fixed64: 6 },
-	       { name: "sfixed32_value", sfixed32: 7 },
-	       { name: "sfixed64_value", sfixed64: 8 },
-	       { name: "bool_value", bool: true },
-	       { name: "string_value", string: "hello" },
-	       { name: "bytes_value", bytes: "hello" },
-	       { name: "message_value", message: { name: "org.post.Post", fields: [{ field: "content", string: "xxxyyyzzz" }] } },
-	       { name: "double_list_value", double_list: { values: [1.23, 4.56] } },
-	       { name: "float_list_value", float_list: { values: [7.89, 1.23] } },
-	       { name: "int32_list_value", int32_list: { values: [1, 2, 3] } },
-	       { name: "int64_list_value", int64_list: { values: [4, 5, 6] } },
-	       { name: "uint32_list_value", uint32_list: { values: [7, 8, 9] } },
-	       { name: "uint64_list_value", uint64_list: { values: [10, 11, 12] } },
-	       { name: "sint32_list_value", sint32_list: { values: [-1, -2, -3] } },
-	       { name: "sint64_list_value", sint64_list: { values: [-4, -5, -6] } },
-	       { name: "fixed32_list_value", fixed32_list: { values: [11, 12, 13] } },
-	       { name: "fixed64_list_value", fixed64_list: { values: [14, 15, 16] } },
-	       { name: "sfixed32_list_value", sfixed32_list: { values: [-1, -2, -3] } },
-	       { name: "sfixed64_list_value", sfixed64_list: { values: [-4, -5, -6] } },
-	       { name: "bool_list_value", bool_list: { values: [false, true] } },
-	       { name: "string_list_value", string_list: { values: ["hello", "world"] } },
-	       { name: "bytes_list_value", bytes_list: { values: ["hello", "world"] } },
-	       { name: "message_list_value", message_list: { values: [{ name: "org.post.Post", fields: [{ field: "content", string: "aaabbbccc" }] }] } }
-	     ]
+	     args { name: "id", by: "$.id" }
 	   }
 	*/
 	resPostIface, err, _ := sg.Do("post_org.federation.Post", func() (interface{}, error) {
 		valueMu.RLock()
 		args := &Org_Federation_PostArgument{
-			Client:            s.client,
-			Id:                req.Id,                                                                     // { name: "id", by: "$.id" }
-			DoubleValue:       1.23,                                                                       // { name: "double_value", double: 1.23 }
-			FloatValue:        4.56,                                                                       // { name: "float_value", float: 4.56 }
-			Int32Value:        1,                                                                          // { name: "int32_value", int32: 1 }
-			Int64Value:        2,                                                                          // { name: "int64_value", int64: 2 }
-			Uint32Value:       3,                                                                          // { name: "uint32_value", uint32: 3 }
-			Uint64Value:       4,                                                                          // { name: "uint64_value", uint64: 4 }
-			Sint32Value:       -1,                                                                         // { name: "sint32_value", sint32: -1 }
-			Sint64Value:       -2,                                                                         // { name: "sint64_value", sint64: -2 }
-			Fixed32Value:      5,                                                                          // { name: "fixed32_value", fixed32: 5 }
-			Fixed64Value:      6,                                                                          // { name: "fixed64_value", fixed64: 6 }
-			Sfixed32Value:     7,                                                                          // { name: "sfixed32_value", sfixed32: 7 }
-			Sfixed64Value:     8,                                                                          // { name: "sfixed64_value", sfixed64: 8 }
-			BoolValue:         true,                                                                       // { name: "bool_value", bool: true }
-			StringValue:       "hello",                                                                    // { name: "string_value", string: "hello" }
-			BytesValue:        []byte{104, 101, 108, 108, 111},                                            // { name: "bytes_value", bytes: "hello" }
-			MessageValue:      &post.Post{Content: "xxxyyyzzz"},                                           // { name: "message_value", message: { name: "org.post.Post", fields: [{ field: "content", string: "xxxyyyzzz" }] } }
-			DoubleListValue:   []float64{1.23, 4.56},                                                      // { name: "double_list_value", double_list: { values: [1.23, 4.56] } }
-			FloatListValue:    []float32{7.89, 1.23},                                                      // { name: "float_list_value", float_list: { values: [7.89, 1.23] } }
-			Int32ListValue:    []int32{1, 2, 3},                                                           // { name: "int32_list_value", int32_list: { values: [1, 2, 3] } }
-			Int64ListValue:    []int64{4, 5, 6},                                                           // { name: "int64_list_value", int64_list: { values: [4, 5, 6] } }
-			Uint32ListValue:   []uint32{7, 8, 9},                                                          // { name: "uint32_list_value", uint32_list: { values: [7, 8, 9] } }
-			Uint64ListValue:   []uint64{10, 11, 12},                                                       // { name: "uint64_list_value", uint64_list: { values: [10, 11, 12] } }
-			Sint32ListValue:   []int32{-1, -2, -3},                                                        // { name: "sint32_list_value", sint32_list: { values: [-1, -2, -3] } }
-			Sint64ListValue:   []int64{-4, -5, -6},                                                        // { name: "sint64_list_value", sint64_list: { values: [-4, -5, -6] } }
-			Fixed32ListValue:  []uint32{11, 12, 13},                                                       // { name: "fixed32_list_value", fixed32_list: { values: [11, 12, 13] } }
-			Fixed64ListValue:  []uint64{14, 15, 16},                                                       // { name: "fixed64_list_value", fixed64_list: { values: [14, 15, 16] } }
-			Sfixed32ListValue: []int32{-1, -2, -3},                                                        // { name: "sfixed32_list_value", sfixed32_list: { values: [-1, -2, -3] } }
-			Sfixed64ListValue: []int64{-4, -5, -6},                                                        // { name: "sfixed64_list_value", sfixed64_list: { values: [-4, -5, -6] } }
-			BoolListValue:     []bool{false, true},                                                        // { name: "bool_list_value", bool_list: { values: [false, true] } }
-			StringListValue:   []string{"hello", "world"},                                                 // { name: "string_list_value", string_list: { values: ["hello", "world"] } }
-			BytesListValue:    [][]byte{[]byte{104, 101, 108, 108, 111}, []byte{119, 111, 114, 108, 100}}, // { name: "bytes_list_value", bytes_list: { values: ["hello", "world"] } }
-			MessageListValue:  []*post.Post{&post.Post{Content: "aaabbbccc"}},                             // { name: "message_list_value", message_list: { values: [{ name: "org.post.Post", fields: [{ field: "content", string: "aaabbbccc" }] }] } }
+			Client: s.client,
+			Id:     req.Id, // { name: "id", by: "$.id" }
 		}
 		valueMu.RUnlock()
 		return s.resolve_Org_Federation_Post(ctx, args)
@@ -863,6 +765,9 @@ func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *O
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("type_url", v.GetTypeUrl()),
 		slog.String("value", string(v.GetValue())),
@@ -870,6 +775,9 @@ func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Valu
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
 		slog.String("literal", v.GetLiteral()),
@@ -877,12 +785,18 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_Item(v *Item) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 		slog.String("type", s.logvalue_Org_Federation_Item_ItemType(v.GetType()).String()),
@@ -903,6 +817,9 @@ func (s *FederationService) logvalue_Org_Federation_Item_ItemType(v Item_ItemTyp
 }
 
 func (s *FederationService) logvalue_Org_Federation_M(v *M) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("foo", v.GetFoo()),
 		slog.Int64("bar", v.GetBar()),
@@ -910,10 +827,16 @@ func (s *FederationService) logvalue_Org_Federation_M(v *M) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_MArgument(v *Org_Federation_MArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
@@ -925,44 +848,18 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federation_PostArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
-		slog.Float64("double_value", v.DoubleValue),
-		slog.Float64("float_value", float64(v.FloatValue)),
-		slog.Int64("int32_value", int64(v.Int32Value)),
-		slog.Int64("int64_value", v.Int64Value),
-		slog.Uint64("uint32_value", uint64(v.Uint32Value)),
-		slog.Uint64("uint64_value", v.Uint64Value),
-		slog.Int64("sint32_value", int64(v.Sint32Value)),
-		slog.Int64("sint64_value", v.Sint64Value),
-		slog.Uint64("fixed32_value", uint64(v.Fixed32Value)),
-		slog.Uint64("fixed64_value", v.Fixed64Value),
-		slog.Int64("sfixed32_value", int64(v.Sfixed32Value)),
-		slog.Int64("sfixed64_value", v.Sfixed64Value),
-		slog.Bool("bool_value", v.BoolValue),
-		slog.String("string_value", v.StringValue),
-		slog.String("bytes_value", string(v.BytesValue)),
-		slog.Any("message_value", s.logvalue_Org_Post_Post(v.MessageValue)),
-		slog.Any("double_list_value", v.DoubleListValue),
-		slog.Any("float_list_value", v.FloatListValue),
-		slog.Any("int32_list_value", v.Int32ListValue),
-		slog.Any("int64_list_value", v.Int64ListValue),
-		slog.Any("uint32_list_value", v.Uint32ListValue),
-		slog.Any("uint64_list_value", v.Uint64ListValue),
-		slog.Any("sint32_list_value", v.Sint32ListValue),
-		slog.Any("sint64_list_value", v.Sint64ListValue),
-		slog.Any("fixed32_list_value", v.Fixed32ListValue),
-		slog.Any("fixed64_list_value", v.Fixed64ListValue),
-		slog.Any("sfixed32_list_value", v.Sfixed32ListValue),
-		slog.Any("sfixed64_list_value", v.Sfixed64ListValue),
-		slog.Any("bool_list_value", v.BoolListValue),
-		slog.Any("string_list_value", v.StringListValue),
-		slog.Any("bytes_list_value", v.BytesListValue),
-		slog.Any("message_list_value", s.logvalue_repeated_Org_Post_Post(v.MessageListValue)),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("type", s.logvalue_Org_Federation_UserType(v.GetType()).String()),
@@ -978,6 +875,9 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 		slog.String("title", v.Title),
@@ -997,12 +897,18 @@ func (s *FederationService) logvalue_Org_Federation_UserType(v UserType) slog.Va
 }
 
 func (s *FederationService) logvalue_Org_Federation_User_AttrA(v *User_AttrA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("foo", v.GetFoo()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_User_AttrB(v *User_AttrB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Bool("bar", v.GetBar()),
 	)
@@ -1020,22 +926,19 @@ func (s *FederationService) logvalue_Org_Federation_User_ProfileEntry(v map[stri
 }
 
 func (s *FederationService) logvalue_Org_Federation_Z(v *Z) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("foo", v.GetFoo()),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_ZArgument(v *Org_Federation_ZArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue()
-}
-
-func (s *FederationService) logvalue_Org_Post_Post(v *post.Post) slog.Value {
-	return slog.GroupValue(
-		slog.String("id", v.GetId()),
-		slog.String("title", v.GetTitle()),
-		slog.String("content", v.GetContent()),
-		slog.String("user_id", v.GetUserId()),
-	)
 }
 
 func (s *FederationService) logvalue_repeated_Org_Federation_Item(v []*Item) slog.Value {

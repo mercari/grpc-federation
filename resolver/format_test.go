@@ -23,41 +23,7 @@ func TestProtoFormat(t *testing.T) {
     messages {
       name: "post"
       message: "Post"
-      args: [
-        { name: "id", by: "$.id" },
-        { name: "double_value", double: 1.23 },
-        { name: "float_value", float: 4.56 },
-        { name: "int32_value", int32: 1 },
-        { name: "int64_value", int64: 2 },
-        { name: "uint32_value", uint32: 3 },
-        { name: "uint64_value", uint64: 4 },
-        { name: "sint32_value", sint32: -1 },
-        { name: "sint64_value", sint64: -2 },
-        { name: "fixed32_value", fixed32: 5 },
-        { name: "fixed64_value", fixed64: 6 },
-        { name: "sfixed32_value", sfixed32: 7 },
-        { name: "sfixed64_value", sfixed64: 8 },
-        { name: "bool_value", bool: true },
-        { name: "string_value", string: "hello" },
-        { name: "bytes_value", bytes: "hello" },
-        { name: "message_value", message: { name: "org.post.Post", fields: [{ field: "content", string: "xxxyyyzzz" }] } },
-        { name: "double_list_value", double_list: { values: [1.23, 4.56] } },
-        { name: "float_list_value", float_list: { values: [7.89, 1.23] } },
-        { name: "int32_list_value", int32_list: { values: [1, 2, 3] } },
-        { name: "int64_list_value", int64_list: { values: [4, 5, 6] } },
-        { name: "uint32_list_value", uint32_list: { values: [7, 8, 9] } },
-        { name: "uint64_list_value", uint64_list: { values: [10, 11, 12] } },
-        { name: "sint32_list_value", sint32_list: { values: [-1, -2, -3] } },
-        { name: "sint64_list_value", sint64_list: { values: [-4, -5, -6] } },
-        { name: "fixed32_list_value", fixed32_list: { values: [11, 12, 13] } },
-        { name: "fixed64_list_value", fixed64_list: { values: [14, 15, 16] } },
-        { name: "sfixed32_list_value", sfixed32_list: { values: [-1, -2, -3] } },
-        { name: "sfixed64_list_value", sfixed64_list: { values: [-4, -5, -6] } },
-        { name: "bool_list_value", bool_list: { values: [false, true] } },
-        { name: "string_list_value", string_list: { values: ["hello", "world"] } },
-        { name: "bytes_list_value", bytes_list: { values: ["hello", "world"] } },
-        { name: "message_list_value", message_list: { values: [{ name: "org.post.Post", fields: [{ field: "content", string: "aaabbbccc" }] }] } }
-      ]
+      args { name: "id", by: "$.id" }
     }
   }`,
 				"Post": `

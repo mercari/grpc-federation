@@ -488,6 +488,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 }
 {{- else if .IsMessage }}
 func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		{{- range .Attrs }}
 		slog.{{ .Type }}("{{ .Key }}", {{ .Value }}),
