@@ -103,28 +103,28 @@ type Org_Federation_BArgument struct {
 
 // Org_Federation_CArgument is argument for "org.federation.C" message.
 type Org_Federation_CArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	A      string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_DArgument is argument for "org.federation.D" message.
 type Org_Federation_DArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	B      string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_EArgument is argument for "org.federation.E" message.
 type Org_Federation_EArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	C      string
 	D      string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_FArgument is argument for "org.federation.F" message.
 type Org_Federation_FArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	C      string
 	D      string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_GArgument is argument for "org.federation.G" message.
@@ -134,7 +134,6 @@ type Org_Federation_GArgument struct {
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
 type Org_Federation_GetResponseArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	A      *A
 	B      *B
 	C      *C
@@ -145,14 +144,15 @@ type Org_Federation_GetResponseArgument struct {
 	H      *H
 	I      *I
 	J      *J
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_HArgument is argument for "org.federation.H" message.
 type Org_Federation_HArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	E      string
 	F      string
 	G      string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_IArgument is argument for "org.federation.I" message.
@@ -162,8 +162,8 @@ type Org_Federation_IArgument struct {
 
 // Org_Federation_JArgument is argument for "org.federation.J" message.
 type Org_Federation_JArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	I      string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.

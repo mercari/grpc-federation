@@ -358,7 +358,7 @@ func (s *Service) Types() []*Type {
 		declTypes = append(declTypes, typ)
 		for _, field := range msg.CustomResolverFields() {
 			typeName := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
-			fields := []*Field{{Name: argName, Type: fmt.Sprintf("*%s", argName)}}
+			fields := []*Field{{Type: fmt.Sprintf("*%s", argName)}}
 			if msg.HasCustomResolver() {
 				fields = append(fields, &Field{
 					Name: msgName,

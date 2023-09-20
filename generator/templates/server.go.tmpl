@@ -135,10 +135,14 @@ type {{ $serviceName }} struct {
 
 // {{ .Desc }}.
 type {{ .Name }} struct {
-	Client *{{ $serviceName }}DependencyServiceClient
 	{{- range .Fields }}
+	{{- if .Name }}
 	{{ .Name }} {{ .Type }}
+	{{- else }}
+	{{ .Type }}
 	{{- end }}
+	{{- end }}
+	Client *{{ $serviceName }}DependencyServiceClient
 }
 
 {{- end }}

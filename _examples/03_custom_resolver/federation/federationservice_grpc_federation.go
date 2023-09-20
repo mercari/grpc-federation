@@ -149,54 +149,54 @@ type FederationService struct {
 
 // Federation_ForNamelessArgument is argument for "federation.ForNameless" message.
 type Federation_ForNamelessArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	Bar    string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
 type Federation_GetPostResponseArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	Id     string
 	Post   *Post
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Federation_PostArgument is argument for "federation.Post" message.
 type Federation_PostArgument struct {
-	Client                  *FederationServiceDependencyServiceClient
 	Id                      string
 	Post                    *post.Post
 	Unused                  *Unused
 	User                    *User
 	XFederation_ForNameless *ForNameless
+	Client                  *FederationServiceDependencyServiceClient
 }
 
 // Federation_Post_UserArgument is custom resolver's argument for "user" field of "federation.Post" message.
 type Federation_Post_UserArgument struct {
-	Client                  *FederationServiceDependencyServiceClient
-	Federation_PostArgument *Federation_PostArgument
+	*Federation_PostArgument
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Federation_UnusedArgument is argument for "federation.Unused" message.
 type Federation_UnusedArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	Foo    string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Federation_UserArgument is argument for "federation.User" message.
 type Federation_UserArgument struct {
-	Client  *FederationServiceDependencyServiceClient
 	Content string
 	Id      string
 	Title   string
 	U       *user.User
 	UserId  string
+	Client  *FederationServiceDependencyServiceClient
 }
 
 // Federation_User_NameArgument is custom resolver's argument for "name" field of "federation.User" message.
 type Federation_User_NameArgument struct {
-	Client                  *FederationServiceDependencyServiceClient
-	Federation_User         *User
-	Federation_UserArgument *Federation_UserArgument
+	*Federation_UserArgument
+	Federation_User *User
+	Client          *FederationServiceDependencyServiceClient
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
