@@ -479,6 +479,10 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 		return nil
 	}
 	values := make([]*EnumValue, 0, len(def.GetValue()))
+	enum := &Enum{
+		File: file,
+		Name: def.GetName(),
+	}
 	for _, valueDef := range def.GetValue() {
 		valueName := valueDef.GetName()
 		rule, err := getEnumValueRule(valueDef)
@@ -490,11 +494,11 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 				),
 			)
 		}
-		enumValue := &EnumValue{Value: valueName}
+		enumValue := &EnumValue{Value: valueName, Enum: enum}
 		values = append(values, enumValue)
 		r.enumValueToRuleMap[enumValue] = rule
 	}
-
+	enum.Values = values
 	rule, err := getEnumRule(def)
 	if err != nil {
 		ctx.addError(
@@ -503,11 +507,6 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 				source.EnumLocation(ctx.fileName(), ctx.messageName(), name),
 			),
 		)
-	}
-	enum := &Enum{
-		File:   file,
-		Name:   def.GetName(),
-		Values: values,
 	}
 	r.cachedEnumMap[fqdn] = enum
 	r.enumToRuleMap[enum] = rule
@@ -748,8 +747,7 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 			continue
 		}
 		rule := field.Rule
-		switch {
-		case rule.Value != nil:
+		if rule.Value != nil {
 			value := rule.Value
 			switch {
 			case value.Literal != nil:
@@ -757,10 +755,12 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 			case value.Filtered != nil:
 				r.validateBindFieldType(ctx, value.Filtered, field)
 			}
-		case rule.AutoBindField != nil:
-			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field)
-		case rule.Alias != nil:
+		}
+		if rule.Alias != nil {
 			r.validateBindFieldType(ctx, rule.Alias.Type, field)
+		}
+		if rule.AutoBindField != nil {
+			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field)
 		}
 	}
 }
@@ -965,7 +965,11 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 			return &FieldRule{MessageCustomResolver: true}
 		}
 		if msg.Rule.Alias != nil {
-			return r.resolveFieldRuleByAutoAlias(ctx, msg, field)
+			alias := r.resolveFieldAlias(ctx, msg, field, "")
+			if alias == nil {
+				return nil
+			}
+			return &FieldRule{Alias: alias}
 		}
 		return nil
 	}
@@ -996,7 +1000,7 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 	}
 }
 
-func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field *Field) *FieldRule {
+func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field *Field) *Field {
 	if msg.Rule == nil {
 		return nil
 	}
@@ -1033,12 +1037,12 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 		)
 		return nil
 	}
-	return &FieldRule{Alias: aliasField}
+	return aliasField
 }
 
 func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, fieldAlias string) *Field {
 	if fieldAlias == "" {
-		return nil
+		return r.resolveFieldRuleByAutoAlias(ctx, msg, field)
 	}
 	if msg.Rule == nil || msg.Rule.Alias == nil {
 		ctx.addError(
@@ -1683,20 +1687,69 @@ func (r *Resolver) resolveMessageLiteral(ctx *context, val *federation.MessageVa
 	return t, fieldMap, nil
 }
 
-func (r *Resolver) resolveEnumLiteral(ctx *context, enumName string) (*Enum, error) {
-	t, err := r.resolveType(
-		ctx,
-		enumName,
-		types.Enum,
-		descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL,
-	)
+func (r *Resolver) resolveEnumValueLiteral(ctx *context, enumValueName string) (*EnumValue, error) {
+	pkg, err := r.lookupPackageFromTypeName(ctx, enumValueName)
 	if err != nil {
 		return nil, err
 	}
-	if t.Enum == nil {
-		return nil, fmt.Errorf(`"%s" enum does not exist`, enumName)
+	return r.lookupEnumValue(enumValueName, pkg)
+}
+
+func (r *Resolver) lookupPackageFromTypeName(ctx *context, name string) (*Package, error) {
+	if strings.Contains(name, ".") {
+		p, err := r.lookupPackage(name)
+		if err == nil {
+			return p, nil
+		}
 	}
-	return t.Enum, nil
+	file := ctx.file()
+	if file == nil {
+		return nil, fmt.Errorf(`cannot find package from "%s" name`, name)
+	}
+	return file.Package, nil
+}
+
+func (r *Resolver) lookupEnumValue(name string, pkg *Package) (*EnumValue, error) {
+	valueName := r.trimPackage(pkg, name)
+	isGlobalEnumValue := !strings.Contains(valueName, ".")
+	if isGlobalEnumValue {
+		for _, file := range pkg.Files {
+			for _, enum := range file.Enums {
+				for _, value := range enum.Values {
+					if value.Value == valueName {
+						return value, nil
+					}
+				}
+			}
+		}
+	} else {
+		for _, file := range pkg.Files {
+			for _, msg := range file.Messages {
+				if value := r.lookupEnumValueFromMessage(name, msg); value != nil {
+					return value, nil
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf(`cannot find enum value from "%s"`, name)
+}
+
+func (r *Resolver) lookupEnumValueFromMessage(name string, msg *Message) *EnumValue {
+	msgName := strings.Join(append(msg.ParentMessageNames(), msg.Name), ".")
+	for _, enum := range msg.Enums {
+		for _, value := range enum.Values {
+			valueName := fmt.Sprintf("%s.%s", msgName, value.Value)
+			if valueName == name {
+				return value
+			}
+		}
+	}
+	for _, msg := range msg.NestedMessages {
+		if value := r.lookupEnumValueFromMessage(name, msg); value != nil {
+			return value
+		}
+	}
+	return nil
 }
 
 func (r *Resolver) resolvePath(pathString string) (Path, PathType, error) {
@@ -2148,7 +2201,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, doubleOpt)
 	}
 	if def.Doubles != nil {
-		value = NewDoubleListValue(def.GetDoubles()...)
+		value = NewDoublesValue(def.GetDoubles()...)
 		optNames = append(optNames, doublesOpt)
 	}
 	if def.Float != nil {
@@ -2156,7 +2209,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, floatOpt)
 	}
 	if def.Floats != nil {
-		value = NewFloatListValue(def.GetFloats()...)
+		value = NewFloatsValue(def.GetFloats()...)
 		optNames = append(optNames, floatsOpt)
 	}
 	if def.Int32 != nil {
@@ -2164,7 +2217,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, int32Opt)
 	}
 	if def.Int32S != nil {
-		value = NewInt32ListValue(def.GetInt32S()...)
+		value = NewInt32sValue(def.GetInt32S()...)
 		optNames = append(optNames, int32sOpt)
 	}
 	if def.Int64 != nil {
@@ -2172,7 +2225,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, int64Opt)
 	}
 	if def.Int64S != nil {
-		value = NewInt64ListValue(def.GetInt64S()...)
+		value = NewInt64sValue(def.GetInt64S()...)
 		optNames = append(optNames, int64sOpt)
 	}
 	if def.Uint32 != nil {
@@ -2180,7 +2233,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, uint32Opt)
 	}
 	if def.Uint32S != nil {
-		value = NewUint32ListValue(def.GetUint32S()...)
+		value = NewUint32sValue(def.GetUint32S()...)
 		optNames = append(optNames, uint32sOpt)
 	}
 	if def.Uint64 != nil {
@@ -2188,7 +2241,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, uint64Opt)
 	}
 	if def.Uint64S != nil {
-		value = NewUint64ListValue(def.GetUint64S()...)
+		value = NewUint64sValue(def.GetUint64S()...)
 		optNames = append(optNames, uint64sOpt)
 	}
 	if def.Sint32 != nil {
@@ -2196,7 +2249,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, sint32Opt)
 	}
 	if def.Sint32S != nil {
-		value = NewSint32ListValue(def.GetSint32S()...)
+		value = NewSint32sValue(def.GetSint32S()...)
 		optNames = append(optNames, sint32sOpt)
 	}
 	if def.Sint64 != nil {
@@ -2204,7 +2257,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, sint64Opt)
 	}
 	if def.Sint64S != nil {
-		value = NewSint64ListValue(def.GetSint64S()...)
+		value = NewSint64sValue(def.GetSint64S()...)
 		optNames = append(optNames, sint64sOpt)
 	}
 	if def.Fixed32 != nil {
@@ -2212,7 +2265,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, fixed32Opt)
 	}
 	if def.Fixed32S != nil {
-		value = NewFixed32ListValue(def.GetFixed32S()...)
+		value = NewFixed32sValue(def.GetFixed32S()...)
 		optNames = append(optNames, fixed32sOpt)
 	}
 	if def.Fixed64 != nil {
@@ -2220,7 +2273,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, fixed64Opt)
 	}
 	if def.Fixed64S != nil {
-		value = NewFixed64ListValue(def.GetFixed64S()...)
+		value = NewFixed64sValue(def.GetFixed64S()...)
 		optNames = append(optNames, fixed64sOpt)
 	}
 	if def.Sfixed32 != nil {
@@ -2228,7 +2281,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, sfixed32Opt)
 	}
 	if def.Sfixed32S != nil {
-		value = NewSfixed32ListValue(def.GetSfixed32S()...)
+		value = NewSfixed32sValue(def.GetSfixed32S()...)
 		optNames = append(optNames, sfixed32sOpt)
 	}
 	if def.Sfixed64 != nil {
@@ -2236,7 +2289,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, sfixed64Opt)
 	}
 	if def.Sfixed64S != nil {
-		value = NewSfixed64ListValue(def.GetSfixed64S()...)
+		value = NewSfixed64sValue(def.GetSfixed64S()...)
 		optNames = append(optNames, sfixed64sOpt)
 	}
 	if def.Bool != nil {
@@ -2244,7 +2297,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, boolOpt)
 	}
 	if def.Bools != nil {
-		value = NewBoolListValue(def.GetBools()...)
+		value = NewBoolsValue(def.GetBools()...)
 		optNames = append(optNames, boolsOpt)
 	}
 	if def.String != nil {
@@ -2252,15 +2305,15 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, stringOpt)
 	}
 	if def.Strings != nil {
-		value = NewStringListValue(def.GetStrings()...)
+		value = NewStringsValue(def.GetStrings()...)
 		optNames = append(optNames, stringsOpt)
 	}
 	if def.ByteString != nil {
-		value = NewBytesValue(def.GetByteString())
+		value = NewByteStringValue(def.GetByteString())
 		optNames = append(optNames, byteStringOpt)
 	}
 	if def.ByteStrings != nil {
-		value = NewBytesListValue(def.GetByteStrings()...)
+		value = NewByteStringsValue(def.GetByteStrings()...)
 		optNames = append(optNames, byteStringsOpt)
 	}
 	if def.Message != nil {
@@ -2283,41 +2336,53 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 			}
 			if typ == nil {
 				typ = t
-			} else if typ != t {
+			} else if typ.Ref != t.Ref {
 				return nil, fmt.Errorf(`"messages" value unsupported multiple message type`)
 			}
 			vals = append(vals, val)
 		}
 		typ.Repeated = true
-		value = NewMessageListValue(typ, vals...)
+		value = NewMessagesValue(typ, vals...)
 		optNames = append(optNames, messagesOpt)
 	}
 	if def.Enum != nil {
-		enum, err := r.resolveEnumLiteral(ctx, def.GetEnum())
+		enumValue, err := r.resolveEnumValueLiteral(ctx, def.GetEnum())
 		if err != nil {
 			return nil, err
 		}
-		value = NewEnumValue(enum)
+		value = NewEnumValue(enumValue)
 		optNames = append(optNames, enumOpt)
 	}
 	if def.Enums != nil {
-		var enums []*Enum
+		var (
+			enumValues []*EnumValue
+			enum       *Enum
+		)
 		for _, enumName := range def.GetEnums() {
-			enum, err := r.resolveEnumLiteral(ctx, enumName)
+			enumValue, err := r.resolveEnumValueLiteral(ctx, enumName)
 			if err != nil {
 				return nil, err
 			}
-			enums = append(enums, enum)
+			if enum == nil {
+				enum = enumValue.Enum
+			} else if enum != enumValue.Enum {
+				return nil, fmt.Errorf(`different enum values are used in enums: "%s" and "%s"`, enum.FQDN(), enumValue.Enum.FQDN())
+			}
+			enumValues = append(enumValues, enumValue)
 		}
-		value = NewEnumListValue(enums...)
+		value = NewEnumsValue(enumValues...)
 		optNames = append(optNames, enumsOpt)
 	}
 	if def.Env != nil {
-		value = NewEnvValue(def.GetEnv())
+		value = NewEnvValue(EnvKey(def.GetEnv()))
 		optNames = append(optNames, envOpt)
 	}
 	if def.Envs != nil {
-		value = NewEnvListValue(def.GetEnvs()...)
+		envKeys := make([]EnvKey, 0, len(def.GetEnvs()))
+		for _, key := range def.GetEnvs() {
+			envKeys = append(envKeys, EnvKey(key))
+		}
+		value = NewEnvsValue(envKeys...)
 		optNames = append(optNames, envsOpt)
 	}
 	if len(optNames) == 0 {

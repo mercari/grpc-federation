@@ -1,32 +1,23 @@
 package util
 
 import (
-	"bytes"
 	"strings"
+	_ "unsafe"
 )
 
+//go:linkname GoCamelCase google.golang.org/protobuf/internal/strs.GoCamelCase
+func GoCamelCase(string) string
+
 func ToPublicGoVariable(name string) string {
-	return ToGoVariable(ToPublicVariable(name))
+	return ToPublicVariable(ToGoVariable(name))
+}
+
+func ToPrivateGoVariable(name string) string {
+	return ToPrivateVariable(ToGoVariable(name))
 }
 
 func ToGoVariable(v string) string {
-	var (
-		isLargeChar bool
-		camelV      []byte
-	)
-	for _, c := range v {
-		if c == '_' || c == '-' {
-			isLargeChar = true
-			continue
-		}
-		if isLargeChar {
-			camelV = append(camelV, bytes.ToUpper([]byte{byte(c)})...)
-			isLargeChar = false
-		} else {
-			camelV = append(camelV, byte(c))
-		}
-	}
-	return string(camelV)
+	return GoCamelCase(v)
 }
 
 func ToPublicVariable(name string) string {

@@ -19,7 +19,6 @@ var (
 	Bytes    = descriptorpb.FieldDescriptorProto_TYPE_BYTES
 	Uint32   = descriptorpb.FieldDescriptorProto_TYPE_UINT32
 	Enum     = descriptorpb.FieldDescriptorProto_TYPE_ENUM
-	Env      = descriptorpb.FieldDescriptorProto_TYPE_STRING
 	Sfixed32 = descriptorpb.FieldDescriptorProto_TYPE_SFIXED32
 	Sfixed64 = descriptorpb.FieldDescriptorProto_TYPE_SFIXED64
 	Sint32   = descriptorpb.FieldDescriptorProto_TYPE_SINT32
@@ -56,8 +55,6 @@ func ToString(t Type) string {
 		return "uint32"
 	case Enum:
 		return "enum"
-	case Env:
-		return "env"
 	case Sfixed32:
 		return "sfixed32"
 	case Sfixed64:

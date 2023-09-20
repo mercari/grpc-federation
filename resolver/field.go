@@ -13,12 +13,16 @@ func (f *Field) HasMessageCustomResolver() bool {
 }
 
 func (f *Field) TypeConversionDecls() []*TypeConversionDecl {
+	return f.typeConversionDecls(make(map[string]struct{}))
+}
+
+func (f *Field) typeConversionDecls(convertedFQDNMap map[string]struct{}) []*TypeConversionDecl {
 	if !f.RequiredTypeConversion() {
 		return nil
 	}
 	fromType := f.SourceType()
 	toType := f.Type
-	return uniqueTypeConversionDecls(typeConversionDecls(fromType, toType))
+	return uniqueTypeConversionDecls(typeConversionDecls(fromType, toType, convertedFQDNMap))
 }
 
 func (f *Field) RequiredTypeConversion() bool {

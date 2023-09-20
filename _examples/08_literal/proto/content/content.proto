@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package content;
+
+option go_package = "example/content;content";
+
+service ContentService {
+  rpc GetContent(GetContentRequest) returns (GetContentResponse) {};
+}
+
+message GetContentRequest {
+  string by_field                   = 1;
+  double double_field               = 2;
+  repeated double doubles_field     = 3;
+  float float_field                 = 4;
+  repeated float floats_field       = 5;
+  int32 int32_field                 = 6;
+  repeated int32 int32s_field       = 7;
+  int64 int64_field                 = 8;
+  repeated int64 int64s_field       = 9;
+  uint32 uint32_field               = 10;
+  repeated uint32 uint32s_field     = 11;
+  uint64 uint64_field               = 12;
+  repeated uint64 uint64s_field     = 13;
+  sint32 sint32_field               = 14;
+  repeated sint32 sint32s_field     = 15;
+  sint64 sint64_field               = 16;
+  repeated sint64 sint64s_field     = 17;
+  fixed32 fixed32_field             = 18;
+  repeated fixed32 fixed32s_field   = 19;
+  fixed64 fixed64_field             = 20;
+  repeated fixed64 fixed64s_field   = 21;
+  sfixed32 sfixed32_field           = 22;
+  repeated sfixed32 sfixed32s_field = 23;
+  sfixed64 sfixed64_field           = 24;
+  repeated sfixed64 sfixed64s_field = 25;
+  bool bool_field                   = 26;
+  repeated bool bools_field         = 27;
+  string string_field               = 28;
+  repeated string strings_field     = 29;
+  bytes byte_string_field           = 30;
+  repeated bytes byte_strings_field = 31;
+  ContentType enum_field            = 32;
+  repeated ContentType enums_field  = 33;
+  string env_field                  = 34;
+  repeated string envs_field        = 35;
+  Content message_field           = 36;
+  repeated Content messages_field = 37;
+}
+
+message GetContentResponse {
+  Content content = 1;
+}
+
+enum ContentType {
+  CONTENT_TYPE_1 = 0;
+  CONTENT_TYPE_2 = 1;
+  CONTENT_TYPE_3 = 2;
+}
+
+message Content {
+  string by_field                   = 1;
+  double double_field               = 2;
+  repeated double doubles_field     = 3;
+  float float_field                 = 4;
+  repeated float floats_field       = 5;
+  int32 int32_field                 = 6;
+  repeated int32 int32s_field       = 7;
+  int64 int64_field                 = 8;
+  repeated int64 int64s_field       = 9;
+  uint32 uint32_field               = 10;
+  repeated uint32 uint32s_field     = 11;
+  uint64 uint64_field               = 12;
+  repeated uint64 uint64s_field     = 13;
+  sint32 sint32_field               = 14;
+  repeated sint32 sint32s_field     = 15;
+  sint64 sint64_field               = 16;
+  repeated sint64 sint64s_field     = 17;
+  fixed32 fixed32_field             = 18;
+  repeated fixed32 fixed32s_field   = 19;
+  fixed64 fixed64_field             = 20;
+  repeated fixed64 fixed64s_field   = 21;
+  sfixed32 sfixed32_field           = 22;
+  repeated sfixed32 sfixed32s_field = 23;
+  sfixed64 sfixed64_field           = 24;
+  repeated sfixed64 sfixed64s_field = 25;
+  bool bool_field                   = 26;
+  repeated bool bools_field         = 27;
+  string string_field               = 28;
+  repeated string strings_field     = 29;
+  bytes byte_string_field           = 30;
+  repeated bytes byte_strings_field = 31;
+  ContentType enum_field            = 32;
+  repeated ContentType enums_field  = 33;
+  string env_field                  = 34;
+  repeated string envs_field        = 35;
+  Content message_field           = 36;
+  repeated Content messages_field = 37;
+}

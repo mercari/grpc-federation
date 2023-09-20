@@ -10,7 +10,7 @@ func (decl *TypeConversionDecl) FQDN() string {
 	return decl.From.FQDN() + decl.To.FQDN()
 }
 
-func typeConversionDecls(fromType, toType *Type) []*TypeConversionDecl {
+func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]struct{}) []*TypeConversionDecl {
 	if fromType == nil || toType == nil {
 		return nil
 	}
@@ -20,6 +20,12 @@ func typeConversionDecls(fromType, toType *Type) []*TypeConversionDecl {
 	if !requiredTypeConversion(fromType, toType) {
 		return nil
 	}
+	decl := &TypeConversionDecl{From: fromType, To: toType}
+	fqdn := decl.FQDN()
+	if _, exists := convertedFQDNMap[fqdn]; exists {
+		return nil
+	}
+	convertedFQDNMap[fqdn] = struct{}{}
 	if fromType.Type == types.Message && fromType.Ref != nil && toType.Ref != nil && fromType.Ref.IsMapEntry {
 		// map type
 		fromMap := fromType.Ref
@@ -30,10 +36,10 @@ func typeConversionDecls(fromType, toType *Type) []*TypeConversionDecl {
 		toValue := toMap.Field("value")
 		var decls []*TypeConversionDecl
 		if fromKey != nil && toKey != nil {
-			decls = append(decls, typeConversionDecls(fromKey.Type, toKey.Type)...)
+			decls = append(decls, typeConversionDecls(fromKey.Type, toKey.Type, convertedFQDNMap)...)
 		}
 		if fromValue != nil && toValue != nil {
-			decls = append(decls, typeConversionDecls(fromValue.Type, toValue.Type)...)
+			decls = append(decls, typeConversionDecls(fromValue.Type, toValue.Type, convertedFQDNMap)...)
 		}
 		return decls
 	}
@@ -44,20 +50,20 @@ func typeConversionDecls(fromType, toType *Type) []*TypeConversionDecl {
 		toType := toType.Clone()
 		fromType.Repeated = false
 		toType.Repeated = false
-		decls = append(decls, typeConversionDecls(fromType, toType)...)
+		decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
 	case fromType.OneofField != nil:
 		fromType := fromType.Clone()
 		toType := toType.Clone()
 		fromType.OneofField = nil
 		toType.OneofField = nil
-		decls = append(decls, typeConversionDecls(fromType, toType)...)
+		decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
 	case fromType.Type == types.Message:
 		for _, field := range toType.Ref.Fields {
 			fromField := fromType.Ref.Field(field.Name)
 			if fromField == nil {
 				continue
 			}
-			decls = append(decls, typeConversionDecls(fromField.Type, field.Type)...)
+			decls = append(decls, typeConversionDecls(fromField.Type, field.Type, convertedFQDNMap)...)
 		}
 	}
 	return decls

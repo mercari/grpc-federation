@@ -279,18 +279,27 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
@@ -300,6 +309,9 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("name", v.GetName()),

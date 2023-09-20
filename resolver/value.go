@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
+	"github.com/mercari/grpc-federation/types"
 )
 
 type commonValueDef struct {
@@ -583,7 +584,7 @@ func NewStringValue(v string) *Value {
 	return &Value{Literal: &Literal{Type: StringType, Value: v}}
 }
 
-func NewBytesValue(v []byte) *Value {
+func NewByteStringValue(v []byte) *Value {
 	return &Value{Literal: &Literal{Type: BytesType, Value: v}}
 }
 
@@ -591,82 +592,107 @@ func NewMessageValue(typ *Type, v map[string]*Value) *Value {
 	return &Value{Literal: &Literal{Type: typ, Value: v}}
 }
 
-func NewDoubleListValue(v ...float64) *Value {
+func NewDoublesValue(v ...float64) *Value {
 	return &Value{Literal: &Literal{Type: DoubleRepeatedType, Value: v}}
 }
 
-func NewFloatListValue(v ...float32) *Value {
+func NewFloatsValue(v ...float32) *Value {
 	return &Value{Literal: &Literal{Type: FloatRepeatedType, Value: v}}
 }
 
-func NewInt32ListValue(v ...int32) *Value {
+func NewInt32sValue(v ...int32) *Value {
 	return &Value{Literal: &Literal{Type: Int32RepeatedType, Value: v}}
 }
 
-func NewInt64ListValue(v ...int64) *Value {
+func NewInt64sValue(v ...int64) *Value {
 	return &Value{Literal: &Literal{Type: Int64RepeatedType, Value: v}}
 }
 
-func NewUint32ListValue(v ...uint32) *Value {
+func NewUint32sValue(v ...uint32) *Value {
 	return &Value{Literal: &Literal{Type: Uint32RepeatedType, Value: v}}
 }
 
-func NewUint64ListValue(v ...uint64) *Value {
+func NewUint64sValue(v ...uint64) *Value {
 	return &Value{Literal: &Literal{Type: Uint64RepeatedType, Value: v}}
 }
 
-func NewSint32ListValue(v ...int32) *Value {
+func NewSint32sValue(v ...int32) *Value {
 	return &Value{Literal: &Literal{Type: Sint32RepeatedType, Value: v}}
 }
 
-func NewSint64ListValue(v ...int64) *Value {
+func NewSint64sValue(v ...int64) *Value {
 	return &Value{Literal: &Literal{Type: Sint64RepeatedType, Value: v}}
 }
 
-func NewFixed32ListValue(v ...uint32) *Value {
+func NewFixed32sValue(v ...uint32) *Value {
 	return &Value{Literal: &Literal{Type: Fixed32RepeatedType, Value: v}}
 }
 
-func NewFixed64ListValue(v ...uint64) *Value {
+func NewFixed64sValue(v ...uint64) *Value {
 	return &Value{Literal: &Literal{Type: Fixed64RepeatedType, Value: v}}
 }
 
-func NewSfixed32ListValue(v ...int32) *Value {
+func NewSfixed32sValue(v ...int32) *Value {
 	return &Value{Literal: &Literal{Type: Sfixed32RepeatedType, Value: v}}
 }
 
-func NewSfixed64ListValue(v ...int64) *Value {
+func NewSfixed64sValue(v ...int64) *Value {
 	return &Value{Literal: &Literal{Type: Sfixed64RepeatedType, Value: v}}
 }
 
-func NewBoolListValue(v ...bool) *Value {
+func NewBoolsValue(v ...bool) *Value {
 	return &Value{Literal: &Literal{Type: BoolRepeatedType, Value: v}}
 }
 
-func NewStringListValue(v ...string) *Value {
+func NewStringsValue(v ...string) *Value {
 	return &Value{Literal: &Literal{Type: StringRepeatedType, Value: v}}
 }
 
-func NewBytesListValue(v ...[]byte) *Value {
+func NewByteStringsValue(v ...[]byte) *Value {
 	return &Value{Literal: &Literal{Type: BytesRepeatedType, Value: v}}
 }
 
-func NewMessageListValue(typ *Type, v ...map[string]*Value) *Value {
+func NewMessagesValue(typ *Type, v ...map[string]*Value) *Value {
 	return &Value{Literal: &Literal{Type: typ, Value: v}}
 }
 
-func NewEnumValue(v *Enum) *Value {
-	return &Value{Literal: &Literal{Type: EnumType, Value: v}}
+func NewEnumValue(v *EnumValue) *Value {
+	var enum *Enum
+	if v != nil {
+		enum = v.Enum
+	}
+	return &Value{
+		Literal: &Literal{
+			Type: &Type{
+				Type: types.Enum,
+				Enum: enum,
+			},
+			Value: v,
+		},
+	}
 }
 
-func NewEnumListValue(v ...*Enum) *Value {
-	return &Value{Literal: &Literal{Type: EnumRepeatedType, Value: v}}
+func NewEnumsValue(v ...*EnumValue) *Value {
+	var enum *Enum
+	if len(v) != 0 {
+		enum = v[0].Enum
+	}
+	return &Value{
+		Literal: &Literal{
+			Type: &Type{
+				Type:     types.Enum,
+				Enum:     enum,
+				Repeated: true,
+			},
+			Value: v,
+		},
+	}
 }
 
-func NewEnvValue(v string) *Value {
+func NewEnvValue(v EnvKey) *Value {
 	return &Value{Literal: &Literal{Type: EnvType, Value: v}}
 }
 
-func NewEnvListValue(v ...string) *Value {
+func NewEnvsValue(v ...EnvKey) *Value {
 	return &Value{Literal: &Literal{Type: EnvRepeatedType, Value: v}}
 }

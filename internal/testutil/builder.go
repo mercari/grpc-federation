@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -214,20 +215,32 @@ func (b *FileBuilder) AddService(svc *resolver.Service) *FileBuilder {
 func (b *FileBuilder) AddEnum(enum *resolver.Enum) *FileBuilder {
 	enum.File = b.file
 	typ := &resolver.Type{Type: types.Enum, Enum: enum}
-	b.addType(enum.Name, typ)
+	var enumName string
+	if enum.Message != nil {
+		enumName = strings.Join(
+			append(enum.Message.ParentMessageNames(), enum.Message.Name, enum.Name),
+			".",
+		)
+	} else {
+		enumName = enum.Name
+	}
+	b.addType(enumName, typ)
 	b.file.Enums = append(b.file.Enums, enum)
 	return b
 }
 
 func (b *FileBuilder) AddMessage(msg *resolver.Message) *FileBuilder {
 	typ := &resolver.Type{Type: types.Message, Ref: msg}
-	b.addType(msg.Name, typ)
+	msgName := strings.Join(append(msg.ParentMessageNames(), msg.Name), ".")
+	b.addType(msgName, typ)
 	msg.File = b.file
 	for _, enum := range msg.Enums {
 		enum.File = b.file
+		b.AddEnum(enum)
 	}
 	for _, m := range msg.NestedMessages {
 		m.File = b.file
+		b.AddMessage(m)
 	}
 	b.file.Messages = append(b.file.Messages, msg)
 	return b
@@ -282,6 +295,9 @@ func (b *MessageBuilder) AddEnum(enum *resolver.Enum) *MessageBuilder {
 
 func (b *MessageBuilder) getType(t *testing.T, name string) *resolver.Type {
 	t.Helper()
+	if b.msg.Name == name {
+		return &resolver.Type{Type: types.Message, Ref: b.msg}
+	}
 	for _, enum := range b.msg.Enums {
 		if enum.Name == name {
 			return &resolver.Type{Type: types.Enum, Enum: enum}
@@ -297,6 +313,12 @@ func (b *MessageBuilder) getType(t *testing.T, name string) *resolver.Type {
 }
 
 func (b *MessageBuilder) AddField(name string, typ *resolver.Type) *MessageBuilder {
+	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ})
+	return b
+}
+
+func (b *MessageBuilder) AddFieldWithSelfType(name string, isRepeated bool) *MessageBuilder {
+	typ := &resolver.Type{Type: types.Message, Ref: b.msg, Repeated: isRepeated}
 	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ})
 	return b
 }
@@ -370,6 +392,15 @@ func (b *MessageBuilder) AddFieldWithAlias(name string, typ *resolver.Type, fiel
 	return b
 }
 
+func (b *MessageBuilder) AddFieldWithTypeNameAndRule(t *testing.T, name, typeName string, isRepeated bool, rule *resolver.FieldRule) *MessageBuilder {
+	t.Helper()
+	typ := b.getType(t, typeName)
+	if isRepeated {
+		typ.Repeated = true
+	}
+	return b.AddFieldWithRule(name, typ, rule)
+}
+
 func (b *MessageBuilder) AddFieldWithRule(name string, typ *resolver.Type, rule *resolver.FieldRule) *MessageBuilder {
 	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ, Rule: rule})
 	return b
@@ -420,7 +451,7 @@ func NewEnumBuilder(name string) *EnumBuilder {
 }
 
 func (b *EnumBuilder) AddValue(value string) *EnumBuilder {
-	b.enum.Values = append(b.enum.Values, &resolver.EnumValue{Value: value})
+	b.enum.Values = append(b.enum.Values, &resolver.EnumValue{Value: value, Enum: b.enum})
 	return b
 }
 
@@ -431,6 +462,7 @@ func (b *EnumBuilder) AddValueWithDefault(value string) *EnumBuilder {
 			Default: true,
 			Aliases: []*resolver.EnumValue{},
 		},
+		Enum: b.enum,
 	})
 	return b
 }
@@ -441,6 +473,7 @@ func (b *EnumBuilder) AddValueWithAlias(value string, alias ...*resolver.EnumVal
 		Rule: &resolver.EnumValueRule{
 			Aliases: alias,
 		},
+		Enum: b.enum,
 	})
 	return b
 }
@@ -902,6 +935,11 @@ func (b *FieldRuleBuilder) SetCustomResolver(v bool) *FieldRuleBuilder {
 
 func (b *FieldRuleBuilder) SetMessageCustomResolver(v bool) *FieldRuleBuilder {
 	b.rule.MessageCustomResolver = v
+	return b
+}
+
+func (b *FieldRuleBuilder) SetAlias(v *resolver.Field) *FieldRuleBuilder {
+	b.rule.Alias = v
 	return b
 }
 

@@ -411,6 +411,9 @@ func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *po
 }
 
 func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("title", v.GetTitle()),
 		slog.String("content", v.GetContent()),
@@ -419,6 +422,9 @@ func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) sl
 }
 
 func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *Org_Federation_CreatePostArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("title", v.Title),
 		slog.String("content", v.Content),
@@ -427,12 +433,18 @@ func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *Org_Fe
 }
 
 func (s *FederationService) logvalue_Org_Federation_CreatePostResponse(v *CreatePostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v *Org_Federation_CreatePostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("title", v.Title),
 		slog.String("content", v.Content),
@@ -441,6 +453,9 @@ func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v
 }
 
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),

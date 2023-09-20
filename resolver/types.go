@@ -84,6 +84,7 @@ type EnumRule struct {
 
 type EnumValue struct {
 	Value string
+	Enum  *Enum
 	Rule  *EnumValueRule
 }
 
@@ -317,9 +318,7 @@ type Value struct {
 	PathType PathType
 	// Whether fields should be expanded when referencing types defined with Filtered.
 	Inline bool
-	// Env value from environment variable.
-	Env string
-	// Literal value
+	// Literal value.
 	Literal *Literal
 	// A reference to the value specified in Path.
 	// If the value is defined in response, it will be the value before filtering by response.field.
@@ -333,6 +332,8 @@ type Literal struct {
 	Type  *Type
 	Value interface{}
 }
+
+type EnvKey string
 
 var (
 	DoubleType           = &Type{Type: types.Double}
@@ -351,7 +352,7 @@ var (
 	StringType           = &Type{Type: types.String}
 	BytesType            = &Type{Type: types.Bytes}
 	EnumType             = &Type{Type: types.Enum}
-	EnvType              = &Type{Type: types.Env}
+	EnvType              = &Type{Type: types.String}
 	DoubleRepeatedType   = &Type{Type: types.Double, Repeated: true}
 	FloatRepeatedType    = &Type{Type: types.Float, Repeated: true}
 	Int32RepeatedType    = &Type{Type: types.Int32, Repeated: true}
@@ -368,5 +369,5 @@ var (
 	StringRepeatedType   = &Type{Type: types.String, Repeated: true}
 	BytesRepeatedType    = &Type{Type: types.Bytes, Repeated: true}
 	EnumRepeatedType     = &Type{Type: types.Enum, Repeated: true}
-	EnvRepeatedType      = &Type{Type: types.Env, Repeated: true}
+	EnvRepeatedType      = &Type{Type: types.String, Repeated: true}
 )

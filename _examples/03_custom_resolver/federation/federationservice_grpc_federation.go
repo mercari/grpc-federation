@@ -162,12 +162,12 @@ type Federation_GetPostResponseArgument struct {
 
 // Federation_PostArgument is argument for "federation.Post" message.
 type Federation_PostArgument struct {
-	Client                *FederationServiceDependencyServiceClient
-	FederationForNameless *ForNameless
-	Id                    string
-	Post                  *post.Post
-	Unused                *Unused
-	User                  *User
+	Client                  *FederationServiceDependencyServiceClient
+	Id                      string
+	Post                    *post.Post
+	Unused                  *Unused
+	User                    *User
+	XFederation_ForNameless *ForNameless
 }
 
 // Federation_Post_UserArgument is custom resolver's argument for "user" field of "federation.Post" message.
@@ -450,12 +450,12 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Federation_PostArgument) (*Post, error) {
 	s.logger.DebugContext(ctx, "resolve  federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
 	var (
-		sg                         singleflight.Group
-		valueFederationForNameless *ForNameless
-		valueMu                    sync.RWMutex
-		valuePost                  *post.Post
-		valueUnused                *Unused
-		valueUser                  *User
+		sg                           singleflight.Group
+		valueMu                      sync.RWMutex
+		valuePost                    *post.Post
+		valueUnused                  *Unused
+		valueUser                    *User
+		value_Federation_ForNameless *ForNameless
 	)
 	// A tree view of message dependencies is shown below.
 	/*
@@ -490,7 +490,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		}
 		resForNameless := resForNamelessIface.(*ForNameless)
 		valueMu.Lock()
-		valueFederationForNameless = resForNameless // { name: "_federation_ForNameless", message: "ForNameless" ... }
+		value_Federation_ForNameless = resForNameless // { name: "_federation_ForNameless", message: "ForNameless" ... }
 		valueMu.Unlock()
 		return nil, nil
 	})
@@ -587,10 +587,10 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.FederationForNameless = valueFederationForNameless
 	req.Post = valuePost
 	req.Unused = valueUnused
 	req.User = valueUser
+	req.XFederation_ForNameless = value_Federation_ForNameless
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -694,30 +694,45 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 }
 
 func (s *FederationService) logvalue_Federation_ForNameless(v *ForNameless) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("bar", v.GetBar()),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_ForNamelessArgument(v *Federation_ForNamelessArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("bar", v.Bar),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Federation_Post(v.GetPost())),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *Federation_GetPostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
@@ -727,24 +742,36 @@ func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_PostArgument(v *Federation_PostArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_Unused(v *Unused) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("foo", v.GetFoo()),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_UnusedArgument(v *Federation_UnusedArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("foo", v.Foo),
 	)
 }
 
 func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("name", v.GetName()),
@@ -752,6 +779,9 @@ func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_UserArgument(v *Federation_UserArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 		slog.String("title", v.Title),

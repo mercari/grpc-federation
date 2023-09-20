@@ -92,7 +92,7 @@ func (dep *ServiceDependency) ClientName() string {
 
 func (dep *ServiceDependency) PrivateClientName() string {
 	svcName := fullServiceName(dep.Service)
-	return fmt.Sprintf("%sClient", util.ToPrivateVariable(svcName))
+	return fmt.Sprintf("%sClient", util.ToPrivateGoVariable(svcName))
 }
 
 func (dep *ServiceDependency) ClientType() string {
@@ -629,8 +629,6 @@ func (s *Service) logValue(field *resolver.Field) string {
 			return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
 		}
 		return fmt.Sprintf("%s(%s).String()", s.logValueFuncName(typ), base)
-	} else if typ.Type == types.Bytes {
-		return fmt.Sprintf("string(v.Get%s())", util.ToPublicGoVariable(field.Name))
 	}
 	if field.Type.Repeated {
 		return base
@@ -1700,7 +1698,7 @@ func toValue(svc *resolver.Service, typ *resolver.Type, value *resolver.Value) s
 			if value.PathType == resolver.MessageArgumentPathType {
 				selectors = append(selectors, util.ToPublicGoVariable(sel))
 			} else {
-				selectors = append(selectors, util.ToGoVariable(sel))
+				selectors = append(selectors, util.ToPrivateGoVariable(sel))
 			}
 			first = false
 		} else {
@@ -1809,6 +1807,9 @@ func toGoLiteralValue(svc *resolver.Service, typ *resolver.Type, value interface
 	case types.Bool:
 		return fmt.Sprintf("%t", value)
 	case types.String:
+		if envKey, ok := value.(resolver.EnvKey); ok {
+			return fmt.Sprintf(`os.Getenv("%s")`, envKey)
+		}
 		return strconv.Quote(value.(string))
 	case types.Bytes:
 		b := value.([]byte)
@@ -1817,6 +1818,13 @@ func toGoLiteralValue(svc *resolver.Service, typ *resolver.Type, value interface
 			bytes = append(bytes, fmt.Sprint(bb))
 		}
 		return fmt.Sprintf("[]byte{%s}", strings.Join(bytes, ","))
+	case types.Enum:
+		enumValue := value.(*resolver.EnumValue)
+		prefix := toEnumValuePrefix(svc, &resolver.Type{
+			Type: types.Enum,
+			Enum: enumValue.Enum,
+		})
+		return toEnumValueText(prefix, enumValue.Value)
 	case types.Message:
 		mapV, ok := value.(map[string]*resolver.Value)
 		if !ok {
@@ -1889,14 +1897,14 @@ func generateGoContent(tmpl *template.Template, params interface{}) ([]byte, err
 var templates embed.FS
 
 func toUserDefinedVariable(name string) string {
-	return util.ToGoVariable(fmt.Sprintf("value_%s", name))
+	return util.ToPrivateGoVariable(fmt.Sprintf("value_%s", name))
 }
 
 func toEnumValuePrefix(svc *resolver.Service, typ *resolver.Type) string {
 	enum := typ.Enum
 	var name string
 	if enum.Message != nil {
-		name = enum.Message.Name
+		name = strings.Join(append(enum.Message.ParentMessageNames(), enum.Message.Name), "_")
 	} else {
 		name = enum.Name
 	}

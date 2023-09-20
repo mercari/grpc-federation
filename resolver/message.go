@@ -151,6 +151,7 @@ func (m *Message) DependencyGraphTreeFormat() string {
 }
 
 func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
+	convertedFQDNMap := make(map[string]struct{})
 	var decls []*TypeConversionDecl
 	if m.Rule != nil && m.Rule.MethodCall != nil && m.Rule.MethodCall.Response != nil {
 		request := m.Rule.MethodCall.Request
@@ -162,12 +163,12 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 				fromType := arg.Value.Filtered
 				field := request.Type.Field(arg.Name)
 				toType := field.Type
-				decls = append(decls, typeConversionDecls(fromType, toType)...)
+				decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
 			}
 		}
 	}
 	for _, field := range m.Fields {
-		decls = append(decls, field.TypeConversionDecls()...)
+		decls = append(decls, field.typeConversionDecls(convertedFQDNMap)...)
 	}
 	uniqueDecls := uniqueTypeConversionDecls(decls)
 	return sortTypeConversionDecls(uniqueDecls)

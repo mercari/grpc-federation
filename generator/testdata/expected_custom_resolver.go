@@ -554,18 +554,27 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
@@ -575,12 +584,18 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federation_PostArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("name", v.GetName()),
@@ -588,6 +603,9 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 		slog.String("title", v.Title),

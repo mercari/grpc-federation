@@ -341,6 +341,8 @@ func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
 		return fmt.Sprintf(`string: "%s"`, lit.Value)
 	case BytesType:
 		return fmt.Sprintf(`byte_string: "%s"`, lit.Value)
+	case EnvType:
+		return fmt.Sprintf(`env: "%s"`, lit.Value)
 	case DoubleRepeatedType:
 		var elems []string
 		for _, v := range lit.Value.([]float64) {
@@ -431,8 +433,25 @@ func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
 			elems = append(elems, fmt.Sprintf(`"%s"`, string(v)))
 		}
 		return fmt.Sprintf(`byte_strings: [%s]`, strings.Join(elems, ", "))
+	case EnvRepeatedType:
+		var elems []string
+		for _, v := range lit.Value.([]EnvKey) {
+			elems = append(elems, fmt.Sprintf(`"%s"`, v))
+		}
+		return fmt.Sprintf(`envs: [%s]`, strings.Join(elems, ", "))
 	}
-	if lit.Type.Type == types.Message {
+
+	switch lit.Type.Type {
+	case types.Enum:
+		if lit.Type.Repeated {
+			var elems []string
+			for _, v := range lit.Value.([]*EnumValue) {
+				elems = append(elems, fmt.Sprintf(`"%s"`, v.FQDN()))
+			}
+			return fmt.Sprintf(`enums: [%s]`, strings.Join(elems, ", "))
+		}
+		return fmt.Sprintf(`enum: "%s"`, lit.Value.(*EnumValue).FQDN())
+	case types.Message:
 		msg := lit.Type.Ref
 		if lit.Type.Repeated {
 			var elems []string

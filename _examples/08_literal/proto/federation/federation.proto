@@ -1,0 +1,250 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "content/content.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { service: "content.ContentService" }
+    ]
+  };
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {
+  string id = 1;
+}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "content.ContentService/GetContent"
+      request: [
+        { field: "by_field",           by: "$.id" },
+        { field: "double_field",       double: 1.23 },
+        { field: "doubles_field",      doubles: [ 4.56, 7.89 ]},
+        { field: "float_field",        float: 4.56 },
+        { field: "floats_field",       floats: [ 7.89, 1.23 ]},
+        { field: "int32_field",        int32: -1 },
+        { field: "int32s_field",       int32s: [ -2, -3 ]},
+        { field: "int64_field",        int64: -4 },
+        { field: "int64s_field",       int64s: [ -5, -6 ]},
+        { field: "uint32_field",       uint32: 1 },
+        { field: "uint32s_field",      uint32s: [ 2, 3 ]},
+        { field: "uint64_field",       uint64: 4 },
+        { field: "uint64s_field",      uint64s: [ 5, 6 ]},
+        { field: "sint32_field",       sint32: -7 },
+        { field: "sint32s_field",      sint32s: [ -8, -9 ]},
+        { field: "sint64_field",       sint64: -10 },
+        { field: "sint64s_field",      sint64s: [ -11, -12 ]},
+        { field: "fixed32_field",      fixed32: 10 },
+        { field: "fixed32s_field",     fixed32s: [ 11, 12 ]},
+        { field: "fixed64_field",      fixed64: 13 },
+        { field: "fixed64s_field",     fixed64s: [ 14, 15 ]},
+        { field: "sfixed32_field",     sfixed32: -14 },
+        { field: "sfixed32s_field",    sfixed32s: [ -15, -16 ]},
+        { field: "sfixed64_field",     sfixed64: -17 },
+        { field: "sfixed64s_field",    sfixed64s: [ -18, -19 ]},
+        { field: "bool_field",         bool: true },
+        { field: "bools_field",        bools: [ true, false ]},
+        { field: "string_field",       string: "foo" },
+        { field: "strings_field",      strings: ["hello", "world"]},
+        { field: "byte_string_field",  byte_string: "foo" },
+        { field: "byte_strings_field", byte_strings: ["foo", "bar"]},
+        { field: "enum_field",         enum: "content.CONTENT_TYPE_1" },
+        { field: "enums_field",        enums: ["content.CONTENT_TYPE_2", "content.CONTENT_TYPE_3"]},
+        { field: "env_field",          env: "foo" },
+        { field: "envs_field",         envs: ["foo", "bar"]},
+        { field: "messages_field",     messages: [{ name: "content.Content" }, { name: "content.Content" }]},
+        { 
+          field: "message_field"
+          message {
+            name: "content.Content"
+            fields: [
+              { field: "by_field",           by: "$.id" },
+              { field: "double_field",       double: 1.23 },
+              { field: "doubles_field",      doubles: [ 4.56, 7.89 ]},
+              { field: "float_field",        float: 4.56 },
+              { field: "floats_field",       floats: [ 7.89, 1.23 ]},
+              { field: "int32_field",        int32: -1 },
+              { field: "int32s_field",       int32s: [ -2, -3 ]},
+              { field: "int64_field",        int64: -4 },
+              { field: "int64s_field",       int64s: [ -5, -6 ]},
+              { field: "uint32_field",       uint32: 1 },
+              { field: "uint32s_field",      uint32s: [ 2, 3 ]},
+              { field: "uint64_field",       uint64: 4 },
+              { field: "uint64s_field",      uint64s: [ 5, 6 ]},
+              { field: "sint32_field",       sint32: -7 },
+              { field: "sint32s_field",      sint32s: [ -8, -9 ]},
+              { field: "sint64_field",       sint64: -10 },
+              { field: "sint64s_field",      sint64s: [ -11, -12 ]},
+              { field: "fixed32_field",      fixed32: 10 },
+              { field: "fixed32s_field",     fixed32s: [ 11, 12 ]},
+              { field: "fixed64_field",      fixed64: 13 },
+              { field: "fixed64s_field",     fixed64s: [ 14, 15 ]},
+              { field: "sfixed32_field",     sfixed32: -14 },
+              { field: "sfixed32s_field",    sfixed32s: [ -15, -16 ]},
+              { field: "sfixed64_field",     sfixed64: -17 },
+              { field: "sfixed64s_field",    sfixed64s: [ -18, -19 ]},
+              { field: "bool_field",         bool: true },
+              { field: "bools_field",        bools: [ true, false ]},
+              { field: "string_field",       string: "foo" },
+              { field: "strings_field",      strings: ["hello", "world"]},
+              { field: "byte_string_field",  byte_string: "foo" },
+              { field: "byte_strings_field", byte_strings: ["foo", "bar"]},
+              { field: "messages_field",     messages: [{ name: "content.Content" }, { name: "content.Content" }]},
+              { field: "enum_field",         enum: "content.CONTENT_TYPE_1" },
+              { field: "enums_field",        enums: ["content.CONTENT_TYPE_2", "content.CONTENT_TYPE_3"]},
+              { field: "env_field",          env: "foo" },
+              { field: "envs_field",         envs: ["foo", "bar"]}
+            ]
+          }
+        }
+      ]
+      response { name: "content", field: "content" }
+    }
+    messages {
+      name: "content2"
+      message: "Content"
+      args: [
+        { name: "by_field",           by: "$.id" },
+        { name: "double_field",       double: 1.23 },
+        { name: "doubles_field",      doubles: [ 4.56, 7.89 ]},
+        { name: "float_field",        float: 4.56 },
+        { name: "floats_field",       floats: [ 7.89, 1.23 ]},
+        { name: "int32_field",        int32: -1 },
+        { name: "int32s_field",       int32s: [ -2, -3 ]},
+        { name: "int64_field",        int64: -4 },
+        { name: "int64s_field",       int64s: [ -5, -6 ]},
+        { name: "uint32_field",       uint32: 1 },
+        { name: "uint32s_field",      uint32s: [ 2, 3 ]},
+        { name: "uint64_field",       uint64: 4 },
+        { name: "uint64s_field",      uint64s: [ 5, 6 ]},
+        { name: "sint32_field",       sint32: -7 },
+        { name: "sint32s_field",      sint32s: [ -8, -9 ]},
+        { name: "sint64_field",       sint64: -10 },
+        { name: "sint64s_field",      sint64s: [ -11, -12 ]},
+        { name: "fixed32_field",      fixed32: 10 },
+        { name: "fixed32s_field",     fixed32s: [ 11, 12 ]},
+        { name: "fixed64_field",      fixed64: 13 },
+        { name: "fixed64s_field",     fixed64s: [ 14, 15 ]},
+        { name: "sfixed32_field",     sfixed32: -14 },
+        { name: "sfixed32s_field",    sfixed32s: [ -15, -16 ]},
+        { name: "sfixed64_field",     sfixed64: -17 },
+        { name: "sfixed64s_field",    sfixed64s: [ -18, -19 ]},
+        { name: "bool_field",         bool: true },
+        { name: "bools_field",        bools: [ true, false ]},
+        { name: "string_field",       string: "foo" },
+        { name: "strings_field",      strings: ["hello", "world"]},
+        { name: "byte_string_field",  byte_string: "foo" },
+        { name: "byte_strings_field", byte_strings: ["foo", "bar"]},
+        { name: "enum_field",         enum: "CONTENT_TYPE_1" },
+        { name: "enums_field",        enums: ["CONTENT_TYPE_2", "CONTENT_TYPE_3"]},
+        { name: "env_field",          env: "foo" },
+        { name: "envs_field",         envs: ["foo", "bar"]},
+        { name: "messages_field",     messages: [{ name: "Content" }, { name: "Content" }]},
+        { 
+          name: "message_field"
+          message {
+            name: "Content"
+            fields: [
+              { field: "by_field",           by: "$.id" },
+              { field: "double_field",       double: 1.23 },
+              { field: "doubles_field",      doubles: [ 4.56, 7.89 ]},
+              { field: "float_field",        float: 4.56 },
+              { field: "floats_field",       floats: [ 7.89, 1.23 ]},
+              { field: "int32_field",        int32: -1 },
+              { field: "int32s_field",       int32s: [ -2, -3 ]},
+              { field: "int64_field",        int64: -4 },
+              { field: "int64s_field",       int64s: [ -5, -6 ]},
+              { field: "uint32_field",       uint32: 1 },
+              { field: "uint32s_field",      uint32s: [ 2, 3 ]},
+              { field: "uint64_field",       uint64: 4 },
+              { field: "uint64s_field",      uint64s: [ 5, 6 ]},
+              { field: "sint32_field",       sint32: -7 },
+              { field: "sint32s_field",      sint32s: [ -8, -9 ]},
+              { field: "sint64_field",       sint64: -10 },
+              { field: "sint64s_field",      sint64s: [ -11, -12 ]},
+              { field: "fixed32_field",      fixed32: 10 },
+              { field: "fixed32s_field",     fixed32s: [ 11, 12 ]},
+              { field: "fixed64_field",      fixed64: 13 },
+              { field: "fixed64s_field",     fixed64s: [ 14, 15 ]},
+              { field: "sfixed32_field",     sfixed32: -14 },
+              { field: "sfixed32s_field",    sfixed32s: [ -15, -16 ]},
+              { field: "sfixed64_field",     sfixed64: -17 },
+              { field: "sfixed64s_field",    sfixed64s: [ -18, -19 ]},
+              { field: "bool_field",         bool: true },
+              { field: "bools_field",        bools: [ true, false ]},
+              { field: "string_field",       string: "foo" },
+              { field: "strings_field",      strings: ["hello", "world"]},
+              { field: "byte_string_field",  byte_string: "foo" },
+              { field: "byte_strings_field", byte_strings: ["foo", "bar"]},
+              { field: "messages_field",     messages: [{ name: "Content" }, { name: "Content" }]},
+              { field: "enum_field",         enum: "CONTENT_TYPE_1" },
+              { field: "enums_field",        enums: ["CONTENT_TYPE_2", "CONTENT_TYPE_3"]},
+              { field: "env_field",          env: "foo" },
+              { field: "envs_field",         envs: ["foo", "bar"]}
+            ]
+          }
+        }        
+      ]
+    }
+  };
+  Content content  = 1 [(grpc.federation.field).by = "content"];
+  Content content2 = 2 [(grpc.federation.field).by = "content2"];
+}
+
+enum ContentType {
+  option (grpc.federation.enum).alias = "content.ContentType";
+
+  CONTENT_TYPE_1 = 0;
+  CONTENT_TYPE_2 = 1;
+  CONTENT_TYPE_3 = 2;
+}
+
+message Content {
+  option (grpc.federation.message).alias = "content.Content";
+
+  string by_field                   = 1  [(grpc.federation.field).by = "$.by_field"];
+  double double_field               = 2  [(grpc.federation.field).by = "$.double_field"];
+  repeated double doubles_field     = 3  [(grpc.federation.field).by = "$.doubles_field"];
+  float float_field                 = 4  [(grpc.federation.field).by = "$.float_field"];
+  repeated float floats_field       = 5  [(grpc.federation.field).by = "$.floats_field"];
+  int32 int32_field                 = 6  [(grpc.federation.field).by = "$.int32_field"];
+  repeated int32 int32s_field       = 7  [(grpc.federation.field).by = "$.int32s_field"];
+  int64 int64_field                 = 8  [(grpc.federation.field).by = "$.int64_field"];
+  repeated int64 int64s_field       = 9  [(grpc.federation.field).by = "$.int64s_field"];
+  uint32 uint32_field               = 10 [(grpc.federation.field).by = "$.uint32_field"];
+  repeated uint32 uint32s_field     = 11 [(grpc.federation.field).by = "$.uint32s_field"];
+  uint64 uint64_field               = 12 [(grpc.federation.field).by = "$.uint64_field"];
+  repeated uint64 uint64s_field     = 13 [(grpc.federation.field).by = "$.uint64s_field"];
+  sint32 sint32_field               = 14 [(grpc.federation.field).by = "$.sint32_field"];
+  repeated sint32 sint32s_field     = 15 [(grpc.federation.field).by = "$.sint32s_field"];
+  sint64 sint64_field               = 16 [(grpc.federation.field).by = "$.sint64_field"];
+  repeated sint64 sint64s_field     = 17 [(grpc.federation.field).by = "$.sint64s_field"];
+  fixed32 fixed32_field             = 18 [(grpc.federation.field).by = "$.fixed32_field"];
+  repeated fixed32 fixed32s_field   = 19 [(grpc.federation.field).by = "$.fixed32s_field"];
+  fixed64 fixed64_field             = 20 [(grpc.federation.field).by = "$.fixed64_field"];
+  repeated fixed64 fixed64s_field   = 21 [(grpc.federation.field).by = "$.fixed64s_field"];
+  sfixed32 sfixed32_field           = 22 [(grpc.federation.field).by = "$.sfixed32_field"];
+  repeated sfixed32 sfixed32s_field = 23 [(grpc.federation.field).by = "$.sfixed32s_field"];
+  sfixed64 sfixed64_field           = 24 [(grpc.federation.field).by = "$.sfixed64_field"];
+  repeated sfixed64 sfixed64s_field = 25 [(grpc.federation.field).by = "$.sfixed64s_field"];
+  bool bool_field                   = 26 [(grpc.federation.field).by = "$.bool_field"];
+  repeated bool bools_field         = 27 [(grpc.federation.field).by = "$.bools_field"];
+  string string_field               = 28 [(grpc.federation.field).by = "$.string_field"];
+  repeated string strings_field     = 29 [(grpc.federation.field).by = "$.strings_field"];
+  bytes byte_string_field           = 30 [(grpc.federation.field).by = "$.byte_string_field"];
+  repeated bytes byte_strings_field = 31 [(grpc.federation.field).by = "$.byte_strings_field"];
+  ContentType enum_field            = 32 [(grpc.federation.field).by = "$.enum_field"];
+  repeated ContentType enums_field  = 33 [(grpc.federation.field).by = "$.enums_field"];
+  string env_field                  = 34 [(grpc.federation.field).by = "$.env_field"];
+  repeated string envs_field        = 35 [(grpc.federation.field).by = "$.envs_field"];
+  Content message_field             = 36 [(grpc.federation.field).by = "$.message_field"];
+  repeated Content messages_field   = 37 [(grpc.federation.field).by = "$.messages_field"];
+}
