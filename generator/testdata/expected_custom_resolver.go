@@ -131,40 +131,40 @@ type FederationService struct {
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type Org_Federation_GetPostResponseArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	Id     string
 	Post   *Post
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type Org_Federation_PostArgument struct {
-	Client *FederationServiceDependencyServiceClient
 	Id     string
 	Post   *post.Post
 	User   *User
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_Post_UserArgument is custom resolver's argument for "user" field of "org.federation.Post" message.
 type Org_Federation_Post_UserArgument struct {
-	Client                      *FederationServiceDependencyServiceClient
-	Org_Federation_PostArgument *Org_Federation_PostArgument
+	*Org_Federation_PostArgument
+	Client *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
 type Org_Federation_UserArgument struct {
-	Client  *FederationServiceDependencyServiceClient
 	Content string
 	Id      string
 	Title   string
 	U       *user.User
 	UserId  string
+	Client  *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_User_NameArgument is custom resolver's argument for "name" field of "org.federation.User" message.
 type Org_Federation_User_NameArgument struct {
-	Client                      *FederationServiceDependencyServiceClient
-	Org_Federation_User         *User
-	Org_Federation_UserArgument *Org_Federation_UserArgument
+	*Org_Federation_UserArgument
+	Org_Federation_User *User
+	Client              *FederationServiceDependencyServiceClient
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.

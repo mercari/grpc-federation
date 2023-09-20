@@ -96,7 +96,6 @@ type FederationService struct {
 
 // Org_Federation_ContentArgument is argument for "org.federation.Content" message.
 type Org_Federation_ContentArgument struct {
-	Client           *FederationServiceDependencyServiceClient
 	BoolField        bool
 	BoolsField       []bool
 	ByField          string
@@ -134,14 +133,15 @@ type Org_Federation_ContentArgument struct {
 	Uint32SField     []uint32
 	Uint64Field      uint64
 	Uint64SField     []uint64
+	Client           *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
 type Org_Federation_GetResponseArgument struct {
-	Client   *FederationServiceDependencyServiceClient
 	Content  *content.Content
 	Content2 *Content
 	Id       string
+	Client   *FederationServiceDependencyServiceClient
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.

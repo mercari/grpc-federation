@@ -95,20 +95,20 @@ type FederationService struct {
 
 // Org_Federation_CreatePostArgument is argument for "org.federation.CreatePost" message.
 type Org_Federation_CreatePostArgument struct {
-	Client  *FederationServiceDependencyServiceClient
 	Content string
 	Title   string
 	UserId  string
+	Client  *FederationServiceDependencyServiceClient
 }
 
 // Org_Federation_CreatePostResponseArgument is argument for "org.federation.CreatePostResponse" message.
 type Org_Federation_CreatePostResponseArgument struct {
-	Client  *FederationServiceDependencyServiceClient
 	Content string
 	Cp      *CreatePost
 	P       *post.Post
 	Title   string
 	UserId  string
+	Client  *FederationServiceDependencyServiceClient
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
