@@ -371,24 +371,23 @@ func validateMessageRuleGraph(graph *MessageRuleDependencyGraph) error {
 }
 
 func validateMessageRuleNode(node *MessageRuleDependencyGraphNode) error {
-	if err := validateMessageRuleNodeCyclicDependency(node, node.Children); err != nil {
+	if err := validateMessageRuleNodeCyclicDependency(map[*MessageRuleDependencyGraphNode]struct{}{}, node); err != nil {
 		return err
 	}
 	return nil
 }
 
-func validateMessageRuleNodeCyclicDependency(target *MessageRuleDependencyGraphNode, children []*MessageRuleDependencyGraphNode) error {
-	for _, child := range children {
-		if target == child {
-			return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, target.Message.PackageName(), target.Message.Name)
-		}
-		if err := validateMessageRuleNodeCyclicDependency(target, child.Children); err != nil {
-			return err
-		}
-		if err := validateMessageRuleNodeCyclicDependency(child, child.Children); err != nil {
+func validateMessageRuleNodeCyclicDependency(visited map[*MessageRuleDependencyGraphNode]struct{}, node *MessageRuleDependencyGraphNode) error {
+	if _, ok := visited[node]; ok {
+		return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, node.Message.PackageName(), node.Message.Name)
+	}
+	visited[node] = struct{}{}
+	for _, child := range node.Children {
+		if err := validateMessageRuleNodeCyclicDependency(visited, child); err != nil {
 			return err
 		}
 	}
+	delete(visited, node)
 	return nil
 }
 
@@ -402,23 +401,22 @@ func validateMessageGraph(graph *MessageDependencyGraph) error {
 }
 
 func validateMessageNode(node *MessageDependencyGraphNode) error {
-	if err := validateMessageNodeCyclicDependency(node, node.Children); err != nil {
+	if err := validateMessageNodeCyclicDependency(map[*MessageDependencyGraphNode]struct{}{}, node); err != nil {
 		return err
 	}
 	return nil
 }
 
-func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, children []*MessageDependencyGraphNode) error {
-	for _, child := range children {
-		if target == child {
-			return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, target.Message.PackageName(), target.Message.Name)
-		}
-		if err := validateMessageNodeCyclicDependency(target, child.Children); err != nil {
-			return err
-		}
-		if err := validateMessageNodeCyclicDependency(child, child.Children); err != nil {
+func validateMessageNodeCyclicDependency(visited map[*MessageDependencyGraphNode]struct{}, node *MessageDependencyGraphNode) error {
+	if _, ok := visited[node]; ok {
+		return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, node.Message.PackageName(), node.Message.Name)
+	}
+	visited[node] = struct{}{}
+	for _, child := range node.Children {
+		if err := validateMessageNodeCyclicDependency(visited, child); err != nil {
 			return err
 		}
 	}
+	delete(visited, node)
 	return nil
 }
