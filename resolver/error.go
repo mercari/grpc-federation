@@ -22,13 +22,52 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("grpc-federation: %s", strings.Join(errs, ": "))
 }
 
+func (e *Error) add(err error) {
+	if err == nil {
+		return
+	}
+
+	e.Errs = append(e.Errs, err)
+}
+
 // LocationError holds error message with location.
-type LocationError struct {
+type LocationError interface {
+	error
+	GetLocation() *source.Location
+	GetMessage() string
+}
+
+type LocationErrorImpl struct {
 	Location *source.Location
 	Message  string
 }
 
-func (e *LocationError) Error() string {
+func (e *LocationErrorImpl) GetLocation() *source.Location {
+	return e.Location
+}
+
+func (e *LocationErrorImpl) GetMessage() string {
+	return e.Message
+}
+
+func (e *LocationErrorImpl) Error() string {
+	return e.Message
+}
+
+type CyclicDependencyError struct {
+	Location *source.Location
+	Message  string
+}
+
+func (e *CyclicDependencyError) GetLocation() *source.Location {
+	return e.Location
+}
+
+func (e *CyclicDependencyError) GetMessage() string {
+	return e.Message
+}
+
+func (e *CyclicDependencyError) Error() string {
 	return e.Message
 }
 
@@ -45,8 +84,8 @@ func ExtractIndividualErrors(err error) []error {
 }
 
 // ToLocationError convert err into LocationError if error instances the one.
-func ToLocationError(err error) *LocationError {
-	var e *LocationError
+func ToLocationError(err error) LocationError {
+	var e LocationError
 	if !errors.As(err, &e) {
 		return nil
 	}
@@ -54,27 +93,9 @@ func ToLocationError(err error) *LocationError {
 }
 
 // ErrWithLocation creates LocationError instance from message and location.
-func ErrWithLocation(msg string, loc *source.Location) *LocationError {
-	return &LocationError{
+func ErrWithLocation(msg string, loc *source.Location) LocationError {
+	return &LocationErrorImpl{
 		Location: loc,
 		Message:  msg,
 	}
-}
-
-type errorBuilder struct {
-	errs []error
-}
-
-func (b *errorBuilder) add(err error) {
-	if err == nil {
-		return
-	}
-	b.errs = append(b.errs, err)
-}
-
-func (b *errorBuilder) build() error {
-	if len(b.errs) == 0 {
-		return nil
-	}
-	return &Error{Errs: b.errs}
 }

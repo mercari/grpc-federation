@@ -1,15 +1,15 @@
 package resolver
 
 type context struct {
-	errorBuilder *errorBuilder
-	allWarnings  *allWarnings
-	fileRef      *File
-	svc          *Service
-	mtd          *Method
-	msg          *Message
-	enum         *Enum
-	depIdx       int
-	argIdx       int
+	allErrors   *Error
+	allWarnings *allWarnings
+	fileRef     *File
+	svc         *Service
+	mtd         *Method
+	msg         *Message
+	enum        *Enum
+	depIdx      int
+	argIdx      int
 }
 
 type allWarnings struct {
@@ -18,22 +18,22 @@ type allWarnings struct {
 
 func newContext() *context {
 	return &context{
-		errorBuilder: &errorBuilder{},
-		allWarnings:  &allWarnings{},
+		allErrors:   &Error{},
+		allWarnings: &allWarnings{},
 	}
 }
 
 func (c *context) clone() *context {
 	return &context{
-		errorBuilder: c.errorBuilder,
-		allWarnings:  c.allWarnings,
-		fileRef:      c.fileRef,
-		svc:          c.svc,
-		mtd:          c.mtd,
-		msg:          c.msg,
-		enum:         c.enum,
-		depIdx:       c.depIdx,
-		argIdx:       c.argIdx,
+		allErrors:   c.allErrors,
+		allWarnings: c.allWarnings,
+		fileRef:     c.fileRef,
+		svc:         c.svc,
+		mtd:         c.mtd,
+		msg:         c.msg,
+		enum:        c.enum,
+		depIdx:      c.depIdx,
+		argIdx:      c.argIdx,
 	}
 }
 
@@ -126,12 +126,16 @@ func (c *context) argIndex() int {
 	return c.argIdx
 }
 
-func (c *context) addError(e *LocationError) {
-	c.errorBuilder.add(e)
+func (c *context) addError(e error) {
+	c.allErrors.add(e)
 }
 
 func (c *context) error() error {
-	return c.errorBuilder.build()
+	if len(c.allErrors.Errs) == 0 {
+		return nil
+	}
+
+	return c.allErrors
 }
 
 func (c *context) addWarning(w *Warning) {

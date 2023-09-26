@@ -119,7 +119,7 @@ func (v *Validator) toValidationOutputByError(dirName string, err error) *Valida
 	if locErr == nil {
 		return &ValidationOutput{Message: err.Error()}
 	}
-	return v.toValidationOutput(dirName, locErr.Location, locErr.Message)
+	return v.toValidationOutput(dirName, locErr.GetLocation(), locErr.GetMessage())
 }
 
 func (v *Validator) toValidationOutput(dirName string, loc *source.Location, msg string) *ValidationOutput {

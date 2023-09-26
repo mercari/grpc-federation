@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -192,6 +193,14 @@ func (r *Resolver) servicesWithRule(ctx *context, files []*File) []*Service {
 }
 
 func (r *Resolver) validateServiceDependency(ctx *context, service *Service) {
+	// Avoid an infinite loop caused by the cyclic dependency
+	for _, err := range ctx.allErrors.Errs {
+		var e *CyclicDependencyError
+		if errors.As(err, &e) {
+			return
+		}
+	}
+
 	useSvcMap := map[string]struct{}{}
 	useServices := service.UseServices()
 	for _, svc := range useServices {

@@ -102,8 +102,7 @@ func CreateMessageDependencyGraph(ctx *context, msgs []*Message) *MessageDepende
 		RootArgs: map[*MessageDependencyGraphNode]*Message{},
 	}
 	if err := validateMessageGraph(graph); err != nil {
-		fileName := roots[0].Message.File.Name
-		ctx.addError(ErrWithLocation(err.Error(), source.FileLocation(fileName)))
+		ctx.addError(err)
 		return nil
 	}
 	return graph
@@ -350,12 +349,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 		Roots: roots,
 	}
 	if err := validateMessageRuleGraph(graph); err != nil {
-		ctx.addError(
-			ErrWithLocation(
-				err.Error(),
-				source.MessageOptionLocation(ctx.fileName(), baseMsg.Name),
-			),
-		)
+		ctx.addError(err)
 		return nil
 	}
 	return graph
@@ -379,7 +373,10 @@ func validateMessageRuleNode(node *MessageRuleDependencyGraphNode) error {
 
 func validateMessageRuleNodeCyclicDependency(visited map[*MessageRuleDependencyGraphNode]struct{}, node *MessageRuleDependencyGraphNode) error {
 	if _, ok := visited[node]; ok {
-		return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, node.Message.PackageName(), node.Message.Name)
+		return &CyclicDependencyError{
+			Location: source.MessageLocation(node.Message.File.Name, node.Message.Name),
+			Message:  fmt.Sprintf(`found cyclic dependency in "%s.%s" message`, node.Message.PackageName(), node.Message.Name),
+		}
 	}
 	visited[node] = struct{}{}
 	for _, child := range node.Children {
@@ -409,7 +406,10 @@ func validateMessageNode(node *MessageDependencyGraphNode) error {
 
 func validateMessageNodeCyclicDependency(visited map[*MessageDependencyGraphNode]struct{}, node *MessageDependencyGraphNode) error {
 	if _, ok := visited[node]; ok {
-		return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, node.Message.PackageName(), node.Message.Name)
+		return &CyclicDependencyError{
+			Location: source.MessageLocation(node.Message.File.Name, node.Message.Name),
+			Message:  fmt.Sprintf(`found cyclic dependency in "%s.%s" message`, node.Message.PackageName(), node.Message.Name),
+		}
 	}
 	visited[node] = struct{}{}
 	for _, child := range node.Children {
