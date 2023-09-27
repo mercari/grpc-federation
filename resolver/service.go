@@ -128,7 +128,7 @@ func (s *Service) UseServices() []*Service {
 		}
 		for _, group := range rule.Resolvers {
 			for _, resolver := range group.Resolvers() {
-				for _, svc := range s.useServices(resolver) {
+				for _, svc := range s.useServices(resolver, make(map[*MessageResolver]struct{})) {
 					serviceMap[svc] = struct{}{}
 				}
 			}
@@ -144,7 +144,12 @@ func (s *Service) UseServices() []*Service {
 	return services
 }
 
-func (s *Service) useServices(resolver *MessageResolver) []*Service {
+func (s *Service) useServices(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
+	if _, found := msgResolverMap[resolver]; found {
+		return nil
+	}
+	msgResolverMap[resolver] = struct{}{}
+
 	var services []*Service
 	if resolver.MethodCall != nil {
 		methodCall := resolver.MethodCall
@@ -153,7 +158,7 @@ func (s *Service) useServices(resolver *MessageResolver) []*Service {
 	if resolver.MessageDependency != nil && resolver.MessageDependency.Message != nil && resolver.MessageDependency.Message.Rule != nil {
 		for _, group := range resolver.MessageDependency.Message.Rule.Resolvers {
 			for _, resolver := range group.Resolvers() {
-				services = append(services, s.useServices(resolver)...)
+				services = append(services, s.useServices(resolver, msgResolverMap)...)
 			}
 		}
 	}

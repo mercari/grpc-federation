@@ -301,6 +301,16 @@ testdata/recursive_message_name.proto:43:32: recursive definition: "Post" is own
 43:        { name: "self", message: "Post" }
                                     ^
 `},
+		{file: "message_cyclic_dependency.proto", expected: `
+testdata/message_cyclic_dependency.proto:27:1: found cyclic dependency in "org.federation.A" message. dependency path: GetResponse => A => AA => AAA => A
+27:  message A {
+     ^
+`},
+		{file: "message_rule_cyclic_dependency.proto", expected: `
+testdata/message_rule_cyclic_dependency.proto:22:28: found cyclic dependency for "org.federation.B" message in "org.federation.FederatedResponse. dependency path: A => B => C => D => B"
+22:        {name: "b", message: "B", args: [{name: "aid", by: "a.id"}, {name: "did", by: "d.id"}]},
+                                ^
+`},
 	}
 	ctx := context.Background()
 	v := validator.New()
