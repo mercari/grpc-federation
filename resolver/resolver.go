@@ -596,7 +596,7 @@ func (r *Resolver) resolveMessageRules(ctx *context, msgs []*Message) {
 	for _, msg := range msgs {
 		ctx := ctx.withMessage(msg)
 		nameRef := newNameReference()
-		msg.Rule = r.resolveMessageRule(ctx, msg, r.messageToRuleMap[msg], nameRef)
+		r.resolveMessageRule(ctx, msg, r.messageToRuleMap[msg], nameRef)
 		r.resolveFieldRules(ctx, msg, nameRef)
 		r.resolveEnumRules(ctx, msg.Enums)
 		r.resolveAutoBindFields(ctx, msg)
@@ -911,9 +911,9 @@ func (r *Resolver) resolveMethodRule(ctx *context, def *federation.MethodRule) *
 	return rule
 }
 
-func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *federation.MessageRule, nameRef *nameReference) *MessageRule {
+func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *federation.MessageRule, nameRef *nameReference) {
 	if ruleDef == nil {
-		return nil
+		return
 	}
 	methodCall := r.resolveMethodCall(ctx, ruleDef.Resolver)
 	msgs := r.resolveMessages(ctx, msg, ruleDef.Messages)
@@ -922,17 +922,16 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 	// so we need to resolve Value.Ref of all arguments before creating the graph.
 	r.resolveValueNameReference(ctx, methodCall, msgs, nameRef)
 
-	rule := &MessageRule{
+	msg.Rule = &MessageRule{
 		MethodCall:          methodCall,
 		MessageDependencies: msgs,
 		CustomResolver:      ruleDef.GetCustomResolver(),
 		Alias:               r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
 	}
-	if graph := CreateMessageRuleDependencyGraph(ctx, msg, rule); graph != nil {
-		rule.DependencyGraph = graph
-		rule.Resolvers = graph.MessageResolverGroups(ctx)
+	if graph := CreateMessageRuleDependencyGraph(ctx, msg, msg.Rule); graph != nil {
+		msg.Rule.DependencyGraph = graph
+		msg.Rule.Resolvers = graph.MessageResolverGroups(ctx)
 	}
-	return rule
 }
 
 func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message {

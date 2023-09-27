@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "a", message: "A" },
+      { name: "b", message: "B" }
+    ]
+  };
+  string aaaname = 1 [(grpc.federation.field).by = "a.aaaname"];
+  string bname = 2 [(grpc.federation.field).by = "b.name"];
+}
+
+message A {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "aa", message: "AA" },
+      { name: "ab", message: "AB" }
+    ]
+  };
+  string aaaname = 1 [(grpc.federation.field).by = "aa.aaaname"];
+  string abname = 2 [(grpc.federation.field).by = "ab.name"];
+}
+
+message AA {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "aaa", message: "AAA" }
+    ]
+  };
+  string aaaname = 1 [(grpc.federation.field).by = "aaa.name"];
+}
+
+message AB {
+  string name = 1 [(grpc.federation.field).string = "ab"];
+}
+
+message AAA {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "a", message: "A" }
+    ]
+  };
+  string name = 1 [(grpc.federation.field).by = "a.aaaname"];
+}
+
+message B {
+  string name = 1 [(grpc.federation.field).string = "b"];
+}

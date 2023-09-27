@@ -20,7 +20,7 @@ func ResolverCmpOpts() []cmp.Option {
 		cmpopts.IgnoreFields(resolver.MessageDependency{}, "Message.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageRule{}, "MessageDependencies", "Alias.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageRuleDependencyGraph{}, "Rule"),
-		cmpopts.IgnoreFields(resolver.MessageRuleDependencyGraphNode{}, "Parent", "ParentMap", "Children", "ChildrenMap", "Message.Rule"),
+		cmpopts.IgnoreFields(resolver.MessageRuleDependencyGraphNode{}, "BaseMessage", "Parent", "ParentMap", "Children", "ChildrenMap", "Message.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageDependencyGraph{}, "RootArgs"),
 		cmpopts.IgnoreFields(resolver.MessageDependencyGraphNode{}, "Parent", "Children", "Message.Rule"),
 		cmpopts.IgnoreFields(resolver.AutoBindField{}, "ResponseField", "MessageDependency"),

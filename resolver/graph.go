@@ -3,6 +3,7 @@ package resolver
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/mercari/grpc-federation/source"
 )
@@ -102,8 +103,7 @@ func CreateMessageDependencyGraph(ctx *context, msgs []*Message) *MessageDepende
 		RootArgs: map[*MessageDependencyGraphNode]*Message{},
 	}
 	if err := validateMessageGraph(graph); err != nil {
-		fileName := roots[0].Message.File.Name
-		ctx.addError(ErrWithLocation(err.Error(), source.FileLocation(fileName)))
+		ctx.addError(err)
 		return nil
 	}
 	return graph
@@ -208,6 +208,7 @@ type MessageRuleDependencyGraphNode struct {
 	Children    []*MessageRuleDependencyGraphNode
 	ParentMap   map[*MessageRuleDependencyGraphNode]struct{}
 	ChildrenMap map[*MessageRuleDependencyGraphNode]struct{}
+	BaseMessage *Message
 	Message     *Message
 }
 
@@ -221,6 +222,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 		msg := rule.MethodCall.Response.Type
 		if msg != nil {
 			msgToNode[msg] = &MessageRuleDependencyGraphNode{
+				BaseMessage: baseMsg,
 				Message:     msg,
 				ParentMap:   map[*MessageRuleDependencyGraphNode]struct{}{},
 				ChildrenMap: map[*MessageRuleDependencyGraphNode]struct{}{},
@@ -233,6 +235,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 			continue
 		}
 		msgToNode[msg] = &MessageRuleDependencyGraphNode{
+			BaseMessage: baseMsg,
 			Message:     msg,
 			ParentMap:   map[*MessageRuleDependencyGraphNode]struct{}{},
 			ChildrenMap: map[*MessageRuleDependencyGraphNode]struct{}{},
@@ -350,18 +353,13 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 		Roots: roots,
 	}
 	if err := validateMessageRuleGraph(graph); err != nil {
-		ctx.addError(
-			ErrWithLocation(
-				err.Error(),
-				source.MessageOptionLocation(ctx.fileName(), baseMsg.Name),
-			),
-		)
+		ctx.addError(err)
 		return nil
 	}
 	return graph
 }
 
-func validateMessageRuleGraph(graph *MessageRuleDependencyGraph) error {
+func validateMessageRuleGraph(graph *MessageRuleDependencyGraph) *LocationError {
 	for _, root := range graph.Roots {
 		if err := validateMessageRuleNode(root); err != nil {
 			return err
@@ -370,29 +368,51 @@ func validateMessageRuleGraph(graph *MessageRuleDependencyGraph) error {
 	return nil
 }
 
-func validateMessageRuleNode(node *MessageRuleDependencyGraphNode) error {
-	if err := validateMessageRuleNodeCyclicDependency(node, node.Children); err != nil {
+func validateMessageRuleNode(node *MessageRuleDependencyGraphNode) *LocationError {
+	if err := validateMessageRuleNodeCyclicDependency(node, make(map[*MessageRuleDependencyGraphNode]struct{}), []*MessageRuleDependencyGraphNode{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func validateMessageRuleNodeCyclicDependency(target *MessageRuleDependencyGraphNode, children []*MessageRuleDependencyGraphNode) error {
-	for _, child := range children {
-		if target == child {
-			return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, target.Message.PackageName(), target.Message.Name)
+func validateMessageRuleNodeCyclicDependency(target *MessageRuleDependencyGraphNode, visited map[*MessageRuleDependencyGraphNode]struct{}, path []*MessageRuleDependencyGraphNode) *LocationError {
+	path = append(path, target)
+	if _, exists := visited[target]; exists {
+		var messages []string
+		for _, node := range path {
+			messages = append(messages, node.Message.Name)
 		}
-		if err := validateMessageRuleNodeCyclicDependency(target, child.Children); err != nil {
-			return err
+		dependencyPath := strings.Join(messages, " => ")
+
+		msg := target.BaseMessage
+		for idx, dep := range msg.Rule.MessageDependencies {
+			if dep.Message == target.Message {
+				return ErrWithLocation(
+					fmt.Sprintf(
+						`found cyclic dependency for "%s.%s" message in "%s.%s. dependency path: %s"`,
+						target.Message.PackageName(), target.Message.Name,
+						msg.PackageName(), msg.Name, dependencyPath,
+					),
+					source.MessageDependencyMessageLocation(msg.File.Name, msg.Name, idx),
+				)
+			}
 		}
-		if err := validateMessageRuleNodeCyclicDependency(child, child.Children); err != nil {
+		return ErrWithLocation(
+			fmt.Sprintf(`found cyclic dependency for "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
+			source.MessageLocation(target.Message.File.Name, target.Message.Name),
+		)
+	}
+	visited[target] = struct{}{}
+	for _, child := range target.Children {
+		if err := validateMessageRuleNodeCyclicDependency(child, visited, path); err != nil {
 			return err
 		}
 	}
+	delete(visited, target)
 	return nil
 }
 
-func validateMessageGraph(graph *MessageDependencyGraph) error {
+func validateMessageGraph(graph *MessageDependencyGraph) *LocationError {
 	for _, root := range graph.Roots {
 		if err := validateMessageNode(root); err != nil {
 			return err
@@ -401,24 +421,33 @@ func validateMessageGraph(graph *MessageDependencyGraph) error {
 	return nil
 }
 
-func validateMessageNode(node *MessageDependencyGraphNode) error {
-	if err := validateMessageNodeCyclicDependency(node, node.Children); err != nil {
+func validateMessageNode(node *MessageDependencyGraphNode) *LocationError {
+	if err := validateMessageNodeCyclicDependency(node, make(map[*MessageDependencyGraphNode]struct{}), []*MessageDependencyGraphNode{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, children []*MessageDependencyGraphNode) error {
-	for _, child := range children {
-		if target == child {
-			return fmt.Errorf(`found cyclic dependency in "%s.%s" message`, target.Message.PackageName(), target.Message.Name)
+func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, visited map[*MessageDependencyGraphNode]struct{}, path []*MessageDependencyGraphNode) *LocationError {
+	path = append(path, target)
+	if _, exists := visited[target]; exists {
+		var messages []string
+		for _, node := range path {
+			messages = append(messages, node.Message.Name)
 		}
-		if err := validateMessageNodeCyclicDependency(target, child.Children); err != nil {
-			return err
-		}
-		if err := validateMessageNodeCyclicDependency(child, child.Children); err != nil {
+		dependencyPath := strings.Join(messages, " => ")
+
+		return ErrWithLocation(
+			fmt.Sprintf(`found cyclic dependency in "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
+			source.MessageLocation(target.Message.File.Name, target.Message.Name),
+		)
+	}
+	visited[target] = struct{}{}
+	for _, child := range target.Children {
+		if err := validateMessageNodeCyclicDependency(child, visited, path); err != nil {
 			return err
 		}
 	}
+	delete(visited, target)
 	return nil
 }
