@@ -398,7 +398,7 @@ func validateMessageRuleNodeCyclicDependency(target *MessageRuleDependencyGraphN
 			}
 		}
 		return ErrWithLocation(
-			fmt.Sprintf(`found cyclic dependency for "%s.%s" message`, target.Message.PackageName(), target.Message.Name),
+			fmt.Sprintf(`found cyclic dependency for "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
 			source.MessageLocation(target.Message.File.Name, target.Message.Name),
 		)
 	}
