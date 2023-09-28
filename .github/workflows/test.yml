@@ -36,3 +36,5 @@ jobs:
         run: make tools
       - name: run test
         run: make test
+      - name: report coverage
+        uses: k1LoW/octocov-action@v0.52.0
