@@ -4,6 +4,9 @@ on:
     tags:
       - "v*.*.*"
 
+permissions:
+  contents: write
+
 jobs:
   publish:
     name: release vscode extension
@@ -16,7 +19,9 @@ jobs:
           sudo npm -g install n
           sudo n stable
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v4
         with:
           go-version: '1.21'
@@ -33,6 +38,18 @@ jobs:
         run: |
           mkdir assets
           mv ./lsp/client/vscode/grpc-federation-*.vsix assets/
+      - name: run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --skip-publish --clean
+      - name: move built extension to publish directory
+        run: |
+          mkdir assets
+          mv ./dist/grpc-federation_*_checksums.txt assets/
+          mv ./dist/grpc-federation_*_*_*.tar.gz assets/
+          mv ./dist/grpc-federation_*_*_*.zip assets/
       - name: release
         uses: softprops/action-gh-release@v1
         with:
