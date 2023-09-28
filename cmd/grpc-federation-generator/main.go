@@ -47,6 +47,14 @@ func _main(ctx context.Context, args []string, opt *option) error {
 	if opt.WatchMode {
 		opts = append(opts, generator.WatchMode())
 	}
+	g.SetPostProcessHandler(func(ctx context.Context, path string, result generator.Result) error {
+		for _, r := range result {
+			if err := r.WriteFiles(ctx); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err := g.Generate(ctx, protoPath, opts...); err != nil {
 		return err
 	}
