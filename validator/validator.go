@@ -53,7 +53,9 @@ func AutoImportOption() ValidatorOption {
 
 func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...ValidatorOption) []*ValidationOutput {
 	v.pathToFileMap = map[string]*source.File{}
-	v.importPaths = v.importPaths[:]
+	copied := make([]string, len(v.importPaths))
+	copy(copied, v.importPaths)
+	v.importPaths = copied
 	for _, opt := range opts {
 		opt(v)
 	}
@@ -89,7 +91,7 @@ func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...Val
 
 func (v *Validator) compilerErrorToValidationOutputs(err *compiler.CompilerError) []*ValidationOutput {
 	if len(err.ErrWithPos) == 0 {
-		return []*ValidationOutput{&ValidationOutput{Message: err.Error()}}
+		return []*ValidationOutput{{Message: err.Error()}}
 	}
 	var outs []*ValidationOutput
 	for _, e := range err.ErrWithPos {

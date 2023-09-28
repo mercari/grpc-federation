@@ -66,7 +66,7 @@ func (h *Handler) findMessageDefinition(ctx context.Context, path string, file *
 	if err != nil {
 		return nil, err
 	}
-	msgName, filePath, err := h.messageAndFilePath(ctx, path, protoFiles, defMsgName)
+	msgName, filePath, err := h.messageAndFilePath(path, protoFiles, defMsgName)
 	if filePath == "" {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (h *Handler) findMethodDefinition(ctx context.Context, path string, file *s
 	if err != nil {
 		return nil, err
 	}
-	methodName, filePath, err := h.methodAndFilePath(ctx, path, protoFiles, defMethodName)
+	methodName, filePath, err := h.methodAndFilePath(path, protoFiles, defMethodName)
 	if filePath == "" {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (h *Handler) toLocation(file *source.File, node ast.Node) []protocol.Locati
 	}
 }
 
-func (h *Handler) messageAndFilePath(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, defMsgName string) (string, string, error) {
+func (h *Handler) messageAndFilePath(path string, protoFiles []*descriptorpb.FileDescriptorProto, defMsgName string) (string, string, error) {
 	currentPkgName, err := h.currentPackageName(path, protoFiles)
 	if err != nil {
 		return "", "", err
@@ -181,7 +181,7 @@ func (h *Handler) messageAndFilePath(ctx context.Context, path string, protoFile
 	return "", "", fmt.Errorf("failed to find %s message from all proto files", defMsgName)
 }
 
-func (h *Handler) methodAndFilePath(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, defMethodName string) (string, string, error) {
+func (h *Handler) methodAndFilePath(path string, protoFiles []*descriptorpb.FileDescriptorProto, defMethodName string) (string, string, error) {
 	currentPkgName, err := h.currentPackageName(path, protoFiles)
 	if err != nil {
 		return "", "", err

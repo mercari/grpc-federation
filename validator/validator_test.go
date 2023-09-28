@@ -266,7 +266,7 @@ testdata/invalid_message_field_alias.proto:74:3: "body" field in "org.federation
        ^
 `},
 		{file: "duplicate_service_dependency_name.proto", expected: `
-testdata/duplicate_service_dependency_name.proto:15:17: "%s" name duplicated
+testdata/duplicate_service_dependency_name.proto:15:17: %q name duplicated
 15:          { name: "dup_name", service: "user.UserService" }
                      ^
 `},

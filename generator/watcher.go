@@ -74,7 +74,7 @@ func (w *Watcher) setWatchPathRecursive(path ...string) error {
 func (w *Watcher) Run(ctx context.Context) error {
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		w.sendEventLoop(ctx)
+		w.sendEventLoop()
 		return nil
 	})
 	eg.Go(func() error {
@@ -87,14 +87,14 @@ func (w *Watcher) Run(ctx context.Context) error {
 	return nil
 }
 
-func (w *Watcher) sendEventLoop(ctx context.Context) {
+func (w *Watcher) sendEventLoop() {
 	for {
 		select {
 		case event, ok := <-w.watcher.Events:
 			if !ok {
 				continue
 			}
-			w.handleEvent(ctx, event)
+			w.handleEvent(event)
 		case err, ok := <-w.watcher.Errors:
 			if !ok {
 				continue
@@ -104,7 +104,7 @@ func (w *Watcher) sendEventLoop(ctx context.Context) {
 	}
 }
 
-func (w *Watcher) handleEvent(ctx context.Context, event fsnotify.Event) {
+func (w *Watcher) handleEvent(event fsnotify.Event) {
 	if w.IsWorking() {
 		return
 	}

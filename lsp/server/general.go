@@ -1,12 +1,10 @@
 package server
 
 import (
-	"context"
-
 	"go.lsp.dev/protocol"
 )
 
-func (h *Handler) initialize(ctx context.Context, params *protocol.InitializeParams) (*protocol.InitializeResult, error) {
+func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.InitializeResult, error) {
 	var tokenTypes []protocol.SemanticTokenTypes
 	for idx, tokenType := range params.Capabilities.TextDocument.SemanticTokens.TokenTypes {
 		tokenTypes = append(tokenTypes, protocol.SemanticTokenTypes(tokenType))

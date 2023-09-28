@@ -2103,9 +2103,6 @@ func TestLiteral(t *testing.T) {
 					Build(t),
 			).SetAlias(ref.Field(t, "content", "Content", "message_field")).Build(t),
 		},
-	)
-	content.Fields = append(
-		content.Fields,
 		&resolver.Field{
 			Name: "messages_field",
 			Type: ref.RepeatedType(t, "org.federation", "Content"),
@@ -2123,9 +2120,6 @@ func TestLiteral(t *testing.T) {
 			Name: "message_field",
 			Type: &resolver.Type{Type: types.Message, Ref: content},
 		},
-	)
-	contentArg.Fields = append(
-		contentArg.Fields,
 		&resolver.Field{
 			Name: "messages_field",
 			Type: &resolver.Type{Type: types.Message, Ref: content, Repeated: true},
@@ -2530,5 +2524,4 @@ func getContentProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				Build(t),
 		)
 	return pb
-
 }

@@ -49,7 +49,7 @@ func NewHandler(client protocol.Client, w io.Writer, importPaths []string) *Hand
 
 func (h *Handler) Initialize(ctx context.Context, params *protocol.InitializeParams) (*protocol.InitializeResult, error) {
 	h.logger.Println("Initialize", params)
-	return h.initialize(ctx, params)
+	return h.initialize(params)
 }
 
 func (h *Handler) Initialized(ctx context.Context, params *protocol.InitializedParams) error {
@@ -314,7 +314,7 @@ func (h *Handler) OutgoingCalls(ctx context.Context, params *protocol.CallHierar
 
 func (h *Handler) SemanticTokensFull(ctx context.Context, params *protocol.SemanticTokensParams) (*protocol.SemanticTokens, error) {
 	h.logger.Println("SemanticTokensFull", params)
-	return h.semanticTokensFull(ctx, params)
+	return h.semanticTokensFull(params)
 }
 
 func (h *Handler) SemanticTokensFullDelta(ctx context.Context, params *protocol.SemanticTokensDeltaParams) (interface{}, error) {

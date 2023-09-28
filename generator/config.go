@@ -21,9 +21,9 @@ type Config struct {
 	// Plugins specify protoc's plugin configuration.
 	Plugins []*PluginConfig `yaml:"plugins"`
 	// AutoProtocGenGo automatically run protoc-gen-go at the time of editing proto. default is true.
-	AutoProtocGenGo *bool `yaml:"auto-protoc-gen-go"`
+	AutoProtocGenGo *bool `yaml:"autoProtocGenGo"`
 	// AutoProtocGenGoGRPC automatically run protoc-gen-go-grpc at the time of editing proto. default is true.
-	AutoProtocGenGoGRPC *bool `yaml:"auto-protoc-gen-go-grpc"`
+	AutoProtocGenGoGRPC *bool `yaml:"autoProtocGenGoGrpc"`
 }
 
 type PluginConfig struct {
@@ -77,7 +77,7 @@ func setupConfig(cfg *Config) error {
 	pluginNameMap := make(map[string]struct{})
 	for _, plugin := range cfg.Plugins {
 		name := plugin.Plugin
-		if !strings.HasPrefix("protoc-gen-", name) {
+		if !strings.HasPrefix(name, "protoc-gen-") {
 			name = "protoc-gen-" + name
 		}
 		path, err := lookupProtocPlugin(name, standardPluginMap)

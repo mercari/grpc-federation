@@ -156,5 +156,4 @@ func TestCompletion(t *testing.T) {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
 	})
-
 }

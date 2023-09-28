@@ -76,8 +76,8 @@ type Completer struct {
 	pp       *pp.PrettyPrinter
 }
 
-func NewCompleter(c *compiler.Compiler, logger *log.Logger, pp *pp.PrettyPrinter) *Completer {
-	return &Completer{compiler: c, logger: logger, pp: pp}
+func NewCompleter(c *compiler.Compiler, logger *log.Logger, printer *pp.PrettyPrinter) *Completer {
+	return &Completer{compiler: c, logger: logger, pp: printer}
 }
 
 func (c *Completer) Completion(ctx context.Context, importPaths []string, path string, content []byte, pos source.Position) (*ast.NodeInfo, []string, error) {

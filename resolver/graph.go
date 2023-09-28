@@ -116,7 +116,7 @@ type MessageRuleDependencyGraph struct {
 
 func (g *MessageRuleDependencyGraph) MessageResolverGroups(ctx *context) []MessageResolverGroup {
 	var groups []MessageResolverGroup
-	for _, child := range g.uniqueChildren(ctx) {
+	for _, child := range g.uniqueChildren() {
 		if group := g.createMessageResolverGroup(ctx, child); group != nil {
 			groups = append(groups, group)
 		}
@@ -124,8 +124,8 @@ func (g *MessageRuleDependencyGraph) MessageResolverGroups(ctx *context) []Messa
 	return groups
 }
 
-func (g *MessageRuleDependencyGraph) uniqueChildren(ctx *context) []*MessageRuleDependencyGraphNode {
-	children := g.children(ctx, g.Roots)
+func (g *MessageRuleDependencyGraph) uniqueChildren() []*MessageRuleDependencyGraphNode {
+	children := g.children(g.Roots)
 	uniqueMap := make(map[*MessageRuleDependencyGraphNode]struct{})
 	for _, child := range children {
 		uniqueMap[child] = struct{}{}
@@ -140,11 +140,11 @@ func (g *MessageRuleDependencyGraph) uniqueChildren(ctx *context) []*MessageRule
 	return uniqueChildren
 }
 
-func (g *MessageRuleDependencyGraph) children(ctx *context, nodes []*MessageRuleDependencyGraphNode) []*MessageRuleDependencyGraphNode {
+func (g *MessageRuleDependencyGraph) children(nodes []*MessageRuleDependencyGraphNode) []*MessageRuleDependencyGraphNode {
 	var children []*MessageRuleDependencyGraphNode
 	for _, node := range nodes {
 		if len(node.Children) != 0 {
-			children = append(children, g.children(ctx, node.Children)...)
+			children = append(children, g.children(node.Children)...)
 		} else {
 			children = append(children, node)
 		}
@@ -196,7 +196,7 @@ func (g *MessageRuleDependencyGraph) createMessageResolver(ctx *context, node *M
 	}
 	ctx.addError(
 		ErrWithLocation(
-			fmt.Sprintf(`"%s" message has not resolver content`, node.Message.Name),
+			fmt.Sprintf(`%q message has not resolver content`, node.Message.Name),
 			source.MessageLocation(ctx.fileName(), node.Message.Name),
 		),
 	)
@@ -261,7 +261,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 			if !exists {
 				ctx.addError(
 					ErrWithLocation(
-						fmt.Sprintf(`"%s" message does not exist for resolving message argument`, msg.Name),
+						fmt.Sprintf(`%q message does not exist for resolving message argument`, msg.Name),
 						source.MessageOptionLocation(ctx.fileName(), baseMsg.Name),
 					),
 				)
@@ -300,7 +300,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 			if !exists {
 				ctx.addError(
 					ErrWithLocation(
-						fmt.Sprintf(`"%s" message does not exist for resolving message argument`, msg.Name),
+						fmt.Sprintf(`%q message does not exist for resolving message argument`, msg.Name),
 						source.MessageOptionLocation(ctx.fileName(), baseMsg.Name),
 					),
 				)

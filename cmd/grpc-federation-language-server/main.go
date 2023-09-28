@@ -51,7 +51,7 @@ func run(ctx context.Context) error {
 	if len(opt.ImportPaths) != 0 {
 		opts = append(opts, server.ImportPathsOption(opt.ImportPaths))
 	}
-	server := server.New(opts...)
-	server.Run(ctx)
+	svr := server.New(opts...)
+	svr.Run(ctx)
 	return nil
 }
