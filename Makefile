@@ -95,5 +95,5 @@ test/examples/%:
 	$(MAKE) -C $* test
 
 .PHONY: cover-html
-cover-html:
+cover-html: test
 	go tool cover -html=cover.out
