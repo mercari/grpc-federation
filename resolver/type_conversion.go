@@ -46,17 +46,17 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 	decls := []*TypeConversionDecl{{From: fromType, To: toType}}
 	switch {
 	case fromType.Repeated:
-		fromType := fromType.Clone()
-		toType := toType.Clone()
-		fromType.Repeated = false
-		toType.Repeated = false
-		decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
+		ft := fromType.Clone()
+		tt := toType.Clone()
+		ft.Repeated = false
+		tt.Repeated = false
+		decls = append(decls, typeConversionDecls(ft, tt, convertedFQDNMap)...)
 	case fromType.OneofField != nil:
-		fromType := fromType.Clone()
-		toType := toType.Clone()
-		fromType.OneofField = nil
-		toType.OneofField = nil
-		decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
+		ft := fromType.Clone()
+		tt := toType.Clone()
+		ft.OneofField = nil
+		tt.OneofField = nil
+		decls = append(decls, typeConversionDecls(ft, tt, convertedFQDNMap)...)
 	case fromType.Type == types.Message:
 		for _, field := range toType.Ref.Fields {
 			fromField := fromType.Ref.Field(field.Name)

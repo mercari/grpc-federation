@@ -52,17 +52,17 @@ type Import struct {
 
 func (s *Service) Imports() []*Import {
 	deps := s.GoPackageDependencies()
-	imports := make([]*Import, 0, len(deps))
+	imprts := make([]*Import, 0, len(deps))
 	for _, pkg := range deps {
-		imports = append(imports, &Import{
+		imprts = append(imprts, &Import{
 			Path:  pkg.ImportPath,
 			Alias: pkg.Name,
 		})
 	}
-	sort.Slice(imports, func(i, j int) bool {
-		return imports[i].Path < imports[j].Path
+	sort.Slice(imprts, func(i, j int) bool {
+		return imprts[i].Path < imprts[j].Path
 	})
-	return imports
+	return imprts
 }
 
 func (s *Service) ServiceName() string {
@@ -312,7 +312,7 @@ func (s *Service) Types() []*Type {
 		msgFQDN := fmt.Sprintf(`%s.%s`, s.Service.PackageName(), msg.Name)
 		typ := &Type{
 			Name: argName,
-			Desc: fmt.Sprintf(`%s is argument for "%s" message`, argName, msgFQDN),
+			Desc: fmt.Sprintf(`%s is argument for %q message`, argName, msgFQDN),
 		}
 
 		genMsg := &Message{Message: msg, Service: s.Service}
@@ -375,7 +375,7 @@ func (s *Service) Types() []*Type {
 				Name:   typeName,
 				Fields: fields,
 				Desc: fmt.Sprintf(
-					`%s is custom resolver's argument for "%s" field of "%s" message`,
+					`%s is custom resolver's argument for %q field of %q message`,
 					typeName,
 					field.Name,
 					msgFQDN,
@@ -1302,7 +1302,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	return &ReturnField{
 		Name:         fieldName,
 		Value:        returnFieldValue,
-		ProtoComment: fmt.Sprintf(`// { name: "%s", autobind: true }`, name),
+		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
 	}
 }
 
@@ -1619,12 +1619,7 @@ func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
 			if field.FieldName == "" {
 				selector = r.ResponseVariable()
 			} else {
-				selector = strings.Join(
-					[]string{
-						r.ResponseVariable(),
-						fmt.Sprintf("Get%s()", util.ToPublicGoVariable(field.FieldName)),
-					}, ".",
-				)
+				selector = r.ResponseVariable() + "." + fmt.Sprintf("Get%s()", util.ToPublicGoVariable(field.FieldName))
 			}
 			format := field.ProtoFormat(resolver.DefaultProtoFormatOption)
 			if format != "" {
@@ -1642,7 +1637,7 @@ func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
 			UseName:      r.MessageDependency.Used,
 			Name:         toUserDefinedVariable(r.MessageDependency.Name),
 			Selector:     r.ResponseVariable(),
-			ProtoComment: fmt.Sprintf(`// { name: "%s", message: "%s" ... }`, r.MessageDependency.Name, r.MessageDependency.Message.Name),
+			ProtoComment: fmt.Sprintf(`// { name: %q, message: %q ... }`, r.MessageDependency.Name, r.MessageDependency.Message.Name),
 		})
 	}
 	return values
@@ -1672,7 +1667,7 @@ func (r *MessageResolver) Arguments() []*Argument {
 	for _, arg := range args {
 		for _, generatedArg := range r.argument(arg.Name, arg.Type, arg.Value) {
 			format := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
-			if len(format) != 0 {
+			if format != "" {
 				generatedArg.ProtoComment = "// " + format
 			}
 			generateArgs = append(generateArgs, generatedArg)
@@ -1761,7 +1756,9 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	if len(fieldNames) != 0 {
 		var args []*Argument
 		for _, fieldName := range fieldNames {
-			sels := append(selectors, fmt.Sprintf("Get%s()", util.ToPublicGoVariable(fieldName)))
+			sels := make([]string, len(selectors))
+			copy(sels, selectors)
+			sels = append(sels, fmt.Sprintf("Get%s()", util.ToPublicGoVariable(fieldName)))
 			args = append(args, &Argument{
 				Name:  util.ToPublicGoVariable(fieldName),
 				Value: strings.Join(sels, "."),
@@ -1808,16 +1805,16 @@ func toGoLiteralValue(svc *resolver.Service, typ *resolver.Type, value interface
 		return fmt.Sprintf("%t", value)
 	case types.String:
 		if envKey, ok := value.(resolver.EnvKey); ok {
-			return fmt.Sprintf(`os.Getenv("%s")`, envKey)
+			return fmt.Sprintf(`os.Getenv(%q)`, envKey)
 		}
 		return strconv.Quote(value.(string))
 	case types.Bytes:
 		b := value.([]byte)
-		bytes := make([]string, 0, len(b))
+		byts := make([]string, 0, len(b))
 		for _, bb := range b {
-			bytes = append(bytes, fmt.Sprint(bb))
+			byts = append(byts, fmt.Sprint(bb))
 		}
-		return fmt.Sprintf("[]byte{%s}", strings.Join(bytes, ","))
+		return fmt.Sprintf("[]byte{%s}", strings.Join(byts, ","))
 	case types.Enum:
 		enumValue := value.(*resolver.EnumValue)
 		prefix := toEnumValuePrefix(svc, &resolver.Type{

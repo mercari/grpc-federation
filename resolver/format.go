@@ -45,7 +45,7 @@ func (r *FieldRule) ProtoFormat(opt *ProtoFormatOption) string {
 	case r.CustomResolver:
 		return indent + "(grpc.federation.field).custom_resolver = true"
 	case r.Alias != nil:
-		return indent + fmt.Sprintf(`(grpc.federation.field).alias = "%s"`, r.Alias.Name)
+		return indent + fmt.Sprintf("(grpc.federation.field).alias = %q", r.Alias.Name)
 	case r.Value != nil:
 		value := r.Value.ProtoFormat(opt)
 		value = strings.Replace(value, ":", " =", 1)
@@ -74,7 +74,7 @@ func (r *MessageRule) ProtoFormat(opt *ProtoFormatOption) string {
 		elems = append(elems, nextOpt.indentFormat()+"custom_resolver: true")
 	}
 	if r.Alias != nil {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf(`alias: "%s"`, r.Alias.FQDN()))
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("alias: %q", r.Alias.FQDN()))
 	}
 	if len(elems) == 0 {
 		return indent + "option (grpc.federation.message) = {}"
@@ -133,7 +133,7 @@ func (m *Method) ProtoFormat(opt *ProtoFormatOption) string {
 	if m == nil {
 		return ""
 	}
-	return opt.indentFormat() + fmt.Sprintf(`method: "%s"`, m.FQDN())
+	return opt.indentFormat() + fmt.Sprintf("method: %q", m.FQDN())
 }
 
 func (r *Request) ProtoFormat(opt *ProtoFormatOption) string {
@@ -205,10 +205,10 @@ func (f *AutoBindField) ProtoFormat(opt *ProtoFormatOption) string {
 func (f *ResponseField) ProtoFormat(opt *ProtoFormatOption) string {
 	var elems []string
 	if f.Name != "" {
-		elems = append(elems, fmt.Sprintf(`name: "%s"`, f.Name))
+		elems = append(elems, fmt.Sprintf("name: %q", f.Name))
 	}
 	if f.FieldName != "" {
-		elems = append(elems, fmt.Sprintf(`field: "%s"`, f.FieldName))
+		elems = append(elems, fmt.Sprintf("field: %q", f.FieldName))
 	}
 	if f.AutoBind {
 		elems = append(elems, `autobind: true`)
@@ -228,10 +228,10 @@ func (d *MessageDependency) ProtoFormat(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
 	var elems []string
 	if d.Name != "" {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf(`name: "%s"`, d.Name))
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("name: %q", d.Name))
 	}
 	if d.Message != nil {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf(`message: "%s"`, d.Message.Name))
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("message: %q", d.Message.Name))
 	}
 	args := d.protoFormatMessageArgs(nextOpt)
 	if args != "" {
@@ -276,9 +276,9 @@ func (a *Argument) ProtoFormat(opt *ProtoFormatOption, isRequestArg bool) string
 	var elems []string
 	if a.Name != "" {
 		if isRequestArg {
-			elems = append(elems, fmt.Sprintf(`field: "%s"`, a.Name))
+			elems = append(elems, fmt.Sprintf("field: %q", a.Name))
 		} else {
-			elems = append(elems, fmt.Sprintf(`name: "%s"`, a.Name))
+			elems = append(elems, fmt.Sprintf("name: %q", a.Name))
 		}
 	}
 	if a.Value != nil {
@@ -296,9 +296,9 @@ func (v *Value) ProtoFormat(opt *ProtoFormatOption) string {
 	}
 	if v.Path != nil {
 		if v.Inline {
-			return fmt.Sprintf(`inline: "%s"`, strings.Join(v.Path.Selectors(), "."))
+			return fmt.Sprintf("inline: %q", strings.Join(v.Path.Selectors(), "."))
 		}
-		return fmt.Sprintf(`by: "%s"`, strings.Join(v.Path.Selectors(), "."))
+		return fmt.Sprintf("by: %q", strings.Join(v.Path.Selectors(), "."))
 	}
 	if v.Literal != nil {
 		return v.Literal.ProtoFormat(opt)
@@ -334,15 +334,15 @@ func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
 	case Sfixed32Type:
 		return fmt.Sprintf(`sfixed32: %v`, lit.Value)
 	case Sfixed64Type:
-		return fmt.Sprintf(`sfixed64: %v`, lit.Value)
+		return fmt.Sprintf("sfixed64: %v", lit.Value)
 	case BoolType:
 		return fmt.Sprintf(`bool: %v`, lit.Value)
 	case StringType:
-		return fmt.Sprintf(`string: "%s"`, lit.Value)
+		return fmt.Sprintf("string: %q", lit.Value)
 	case BytesType:
-		return fmt.Sprintf(`byte_string: "%s"`, lit.Value)
+		return fmt.Sprintf("byte_string: %q", lit.Value)
 	case EnvType:
-		return fmt.Sprintf(`env: "%s"`, lit.Value)
+		return fmt.Sprintf("env: %q", lit.Value)
 	case DoubleRepeatedType:
 		var elems []string
 		for _, v := range lit.Value.([]float64) {
@@ -424,19 +424,19 @@ func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
 	case StringRepeatedType:
 		var elems []string
 		for _, v := range lit.Value.([]string) {
-			elems = append(elems, fmt.Sprintf(`"%s"`, v))
+			elems = append(elems, fmt.Sprintf(`%q`, v))
 		}
 		return fmt.Sprintf(`strings: [%s]`, strings.Join(elems, ", "))
 	case BytesRepeatedType:
 		var elems []string
 		for _, v := range lit.Value.([][]byte) {
-			elems = append(elems, fmt.Sprintf(`"%s"`, string(v)))
+			elems = append(elems, fmt.Sprintf(`%q`, string(v)))
 		}
 		return fmt.Sprintf(`byte_strings: [%s]`, strings.Join(elems, ", "))
 	case EnvRepeatedType:
 		var elems []string
 		for _, v := range lit.Value.([]EnvKey) {
-			elems = append(elems, fmt.Sprintf(`"%s"`, v))
+			elems = append(elems, fmt.Sprintf(`%q`, v))
 		}
 		return fmt.Sprintf(`envs: [%s]`, strings.Join(elems, ", "))
 	}
@@ -446,11 +446,11 @@ func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
 		if lit.Type.Repeated {
 			var elems []string
 			for _, v := range lit.Value.([]*EnumValue) {
-				elems = append(elems, fmt.Sprintf(`"%s"`, v.FQDN()))
+				elems = append(elems, fmt.Sprintf("%q", v.FQDN()))
 			}
 			return fmt.Sprintf(`enums: [%s]`, strings.Join(elems, ", "))
 		}
-		return fmt.Sprintf(`enum: "%s"`, lit.Value.(*EnumValue).FQDN())
+		return fmt.Sprintf("enum: %q", lit.Value.(*EnumValue).FQDN())
 	case types.Message:
 		msg := lit.Type.Ref
 		if lit.Type.Repeated {
@@ -458,19 +458,19 @@ func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
 			for _, v := range lit.Value.([]map[string]*Value) {
 				var fields []string
 				for fieldName, fieldValue := range v {
-					fields = append(fields, fmt.Sprintf(`{ field: "%s", %s }`, fieldName, fieldValue.ProtoFormat(opt)))
+					fields = append(fields, fmt.Sprintf("{ field: %q, %s }", fieldName, fieldValue.ProtoFormat(opt)))
 				}
 				sort.Strings(fields)
-				elems = append(elems, fmt.Sprintf(`{ name: "%s", fields: [%s] }`, msg.FQDN(), strings.Join(fields, ", ")))
+				elems = append(elems, fmt.Sprintf("{ name: %q, fields: [%s] }", msg.FQDN(), strings.Join(fields, ", ")))
 			}
 			return fmt.Sprintf("messages: [%s]", strings.Join(elems, ", "))
 		}
 		var fields []string
 		for fieldName, fieldValue := range lit.Value.(map[string]*Value) {
-			fields = append(fields, fmt.Sprintf(`{ field: "%s", %s }`, fieldName, fieldValue.ProtoFormat(opt)))
+			fields = append(fields, fmt.Sprintf("{ field: %q, %s }", fieldName, fieldValue.ProtoFormat(opt)))
 		}
 		sort.Strings(fields)
-		return fmt.Sprintf(`message: { name: "%s", fields: [%s] }`, msg.FQDN(), strings.Join(fields, ", "))
+		return fmt.Sprintf("message: { name: %q, fields: [%s] }", msg.FQDN(), strings.Join(fields, ", "))
 	}
 	return ""
 }

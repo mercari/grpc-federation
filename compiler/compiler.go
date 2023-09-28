@@ -3,7 +3,6 @@ package compiler
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"fmt"
 	"io"
 	"os"
@@ -19,6 +18,8 @@ import (
 
 	"github.com/mercari/grpc-federation/proto/grpc/federation"
 	"github.com/mercari/grpc-federation/source"
+
+	_ "embed"
 )
 
 // Compiler provides a way to generate file descriptors from a Protocol Buffers file without relying on protoc command.
@@ -87,7 +88,10 @@ const (
 
 // Compile compile the target Protocol Buffers file and produces all file descriptors.
 func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Option) ([]*descriptorpb.FileDescriptorProto, error) {
-	c.importPaths = c.importPaths[:]
+	copied := make([]string, len(c.importPaths))
+	copy(copied, c.importPaths)
+	c.importPaths = copied
+
 	for _, opt := range opts {
 		opt(c)
 	}

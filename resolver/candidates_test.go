@@ -57,7 +57,7 @@ func TestCandidates(t *testing.T) {
 			},
 		},
 		cachedMessageMap: map[string]*Message{
-			"foo.x": &Message{
+			"foo.x": {
 				File: &File{Name: "foo.proto", Package: &Package{Name: "foo"}},
 				Name: "x",
 				Fields: []*Field{
@@ -79,7 +79,7 @@ func TestCandidates(t *testing.T) {
 				},
 			},
 			"foo.y": msgY,
-			"foo.z": &Message{
+			"foo.z": {
 				File: &File{Name: "foo.proto", Package: &Package{Name: "foo"}},
 				Name: "z",
 			},

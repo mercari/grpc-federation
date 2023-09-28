@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"strings"
 
 	"github.com/bufbuild/protocompile/ast"
@@ -10,7 +9,7 @@ import (
 	"github.com/mercari/grpc-federation/source"
 )
 
-func (h *Handler) semanticTokensFull(ctx context.Context, params *protocol.SemanticTokensParams) (*protocol.SemanticTokens, error) {
+func (h *Handler) semanticTokensFull(params *protocol.SemanticTokensParams) (*protocol.SemanticTokens, error) {
 	path, content, err := h.getFile(params.TextDocument.URI)
 	if err != nil {
 		return nil, err
@@ -20,8 +19,8 @@ func (h *Handler) semanticTokensFull(ctx context.Context, params *protocol.Seman
 		return nil, nil
 	}
 	var (
-		line int = 1
-		col  int = 1
+		line = 1
+		col  = 1
 		data []uint32
 	)
 	tokenTypeMap := file.SemanticTokenTypeMap()

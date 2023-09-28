@@ -40,7 +40,7 @@ func parseRequest(r io.Reader) (*pluginpb.CodeGeneratorRequest, error) {
 	}
 
 	var req pluginpb.CodeGeneratorRequest
-	if err = proto.Unmarshal(buf, &req); err != nil {
+	if err := proto.Unmarshal(buf, &req); err != nil {
 		return nil, err
 	}
 	return &req, nil

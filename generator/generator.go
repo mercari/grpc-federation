@@ -157,7 +157,7 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 		return g.watcher.Run(ctx)
 	}
 
-	results := g.otherResults(ctx, path)
+	results := g.otherResults(path)
 	if _, exists := g.buildCache[path]; exists {
 		result, err := g.updateProtoFile(ctx, path)
 		if err != nil {
@@ -232,15 +232,16 @@ func (g *Generator) generateByPlugin(ctx context.Context, req *PluginRequest, cf
 	if cfg.installedPath == "" {
 		switch cfg.Plugin {
 		case protocGenGo:
-			return g.generateByProtogenGo(ctx, req)
+			return g.generateByProtogenGo(req)
 		case protocGenGoGRPC:
-			return g.generateByProtogenGoGRPC(ctx, req)
+			return g.generateByProtogenGoGRPC(req)
 		case protocGenGRPCFederation:
-			return g.generateByGRPCFederation(ctx, req)
+			return g.generateByGRPCFederation(req)
 		}
 		return nil, fmt.Errorf("failed to find installed path for %s", cfg.Plugin)
 	}
 	var stdout bytes.Buffer
+	//nolint:gosec // only valid values are set to cfg.installedPath
 	cmd := exec.CommandContext(ctx, cfg.installedPath)
 	cmd.Stdin = req.content
 	cmd.Stdout = &stdout
@@ -300,7 +301,7 @@ func (g *Generator) setWatcher(w *Watcher) error {
 			}
 			results = append(results, result)
 		case event.Has(fsnotify.Remove), event.Has(fsnotify.Rename):
-			results = append(results, g.deleteProtoFile(ctx, path))
+			results = append(results, g.deleteProtoFile(path))
 		case event.Has(fsnotify.Write):
 			result, err := g.updateProtoFile(ctx, path)
 			if err != nil {
@@ -309,7 +310,7 @@ func (g *Generator) setWatcher(w *Watcher) error {
 			}
 			results = append(results, result)
 		}
-		results = append(results, g.otherResults(ctx, path)...)
+		results = append(results, g.otherResults(path)...)
 		if g.postProcessHandler != nil {
 			if err := g.postProcessHandler(ctx, path, results); err != nil {
 				log.Printf("%+v", err)
@@ -325,7 +326,7 @@ func existsPath(path string) bool {
 	return err == nil
 }
 
-func (g *Generator) otherResults(ctx context.Context, path string) []*ProtoFileResult {
+func (g *Generator) otherResults(path string) []*ProtoFileResult {
 	results := make([]*ProtoFileResult, 0, len(g.buildCache))
 	for p, resp := range g.buildCache {
 		if path == p {
@@ -334,7 +335,7 @@ func (g *Generator) otherResults(ctx context.Context, path string) []*ProtoFileR
 		if !existsPath(p) {
 			// Sometimes fsnotify cannot detect a file remove event, so it may contain a path that does not exist.
 			// If the path does not exist, create result for delete.
-			results = append(results, g.deleteProtoFile(ctx, p))
+			results = append(results, g.deleteProtoFile(p))
 			continue
 		}
 
@@ -371,7 +372,7 @@ func (g *Generator) updateProtoFile(ctx context.Context, path string) (*ProtoFil
 	return result, nil
 }
 
-func (g *Generator) deleteProtoFile(ctx context.Context, path string) *ProtoFileResult {
+func (g *Generator) deleteProtoFile(path string) *ProtoFileResult {
 	result := &ProtoFileResult{
 		ProtoPath: path,
 		Type:      DeleteAction,
@@ -403,7 +404,7 @@ func (g *Generator) createGeneratorResult(ctx context.Context, path string) (*Pr
 			return nil, err
 		}
 		if pluginCfg.Plugin == "protoc-gen-grpc-federation" {
-			svcs, err := g.createGRPCFederationServices(ctx, pluginReq)
+			svcs, err := g.createGRPCFederationServices(pluginReq)
 			if err != nil {
 				return nil, err
 			}
@@ -448,7 +449,7 @@ func (g *Generator) compileProto(ctx context.Context, protoPath string) (*plugin
 	}, nil
 }
 
-func (g *Generator) generateByProtogenGo(ctx context.Context, r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
+func (g *Generator) generateByProtogenGo(r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
 	cfg, err := parseOpt(r.req.GetParameter())
 	if err != nil {
 		return nil, err
@@ -484,7 +485,7 @@ func (g *Generator) generateByProtogenGo(ctx context.Context, r *PluginRequest) 
 	return &res, nil
 }
 
-func (g *Generator) generateByProtogenGoGRPC(ctx context.Context, r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
+func (g *Generator) generateByProtogenGoGRPC(r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
 	cfg, err := parseOpt(r.req.GetParameter())
 	if err != nil {
 		return nil, err
@@ -521,7 +522,7 @@ func (g *Generator) generateByProtogenGoGRPC(ctx context.Context, r *PluginReque
 	return &res, nil
 }
 
-func (g *Generator) generateByGRPCFederation(ctx context.Context, r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
+func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
 	cfg, err := parseOpt(r.req.GetParameter())
 	if err != nil {
 		return nil, err
@@ -553,7 +554,7 @@ func (g *Generator) generateByGRPCFederation(ctx context.Context, r *PluginReque
 	return &resp, nil
 }
 
-func (g *Generator) createGRPCFederationServices(ctx context.Context, r *PluginRequest) ([]*resolver.Service, error) {
+func (g *Generator) createGRPCFederationServices(r *PluginRequest) ([]*resolver.Service, error) {
 	result, err := resolver.New(r.req.GetProtoFile()).Resolve()
 	if err != nil {
 		return nil, err

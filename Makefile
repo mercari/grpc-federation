@@ -37,6 +37,9 @@ tools:
 .PHONY: lint
 lint: lint/examples lint/golangci-lint
 
+.PHONY: fmt
+fmt: fmt/golangci-lint
+
 lint/examples: $(foreach var,$(EXAMPLES),lint/examples/$(var))
 
 lint/examples/%:
@@ -44,6 +47,9 @@ lint/examples/%:
 
 lint/golangci-lint:
 	$(GOBIN)/golangci-lint run $(args) ./...
+
+fmt/golangci-lint:
+	$(GOBIN)/golangci-lint run --fix $(args) ./...
 
 .PHONY: generate
 generate: generate/buf generate/examples

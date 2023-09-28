@@ -206,7 +206,7 @@ func (r *Resolver) validateServiceDependency(ctx *context, service *Service) {
 		if _, exists := useSvcMap[depSvcName]; !exists {
 			ctx.addWarning(&Warning{
 				Location: source.ServiceDependencyLocation(service.File.Name, service.Name, idx),
-				Message:  fmt.Sprintf(`"%s" defined in "dependencies" of "grpc.federation.service" but it is not used`, depSvcName),
+				Message:  fmt.Sprintf(`%q defined in "dependencies" of "grpc.federation.service" but it is not used`, depSvcName),
 			})
 		}
 		depSvcMap[depSvcName] = struct{}{}
@@ -320,7 +320,7 @@ func (r *Resolver) resolveServiceDependency(ctx *context, def *federation.Servic
 			if service == nil {
 				ctx.addError(
 					ErrWithLocation(
-						fmt.Sprintf(`"%s" does not exist`, serviceWithPkgName),
+						fmt.Sprintf(`%q does not exist`, serviceWithPkgName),
 						source.ServiceDependencyServiceLocation(ctx.fileName(), ctx.serviceName(), ctx.depIndex()),
 					),
 				)
@@ -668,14 +668,14 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 			var locates []string
 			for _, autoBindField := range autoBindFields {
 				if autoBindField.ResponseField != nil {
-					locates = append(locates, fmt.Sprintf(`"%s" name at response`, autoBindField.ResponseField.Name))
+					locates = append(locates, fmt.Sprintf(`%q name at response`, autoBindField.ResponseField.Name))
 				} else if autoBindField.MessageDependency != nil {
-					locates = append(locates, fmt.Sprintf(`"%s" name at messages`, autoBindField.MessageDependency.Name))
+					locates = append(locates, fmt.Sprintf(`%q name at messages`, autoBindField.MessageDependency.Name))
 				}
 			}
 			ctx.addError(
 				ErrWithLocation(
-					fmt.Sprintf(`"%s" field found multiple times in the message specified by autobind. since it is not possible to determine one, please use "grpc.federation.field" to explicitly bind it. found message names are %s`, field.Name, strings.Join(locates, " and ")),
+					fmt.Sprintf(`%q field found multiple times in the message specified by autobind. since it is not possible to determine one, please use "grpc.federation.field" to explicitly bind it. found message names are %s`, field.Name, strings.Join(locates, " and ")),
 					source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
 				),
 			)
@@ -709,7 +709,7 @@ func (r *Resolver) validateName(name string) error {
 		return nil
 	}
 	if !nameRe.MatchString(name) {
-		return fmt.Errorf(`"%s" is invalid name. name should be in the following pattern: %s`, name, namePattern)
+		return fmt.Errorf(`%q is invalid name. name should be in the following pattern: %s`, name, namePattern)
 	}
 	return nil
 }
@@ -730,7 +730,7 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 		if !field.HasRule() {
 			ctx.addError(
 				ErrWithLocation(
-					fmt.Sprintf(`"%s" field in "%s" message needs to specify "grpc.federation.field" option`, field.Name, msg.FQDN()),
+					fmt.Sprintf(`%q field in %q message needs to specify "grpc.federation.field" option`, field.Name, msg.FQDN()),
 					source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
 				),
 			)
@@ -786,7 +786,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
-						`required specify alias = "%s" in grpc.federation.message option for the "%s" type to automatically assign a value to the "%s.%s" field via autobind`,
+						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the "%s.%s" field via autobind`,
 						fromMessageName, toMessageName, ctx.messageName(), toField.Name,
 					),
 					source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), toField.Name),
@@ -799,7 +799,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
-						`required specify alias = "%s" in grpc.federation.message option for the "%s" type to automatically assign a value to the "%s.%s" field via autobind`,
+						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the "%s.%s" field via autobind`,
 						fromMessageName, toMessageName, ctx.messageName(), toField.Name,
 					),
 					source.MessageAliasLocation(toMessage.File.Name, toMessage.Name),
@@ -828,7 +828,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
-						`required specify alias = "%s" in grpc.federation.enum option for the "%s" type to automatically assign a value to the "%s.%s" field via autobind`,
+						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the "%s.%s" field via autobind`,
 						fromEnumName, toEnumName, ctx.messageName(), toField.Name,
 					),
 					source.EnumLocation(ctx.fileName(), toEnumMessageName, toEnum.Name),
@@ -841,7 +841,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
-						`required specify alias = "%s" in grpc.federation.enum option for the "%s" type to automatically assign a value to the "%s.%s" field via autobind`,
+						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the "%s.%s" field via autobind`,
 						fromEnumName, toEnumName, ctx.messageName(), toField.Name,
 					),
 					source.EnumAliasLocation(ctx.fileName(), toEnumMessageName, toEnum.Name),
@@ -877,7 +877,7 @@ func (r *Resolver) resolveServiceRule(ctx *context, def *federation.ServiceRule)
 			if _, exists := svcNameMap[dep.Name]; exists {
 				ctx.addError(
 					ErrWithLocation(
-						`"%s" name duplicated`,
+						`%q name duplicated`,
 						source.ServiceDependencyNameLocation(ctx.fileName(), ctx.serviceName(), idx),
 					),
 				)
@@ -1012,7 +1012,7 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
-					`specified "alias" in grpc.federation.message option, but "%s" field does not exist in "%s" message`,
+					`specified "alias" in grpc.federation.message option, but %q field does not exist in %q message`,
 					field.Name, msgAlias.FQDN(),
 				),
 				source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
@@ -1027,7 +1027,7 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
-					`The types of "%s"'s "%s" field ("%s") and "%s"'s field ("%s") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
+					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
 					msg.FQDN(), field.Name, types.ToString(field.Type.Type),
 					msgAlias.FQDN(), types.ToString(aliasField.Type.Type),
 				),
@@ -1057,7 +1057,7 @@ func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, f
 	if aliasField == nil {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`"%s" field does not exist in "%s" message`, fieldAlias, msgAlias.FQDN()),
+				fmt.Sprintf(`%q field does not exist in %q message`, fieldAlias, msgAlias.FQDN()),
 				source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
 			),
 		)
@@ -1070,7 +1070,7 @@ func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, f
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
-					`The types of "%s"'s "%s" field ("%s") and "%s"'s field ("%s") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
+					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
 					msg.FQDN(), field.Name, types.ToString(field.Type.Type),
 					msgAlias.FQDN(), types.ToString(aliasField.Type.Type),
 				),
@@ -1149,7 +1149,7 @@ func (r *Resolver) resolveEnumValueRuleByAutoAlias(ctx *context, enum *Enum, enu
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
-					`specified "alias" in grpc.federation.enum option, but "%s" value does not exist in "%s" enum`,
+					`specified "alias" in grpc.federation.enum option, but %q value does not exist in %q enum`,
 					enumValueName, enumAlias.FQDN(),
 				),
 				source.EnumValueLocation(ctx.fileName(), ctx.messageName(), ctx.enumName(), enumValueName),
@@ -1178,7 +1178,7 @@ func (r *Resolver) resolveEnumValueAlias(ctx *context, enum *Enum, enumValueName
 	if value == nil {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`"%s" value does not exist in "%s" enum`, enumValueAlias, enumAlias.FQDN()),
+				fmt.Sprintf(`%q value does not exist in %q enum`, enumValueAlias, enumAlias.FQDN()),
 				source.EnumValueLocation(ctx.fileName(), ctx.messageName(), ctx.enumName(), enumValueName),
 			),
 		)
@@ -1241,7 +1241,7 @@ func (r *Resolver) resolveType(ctx *context, typeName string, typ types.Type, la
 		if !strings.Contains(typeName, ".") {
 			file := ctx.file()
 			if file == nil {
-				return nil, fmt.Errorf(`package name is missing for "%s" message`, typeName)
+				return nil, fmt.Errorf(`package name is missing for %q message`, typeName)
 			}
 			pkg = file.Package
 		} else {
@@ -1258,7 +1258,7 @@ func (r *Resolver) resolveType(ctx *context, typeName string, typ types.Type, la
 		if !strings.Contains(typeName, ".") {
 			file := ctx.file()
 			if file == nil {
-				return nil, fmt.Errorf(`package name is missing for "%s" enum`, typeName)
+				return nil, fmt.Errorf(`package name is missing for %q enum`, typeName)
 			}
 			pkg = file.Package
 		} else {
@@ -1297,7 +1297,7 @@ func (r *Resolver) resolveMethodCall(ctx *context, resolverDef *federation.Resol
 	if !exists {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`"%s" package does not exist`, pkgName),
+				fmt.Sprintf(`%q package does not exist`, pkgName),
 				source.MethodLocation(ctx.fileName(), ctx.messageName()),
 			),
 		)
@@ -1307,7 +1307,7 @@ func (r *Resolver) resolveMethodCall(ctx *context, resolverDef *federation.Resol
 	if service == nil {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`cannot find "%s" method because the service to which the method belongs does not exist`, methodName),
+				fmt.Sprintf(`cannot find %q method because the service to which the method belongs does not exist`, methodName),
 				source.MethodLocation(ctx.fileName(), ctx.messageName()),
 			),
 		)
@@ -1318,7 +1318,7 @@ func (r *Resolver) resolveMethodCall(ctx *context, resolverDef *federation.Resol
 	if method == nil {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`"%s" method does not exist in %s service`, methodName, service.Name),
+				fmt.Sprintf(`%q method does not exist in %s service`, methodName, service.Name),
 				source.MethodLocation(ctx.fileName(), ctx.messageName()),
 			),
 		)
@@ -1343,8 +1343,8 @@ func (r *Resolver) resolveMethodCall(ctx *context, resolverDef *federation.Resol
 
 	return &MethodCall{
 		Method:   method,
-		Request:  r.resolveRequest(ctx, pkg, method, resolverDef.GetRequest()),
-		Response: r.resolveResponse(ctx, pkg, method, resolverDef.GetResponse()),
+		Request:  r.resolveRequest(ctx, method, resolverDef.GetRequest()),
+		Response: r.resolveResponse(ctx, method, resolverDef.GetResponse()),
 		Timeout:  timeout,
 		Retry:    r.resolveRetry(ctx, resolverDef.GetRetry(), timeout),
 	}
@@ -1467,7 +1467,7 @@ func (r *Resolver) resolveRetryExponential(ctx *context, def *federation.RetryPo
 	}
 }
 
-func (r *Resolver) resolveRequest(ctx *context, pkg *Package, method *Method, requestDef []*federation.MethodRequest) *Request {
+func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*federation.MethodRequest) *Request {
 	reqType := method.Request
 	args := make([]*Argument, 0, len(requestDef))
 	for idx, req := range requestDef {
@@ -1475,7 +1475,7 @@ func (r *Resolver) resolveRequest(ctx *context, pkg *Package, method *Method, re
 		var argType *Type
 		if !reqType.HasField(fieldName) {
 			ctx.addError(ErrWithLocation(
-				fmt.Sprintf(`"%s" field does not exist in "%s.%s" message for method request`, fieldName, reqType.PackageName(), reqType.Name),
+				fmt.Sprintf(`%q field does not exist in "%s.%s" message for method request`, fieldName, reqType.PackageName(), reqType.Name),
 				source.RequestFieldLocation(ctx.fileName(), ctx.messageName(), idx),
 			))
 		} else {
@@ -1497,7 +1497,7 @@ func (r *Resolver) resolveRequest(ctx *context, pkg *Package, method *Method, re
 	return &Request{Args: args, Type: reqType}
 }
 
-func (r *Resolver) resolveResponse(ctx *context, pkg *Package, method *Method, responseDef []*federation.MethodResponse) *Response {
+func (r *Resolver) resolveResponse(ctx *context, method *Method, responseDef []*federation.MethodResponse) *Response {
 	resType := method.Response
 	fields := make([]*ResponseField, 0, len(responseDef))
 	for idx, res := range responseDef {
@@ -1524,7 +1524,7 @@ func (r *Resolver) resolveResponse(ctx *context, pkg *Package, method *Method, r
 		var fieldType *Type
 		if !resType.HasField(fieldName) {
 			ctx.addError(ErrWithLocation(
-				fmt.Sprintf(`"%s" field does not exist in "%s.%s" message for method response`, fieldName, resType.PackageName(), resType.Name),
+				fmt.Sprintf(`%q field does not exist in "%s.%s" message for method response`, fieldName, resType.PackageName(), resType.Name),
 				source.ResponseFieldLocation(ctx.fileName(), ctx.messageName(), idx),
 			))
 		} else {
@@ -1577,7 +1577,7 @@ func (r *Resolver) resolveMessages(ctx *context, baseMsg *Message, msgs []*feder
 		if msg == baseMsg {
 			ctx.addError(
 				ErrWithLocation(
-					fmt.Sprintf(`recursive definition: "%s" is own message name`, msg.Name),
+					fmt.Sprintf(`recursive definition: %q is own message name`, msg.Name),
 					source.MessageDependencyMessageLocation(ctx.fileName(), ctx.messageName(), idx),
 				),
 			)
@@ -1613,7 +1613,7 @@ func (r *Resolver) resolveMessageArgument(ctx *context, argDef *federation.Argum
 	value, err := r.resolveValue(ctx, argumentToCommonValueDef(argDef))
 	if err != nil {
 		switch {
-		case len(argDef.GetBy()) != 0:
+		case argDef.GetBy() != "":
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -1625,7 +1625,7 @@ func (r *Resolver) resolveMessageArgument(ctx *context, argDef *federation.Argum
 					),
 				),
 			)
-		case len(argDef.GetInline()) != 0:
+		case argDef.GetInline() != "":
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -1669,13 +1669,13 @@ func (r *Resolver) resolveMessageLiteral(ctx *context, val *federation.MessageVa
 		return nil, nil, err
 	}
 	if t.Ref == nil {
-		return nil, nil, fmt.Errorf(`"%s" message does not exist`, msgName)
+		return nil, nil, fmt.Errorf(`%q message does not exist`, msgName)
 	}
 	fieldMap := map[string]*Value{}
 	for _, field := range val.GetFields() {
 		fieldName := field.GetField()
 		if !t.Ref.HasField(fieldName) {
-			return nil, nil, fmt.Errorf(`"%s" field does not exist in %s message`, fieldName, msgName)
+			return nil, nil, fmt.Errorf(`%q field does not exist in %s message`, fieldName, msgName)
 		}
 		value, err := r.resolveValue(ctx, messageFieldValueToCommonValueDef(field))
 		if err != nil {
@@ -1703,7 +1703,7 @@ func (r *Resolver) lookupPackageFromTypeName(ctx *context, name string) (*Packag
 	}
 	file := ctx.file()
 	if file == nil {
-		return nil, fmt.Errorf(`cannot find package from "%s" name`, name)
+		return nil, fmt.Errorf(`cannot find package from %q name`, name)
 	}
 	return file.Package, nil
 }
@@ -1730,7 +1730,7 @@ func (r *Resolver) lookupEnumValue(name string, pkg *Package) (*EnumValue, error
 			}
 		}
 	}
-	return nil, fmt.Errorf(`cannot find enum value from "%s"`, name)
+	return nil, fmt.Errorf(`cannot find enum value from %q`, name)
 }
 
 func (r *Resolver) lookupEnumValueFromMessage(name string, msg *Message) *EnumValue {
@@ -1752,7 +1752,7 @@ func (r *Resolver) lookupEnumValueFromMessage(name string, msg *Message) *EnumVa
 }
 
 func (r *Resolver) resolvePath(pathString string) (Path, PathType, error) {
-	if len(pathString) == 0 {
+	if pathString == "" {
 		return nil, UnknownPathType, nil
 	}
 	path, err := NewPathBuilder(pathString).Build()
@@ -1862,7 +1862,7 @@ func (r *Resolver) setValueNameReference(value *Value, nameRef *nameReference) e
 	name := sels[0]
 	typ := nameRef.getFieldType(name)
 	if typ == nil {
-		return fmt.Errorf(`"%s" name reference does not exist in this grpc.federation.message option`, name)
+		return fmt.Errorf(`%q name reference does not exist in this grpc.federation.message option`, name)
 	}
 	fieldType, err := value.Path.Type(&Type{
 		Type: types.Message,
@@ -1872,7 +1872,7 @@ func (r *Resolver) setValueNameReference(value *Value, nameRef *nameReference) e
 		return err
 	}
 	if value.Inline && fieldType.Ref == nil {
-		return fmt.Errorf(`inline keyword must refer to a message type. but "%s" is not a message type`, name)
+		return fmt.Errorf(`inline keyword must refer to a message type. but %q is not a message type`, name)
 	}
 	nameRef.use(name)
 	value.Ref = nameRef.getBaseType(name)
@@ -1998,7 +1998,7 @@ func (r *Resolver) setValueMessageArgumentReference(value *Value, msgArg *Type) 
 	if value.Inline && fieldType.Ref == nil {
 		sels := value.Path.Selectors()
 		if len(sels) != 0 {
-			return fmt.Errorf(`inline keyword must refer to a message type. but "%s" is not a message type`, sels[0])
+			return fmt.Errorf(`inline keyword must refer to a message type. but %q is not a message type`, sels[0])
 		}
 		return fmt.Errorf("inline keyword must refer to a message type. but path selector is empty")
 	}
@@ -2034,7 +2034,7 @@ func (r *Resolver) setValueMessageArgumentReferenceForMessageFieldValue(fields m
 
 // resolveresolveMessageArgumentReference constructs message arguments using a dependency graph and assigns them to each message.
 func (r *Resolver) resolveMessageArgumentReference(ctx *context, files []*File) {
-	r.resolveMethodResponseMessageArgument(ctx, files)
+	r.resolveMethodResponseMessageArgument(files)
 
 	// create a dependency graph for all messages.
 	graph := CreateMessageDependencyGraph(ctx, r.allMessages(files))
@@ -2054,7 +2054,7 @@ func (r *Resolver) resolveMessageArgumentReference(ctx *context, files []*File) 
 
 		msgs := []*Message{}
 		for _, child := range root.Children {
-			m := r.resolveMessageArgumentReferences(ctx, child, reqMsg)
+			m := r.resolveMessageArgumentReferences(child, reqMsg)
 			msgs = append(msgs, m...)
 		}
 		args := make([]*Message, 0, len(msgs))
@@ -2073,7 +2073,7 @@ func (r *Resolver) resolveMessageArgumentReference(ctx *context, files []*File) 
 	}
 }
 
-func (r *Resolver) resolveMethodResponseMessageArgument(ctx *context, files []*File) {
+func (r *Resolver) resolveMethodResponseMessageArgument(files []*File) {
 	for _, file := range files {
 		for _, svc := range file.Services {
 			for _, method := range svc.Methods {
@@ -2087,7 +2087,7 @@ func (r *Resolver) resolveMethodResponseMessageArgument(ctx *context, files []*F
 	}
 }
 
-func (r *Resolver) resolveMessageArgumentReferences(ctx *context, node *MessageDependencyGraphNode, arg *Message) []*Message {
+func (r *Resolver) resolveMessageArgumentReferences(node *MessageDependencyGraphNode, arg *Message) []*Message {
 	argType := &Type{
 		Type: types.Message,
 		Ref:  arg,
@@ -2120,7 +2120,7 @@ func (r *Resolver) resolveMessageArgumentReferences(ctx *context, node *MessageD
 	}
 	msgs := []*Message{msg}
 	for _, child := range node.Children {
-		m := r.resolveMessageArgumentReferences(ctx, child, msgArg)
+		m := r.resolveMessageArgumentReferences(child, msgArg)
 		msgs = append(msgs, m...)
 	}
 	return msgs
@@ -2365,7 +2365,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 			if enum == nil {
 				enum = enumValue.Enum
 			} else if enum != enumValue.Enum {
-				return nil, fmt.Errorf(`different enum values are used in enums: "%s" and "%s"`, enum.FQDN(), enumValue.Enum.FQDN())
+				return nil, fmt.Errorf(`different enum values are used in enums: %q and %q`, enum.FQDN(), enumValue.Enum.FQDN())
 			}
 			enumValues = append(enumValues, enumValue)
 		}
@@ -2405,7 +2405,7 @@ func (r *Resolver) lookupRequestMessageFromResponseMessage(resMsg *Message) *Mes
 func (r *Resolver) splitMethodFullName(pkg *Package, name string) (string, string, string, error) {
 	serviceWithPkgAndMethod := strings.Split(name, "/")
 	if len(serviceWithPkgAndMethod) != 2 {
-		return "", "", "", fmt.Errorf(`invalid method format. required format is "<package-name>.<service-name>/<method-name>" but specified "%s"`, name)
+		return "", "", "", fmt.Errorf(`invalid method format. required format is "<package-name>.<service-name>/<method-name>" but specified %q`, name)
 	}
 	serviceWithPkgName := serviceWithPkgAndMethod[0]
 	methodName := serviceWithPkgAndMethod[1]
@@ -2414,7 +2414,7 @@ func (r *Resolver) splitMethodFullName(pkg *Package, name string) (string, strin
 	}
 	names := strings.Split(serviceWithPkgName, ".")
 	if len(names) <= 1 {
-		return "", "", "", fmt.Errorf(`invalid method format. required package name but not specified: "%s"`, serviceWithPkgName)
+		return "", "", "", fmt.Errorf(`invalid method format. required package name but not specified: %q`, serviceWithPkgName)
 	}
 	pkgName := strings.Join(names[:len(names)-1], ".")
 	serviceName := names[len(names)-1]
@@ -2424,7 +2424,7 @@ func (r *Resolver) splitMethodFullName(pkg *Package, name string) (string, strin
 func (r *Resolver) lookupMessage(pkg *Package, name string) (*File, *descriptorpb.DescriptorProto, error) {
 	files, exists := r.protoPackageNameToFileDefs[pkg.Name]
 	if !exists {
-		return nil, nil, fmt.Errorf(`"%s" package does not exist`, pkg.Name)
+		return nil, nil, fmt.Errorf(`%q package does not exist`, pkg.Name)
 	}
 	for _, file := range files {
 		for _, msg := range file.GetMessageType() {
@@ -2445,7 +2445,7 @@ func (r *Resolver) lookupMessage(pkg *Package, name string) (*File, *descriptorp
 func (r *Resolver) lookupEnum(pkg *Package, name string) (*File, *descriptorpb.EnumDescriptorProto, error) {
 	files, exists := r.protoPackageNameToFileDefs[pkg.Name]
 	if !exists {
-		return nil, nil, fmt.Errorf(`"%s" package does not exist`, pkg.Name)
+		return nil, nil, fmt.Errorf(`%q package does not exist`, pkg.Name)
 	}
 	for _, file := range files {
 		for _, enum := range file.GetEnumType() {
@@ -2505,7 +2505,7 @@ func (r *Resolver) lookupMessageRecursive(name, parent string, msg *descriptorpb
 func (r *Resolver) lookupService(pkg *Package, name string) (*File, *descriptorpb.ServiceDescriptorProto, error) {
 	files, exists := r.protoPackageNameToFileDefs[pkg.Name]
 	if !exists {
-		return nil, nil, fmt.Errorf(`"%s" package does not exist`, pkg.Name)
+		return nil, nil, fmt.Errorf(`%q package does not exist`, pkg.Name)
 	}
 	for _, file := range files {
 		for _, svc := range file.GetService() {
@@ -2521,7 +2521,7 @@ func (r *Resolver) lookupPackage(name string) (*Package, error) {
 	name = strings.TrimPrefix(name, ".")
 	names := strings.Split(name, ".")
 	if len(names) <= 1 {
-		return nil, fmt.Errorf(`unexpected package name "%s"`, name)
+		return nil, fmt.Errorf(`unexpected package name %q`, name)
 	}
 	for lastIdx := len(names) - 1; lastIdx > 0; lastIdx-- {
 		pkgName := strings.Join(names[:lastIdx], ".")
@@ -2530,7 +2530,7 @@ func (r *Resolver) lookupPackage(name string) (*Package, error) {
 			return pkg, nil
 		}
 	}
-	return nil, fmt.Errorf(`cannot find package from "%s"`, name)
+	return nil, fmt.Errorf(`cannot find package from %q`, name)
 }
 
 func (r *Resolver) trimPackage(pkg *Package, name string) string {
@@ -2552,7 +2552,7 @@ func splitGoPackageName(goPackage string) (string, string, error) {
 		return path, paths[len(paths)-1], nil
 	}
 	if len(importPathAndPkgName) != 2 {
-		return "", "", fmt.Errorf(`go_package option "%s" is invalid`, goPackage)
+		return "", "", fmt.Errorf(`go_package option %q is invalid`, goPackage)
 	}
 	return importPathAndPkgName[0], importPathAndPkgName[1], nil
 }
