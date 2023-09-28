@@ -16,7 +16,7 @@ type Watcher struct {
 	isWorking   bool
 	isWorkingMu sync.RWMutex
 	eventCh     chan fsnotify.Event
-	handler     func(context.Context, string)
+	handler     func(context.Context, fsnotify.Event)
 	watcher     *fsnotify.Watcher
 }
 
@@ -27,7 +27,7 @@ func NewWatcher() (*Watcher, error) {
 	}
 	return &Watcher{
 		eventCh: make(chan fsnotify.Event),
-		handler: func(context.Context, string) {},
+		handler: func(context.Context, fsnotify.Event) {},
 		watcher: watcher,
 	}, nil
 }
@@ -36,7 +36,7 @@ func (w *Watcher) Close() {
 	w.watcher.Close()
 }
 
-func (w *Watcher) SetHandler(handler func(ctx context.Context, path string)) {
+func (w *Watcher) SetHandler(handler func(ctx context.Context, event fsnotify.Event)) {
 	w.handler = handler
 }
 
@@ -141,7 +141,7 @@ func (w *Watcher) receiveEventLoop(ctx context.Context) {
 	for {
 		event := <-w.eventCh
 		w.setWorking(true)
-		w.handler(ctx, event.Name)
+		w.handler(ctx, event)
 		w.setWorking(false)
 	}
 }

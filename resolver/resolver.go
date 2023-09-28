@@ -109,7 +109,7 @@ func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descrip
 			pkg = &Package{Name: fileDef.GetPackage()}
 		}
 		file := &File{Name: fileDef.GetName()}
-		gopkg, err := r.resolveGoPackage(fileDef)
+		gopkg, err := ResolveGoPackage(fileDef)
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -140,12 +140,12 @@ func (r *Resolver) resolveFiles(ctx *context) []*File {
 	return files
 }
 
-func (r *Resolver) resolveGoPackage(def *descriptorpb.FileDescriptorProto) (*GoPackage, error) {
+func ResolveGoPackage(def *descriptorpb.FileDescriptorProto) (*GoPackage, error) {
 	opts := def.GetOptions()
 	if opts == nil {
 		return nil, nil
 	}
-	importPath, gopkgName, err := r.splitGoPackageName(opts.GetGoPackage())
+	importPath, gopkgName, err := splitGoPackageName(opts.GetGoPackage())
 	if err != nil {
 		return nil, err
 	}
@@ -2541,7 +2541,7 @@ func (r *Resolver) trimPackage(pkg *Package, name string) string {
 	return strings.TrimPrefix(name, fmt.Sprintf("%s.", pkg.Name))
 }
 
-func (r *Resolver) splitGoPackageName(goPackage string) (string, string, error) {
+func splitGoPackageName(goPackage string) (string, string, error) {
 	importPathAndPkgName := strings.Split(goPackage, ";")
 	if len(importPathAndPkgName) == 1 {
 		path := importPathAndPkgName[0]

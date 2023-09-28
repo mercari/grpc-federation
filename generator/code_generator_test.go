@@ -13,7 +13,7 @@ import (
 	"github.com/mercari/grpc-federation/resolver"
 )
 
-func TestGenerate(t *testing.T) {
+func TestCodeGenerate(t *testing.T) {
 	tests := []struct {
 		name string
 	}{

@@ -61,32 +61,40 @@ type OutputFilePathConfig struct {
 	ImportPaths []string
 }
 
-// OutputPath returns the path to the output file.
-// Three output mode supported by protoc-gen-go are available.
-// FYI: https://protobuf.dev/reference/go/go-generated.
-func (r *OutputFilePathResolver) OutputPath(svc *Service) (string, error) {
+func (r *OutputFilePathResolver) OutputDir(fileName string, gopkg *GoPackage) (string, error) {
 	switch r.cfg.Mode {
 	case ModulePrefixMode:
-		return r.modulePrefixBasedOutputPath(svc)
+		return r.modulePrefixBasedOutputDir(gopkg)
 	case SourceRelativeMode:
-		return r.sourceRelativeBasedOutputPath(svc)
+		return r.sourceRelativeBasedOutputDir(fileName)
 	case ImportMode:
-		return r.importBasedOutputPath(svc)
+		return r.importBasedOutputDir(gopkg)
 	}
 	return "", fmt.Errorf("grpc-federation: unexpected output file mode: %d", r.cfg.Mode)
 }
 
-func (r *OutputFilePathResolver) importBasedOutputPath(svc *Service) (string, error) {
-	if svc.File.GoPackage == nil {
+// OutputPath returns the path to the output file.
+// Three output mode supported by protoc-gen-go are available.
+// FYI: https://protobuf.dev/reference/go/go-generated.
+func (r *OutputFilePathResolver) OutputPath(svc *Service) (string, error) {
+	dir, err := r.OutputDir(svc.File.Name, svc.File.GoPackage)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, r.FileName(svc)), nil
+}
+
+func (r *OutputFilePathResolver) importBasedOutputDir(gopkg *GoPackage) (string, error) {
+	if gopkg == nil {
 		return "", fmt.Errorf("grpc-federation: gopkg must be specified")
 	}
-	return filepath.Join(svc.File.GoPackage.ImportPath, r.fileName(svc)), nil
+	return gopkg.ImportPath, nil
 }
 
 // SourceRelativeBasedOutputPath returns the path to the output file when the `paths=source_relative` flag is specified.
 // FYI: https://protobuf.dev/reference/go/go-generated.
-func (r *OutputFilePathResolver) sourceRelativeBasedOutputPath(svc *Service) (string, error) {
-	filePath := svc.File.Name
+func (r *OutputFilePathResolver) sourceRelativeBasedOutputDir(fileName string) (string, error) {
+	filePath := fileName
 	if r.cfg.FilePath != "" {
 		filePath = r.cfg.FilePath
 	}
@@ -94,25 +102,25 @@ func (r *OutputFilePathResolver) sourceRelativeBasedOutputPath(svc *Service) (st
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(filepath.Dir(relativePath), r.fileName(svc)), nil
+	return filepath.Dir(relativePath), nil
 }
 
 // ModulePrefixBasedOutputPath returns the path to the output file when the `module=$PREFIX` flag is specified.
 // FYI: https://protobuf.dev/reference/go/go-generated.
-func (r *OutputFilePathResolver) modulePrefixBasedOutputPath(svc *Service) (string, error) {
-	if svc.File.GoPackage == nil {
+func (r *OutputFilePathResolver) modulePrefixBasedOutputDir(gopkg *GoPackage) (string, error) {
+	if gopkg == nil {
 		return "", fmt.Errorf("grpc-federation: gopkg must be specified")
 	}
 	var prefix string
 	if r.cfg.Prefix != "" {
 		prefix = r.cfg.Prefix
 	}
-	trimmedPrefix := strings.TrimPrefix(svc.File.GoPackage.ImportPath, prefix)
+	trimmedPrefix := strings.TrimPrefix(gopkg.ImportPath, prefix)
 	trimmedSlash := strings.TrimPrefix(trimmedPrefix, "/")
-	return filepath.Join(trimmedSlash, r.fileName(svc)), nil
+	return trimmedSlash, nil
 }
 
-func (r *OutputFilePathResolver) fileName(svc *Service) string {
+func (r *OutputFilePathResolver) FileName(svc *Service) string {
 	return fmt.Sprintf("%s_grpc_federation.go", strings.ToLower(svc.Name))
 }
 
