@@ -34,22 +34,12 @@ jobs:
           make build/vscode-extension
         env:
           VERSION: ${{ steps.meta.outputs.VERSION }}
-      - name: move built extension to publish directory
-        run: |
-          mkdir assets
-          mv ./lsp/client/vscode/grpc-federation-*.vsix assets/
       - name: run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
           args: release --skip-publish --clean
-      - name: move built extension to publish directory
-        run: |
-          mkdir assets
-          mv ./dist/grpc-federation_*_checksums.txt assets/
-          mv ./dist/grpc-federation_*_*_*.tar.gz assets/
-          mv ./dist/grpc-federation_*_*_*.zip assets/
       - name: release
         uses: softprops/action-gh-release@v1
         with:
@@ -57,4 +47,7 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            ./assets/*
+            ./lsp/client/vscode/grpc-federation-*.vsix
+            ./dist/grpc-federation_*_checksums.txt
+            ./dist/grpc-federation_*_*_*.tar.gz
+            ./dist/grpc-federation_*_*_*.zip
