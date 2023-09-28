@@ -87,7 +87,7 @@ install/vscode-dependencies:
 
 .PHONY: test
 test: test/examples
-	go test -race -cover `go list ./... | grep -v github.com/mercari/grpc-federation/tools`
+	go test -race -coverpkg=$(COVERPKG_OPT) -covermode=atomic -coverprofile=cover.out `go list ./... | grep -v github.com/mercari/grpc-federation/tools`
 
 test/examples: $(foreach var,$(EXAMPLES),test/examples/$(var))
 
@@ -95,6 +95,5 @@ test/examples/%:
 	$(MAKE) -C $* test
 
 .PHONY: cover-html
-cover-html:
-	go test -coverpkg=$(COVERPKG_OPT) -coverprofile=cover.out `go list ./... | grep -v github.com/mercari/grpc-federation/tools`
+cover-html: test
 	go tool cover -html=cover.out
