@@ -190,7 +190,7 @@ func (g *MessageRuleDependencyGraph) createMessageResolver(ctx *context, node *M
 		}
 	}
 	for _, depMessage := range g.Rule.MessageDependencies {
-		if node.Message == depMessage.Message {
+		if depMessage == node.MessageDependency {
 			return &MessageResolver{Name: depMessage.Name, MessageDependency: depMessage}
 		}
 	}
@@ -204,12 +204,40 @@ func (g *MessageRuleDependencyGraph) createMessageResolver(ctx *context, node *M
 }
 
 type MessageRuleDependencyGraphNode struct {
-	Parent      []*MessageRuleDependencyGraphNode
-	Children    []*MessageRuleDependencyGraphNode
-	ParentMap   map[*MessageRuleDependencyGraphNode]struct{}
-	ChildrenMap map[*MessageRuleDependencyGraphNode]struct{}
-	BaseMessage *Message
-	Message     *Message
+	Parent            []*MessageRuleDependencyGraphNode
+	Children          []*MessageRuleDependencyGraphNode
+	ParentMap         map[*MessageRuleDependencyGraphNode]struct{}
+	ChildrenMap       map[*MessageRuleDependencyGraphNode]struct{}
+	BaseMessage       *Message
+	Message           *Message
+	MessageDependency *MessageDependency
+}
+
+func (n *MessageRuleDependencyGraphNode) FQDN() string {
+	if n.MessageDependency != nil {
+		return fmt.Sprintf("%s_%s", n.MessageDependency.Name, n.Message.FQDN())
+	}
+	return n.Message.FQDN()
+}
+
+func newMessageRuleDependencyGraphNodeByResponse(baseMsg *Message, response *Response) *MessageRuleDependencyGraphNode {
+	msg := response.Type
+	return &MessageRuleDependencyGraphNode{
+		BaseMessage: baseMsg,
+		Message:     msg,
+		ParentMap:   make(map[*MessageRuleDependencyGraphNode]struct{}),
+		ChildrenMap: make(map[*MessageRuleDependencyGraphNode]struct{}),
+	}
+}
+
+func newMessageRuleDependencyGraphNodeByMessageDependency(baseMsg *Message, dep *MessageDependency) *MessageRuleDependencyGraphNode {
+	return &MessageRuleDependencyGraphNode{
+		BaseMessage:       baseMsg,
+		Message:           dep.Message,
+		MessageDependency: dep,
+		ParentMap:         make(map[*MessageRuleDependencyGraphNode]struct{}),
+		ChildrenMap:       make(map[*MessageRuleDependencyGraphNode]struct{}),
+	}
 }
 
 // CreateMessageRuleDependencyGraph construct a dependency graph using the name-based reference dependencies used in the method calls
@@ -217,16 +245,14 @@ type MessageRuleDependencyGraphNode struct {
 // Requires reference resolution for arguments that use prior name-based references.
 // If a circular reference occurs, return an error.
 func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *MessageRule) *MessageRuleDependencyGraph {
-	msgToNode := map[*Message]*MessageRuleDependencyGraphNode{}
+	nameToNode := make(map[string]*MessageRuleDependencyGraphNode)
+	msgToNode := make(map[*Message]*MessageRuleDependencyGraphNode)
 	if rule.MethodCall != nil && rule.MethodCall.Response != nil {
 		msg := rule.MethodCall.Response.Type
-		if msg != nil {
-			msgToNode[msg] = &MessageRuleDependencyGraphNode{
-				BaseMessage: baseMsg,
-				Message:     msg,
-				ParentMap:   map[*MessageRuleDependencyGraphNode]struct{}{},
-				ChildrenMap: map[*MessageRuleDependencyGraphNode]struct{}{},
-			}
+		node := newMessageRuleDependencyGraphNodeByResponse(baseMsg, rule.MethodCall.Response)
+		msgToNode[msg] = node
+		for _, field := range rule.MethodCall.Response.Fields {
+			nameToNode[field.Name] = node
 		}
 	}
 	for _, depMessage := range rule.MessageDependencies {
@@ -234,35 +260,30 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 		if msg == nil {
 			continue
 		}
-		msgToNode[msg] = &MessageRuleDependencyGraphNode{
-			BaseMessage: baseMsg,
-			Message:     msg,
-			ParentMap:   map[*MessageRuleDependencyGraphNode]struct{}{},
-			ChildrenMap: map[*MessageRuleDependencyGraphNode]struct{}{},
-		}
+		node := newMessageRuleDependencyGraphNodeByMessageDependency(baseMsg, depMessage)
+		msgToNode[msg] = node
+		nameToNode[depMessage.Name] = node
 	}
+
+	// build dependencies from name reference.
 	if rule.MethodCall != nil && rule.MethodCall.Request != nil && rule.MethodCall.Response != nil {
-		for _, arg := range rule.MethodCall.Request.Args {
+		for idx, arg := range rule.MethodCall.Request.Args {
 			if arg.Value == nil {
 				continue
 			}
-			if arg.Value.PathType == MessageArgumentPathType {
+			if arg.Value.PathType != NameReferencePathType {
 				continue
 			}
-			typeRef := arg.Value.Ref
-			if typeRef == nil {
+			selectors := arg.Value.Path.Selectors()
+			if len(selectors) == 0 {
 				continue
 			}
-			msg := typeRef.Ref
-			if msg == nil {
-				continue
-			}
-			node, exists := msgToNode[msg]
+			node, exists := nameToNode[selectors[0]]
 			if !exists {
 				ctx.addError(
 					ErrWithLocation(
-						fmt.Sprintf(`%q message does not exist for resolving message argument`, msg.Name),
-						source.MessageOptionLocation(ctx.fileName(), baseMsg.Name),
+						fmt.Sprintf(`%q name does not exist`, selectors[0]),
+						source.RequestByLocation(ctx.fileName(), baseMsg.Name, idx),
 					),
 				)
 				continue
@@ -280,28 +301,24 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 			}
 		}
 	}
-	for _, depMessage := range rule.MessageDependencies {
-		for _, arg := range depMessage.Args {
+	for msgIdx, depMessage := range rule.MessageDependencies {
+		for argIdx, arg := range depMessage.Args {
 			if arg.Value == nil {
 				continue
 			}
-			if arg.Value.PathType == MessageArgumentPathType {
+			if arg.Value.PathType != NameReferencePathType {
 				continue
 			}
-			typeRef := arg.Value.Ref
-			if typeRef == nil {
+			selectors := arg.Value.Path.Selectors()
+			if len(selectors) == 0 {
 				continue
 			}
-			msg := typeRef.Ref
-			if msg == nil {
-				continue
-			}
-			node, exists := msgToNode[msg]
+			node, exists := nameToNode[selectors[0]]
 			if !exists {
 				ctx.addError(
 					ErrWithLocation(
-						fmt.Sprintf(`%q message does not exist for resolving message argument`, msg.Name),
-						source.MessageOptionLocation(ctx.fileName(), baseMsg.Name),
+						fmt.Sprintf(`%q name does not exist`, selectors[0]),
+						source.MessageDependencyArgumentByLocation(ctx.fileName(), baseMsg.Name, msgIdx, argIdx),
 					),
 				)
 				continue
@@ -319,22 +336,24 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 			}
 		}
 	}
-	var roots []*MessageRuleDependencyGraphNode
-	msgs := make([]*Message, 0, len(msgToNode))
-	for msg, node := range msgToNode {
-		msgs = append(msgs, msg)
-		sort.Slice(node.Children, func(i, j int) bool {
-			return node.Children[i].Message.Name < node.Children[j].Message.Name
-		})
-		sort.Slice(node.Parent, func(i, j int) bool {
-			return node.Parent[i].Message.Name < node.Parent[j].Message.Name
-		})
+
+	nodeMap := make(map[*MessageRuleDependencyGraphNode]struct{})
+	for _, node := range msgToNode {
+		nodeMap[node] = struct{}{}
 	}
-	sort.Slice(msgs, func(i, j int) bool {
-		return msgs[i].Name < msgs[j].Name
+	for _, node := range nameToNode {
+		nodeMap[node] = struct{}{}
+	}
+
+	nodes := make([]*MessageRuleDependencyGraphNode, 0, len(nodeMap))
+	for node := range nodeMap {
+		nodes = append(nodes, node)
+	}
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].FQDN() < nodes[j].FQDN()
 	})
-	for _, msg := range msgs {
-		node := msgToNode[msg]
+	var roots []*MessageRuleDependencyGraphNode
+	for _, node := range nodes {
 		if len(node.Parent) == 0 {
 			roots = append(roots, node)
 		}

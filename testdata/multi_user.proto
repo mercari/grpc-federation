@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "user.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { service: "org.user.UserService" }
+    ]
+  };
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    messages { name: "user", message: "User", args { name: "user_id", string: "1" } }
+    messages { name: "user2", message: "User", args { name: "user_id", string: "2" } }
+    messages { message: "Foo" }
+  };
+  User user = 1 [(grpc.federation.field).by = "user"];
+  User user2 = 2 [(grpc.federation.field).by = "user2"];
+}
+
+message User {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "org.user.UserService/GetUser"
+      request { field: "id", by: "$.user_id" }
+      response { name: "user", field: "user", autobind: true  }
+    }
+    messages { message: "Sub" }
+  };
+  string id = 1;
+  string name = 3 [(grpc.federation.field).custom_resolver = true];
+}
+
+message Foo {
+  option (grpc.federation.message) = {
+    messages { message: "Sub" }
+  };
+}
+
+message Sub {
+  option (grpc.federation.message).custom_resolver = true;
+}
