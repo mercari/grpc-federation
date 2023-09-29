@@ -75,6 +75,9 @@ testdata/invalid_method.proto:36:15: invalid method format. required format is "
 testdata/invalid_method.proto:39:57: "invalid" name reference does not exist in this grpc.federation.message option
 39:        { name: "user", message: "User", args: [{ inline: "invalid" }]}
                                                              ^
+testdata/invalid_method.proto:39:47: "invalid" name does not exist
+39:        { name: "user", message: "User", args: [{ inline: "invalid" }]}
+                                                   ^
 testdata/invalid_method.proto:42:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
 42:    string id = 1;
        ^
