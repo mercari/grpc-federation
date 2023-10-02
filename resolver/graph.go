@@ -135,7 +135,7 @@ func (g *MessageRuleDependencyGraph) uniqueChildren() []*MessageRuleDependencyGr
 		uniqueChildren = append(uniqueChildren, child)
 	}
 	sort.Slice(uniqueChildren, func(i, j int) bool {
-		return uniqueChildren[i].Message.Name < uniqueChildren[j].Message.Name
+		return uniqueChildren[i].FQDN() < uniqueChildren[j].FQDN()
 	})
 	return uniqueChildren
 }
@@ -167,7 +167,7 @@ func (g *MessageRuleDependencyGraph) createMessageResolverGroup(ctx *context, no
 	}
 	rg := new(ConcurrentMessageResolverGroup)
 	sort.Slice(node.Parent, func(i, j int) bool {
-		return node.Parent[i].Message.Name < node.Parent[j].Message.Name
+		return node.Parent[i].FQDN() < node.Parent[j].FQDN()
 	})
 	for _, parent := range node.Parent {
 		if group := g.createMessageResolverGroup(ctx, parent); group != nil {

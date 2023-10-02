@@ -1411,8 +1411,8 @@ func TestAutobind(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetPost")).
 						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_User")).
+						AddResolver(testutil.NewMessageResolverGroupByName("GetPost")).
 						Build(t),
 				).
 				Build(t),
@@ -2068,8 +2068,8 @@ func TestLiteral(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Content")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("content2")).
 						AddResolver(testutil.NewMessageResolverGroupByName("GetContent")).
+						AddResolver(testutil.NewMessageResolverGroupByName("content2")).
 						Build(t),
 				).
 				Build(t),
@@ -2212,8 +2212,8 @@ func TestMultiUser(t *testing.T) {
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
 						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Sub")).
+						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
 						Build(t),
 				).
 				Build(t),
