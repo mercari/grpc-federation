@@ -58,13 +58,26 @@ type CustomResolver struct {
 	Field   *Field
 }
 
+func (r *CustomResolver) FQDN() string {
+	if r.Field != nil {
+		return fmt.Sprintf("%s.%s", r.Message.FQDN(), r.Field.Name)
+	}
+	return r.Message.FQDN()
+}
+
 func (s *Service) CustomResolvers() []*CustomResolver {
-	var resolvers []*CustomResolver
+	resolverMap := make(map[string]*CustomResolver)
 	for _, method := range s.Methods {
-		resolvers = append(resolvers, s.customResolversByMessage(method.Response)...)
+		for _, resolver := range s.customResolversByMessage(method.Response) {
+			resolverMap[resolver.FQDN()] = resolver
+		}
+	}
+	resolvers := make([]*CustomResolver, 0, len(resolverMap))
+	for _, resolver := range resolverMap {
+		resolvers = append(resolvers, resolver)
 	}
 	sort.Slice(resolvers, func(i, j int) bool {
-		return resolvers[i].Message.Name < resolvers[j].Message.Name
+		return resolvers[i].FQDN() < resolvers[j].FQDN()
 	})
 	return resolvers
 }

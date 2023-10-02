@@ -3,6 +3,7 @@ package resolver
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -2052,11 +2053,19 @@ func (r *Resolver) resolveMessageArgumentReference(ctx *context, files []*File) 
 			Fields: reqMsg.Fields,
 		}
 
-		msgs := []*Message{}
+		msgMap := make(map[string]*Message)
 		for _, child := range root.Children {
-			m := r.resolveMessageArgumentReferences(child, reqMsg)
-			msgs = append(msgs, m...)
+			for _, msg := range r.resolveMessageArgumentReferences(child, reqMsg) {
+				msgMap[msg.FQDN()] = msg
+			}
 		}
+		msgs := make([]*Message, 0, len(msgMap))
+		for _, msg := range msgMap {
+			msgs = append(msgs, msg)
+		}
+		sort.Slice(msgs, func(i, j int) bool {
+			return msgs[i].Name < msgs[j].Name
+		})
 		args := make([]*Message, 0, len(msgs))
 		for _, msg := range msgs {
 			args = append(args, msg.Rule.MessageArgument)

@@ -246,8 +246,8 @@ func TestSimpleAggregation(t *testing.T) {
 						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
-								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
 								Add(ref.Message(t, "org.federation", "M")).
+								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
 								Add(ref.Message(t, "org.federation", "Z")).
 								Build(t),
 						).
@@ -324,10 +324,10 @@ func TestSimpleAggregation(t *testing.T) {
 						Build(t),
 				).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "M"), ref.Message(t, "org.federation", "MArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
 				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Z"), ref.Message(t, "org.federation", "ZArgument")).
-				AddMessage(ref.Message(t, "org.federation", "M"), ref.Message(t, "org.federation", "MArgument")).
 				Build(t),
 		)
 
@@ -1407,8 +1407,8 @@ func TestAutobind(t *testing.T) {
 						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
-								Add(ref.Message(t, "org.post", "GetPostResponse")).
 								Add(ref.Message(t, "org.federation", "User")).
+								Add(ref.Message(t, "org.post", "GetPostResponse")).
 								Build(t),
 						).
 						AddResolver(testutil.NewMessageResolverGroupByName("GetPost")).
@@ -2064,8 +2064,8 @@ func TestLiteral(t *testing.T) {
 						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
-								Add(ref.Message(t, "org.federation", "Content")).
 								Add(ref.Message(t, "content", "GetContentResponse")).
+								Add(ref.Message(t, "org.federation", "Content")).
 								Build(t),
 						).
 						AddResolver(testutil.NewMessageResolverGroupByName("content2")).
@@ -2129,6 +2129,189 @@ func TestLiteral(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
+	if diff := cmp.Diff(result.Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
+func TestMultiUser(t *testing.T) {
+	fb := testutil.NewFileBuilder("multi_user.proto")
+	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(testutil.NewMessageBuilder("SubArgument").Build(t)).
+		AddMessage(testutil.NewMessageBuilder("FooArgument").Build(t)).
+		AddMessage(
+			testutil.NewMessageBuilder("Sub").
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "SubArgument")).
+						SetCustomResolver(true).
+						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("Foo").
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "FooArgument")).
+						AddMessageDependency(
+							"_org_federation_Sub",
+							ref.Message(t, "org.federation", "Sub"),
+							nil,
+							false,
+							false,
+						).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "Sub")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Sub")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("UserArgument").
+				AddField("user_id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("User").
+				AddFieldWithAutoBind("id", resolver.StringType, ref.Field(t, "org.user", "User", "id")).
+				AddFieldWithRule("name", resolver.StringType, testutil.NewFieldRuleBuilder(nil).SetCustomResolver(true).Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMethodCall(
+							testutil.NewMethodCallBuilder(ref.Method(t, "org.user", "UserService", "GetUser")).
+								SetRequest(
+									testutil.NewRequestBuilder().
+										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+										Build(t),
+								).
+								SetResponse(
+									testutil.NewResponseBuilder().AddField("user", "user", ref.Type(t, "org.user", "User"), true, true).Build(t),
+								).
+								Build(t),
+						).
+						AddMessageDependency(
+							"_org_federation_Sub",
+							ref.Message(t, "org.federation", "Sub"),
+							nil,
+							false,
+							false,
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "Sub")).
+								Add(ref.Message(t, "org.user", "GetUserResponse")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
+						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Sub")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(testutil.NewMessageBuilder("GetRequest").Build(t)).
+		AddMessage(testutil.NewMessageBuilder("GetResponseArgument").Build(t)).
+		AddMessage(
+			testutil.NewMessageBuilder("GetResponse").
+				AddFieldWithRule(
+					"user",
+					ref.Type(t, "org.federation", "User"),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(
+							ref.Type(t, "org.federation", "User"),
+							ref.Type(t, "org.federation", "User"),
+							"user",
+						).Build(t),
+					).Build(t),
+				).
+				AddFieldWithRule(
+					"user2",
+					ref.Type(t, "org.federation", "User"),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(
+							ref.Type(t, "org.federation", "User"),
+							ref.Type(t, "org.federation", "User"),
+							"user2",
+						).Build(t),
+					).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddMessageDependency(
+							"user",
+							ref.Message(t, "org.federation", "User"),
+							testutil.NewMessageDependencyArgumentBuilder().
+								Add("user_id", resolver.NewStringValue("1")).
+								Build(t),
+							false,
+							true,
+						).
+						AddMessageDependency(
+							"user2",
+							ref.Message(t, "org.federation", "User"),
+							testutil.NewMessageDependencyArgumentBuilder().
+								Add("user_id", resolver.NewStringValue("2")).
+								Build(t),
+							false,
+							true,
+						).
+						AddMessageDependency(
+							"_org_federation_Foo",
+							ref.Message(t, "org.federation", "Foo"),
+							nil,
+							false,
+							false,
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "Foo")).
+								Add(ref.Message(t, "org.federation", "User")).
+								Add(ref.Message(t, "org.federation", "User")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Foo")).
+						AddResolver(testutil.NewMessageResolverGroupByName("user2")).
+						AddResolver(testutil.NewMessageResolverGroupByName("user")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod("Get", ref.Message(t, "org.federation", "GetRequest"), ref.Message(t, "org.federation", "GetResponse"), nil).
+				SetRule(
+					testutil.NewServiceRuleBuilder().
+						AddDependency("", ref.Service(t, "org.user", "UserService")).
+						Build(t),
+				).
+				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "Foo"), ref.Message(t, "org.federation", "FooArgument")).
+				AddMessage(ref.Message(t, "org.federation", "Sub"), ref.Message(t, "org.federation", "SubArgument")).
+				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
+				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+	federationService := federationFile.Services[0]
+
+	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "multi_user.proto")))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Services))
+	}
 	if diff := cmp.Diff(result.Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}

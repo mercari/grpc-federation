@@ -711,14 +711,20 @@ type DependentMethod struct {
 }
 
 func (s *Service) DependentMethods() []*DependentMethod {
-	var ret []*DependentMethod
+	methodMap := make(map[string]*DependentMethod)
 	for _, method := range s.Service.Methods {
-		ret = append(ret, s.dependentMethods(method.Response)...)
+		for _, depMethod := range s.dependentMethods(method.Response) {
+			methodMap[depMethod.Name] = depMethod
+		}
 	}
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].Name < ret[j].Name
+	depMethods := make([]*DependentMethod, 0, len(methodMap))
+	for _, depMethod := range methodMap {
+		depMethods = append(depMethods, depMethod)
+	}
+	sort.Slice(depMethods, func(i, j int) bool {
+		return depMethods[i].Name < depMethods[j].Name
 	})
-	return ret
+	return depMethods
 }
 
 func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {

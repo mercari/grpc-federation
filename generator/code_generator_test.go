@@ -25,6 +25,7 @@ func TestCodeGenerate(t *testing.T) {
 		{"alias"},
 		{"autobind"},
 		{"literal"},
+		{"multi_user"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
