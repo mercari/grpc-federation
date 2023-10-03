@@ -34,12 +34,10 @@ type UserServer struct {
 }
 
 var nameMap = map[string]string{
-	"1": "foo",
-	"2": "bar",
+	"xxx": "foo",
 }
 
 func (s *UserServer) GetUser(ctx context.Context, req *user.GetUserRequest) (*user.GetUserResponse, error) {
-
 	return &user.GetUserResponse{
 		User: &user.User{
 			Id:   req.Id,
@@ -103,12 +101,12 @@ func TestFederation(t *testing.T) {
 	}
 	if diff := cmp.Diff(res, &federation.GetResponse{
 		User: &federation.User{
-			Id:   "1",
+			Id:   "xxx",
 			Name: "foo",
 		},
 		User2: &federation.User{
-			Id:   "2",
-			Name: "bar",
+			Id:   "xxx",
+			Name: "foo",
 		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetResponse{},

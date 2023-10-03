@@ -20,9 +20,9 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages { name: "user", message: "User", args { name: "user_id", string: "1" } }
-    messages { name: "user2", message: "User", args { name: "user_id", string: "2" } }
-    messages { message: "Foo" }
+    messages { name: "uid", message: "UserID" }
+    messages { name: "user", message: "User", args { name: "user_id", by: "uid.value" } }
+    messages { name: "user2", message: "User", args { name: "user_id", by: "uid.value" } }
   };
   User user = 1 [(grpc.federation.field).by = "user"];
   User user2 = 2 [(grpc.federation.field).by = "user2"];
@@ -41,10 +41,12 @@ message User {
   string name = 3 [(grpc.federation.field).custom_resolver = true];
 }
 
-message Foo {
+message UserID {
   option (grpc.federation.message) = {
     messages { message: "Sub" }
   };
+
+  string value = 1 [(grpc.federation.field).string = "xxx"];
 }
 
 message Sub {
