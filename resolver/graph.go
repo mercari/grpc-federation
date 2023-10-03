@@ -215,7 +215,7 @@ type MessageRuleDependencyGraphNode struct {
 
 func (n *MessageRuleDependencyGraphNode) FQDN() string {
 	if n.MessageDependency != nil {
-		return fmt.Sprintf("%s_%s", n.MessageDependency.Name, n.Message.FQDN())
+		return fmt.Sprintf("%s_%s", n.Message.FQDN(), n.MessageDependency.Name)
 	}
 	return n.Message.FQDN()
 }
@@ -246,11 +246,11 @@ func newMessageRuleDependencyGraphNodeByMessageDependency(baseMsg *Message, dep 
 // If a circular reference occurs, return an error.
 func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *MessageRule) *MessageRuleDependencyGraph {
 	nameToNode := make(map[string]*MessageRuleDependencyGraphNode)
-	msgToNode := make(map[*Message]*MessageRuleDependencyGraphNode)
+	msgToNodes := make(map[*Message][]*MessageRuleDependencyGraphNode)
 	if rule.MethodCall != nil && rule.MethodCall.Response != nil {
 		msg := rule.MethodCall.Response.Type
 		node := newMessageRuleDependencyGraphNodeByResponse(baseMsg, rule.MethodCall.Response)
-		msgToNode[msg] = node
+		msgToNodes[msg] = append(msgToNodes[msg], node)
 		for _, field := range rule.MethodCall.Response.Fields {
 			nameToNode[field.Name] = node
 		}
@@ -261,7 +261,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 			continue
 		}
 		node := newMessageRuleDependencyGraphNodeByMessageDependency(baseMsg, depMessage)
-		msgToNode[msg] = node
+		msgToNodes[msg] = append(msgToNodes[msg], node)
 		nameToNode[depMessage.Name] = node
 	}
 
@@ -288,8 +288,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 				)
 				continue
 			}
-			responseTypeNode := msgToNode[rule.MethodCall.Response.Type]
-			if responseTypeNode != nil {
+			for _, responseTypeNode := range msgToNodes[rule.MethodCall.Response.Type] {
 				if _, exists := node.ChildrenMap[responseTypeNode]; !exists {
 					node.Children = append(node.Children, responseTypeNode)
 					node.ChildrenMap[responseTypeNode] = struct{}{}
@@ -323,8 +322,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 				)
 				continue
 			}
-			depMessageNode := msgToNode[depMessage.Message]
-			if depMessageNode != nil {
+			for _, depMessageNode := range msgToNodes[depMessage.Message] {
 				if _, exists := node.ChildrenMap[depMessageNode]; !exists {
 					node.Children = append(node.Children, depMessageNode)
 					node.ChildrenMap[depMessageNode] = struct{}{}
@@ -337,27 +335,17 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 		}
 	}
 
-	nodeMap := make(map[*MessageRuleDependencyGraphNode]struct{})
-	for _, node := range msgToNode {
-		nodeMap[node] = struct{}{}
-	}
-	for _, node := range nameToNode {
-		nodeMap[node] = struct{}{}
-	}
-
-	nodes := make([]*MessageRuleDependencyGraphNode, 0, len(nodeMap))
-	for node := range nodeMap {
-		nodes = append(nodes, node)
-	}
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].FQDN() < nodes[j].FQDN()
-	})
 	var roots []*MessageRuleDependencyGraphNode
-	for _, node := range nodes {
-		if len(node.Parent) == 0 {
-			roots = append(roots, node)
+	for _, nodes := range msgToNodes {
+		for _, node := range nodes {
+			if len(node.Parent) == 0 {
+				roots = append(roots, node)
+			}
 		}
 	}
+	sort.Slice(roots, func(i, j int) bool {
+		return roots[i].FQDN() < roots[j].FQDN()
+	})
 	if len(roots) == 0 && !rule.CustomResolver && rule.Alias == nil {
 		ctx.addError(
 			ErrWithLocation(

@@ -247,8 +247,8 @@ func TestSimpleAggregation(t *testing.T) {
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
 								Add(ref.Message(t, "org.federation", "M")).
-								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
 								Add(ref.Message(t, "org.federation", "Z")).
+								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
 								Build(t),
 						).
 						AddResolver(testutil.NewMessageResolverGroupByName("m")).
@@ -2141,7 +2141,7 @@ func TestMultiUser(t *testing.T) {
 	fb.SetPackage("org.federation").
 		SetGoPackage("example/federation", "federation").
 		AddMessage(testutil.NewMessageBuilder("SubArgument").Build(t)).
-		AddMessage(testutil.NewMessageBuilder("FooArgument").Build(t)).
+		AddMessage(testutil.NewMessageBuilder("UserIDArgument").Build(t)).
 		AddMessage(
 			testutil.NewMessageBuilder("Sub").
 				SetRule(
@@ -2154,10 +2154,11 @@ func TestMultiUser(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
-			testutil.NewMessageBuilder("Foo").
+			testutil.NewMessageBuilder("UserID").
+				AddFieldWithRule("value", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("xxx")).Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMessageArgument(ref.Message(t, "org.federation", "FooArgument")).
+						SetMessageArgument(ref.Message(t, "org.federation", "UserIDArgument")).
 						AddMessageDependency(
 							"_org_federation_Sub",
 							ref.Message(t, "org.federation", "Sub"),
@@ -2265,8 +2266,8 @@ func TestMultiUser(t *testing.T) {
 							true,
 						).
 						AddMessageDependency(
-							"_org_federation_Foo",
-							ref.Message(t, "org.federation", "Foo"),
+							"uid",
+							ref.Message(t, "org.federation", "UserID"),
 							nil,
 							false,
 							false,
@@ -2274,14 +2275,21 @@ func TestMultiUser(t *testing.T) {
 						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
-								Add(ref.Message(t, "org.federation", "Foo")).
-								Add(ref.Message(t, "org.federation", "User")).
-								Add(ref.Message(t, "org.federation", "User")).
+								Add(ref.Message(t, "org.federation", "UserID")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Foo")).
-						AddResolver(testutil.NewMessageResolverGroupByName("user2")).
-						AddResolver(testutil.NewMessageResolverGroupByName("user")).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("uid")).
+								SetEnd(testutil.NewMessageResolver("user")).
+								Build(t),
+						).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("uid")).
+								SetEnd(testutil.NewMessageResolver("user2")).
+								Build(t),
+						).
 						Build(t),
 				).
 				Build(t),
@@ -2295,9 +2303,9 @@ func TestMultiUser(t *testing.T) {
 						Build(t),
 				).
 				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
-				AddMessage(ref.Message(t, "org.federation", "Foo"), ref.Message(t, "org.federation", "FooArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Sub"), ref.Message(t, "org.federation", "SubArgument")).
 				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
+				AddMessage(ref.Message(t, "org.federation", "UserID"), ref.Message(t, "org.federation", "UserIDArgument")).
 				Build(t),
 		)
 
