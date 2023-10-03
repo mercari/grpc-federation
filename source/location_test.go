@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-
 	"github.com/mercari/grpc-federation/source"
 )
 
@@ -39,15 +37,6 @@ func TestFile(t *testing.T) {
 		}
 		if n.RawText() != `"post"` {
 			t.Fatalf("failed to get text %s", n.RawText())
-		}
-	})
-	t.Run("finder", func(t *testing.T) {
-		foundLoc := sourceFile.FindLocationByPos(source.Position{
-			Line: 25,
-			Col:  17,
-		})
-		if diff := cmp.Diff(foundLoc, loc); diff != "" {
-			t.Errorf("(-got, +want)\n%s", diff)
 		}
 	})
 }

@@ -11,8 +11,18 @@ option go_package = "example/federation;federation";
 service FederationService {
   option (grpc.federation.service) = {
     go_package: "grpc;grpc"
+    dependencies: [
+      { name: "post", service: "post.PostService" }
+    ]
   };
-  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {
+    option (grpc.federation.method).timeout = "1s";
+  };
+  rpc GetPost2(GetPostRequest) returns (GetPostResponse) {
+    option (grpc.federation.method) = {
+      timeout: "1s",
+    };
+  };
 }
 
 message GetPostRequest {
