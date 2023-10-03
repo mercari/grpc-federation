@@ -335,19 +335,17 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 		}
 	}
 
-	allNodes := make([]*MessageRuleDependencyGraphNode, 0, len(msgToNodes))
-	for _, nodes := range msgToNodes {
-		allNodes = append(allNodes, nodes...)
-	}
-	sort.Slice(allNodes, func(i, j int) bool {
-		return allNodes[i].FQDN() < allNodes[j].FQDN()
-	})
 	var roots []*MessageRuleDependencyGraphNode
-	for _, node := range allNodes {
-		if len(node.Parent) == 0 {
-			roots = append(roots, node)
+	for _, nodes := range msgToNodes {
+		for _, node := range nodes {
+			if len(node.Parent) == 0 {
+				roots = append(roots, node)
+			}
 		}
 	}
+	sort.Slice(roots, func(i, j int) bool {
+		return roots[i].FQDN() < roots[j].FQDN()
+	})
 	if len(roots) == 0 && !rule.CustomResolver && rule.Alias == nil {
 		ctx.addError(
 			ErrWithLocation(
