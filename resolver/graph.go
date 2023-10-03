@@ -337,9 +337,7 @@ func CreateMessageRuleDependencyGraph(ctx *context, baseMsg *Message, rule *Mess
 
 	allNodes := make([]*MessageRuleDependencyGraphNode, 0, len(msgToNodes))
 	for _, nodes := range msgToNodes {
-		for _, node := range nodes {
-			allNodes = append(allNodes, node)
-		}
+		allNodes = append(allNodes, nodes...)
 	}
 	sort.Slice(allNodes, func(i, j int) bool {
 		return allNodes[i].FQDN() < allNodes[j].FQDN()
