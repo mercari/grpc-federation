@@ -305,6 +305,18 @@ func (f *File) findMessageArgumentByPos(ctx findContext, pos Position, list []*a
 		for _, arg := range literal.Elements {
 			fieldName := arg.Name.Name.AsIdentifier()
 			switch fieldName {
+			case "name":
+				value, ok := arg.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.messageDepOption.Args = &ArgumentOption{
+						Idx:  idx,
+						Name: true,
+					}
+					return f.buildLocation(ctx)
+				}
 			case "by":
 				value, ok := arg.Val.(*ast.StringLiteralNode)
 				if !ok {
