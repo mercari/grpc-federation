@@ -878,7 +878,7 @@ func (r *Resolver) resolveServiceRule(ctx *context, def *federation.ServiceRule)
 			if _, exists := svcNameMap[dep.Name]; exists {
 				ctx.addError(
 					ErrWithLocation(
-						`%q name duplicated`,
+						fmt.Sprintf(`%q name duplicated`, dep.Name),
 						source.ServiceDependencyNameLocation(ctx.fileName(), ctx.serviceName(), idx),
 					),
 				)
