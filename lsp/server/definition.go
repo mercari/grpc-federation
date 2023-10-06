@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -25,7 +26,7 @@ func (h *Handler) definition(ctx context.Context, params *protocol.DefinitionPar
 		return nil, err
 	}
 	pos := source.Position{Line: int(params.Position.Line) + 1, Col: int(params.Position.Character) + 1}
-	h.logger.Printf("created file. path = %s ast = %p", file.Path(), file.AST())
+	h.logger.Info("created file", slog.String("path", file.Path()), slog.Any("ast", file.AST()))
 	loc := file.FindLocationByPos(pos)
 	if loc == nil {
 		return nil, nil
@@ -40,7 +41,7 @@ func (h *Handler) definition(ctx context.Context, params *protocol.DefinitionPar
 		if err != nil {
 			return nil, err
 		}
-		h.logger.Println("found message name = ", foundMsgName)
+		h.logger.Info("found message", slog.String("name", foundMsgName))
 		locs, err := h.findMessageDefinition(ctx, path, file, foundMsgName)
 		if err != nil {
 			return nil, err
@@ -51,7 +52,7 @@ func (h *Handler) definition(ctx context.Context, params *protocol.DefinitionPar
 		if err != nil {
 			return nil, err
 		}
-		h.logger.Println("found method name = ", foundMethodName)
+		h.logger.Info("found method", slog.String("name", foundMethodName))
 		locs, err := h.findMethodDefinition(ctx, path, file, foundMethodName)
 		if err != nil {
 			return nil, err
@@ -158,11 +159,11 @@ func (h *Handler) messageAndFilePath(path string, protoFiles []*descriptorpb.Fil
 	if err != nil {
 		return "", "", err
 	}
-	h.logger.Println("current package = ", currentPkgName)
+	h.logger.Info("current package", slog.String("name", currentPkgName))
 	for _, protoFile := range protoFiles {
 		filePath, err := h.filePathFromFileDescriptorProto(path, protoFile)
 		if err != nil {
-			h.logger.Printf("[WARN] %v", err)
+			h.logger.Warn("failed to find a path from a proto", slog.String("error", err.Error()))
 			continue
 		}
 		pkg := protoFile.GetPackage()
@@ -186,11 +187,11 @@ func (h *Handler) methodAndFilePath(path string, protoFiles []*descriptorpb.File
 	if err != nil {
 		return "", "", err
 	}
-	h.logger.Println("current package = ", currentPkgName)
+	h.logger.Info("current package", slog.String("name", currentPkgName))
 	for _, protoFile := range protoFiles {
 		filePath, err := h.filePathFromFileDescriptorProto(path, protoFile)
 		if err != nil {
-			h.logger.Printf("[WARN] %v", err)
+			h.logger.Warn("failed to find a path from a proto", slog.String("error", err.Error()))
 			continue
 		}
 		pkg := protoFile.GetPackage()

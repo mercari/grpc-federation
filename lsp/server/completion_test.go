@@ -2,13 +2,12 @@ package server_test
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/k0kubun/pp/v3"
 
 	"github.com/mercari/grpc-federation/compiler"
 	"github.com/mercari/grpc-federation/lsp/server"
@@ -22,7 +21,7 @@ func TestCompletion(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	completer := server.NewCompleter(compiler.New(), log.New(os.Stdout, "", 0), pp.New())
+	completer := server.NewCompleter(compiler.New(), slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	t.Run("method", func(t *testing.T) {
 		// resolver.method value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
