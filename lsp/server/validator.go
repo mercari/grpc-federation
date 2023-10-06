@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
@@ -46,6 +47,6 @@ func (h *Handler) validateText(ctx context.Context, docURI uri.URI) {
 		URI:         docURI,
 		Diagnostics: diagnostics,
 	}); err != nil {
-		h.logger.Println("failed to publish diagnostics", err)
+		h.logger.Error("failed to publish diagnostics", slog.String("error", err.Error()))
 	}
 }

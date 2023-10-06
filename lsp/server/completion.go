@@ -2,12 +2,11 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/bufbuild/protocompile/ast"
-	"github.com/k0kubun/pp/v3"
 	"go.lsp.dev/protocol"
 
 	"github.com/mercari/grpc-federation/compiler"
@@ -33,7 +32,7 @@ func (h *Handler) completion(ctx context.Context, params *protocol.CompletionPar
 	if err == nil {
 		curText = unquoted
 	}
-	h.logger.Println("text = ", curText, "candidates = ", candidates)
+	h.logger.Info("processing candidates", slog.String("text", curText), slog.Any("candidates", candidates))
 	items := make([]protocol.CompletionItem, 0, len(candidates))
 	for _, candidate := range candidates {
 		if strings.HasPrefix(candidate, curText) {
@@ -72,12 +71,11 @@ func (h *Handler) completion(ctx context.Context, params *protocol.CompletionPar
 
 type Completer struct {
 	compiler *compiler.Compiler
-	logger   *log.Logger
-	pp       *pp.PrettyPrinter
+	logger   *slog.Logger
 }
 
-func NewCompleter(c *compiler.Compiler, logger *log.Logger, printer *pp.PrettyPrinter) *Completer {
-	return &Completer{compiler: c, logger: logger, pp: printer}
+func NewCompleter(c *compiler.Compiler, logger *slog.Logger) *Completer {
+	return &Completer{compiler: c, logger: logger}
 }
 
 func (c *Completer) Completion(ctx context.Context, importPaths []string, path string, content []byte, pos source.Position) (*ast.NodeInfo, []string, error) {

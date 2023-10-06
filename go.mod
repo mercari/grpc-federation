@@ -8,7 +8,6 @@ require (
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/go-cmp v0.5.9
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/k0kubun/pp/v3 v3.2.0
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.0
 	go.lsp.dev/uri v0.3.0
@@ -32,6 +31,5 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
