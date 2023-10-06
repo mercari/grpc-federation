@@ -35,10 +35,15 @@ tools:
 		github.com/golangci/golangci-lint/cmd/golangci-lint
 
 .PHONY: lint
-lint: lint/examples lint/golangci-lint
+lint: lint/examples lint/golangci-lint lint/gomod
 
 .PHONY: fmt
-fmt: fmt/golangci-lint
+fmt: fmt/golangci-lint tidy
+
+.PHONY: tidy
+tidy:
+	go mod tidy
+	cd tools && go mod tidy
 
 lint/examples: $(foreach var,$(EXAMPLES),lint/examples/$(var))
 
@@ -47,6 +52,15 @@ lint/examples/%:
 
 lint/golangci-lint:
 	$(GOBIN)/golangci-lint run $(args) ./...
+
+lint/gomod: tidy
+	if git diff --quiet go.mod go.sum tools/go.mod tools/go.sum; then \
+        exit 0; \
+	else \
+		echo "go mod tidy resulted in a change of files."; \
+		echo "Run make tidy locally before pushing"; \
+		exit 1; \
+	fi
 
 fmt/golangci-lint:
 	$(GOBIN)/golangci-lint run --fix $(args) ./...
