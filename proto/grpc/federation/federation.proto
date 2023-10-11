@@ -436,8 +436,6 @@ message MessageValue {
 // MessageFieldValue represents message's field.
 message MessageFieldValue {
   string field = 1;
-  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
-  optional string by = 2;
   // double literal value.
   optional double double = 3;
   // repeated double literal values.

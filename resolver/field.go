@@ -42,13 +42,7 @@ func (f *Field) SourceType() *Type {
 	rule := f.Rule
 	switch {
 	case rule.Value != nil:
-		value := rule.Value
-		switch {
-		case value.Literal != nil:
-			return value.Literal.Type
-		case value.Filtered != nil:
-			return value.Filtered
-		}
+		return rule.Value.Type()
 	case rule.Alias != nil:
 		return rule.Alias.Type
 	case rule.AutoBindField != nil:

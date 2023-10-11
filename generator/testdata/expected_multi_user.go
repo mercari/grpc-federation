@@ -7,17 +7,24 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/google/cel-go/cel"
+	celtypes "github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 
 	user "example/user"
 )
@@ -111,6 +118,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler FederationServiceErrorHandler
+	env          *cel.Env
 	resolver     FederationServiceResolver
 	client       *FederationServiceDependencyServiceClient
 }
@@ -147,6 +155,132 @@ type Org_Federation_User_NameArgument struct {
 	Client *FederationServiceDependencyServiceClient
 }
 
+// FederationServiceCELTypeHelper
+type FederationServiceCELTypeHelper struct {
+	celRegistry    *celtypes.Registry
+	structFieldMap map[string]map[string]*celtypes.FieldType
+	mapMu          sync.Mutex
+}
+
+func (h *FederationServiceCELTypeHelper) TypeProvider() celtypes.Provider {
+	return h
+}
+
+func (h *FederationServiceCELTypeHelper) TypeAdapter() celtypes.Adapter {
+	return h.celRegistry
+}
+
+func (h *FederationServiceCELTypeHelper) EnumValue(enumName string) ref.Val {
+	return h.celRegistry.EnumValue(enumName)
+}
+
+func (h *FederationServiceCELTypeHelper) FindIdent(identName string) (ref.Val, bool) {
+	return h.celRegistry.FindIdent(identName)
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructType(structType string) (*celtypes.Type, bool) {
+	if st, found := h.celRegistry.FindStructType(structType); found {
+		return st, found
+	}
+	h.mapMu.Lock()
+	defer h.mapMu.Unlock()
+	if _, exists := h.structFieldMap[structType]; exists {
+		return celtypes.NewObjectType(structType), true
+	}
+	return nil, false
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructFieldNames(structType string) ([]string, bool) {
+	if names, found := h.celRegistry.FindStructFieldNames(structType); found {
+		return names, found
+	}
+
+	h.mapMu.Lock()
+	defer h.mapMu.Unlock()
+	fieldMap, exists := h.structFieldMap[structType]
+	if !exists {
+		return nil, false
+	}
+	fieldNames := make([]string, 0, len(fieldMap))
+	for fieldName := range fieldMap {
+		fieldNames = append(fieldNames, fieldName)
+	}
+	sort.Strings(fieldNames)
+	return fieldNames, true
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructFieldType(structType, fieldName string) (*celtypes.FieldType, bool) {
+	if field, found := h.celRegistry.FindStructFieldType(structType, fieldName); found {
+		return field, found
+	}
+
+	h.mapMu.Lock()
+	defer h.mapMu.Unlock()
+	fieldMap, exists := h.structFieldMap[structType]
+	if !exists {
+		return nil, false
+	}
+	field, found := fieldMap[fieldName]
+	return field, found
+}
+
+func (h *FederationServiceCELTypeHelper) NewValue(structType string, fields map[string]ref.Val) ref.Val {
+	return h.celRegistry.NewValue(structType, fields)
+}
+
+func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
+	celRegistry := celtypes.NewEmptyRegistry()
+	protoregistry.GlobalFiles.RangeFiles(func(f protoreflect.FileDescriptor) bool {
+		if err := celRegistry.RegisterDescriptor(f); err != nil {
+			return false
+		}
+		return true
+	})
+	newFieldType := func(typ *celtypes.Type, fieldName string) *celtypes.FieldType {
+		isSet := func(v any, fieldName string) bool {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return false
+			}
+			return rv.FieldByName(fieldName).IsValid()
+		}
+		getFrom := func(v any, fieldName string) (any, error) {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("%T is not struct type", v)
+			}
+			value := rv.FieldByName(fieldName)
+			return value.Interface(), nil
+		}
+		return &celtypes.FieldType{
+			Type: typ,
+			IsSet: func(v any) bool {
+				return isSet(v, fieldName)
+			},
+			GetFrom: func(v any) (any, error) {
+				return getFrom(v, fieldName)
+			},
+		}
+	}
+	return &FederationServiceCELTypeHelper{
+		celRegistry: celRegistry,
+		structFieldMap: map[string]map[string]*celtypes.FieldType{
+			"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{},
+			"grpc.federation.private.SubArgument":         map[string]*celtypes.FieldType{},
+			"grpc.federation.private.UserArgument": map[string]*celtypes.FieldType{
+				"user_id": newFieldType(celtypes.StringType, "UserId"),
+			},
+			"grpc.federation.private.UserIDArgument": map[string]*celtypes.FieldType{},
+		},
+	}
+}
+
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if err := validateFederationServiceConfig(cfg); err != nil {
@@ -167,10 +301,20 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
+	celHelper := newFederationServiceCELTypeHelper()
+	env, err := cel.NewCustomEnv(
+		cel.StdLib(),
+		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
+		cel.CustomTypeProvider(celHelper.TypeProvider()),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return &FederationService{
 		cfg:          cfg,
 		logger:       logger,
 		errorHandler: errorHandler,
+		env:          env,
 		resolver:     cfg.Resolver,
 		client: &FederationServiceDependencyServiceClient{
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
@@ -268,6 +412,30 @@ func recoverErrorFederationService(v interface{}, rawStack []byte) *FederationSe
 	}
 }
 
+func (s *FederationService) evalCEL(expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
+	env, err := s.env.Extend(vars...)
+	if err != nil {
+		return nil, err
+	}
+	expr = strings.Replace(expr, "$", "__ARG__", -1)
+	ast, iss := env.Compile(expr)
+	if iss.Err() != nil {
+		return nil, iss.Err()
+	}
+	program, err := env.Program(ast)
+	if err != nil {
+		return nil, err
+	}
+	out, _, err := program.Eval(args)
+	if err != nil {
+		return nil, err
+	}
+	if outType != nil {
+		return out.ConvertToNative(outType)
+	}
+	return out.Value(), nil
+}
+
 func (s *FederationService) goWithRecover(eg *errgroup.Group, fn func() (interface{}, error)) {
 	eg.Go(func() (e error) {
 		defer func() {
@@ -333,6 +501,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		valueUser  *User
 		valueUser2 *User
 	)
+	envOpts := []cel.EnvOption{cel.Variable("__ARG__", cel.ObjectType("grpc.federation.private.GetResponseArgument"))}
+	evalValues := map[string]any{"__ARG__": req}
 	// A tree view of message dependencies is shown below.
 	/*
 	   uid ─┐
@@ -365,6 +535,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		resUserID := resUserIDIface.(*UserID)
 		valueMu.Lock()
 		valueUid = resUserID // { name: "uid", message: "UserID" ... }
+		envOpts = append(envOpts, cel.Variable("uid", cel.ObjectType("org.federation.UserID")))
+		evalValues["uid"] = valueUid
 		valueMu.Unlock()
 
 		// This section's codes are generated by the following proto definition.
@@ -379,7 +551,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			valueMu.RLock()
 			args := &Org_Federation_UserArgument{
 				Client: s.client,
-				UserId: valueUid.GetValue(), // { name: "user_id", by: "uid.value" }
+			}
+			// { name: "user_id", by: "uid.value" }
+			{
+				_value, err := s.evalCEL("uid.value", envOpts, evalValues, reflect.TypeOf(args.UserId))
+				if err != nil {
+					return nil, err
+				}
+				args.UserId = _value.(string)
 			}
 			valueMu.RUnlock()
 			return s.resolve_Org_Federation_User(ctx, args)
@@ -390,6 +569,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		resUser := resUserIface.(*User)
 		valueMu.Lock()
 		valueUser = resUser // { name: "user", message: "User" ... }
+		envOpts = append(envOpts, cel.Variable("user", cel.ObjectType("org.federation.User")))
+		evalValues["user"] = valueUser
 		valueMu.Unlock()
 		return nil, nil
 	})
@@ -417,6 +598,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		resUserID := resUserIDIface.(*UserID)
 		valueMu.Lock()
 		valueUid = resUserID // { name: "uid", message: "UserID" ... }
+		envOpts = append(envOpts, cel.Variable("uid", cel.ObjectType("org.federation.UserID")))
+		evalValues["uid"] = valueUid
 		valueMu.Unlock()
 
 		// This section's codes are generated by the following proto definition.
@@ -431,7 +614,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			valueMu.RLock()
 			args := &Org_Federation_UserArgument{
 				Client: s.client,
-				UserId: valueUid.GetValue(), // { name: "user_id", by: "uid.value" }
+			}
+			// { name: "user_id", by: "uid.value" }
+			{
+				_value, err := s.evalCEL("uid.value", envOpts, evalValues, reflect.TypeOf(args.UserId))
+				if err != nil {
+					return nil, err
+				}
+				args.UserId = _value.(string)
 			}
 			valueMu.RUnlock()
 			return s.resolve_Org_Federation_User(ctx, args)
@@ -442,6 +632,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		resUser := resUserIface.(*User)
 		valueMu.Lock()
 		valueUser2 = resUser // { name: "user2", message: "User" ... }
+		envOpts = append(envOpts, cel.Variable("user2", cel.ObjectType("org.federation.User")))
+		evalValues["user2"] = valueUser2
 		valueMu.Unlock()
 		return nil, nil
 	})
@@ -459,8 +651,22 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	ret := &GetResponse{}
 
 	// field binding section.
-	ret.User = valueUser   // (grpc.federation.field).by = "user"
-	ret.User2 = valueUser2 // (grpc.federation.field).by = "user2"
+	// (grpc.federation.field).by = "user"
+	{
+		_value, err := s.evalCEL("user", envOpts, evalValues, nil)
+		if err != nil {
+			return nil, err
+		}
+		ret.User = _value.(*User)
+	}
+	// (grpc.federation.field).by = "user2"
+	{
+		_value, err := s.evalCEL("user2", envOpts, evalValues, nil)
+		if err != nil {
+			return nil, err
+		}
+		ret.User2 = _value.(*User)
+	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
 	return ret, nil
@@ -490,6 +696,8 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		valueUser               *user.User
 		value_OrgFederation_Sub *Sub
 	)
+	envOpts := []cel.EnvOption{cel.Variable("__ARG__", cel.ObjectType("grpc.federation.private.UserArgument"))}
+	evalValues := map[string]any{"__ARG__": req}
 	// A tree view of message dependencies is shown below.
 	/*
 	   _org_federation_Sub ─┐
@@ -520,6 +728,8 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		resSub := resSubIface.(*Sub)
 		valueMu.Lock()
 		value_OrgFederation_Sub = resSub // { name: "_org_federation_Sub", message: "Sub" ... }
+		envOpts = append(envOpts, cel.Variable("_org_federation_Sub", cel.ObjectType("org.federation.Sub")))
+		evalValues["_org_federation_Sub"] = value_OrgFederation_Sub
 		valueMu.Unlock()
 		return nil, nil
 	})
@@ -536,8 +746,14 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		*/
 		resGetUserResponseIface, err, _ := sg.Do("org.user.UserService/GetUser", func() (interface{}, error) {
 			valueMu.RLock()
-			args := &user.GetUserRequest{
-				Id: req.UserId, // { field: "id", by: "$.user_id" }
+			args := &user.GetUserRequest{}
+			// { field: "id", by: "$.user_id" }
+			{
+				_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(args.Id))
+				if err != nil {
+					return nil, err
+				}
+				args.Id = _value.(string)
 			}
 			valueMu.RUnlock()
 			return s.client.Org_User_UserServiceClient.GetUser(ctx, args)
@@ -550,6 +766,8 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		resGetUserResponse := resGetUserResponseIface.(*user.GetUserResponse)
 		valueMu.Lock()
 		valueUser = resGetUserResponse.GetUser() // { name: "user", field: "user", autobind: true }
+		envOpts = append(envOpts, cel.Variable("user", cel.ObjectType("org.user.User")))
+		evalValues["user"] = valueUser
 		valueMu.Unlock()
 		return nil, nil
 	})

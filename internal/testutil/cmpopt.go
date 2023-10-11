@@ -9,7 +9,7 @@ import (
 
 func ResolverCmpOpts() []cmp.Option {
 	return []cmp.Option{
-		cmpopts.IgnoreFields(resolver.File{}, "Messages", "Services", "Enums"),
+		cmpopts.IgnoreFields(resolver.File{}, "Messages", "Services", "Enums", "Desc"),
 		cmpopts.IgnoreFields(resolver.Package{}, "Files"),
 		cmpopts.IgnoreFields(resolver.Method{}, "Service"),
 		cmpopts.IgnoreFields(resolver.Message{}, "File", "ParentMessage"),
@@ -20,13 +20,13 @@ func ResolverCmpOpts() []cmp.Option {
 		cmpopts.IgnoreFields(resolver.MessageDependency{}, "Message.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageRule{}, "MessageDependencies", "Alias.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageRuleDependencyGraph{}, "Rule"),
-		cmpopts.IgnoreFields(resolver.MessageRuleDependencyGraphNode{}, "BaseMessage", "MessageDependency", "Parent", "ParentMap", "Children", "ChildrenMap", "Message.Rule"),
-		cmpopts.IgnoreFields(resolver.MessageDependencyGraph{}, "RootArgs"),
+		cmpopts.IgnoreFields(resolver.MessageRuleDependencyGraphNode{}, "BaseMessage", "Response", "MessageDependency", "Parent", "ParentMap", "Children", "ChildrenMap", "Message.Rule"),
+		cmpopts.IgnoreFields(resolver.MessageDependencyGraph{}),
 		cmpopts.IgnoreFields(resolver.MessageDependencyGraphNode{}, "Parent", "Children", "Message.Rule"),
 		cmpopts.IgnoreFields(resolver.AutoBindField{}, "ResponseField", "MessageDependency"),
 		cmpopts.IgnoreFields(resolver.Type{}, "Ref.Rule", "Enum.Rule", "OneofField"),
 		cmpopts.IgnoreFields(resolver.Oneof{}, "Message"),
 		cmpopts.IgnoreFields(resolver.Field{}, "Oneof.Message", "Oneof.Fields"),
-		cmpopts.IgnoreFields(resolver.Value{}, "Ref", "Filtered"),
+		cmpopts.IgnoreFields(resolver.Value{}, "CEL", "Const"),
 	}
 }

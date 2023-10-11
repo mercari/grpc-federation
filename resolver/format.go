@@ -294,168 +294,168 @@ func (v *Value) ProtoFormat(opt *ProtoFormatOption) string {
 	if v == nil {
 		return ""
 	}
-	if v.Path != nil {
-		if v.Inline {
-			return fmt.Sprintf("inline: %q", strings.Join(v.Path.Selectors(), "."))
+	if v.CEL != nil {
+		if v.CEL.Inline {
+			return fmt.Sprintf("inline: %q", v.CEL.Expr)
 		}
-		return fmt.Sprintf("by: %q", strings.Join(v.Path.Selectors(), "."))
+		return fmt.Sprintf("by: %q", v.CEL.Expr)
 	}
-	if v.Literal != nil {
-		return v.Literal.ProtoFormat(opt)
+	if v.Const != nil {
+		return v.Const.ProtoFormat(opt)
 	}
 	return ""
 }
 
-func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
-	if lit == nil {
+func (c *ConstValue) ProtoFormat(opt *ProtoFormatOption) string {
+	if c == nil {
 		return ""
 	}
-	switch lit.Type {
+	switch c.Type {
 	case DoubleType:
-		return fmt.Sprintf(`double: %v`, lit.Value)
+		return fmt.Sprintf(`double: %v`, c.Value)
 	case FloatType:
-		return fmt.Sprintf(`float: %v`, lit.Value)
+		return fmt.Sprintf(`float: %v`, c.Value)
 	case Int32Type:
-		return fmt.Sprintf(`int32: %v`, lit.Value)
+		return fmt.Sprintf(`int32: %v`, c.Value)
 	case Int64Type:
-		return fmt.Sprintf(`int64: %v`, lit.Value)
+		return fmt.Sprintf(`int64: %v`, c.Value)
 	case Uint32Type:
-		return fmt.Sprintf(`uint32: %v`, lit.Value)
+		return fmt.Sprintf(`uint32: %v`, c.Value)
 	case Uint64Type:
-		return fmt.Sprintf(`uint64: %v`, lit.Value)
+		return fmt.Sprintf(`uint64: %v`, c.Value)
 	case Sint32Type:
-		return fmt.Sprintf(`sint32: %v`, lit.Value)
+		return fmt.Sprintf(`sint32: %v`, c.Value)
 	case Sint64Type:
-		return fmt.Sprintf(`sint64: %v`, lit.Value)
+		return fmt.Sprintf(`sint64: %v`, c.Value)
 	case Fixed32Type:
-		return fmt.Sprintf(`fixed32: %v`, lit.Value)
+		return fmt.Sprintf(`fixed32: %v`, c.Value)
 	case Fixed64Type:
-		return fmt.Sprintf(`fixed64: %v`, lit.Value)
+		return fmt.Sprintf(`fixed64: %v`, c.Value)
 	case Sfixed32Type:
-		return fmt.Sprintf(`sfixed32: %v`, lit.Value)
+		return fmt.Sprintf(`sfixed32: %v`, c.Value)
 	case Sfixed64Type:
-		return fmt.Sprintf("sfixed64: %v", lit.Value)
+		return fmt.Sprintf("sfixed64: %v", c.Value)
 	case BoolType:
-		return fmt.Sprintf(`bool: %v`, lit.Value)
+		return fmt.Sprintf(`bool: %v`, c.Value)
 	case StringType:
-		return fmt.Sprintf("string: %q", lit.Value)
+		return fmt.Sprintf("string: %q", c.Value)
 	case BytesType:
-		return fmt.Sprintf("byte_string: %q", lit.Value)
+		return fmt.Sprintf("byte_string: %q", c.Value)
 	case EnvType:
-		return fmt.Sprintf("env: %q", lit.Value)
+		return fmt.Sprintf("env: %q", c.Value)
 	case DoubleRepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]float64) {
+		for _, v := range c.Value.([]float64) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`doubles: [%s]`, strings.Join(elems, ", "))
 	case FloatRepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]float32) {
+		for _, v := range c.Value.([]float32) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`floats: [%s]`, strings.Join(elems, ", "))
 	case Int32RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]int32) {
+		for _, v := range c.Value.([]int32) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`int32s: [%s]`, strings.Join(elems, ", "))
 	case Int64RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]int64) {
+		for _, v := range c.Value.([]int64) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`int64s: [%s]`, strings.Join(elems, ", "))
 	case Uint32RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]uint32) {
+		for _, v := range c.Value.([]uint32) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`uint32s: [%s]`, strings.Join(elems, ", "))
 	case Uint64RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]uint64) {
+		for _, v := range c.Value.([]uint64) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`uint64s: [%s]`, strings.Join(elems, ", "))
 	case Sint32RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]int32) {
+		for _, v := range c.Value.([]int32) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`sint32s: [%s]`, strings.Join(elems, ", "))
 	case Sint64RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]int64) {
+		for _, v := range c.Value.([]int64) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`sint64s: [%s]`, strings.Join(elems, ", "))
 	case Fixed32RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]uint32) {
+		for _, v := range c.Value.([]uint32) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`fixed32s: [%s]`, strings.Join(elems, ", "))
 	case Fixed64RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]uint64) {
+		for _, v := range c.Value.([]uint64) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`fixed64s: [%s]`, strings.Join(elems, ", "))
 	case Sfixed32RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]int32) {
+		for _, v := range c.Value.([]int32) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`sfixed32s: [%s]`, strings.Join(elems, ", "))
 	case Sfixed64RepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]int64) {
+		for _, v := range c.Value.([]int64) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`sfixed64s: [%s]`, strings.Join(elems, ", "))
 	case BoolRepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]bool) {
+		for _, v := range c.Value.([]bool) {
 			elems = append(elems, fmt.Sprint(v))
 		}
 		return fmt.Sprintf(`bools: [%s]`, strings.Join(elems, ", "))
 	case StringRepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]string) {
+		for _, v := range c.Value.([]string) {
 			elems = append(elems, fmt.Sprintf(`%q`, v))
 		}
 		return fmt.Sprintf(`strings: [%s]`, strings.Join(elems, ", "))
 	case BytesRepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([][]byte) {
+		for _, v := range c.Value.([][]byte) {
 			elems = append(elems, fmt.Sprintf(`%q`, string(v)))
 		}
 		return fmt.Sprintf(`byte_strings: [%s]`, strings.Join(elems, ", "))
 	case EnvRepeatedType:
 		var elems []string
-		for _, v := range lit.Value.([]EnvKey) {
+		for _, v := range c.Value.([]EnvKey) {
 			elems = append(elems, fmt.Sprintf(`%q`, v))
 		}
 		return fmt.Sprintf(`envs: [%s]`, strings.Join(elems, ", "))
 	}
 
-	switch lit.Type.Type {
+	switch c.Type.Type {
 	case types.Enum:
-		if lit.Type.Repeated {
+		if c.Type.Repeated {
 			var elems []string
-			for _, v := range lit.Value.([]*EnumValue) {
+			for _, v := range c.Value.([]*EnumValue) {
 				elems = append(elems, fmt.Sprintf("%q", v.FQDN()))
 			}
 			return fmt.Sprintf(`enums: [%s]`, strings.Join(elems, ", "))
 		}
-		return fmt.Sprintf("enum: %q", lit.Value.(*EnumValue).FQDN())
+		return fmt.Sprintf("enum: %q", c.Value.(*EnumValue).FQDN())
 	case types.Message:
-		msg := lit.Type.Ref
-		if lit.Type.Repeated {
+		msg := c.Type.Ref
+		if c.Type.Repeated {
 			var elems []string
-			for _, v := range lit.Value.([]map[string]*Value) {
+			for _, v := range c.Value.([]map[string]*Value) {
 				var fields []string
 				for fieldName, fieldValue := range v {
 					fields = append(fields, fmt.Sprintf("{ field: %q, %s }", fieldName, fieldValue.ProtoFormat(opt)))
@@ -466,7 +466,7 @@ func (lit *Literal) ProtoFormat(opt *ProtoFormatOption) string {
 			return fmt.Sprintf("messages: [%s]", strings.Join(elems, ", "))
 		}
 		var fields []string
-		for fieldName, fieldValue := range lit.Value.(map[string]*Value) {
+		for fieldName, fieldValue := range c.Value.(map[string]*Value) {
 			fields = append(fields, fmt.Sprintf("{ field: %q, %s }", fieldName, fieldValue.ProtoFormat(opt)))
 		}
 		sort.Strings(fields)

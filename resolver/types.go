@@ -3,6 +3,9 @@ package resolver
 import (
 	"time"
 
+	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
+	"google.golang.org/protobuf/types/descriptorpb"
+
 	"github.com/mercari/grpc-federation/types"
 )
 
@@ -15,6 +18,7 @@ type File struct {
 	Package   *Package
 	GoPackage *GoPackage
 	Name      string
+	Desc      *descriptorpb.FileDescriptorProto
 	Services  []*Service
 	Messages  []*Message
 	Enums     []*Enum
@@ -177,7 +181,7 @@ type AutoBindField struct {
 }
 
 type FieldRule struct {
-	// Value valid if `by` or `literal` is specified in grpc.federation.field option.
+	// Value value to bind to field.
 	Value *Value
 	// CustomResolver whether `custom_resolver = true` is set in grpc.federation.field option.
 	CustomResolver bool
@@ -314,21 +318,18 @@ type Argument struct {
 }
 
 type Value struct {
-	Path     Path
-	PathType PathType
-	// Whether fields should be expanded when referencing types defined with Filtered.
-	Inline bool
-	// Literal value.
-	Literal *Literal
-	// A reference to the value specified in Path.
-	// If the value is defined in response, it will be the value before filtering by response.field.
-	Ref *Type
-	// Filtered the value of the field after filtering
-	// using Path from the message defined by Ref.
-	Filtered *Type
+	CEL   *CELValue
+	Const *ConstValue
 }
 
-type Literal struct {
+type CELValue struct {
+	Expr        string
+	Inline      bool
+	Out         *Type
+	CheckedExpr *exprv1.CheckedExpr
+}
+
+type ConstValue struct {
 	Type  *Type
 	Value interface{}
 }

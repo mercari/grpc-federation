@@ -7,17 +7,24 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/google/cel-go/cel"
+	celtypes "github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 
 	post "example/post"
 )
@@ -90,6 +97,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler FederationServiceErrorHandler
+	env          *cel.Env
 	client       *FederationServiceDependencyServiceClient
 }
 
@@ -109,6 +117,136 @@ type Org_Federation_CreatePostResponseArgument struct {
 	Title   string
 	UserId  string
 	Client  *FederationServiceDependencyServiceClient
+}
+
+// FederationServiceCELTypeHelper
+type FederationServiceCELTypeHelper struct {
+	celRegistry    *celtypes.Registry
+	structFieldMap map[string]map[string]*celtypes.FieldType
+	mapMu          sync.Mutex
+}
+
+func (h *FederationServiceCELTypeHelper) TypeProvider() celtypes.Provider {
+	return h
+}
+
+func (h *FederationServiceCELTypeHelper) TypeAdapter() celtypes.Adapter {
+	return h.celRegistry
+}
+
+func (h *FederationServiceCELTypeHelper) EnumValue(enumName string) ref.Val {
+	return h.celRegistry.EnumValue(enumName)
+}
+
+func (h *FederationServiceCELTypeHelper) FindIdent(identName string) (ref.Val, bool) {
+	return h.celRegistry.FindIdent(identName)
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructType(structType string) (*celtypes.Type, bool) {
+	if st, found := h.celRegistry.FindStructType(structType); found {
+		return st, found
+	}
+	h.mapMu.Lock()
+	defer h.mapMu.Unlock()
+	if _, exists := h.structFieldMap[structType]; exists {
+		return celtypes.NewObjectType(structType), true
+	}
+	return nil, false
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructFieldNames(structType string) ([]string, bool) {
+	if names, found := h.celRegistry.FindStructFieldNames(structType); found {
+		return names, found
+	}
+
+	h.mapMu.Lock()
+	defer h.mapMu.Unlock()
+	fieldMap, exists := h.structFieldMap[structType]
+	if !exists {
+		return nil, false
+	}
+	fieldNames := make([]string, 0, len(fieldMap))
+	for fieldName := range fieldMap {
+		fieldNames = append(fieldNames, fieldName)
+	}
+	sort.Strings(fieldNames)
+	return fieldNames, true
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructFieldType(structType, fieldName string) (*celtypes.FieldType, bool) {
+	if field, found := h.celRegistry.FindStructFieldType(structType, fieldName); found {
+		return field, found
+	}
+
+	h.mapMu.Lock()
+	defer h.mapMu.Unlock()
+	fieldMap, exists := h.structFieldMap[structType]
+	if !exists {
+		return nil, false
+	}
+	field, found := fieldMap[fieldName]
+	return field, found
+}
+
+func (h *FederationServiceCELTypeHelper) NewValue(structType string, fields map[string]ref.Val) ref.Val {
+	return h.celRegistry.NewValue(structType, fields)
+}
+
+func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
+	celRegistry := celtypes.NewEmptyRegistry()
+	protoregistry.GlobalFiles.RangeFiles(func(f protoreflect.FileDescriptor) bool {
+		if err := celRegistry.RegisterDescriptor(f); err != nil {
+			return false
+		}
+		return true
+	})
+	newFieldType := func(typ *celtypes.Type, fieldName string) *celtypes.FieldType {
+		isSet := func(v any, fieldName string) bool {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return false
+			}
+			return rv.FieldByName(fieldName).IsValid()
+		}
+		getFrom := func(v any, fieldName string) (any, error) {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("%T is not struct type", v)
+			}
+			value := rv.FieldByName(fieldName)
+			return value.Interface(), nil
+		}
+		return &celtypes.FieldType{
+			Type: typ,
+			IsSet: func(v any) bool {
+				return isSet(v, fieldName)
+			},
+			GetFrom: func(v any) (any, error) {
+				return getFrom(v, fieldName)
+			},
+		}
+	}
+	return &FederationServiceCELTypeHelper{
+		celRegistry: celRegistry,
+		structFieldMap: map[string]map[string]*celtypes.FieldType{
+			"grpc.federation.private.CreatePostArgument": map[string]*celtypes.FieldType{
+				"title":   newFieldType(celtypes.StringType, "Title"),
+				"content": newFieldType(celtypes.StringType, "Content"),
+				"user_id": newFieldType(celtypes.StringType, "UserId"),
+			},
+			"grpc.federation.private.CreatePostResponseArgument": map[string]*celtypes.FieldType{
+				"title":   newFieldType(celtypes.StringType, "Title"),
+				"content": newFieldType(celtypes.StringType, "Content"),
+				"user_id": newFieldType(celtypes.StringType, "UserId"),
+			},
+		},
+	}
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -131,10 +269,20 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
+	celHelper := newFederationServiceCELTypeHelper()
+	env, err := cel.NewCustomEnv(
+		cel.StdLib(),
+		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
+		cel.CustomTypeProvider(celHelper.TypeProvider()),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return &FederationService{
 		cfg:          cfg,
 		logger:       logger,
 		errorHandler: errorHandler,
+		env:          env,
 		client: &FederationServiceDependencyServiceClient{
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
@@ -228,6 +376,30 @@ func recoverErrorFederationService(v interface{}, rawStack []byte) *FederationSe
 	}
 }
 
+func (s *FederationService) evalCEL(expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
+	env, err := s.env.Extend(vars...)
+	if err != nil {
+		return nil, err
+	}
+	expr = strings.Replace(expr, "$", "__ARG__", -1)
+	ast, iss := env.Compile(expr)
+	if iss.Err() != nil {
+		return nil, iss.Err()
+	}
+	program, err := env.Program(ast)
+	if err != nil {
+		return nil, err
+	}
+	out, _, err := program.Eval(args)
+	if err != nil {
+		return nil, err
+	}
+	if outType != nil {
+		return out.ConvertToNative(outType)
+	}
+	return out.Value(), nil
+}
+
 func (s *FederationService) goWithRecover(eg *errgroup.Group, fn func() (interface{}, error)) {
 	eg.Go(func() (e error) {
 		defer func() {
@@ -289,14 +461,37 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 // resolve_Org_Federation_CreatePost resolve "org.federation.CreatePost" message.
 func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *Org_Federation_CreatePostArgument) (*CreatePost, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
+	envOpts := []cel.EnvOption{cel.Variable("__ARG__", cel.ObjectType("grpc.federation.private.CreatePostArgument"))}
+	evalValues := map[string]any{"__ARG__": req}
 
 	// create a message value to be returned.
 	ret := &CreatePost{}
 
 	// field binding section.
-	ret.Title = req.Title     // (grpc.federation.field).by = "$.title"
-	ret.Content = req.Content // (grpc.federation.field).by = "$.content"
-	ret.UserId = req.UserId   // (grpc.federation.field).by = "$.user_id"
+	// (grpc.federation.field).by = "$.title"
+	{
+		_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(ret.Title))
+		if err != nil {
+			return nil, err
+		}
+		ret.Title = _value.(string)
+	}
+	// (grpc.federation.field).by = "$.content"
+	{
+		_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(ret.Content))
+		if err != nil {
+			return nil, err
+		}
+		ret.Content = _value.(string)
+	}
+	// (grpc.federation.field).by = "$.user_id"
+	{
+		_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(ret.UserId))
+		if err != nil {
+			return nil, err
+		}
+		ret.UserId = _value.(string)
+	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.CreatePost", slog.Any("org.federation.CreatePost", s.logvalue_Org_Federation_CreatePost(ret)))
 	return ret, nil
@@ -311,6 +506,8 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		valueMu sync.RWMutex
 		valueP  *post.Post
 	)
+	envOpts := []cel.EnvOption{cel.Variable("__ARG__", cel.ObjectType("grpc.federation.private.CreatePostResponseArgument"))}
+	evalValues := map[string]any{"__ARG__": req}
 
 	// This section's codes are generated by the following proto definition.
 	/*
@@ -327,10 +524,31 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	resCreatePostIface, err, _ := sg.Do("cp_org.federation.CreatePost", func() (interface{}, error) {
 		valueMu.RLock()
 		args := &Org_Federation_CreatePostArgument{
-			Client:  s.client,
-			Title:   req.Title,   // { name: "title", by: "$.title" }
-			Content: req.Content, // { name: "content", by: "$.content" }
-			UserId:  req.UserId,  // { name: "user_id", by: "$.user_id" }
+			Client: s.client,
+		}
+		// { name: "title", by: "$.title" }
+		{
+			_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(args.Title))
+			if err != nil {
+				return nil, err
+			}
+			args.Title = _value.(string)
+		}
+		// { name: "content", by: "$.content" }
+		{
+			_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(args.Content))
+			if err != nil {
+				return nil, err
+			}
+			args.Content = _value.(string)
+		}
+		// { name: "user_id", by: "$.user_id" }
+		{
+			_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(args.UserId))
+			if err != nil {
+				return nil, err
+			}
+			args.UserId = _value.(string)
 		}
 		valueMu.RUnlock()
 		return s.resolve_Org_Federation_CreatePost(ctx, args)
@@ -341,6 +559,8 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	resCreatePost := resCreatePostIface.(*CreatePost)
 	valueMu.Lock()
 	valueCp = resCreatePost // { name: "cp", message: "CreatePost" ... }
+	envOpts = append(envOpts, cel.Variable("cp", cel.ObjectType("org.federation.CreatePost")))
+	evalValues["cp"] = valueCp
 	valueMu.Unlock()
 
 	// This section's codes are generated by the following proto definition.
@@ -353,8 +573,14 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	*/
 	resCreatePostResponseIface, err, _ := sg.Do("org.post.PostService/CreatePost", func() (interface{}, error) {
 		valueMu.RLock()
-		args := &post.CreatePostRequest{
-			Post: s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(valueCp), // { field: "post", by: "cp" }
+		args := &post.CreatePostRequest{}
+		// { field: "post", by: "cp" }
+		{
+			_value, err := s.evalCEL("cp", envOpts, evalValues, nil)
+			if err != nil {
+				return nil, err
+			}
+			args.Post = s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(_value.(*CreatePost))
 		}
 		valueMu.RUnlock()
 		return s.client.Org_Post_PostServiceClient.CreatePost(ctx, args)
@@ -367,6 +593,8 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	resCreatePostResponse := resCreatePostResponseIface.(*post.CreatePostResponse)
 	valueMu.Lock()
 	valueP = resCreatePostResponse.GetPost() // { name: "p", field: "post" }
+	envOpts = append(envOpts, cel.Variable("p", cel.ObjectType("org.post.Post")))
+	evalValues["p"] = valueP
 	valueMu.Unlock()
 
 	// assign named parameters to message arguments to pass to the custom resolver.
@@ -377,7 +605,14 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	ret := &CreatePostResponse{}
 
 	// field binding section.
-	ret.Post = s.cast_Org_Post_Post__to__Org_Federation_Post(valueP) // (grpc.federation.field).by = "p"
+	// (grpc.federation.field).by = "p"
+	{
+		_value, err := s.evalCEL("p", envOpts, evalValues, nil)
+		if err != nil {
+			return nil, err
+		}
+		ret.Post = s.cast_Org_Post_Post__to__Org_Federation_Post(_value.(*post.Post))
+	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.CreatePostResponse", slog.Any("org.federation.CreatePostResponse", s.logvalue_Org_Federation_CreatePostResponse(ret)))
 	return ret, nil

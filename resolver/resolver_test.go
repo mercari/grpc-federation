@@ -286,7 +286,7 @@ func TestSimpleAggregation(t *testing.T) {
 						).Build(t),
 					).Build(t),
 				).
-				AddFieldWithRule("literal", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
+				AddFieldWithRule("const", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddMessageDependency(
@@ -518,8 +518,8 @@ func TestCreatePost(t *testing.T) {
 						AddDependency("post_service", ref.Service(t, "org.post", "PostService")).
 						Build(t),
 				).
-				AddMessage(ref.Message(t, "org.federation", "CreatePostResponse"), ref.Message(t, "org.federation", "CreatePostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "CreatePost"), ref.Message(t, "org.federation", "CreatePostArgument")).
+				AddMessage(ref.Message(t, "org.federation", "CreatePostResponse"), ref.Message(t, "org.federation", "CreatePostResponseArgument")).
 				Build(t),
 		)
 
@@ -1143,7 +1143,6 @@ func TestAsync(t *testing.T) {
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("Get", ref.Message(t, "org.federation", "GetRequest"), ref.Message(t, "org.federation", "GetResponse"), nil).
 				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
-				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "A"), ref.Message(t, "org.federation", "AArgument")).
 				AddMessage(ref.Message(t, "org.federation", "AA"), ref.Message(t, "org.federation", "AAArgument")).
 				AddMessage(ref.Message(t, "org.federation", "AB"), ref.Message(t, "org.federation", "ABArgument")).
@@ -1153,6 +1152,7 @@ func TestAsync(t *testing.T) {
 				AddMessage(ref.Message(t, "org.federation", "E"), ref.Message(t, "org.federation", "EArgument")).
 				AddMessage(ref.Message(t, "org.federation", "F"), ref.Message(t, "org.federation", "FArgument")).
 				AddMessage(ref.Message(t, "org.federation", "G"), ref.Message(t, "org.federation", "GArgument")).
+				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "H"), ref.Message(t, "org.federation", "HArgument")).
 				AddMessage(ref.Message(t, "org.federation", "I"), ref.Message(t, "org.federation", "IArgument")).
 				AddMessage(ref.Message(t, "org.federation", "J"), ref.Message(t, "org.federation", "JArgument")).
@@ -1475,8 +1475,8 @@ func TestAutobind(t *testing.T) {
 	}
 }
 
-func TestLiteral(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "literal.proto")))
+func TestConstValue(t *testing.T) {
+	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "const_value.proto")))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1485,7 +1485,7 @@ func TestLiteral(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Services))
 	}
 
-	fb := testutil.NewFileBuilder("literal.proto")
+	fb := testutil.NewFileBuilder("const_value.proto")
 	ref := testutil.NewBuilderReferenceManager(getContentProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -1851,6 +1851,14 @@ func TestLiteral(t *testing.T) {
 							Build(t),
 					).Build(t),
 				).
+				AddFieldWithRule(
+					"cel_expr",
+					resolver.Int64Type,
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(resolver.Int64Type, resolver.Int64Type, "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field").
+							Build(t),
+					).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetMethodCall(
@@ -1905,7 +1913,6 @@ func TestLiteral(t *testing.T) {
 											resolver.NewMessageValue(
 												ref.Type(t, "content", "Content"),
 												map[string]*resolver.Value{
-													"by_field":           testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t),
 													"double_field":       resolver.NewDoubleValue(1.23),
 													"doubles_field":      resolver.NewDoublesValue(4.56, 7.89),
 													"float_field":        resolver.NewFloatValue(4.56),
@@ -2011,7 +2018,6 @@ func TestLiteral(t *testing.T) {
 									resolver.NewMessageValue(
 										ref.Type(t, "org.federation", "Content"),
 										map[string]*resolver.Value{
-											"by_field":           testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t),
 											"double_field":       resolver.NewDoubleValue(1.23),
 											"doubles_field":      resolver.NewDoublesValue(4.56, 7.89),
 											"float_field":        resolver.NewFloatValue(4.56),
@@ -2087,8 +2093,8 @@ func TestLiteral(t *testing.T) {
 						AddDependency("", ref.Service(t, "content", "ContentService")).
 						Build(t),
 				).
-				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Content"), ref.Message(t, "org.federation", "ContentArgument")).
+				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
 				Build(t),
 		)
 
@@ -2416,8 +2422,6 @@ func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 			testutil.NewServiceBuilder("UserService").
 				AddMethod("GetUser", ref.Message(t, "org.user", "GetUserRequest"), ref.Message(t, "org.user", "GetUserResponse"), nil).
 				AddMethod("GetUsers", ref.Message(t, "org.user", "GetUsersRequest"), ref.Message(t, "org.user", "GetUsersResponse"), nil).
-				AddMessage(nil, ref.Message(t, "org.user", "GetUserResponseArgument")).
-				AddMessage(nil, ref.Message(t, "org.user", "GetUsersResponseArgument")).
 				Build(t),
 		)
 	return ub
@@ -2494,9 +2498,6 @@ func getPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddMethod("GetPost", ref.Message(t, "org.post", "GetPostRequest"), ref.Message(t, "org.post", "GetPostResponse"), nil).
 				AddMethod("GetPosts", ref.Message(t, "org.post", "GetPostsRequest"), ref.Message(t, "org.post", "GetPostsResponse"), nil).
 				AddMethod("CreatePost", ref.Message(t, "org.post", "CreatePostRequest"), ref.Message(t, "org.post", "CreatePostResponse"), nil).
-				AddMessage(nil, ref.Message(t, "org.post", "GetPostResponseArgument")).
-				AddMessage(nil, ref.Message(t, "org.post", "GetPostsResponseArgument")).
-				AddMessage(nil, ref.Message(t, "org.post", "CreatePostResponseArgument")).
 				Build(t),
 		)
 	return pb
@@ -2560,7 +2561,6 @@ func getNestedPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 		AddService(
 			testutil.NewServiceBuilder("PostService").
 				AddMethod("GetPost", ref.Message(t, "org.post", "GetPostRequest"), ref.Message(t, "org.post", "GetPostResponse"), nil).
-				AddMessage(nil, ref.Message(t, "org.post", "GetPostResponseArgument")).
 				Build(t),
 		)
 	return pb
@@ -2711,7 +2711,6 @@ func getContentProtoBuilder(t *testing.T) *testutil.FileBuilder {
 		AddService(
 			testutil.NewServiceBuilder("ContentService").
 				AddMethod("GetContent", ref.Message(t, "content", "GetContentRequest"), ref.Message(t, "content", "GetContentResponse"), nil).
-				AddMessage(nil, ref.Message(t, "content", "GetContentResponseArgument")).
 				Build(t),
 		)
 	return pb
