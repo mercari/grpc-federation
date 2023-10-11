@@ -373,14 +373,14 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- $msgResolvers := .MessageResolvers }}
 	{{- $msgResolversLen := len $msgResolvers }}
 	{{- if eq $msgResolversLen 1 }}
-	{{- template "resolverGroup" (map "ID" 0 "Ctx" "ctx" "Resolver" (index $msgResolvers 0)) }}
+	{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $msgResolvers 0)) }}
 	{{- else }}
 	{{- if $msgResolvers }}
-	eg, egCtx := errgroup.WithContext(ctx)
+	eg, ctx1 := errgroup.WithContext(ctx)
 	{{- end }}
-	{{ range $i, $r := $msgResolvers }}
+	{{ range $msgResolvers }}
 	s.goWithRecover(eg, func() (interface{}, error) {
-		{{- template "resolverGroup" (map "ID" $i "Ctx" "egCtx" "Resolver" $r) }}
+		{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
 		return nil, nil
 	})
 	{{ end }}
@@ -701,11 +701,10 @@ valueMu.Unlock()
 
 {{- define "resolverGroup" }}
 {{- if .Resolver.IsConcurrent }}
-{{- $ctx := printf "%s%d" .Ctx .ID }}
-eg, {{ $ctx }} := errgroup.WithContext({{ .Ctx }})
-{{- range $i, $r := .Resolver.Starts }}
+eg, {{ printf "ctx%d" .Level }} := errgroup.WithContext({{ parentCtx .Level }})
+{{- range .Resolver.Starts }}
 s.goWithRecover(eg, func() (interface{}, error) {
-	{{- template "resolverGroup" (map "ID" $i "Ctx" $ctx "Resolver" $r) }}
+	{{- template "resolverGroup" (map "Level" (add $.Level 1) "Resolver" .) }}
 	return nil, nil
 })
 {{- end }}
@@ -713,17 +712,17 @@ if err := eg.Wait(); err != nil {
 	return nil, err
 }
 {{- if .Resolver.ExistsEnd }}
-{{ template "messageResolver" (map "Ctx" .Ctx "Resolver" .Resolver.End) }}
+{{ template "messageResolver" (map "Ctx" (parentCtx .Level) "Resolver" .Resolver.End) }}
 {{- end }}
 
 {{- else }}
 
 {{- if .Resolver.ExistsStart }}
-{{ template "resolverGroup"  (map "ID" 0 "Ctx" .Ctx "Resolver" .Resolver.Start) }}
+{{ template "resolverGroup"  (map "Level" .Level "Resolver" .Resolver.Start) }}
 {{- end }}
 
 {{- if .Resolver.ExistsEnd }}
-{{ template "messageResolver" (map "Ctx" .Ctx "Resolver" .Resolver.End) }}
+{{ template "messageResolver" (map "Ctx" (parentCtx .Level) "Resolver" .Resolver.End) }}
 {{- end }}
 
 {{- end }}

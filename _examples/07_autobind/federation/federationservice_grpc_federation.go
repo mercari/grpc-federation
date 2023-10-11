@@ -352,7 +352,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	   _org_federation_User ─┐
 	                GetPost ─┤
 	*/
-	eg, egCtx := errgroup.WithContext(ctx)
+	eg, ctx1 := errgroup.WithContext(ctx)
 
 	s.goWithRecover(eg, func() (interface{}, error) {
 
@@ -372,7 +372,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				UserId: "foo", // { name: "user_id", string: "foo" }
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(egCtx, args)
+			return s.resolve_Org_Federation_User(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -400,10 +400,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Id: req.Id, // { field: "id", by: "$.id" }
 			}
 			valueMu.RUnlock()
-			return s.client.Post_PostServiceClient.GetPost(egCtx, args)
+			return s.client.Post_PostServiceClient.GetPost(ctx1, args)
 		})
 		if err != nil {
-			if err := s.errorHandler(egCtx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
+			if err := s.errorHandler(ctx1, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
 				return nil, err
 			}
 		}

@@ -381,7 +381,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   GetContent ─┐
 	     content2 ─┤
 	*/
-	eg, egCtx := errgroup.WithContext(ctx)
+	eg, ctx1 := errgroup.WithContext(ctx)
 
 	s.goWithRecover(eg, func() (interface{}, error) {
 
@@ -473,10 +473,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				MessagesField:    []*content.Content{&content.Content{}, &content.Content{}},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 // { field: "messages_field", messages: [{ name: "content.Content", fields: [] }, { name: "content.Content", fields: [] }] }
 			}
 			valueMu.RUnlock()
-			return s.client.Content_ContentServiceClient.GetContent(egCtx, args)
+			return s.client.Content_ContentServiceClient.GetContent(ctx1, args)
 		})
 		if err != nil {
-			if err := s.errorHandler(egCtx, FederationService_DependentMethod_Content_ContentService_GetContent, err); err != nil {
+			if err := s.errorHandler(ctx1, FederationService_DependentMethod_Content_ContentService_GetContent, err); err != nil {
 				return nil, err
 			}
 		}
@@ -578,7 +578,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				MessagesField:    []*Content{&Content{}, &Content{}},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // { name: "messages_field", messages: [{ name: "org.federation.Content", fields: [] }, { name: "org.federation.Content", fields: [] }] }
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_Content(egCtx, args)
+			return s.resolve_Org_Federation_Content(ctx1, args)
 		})
 		if err != nil {
 			return nil, err

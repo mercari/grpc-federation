@@ -1879,7 +1879,9 @@ func loadTemplate(path string) (*template.Template, error) {
 	}
 	tmpl, err := template.New("").Funcs(
 		map[string]any{
-			"map": CreateMap,
+			"add":       Add,
+			"map":       CreateMap,
+			"parentCtx": ParentCtx,
 		},
 	).Parse(string(tmplContent))
 	if err != nil {

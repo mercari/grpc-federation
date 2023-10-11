@@ -22,3 +22,22 @@ func CreateMap(pairs ...any) (map[string]any, error) {
 	}
 	return m, nil
 }
+
+// ParentCtx creates parent context name from the given level.
+func ParentCtx(level int) (string, error) {
+	if level <= 0 {
+		return "", errors.New("level cannot be less than or equal to 0")
+	}
+
+	// the level 0 (root) context should be ctx, not ctx0
+	if level == 1 {
+		return "ctx", nil
+	}
+
+	return fmt.Sprintf("ctx%d", level-1), nil
+}
+
+// Add adds two numbers.
+func Add(n1, n2 int) int {
+	return n1 + n2
+}

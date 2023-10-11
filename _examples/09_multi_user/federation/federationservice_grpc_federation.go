@@ -340,7 +340,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   uid ─┐      │
 	        user2 ─┤
 	*/
-	eg, egCtx := errgroup.WithContext(ctx)
+	eg, ctx1 := errgroup.WithContext(ctx)
 
 	s.goWithRecover(eg, func() (interface{}, error) {
 
@@ -357,7 +357,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				Client: s.client,
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_UserID(egCtx, args)
+			return s.resolve_Org_Federation_UserID(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -382,7 +382,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				UserId: valueUid.GetValue(), // { name: "user_id", by: "uid.value" }
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(egCtx, args)
+			return s.resolve_Org_Federation_User(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -409,7 +409,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				Client: s.client,
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_UserID(egCtx, args)
+			return s.resolve_Org_Federation_UserID(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -434,7 +434,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				UserId: valueUid.GetValue(), // { name: "user_id", by: "uid.value" }
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(egCtx, args)
+			return s.resolve_Org_Federation_User(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -495,7 +495,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	   _org_federation_Sub ─┐
 	               GetUser ─┤
 	*/
-	eg, egCtx := errgroup.WithContext(ctx)
+	eg, ctx1 := errgroup.WithContext(ctx)
 
 	s.goWithRecover(eg, func() (interface{}, error) {
 
@@ -512,7 +512,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				Client: s.client,
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_Sub(egCtx, args)
+			return s.resolve_Org_Federation_Sub(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -540,10 +540,10 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				Id: req.UserId, // { field: "id", by: "$.user_id" }
 			}
 			valueMu.RUnlock()
-			return s.client.User_UserServiceClient.GetUser(egCtx, args)
+			return s.client.User_UserServiceClient.GetUser(ctx1, args)
 		})
 		if err != nil {
-			if err := s.errorHandler(egCtx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
+			if err := s.errorHandler(ctx1, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
 				return nil, err
 			}
 		}
