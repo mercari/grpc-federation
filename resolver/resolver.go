@@ -2062,10 +2062,11 @@ func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.Fil
 		if field.Type.Repeated {
 			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 		}
+		typ := field.Type.Type
 		msg.Field = append(msg.Field, &descriptorpb.FieldDescriptorProto{
 			Name:     proto.String(field.Name),
 			Number:   proto.Int32(int32(idx) + 1),
-			Type:     &field.Type.Type,
+			Type:     &typ,
 			TypeName: proto.String(typeName),
 			Label:    &label,
 		})
