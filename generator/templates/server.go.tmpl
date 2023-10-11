@@ -373,14 +373,14 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- $msgResolvers := .MessageResolvers }}
 	{{- $msgResolversLen := len $msgResolvers }}
 	{{- if eq $msgResolversLen 1 }}
-	{{- template "resolverGroup" (map "Ctx" "ctx" "Resolver" (index $msgResolvers 0)) }}
+	{{- template "resolverGroup" (map "ID" 0 "Ctx" "ctx" "Resolver" (index $msgResolvers 0)) }}
 	{{- else }}
 	{{- if $msgResolvers }}
 	eg, egCtx := errgroup.WithContext(ctx)
 	{{- end }}
-	{{ range $msgResolvers }}
+	{{ range $i, $r := $msgResolvers }}
 	s.goWithRecover(eg, func() (interface{}, error) {
-		{{- template "resolverGroup" (map "Ctx" "egCtx" "Resolver" .) }}
+		{{- template "resolverGroup" (map "ID" $i "Ctx" "egCtx" "Resolver" $r) }}
 		return nil, nil
 	})
 	{{ end }}
@@ -701,10 +701,11 @@ valueMu.Unlock()
 
 {{- define "resolverGroup" }}
 {{- if .Resolver.IsConcurrent }}
-eg, egCtx := errgroup.WithContext({{ .Ctx }})
-{{- range .Resolver.Starts }}
+{{- $ctx := printf "%s%d" .Ctx .ID }}
+eg, {{ $ctx }} := errgroup.WithContext({{ .Ctx }})
+{{- range $i, $r := .Resolver.Starts }}
 s.goWithRecover(eg, func() (interface{}, error) {
-	{{- template "resolverGroup" (map "Ctx" "egCtx" "Resolver" .) }}
+	{{- template "resolverGroup" (map "ID" $i "Ctx" $ctx "Resolver" $r) }}
 	return nil, nil
 })
 {{- end }}
@@ -718,7 +719,7 @@ if err := eg.Wait(); err != nil {
 {{- else }}
 
 {{- if .Resolver.ExistsStart }}
-{{ template "resolverGroup"  (map "Ctx" .Ctx "Resolver" .Resolver.Start) }}
+{{ template "resolverGroup"  (map "ID" 0 "Ctx" .Ctx "Resolver" .Resolver.Start) }}
 {{- end }}
 
 {{- if .Resolver.ExistsEnd }}
