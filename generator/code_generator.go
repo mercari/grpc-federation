@@ -1933,7 +1933,13 @@ func loadTemplate(path string) (*template.Template, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read template: %w", err)
 	}
-	tmpl, err := template.New("").Parse(string(tmplContent))
+	tmpl, err := template.New("").Funcs(
+		map[string]any{
+			"add":       Add,
+			"map":       CreateMap,
+			"parentCtx": ParentCtx,
+		},
+	).Parse(string(tmplContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template %s: %w", path, err)
 	}

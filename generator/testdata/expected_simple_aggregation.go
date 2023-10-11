@@ -626,7 +626,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	            user ─┤
 	               z ─┤
 	*/
-	eg, ctx := errgroup.WithContext(ctx)
+	eg, ctx1 := errgroup.WithContext(ctx)
 
 	s.goWithRecover(eg, func() (interface{}, error) {
 
@@ -644,7 +644,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Client: s.client,
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_M(ctx, args)
+			return s.resolve_Org_Federation_M(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -680,17 +680,17 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				args.Id = _value.(string)
 			}
 			valueMu.RUnlock()
-			return withTimeoutFederationService[post.GetPostResponse](ctx, "org.post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
+			return withTimeoutFederationService[post.GetPostResponse](ctx1, "org.post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
 				var b backoff.BackOff = backoff.NewConstantBackOff(2000000000 /* 2s */)
 				b = backoff.WithMaxRetries(b, 3)
-				b = backoff.WithContext(b, ctx)
+				b = backoff.WithContext(b, ctx1)
 				return withRetryFederationService[post.GetPostResponse](b, func() (*post.GetPostResponse, error) {
-					return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
+					return s.client.Org_Post_PostServiceClient.GetPost(ctx1, args)
 				})
 			})
 		})
 		if err != nil {
-			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
+			if err := s.errorHandler(ctx1, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
 				return nil, err
 			}
 		}
@@ -727,7 +727,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				args.UserId = _inlineValue.GetUserId()
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(ctx, args)
+			return s.resolve_Org_Federation_User(ctx1, args)
 		})
 		if err != nil {
 			return nil, err
@@ -756,7 +756,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Client: s.client,
 			}
 			valueMu.RUnlock()
-			return s.resolve_Org_Federation_Z(ctx, args)
+			return s.resolve_Org_Federation_Z(ctx1, args)
 		}); err != nil {
 			return nil, err
 		}
