@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/mercari/grpc-federation/types"
 )
 
@@ -22,7 +23,7 @@ func NewMessageType(msg *Message, repeated bool) *Type {
 func newMessageArgument(msg *Message) *Message {
 	file := *msg.File
 	file.Package = &Package{
-		Name:  "grpc.federation.private",
+		Name:  federation.PrivatePackageName,
 		Files: Files{&file},
 	}
 	arg := &Message{

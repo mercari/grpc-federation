@@ -1927,7 +1927,10 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *Value) err
 	if value.CEL == nil {
 		return nil
 	}
-	expr := strings.Replace(value.CEL.Expr, "$", "__ARG__", -1)
+	if strings.Contains(value.CEL.Expr, federation.MessageArgumentVariableName) {
+		return fmt.Errorf("%q is a reserved keyword and cannot be used as a variable name", federation.MessageArgumentVariableName)
+	}
+	expr := strings.Replace(value.CEL.Expr, "$", federation.MessageArgumentVariableName, -1)
 	ast, issues := env.Compile(expr)
 	if issues.Err() != nil {
 		return issues.Err()
@@ -1951,7 +1954,7 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.StdLib(),
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
-		cel.Variable("__ARG__", cel.ObjectType(arg.FQDN())),
+		cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(arg.FQDN())),
 	}
 	if msg.Rule != nil && msg.Rule.MethodCall != nil && msg.Rule.MethodCall.Response != nil {
 		resType := msg.Rule.MethodCall.Response.Type
@@ -2073,7 +2076,7 @@ func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.Fil
 	}
 	return &descriptorpb.FileDescriptorProto{
 		Name:             proto.String(arg.Name),
-		Package:          proto.String("grpc.federation.private"),
+		Package:          proto.String(federation.PrivatePackageName),
 		Dependency:       append(desc.Dependency, arg.File.Name),
 		PublicDependency: desc.PublicDependency,
 		WeakDependency:   desc.WeakDependency,

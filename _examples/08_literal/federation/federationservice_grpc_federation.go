@@ -19,6 +19,7 @@ import (
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -156,7 +157,7 @@ type Org_Federation_GetResponseArgument struct {
 type FederationServiceCELTypeHelper struct {
 	celRegistry    *celtypes.Registry
 	structFieldMap map[string]map[string]*celtypes.FieldType
-	mapMu          sync.Mutex
+	mapMu          sync.RWMutex
 }
 
 func (h *FederationServiceCELTypeHelper) TypeProvider() celtypes.Provider {
@@ -179,8 +180,8 @@ func (h *FederationServiceCELTypeHelper) FindStructType(structType string) (*cel
 	if st, found := h.celRegistry.FindStructType(structType); found {
 		return st, found
 	}
-	h.mapMu.Lock()
-	defer h.mapMu.Unlock()
+	h.mapMu.RLock()
+	defer h.mapMu.RUnlock()
 	if _, exists := h.structFieldMap[structType]; exists {
 		return celtypes.NewObjectType(structType), true
 	}
@@ -192,8 +193,8 @@ func (h *FederationServiceCELTypeHelper) FindStructFieldNames(structType string)
 		return names, found
 	}
 
-	h.mapMu.Lock()
-	defer h.mapMu.Unlock()
+	h.mapMu.RLock()
+	defer h.mapMu.RUnlock()
 	fieldMap, exists := h.structFieldMap[structType]
 	if !exists {
 		return nil, false
@@ -211,8 +212,8 @@ func (h *FederationServiceCELTypeHelper) FindStructFieldType(structType, fieldNa
 		return field, found
 	}
 
-	h.mapMu.Lock()
-	defer h.mapMu.Unlock()
+	h.mapMu.RLock()
+	defer h.mapMu.RUnlock()
 	fieldMap, exists := h.structFieldMap[structType]
 	if !exists {
 		return nil, false
@@ -446,7 +447,7 @@ func (s *FederationService) evalCEL(expr string, vars []cel.EnvOption, args map[
 	if err != nil {
 		return nil, err
 	}
-	expr = strings.Replace(expr, "$", "__ARG__", -1)
+	expr = strings.Replace(expr, "$", grpcfed.MessageArgumentVariableName, -1)
 	ast, iss := env.Compile(expr)
 	if iss.Err() != nil {
 		return nil, iss.Err()
@@ -524,8 +525,8 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 // resolve_Org_Federation_Content resolve "org.federation.Content" message.
 func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, req *Org_Federation_ContentArgument) (*Content, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.Content", slog.Any("message_args", s.logvalue_Org_Federation_ContentArgument(req)))
-	envOpts := []cel.EnvOption{cel.Variable("__ARG__", cel.ObjectType("grpc.federation.private.ContentArgument"))}
-	evalValues := map[string]any{"__ARG__": req}
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.ContentArgument"))}
+	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 
 	// create a message value to be returned.
 	ret := &Content{}
@@ -841,8 +842,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		valueContent2 *Content
 		valueMu       sync.RWMutex
 	)
-	envOpts := []cel.EnvOption{cel.Variable("__ARG__", cel.ObjectType("grpc.federation.private.GetResponseArgument"))}
-	evalValues := map[string]any{"__ARG__": req}
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.GetResponseArgument"))}
+	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 	// A tree view of message dependencies is shown below.
 	/*
 	   GetContent ─┐

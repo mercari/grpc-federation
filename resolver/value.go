@@ -31,7 +31,7 @@ func (v *Value) ReferenceNames() []string {
 
 	var refNames []string
 	for _, ref := range v.CEL.CheckedExpr.ReferenceMap {
-		if ref.Name == "__ARG__" {
+		if ref.Name == federation.MessageArgumentVariableName {
 			continue
 		}
 		refNames = append(refNames, ref.Name)
