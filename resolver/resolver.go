@@ -1,12 +1,16 @@
 package resolver
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/google/cel-go/cel"
+	celtypes "github.com/google/cel-go/common/types"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
@@ -16,39 +20,46 @@ import (
 
 type Resolver struct {
 	files                      []*descriptorpb.FileDescriptorProto
+	celRegistry                *CELRegistry
 	defToFileMap               map[*descriptorpb.FileDescriptorProto]*File
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
-	serviceToRuleMap           map[*Service]*federation.ServiceRule
-	methodToRuleMap            map[*Method]*federation.MethodRule
-	messageToRuleMap           map[*Message]*federation.MessageRule
-	enumToRuleMap              map[*Enum]*federation.EnumRule
-	enumValueToRuleMap         map[*EnumValue]*federation.EnumValueRule
-	fieldToRuleMap             map[*Field]*federation.FieldRule
-	oneofToRuleMap             map[*Oneof]*federation.OneofRule
-	cachedMessageMap           map[string]*Message
-	cachedEnumMap              map[string]*Enum
-	cachedMethodMap            map[string]*Method
-	cachedServiceMap           map[string]*Service
+
+	serviceToRuleMap   map[*Service]*federation.ServiceRule
+	methodToRuleMap    map[*Method]*federation.MethodRule
+	messageToRuleMap   map[*Message]*federation.MessageRule
+	enumToRuleMap      map[*Enum]*federation.EnumRule
+	enumValueToRuleMap map[*EnumValue]*federation.EnumValueRule
+	fieldToRuleMap     map[*Field]*federation.FieldRule
+	oneofToRuleMap     map[*Oneof]*federation.OneofRule
+
+	cachedMessageMap map[string]*Message
+	cachedEnumMap    map[string]*Enum
+	cachedMethodMap  map[string]*Method
+	cachedServiceMap map[string]*Service
 }
 
 func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
+	msgMap := make(map[string]*Message)
 	return &Resolver{
 		files:                      files,
+		celRegistry:                newCELRegistry(msgMap),
+		defToFileMap:               make(map[*descriptorpb.FileDescriptorProto]*File),
 		protoPackageNameToFileDefs: make(map[string][]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToPackage:  make(map[string]*Package),
-		defToFileMap:               make(map[*descriptorpb.FileDescriptorProto]*File),
-		serviceToRuleMap:           make(map[*Service]*federation.ServiceRule),
-		methodToRuleMap:            make(map[*Method]*federation.MethodRule),
-		messageToRuleMap:           make(map[*Message]*federation.MessageRule),
-		enumToRuleMap:              make(map[*Enum]*federation.EnumRule),
-		enumValueToRuleMap:         make(map[*EnumValue]*federation.EnumValueRule),
-		fieldToRuleMap:             make(map[*Field]*federation.FieldRule),
-		oneofToRuleMap:             make(map[*Oneof]*federation.OneofRule),
-		cachedMessageMap:           make(map[string]*Message),
-		cachedEnumMap:              make(map[string]*Enum),
-		cachedMethodMap:            make(map[string]*Method),
-		cachedServiceMap:           make(map[string]*Service),
+
+		serviceToRuleMap:   make(map[*Service]*federation.ServiceRule),
+		methodToRuleMap:    make(map[*Method]*federation.MethodRule),
+		messageToRuleMap:   make(map[*Message]*federation.MessageRule),
+		enumToRuleMap:      make(map[*Enum]*federation.EnumRule),
+		enumValueToRuleMap: make(map[*EnumValue]*federation.EnumValueRule),
+		fieldToRuleMap:     make(map[*Field]*federation.FieldRule),
+		oneofToRuleMap:     make(map[*Oneof]*federation.OneofRule),
+
+		cachedMessageMap: msgMap,
+		cachedEnumMap:    make(map[string]*Enum),
+		cachedMethodMap:  make(map[string]*Method),
+		cachedServiceMap: make(map[string]*Service),
 	}
 }
 
@@ -80,21 +91,27 @@ func (r *Resolver) ResolveWellknownFiles() (Files, error) {
 }
 
 func (r *Resolver) Resolve() (*Result, error) {
+	if err := r.celRegistry.RegisterFiles(r.files...); err != nil {
+		return nil, err
+	}
 	// In order to return multiple errors with source code location information,
 	// we add all errors to the context when they occur.
 	// Therefore, functions called from Resolve() do not return errors directly.
 	// Instead, it must return all errors captured by context in ctx.error().
 	ctx := newContext()
 
-	r.resolvePackageAndFileReference(ctx, append(r.files, stdFileDescriptors()...))
+	r.resolvePackageAndFileReference(ctx, r.files)
+
 	files := r.resolveFiles(ctx)
+
 	r.resolveRule(ctx, files)
 
 	if !r.existsServiceRule(files) {
 		return &Result{Warnings: ctx.warnings()}, ctx.error()
 	}
 
-	r.resolveMessageArgumentReference(ctx, files)
+	r.resolveMessageArgument(ctx, files)
+	r.resolveMessageRuleDependencies(ctx, files)
 
 	services := r.servicesWithRule(ctx, files)
 	return &Result{Services: services, Warnings: ctx.warnings()}, ctx.error()
@@ -122,6 +139,7 @@ func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descrip
 			file.GoPackage = gopkg
 		}
 		file.Package = pkg
+		file.Desc = fileDef
 		pkg.Files = append(pkg.Files, file)
 
 		r.defToFileMap[fileDef] = file
@@ -133,6 +151,7 @@ func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descrip
 	}
 }
 
+// resolveFiles resolve all references except custom option.
 func (r *Resolver) resolveFiles(ctx *context) []*File {
 	files := make([]*File, 0, len(r.files))
 	for _, fileDef := range r.files {
@@ -220,7 +239,7 @@ func (r *Resolver) validateMethodResponse(ctx *context, service *Service) {
 		if response.Rule == nil {
 			ctx.addError(
 				ErrWithLocation(
-					fmt.Sprintf(`"%s.%s" message needs to specify "grpc.federation.message" option`, response.Package().Name, response.Name),
+					fmt.Sprintf(`"%s.%s" message needs to specify "grpc.federation.message" option`, response.PackageName(), response.Name),
 					source.MessageLocation(ctx.fileName(), response.Name),
 				),
 			)
@@ -514,68 +533,13 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 	return enum
 }
 
-type nameReference struct {
-	nameToBaseTypeMap   map[string]*Type
-	nameToFieldTypeMap  map[string]*Type
-	nameToDepMap        map[string]*MessageDependency
-	nameToResponseField map[string]*ResponseField
-}
-
-func (r *nameReference) setBaseType(name string, ref *Type) {
-	r.nameToBaseTypeMap[name] = ref
-}
-
-func (r *nameReference) setFieldType(name string, ref *Type) {
-	r.nameToFieldTypeMap[name] = ref
-}
-
-func (r *nameReference) setMessageDependency(name string, dep *MessageDependency) {
-	r.nameToDepMap[name] = dep
-}
-
-func (r *nameReference) setResponseField(name string, field *ResponseField) {
-	r.nameToResponseField[name] = field
-}
-
-func (r *nameReference) getBaseType(name string) *Type {
-	return r.nameToBaseTypeMap[name]
-}
-
-func (r *nameReference) getFieldType(name string) *Type {
-	return r.nameToFieldTypeMap[name]
-}
-
-func (r *nameReference) use(name string) {
-	if dep, exists := r.nameToDepMap[name]; exists {
-		if dep.Name == "" {
-			return
-		}
-		dep.Used = true
-	}
-	if field, exists := r.nameToResponseField[name]; exists {
-		field.Used = true
-	}
-}
-
-func newNameReference() *nameReference {
-	return &nameReference{
-		nameToBaseTypeMap:   make(map[string]*Type),
-		nameToFieldTypeMap:  make(map[string]*Type),
-		nameToDepMap:        make(map[string]*MessageDependency),
-		nameToResponseField: make(map[string]*ResponseField),
-	}
-}
-
+// resolveRule resolve the rule defined in grpc.federation custom option.
 func (r *Resolver) resolveRule(ctx *context, files []*File) {
 	for _, file := range files {
 		ctx := ctx.withFile(file)
 		r.resolveServiceRules(ctx, file.Services)
 		r.resolveMessageRules(ctx, file.Messages)
 		r.resolveEnumRules(ctx, file.Enums)
-	}
-	for _, file := range files {
-		ctx := ctx.withFile(file)
-		r.validateMessages(ctx, file.Messages)
 	}
 }
 
@@ -596,9 +560,8 @@ func (r *Resolver) resolveMethodRules(ctx *context, mtds []*Method) {
 func (r *Resolver) resolveMessageRules(ctx *context, msgs []*Message) {
 	for _, msg := range msgs {
 		ctx := ctx.withMessage(msg)
-		nameRef := newNameReference()
-		r.resolveMessageRule(ctx, msg, r.messageToRuleMap[msg], nameRef)
-		r.resolveFieldRules(ctx, msg, nameRef)
+		r.resolveMessageRule(ctx, msg, r.messageToRuleMap[msg])
+		r.resolveFieldRules(ctx, msg)
 		r.resolveEnumRules(ctx, msg.Enums)
 		r.resolveAutoBindFields(ctx, msg)
 		if msg.HasRule() {
@@ -612,9 +575,9 @@ func (r *Resolver) resolveMessageRules(ctx *context, msgs []*Message) {
 	}
 }
 
-func (r *Resolver) resolveFieldRules(ctx *context, msg *Message, nameRef *nameReference) {
+func (r *Resolver) resolveFieldRules(ctx *context, msg *Message) {
 	for _, field := range msg.Fields {
-		field.Rule = r.resolveFieldRule(ctx, msg, field, r.fieldToRuleMap[field], nameRef)
+		field.Rule = r.resolveFieldRule(ctx, msg, field, r.fieldToRuleMap[field])
 	}
 }
 
@@ -717,7 +680,7 @@ func (r *Resolver) validateName(name string) error {
 
 func (r *Resolver) validateMessages(ctx *context, msgs []*Message) {
 	for _, msg := range msgs {
-		ctx := ctx.withMessage(msg)
+		ctx := ctx.withFile(msg.File).withMessage(msg)
 		r.validateMessageFields(ctx, msg)
 		r.validateMessages(ctx, msg.NestedMessages)
 	}
@@ -749,13 +712,7 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 		}
 		rule := field.Rule
 		if rule.Value != nil {
-			value := rule.Value
-			switch {
-			case value.Literal != nil:
-				r.validateBindFieldType(ctx, value.Literal.Type, field)
-			case value.Filtered != nil:
-				r.validateBindFieldType(ctx, value.Filtered, field)
-			}
+			r.validateBindFieldType(ctx, rule.Value.Type(), field)
 		}
 		if rule.Alias != nil {
 			r.validateBindFieldType(ctx, rule.Alias.Type, field)
@@ -767,6 +724,9 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 }
 
 func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *Field) {
+	if fromType == nil || toField == nil {
+		return
+	}
 	toType := toField.Type
 	if fromType.Type == types.Message {
 		if fromType.Ref == nil || toType.Ref == nil {
@@ -912,26 +872,18 @@ func (r *Resolver) resolveMethodRule(ctx *context, def *federation.MethodRule) *
 	return rule
 }
 
-func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *federation.MessageRule, nameRef *nameReference) {
+func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *federation.MessageRule) {
 	if ruleDef == nil {
 		return
 	}
 	methodCall := r.resolveMethodCall(ctx, ruleDef.Resolver)
 	msgs := r.resolveMessages(ctx, msg, ruleDef.Messages)
-
-	// When creating the graph, we need to reference the arguments by name,
-	// so we need to resolve Value.Ref of all arguments before creating the graph.
-	r.resolveValueNameReference(ctx, methodCall, msgs, nameRef)
-
 	msg.Rule = &MessageRule{
 		MethodCall:          methodCall,
 		MessageDependencies: msgs,
 		CustomResolver:      ruleDef.GetCustomResolver(),
 		Alias:               r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
-	}
-	if graph := CreateMessageRuleDependencyGraph(ctx, msg, msg.Rule); graph != nil {
-		msg.Rule.DependencyGraph = graph
-		msg.Rule.Resolvers = graph.MessageResolverGroups(ctx)
+		DependencyGraph:     &MessageRuleDependencyGraph{},
 	}
 }
 
@@ -956,7 +908,7 @@ func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message 
 	return r.resolveMessage(ctx, ctx.file().Package, aliasName)
 }
 
-func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ruleDef *federation.FieldRule, nameRef *nameReference) *FieldRule {
+func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ruleDef *federation.FieldRule) *FieldRule {
 	if ruleDef == nil {
 		if msg.Rule == nil {
 			return nil
@@ -982,16 +934,6 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 			),
 		)
 		return nil
-	}
-	if value != nil {
-		if err := r.setValueNameReference(value, nameRef); err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.MessageFieldByLocation(ctx.fileName(), ctx.messageName(), field.Name),
-				),
-			)
-		}
 	}
 	return &FieldRule{
 		Value:          value,
@@ -1586,7 +1528,7 @@ func (r *Resolver) resolveMessages(ctx *context, baseMsg *Message, msgs []*feder
 		}
 		args := make([]*Argument, 0, len(msgDef.GetArgs()))
 		for idx, argDef := range msgDef.GetArgs() {
-			args = append(args, r.resolveMessageArgument(ctx.withArgIndex(idx), argDef))
+			args = append(args, r.resolveMessageDependencyArgument(ctx.withArgIndex(idx), argDef))
 		}
 
 		name := msgDef.GetName()
@@ -1610,7 +1552,7 @@ func (r *Resolver) resolveMessages(ctx *context, baseMsg *Message, msgs []*feder
 	return deps
 }
 
-func (r *Resolver) resolveMessageArgument(ctx *context, argDef *federation.Argument) *Argument {
+func (r *Resolver) resolveMessageDependencyArgument(ctx *context, argDef *federation.Argument) *Argument {
 	value, err := r.resolveValue(ctx, argumentToCommonValueDef(argDef))
 	if err != nil {
 		switch {
@@ -1658,7 +1600,7 @@ func (r *Resolver) resolveMessageArgument(ctx *context, argDef *federation.Argum
 	}
 }
 
-func (r *Resolver) resolveMessageLiteral(ctx *context, val *federation.MessageValue) (*Type, map[string]*Value, error) {
+func (r *Resolver) resolveMessageConstValue(ctx *context, val *federation.MessageValue) (*Type, map[string]*Value, error) {
 	msgName := val.GetName()
 	t, err := r.resolveType(
 		ctx,
@@ -1687,7 +1629,7 @@ func (r *Resolver) resolveMessageLiteral(ctx *context, val *federation.MessageVa
 	return t, fieldMap, nil
 }
 
-func (r *Resolver) resolveEnumValueLiteral(ctx *context, enumValueName string) (*EnumValue, error) {
+func (r *Resolver) resolveEnumConstValue(ctx *context, enumValueName string) (*EnumValue, error) {
 	pkg, err := r.lookupPackageFromTypeName(ctx, enumValueName)
 	if err != nil {
 		return nil, err
@@ -1752,178 +1694,134 @@ func (r *Resolver) lookupEnumValueFromMessage(name string, msg *Message) *EnumVa
 	return nil
 }
 
-func (r *Resolver) resolvePath(pathString string) (Path, PathType, error) {
-	if pathString == "" {
-		return nil, UnknownPathType, nil
-	}
-	path, err := NewPathBuilder(pathString).Build()
-	if err != nil {
-		return nil, UnknownPathType, err
-	}
-	if pathString[0] == '$' {
-		return path, MessageArgumentPathType, nil
-	}
-	return path, NameReferencePathType, nil
-}
-
-func (r *Resolver) resolveValueNameReference(ctx *context, methodCall *MethodCall, depMessages []*MessageDependency, nameRef *nameReference) {
-	if methodCall != nil && methodCall.Response != nil {
-		for _, resField := range methodCall.Response.Fields {
-			if resField.Name == "" {
-				continue
-			}
-			resType := methodCall.Response.Type
-			nameRef.setBaseType(resField.Name, &Type{
-				Type: types.Message,
-				Ref:  resType,
-			})
-			nameRef.setResponseField(resField.Name, resField)
-			if resField.FieldName != "" {
-				field := resType.Field(resField.FieldName)
-				if field == nil {
-					// The case of an invalid field in the response field has already been verified in the `resolveResponse()`,
-					// so there is no need to add the error to context here.
-					continue
-				}
-				nameRef.setFieldType(resField.Name, field.Type)
-			} else {
-				nameRef.setFieldType(resField.Name, nameRef.getBaseType(resField.Name))
-			}
-		}
-	}
-	for _, depMessage := range depMessages {
-		msg := depMessage.Message
-		typ := &Type{Type: types.Message, Ref: msg}
-		nameRef.setBaseType(depMessage.Name, typ)
-		nameRef.setFieldType(depMessage.Name, typ)
-		nameRef.setMessageDependency(depMessage.Name, depMessage)
-	}
-	if methodCall != nil && methodCall.Request != nil {
-		for idx, arg := range methodCall.Request.Args {
-			if err := r.setValueNameReference(arg.Value, nameRef); err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						source.RequestByLocation(ctx.fileName(), ctx.messageName(), idx),
-					),
-				)
-			}
-		}
-	}
-	for depIdx, depMessage := range depMessages {
-		for argIdx, arg := range depMessage.Args {
-			if err := r.setValueNameReference(arg.Value, nameRef); err != nil {
-				if arg.Value.Inline {
-					ctx.addError(
-						ErrWithLocation(
-							err.Error(),
-							source.MessageDependencyArgumentInlineLocation(
-								ctx.fileName(),
-								ctx.messageName(),
-								depIdx,
-								argIdx,
-							),
-						),
-					)
-				} else {
-					ctx.addError(
-						ErrWithLocation(
-							err.Error(),
-							source.MessageDependencyArgumentByLocation(
-								ctx.fileName(),
-								ctx.messageName(),
-								depIdx,
-								argIdx,
-							),
-						),
-					)
-				}
-			}
-		}
-	}
-}
-
-func (r *Resolver) setValueNameReference(value *Value, nameRef *nameReference) error {
-	if value == nil {
-		return nil
-	}
-	if value.Literal != nil && value.Literal.Type.Type == types.Message {
-		if err := r.setValueNameReferenceForMessageValue(value, nameRef); err != nil {
-			return err
-		}
-		return nil
-	}
-	if value.PathType != NameReferencePathType {
-		return nil
-	}
-	sels := value.Path.Selectors()
-	if len(sels) == 0 {
-		return fmt.Errorf("invalid path selector format. path selector does not exist")
-	}
-	name := sels[0]
-	typ := nameRef.getFieldType(name)
-	if typ == nil {
-		return fmt.Errorf(`%q name reference does not exist in this grpc.federation.message option`, name)
-	}
-	fieldType, err := value.Path.Type(&Type{
-		Type: types.Message,
-		Ref:  &Message{Fields: []*Field{{Name: name, Type: typ}}},
-	})
-	if err != nil {
-		return err
-	}
-	if value.Inline && fieldType.Ref == nil {
-		return fmt.Errorf(`inline keyword must refer to a message type. but %q is not a message type`, name)
-	}
-	nameRef.use(name)
-	value.Ref = nameRef.getBaseType(name)
-	value.Filtered = fieldType
-	return nil
-}
-
-func (r *Resolver) setValueNameReferenceForMessageValue(value *Value, nameRef *nameReference) error {
-	if value.Literal.Type.Repeated {
-		for _, v := range value.Literal.Value.([]map[string]*Value) {
-			if err := r.setValueNameReferenceForMessageFieldValue(v, nameRef); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	v := value.Literal.Value.(map[string]*Value)
-	if err := r.setValueNameReferenceForMessageFieldValue(v, nameRef); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *Resolver) setValueNameReferenceForMessageFieldValue(fields map[string]*Value, nameRef *nameReference) error {
-	for _, value := range fields {
-		if err := r.setValueNameReference(value, nameRef); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *Resolver) resolveValueMessageArgumentReference(ctx *context, msg *Message) {
-	if msg.Rule == nil {
+// resolveMessageArgument constructs message arguments using a dependency graph and assigns them to each message.
+func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
+	// create a dependency graph for all messages.
+	graph := CreateMessageDependencyGraph(ctx, r.allMessages(files))
+	if graph == nil {
 		return
 	}
-	ctx = ctx.withFile(msg.File)
-	ctx = ctx.withMessage(msg)
-	msgArg := &Type{
-		Type: types.Message,
-		Ref:  msg.Rule.MessageArgument,
+	for _, root := range graph.Roots {
+		reqMsg := r.lookupRequestMessageFromResponseMessage(root.Message)
+		if reqMsg == nil {
+			continue
+		}
+		msgArg := newMessageArgument(root.Message)
+		msgArg.Fields = append(msgArg.Fields, reqMsg.Fields...)
+		r.cachedMessageMap[msgArg.FQDN()] = msgArg
+		msgMap := make(map[string]*Message)
+		for _, msg := range r.resolveMessageArgumentRecursive(ctx, root) {
+			msgMap[msg.FQDN()] = msg
+		}
+		msgs := make([]*Message, 0, len(msgMap))
+		for _, msg := range msgMap {
+			msgs = append(msgs, msg)
+		}
+		sort.Slice(msgs, func(i, j int) bool {
+			return msgs[i].Name < msgs[j].Name
+		})
+		args := make([]*Message, 0, len(msgs))
+		for _, msg := range msgs {
+			args = append(args, msg.Rule.MessageArgument)
+		}
+		for _, svc := range root.Message.File.Services {
+			svc.MessageArgs = append(svc.MessageArgs, args...)
+			svc.Messages = append(svc.Messages, msgs...)
+		}
+	}
+}
+
+func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *MessageDependencyGraphNode) []*Message {
+	msg := node.Message
+	arg := msg.Rule.MessageArgument
+	fileDesc := r.messageArgumentFileDescriptor(arg)
+	if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				source.MessageLocation(msg.File.Name, msg.Name),
+			),
+		)
+		return nil
+	}
+	env, err := r.createCELEnv(msg)
+	if err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				source.MessageLocation(msg.File.Name, msg.Name),
+			),
+		)
+		return nil
+	}
+	r.resolveMessageCELValues(ctx, env, msg)
+
+	msgs := []*Message{msg}
+	msgToDepMap := make(map[*Message]*MessageDependency)
+	depToIdx := make(map[*MessageDependency]int)
+	for idx, dep := range msg.Rule.MessageDependencies {
+		msgToDepMap[dep.Message] = dep
+		depToIdx[dep] = idx
+	}
+	for _, child := range node.Children {
+		depMsg := child.Message
+		dep := msgToDepMap[depMsg]
+		depMsgArg := newMessageArgument(depMsg)
+		r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
+		argNameMap := make(map[string]struct{})
+		for argIdx, arg := range dep.Args {
+			if _, exists := argNameMap[arg.Name]; exists {
+				continue
+			}
+			if arg.Value == nil {
+				continue
+			}
+			fieldType := arg.Value.Type()
+			if fieldType == nil {
+				continue
+			}
+			if arg.Value.CEL != nil && arg.Value.CEL.Inline {
+				if fieldType.Type != types.Message {
+					ctx.addError(
+						ErrWithLocation(
+							"inline value is not message type",
+							source.MessageDependencyArgumentInlineLocation(
+								msg.File.Name,
+								msg.Name,
+								depToIdx[dep],
+								argIdx,
+							),
+						),
+					)
+					continue
+				}
+				depMsgArg.Fields = append(depMsgArg.Fields, fieldType.Ref.Fields...)
+			} else {
+				depMsgArg.Fields = append(depMsgArg.Fields, &Field{
+					Name: arg.Name,
+					Type: fieldType,
+				})
+			}
+			argNameMap[arg.Name] = struct{}{}
+		}
+		m := r.resolveMessageArgumentRecursive(ctx, child)
+		msgs = append(msgs, m...)
+	}
+	return msgs
+}
+
+func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Message) {
+	if msg.Rule == nil {
+		return
 	}
 	methodCall := msg.Rule.MethodCall
 	if methodCall != nil && methodCall.Request != nil {
 		for idx, arg := range methodCall.Request.Args {
-			if err := r.setValueMessageArgumentReference(arg.Value, msgArg); err != nil {
+			if err := r.resolveCELValue(ctx, env, arg.Value); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.RequestByLocation(ctx.fileName(), ctx.messageName(), idx),
+						source.RequestByLocation(msg.File.Name, msg.Name, idx),
 					),
 				)
 			}
@@ -1931,14 +1829,14 @@ func (r *Resolver) resolveValueMessageArgumentReference(ctx *context, msg *Messa
 	}
 	for depIdx, depMessage := range msg.Rule.MessageDependencies {
 		for argIdx, arg := range depMessage.Args {
-			if err := r.setValueMessageArgumentReference(arg.Value, msgArg); err != nil {
-				if arg.Value.Inline {
+			if err := r.resolveCELValue(ctx, env, arg.Value); err != nil {
+				if arg.Value.CEL != nil && arg.Value.CEL.Inline {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
 							source.MessageDependencyArgumentInlineLocation(
-								ctx.fileName(),
-								ctx.messageName(),
+								msg.File.Name,
+								msg.Name,
 								depIdx,
 								argIdx,
 							),
@@ -1949,8 +1847,8 @@ func (r *Resolver) resolveValueMessageArgumentReference(ctx *context, msg *Messa
 						ErrWithLocation(
 							err.Error(),
 							source.MessageDependencyArgumentByLocation(
-								ctx.fileName(),
-								ctx.messageName(),
+								msg.File.Name,
+								msg.Name,
 								depIdx,
 								argIdx,
 							),
@@ -1964,175 +1862,241 @@ func (r *Resolver) resolveValueMessageArgumentReference(ctx *context, msg *Messa
 		if !field.HasRule() {
 			continue
 		}
-		if err := r.setValueMessageArgumentReference(field.Rule.Value, msgArg); err != nil {
+		if err := r.resolveCELValue(ctx, env, field.Rule.Value); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MessageFieldLocation(
-						ctx.fileName(),
-						ctx.messageName(),
+					source.MessageFieldByLocation(
+						msg.File.Name,
+						msg.Name,
 						field.Name,
 					),
 				),
 			)
 		}
 	}
+
+	r.resolveUsedNameReference(msg)
 }
 
-func (r *Resolver) setValueMessageArgumentReference(value *Value, msgArg *Type) error {
+func (r *Resolver) resolveUsedNameReference(msg *Message) {
+	if msg.Rule == nil {
+		return
+	}
+	methodCall := msg.Rule.MethodCall
+	nameMap := make(map[string]struct{})
+	for _, name := range msg.ReferenceNames() {
+		nameMap[name] = struct{}{}
+	}
+	if methodCall != nil && methodCall.Response != nil {
+		for _, field := range methodCall.Response.Fields {
+			if _, exists := nameMap[field.Name]; exists {
+				field.Used = true
+			}
+		}
+	}
+	for _, depMessage := range msg.Rule.MessageDependencies {
+		if _, exists := nameMap[depMessage.Name]; exists {
+			depMessage.Used = true
+		}
+	}
+}
+
+func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *Value) error {
 	if value == nil {
 		return nil
 	}
-	if value.Literal != nil && value.Literal.Type.Type == types.Message {
-		if err := r.setValueMessageArgumentReferenceForMessageValue(value, msgArg); err != nil {
-			return err
+	if value.Const != nil && value.Const.Type.Type == types.Message {
+		if value.Const.Type.Repeated {
+			for _, msgValue := range value.Const.Value.([]map[string]*Value) {
+				for _, fieldValue := range msgValue {
+					if err := r.resolveCELValue(ctx, env, fieldValue); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
 		}
-		return nil
-	}
-	if value.PathType != MessageArgumentPathType {
-		return nil
-	}
-	fieldType, err := value.Path.Type(msgArg)
-	if err != nil {
-		return err
-	}
-	if value.Inline && fieldType.Ref == nil {
-		sels := value.Path.Selectors()
-		if len(sels) != 0 {
-			return fmt.Errorf(`inline keyword must refer to a message type. but %q is not a message type`, sels[0])
-		}
-		return fmt.Errorf("inline keyword must refer to a message type. but path selector is empty")
-	}
-	value.Ref = fieldType
-	value.Filtered = fieldType
-	return nil
-}
-
-func (r *Resolver) setValueMessageArgumentReferenceForMessageValue(value *Value, msgArg *Type) error {
-	if value.Literal.Type.Repeated {
-		for _, v := range value.Literal.Value.([]map[string]*Value) {
-			if err := r.setValueMessageArgumentReferenceForMessageFieldValue(v, msgArg); err != nil {
+		for _, fieldValue := range value.Const.Value.(map[string]*Value) {
+			if err := r.resolveCELValue(ctx, env, fieldValue); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	v := value.Literal.Value.(map[string]*Value)
-	if err := r.setValueMessageArgumentReferenceForMessageFieldValue(v, msgArg); err != nil {
+	if value.CEL == nil {
+		return nil
+	}
+	if strings.Contains(value.CEL.Expr, federation.MessageArgumentVariableName) {
+		return fmt.Errorf("%q is a reserved keyword and cannot be used as a variable name", federation.MessageArgumentVariableName)
+	}
+	expr := strings.Replace(value.CEL.Expr, "$", federation.MessageArgumentVariableName, -1)
+	ast, issues := env.Compile(expr)
+	if issues.Err() != nil {
+		return issues.Err()
+	}
+	out, err := r.fromCELType(ctx, ast.OutputType())
+	if err != nil {
 		return err
 	}
+	checkedExpr, err := cel.AstToCheckedExpr(ast)
+	if err != nil {
+		return err
+	}
+	value.CEL.Out = out
+	value.CEL.CheckedExpr = checkedExpr
 	return nil
 }
 
-func (r *Resolver) setValueMessageArgumentReferenceForMessageFieldValue(fields map[string]*Value, msgArg *Type) error {
-	for _, value := range fields {
-		if err := r.setValueMessageArgumentReference(value, msgArg); err != nil {
-			return err
-		}
+func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
+	arg := msg.Rule.MessageArgument
+	envOpts := []cel.EnvOption{
+		cel.StdLib(),
+		cel.CustomTypeAdapter(r.celRegistry),
+		cel.CustomTypeProvider(r.celRegistry),
+		cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(arg.FQDN())),
 	}
-	return nil
-}
-
-// resolveresolveMessageArgumentReference constructs message arguments using a dependency graph and assigns them to each message.
-func (r *Resolver) resolveMessageArgumentReference(ctx *context, files []*File) {
-	r.resolveMethodResponseMessageArgument(files)
-
-	// create a dependency graph for all messages.
-	graph := CreateMessageDependencyGraph(ctx, r.allMessages(files))
-	if graph == nil {
-		return
-	}
-	for _, root := range graph.Roots {
-		reqMsg := r.lookupRequestMessageFromResponseMessage(root.Message)
-		if reqMsg == nil {
-			continue
-		}
-		root.Message.Rule.MessageArgument = &Message{
-			File:   reqMsg.File,
-			Name:   fmt.Sprintf("%sArgument", root.Message.Name),
-			Fields: reqMsg.Fields,
-		}
-
-		msgMap := make(map[string]*Message)
-		for _, child := range root.Children {
-			for _, msg := range r.resolveMessageArgumentReferences(child, reqMsg) {
-				msgMap[msg.FQDN()] = msg
+	if msg.Rule != nil && msg.Rule.MethodCall != nil && msg.Rule.MethodCall.Response != nil {
+		resType := msg.Rule.MethodCall.Response.Type
+		for _, responseField := range msg.Rule.MethodCall.Response.Fields {
+			if responseField.Name == "" {
+				continue
 			}
-		}
-		msgs := make([]*Message, 0, len(msgMap))
-		for _, msg := range msgMap {
-			msgs = append(msgs, msg)
-		}
-		sort.Slice(msgs, func(i, j int) bool {
-			return msgs[i].Name < msgs[j].Name
-		})
-		args := make([]*Message, 0, len(msgs))
-		for _, msg := range msgs {
-			args = append(args, msg.Rule.MessageArgument)
-		}
-
-		msgsWithRootMsg := append([]*Message{root.Message}, msgs...)
-		for _, svc := range root.Message.File.Services {
-			svc.MessageArgs = append(svc.MessageArgs, args...)
-			svc.Messages = append(svc.Messages, msgsWithRootMsg...)
-		}
-		for _, msg := range msgsWithRootMsg {
-			r.resolveValueMessageArgumentReference(ctx, msg)
-		}
-	}
-}
-
-func (r *Resolver) resolveMethodResponseMessageArgument(files []*File) {
-	for _, file := range files {
-		for _, svc := range file.Services {
-			for _, method := range svc.Methods {
-				svc.MessageArgs = append(svc.MessageArgs, &Message{
-					File:   method.Request.File,
-					Name:   fmt.Sprintf("%sArgument", method.Response.Name),
-					Fields: method.Request.Fields,
-				})
+			typ := NewMessageType(resType, false)
+			if responseField.FieldName != "" {
+				field := resType.Field(responseField.FieldName)
+				if field == nil {
+					// The case of an invalid field in the response field has already been verified in the `resolveResponse()`,
+					// so there is no need to add the error to context here.
+					continue
+				}
+				typ = field.Type
 			}
+			envOpts = append(envOpts, cel.Variable(responseField.Name, ToCELType(typ)))
 		}
 	}
+	if msg.Rule != nil {
+		for _, dep := range msg.Rule.MessageDependencies {
+			if dep.Name == "" {
+				continue
+			}
+			envOpts = append(envOpts, cel.Variable(dep.Name, ToCELType(NewMessageType(dep.Message, false))))
+		}
+	}
+	env, err := cel.NewCustomEnv(envOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return env, nil
 }
 
-func (r *Resolver) resolveMessageArgumentReferences(node *MessageDependencyGraphNode, arg *Message) []*Message {
-	argType := &Type{
-		Type: types.Message,
-		Ref:  arg,
-	}
-	msg := node.Message
-	msgArg := &Message{
-		File:   msg.File,
-		Name:   fmt.Sprintf("%sArgument", msg.Name),
-		Fields: []*Field{},
-	}
-	node.Message.Rule.MessageArgument = msgArg
-	for _, expectedArg := range node.ExpectedMessageArguments() {
-		if expectedArg.Value == nil {
-			continue
+func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
+	switch typ.Kind() {
+	case celtypes.BoolKind:
+		return BoolType, nil
+	case celtypes.BytesKind:
+		return BytesType, nil
+	case celtypes.DoubleKind:
+		return DoubleType, nil
+	case celtypes.IntKind:
+		if enum, found := r.celRegistry.LookupEnum(typ); found {
+			return &Type{Type: types.Enum, Enum: enum}, nil
 		}
-		fields, err := expectedArg.Value.Fields(argType)
+		return Int64Type, nil
+	case celtypes.UintKind:
+		return Uint64Type, nil
+	case celtypes.StringKind:
+		return StringType, nil
+	case celtypes.AnyKind:
+		return AnyType, nil
+	case celtypes.DurationKind:
+		return DurationType, nil
+	case celtypes.TimestampKind:
+		return TimestampType, nil
+	case celtypes.MapKind:
+		mapKey, err := r.fromCELType(ctx, typ.Parameters()[0])
 		if err != nil {
-			// If an error occurs, the process of resolving the message argument is aborted.
-			// Errors that would have been returned here are re-verified in the subsequent `resolveValueMessageArgumentReference`
-			// and are properly handled with location information.
-			// Therefore, the error can be ignored here.
-			return nil
+			return nil, err
 		}
-		for _, field := range fields {
-			if field.Name == "" {
-				field.Name = expectedArg.Name
-			}
-			msgArg.Fields = append(msgArg.Fields, field)
+		mapValue, err := r.fromCELType(ctx, typ.Parameters()[1])
+		if err != nil {
+			return nil, err
+		}
+		return NewMessageType(&Message{
+			IsMapEntry: true,
+			Fields: []*Field{
+				{Name: "key", Type: mapKey},
+				{Name: "value", Type: mapValue},
+			},
+		}, false), nil
+	case celtypes.ListKind:
+		typ, err := r.fromCELType(ctx, typ.Parameters()[0])
+		if err != nil {
+			return nil, err
+		}
+		typ = typ.Clone()
+		typ.Repeated = true
+		return typ, nil
+	case celtypes.StructKind:
+		return r.resolveType(
+			ctx,
+			typ.TypeName(),
+			types.Message,
+			descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL,
+		)
+	}
+	return nil, errors.New("unknown type is required")
+}
+
+func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {
+	desc := arg.File.Desc
+	msg := &descriptorpb.DescriptorProto{
+		Name: proto.String(arg.Name),
+	}
+	for idx, field := range arg.Fields {
+		var typeName string
+		if field.Type.Ref != nil {
+			typeName = field.Type.Ref.FQDN()
+		}
+		if field.Type.Enum != nil {
+			typeName = field.Type.Enum.FQDN()
+		}
+		label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+		if field.Type.Repeated {
+			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+		}
+		typ := field.Type.Type
+		msg.Field = append(msg.Field, &descriptorpb.FieldDescriptorProto{
+			Name:     proto.String(field.Name),
+			Number:   proto.Int32(int32(idx) + 1),
+			Type:     &typ,
+			TypeName: proto.String(typeName),
+			Label:    &label,
+		})
+	}
+	return &descriptorpb.FileDescriptorProto{
+		Name:             proto.String(arg.Name),
+		Package:          proto.String(federation.PrivatePackageName),
+		Dependency:       append(desc.Dependency, arg.File.Name),
+		PublicDependency: desc.PublicDependency,
+		WeakDependency:   desc.WeakDependency,
+		MessageType:      []*descriptorpb.DescriptorProto{msg},
+	}
+}
+
+// resolveMessageRuleDependencies resolve dependencies for each message.
+func (r *Resolver) resolveMessageRuleDependencies(ctx *context, files []*File) {
+	msgs := r.allMessages(files)
+	for _, msg := range msgs {
+		if msg.Rule == nil {
+			continue
+		}
+		if graph := CreateMessageRuleDependencyGraph(ctx, msg); graph != nil {
+			msg.Rule.DependencyGraph = graph
+			msg.Rule.Resolvers = graph.MessageResolverGroups(ctx)
 		}
 	}
-	msgs := []*Message{msg}
-	for _, child := range node.Children {
-		m := r.resolveMessageArgumentReferences(child, msgArg)
-		msgs = append(msgs, m...)
-	}
-	return msgs
+	r.validateMessages(ctx, msgs)
 }
 
 func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, error) {
@@ -2189,19 +2153,11 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, aliasOpt)
 	}
 	if def.By != nil {
-		path, pathType, err := r.resolvePath(def.GetBy())
-		if err != nil {
-			return nil, err
-		}
-		value = &Value{Path: path, PathType: pathType}
+		value = &Value{CEL: &CELValue{Expr: def.GetBy()}}
 		optNames = append(optNames, byOpt)
 	}
 	if def.Inline != nil {
-		path, pathType, err := r.resolvePath(def.GetInline())
-		if err != nil {
-			return nil, err
-		}
-		value = &Value{Path: path, PathType: pathType, Inline: true}
+		value = &Value{CEL: &CELValue{Expr: def.GetInline(), Inline: true}}
 		optNames = append(optNames, inlineOpt)
 	}
 	if def.Double != nil {
@@ -2325,7 +2281,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, byteStringsOpt)
 	}
 	if def.Message != nil {
-		typ, val, err := r.resolveMessageLiteral(ctx, def.GetMessage())
+		typ, val, err := r.resolveMessageConstValue(ctx, def.GetMessage())
 		if err != nil {
 			return nil, err
 		}
@@ -2338,7 +2294,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 			vals []map[string]*Value
 		)
 		for _, msg := range def.GetMessages() {
-			t, val, err := r.resolveMessageLiteral(ctx, msg)
+			t, val, err := r.resolveMessageConstValue(ctx, msg)
 			if err != nil {
 				return nil, err
 			}
@@ -2354,7 +2310,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, messagesOpt)
 	}
 	if def.Enum != nil {
-		enumValue, err := r.resolveEnumValueLiteral(ctx, def.GetEnum())
+		enumValue, err := r.resolveEnumConstValue(ctx, def.GetEnum())
 		if err != nil {
 			return nil, err
 		}
@@ -2367,7 +2323,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 			enum       *Enum
 		)
 		for _, enumName := range def.GetEnums() {
-			enumValue, err := r.resolveEnumValueLiteral(ctx, enumName)
+			enumValue, err := r.resolveEnumConstValue(ctx, enumName)
 			if err != nil {
 				return nil, err
 			}

@@ -36,7 +36,7 @@ message GetPostResponse {
     ]
   };
   org.federation.Post post = 1 [(grpc.federation.field).by = "post"];
-  string literal = 2 [(grpc.federation.field).string = "foo"];
+  string const = 2 [(grpc.federation.field).string = "foo"];
 }
 
 message Post {

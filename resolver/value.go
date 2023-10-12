@@ -1,11 +1,43 @@
 package resolver
 
 import (
-	"fmt"
-
 	"github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/mercari/grpc-federation/types"
 )
+
+func (v *Value) Type() *Type {
+	if v == nil {
+		return nil
+	}
+	if v.CEL != nil {
+		return v.CEL.Out
+	}
+	if v.Const != nil {
+		return v.Const.Type
+	}
+	return nil
+}
+
+func (v *Value) ReferenceNames() []string {
+	if v == nil {
+		return nil
+	}
+	if v.CEL == nil {
+		return nil
+	}
+	if v.CEL.CheckedExpr == nil {
+		return nil
+	}
+
+	var refNames []string
+	for _, ref := range v.CEL.CheckedExpr.ReferenceMap {
+		if ref.Name == federation.MessageArgumentVariableName {
+			continue
+		}
+		refNames = append(refNames, ref.Name)
+	}
+	return refNames
+}
 
 type commonValueDef struct {
 	CustomResolver *bool
@@ -454,7 +486,6 @@ func argumentToCommonValueDef(def *federation.Argument) *commonValueDef {
 
 func messageFieldValueToCommonValueDef(def *federation.MessageFieldValue) *commonValueDef {
 	return &commonValueDef{
-		By:          def.By,
 		Double:      def.Double,
 		Doubles:     def.Doubles,
 		Float:       def.Float,
@@ -494,166 +525,132 @@ func messageFieldValueToCommonValueDef(def *federation.MessageFieldValue) *commo
 	}
 }
 
-func (v *Value) Fields(msgArgType *Type) ([]*Field, error) {
-	if v.Literal != nil {
-		return []*Field{{Type: v.Literal.Type}}, nil
-	}
-	if v.PathType == MessageArgumentPathType {
-		fieldType, err := v.Path.Type(msgArgType)
-		if err != nil {
-			return nil, err
-		}
-		if v.Inline {
-			if fieldType.Ref == nil {
-				sels := v.Path.Selectors()
-				if len(sels) != 0 {
-					return nil, fmt.Errorf(`inline keyword must refer to a message type. but "%s" is not a message type`, sels[0])
-				}
-				return nil, fmt.Errorf(`inline keyword must refer to a message type. but path selector is empty`)
-			}
-			return fieldType.Ref.Fields, nil
-		}
-		return []*Field{{Type: fieldType}}, nil
-	}
-	if v.Filtered == nil {
-		return nil, fmt.Errorf("undefined name reference")
-	}
-	if v.Inline {
-		nameReference := v.Filtered.Ref
-		if nameReference == nil {
-			return nil, fmt.Errorf("undefined name reference")
-		}
-		return nameReference.Fields, nil
-	}
-	return []*Field{{Type: v.Filtered}}, nil
-}
-
 func NewDoubleValue(v float64) *Value {
-	return &Value{Literal: &Literal{Type: DoubleType, Value: v}}
+	return &Value{Const: &ConstValue{Type: DoubleType, Value: v}}
 }
 
 func NewFloatValue(v float32) *Value {
-	return &Value{Literal: &Literal{Type: FloatType, Value: v}}
+	return &Value{Const: &ConstValue{Type: FloatType, Value: v}}
 }
 
 func NewInt32Value(v int32) *Value {
-	return &Value{Literal: &Literal{Type: Int32Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Int32Type, Value: v}}
 }
 
 func NewInt64Value(v int64) *Value {
-	return &Value{Literal: &Literal{Type: Int64Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Int64Type, Value: v}}
 }
 
 func NewUint32Value(v uint32) *Value {
-	return &Value{Literal: &Literal{Type: Uint32Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Uint32Type, Value: v}}
 }
 
 func NewUint64Value(v uint64) *Value {
-	return &Value{Literal: &Literal{Type: Uint64Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Uint64Type, Value: v}}
 }
 
 func NewSint32Value(v int32) *Value {
-	return &Value{Literal: &Literal{Type: Sint32Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sint32Type, Value: v}}
 }
 
 func NewSint64Value(v int64) *Value {
-	return &Value{Literal: &Literal{Type: Sint64Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sint64Type, Value: v}}
 }
 
 func NewFixed32Value(v uint32) *Value {
-	return &Value{Literal: &Literal{Type: Fixed32Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Fixed32Type, Value: v}}
 }
 
 func NewFixed64Value(v uint64) *Value {
-	return &Value{Literal: &Literal{Type: Fixed64Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Fixed64Type, Value: v}}
 }
 
 func NewSfixed32Value(v int32) *Value {
-	return &Value{Literal: &Literal{Type: Sfixed32Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sfixed32Type, Value: v}}
 }
 
 func NewSfixed64Value(v int64) *Value {
-	return &Value{Literal: &Literal{Type: Sfixed64Type, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sfixed64Type, Value: v}}
 }
 
 func NewBoolValue(v bool) *Value {
-	return &Value{Literal: &Literal{Type: BoolType, Value: v}}
+	return &Value{Const: &ConstValue{Type: BoolType, Value: v}}
 }
 
 func NewStringValue(v string) *Value {
-	return &Value{Literal: &Literal{Type: StringType, Value: v}}
+	return &Value{Const: &ConstValue{Type: StringType, Value: v}}
 }
 
 func NewByteStringValue(v []byte) *Value {
-	return &Value{Literal: &Literal{Type: BytesType, Value: v}}
+	return &Value{Const: &ConstValue{Type: BytesType, Value: v}}
 }
 
 func NewMessageValue(typ *Type, v map[string]*Value) *Value {
-	return &Value{Literal: &Literal{Type: typ, Value: v}}
+	return &Value{Const: &ConstValue{Type: typ, Value: v}}
 }
 
 func NewDoublesValue(v ...float64) *Value {
-	return &Value{Literal: &Literal{Type: DoubleRepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: DoubleRepeatedType, Value: v}}
 }
 
 func NewFloatsValue(v ...float32) *Value {
-	return &Value{Literal: &Literal{Type: FloatRepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: FloatRepeatedType, Value: v}}
 }
 
 func NewInt32sValue(v ...int32) *Value {
-	return &Value{Literal: &Literal{Type: Int32RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Int32RepeatedType, Value: v}}
 }
 
 func NewInt64sValue(v ...int64) *Value {
-	return &Value{Literal: &Literal{Type: Int64RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Int64RepeatedType, Value: v}}
 }
 
 func NewUint32sValue(v ...uint32) *Value {
-	return &Value{Literal: &Literal{Type: Uint32RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Uint32RepeatedType, Value: v}}
 }
 
 func NewUint64sValue(v ...uint64) *Value {
-	return &Value{Literal: &Literal{Type: Uint64RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Uint64RepeatedType, Value: v}}
 }
 
 func NewSint32sValue(v ...int32) *Value {
-	return &Value{Literal: &Literal{Type: Sint32RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sint32RepeatedType, Value: v}}
 }
 
 func NewSint64sValue(v ...int64) *Value {
-	return &Value{Literal: &Literal{Type: Sint64RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sint64RepeatedType, Value: v}}
 }
 
 func NewFixed32sValue(v ...uint32) *Value {
-	return &Value{Literal: &Literal{Type: Fixed32RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Fixed32RepeatedType, Value: v}}
 }
 
 func NewFixed64sValue(v ...uint64) *Value {
-	return &Value{Literal: &Literal{Type: Fixed64RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Fixed64RepeatedType, Value: v}}
 }
 
 func NewSfixed32sValue(v ...int32) *Value {
-	return &Value{Literal: &Literal{Type: Sfixed32RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sfixed32RepeatedType, Value: v}}
 }
 
 func NewSfixed64sValue(v ...int64) *Value {
-	return &Value{Literal: &Literal{Type: Sfixed64RepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: Sfixed64RepeatedType, Value: v}}
 }
 
 func NewBoolsValue(v ...bool) *Value {
-	return &Value{Literal: &Literal{Type: BoolRepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: BoolRepeatedType, Value: v}}
 }
 
 func NewStringsValue(v ...string) *Value {
-	return &Value{Literal: &Literal{Type: StringRepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: StringRepeatedType, Value: v}}
 }
 
 func NewByteStringsValue(v ...[]byte) *Value {
-	return &Value{Literal: &Literal{Type: BytesRepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: BytesRepeatedType, Value: v}}
 }
 
 func NewMessagesValue(typ *Type, v ...map[string]*Value) *Value {
-	return &Value{Literal: &Literal{Type: typ, Value: v}}
+	return &Value{Const: &ConstValue{Type: typ, Value: v}}
 }
 
 func NewEnumValue(v *EnumValue) *Value {
@@ -662,7 +659,7 @@ func NewEnumValue(v *EnumValue) *Value {
 		enum = v.Enum
 	}
 	return &Value{
-		Literal: &Literal{
+		Const: &ConstValue{
 			Type: &Type{
 				Type: types.Enum,
 				Enum: enum,
@@ -678,7 +675,7 @@ func NewEnumsValue(v ...*EnumValue) *Value {
 		enum = v[0].Enum
 	}
 	return &Value{
-		Literal: &Literal{
+		Const: &ConstValue{
 			Type: &Type{
 				Type:     types.Enum,
 				Enum:     enum,
@@ -690,9 +687,9 @@ func NewEnumsValue(v ...*EnumValue) *Value {
 }
 
 func NewEnvValue(v EnvKey) *Value {
-	return &Value{Literal: &Literal{Type: EnvType, Value: v}}
+	return &Value{Const: &ConstValue{Type: EnvType, Value: v}}
 }
 
 func NewEnvsValue(v ...EnvKey) *Value {
-	return &Value{Literal: &Literal{Type: EnvRepeatedType, Value: v}}
+	return &Value{Const: &ConstValue{Type: EnvRepeatedType, Value: v}}
 }

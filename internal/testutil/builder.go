@@ -858,7 +858,10 @@ func (b *MessageDependencyArgumentBuilder) Add(name string, value *resolver.Valu
 }
 
 func (b *MessageDependencyArgumentBuilder) Inline(value *resolver.Value) *MessageDependencyArgumentBuilder {
-	value.Inline = true
+	if value.CEL == nil {
+		value.CEL = &resolver.CELValue{}
+	}
+	value.CEL.Inline = true
 	b.args = append(b.args, &resolver.Argument{Value: value})
 	return b
 }
@@ -869,54 +872,42 @@ func (b *MessageDependencyArgumentBuilder) Build(t *testing.T) []*resolver.Argum
 }
 
 type MessageArgumentValueBuilder struct {
-	pathBuilder *resolver.PathBuilder
-	value       *resolver.Value
+	value *resolver.Value
 }
 
-func NewMessageArgumentValueBuilder(ref, filtered *resolver.Type, path string) *MessageArgumentValueBuilder {
+func NewMessageArgumentValueBuilder(ref, filtered *resolver.Type, expr string) *MessageArgumentValueBuilder {
 	return &MessageArgumentValueBuilder{
-		pathBuilder: resolver.NewPathBuilder(path),
 		value: &resolver.Value{
-			PathType: resolver.MessageArgumentPathType,
-			Ref:      ref,
-			Filtered: filtered,
+			CEL: &resolver.CELValue{
+				Expr: expr,
+				Out:  filtered,
+			},
 		},
 	}
 }
 
 func (b *MessageArgumentValueBuilder) Build(t *testing.T) *resolver.Value {
 	t.Helper()
-	p, err := b.pathBuilder.Build()
-	if err != nil {
-		t.Fatal(err)
-	}
-	b.value.Path = &resolver.PathRoot{PathBase: &resolver.PathBase{Child: p}}
 	return b.value
 }
 
 type NameReferenceValueBuilder struct {
-	pathBuilder *resolver.PathBuilder
-	value       *resolver.Value
+	value *resolver.Value
 }
 
-func NewNameReferenceValueBuilder(ref, filtered *resolver.Type, path string) *NameReferenceValueBuilder {
+func NewNameReferenceValueBuilder(ref, filtered *resolver.Type, expr string) *NameReferenceValueBuilder {
 	return &NameReferenceValueBuilder{
-		pathBuilder: resolver.NewPathBuilder(path),
 		value: &resolver.Value{
-			PathType: resolver.NameReferencePathType,
-			Ref:      ref,
-			Filtered: filtered,
+			CEL: &resolver.CELValue{
+				Expr: expr,
+				Out:  filtered,
+			},
 		},
 	}
 }
 
 func (b *NameReferenceValueBuilder) Build(t *testing.T) *resolver.Value {
 	t.Helper()
-	p, err := b.pathBuilder.Build()
-	if err != nil {
-		t.Fatal(err)
-	}
-	b.value.Path = p
 	return b.value
 }
 

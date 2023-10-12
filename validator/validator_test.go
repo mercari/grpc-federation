@@ -26,7 +26,9 @@ testdata/invalid_autobind.proto:23:3: "id" field in "org.federation.GetResponse"
        ^
 `},
 		{file: "invalid_field_option.proto", expected: `
-testdata/invalid_field_option.proto:30:50: "invalid" field does not exist in "Post" message
+testdata/invalid_field_option.proto:30:50: ERROR: <input>:1:5: undefined field 'invalid'
+ | post.invalid
+ | ....^
 30:    Post post = 1 [(grpc.federation.field) = { by: "post.invalid" }];
                                                       ^
 `},
@@ -52,9 +54,6 @@ testdata/invalid_message_alias_target.proto:55:44: required specify alias = "org
 testdata/invalid_message_alias.proto:53:44: cannot find package from "invalid.Invalid"
 53:    option (grpc.federation.message).alias = "invalid.Invalid";
                                                 ^
-testdata/invalid_message_alias.proto:53:3: root message does not exist in message rule dependency graph
-53:    option (grpc.federation.message).alias = "invalid.Invalid";
-       ^
 testdata/invalid_message_alias.proto:43:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
 43:    PostData data = 4;
        ^
@@ -72,12 +71,16 @@ testdata/invalid_message_alias.proto:57:3: "content" field in "org.federation.Po
 testdata/invalid_method.proto:36:15: invalid method format. required format is "<package-name>.<service-name>/<method-name>" but specified ""
 36:        method: ""
                    ^
-testdata/invalid_method.proto:39:57: "invalid" name reference does not exist in this grpc.federation.message option
+testdata/invalid_method.proto:39:57: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container '')
+ | invalid
+ | ^
 39:        { name: "user", message: "User", args: [{ inline: "invalid" }]}
                                                              ^
-testdata/invalid_method.proto:39:47: "invalid" name does not exist
-39:        { name: "user", message: "User", args: [{ inline: "invalid" }]}
-                                                   ^
+testdata/invalid_method.proto:53:28: ERROR: <input>:1:8: undefined field 'user_id'
+ | __ARG__.user_id
+ | .......^
+53:          { field: "id", by: "$.user_id" }
+                                ^
 testdata/invalid_method.proto:42:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
 42:    string id = 1;
        ^
@@ -141,7 +144,9 @@ testdata/invalid_method_timeout_format.proto:12:47: time: unknown unit "p" in du
 testdata/invalid_method_request.proto:39:18: "invalid" field does not exist in "post.GetPostRequest" message for method request
 39:          { field: "invalid", by: "$.invalid" }
                       ^
-testdata/invalid_method_request.proto:39:33: "invalid" field does not exist in "PostArgument" message
+testdata/invalid_method_request.proto:39:33: ERROR: <input>:1:8: undefined field 'invalid'
+ | __ARG__.invalid
+ | .......^
 39:          { field: "invalid", by: "$.invalid" }
                                      ^
 `},
@@ -203,6 +208,12 @@ testdata/missing_message_field_alias.proto:75:3: "dup_body" field in "org.federa
 testdata/missing_message_option.proto:43:32: "federation.User" message does not specify "grpc.federation.message" option
 43:        { name: "user", message: "User", args: [{ inline: "post" }]}
                                     ^
+testdata/missing_message_option.proto:53:3: "id" field in "federation.User" message needs to specify "grpc.federation.field" option
+53:    string id = 1;
+       ^
+testdata/missing_message_option.proto:54:3: "name" field in "federation.User" message needs to specify "grpc.federation.field" option
+54:    string name = 2;
+       ^
 `},
 		{file: "missing_method_request_value.proto", expected: `
 testdata/missing_method_request_value.proto:39:9: value must be specified
@@ -218,9 +229,16 @@ testdata/missing_response_message_option.proto:18:1: "federation.GetPostResponse
 testdata/invalid_method_response.proto:41:42: "invalid" field does not exist in "post.GetPostResponse" message for method response
 41:        response: [ { name: "post", field: "invalid", autobind: true  } ]
                                               ^
-testdata/invalid_method_response.proto:44:57: "post" name reference does not exist in this grpc.federation.message option
+testdata/invalid_method_response.proto:44:57: ERROR: <input>:1:1: undeclared reference to 'post' (in container '')
+ | post
+ | ^
 44:        { name: "user", message: "User", args: [{ inline: "post" }]}
                                                              ^
+testdata/invalid_method_response.proto:58:28: ERROR: <input>:1:8: undefined field 'user_id'
+ | __ARG__.user_id
+ | .......^
+58:          { field: "id", by: "$.user_id" }
+                                ^
 testdata/invalid_method_response.proto:47:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
 47:    string id = 1;
        ^
@@ -239,20 +257,34 @@ testdata/invalid_message_name.proto: "federation.Invalid" message does not exist
 testdata/invalid_message_name.proto:44:32: undefined message specified "grpc.federation.message" option
 44:        { name: "user", message: "Invalid", args: [{ inline: "post" }]}
                                     ^
+testdata/invalid_message_name.proto:50:50: unknown type is required
+50:    User user = 4 [(grpc.federation.field) = { by: "user" }];
+                                                      ^
 `},
 		{file: "invalid_message_argument.proto", expected: `
-testdata/invalid_message_argument.proto:44:100: invalid path format. "." cannot be used after dot character
-44:        { name: "user", message: "User", args: [{ by: "$.id.invalid" }, { inline: "post.id" }, { by: "...." }, { inline: "...." }]}
-                                                                                                        ^
-testdata/invalid_message_argument.proto:44:120: invalid path format. "." cannot be used after dot character
-44:        { name: "user", message: "User", args: [{ by: "$.id.invalid" }, { inline: "post.id" }, { by: "...." }, { inline: "...." }]}
-                                                                                                                            ^
-testdata/invalid_message_argument.proto:44:81: inline keyword must refer to a message type. but "post" is not a message type
-44:        { name: "user", message: "User", args: [{ by: "$.id.invalid" }, { inline: "post.id" }, { by: "...." }, { inline: "...." }]}
-                                                                                     ^
-testdata/invalid_message_argument.proto:44:53: "invalid" path selector must refer to a message type. but it is not a message type
+testdata/invalid_message_argument.proto:44:53: ERROR: <input>:1:11: type 'string' does not support field selection
+ | __ARG__.id.invalid
+ | ..........^
 44:        { name: "user", message: "User", args: [{ by: "$.id.invalid" }, { inline: "post.id" }, { by: "...." }, { inline: "...." }]}
                                                          ^
+testdata/invalid_message_argument.proto:44:100: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+ | ....
+ | .^
+44:        { name: "user", message: "User", args: [{ by: "$.id.invalid" }, { inline: "post.id" }, { by: "...." }, { inline: "...." }]}
+                                                                                                        ^
+testdata/invalid_message_argument.proto:44:120: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+ | ....
+ | .^
+44:        { name: "user", message: "User", args: [{ by: "$.id.invalid" }, { inline: "post.id" }, { by: "...." }, { inline: "...." }]}
+                                                                                                                            ^
+testdata/invalid_message_argument.proto:44:81: inline value is not message type
+44:        { name: "user", message: "User", args: [{ by: "$.id.invalid" }, { inline: "post.id" }, { by: "...." }, { inline: "...." }]}
+                                                                                     ^
+testdata/invalid_message_argument.proto:58:28: ERROR: <input>:1:8: undefined field 'user_id'
+ | __ARG__.user_id
+ | .......^
+58:          { field: "id", by: "$.user_id" }
+                                ^
 `},
 		{file: "invalid_message_field_alias.proto", expected: `
 testdata/invalid_message_field_alias.proto:58:3: The types of "org.federation.PostData"'s "title" field ("int64") and "org.post.PostData"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself

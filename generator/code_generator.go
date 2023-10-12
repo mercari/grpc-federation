@@ -176,9 +176,11 @@ func (s *Service) CustomResolvers() []*CustomResolver {
 }
 
 type Type struct {
-	Name   string
-	Fields []*Field
-	Desc   string
+	Name        string
+	Fields      []*Field
+	ProtoFields []*ProtoField
+	Desc        string
+	ProtoFQDN   string
 }
 
 func (t *Type) HasField(fieldName string) bool {
@@ -190,9 +192,50 @@ func (t *Type) HasField(fieldName string) bool {
 	return false
 }
 
+type ProtoField struct {
+	*resolver.Field
+}
+
+func (f *ProtoField) FieldName() string {
+	return util.ToPublicGoVariable(f.Field.Name)
+}
+
+func (f *ProtoField) Name() string {
+	return f.Field.Name
+}
+
+func (f *ProtoField) TypeDeclare() string {
+	return toCELTypeDeclare(f.Field.Type)
+}
+
 type Field struct {
 	Name string
 	Type string
+}
+
+func toCELTypeDeclare(t *resolver.Type) string {
+	if t.Repeated {
+		cloned := t.Clone()
+		cloned.Repeated = false
+		return fmt.Sprintf("celtypes.NewListType(%s)", toCELTypeDeclare(cloned))
+	}
+	switch t.Type {
+	case types.Double, types.Float:
+		return "celtypes.DoubleType"
+	case types.Int32, types.Int64, types.Sint32, types.Sint64, types.Sfixed32, types.Sfixed64, types.Enum:
+		return "celtypes.IntType"
+	case types.Uint32, types.Uint64, types.Fixed32, types.Fixed64:
+		return "celtypes.UintType"
+	case types.Bool:
+		return "celtypes.BoolType"
+	case types.String:
+		return "celtypes.StringType"
+	case types.Bytes:
+		return "celtypes.BytesType"
+	case types.Message:
+		return fmt.Sprintf(`celtypes.NewObjectType(%q)`, t.Ref.FQDN())
+	}
+	return ""
 }
 
 func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
@@ -311,8 +354,9 @@ func (s *Service) Types() []*Type {
 		}
 		msgFQDN := fmt.Sprintf(`%s.%s`, s.Service.PackageName(), msg.Name)
 		typ := &Type{
-			Name: argName,
-			Desc: fmt.Sprintf(`%s is argument for %q message`, argName, msgFQDN),
+			Name:      argName,
+			Desc:      fmt.Sprintf(`%s is argument for %q message`, argName, msgFQDN),
+			ProtoFQDN: arg.FQDN(),
 		}
 
 		genMsg := &Message{Message: msg, Service: s.Service}
@@ -350,6 +394,7 @@ func (s *Service) Types() []*Type {
 				Name: util.ToPublicGoVariable(field.Name),
 				Type: toTypeText(s.Service, field.Type),
 			})
+			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
 		}
 		sort.Slice(typ.Fields, func(i, j int) bool {
 			return typ.Fields[i].Name < typ.Fields[j].Name
@@ -424,6 +469,7 @@ type LogValueAttr struct {
 func (s *Service) LogValues() []*LogValue {
 	for _, msg := range s.Service.Messages {
 		if msg.Rule != nil {
+			msg.Rule.MessageArgument.File.Package = msg.File.Package
 			s.setLogValueByMessageArgument(msg.Rule.MessageArgument)
 		}
 		s.setLogValueByMessage(msg)
@@ -831,6 +877,10 @@ func (m *Message) RequestType() string {
 	return fmt.Sprintf("%sArgument", msg)
 }
 
+func (m *Message) RequestProtoType() string {
+	return m.Message.Rule.MessageArgument.FQDN()
+}
+
 func (m *Message) CustomResolverName() string {
 	msg := fullMessageName(m.Message)
 	return fmt.Sprintf("Resolve_%s", msg)
@@ -928,12 +978,14 @@ type ReturnField struct {
 	Value                 string
 	IsCustomResolverField bool
 	IsOneofField          bool
+	CEL                   *resolver.CELValue
 	OneofFields           []*OneofField
 	ResolverName          string
 	RequestType           string
 	MessageName           string
 	MessageArgumentName   string
 	ProtoComment          string
+	OutType               string
 }
 
 type OneofField struct {
@@ -1269,10 +1321,10 @@ func (m *Message) ReturnFields() []*ReturnField {
 			returnFields = append(returnFields, m.customResolverToReturnField(field))
 		case rule.Value != nil:
 			value := rule.Value
-			if value.Literal != nil {
-				returnFields = append(returnFields, m.literalValueToReturnField(field, value.Literal))
+			if value.Const != nil {
+				returnFields = append(returnFields, m.constValueToReturnField(field, value.Const))
 			} else {
-				returnFields = append(returnFields, m.pathValueToReturnField(field, value))
+				returnFields = append(returnFields, m.celValueToReturnField(field, value.CEL))
 			}
 		case rule.AutoBindField != nil:
 			returnFields = append(returnFields, m.autoBindFieldToReturnField(field, rule.AutoBindField))
@@ -1312,10 +1364,10 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	}
 }
 
-func (m *Message) literalValueToReturnField(field *resolver.Field, literal *resolver.Literal) *ReturnField {
+func (m *Message) constValueToReturnField(field *resolver.Field, constValue *resolver.ConstValue) *ReturnField {
 	return &ReturnField{
 		Name:  util.ToPublicGoVariable(field.Name),
-		Value: toGoLiteralValue(m.Service, literal.Type, literal.Value),
+		Value: toGoConstValue(m.Service, constValue.Type, constValue.Value),
 		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
 			Prefix:         "// ",
 			IndentSpaceNum: 2,
@@ -1323,47 +1375,43 @@ func (m *Message) literalValueToReturnField(field *resolver.Field, literal *reso
 	}
 }
 
-func (m *Message) pathValueToReturnField(field *resolver.Field, value *resolver.Value) *ReturnField {
-	var selectors []string
-	if value.PathType == resolver.MessageArgumentPathType {
-		selectors = append(selectors, "req")
-	}
-	first := true
-	for _, sel := range value.Path.Selectors() {
-		if sel == "$" {
-			continue
-		}
-		if first {
-			if value.PathType == resolver.MessageArgumentPathType {
-				selectors = append(selectors, util.ToPublicGoVariable(sel))
-			} else {
-				selectors = append(selectors, toUserDefinedVariable(sel))
-			}
-			first = false
-			continue
-		}
-		selectors = append(
-			selectors,
-			fmt.Sprintf("Get%s()", util.ToPublicGoVariable(sel)),
-		)
-	}
+func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.CELValue) *ReturnField {
+	toType := field.Type
+	fromType := value.Out
 
-	var returnFieldValue string
-	if field.RequiredTypeConversion() {
-		fromType := field.SourceType()
-		toType := field.Type
-		castFuncName := castFuncName(fromType, toType)
-		returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, strings.Join(selectors, "."))
-	} else {
-		returnFieldValue = strings.Join(selectors, ".")
+	var (
+		returnFieldValue string
+		outType          string
+	)
+	switch fromType.Type {
+	case types.Message:
+		outType = "nil"
+		returnFieldValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, fromType))
+		if field.RequiredTypeConversion() {
+			castFuncName := castFuncName(fromType, toType)
+			returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, returnFieldValue)
+		}
+	case types.Enum:
+		outType = "nil"
+		returnFieldValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(m.Service, fromType))
+		if field.RequiredTypeConversion() {
+			castFuncName := castFuncName(fromType, toType)
+			returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, returnFieldValue)
+		}
+	default:
+		// Since fromType is a primitive type, type conversion is possible on the CEL side.
+		outType = fmt.Sprintf("reflect.TypeOf(ret.%s)", util.ToPublicGoVariable(field.Name))
+		returnFieldValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, toType))
 	}
 	return &ReturnField{
 		Name:  util.ToPublicGoVariable(field.Name),
 		Value: returnFieldValue,
+		CEL:   value,
 		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
 			Prefix:         "// ",
 			IndentSpaceNum: 2,
 		}),
+		OutType: outType,
 	}
 }
 
@@ -1391,13 +1439,13 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 		switch {
 		case rule.Value != nil:
 			value := rule.Value
-			if value.Literal != nil {
+			if value.Const != nil {
 				oneofFields = append(oneofFields, &OneofField{
-					ReturnField: m.literalValueToReturnField(field, value.Literal),
+					ReturnField: m.constValueToReturnField(field, value.Const),
 				})
 			} else {
 				oneofFields = append(oneofFields, &OneofField{
-					ReturnField: m.pathValueToReturnField(field, value),
+					ReturnField: m.celValueToReturnField(field, value.CEL),
 				})
 			}
 		case rule.AutoBindField != nil:
@@ -1599,6 +1647,8 @@ type ResponseVariable struct {
 	Name         string
 	Selector     string
 	ProtoComment string
+	CELExpr      string
+	CELType      string
 }
 
 func (r *MessageResolver) ResponseVariable() string {
@@ -1621,11 +1671,16 @@ func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
 	var values []*ResponseVariable
 	if r.MethodCall != nil {
 		for _, field := range r.MethodCall.Response.Fields {
-			var selector string
+			var (
+				selector string
+				typ      *resolver.Type
+			)
 			if field.FieldName == "" {
 				selector = r.ResponseVariable()
+				typ = resolver.NewMessageType(r.MethodCall.Response.Type, false)
 			} else {
 				selector = r.ResponseVariable() + "." + fmt.Sprintf("Get%s()", util.ToPublicGoVariable(field.FieldName))
+				typ = r.MethodCall.Response.Type.Field(field.FieldName).Type
 			}
 			format := field.ProtoFormat(resolver.DefaultProtoFormatOption)
 			if format != "" {
@@ -1636,6 +1691,8 @@ func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
 				Name:         toUserDefinedVariable(field.Name),
 				Selector:     selector,
 				ProtoComment: format,
+				CELExpr:      field.Name,
+				CELType:      toCELNativeType(typ),
 			})
 		}
 	} else {
@@ -1644,15 +1701,47 @@ func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
 			Name:         toUserDefinedVariable(r.MessageDependency.Name),
 			Selector:     r.ResponseVariable(),
 			ProtoComment: fmt.Sprintf(`// { name: %q, message: %q ... }`, r.MessageDependency.Name, r.MessageDependency.Message.Name),
+			CELExpr:      r.MessageDependency.Name,
+			CELType:      toCELNativeType(resolver.NewMessageType(r.MessageDependency.Message, false)),
 		})
 	}
 	return values
 }
 
+func toCELNativeType(t *resolver.Type) string {
+	if t.Repeated {
+		cloned := t.Clone()
+		cloned.Repeated = false
+		return fmt.Sprintf("cel.ListType(%s)", toCELNativeType(cloned))
+	}
+	switch t.Type {
+	case types.Double, types.Float:
+		return "celtypes.DoubleType"
+	case types.Int32, types.Int64, types.Sint32, types.Sint64, types.Sfixed32, types.Sfixed64, types.Enum:
+		return "celtypes.IntType"
+	case types.Uint32, types.Uint64, types.Fixed32, types.Fixed64:
+		return "celtypes.UintType"
+	case types.Bool:
+		return "celtypes.BoolType"
+	case types.String:
+		return "celtypes.StringType"
+	case types.Bytes:
+		return "celtypes.BytesType"
+	case types.Message:
+		return fmt.Sprintf("cel.ObjectType(%q)", t.Ref.FQDN())
+	default:
+		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Type)
+	}
+	return ""
+}
+
 type Argument struct {
 	Name         string
 	Value        string
+	CEL          *resolver.CELValue
+	InlineFields []*Argument
 	ProtoComment string
+	OutType      string
 }
 
 func (r *MessageResolver) Arguments() []*Argument {
@@ -1683,33 +1772,12 @@ func (r *MessageResolver) Arguments() []*Argument {
 }
 
 func toValue(svc *resolver.Service, typ *resolver.Type, value *resolver.Value) string {
-	if value.Literal != nil {
-		return toGoLiteralValue(svc, value.Literal.Type, value.Literal.Value)
+	if value.Const != nil {
+		return toGoConstValue(svc, value.Const.Type, value.Const.Value)
 	}
 	var selectors []string
-	if value.PathType == resolver.MessageArgumentPathType {
-		selectors = append(selectors, "req")
-	}
-	first := true
-	for _, sel := range value.Path.Selectors() {
-		if sel == "$" {
-			continue
-		}
-		if first {
-			if value.PathType == resolver.MessageArgumentPathType {
-				selectors = append(selectors, util.ToPublicGoVariable(sel))
-			} else {
-				selectors = append(selectors, util.ToPrivateGoVariable(sel))
-			}
-			first = false
-		} else {
-			selectors = append(
-				selectors,
-				fmt.Sprintf("Get%s()", util.ToPublicGoVariable(sel)),
-			)
-		}
-	}
-	fromType := value.Filtered
+	selectors = append(selectors, "foo")
+	fromType := value.CEL.Out
 	toType := typ
 	if !requiredCast(fromType, toType) {
 		return strings.Join(selectors, ".")
@@ -1719,82 +1787,70 @@ func toValue(svc *resolver.Service, typ *resolver.Type, value *resolver.Value) s
 }
 
 func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resolver.Value) []*Argument {
-	if value.Literal != nil {
+	if value.Const != nil {
 		return []*Argument{
 			{
 				Name:  util.ToPublicGoVariable(name),
-				Value: toGoLiteralValue(r.Service, value.Literal.Type, value.Literal.Value),
+				Value: toGoConstValue(r.Service, value.Const.Type, value.Const.Value),
 			},
 		}
 	}
-	var (
-		selectors  []string
-		fieldNames []string
-	)
-	if value.PathType == resolver.MessageArgumentPathType {
-		selectors = append(selectors, "req")
+	if value.CEL == nil {
+		return nil
 	}
-	if value.Inline {
-		fieldType := value.Filtered
-		for _, field := range fieldType.Ref.Fields {
-			fieldNames = append(fieldNames, field.Name)
-		}
-	}
-	first := true
-	for _, sel := range value.Path.Selectors() {
-		if sel == "$" {
-			continue
-		}
-		if first {
-			if value.PathType == resolver.MessageArgumentPathType {
-				selectors = append(selectors, util.ToPublicGoVariable(sel))
-			} else {
-				selectors = append(selectors, toUserDefinedVariable(sel))
-			}
-			first = false
-		} else {
-			selectors = append(
-				selectors,
-				fmt.Sprintf("Get%s()", util.ToPublicGoVariable(sel)),
-			)
-		}
-	}
-	if len(fieldNames) != 0 {
-		var args []*Argument
-		for _, fieldName := range fieldNames {
-			sels := make([]string, len(selectors))
-			copy(sels, selectors)
-			sels = append(sels, fmt.Sprintf("Get%s()", util.ToPublicGoVariable(fieldName)))
-			args = append(args, &Argument{
-				Name:  util.ToPublicGoVariable(fieldName),
-				Value: strings.Join(sels, "."),
+	var inlineFields []*Argument
+	if value.CEL.Inline {
+		for _, field := range value.CEL.Out.Ref.Fields {
+			inlineFields = append(inlineFields, &Argument{
+				Name:  util.ToPublicGoVariable(field.Name),
+				Value: fmt.Sprintf("_inlineValue.Get%s()", util.ToPublicGoVariable(field.Name)),
 			})
 		}
-		return args
+	}
+	fromType := value.CEL.Out
+	var toType *resolver.Type
+	if typ != nil {
+		toType = typ
+	} else {
+		toType = fromType
 	}
 
-	fromType := value.Filtered
-	toType := typ
-	if !requiredCast(fromType, toType) {
-		return []*Argument{
-			{
-				Name:  util.ToPublicGoVariable(name),
-				Value: strings.Join(selectors, "."),
-			},
+	var (
+		argValue string
+		outType  string
+	)
+	switch fromType.Type {
+	case types.Message:
+		outType = "nil"
+		argValue = fmt.Sprintf("_value.(%s)", toTypeText(r.Service, fromType))
+		if requiredCast(fromType, toType) {
+			castFuncName := castFuncName(fromType, toType)
+			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
+	case types.Enum:
+		outType = "nil"
+		argValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(r.Service, fromType))
+		if requiredCast(fromType, toType) {
+			castFuncName := castFuncName(fromType, toType)
+			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+		}
+	default:
+		// Since fromType is a primitive type, type conversion is possible on the CEL side.
+		outType = fmt.Sprintf("reflect.TypeOf(args.%s)", util.ToPublicGoVariable(name))
+		argValue = fmt.Sprintf("_value.(%s)", toTypeText(r.Service, toType))
 	}
-	castFuncName := castFuncName(fromType, toType)
 	return []*Argument{
 		{
-			Name: util.ToPublicGoVariable(name),
-			Value: fmt.Sprintf(
-				"s.%s(%s)", castFuncName, strings.Join(selectors, "."),
-			),
+			Name:         util.ToPublicGoVariable(name),
+			Value:        argValue,
+			CEL:          value.CEL,
+			InlineFields: inlineFields,
+			OutType:      outType,
 		},
 	}
 }
 
-func toGoLiteralValue(svc *resolver.Service, typ *resolver.Type, value interface{}) string {
+func toGoConstValue(svc *resolver.Service, typ *resolver.Type, value interface{}) string {
 	if typ.Repeated {
 		rv := reflect.ValueOf(value)
 		length := rv.Len()
@@ -1802,7 +1858,7 @@ func toGoLiteralValue(svc *resolver.Service, typ *resolver.Type, value interface
 		copied.Repeated = false
 		var values []string
 		for i := 0; i < length; i++ {
-			values = append(values, toGoLiteralValue(svc, &copied, rv.Index(i).Interface()))
+			values = append(values, toGoConstValue(svc, &copied, rv.Index(i).Interface()))
 		}
 		return fmt.Sprintf("%s{%s}", toTypeText(svc, typ), strings.Join(values, ","))
 	}
@@ -1831,7 +1887,7 @@ func toGoLiteralValue(svc *resolver.Service, typ *resolver.Type, value interface
 	case types.Message:
 		mapV, ok := value.(map[string]*resolver.Value)
 		if !ok {
-			log.Fatalf("message literal value must be map[string]*resolver.Value type. but %T", value)
+			log.Fatalf("message const value must be map[string]*resolver.Value type. but %T", value)
 		}
 		if typ.Ref == nil {
 			log.Fatal("message reference required")

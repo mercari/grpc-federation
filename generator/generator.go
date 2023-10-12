@@ -36,7 +36,6 @@ type Generator struct {
 	watcher               *Watcher
 	compiler              *compiler.Compiler
 	validator             *validator.Validator
-	codeGenerator         *CodeGenerator
 	importPaths           []string
 	postProcessHandler    PostProcessHandler
 	buildCache            BuildCache
@@ -121,7 +120,6 @@ func New(cfg Config) *Generator {
 		cfg:                   &cfg,
 		compiler:              compiler.New(),
 		validator:             validator.New(),
-		codeGenerator:         NewCodeGenerator(),
 		importPaths:           cfg.Imports,
 		absPathToRelativePath: make(map[string]string),
 	}

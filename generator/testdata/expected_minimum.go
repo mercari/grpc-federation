@@ -7,15 +7,24 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
+	"github.com/google/cel-go/cel"
+	celtypes "github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
+	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -88,6 +97,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler FederationServiceErrorHandler
+	env          *cel.Env
 	resolver     FederationServiceResolver
 	client       *FederationServiceDependencyServiceClient
 }
@@ -96,6 +106,129 @@ type FederationService struct {
 type Org_Federation_GetPostResponseArgument struct {
 	Id     string
 	Client *FederationServiceDependencyServiceClient
+}
+
+// FederationServiceCELTypeHelper
+type FederationServiceCELTypeHelper struct {
+	celRegistry    *celtypes.Registry
+	structFieldMap map[string]map[string]*celtypes.FieldType
+	mapMu          sync.RWMutex
+}
+
+func (h *FederationServiceCELTypeHelper) TypeProvider() celtypes.Provider {
+	return h
+}
+
+func (h *FederationServiceCELTypeHelper) TypeAdapter() celtypes.Adapter {
+	return h.celRegistry
+}
+
+func (h *FederationServiceCELTypeHelper) EnumValue(enumName string) ref.Val {
+	return h.celRegistry.EnumValue(enumName)
+}
+
+func (h *FederationServiceCELTypeHelper) FindIdent(identName string) (ref.Val, bool) {
+	return h.celRegistry.FindIdent(identName)
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructType(structType string) (*celtypes.Type, bool) {
+	if st, found := h.celRegistry.FindStructType(structType); found {
+		return st, found
+	}
+	h.mapMu.RLock()
+	defer h.mapMu.RUnlock()
+	if _, exists := h.structFieldMap[structType]; exists {
+		return celtypes.NewObjectType(structType), true
+	}
+	return nil, false
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructFieldNames(structType string) ([]string, bool) {
+	if names, found := h.celRegistry.FindStructFieldNames(structType); found {
+		return names, found
+	}
+
+	h.mapMu.RLock()
+	defer h.mapMu.RUnlock()
+	fieldMap, exists := h.structFieldMap[structType]
+	if !exists {
+		return nil, false
+	}
+	fieldNames := make([]string, 0, len(fieldMap))
+	for fieldName := range fieldMap {
+		fieldNames = append(fieldNames, fieldName)
+	}
+	sort.Strings(fieldNames)
+	return fieldNames, true
+}
+
+func (h *FederationServiceCELTypeHelper) FindStructFieldType(structType, fieldName string) (*celtypes.FieldType, bool) {
+	if field, found := h.celRegistry.FindStructFieldType(structType, fieldName); found {
+		return field, found
+	}
+
+	h.mapMu.RLock()
+	defer h.mapMu.RUnlock()
+	fieldMap, exists := h.structFieldMap[structType]
+	if !exists {
+		return nil, false
+	}
+	field, found := fieldMap[fieldName]
+	return field, found
+}
+
+func (h *FederationServiceCELTypeHelper) NewValue(structType string, fields map[string]ref.Val) ref.Val {
+	return h.celRegistry.NewValue(structType, fields)
+}
+
+func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
+	celRegistry := celtypes.NewEmptyRegistry()
+	protoregistry.GlobalFiles.RangeFiles(func(f protoreflect.FileDescriptor) bool {
+		if err := celRegistry.RegisterDescriptor(f); err != nil {
+			return false
+		}
+		return true
+	})
+	newFieldType := func(typ *celtypes.Type, fieldName string) *celtypes.FieldType {
+		isSet := func(v any, fieldName string) bool {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return false
+			}
+			return rv.FieldByName(fieldName).IsValid()
+		}
+		getFrom := func(v any, fieldName string) (any, error) {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("%T is not struct type", v)
+			}
+			value := rv.FieldByName(fieldName)
+			return value.Interface(), nil
+		}
+		return &celtypes.FieldType{
+			Type: typ,
+			IsSet: func(v any) bool {
+				return isSet(v, fieldName)
+			},
+			GetFrom: func(v any) (any, error) {
+				return getFrom(v, fieldName)
+			},
+		}
+	}
+	return &FederationServiceCELTypeHelper{
+		celRegistry: celRegistry,
+		structFieldMap: map[string]map[string]*celtypes.FieldType{
+			"grpc.federation.private.GetPostResponseArgument": map[string]*celtypes.FieldType{
+				"id": newFieldType(celtypes.StringType, "Id"),
+			},
+		},
+	}
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -111,10 +244,20 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
+	celHelper := newFederationServiceCELTypeHelper()
+	env, err := cel.NewCustomEnv(
+		cel.StdLib(),
+		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
+		cel.CustomTypeProvider(celHelper.TypeProvider()),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return &FederationService{
 		cfg:          cfg,
 		logger:       logger,
 		errorHandler: errorHandler,
+		env:          env,
 		resolver:     cfg.Resolver,
 		client:       &FederationServiceDependencyServiceClient{},
 	}, nil
@@ -205,6 +348,30 @@ func recoverErrorFederationService(v interface{}, rawStack []byte) *FederationSe
 		Message: lines[0],
 		Stack:   stack,
 	}
+}
+
+func (s *FederationService) evalCEL(expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
+	env, err := s.env.Extend(vars...)
+	if err != nil {
+		return nil, err
+	}
+	expr = strings.Replace(expr, "$", grpcfed.MessageArgumentVariableName, -1)
+	ast, iss := env.Compile(expr)
+	if iss.Err() != nil {
+		return nil, iss.Err()
+	}
+	program, err := env.Program(ast)
+	if err != nil {
+		return nil, err
+	}
+	out, _, err := program.Eval(args)
+	if err != nil {
+		return nil, err
+	}
+	if outType != nil {
+		return out.ConvertToNative(outType)
+	}
+	return out.Value(), nil
 }
 
 func (s *FederationService) goWithRecover(eg *errgroup.Group, fn func() (interface{}, error)) {

@@ -24,7 +24,7 @@ func TestCodeGenerate(t *testing.T) {
 		{"async"},
 		{"alias"},
 		{"autobind"},
-		{"literal"},
+		{"const_value"},
 		{"multi_user"},
 	}
 	for _, test := range tests {

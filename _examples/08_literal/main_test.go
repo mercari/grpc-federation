@@ -162,7 +162,6 @@ func TestFederation(t *testing.T) {
 			EnvField:         "foo-value",
 			EnvsField:        []string{"foo-value", "bar-value"},
 			MessageField: &federation.Content{
-				ByField:          "foo",
 				DoubleField:      1.23,
 				DoublesField:     []float64{4.56, 7.89},
 				FloatField:       4.56,
@@ -238,7 +237,6 @@ func TestFederation(t *testing.T) {
 			EnvField:         "foo-value",
 			EnvsField:        []string{"foo-value", "bar-value"},
 			MessageField: &federation.Content{
-				ByField:          "foo",
 				DoubleField:      1.23,
 				DoublesField:     []float64{4.56, 7.89},
 				FloatField:       4.56,
@@ -277,6 +275,7 @@ func TestFederation(t *testing.T) {
 			},
 			MessagesField: []*federation.Content{{}, {}},
 		},
+		CelExpr: -22,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetResponse{},
 		federation.Content{},

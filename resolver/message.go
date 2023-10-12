@@ -1,8 +1,10 @@
 package resolver
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/mercari/grpc-federation/types"
 )
 
@@ -16,6 +18,21 @@ func NewMessageType(msg *Message, repeated bool) *Type {
 		Ref:      msg,
 		Repeated: repeated,
 	}
+}
+
+func newMessageArgument(msg *Message) *Message {
+	file := *msg.File
+	file.Package = &Package{
+		Name:  federation.PrivatePackageName,
+		Files: Files{&file},
+	}
+	arg := &Message{
+		File:   &file,
+		Name:   fmt.Sprintf("%sArgument", msg.Name),
+		Fields: []*Field{},
+	}
+	msg.Rule.MessageArgument = arg
+	return arg
 }
 
 func (m *Message) ParentMessageNames() []string {
@@ -55,6 +72,39 @@ func (m *Message) HasRule() bool {
 	return false
 }
 
+func (m *Message) HasCELValue() bool {
+	if m.Rule == nil {
+		return false
+	}
+	methodCall := m.Rule.MethodCall
+	if methodCall != nil {
+		if methodCall.Request != nil {
+			for _, arg := range methodCall.Request.Args {
+				if arg.Value != nil && arg.Value.CEL != nil {
+					return true
+				}
+			}
+		}
+	}
+	for _, dep := range m.Rule.MessageDependencies {
+		for _, arg := range dep.Args {
+			if arg.Value != nil && arg.Value.CEL != nil {
+				return true
+			}
+		}
+	}
+	for _, field := range m.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		value := field.Rule.Value
+		if value != nil && value.CEL != nil {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *Message) HasCustomResolver() bool {
 	return m.Rule != nil && m.Rule.CustomResolver
 }
@@ -87,6 +137,33 @@ func (m *Message) UseAllNameReference() {
 		}
 		msg.Used = true
 	}
+}
+
+func (m *Message) ReferenceNames() []string {
+	if m.Rule == nil {
+		return nil
+	}
+
+	rule := m.Rule
+	var refNames []string
+	methodCall := rule.MethodCall
+	if methodCall != nil && methodCall.Request != nil {
+		for _, arg := range methodCall.Request.Args {
+			refNames = append(refNames, arg.Value.ReferenceNames()...)
+		}
+	}
+	for _, depMessage := range rule.MessageDependencies {
+		for _, arg := range depMessage.Args {
+			refNames = append(refNames, arg.Value.ReferenceNames()...)
+		}
+	}
+	for _, field := range m.Fields {
+		if !field.HasRule() {
+			continue
+		}
+		refNames = append(refNames, field.Rule.Value.ReferenceNames()...)
+	}
+	return refNames
 }
 
 func (m *Message) CustomResolverFields() []*Field {
@@ -160,7 +237,7 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 				if !request.Type.HasField(arg.Name) {
 					continue
 				}
-				fromType := arg.Value.Filtered
+				fromType := arg.Value.Type()
 				field := request.Type.Field(arg.Name)
 				toType := field.Type
 				decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
