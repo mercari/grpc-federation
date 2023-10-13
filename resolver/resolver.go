@@ -2027,7 +2027,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				}
 				envOpts = append(envOpts, cel.Variable(dep.Name, ToCELType(NewMessageType(dep.Message, false))))
 			}
-			env, err := env.Extend(envOpts...)
+			newEnv, err := env.Extend(envOpts...)
 			if err != nil {
 				ctx.addError(
 					ErrWithLocation(
@@ -2041,7 +2041,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				)
 				continue
 			}
-			if err := r.resolveCELValue(ctx, env, oneof.By); err != nil {
+			if err := r.resolveCELValue(ctx, newEnv, oneof.By); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),

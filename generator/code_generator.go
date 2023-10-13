@@ -445,7 +445,7 @@ type OneofType struct {
 }
 
 func (s *Service) OneofTypes() []*OneofType {
-	var types []*OneofType
+	var ret []*OneofType
 	for _, msg := range s.Service.Messages {
 		for _, oneof := range msg.Oneofs {
 			if !oneof.IsSameType() {
@@ -466,7 +466,7 @@ func (s *Service) OneofTypes() []*OneofType {
 			cloned := oneof.Fields[0].Type.Clone()
 			cloned.OneofField = nil
 			returnZeroValue := toMakeZeroValue(s.Service, cloned)
-			types = append(types, &OneofType{
+			ret = append(ret, &OneofType{
 				Name:             oneof.Name,
 				FieldName:        util.ToPublicGoVariable(oneof.Name),
 				MessageProtoFQDN: oneof.Message.FQDN(),
@@ -477,7 +477,7 @@ func (s *Service) OneofTypes() []*OneofType {
 			})
 		}
 	}
-	return types
+	return ret
 }
 
 func toMakeZeroValue(svc *resolver.Service, t *resolver.Type) string {
@@ -489,7 +489,7 @@ func toMakeZeroValue(svc *resolver.Service, t *resolver.Type) string {
 		return fmt.Sprintf("%s(0)", text)
 	}
 	if t.Type == types.String {
-		return fmt.Sprintf(`""`)
+		return `""`
 	}
 	return fmt.Sprintf("(%s)(nil)", text)
 }

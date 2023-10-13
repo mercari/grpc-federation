@@ -27,18 +27,18 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 		}
 		msgToNode[msg] = &AllMessageDependencyGraphNode{Message: msg}
 	}
-	childMap := make(map[*AllMessageDependencyGraphNode]struct{})
 	for _, msg := range msgs {
 		if msg.Rule == nil {
 			continue
 		}
+		childMap := make(map[*AllMessageDependencyGraphNode]struct{})
 		node := msgToNode[msg]
 		for depIdx, depMessage := range msg.Rule.MessageDependencies {
-			depNode, exists := msgToNode[depMessage.Message]
+			depNode, depNodeExists := msgToNode[depMessage.Message]
 			if _, exists := childMap[depNode]; exists {
 				continue
 			}
-			if !exists {
+			if !depNodeExists {
 				if depMessage.Message == nil {
 					fileName := msg.File.Name
 					ctx.addError(
@@ -74,11 +74,11 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 				continue
 			}
 			for depIdx, depMessage := range field.Rule.Oneof.MessageDependencies {
-				depNode, exists := msgToNode[depMessage.Message]
+				depNode, depNodeExists := msgToNode[depMessage.Message]
 				if _, exists := childMap[depNode]; exists {
 					continue
 				}
-				if !exists {
+				if !depNodeExists {
 					if depMessage.Message == nil {
 						fileName := msg.File.Name
 						ctx.addError(
