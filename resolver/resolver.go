@@ -1701,6 +1701,8 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 	if graph == nil {
 		return
 	}
+
+	serviceMsgMap := make(map[string]map[string]*Message)
 	for _, root := range graph.Roots {
 		reqMsg := r.lookupRequestMessageFromResponseMessage(root.Message)
 		if reqMsg == nil {
@@ -1709,9 +1711,21 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 		msgArg := newMessageArgument(root.Message)
 		msgArg.Fields = append(msgArg.Fields, reqMsg.Fields...)
 		r.cachedMessageMap[msgArg.FQDN()] = msgArg
-		msgMap := make(map[string]*Message)
-		for _, msg := range r.resolveMessageArgumentRecursive(ctx, root) {
-			msgMap[msg.FQDN()] = msg
+		// Store the messages to serviceMsgMap first to avoid inserting duplicated ones to Service.Messages
+		for _, svc := range root.Message.File.Services {
+			if _, exists := serviceMsgMap[svc.FQDN()]; !exists {
+				serviceMsgMap[svc.FQDN()] = make(map[string]*Message)
+			}
+			for _, msg := range r.resolveMessageArgumentRecursive(ctx, root) {
+				serviceMsgMap[svc.FQDN()][msg.FQDN()] = msg
+			}
+		}
+	}
+
+	for fqdn, svc := range r.cachedServiceMap {
+		msgMap, exsits := serviceMsgMap[fqdn]
+		if !exsits {
+			continue
 		}
 		msgs := make([]*Message, 0, len(msgMap))
 		for _, msg := range msgMap {
@@ -1724,10 +1738,8 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 		for _, msg := range msgs {
 			args = append(args, msg.Rule.MessageArgument)
 		}
-		for _, svc := range root.Message.File.Services {
-			svc.MessageArgs = append(svc.MessageArgs, args...)
-			svc.Messages = append(svc.Messages, msgs...)
-		}
+		svc.MessageArgs = append(svc.MessageArgs, args...)
+		svc.Messages = append(svc.Messages, msgs...)
 	}
 }
 
