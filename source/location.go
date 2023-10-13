@@ -84,6 +84,14 @@ type Field struct {
 type FieldOption struct {
 	By    bool
 	Alias bool
+	Oneof *FieldOneof
+}
+
+// FieldOneof represents grpc.federation.field.oneof location.
+type FieldOneof struct {
+	Expr     bool
+	Messages *MessageDependencyOption
+	By       bool
 }
 
 type Oneof struct {
@@ -441,6 +449,171 @@ func MessageFieldAliasLocation(fileName, msgName, fieldName string) *Location {
 				Name: fieldName,
 				Option: &FieldOption{
 					Alias: true,
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofLocation creates location for oneof in grpc.federation.field option.
+func MessageFieldOneofLocation(fileName, msgName, fieldName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name:   fieldName,
+				Option: &FieldOption{Oneof: &FieldOneof{}},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofExprLocation creates location for expr in grpc.federation.field.oneof option.
+func MessageFieldOneofExprLocation(fileName, msgName, fieldName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name: fieldName,
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						Expr: true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofByLocation creates location for by in grpc.federation.field.oneof option.
+func MessageFieldOneofByLocation(fileName, msgName, fieldName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name: fieldName,
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						By: true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofMessageDependencyMessageLocation creates location for messages in grpc.federation.field.oneof option.
+func MessageFieldOneofMessageDependencyMessageLocation(fileName, msgName, fieldName string, idx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name: fieldName,
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						Messages: &MessageDependencyOption{
+							Idx:     idx,
+							Message: true,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofMessageDependencyArgumentLocation creates location for messages[].args[] in grpc.federation.field.oneof.
+func MessageFieldOneofMessageDependencyArgumentLocation(fileName, msgName, fieldName string, idx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name: fieldName,
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						Messages: &MessageDependencyOption{
+							Idx: idx,
+							Args: &ArgumentOption{
+								Idx: argIdx,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofMessageDependencyArgumentNameLocation creates location for messages[].args[].name in grpc.federation.field.oneof.
+func MessageFieldOneofMessageDependencyArgumentNameLocation(fileName, msgName, fieldName string, idx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						Messages: &MessageDependencyOption{
+							Idx: idx,
+							Args: &ArgumentOption{
+								Idx:  argIdx,
+								Name: true,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofMessageDependencyArgumentByLocation creates location for messages[].args[].by in grpc.federation.field.oneof.
+func MessageFieldOneofMessageDependencyArgumentByLocation(fileName, msgName, fieldName string, idx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name: fieldName,
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						Messages: &MessageDependencyOption{
+							Idx: idx,
+							Args: &ArgumentOption{
+								Idx: argIdx,
+								By:  true,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofMessageDependencyArgumentInlineLocation creates location for messages[].args[].inline in grpc.federation.field.oneof.
+func MessageFieldOneofMessageDependencyArgumentInlineLocation(fileName, msgName, fieldName string, idx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name: fieldName,
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						Messages: &MessageDependencyOption{
+							Idx: idx,
+							Args: &ArgumentOption{
+								Idx:    argIdx,
+								Inline: true,
+							},
+						},
+					},
 				},
 			},
 		},

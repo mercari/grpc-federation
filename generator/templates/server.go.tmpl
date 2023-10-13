@@ -272,6 +272,43 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 			},
 		}
 	}
+	newOneofSelectorFieldType := func(typ *celtypes.Type, fieldName string, oneofTypes []reflect.Type, getterNames []string, zeroValue reflect.Value) *celtypes.FieldType {
+		isSet := func(_ any) bool {
+			return false
+		}
+		getFrom := func(v any) (any, error) {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("%T is not struct type", v)
+			}
+			field := rv.FieldByName(fieldName)
+			fieldImpl := reflect.ValueOf(field.Interface())
+			for idx, oneofType := range oneofTypes {
+				if fieldImpl.Type() == oneofType {
+					method := reflect.ValueOf(v).MethodByName(getterNames[idx])
+					retValues := method.Call(nil)
+					if len(retValues) != 1 {
+						return nil, fmt.Errorf("failed to call %s for %T", "", v)
+					}
+					retValue := retValues[0]
+					return retValue.Interface(), nil
+				}
+			}
+			return zeroValue.Interface(), nil
+		}
+		return &celtypes.FieldType{
+			Type: typ,
+			IsSet: func(v any) bool {
+				return isSet(v)
+			},
+			GetFrom: func(v any) (any, error) {
+				return getFrom(v)
+			},
+		}
+	}
 	return &FederationServiceCELTypeHelper{
 		celRegistry: celRegistry,
 		structFieldMap: map[string]map[string]*celtypes.FieldType{
@@ -285,6 +322,17 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 				{{- end }}
 			},
 			{{- end }}
+			{{- end }}
+
+			{{- range .OneofTypes }}
+			"{{ .MessageProtoFQDN }}": map[string]*celtypes.FieldType{
+				"{{ .Name }}": newOneofSelectorFieldType(
+					{{ .TypeDeclare }}, "{{ .FieldName }}",
+					[]reflect.Type{ {{- range .FieldZeroValues }}reflect.TypeOf({{ . }}),{{- end }} },
+					[]string{ {{- range .FieldGetterNames }}"{{ . }}",{{- end }} },
+					reflect.Zero(reflect.TypeOf({{ .ReturnZeroValue }})),
+				),
+			},
 			{{- end }}
 		},
 	}
@@ -617,9 +665,44 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	}
 	{{- else if .IsOneofField }}
 	{{ $name := .Name }}
+	{{ $oneofFields := .OneofFields }}
+	{{- if .HasFieldOneofRule }}
+	{{- range $oneofFields }}
+	oneof_{{ .Name }}, err := s.evalCEL("{{ .Expr }}", envOpts, evalValues, reflect.TypeOf(true))
+	if err != nil {
+		return nil, err
+	}
+	{{- end }}
+	{{- end }}
 	switch {
-	{{- range .OneofFields }}
-	case {{ .Value }} != nil:
+	{{- range $oneofFields }}
+	case {{ .Condition }}:
+		{{- $oneofMsgResolvers := .MessageResolvers }}
+		{{- $oneofMsgResolversLen := len $oneofMsgResolvers }}
+		{{- if eq $oneofMsgResolversLen 1 }}
+		{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $oneofMsgResolvers 0)) }}
+		{{- else }}
+		{{- if $oneofMsgResolvers }}
+		eg, ctx1 := errgroup.WithContext(ctx)
+		{{- end }}
+		{{ range $oneofMsgResolvers }}
+		s.goWithRecover(eg, func() (interface{}, error) {
+			{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+			return nil, nil
+		})
+		{{ end }}
+		{{- if $oneofMsgResolvers }}
+		if err := eg.Wait(); err != nil {
+			return nil, err
+		}
+		{{- end }}
+		{{- end }}
+		{{- if .By }}
+		_value, err := s.evalCEL("{{ .By }}", envOpts, evalValues, {{ .OutType }})
+		if err != nil {
+			return nil, err
+		}
+		{{- end }}
 		ret.{{ $name }} = {{ .Value }}
 	{{- end }}
 	}

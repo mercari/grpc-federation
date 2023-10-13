@@ -22,15 +22,19 @@ func (v *Value) ReferenceNames() []string {
 	if v == nil {
 		return nil
 	}
-	if v.CEL == nil {
+	return v.CEL.ReferenceNames()
+}
+
+func (v *CELValue) ReferenceNames() []string {
+	if v == nil {
 		return nil
 	}
-	if v.CEL.CheckedExpr == nil {
+	if v.CheckedExpr == nil {
 		return nil
 	}
 
 	var refNames []string
-	for _, ref := range v.CEL.CheckedExpr.ReferenceMap {
+	for _, ref := range v.CheckedExpr.ReferenceMap {
 		if ref.Name == federation.MessageArgumentVariableName {
 			continue
 		}

@@ -577,7 +577,7 @@ func (b *MessageRuleBuilder) SetMessageArgument(msg *resolver.Message) *MessageR
 	return b
 }
 
-func (b *MessageRuleBuilder) SetDependencyGraph(graph *resolver.MessageRuleDependencyGraph) *MessageRuleBuilder {
+func (b *MessageRuleBuilder) SetDependencyGraph(graph *resolver.MessageDependencyGraph) *MessageRuleBuilder {
 	b.rule.DependencyGraph = graph
 	return b
 }
@@ -934,34 +934,39 @@ func (b *FieldRuleBuilder) SetAlias(v *resolver.Field) *FieldRuleBuilder {
 	return b
 }
 
+func (b *FieldRuleBuilder) SetOneof(v *resolver.FieldOneofRule) *FieldRuleBuilder {
+	b.rule.Oneof = v
+	return b
+}
+
 func (b *FieldRuleBuilder) Build(t *testing.T) *resolver.FieldRule {
 	t.Helper()
 	return b.rule
 }
 
 type DependencyGraphBuilder struct {
-	graph *resolver.MessageRuleDependencyGraph
+	graph *resolver.MessageDependencyGraph
 }
 
 func NewDependencyGraphBuilder() *DependencyGraphBuilder {
 	return &DependencyGraphBuilder{
-		graph: &resolver.MessageRuleDependencyGraph{},
+		graph: &resolver.MessageDependencyGraph{},
 	}
 }
 
 func (b *DependencyGraphBuilder) Add(parent *resolver.Message, children ...*resolver.Message) *DependencyGraphBuilder {
-	nodes := make([]*resolver.MessageRuleDependencyGraphNode, 0, len(children))
+	nodes := make([]*resolver.MessageDependencyGraphNode, 0, len(children))
 	for _, child := range children {
-		nodes = append(nodes, &resolver.MessageRuleDependencyGraphNode{Message: child})
+		nodes = append(nodes, &resolver.MessageDependencyGraphNode{Message: child})
 	}
-	b.graph.Roots = append(b.graph.Roots, &resolver.MessageRuleDependencyGraphNode{
+	b.graph.Roots = append(b.graph.Roots, &resolver.MessageDependencyGraphNode{
 		Message:  parent,
 		Children: nodes,
 	})
 	return b
 }
 
-func (b *DependencyGraphBuilder) Build(t *testing.T) *resolver.MessageRuleDependencyGraph {
+func (b *DependencyGraphBuilder) Build(t *testing.T) *resolver.MessageDependencyGraph {
 	t.Helper()
 	return b.graph
 }
@@ -1016,5 +1021,58 @@ func (b *MethodRuleBuilder) Build(t *testing.T) *resolver.MethodRule {
 		}
 		b.rule.Timeout = &duration
 	}
+	return b.rule
+}
+
+type FieldOneofRuleBuilder struct {
+	rule *resolver.FieldOneofRule
+}
+
+func NewFieldOneofRuleBuilder() *FieldOneofRuleBuilder {
+	return &FieldOneofRuleBuilder{
+		rule: &resolver.FieldOneofRule{},
+	}
+}
+
+func (b *FieldOneofRuleBuilder) SetExpr(expr string, out *resolver.Type) *FieldOneofRuleBuilder {
+	b.rule.Expr = &resolver.CELValue{
+		Expr: expr,
+		Out:  out,
+	}
+	return b
+}
+
+func (b *FieldOneofRuleBuilder) AddMessageDependency(name string, msg *resolver.Message, args []*resolver.Argument, autobind, used bool) *FieldOneofRuleBuilder {
+	dep := &resolver.MessageDependency{
+		Name:     name,
+		Message:  msg,
+		Args:     args,
+		AutoBind: autobind,
+		Used:     used,
+	}
+	b.rule.MessageDependencies = append(b.rule.MessageDependencies, dep)
+	return b
+}
+
+func (b *FieldOneofRuleBuilder) SetBy(expr string, out *resolver.Type) *FieldOneofRuleBuilder {
+	b.rule.By = &resolver.CELValue{
+		Expr: expr,
+		Out:  out,
+	}
+	return b
+}
+
+func (b *FieldOneofRuleBuilder) SetDependencyGraph(graph *resolver.MessageDependencyGraph) *FieldOneofRuleBuilder {
+	b.rule.DependencyGraph = graph
+	return b
+}
+
+func (b *FieldOneofRuleBuilder) AddResolver(group resolver.MessageResolverGroup) *FieldOneofRuleBuilder {
+	b.rule.Resolvers = append(b.rule.Resolvers, group)
+	return b
+}
+
+func (b *FieldOneofRuleBuilder) Build(t *testing.T) *resolver.FieldOneofRule {
+	t.Helper()
 	return b.rule
 }

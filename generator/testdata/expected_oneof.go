@@ -26,15 +26,10 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
-
-	post "example/post"
 )
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
-	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
-	// If this interface is not provided, an error is returned during initialization.
-	Client FederationServiceClientFactory // required
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler FederationServiceErrorHandler
@@ -44,8 +39,6 @@ type FederationServiceConfig struct {
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
 type FederationServiceClientFactory interface {
-	// Org_Post_PostServiceClient create a gRPC Client to be used to call methods in org.post.PostService.
-	Org_Post_PostServiceClient(FederationServiceClientConfig) (post.PostServiceClient, error)
 }
 
 // FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
@@ -61,7 +54,6 @@ type FederationServiceClientConfig struct {
 // FederationServiceDependencyServiceClient has a gRPC client for all services on which the federation service depends.
 // This is provided as an argument when implementing the custom resolver.
 type FederationServiceDependencyServiceClient struct {
-	Org_Post_PostServiceClient post.PostServiceClient
 }
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
@@ -77,10 +69,6 @@ type FederationServiceUnimplementedResolver struct{}
 // FederationServiceErrorHandler Federation Service often needs to convert errors received from downstream services.
 // If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 type FederationServiceErrorHandler func(ctx context.Context, methodName string, err error) error
-
-const (
-	FederationService_DependentMethod_Org_Post_PostService_CreatePost = "/org.post.PostService/CreatePost"
-)
 
 // FederationServiceRecoveredError represents recovered error.
 type FederationServiceRecoveredError struct {
@@ -102,22 +90,28 @@ type FederationService struct {
 	client       *FederationServiceDependencyServiceClient
 }
 
-// Org_Federation_CreatePostArgument is argument for "org.federation.CreatePost" message.
-type Org_Federation_CreatePostArgument struct {
-	Content string
-	Title   string
-	UserId  string
-	Client  *FederationServiceDependencyServiceClient
+// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
+type Org_Federation_GetResponseArgument struct {
+	Sel    *UserSelection
+	Client *FederationServiceDependencyServiceClient
 }
 
-// Org_Federation_CreatePostResponseArgument is argument for "org.federation.CreatePostResponse" message.
-type Org_Federation_CreatePostResponseArgument struct {
-	Content string
-	Cp      *CreatePost
-	P       *post.Post
-	Title   string
-	UserId  string
-	Client  *FederationServiceDependencyServiceClient
+// Org_Federation_MArgument is argument for "org.federation.M" message.
+type Org_Federation_MArgument struct {
+	Client *FederationServiceDependencyServiceClient
+}
+
+// Org_Federation_UserArgument is argument for "org.federation.User" message.
+type Org_Federation_UserArgument struct {
+	UserId string
+	Client *FederationServiceDependencyServiceClient
+}
+
+// Org_Federation_UserSelectionArgument is argument for "org.federation.UserSelection" message.
+type Org_Federation_UserSelectionArgument struct {
+	M      *M
+	Value  string
+	Client *FederationServiceDependencyServiceClient
 }
 
 // FederationServiceCELTypeHelper
@@ -273,15 +267,21 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 	return &FederationServiceCELTypeHelper{
 		celRegistry: celRegistry,
 		structFieldMap: map[string]map[string]*celtypes.FieldType{
-			"grpc.federation.private.CreatePostArgument": map[string]*celtypes.FieldType{
-				"title":   newFieldType(celtypes.StringType, "Title"),
-				"content": newFieldType(celtypes.StringType, "Content"),
+			"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{},
+			"grpc.federation.private.MArgument":           map[string]*celtypes.FieldType{},
+			"grpc.federation.private.UserArgument": map[string]*celtypes.FieldType{
 				"user_id": newFieldType(celtypes.StringType, "UserId"),
 			},
-			"grpc.federation.private.CreatePostResponseArgument": map[string]*celtypes.FieldType{
-				"title":   newFieldType(celtypes.StringType, "Title"),
-				"content": newFieldType(celtypes.StringType, "Content"),
-				"user_id": newFieldType(celtypes.StringType, "UserId"),
+			"grpc.federation.private.UserSelectionArgument": map[string]*celtypes.FieldType{
+				"value": newFieldType(celtypes.StringType, "Value"),
+			},
+			"org.federation.UserSelection": map[string]*celtypes.FieldType{
+				"user": newOneofSelectorFieldType(
+					celtypes.NewObjectType("org.federation.User"), "User",
+					[]reflect.Type{reflect.TypeOf((*UserSelection_UserA)(nil)), reflect.TypeOf((*UserSelection_UserB)(nil))},
+					[]string{"GetUserA", "GetUserB"},
+					reflect.Zero(reflect.TypeOf((*User)(nil))),
+				),
 			},
 		},
 	}
@@ -290,13 +290,6 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if err := validateFederationServiceConfig(cfg); err != nil {
-		return nil, err
-	}
-	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
-		Service: "org.post.PostService",
-		Name:    "post_service",
-	})
-	if err != nil {
 		return nil, err
 	}
 	logger := cfg.Logger
@@ -321,16 +314,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		logger:       logger,
 		errorHandler: errorHandler,
 		env:          env,
-		client: &FederationServiceDependencyServiceClient{
-			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
-		},
+		client:       &FederationServiceDependencyServiceClient{},
 	}, nil
 }
 
 func validateFederationServiceConfig(cfg FederationServiceConfig) error {
-	if cfg.Client == nil {
-		return fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
-	}
 	return nil
 }
 
@@ -475,19 +463,16 @@ func (s *FederationService) outputErrorLog(ctx context.Context, err error) {
 	s.logger.ErrorContext(ctx, err.Error())
 }
 
-// CreatePost implements "org.federation.FederationService/CreatePost" method.
-func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostRequest) (res *CreatePostResponse, e error) {
+// Get implements "org.federation.FederationService/Get" method.
+func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
 	defer func() {
 		if r := recover(); r != nil {
 			e = recoverErrorFederationService(r, debug.Stack())
 			s.outputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_CreatePostResponse(ctx, &Org_Federation_CreatePostResponseArgument{
-		Client:  s.client,
-		Title:   req.Title,
-		Content: req.Content,
-		UserId:  req.UserId,
+	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
+		Client: s.client,
 	})
 	if err != nil {
 		s.outputErrorLog(ctx, err)
@@ -496,243 +481,293 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 	return res, nil
 }
 
-// resolve_Org_Federation_CreatePost resolve "org.federation.CreatePost" message.
-func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *Org_Federation_CreatePostArgument) (*CreatePost, error) {
-	s.logger.DebugContext(ctx, "resolve  org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
-	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.CreatePostArgument"))}
-	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
-
-	// create a message value to be returned.
-	ret := &CreatePost{}
-
-	// field binding section.
-	// (grpc.federation.field).by = "$.title"
-	{
-		_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(ret.Title))
-		if err != nil {
-			return nil, err
-		}
-		ret.Title = _value.(string)
-	}
-	// (grpc.federation.field).by = "$.content"
-	{
-		_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(ret.Content))
-		if err != nil {
-			return nil, err
-		}
-		ret.Content = _value.(string)
-	}
-	// (grpc.federation.field).by = "$.user_id"
-	{
-		_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(ret.UserId))
-		if err != nil {
-			return nil, err
-		}
-		ret.UserId = _value.(string)
-	}
-
-	s.logger.DebugContext(ctx, "resolved org.federation.CreatePost", slog.Any("org.federation.CreatePost", s.logvalue_Org_Federation_CreatePost(ret)))
-	return ret, nil
-}
-
-// resolve_Org_Federation_CreatePostResponse resolve "org.federation.CreatePostResponse" message.
-func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx context.Context, req *Org_Federation_CreatePostResponseArgument) (*CreatePostResponse, error) {
-	s.logger.DebugContext(ctx, "resolve  org.federation.CreatePostResponse", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostResponseArgument(req)))
+// resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
+func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
+	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
-		sg      singleflight.Group
-		valueCp *CreatePost
-		valueMu sync.RWMutex
-		valueP  *post.Post
+		sg       singleflight.Group
+		valueMu  sync.RWMutex
+		valueSel *UserSelection
 	)
-	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.CreatePostResponseArgument"))}
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.GetResponseArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 
 	// This section's codes are generated by the following proto definition.
 	/*
 	   {
-	     name: "cp"
-	     message: "CreatePost"
-	     args: [
-	       { name: "title", by: "$.title" },
-	       { name: "content", by: "$.content" },
-	       { name: "user_id", by: "$.user_id" }
-	     ]
+	     name: "sel"
+	     message: "UserSelection"
+	     args { name: "value", string: "foo" }
 	   }
 	*/
-	resCreatePostIface, err, _ := sg.Do("cp_org.federation.CreatePost", func() (interface{}, error) {
+	resUserSelectionIface, err, _ := sg.Do("sel_org.federation.UserSelection", func() (interface{}, error) {
 		valueMu.RLock()
-		args := &Org_Federation_CreatePostArgument{
+		args := &Org_Federation_UserSelectionArgument{
 			Client: s.client,
-		}
-		// { name: "title", by: "$.title" }
-		{
-			_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(args.Title))
-			if err != nil {
-				return nil, err
-			}
-			args.Title = _value.(string)
-		}
-		// { name: "content", by: "$.content" }
-		{
-			_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(args.Content))
-			if err != nil {
-				return nil, err
-			}
-			args.Content = _value.(string)
-		}
-		// { name: "user_id", by: "$.user_id" }
-		{
-			_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(args.UserId))
-			if err != nil {
-				return nil, err
-			}
-			args.UserId = _value.(string)
+			Value:  "foo", // { name: "value", string: "foo" }
 		}
 		valueMu.RUnlock()
-		return s.resolve_Org_Federation_CreatePost(ctx, args)
+		return s.resolve_Org_Federation_UserSelection(ctx, args)
 	})
 	if err != nil {
 		return nil, err
 	}
-	resCreatePost := resCreatePostIface.(*CreatePost)
+	resUserSelection := resUserSelectionIface.(*UserSelection)
 	valueMu.Lock()
-	valueCp = resCreatePost // { name: "cp", message: "CreatePost" ... }
-	envOpts = append(envOpts, cel.Variable("cp", cel.ObjectType("org.federation.CreatePost")))
-	evalValues["cp"] = valueCp
-	valueMu.Unlock()
-
-	// This section's codes are generated by the following proto definition.
-	/*
-	   resolver: {
-	     method: "org.post.PostService/CreatePost"
-	     request { field: "post", by: "cp" }
-	     response { name: "p", field: "post" }
-	   }
-	*/
-	resCreatePostResponseIface, err, _ := sg.Do("org.post.PostService/CreatePost", func() (interface{}, error) {
-		valueMu.RLock()
-		args := &post.CreatePostRequest{}
-		// { field: "post", by: "cp" }
-		{
-			_value, err := s.evalCEL("cp", envOpts, evalValues, nil)
-			if err != nil {
-				return nil, err
-			}
-			args.Post = s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(_value.(*CreatePost))
-		}
-		valueMu.RUnlock()
-		return s.client.Org_Post_PostServiceClient.CreatePost(ctx, args)
-	})
-	if err != nil {
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_CreatePost, err); err != nil {
-			return nil, err
-		}
-	}
-	resCreatePostResponse := resCreatePostResponseIface.(*post.CreatePostResponse)
-	valueMu.Lock()
-	valueP = resCreatePostResponse.GetPost() // { name: "p", field: "post" }
-	envOpts = append(envOpts, cel.Variable("p", cel.ObjectType("org.post.Post")))
-	evalValues["p"] = valueP
+	valueSel = resUserSelection // { name: "sel", message: "UserSelection" ... }
+	envOpts = append(envOpts, cel.Variable("sel", cel.ObjectType("org.federation.UserSelection")))
+	evalValues["sel"] = valueSel
 	valueMu.Unlock()
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cp = valueCp
-	req.P = valueP
+	req.Sel = valueSel
 
 	// create a message value to be returned.
-	ret := &CreatePostResponse{}
+	ret := &GetResponse{}
 
 	// field binding section.
-	// (grpc.federation.field).by = "p"
+	// (grpc.federation.field).by = "sel.user"
 	{
-		_value, err := s.evalCEL("p", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("sel.user", envOpts, evalValues, nil)
 		if err != nil {
 			return nil, err
 		}
-		ret.Post = s.cast_Org_Post_Post__to__Org_Federation_Post(_value.(*post.Post))
+		ret.User = _value.(*User)
 	}
 
-	s.logger.DebugContext(ctx, "resolved org.federation.CreatePostResponse", slog.Any("org.federation.CreatePostResponse", s.logvalue_Org_Federation_CreatePostResponse(ret)))
+	s.logger.DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
 	return ret, nil
 }
 
-// cast_Org_Federation_CreatePost__to__Org_Post_CreatePost cast from "org.federation.CreatePost" to "org.post.CreatePost".
-func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(from *CreatePost) *post.CreatePost {
-	if from == nil {
-		return nil
-	}
+// resolve_Org_Federation_M resolve "org.federation.M" message.
+func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *Org_Federation_MArgument) (*M, error) {
+	s.logger.DebugContext(ctx, "resolve  org.federation.M", slog.Any("message_args", s.logvalue_Org_Federation_MArgument(req)))
 
-	return &post.CreatePost{
-		Title:   from.GetTitle(),
-		Content: from.GetContent(),
-		UserId:  from.GetUserId(),
-	}
+	// create a message value to be returned.
+	ret := &M{}
+
+	// field binding section.
+	ret.Value = "foo" // (grpc.federation.field).string = "foo"
+
+	s.logger.DebugContext(ctx, "resolved org.federation.M", slog.Any("org.federation.M", s.logvalue_Org_Federation_M(ret)))
+	return ret, nil
 }
 
-// cast_Org_Post_Post__to__Org_Federation_Post cast from "org.post.Post" to "org.federation.Post".
-func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *post.Post) *Post {
-	if from == nil {
-		return nil
+// resolve_Org_Federation_User resolve "org.federation.User" message.
+func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument) (*User, error) {
+	s.logger.DebugContext(ctx, "resolve  org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.UserArgument"))}
+	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
+
+	// create a message value to be returned.
+	ret := &User{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "$.user_id"
+	{
+		_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(ret.Id))
+		if err != nil {
+			return nil, err
+		}
+		ret.Id = _value.(string)
 	}
 
-	return &Post{
-		Id:      from.GetId(),
-		Title:   from.GetTitle(),
-		Content: from.GetContent(),
-		UserId:  from.GetUserId(),
-	}
+	s.logger.DebugContext(ctx, "resolved org.federation.User", slog.Any("org.federation.User", s.logvalue_Org_Federation_User(ret)))
+	return ret, nil
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) slog.Value {
+// resolve_Org_Federation_UserSelection resolve "org.federation.UserSelection" message.
+func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Context, req *Org_Federation_UserSelectionArgument) (*UserSelection, error) {
+	s.logger.DebugContext(ctx, "resolve  org.federation.UserSelection", slog.Any("message_args", s.logvalue_Org_Federation_UserSelectionArgument(req)))
+	var (
+		sg      singleflight.Group
+		valueM  *M
+		valueMu sync.RWMutex
+		valueUa *User
+		valueUb *User
+	)
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.UserSelectionArgument"))}
+	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
+
+	// This section's codes are generated by the following proto definition.
+	/*
+	   {
+	     name: "m"
+	     message: "M"
+	   }
+	*/
+	resMIface, err, _ := sg.Do("m_org.federation.M", func() (interface{}, error) {
+		valueMu.RLock()
+		args := &Org_Federation_MArgument{
+			Client: s.client,
+		}
+		valueMu.RUnlock()
+		return s.resolve_Org_Federation_M(ctx, args)
+	})
+	if err != nil {
+		return nil, err
+	}
+	resM := resMIface.(*M)
+	valueMu.Lock()
+	valueM = resM // { name: "m", message: "M" ... }
+	envOpts = append(envOpts, cel.Variable("m", cel.ObjectType("org.federation.M")))
+	evalValues["m"] = valueM
+	valueMu.Unlock()
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.M = valueM
+
+	// create a message value to be returned.
+	ret := &UserSelection{}
+
+	// field binding section.
+
+	oneof_UserA, err := s.evalCEL("m.value == $.value", envOpts, evalValues, reflect.TypeOf(true))
+	if err != nil {
+		return nil, err
+	}
+	oneof_UserB, err := s.evalCEL("m.value != $.value", envOpts, evalValues, reflect.TypeOf(true))
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case oneof_UserA.(bool):
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   {
+		     name: "ua"
+		     message: "User"
+		     args { name: "user_id", string: "a" }
+		   }
+		*/
+		resUserIface, err, _ := sg.Do("ua_org.federation.User", func() (interface{}, error) {
+			valueMu.RLock()
+			args := &Org_Federation_UserArgument{
+				Client: s.client,
+				UserId: "a", // { name: "user_id", string: "a" }
+			}
+			valueMu.RUnlock()
+			return s.resolve_Org_Federation_User(ctx, args)
+		})
+		if err != nil {
+			return nil, err
+		}
+		resUser := resUserIface.(*User)
+		valueMu.Lock()
+		valueUa = resUser // { name: "ua", message: "User" ... }
+		envOpts = append(envOpts, cel.Variable("ua", cel.ObjectType("org.federation.User")))
+		evalValues["ua"] = valueUa
+		valueMu.Unlock()
+		_value, err := s.evalCEL("ua", envOpts, evalValues, nil)
+		if err != nil {
+			return nil, err
+		}
+		ret.User = &UserSelection_UserA{UserA: _value.(*User)}
+	case oneof_UserB.(bool):
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   {
+		     name: "ub"
+		     message: "User"
+		     args { name: "user_id", string: "b" }
+		   }
+		*/
+		resUserIface, err, _ := sg.Do("ub_org.federation.User", func() (interface{}, error) {
+			valueMu.RLock()
+			args := &Org_Federation_UserArgument{
+				Client: s.client,
+				UserId: "b", // { name: "user_id", string: "b" }
+			}
+			valueMu.RUnlock()
+			return s.resolve_Org_Federation_User(ctx, args)
+		})
+		if err != nil {
+			return nil, err
+		}
+		resUser := resUserIface.(*User)
+		valueMu.Lock()
+		valueUb = resUser // { name: "ub", message: "User" ... }
+		envOpts = append(envOpts, cel.Variable("ub", cel.ObjectType("org.federation.User")))
+		evalValues["ub"] = valueUb
+		valueMu.Unlock()
+		_value, err := s.evalCEL("ub", envOpts, evalValues, nil)
+		if err != nil {
+			return nil, err
+		}
+		ret.User = &UserSelection_UserB{UserB: _value.(*User)}
+	}
+
+	s.logger.DebugContext(ctx, "resolved org.federation.UserSelection", slog.Any("org.federation.UserSelection", s.logvalue_Org_Federation_UserSelection(ret)))
+	return ret, nil
+}
+
+func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
-		slog.String("title", v.GetTitle()),
-		slog.String("content", v.GetContent()),
-		slog.String("user_id", v.GetUserId()),
+		slog.Any("user", s.logvalue_Org_Federation_User(v.GetUser())),
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *Org_Federation_CreatePostArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
+}
+
+func (s *FederationService) logvalue_Org_Federation_M(v *M) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
-		slog.String("title", v.Title),
-		slog.String("content", v.Content),
-		slog.String("user_id", v.UserId),
+		slog.String("value", v.GetValue()),
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePostResponse(v *CreatePostResponse) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_MArgument(v *Org_Federation_MArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
-	return slog.GroupValue(
-		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
-	)
+	return slog.GroupValue()
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v *Org_Federation_CreatePostResponseArgument) slog.Value {
-	if v == nil {
-		return slog.GroupValue()
-	}
-	return slog.GroupValue(
-		slog.String("title", v.Title),
-		slog.String("content", v.Content),
-		slog.String("user_id", v.UserId),
-	)
-}
-
-func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
-		slog.String("title", v.GetTitle()),
-		slog.String("content", v.GetContent()),
-		slog.String("user_id", v.GetUserId()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("user_id", v.UserId),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_UserSelection(v *UserSelection) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("user_a", s.logvalue_Org_Federation_User(v.GetUserA())),
+		slog.Any("user_b", s.logvalue_Org_Federation_User(v.GetUserB())),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_UserSelectionArgument(v *Org_Federation_UserSelectionArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("value", v.Value),
 	)
 }

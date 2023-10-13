@@ -1006,7 +1006,36 @@ func (f *File) nodeInfoByFieldOption(node *ast.OptionNode, opt *FieldOption) *as
 					return nil
 				}
 				return f.nodeInfo(value)
+			case opt.Oneof != nil && optName == "oneof":
+				value, ok := elem.Val.(*ast.MessageLiteralNode)
+				if !ok {
+					return nil
+				}
+				return f.nodeInfoByFieldOneof(value, opt.Oneof)
 			}
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByFieldOneof(node *ast.MessageLiteralNode, opt *FieldOneof) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.Expr && fieldName == "expr":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.Messages != nil && fieldName == "messages":
+			return f.nodeInfoByMessageDependency(f.getMessageListFromNode(elem.Val), opt.Messages)
+		case opt.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
 		}
 	}
 	return f.nodeInfo(node)

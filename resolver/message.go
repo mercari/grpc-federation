@@ -101,6 +101,12 @@ func (m *Message) HasCELValue() bool {
 		if value != nil && value.CEL != nil {
 			return true
 		}
+		if field.Rule.Oneof != nil && field.Rule.Oneof.Expr != nil {
+			return true
+		}
+		if field.Rule.Oneof != nil && field.Rule.Oneof.By != nil {
+			return true
+		}
 	}
 	return false
 }
@@ -162,6 +168,9 @@ func (m *Message) ReferenceNames() []string {
 			continue
 		}
 		refNames = append(refNames, field.Rule.Value.ReferenceNames()...)
+		if field.Rule.Oneof != nil {
+			refNames = append(refNames, field.Rule.Oneof.Expr.ReferenceNames()...)
+		}
 	}
 	return refNames
 }
@@ -206,6 +215,18 @@ func (m *Message) Field(name string) *Field {
 	for _, field := range m.Fields {
 		if field.Name == name {
 			return field
+		}
+	}
+	return nil
+}
+
+func (m *Message) Oneof(name string) *Oneof {
+	for _, field := range m.Fields {
+		if field.Oneof == nil {
+			continue
+		}
+		if field.Oneof.Name == name {
+			return field.Oneof
 		}
 	}
 	return nil

@@ -111,7 +111,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 	}
 
 	r.resolveMessageArgument(ctx, files)
-	r.resolveMessageRuleDependencies(ctx, files)
+	r.resolveMessageDependencies(ctx, files)
 
 	services := r.servicesWithRule(ctx, files)
 	return &Result{Services: services, Warnings: ctx.warnings()}, ctx.error()
@@ -877,13 +877,19 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 		return
 	}
 	methodCall := r.resolveMethodCall(ctx, ruleDef.Resolver)
-	msgs := r.resolveMessages(ctx, msg, ruleDef.Messages)
+	depMsgs := r.resolveMessages(ctx, msg, ruleDef.Messages)
+	for _, depMsg := range depMsgs {
+		depMsg.Owner = &MessageDependencyOwner{
+			Type:    MessageDependencyOwnerMessage,
+			Message: msg,
+		}
+	}
 	msg.Rule = &MessageRule{
 		MethodCall:          methodCall,
-		MessageDependencies: msgs,
+		MessageDependencies: depMsgs,
 		CustomResolver:      ruleDef.GetCustomResolver(),
 		Alias:               r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
-		DependencyGraph:     &MessageRuleDependencyGraph{},
+		DependencyGraph:     &MessageDependencyGraph{},
 	}
 }
 
@@ -925,20 +931,53 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 		}
 		return nil
 	}
-	value, err := r.resolveValue(ctx, fieldRuleToCommonValueDef(ruleDef))
-	if err != nil {
-		ctx.addError(
-			ErrWithLocation(
-				err.Error(),
-				source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
-			),
-		)
-		return nil
+	oneof := r.resolveFieldOneofRule(ctx, msg, field, ruleDef.GetOneof())
+	var value *Value
+	if oneof == nil {
+		v, err := r.resolveValue(ctx, fieldRuleToCommonValueDef(ruleDef))
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
+				),
+			)
+			return nil
+		}
+		value = v
 	}
 	return &FieldRule{
 		Value:          value,
 		CustomResolver: ruleDef.GetCustomResolver(),
 		Alias:          r.resolveFieldAlias(ctx, msg, field, ruleDef.GetAlias()),
+		Oneof:          oneof,
+	}
+}
+
+func (r *Resolver) resolveFieldOneofRule(ctx *context, msg *Message, field *Field, def *federation.FieldOneof) *FieldOneofRule {
+	if def == nil {
+		return nil
+	}
+	if field.Oneof == nil {
+		ctx.addError(
+			ErrWithLocation(
+				`"oneof" feature can only be used for fields within oneof`,
+				source.MessageFieldOneofLocation(ctx.fileName(), msg.Name, field.Name),
+			),
+		)
+		return nil
+	}
+	depMsgs := r.resolveMessages(ctx, msg, def.GetMessages())
+	for _, depMsg := range depMsgs {
+		depMsg.Owner = &MessageDependencyOwner{
+			Type:  MessageDependencyOwnerOneofField,
+			Field: field,
+		}
+	}
+	return &FieldOneofRule{
+		Expr:                &CELValue{Expr: def.GetExpr()},
+		MessageDependencies: depMsgs,
+		By:                  &CELValue{Expr: def.GetBy()},
 	}
 }
 
@@ -1697,7 +1736,7 @@ func (r *Resolver) lookupEnumValueFromMessage(name string, msg *Message) *EnumVa
 // resolveMessageArgument constructs message arguments using a dependency graph and assigns them to each message.
 func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 	// create a dependency graph for all messages.
-	graph := CreateMessageDependencyGraph(ctx, r.allMessages(files))
+	graph := CreateAllMessageDependencyGraph(ctx, r.allMessages(files))
 	if graph == nil {
 		return
 	}
@@ -1731,7 +1770,7 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 	}
 }
 
-func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *MessageDependencyGraphNode) []*Message {
+func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessageDependencyGraphNode) []*Message {
 	msg := node.Message
 	arg := msg.Rule.MessageArgument
 	fileDesc := r.messageArgumentFileDescriptor(arg)
@@ -1757,20 +1796,54 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *MessageDe
 	r.resolveMessageCELValues(ctx, env, msg)
 
 	msgs := []*Message{msg}
-	msgToDepMap := make(map[*Message]*MessageDependency)
+	msgToDepsMap := make(map[*Message][]*MessageDependency)
 	depToIdx := make(map[*MessageDependency]int)
 	for idx, dep := range msg.Rule.MessageDependencies {
-		msgToDepMap[dep.Message] = dep
+		msgToDepsMap[dep.Message] = append(msgToDepsMap[dep.Message], dep)
 		depToIdx[dep] = idx
+	}
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		for idx, dep := range field.Rule.Oneof.MessageDependencies {
+			msgToDepsMap[dep.Message] = append(msgToDepsMap[dep.Message], dep)
+			depToIdx[dep] = idx
+		}
 	}
 	for _, child := range node.Children {
 		depMsg := child.Message
-		dep := msgToDepMap[depMsg]
 		depMsgArg := newMessageArgument(depMsg)
 		r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
-		argNameMap := make(map[string]struct{})
+		deps := msgToDepsMap[depMsg]
+		depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, msg, deps, depToIdx)...)
+		m := r.resolveMessageArgumentRecursive(ctx, child)
+		msgs = append(msgs, m...)
+	}
+	return msgs
+}
+
+func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, deps []*MessageDependency, depToIdx map[*MessageDependency]int) []*Field {
+	argNameMap := make(map[string]struct{})
+	for _, dep := range deps {
+		for _, arg := range dep.Args {
+			if arg.Name == "" {
+				continue
+			}
+			argNameMap[arg.Name] = struct{}{}
+		}
+	}
+
+	evaluatedArgNameMap := make(map[string]struct{})
+	var fields []*Field
+	for _, dep := range deps {
+		depIdx := depToIdx[dep]
+		r.validateMessageDependencyArgumentName(ctx, argNameMap, msg, dep, depIdx)
 		for argIdx, arg := range dep.Args {
-			if _, exists := argNameMap[arg.Name]; exists {
+			if _, exists := evaluatedArgNameMap[arg.Name]; exists {
 				continue
 			}
 			if arg.Value == nil {
@@ -1795,19 +1868,56 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *MessageDe
 					)
 					continue
 				}
-				depMsgArg.Fields = append(depMsgArg.Fields, fieldType.Ref.Fields...)
+				fields = append(fields, fieldType.Ref.Fields...)
 			} else {
-				depMsgArg.Fields = append(depMsgArg.Fields, &Field{
+				fields = append(fields, &Field{
 					Name: arg.Name,
 					Type: fieldType,
 				})
 			}
-			argNameMap[arg.Name] = struct{}{}
+			evaluatedArgNameMap[arg.Name] = struct{}{}
 		}
-		m := r.resolveMessageArgumentRecursive(ctx, child)
-		msgs = append(msgs, m...)
 	}
-	return msgs
+	return fields
+}
+
+func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMap map[string]struct{}, msg *Message, dep *MessageDependency, depIdx int) {
+	curDepArgNameMap := make(map[string]struct{})
+	for _, arg := range dep.Args {
+		if arg.Name == "" {
+			continue
+		}
+		curDepArgNameMap[arg.Name] = struct{}{}
+	}
+	for name := range argNameMap {
+		if _, exists := curDepArgNameMap[name]; exists {
+			continue
+		}
+		var errLoc *source.Location
+		switch dep.Owner.Type {
+		case MessageDependencyOwnerMessage:
+			errLoc = source.MessageDependencyArgumentLocation(
+				msg.File.Name,
+				msg.Name,
+				depIdx,
+				0,
+			)
+		case MessageDependencyOwnerOneofField:
+			errLoc = source.MessageFieldOneofMessageDependencyArgumentLocation(
+				msg.File.Name,
+				msg.Name,
+				dep.Owner.Field.Name,
+				depIdx,
+				0,
+			)
+		}
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf("%q argument is defined in other message dependency arguments, but not in this context", name),
+				errLoc,
+			),
+		)
+	}
 }
 
 func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Message) {
@@ -1817,7 +1927,10 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 	methodCall := msg.Rule.MethodCall
 	if methodCall != nil && methodCall.Request != nil {
 		for idx, arg := range methodCall.Request.Args {
-			if err := r.resolveCELValue(ctx, env, arg.Value); err != nil {
+			if arg.Value == nil {
+				continue
+			}
+			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -1829,7 +1942,10 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 	}
 	for depIdx, depMessage := range msg.Rule.MessageDependencies {
 		for argIdx, arg := range depMessage.Args {
-			if err := r.resolveCELValue(ctx, env, arg.Value); err != nil {
+			if arg.Value == nil {
+				continue
+			}
+			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
 				if arg.Value.CEL != nil && arg.Value.CEL.Inline {
 					ctx.addError(
 						ErrWithLocation(
@@ -1862,17 +1978,81 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		if !field.HasRule() {
 			continue
 		}
-		if err := r.resolveCELValue(ctx, env, field.Rule.Value); err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.MessageFieldByLocation(
-						msg.File.Name,
-						msg.Name,
-						field.Name,
+		if field.Rule.Value != nil {
+			if err := r.resolveCELValue(ctx, env, field.Rule.Value.CEL); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageFieldByLocation(
+							msg.File.Name,
+							msg.Name,
+							field.Name,
+						),
 					),
-				),
-			)
+				)
+			}
+		}
+		if field.Rule.Oneof != nil {
+			oneof := field.Rule.Oneof
+			if err := r.resolveCELValue(ctx, env, oneof.Expr); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageFieldOneofExprLocation(
+							msg.File.Name,
+							msg.Name,
+							field.Name,
+						),
+					),
+				)
+			}
+			if oneof.Expr.Out != nil {
+				if oneof.Expr.Out.Type != types.Bool {
+					ctx.addError(
+						ErrWithLocation(
+							fmt.Sprintf(`return value of "expr" must be bool type but got %s type`, oneof.Expr.Out.Type),
+							source.MessageFieldOneofExprLocation(
+								msg.File.Name,
+								msg.Name,
+								field.Name,
+							),
+						),
+					)
+				}
+			}
+			var envOpts []cel.EnvOption
+			for _, dep := range oneof.MessageDependencies {
+				if dep.Name == "" {
+					continue
+				}
+				envOpts = append(envOpts, cel.Variable(dep.Name, ToCELType(NewMessageType(dep.Message, false))))
+			}
+			env, err := env.Extend(envOpts...)
+			if err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`failed to extend cel.Env from variables of messages: %s`, err.Error()),
+						source.MessageFieldOneofLocation(
+							msg.File.Name,
+							msg.Name,
+							field.Name,
+						),
+					),
+				)
+				continue
+			}
+			if err := r.resolveCELValue(ctx, env, oneof.By); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageFieldOneofByLocation(
+							msg.File.Name,
+							msg.Name,
+							field.Name,
+						),
+					),
+				)
+			}
 		}
 	}
 
@@ -1900,37 +2080,34 @@ func (r *Resolver) resolveUsedNameReference(msg *Message) {
 			depMessage.Used = true
 		}
 	}
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		oneof := field.Rule.Oneof
+		oneofNameMap := make(map[string]struct{})
+		for _, name := range oneof.By.ReferenceNames() {
+			oneofNameMap[name] = struct{}{}
+		}
+		for _, depMessage := range oneof.MessageDependencies {
+			if _, exists := oneofNameMap[depMessage.Name]; exists {
+				depMessage.Used = true
+			}
+		}
+	}
 }
 
-func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *Value) error {
+func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) error {
 	if value == nil {
 		return nil
 	}
-	if value.Const != nil && value.Const.Type.Type == types.Message {
-		if value.Const.Type.Repeated {
-			for _, msgValue := range value.Const.Value.([]map[string]*Value) {
-				for _, fieldValue := range msgValue {
-					if err := r.resolveCELValue(ctx, env, fieldValue); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
-		for _, fieldValue := range value.Const.Value.(map[string]*Value) {
-			if err := r.resolveCELValue(ctx, env, fieldValue); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if value.CEL == nil {
-		return nil
-	}
-	if strings.Contains(value.CEL.Expr, federation.MessageArgumentVariableName) {
+	if strings.Contains(value.Expr, federation.MessageArgumentVariableName) {
 		return fmt.Errorf("%q is a reserved keyword and cannot be used as a variable name", federation.MessageArgumentVariableName)
 	}
-	expr := strings.Replace(value.CEL.Expr, "$", federation.MessageArgumentVariableName, -1)
+	expr := strings.Replace(value.Expr, "$", federation.MessageArgumentVariableName, -1)
 	ast, issues := env.Compile(expr)
 	if issues.Err() != nil {
 		return issues.Err()
@@ -1943,8 +2120,8 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *Value) err
 	if err != nil {
 		return err
 	}
-	value.CEL.Out = out
-	value.CEL.CheckedExpr = checkedExpr
+	value.Out = out
+	value.CheckedExpr = checkedExpr
 	return nil
 }
 
@@ -2085,15 +2262,27 @@ func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.Fil
 }
 
 // resolveMessageRuleDependencies resolve dependencies for each message.
-func (r *Resolver) resolveMessageRuleDependencies(ctx *context, files []*File) {
+func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 	msgs := r.allMessages(files)
 	for _, msg := range msgs {
 		if msg.Rule == nil {
 			continue
 		}
-		if graph := CreateMessageRuleDependencyGraph(ctx, msg); graph != nil {
+		if graph := CreateMessageDependencyGraph(ctx, msg); graph != nil {
 			msg.Rule.DependencyGraph = graph
 			msg.Rule.Resolvers = graph.MessageResolverGroups(ctx)
+		}
+		for _, field := range msg.Fields {
+			if field.Rule == nil {
+				continue
+			}
+			if field.Rule.Oneof == nil {
+				continue
+			}
+			if graph := CreateMessageDependencyGraphByFieldOneof(ctx, msg, field); graph != nil {
+				field.Rule.Oneof.DependencyGraph = graph
+				field.Rule.Oneof.Resolvers = graph.MessageResolverGroups(ctx)
+			}
 		}
 	}
 	r.validateMessages(ctx, msgs)
