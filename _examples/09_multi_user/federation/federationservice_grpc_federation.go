@@ -269,6 +269,43 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 			},
 		}
 	}
+	newOneofSelectorFieldType := func(typ *celtypes.Type, fieldName string, oneofTypes []reflect.Type, getterNames []string, zeroValue reflect.Value) *celtypes.FieldType {
+		isSet := func(_ any) bool {
+			return false
+		}
+		getFrom := func(v any) (any, error) {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Pointer {
+				rv = rv.Elem()
+			}
+			if rv.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("%T is not struct type", v)
+			}
+			field := rv.FieldByName(fieldName)
+			fieldImpl := reflect.ValueOf(field.Interface())
+			for idx, oneofType := range oneofTypes {
+				if fieldImpl.Type() == oneofType {
+					method := reflect.ValueOf(v).MethodByName(getterNames[idx])
+					retValues := method.Call(nil)
+					if len(retValues) != 1 {
+						return nil, fmt.Errorf("failed to call %s for %T", "", v)
+					}
+					retValue := retValues[0]
+					return retValue.Interface(), nil
+				}
+			}
+			return zeroValue.Interface(), nil
+		}
+		return &celtypes.FieldType{
+			Type: typ,
+			IsSet: func(v any) bool {
+				return isSet(v)
+			},
+			GetFrom: func(v any) (any, error) {
+				return getFrom(v)
+			},
+		}
+	}
 	return &FederationServiceCELTypeHelper{
 		celRegistry: celRegistry,
 		structFieldMap: map[string]map[string]*celtypes.FieldType{
