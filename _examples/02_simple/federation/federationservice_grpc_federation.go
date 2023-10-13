@@ -283,6 +283,7 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 			},
 		}
 	}
+	_ = newOneofSelectorFieldType
 	return &FederationServiceCELTypeHelper{
 		celRegistry: celRegistry,
 		structFieldMap: map[string]map[string]*celtypes.FieldType{
