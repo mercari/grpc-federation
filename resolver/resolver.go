@@ -1701,6 +1701,8 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 	if graph == nil {
 		return
 	}
+
+	svcMsgSet := make(map[*Service]map[*Message]struct{})
 	for _, root := range graph.Roots {
 		reqMsg := r.lookupRequestMessageFromResponseMessage(root.Message)
 		if reqMsg == nil {
@@ -1709,12 +1711,20 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 		msgArg := newMessageArgument(root.Message)
 		msgArg.Fields = append(msgArg.Fields, reqMsg.Fields...)
 		r.cachedMessageMap[msgArg.FQDN()] = msgArg
-		msgMap := make(map[string]*Message)
-		for _, msg := range r.resolveMessageArgumentRecursive(ctx, root) {
-			msgMap[msg.FQDN()] = msg
+		// Store the messages to serviceMsgMap first to avoid inserting duplicated ones to Service.Messages
+		for _, svc := range root.Message.File.Services {
+			if _, exists := svcMsgSet[svc]; !exists {
+				svcMsgSet[svc] = make(map[*Message]struct{})
+			}
+			for _, msg := range r.resolveMessageArgumentRecursive(ctx, root) {
+				svcMsgSet[svc][msg] = struct{}{}
+			}
 		}
-		msgs := make([]*Message, 0, len(msgMap))
-		for _, msg := range msgMap {
+	}
+
+	for svc, msgSet := range svcMsgSet {
+		msgs := make([]*Message, 0, len(msgSet))
+		for msg := range msgSet {
 			msgs = append(msgs, msg)
 		}
 		sort.Slice(msgs, func(i, j int) bool {
@@ -1724,10 +1734,8 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 		for _, msg := range msgs {
 			args = append(args, msg.Rule.MessageArgument)
 		}
-		for _, svc := range root.Message.File.Services {
-			svc.MessageArgs = append(svc.MessageArgs, args...)
-			svc.Messages = append(svc.Messages, msgs...)
-		}
+		svc.MessageArgs = append(svc.MessageArgs, args...)
+		svc.Messages = append(svc.Messages, msgs...)
 	}
 }
 
