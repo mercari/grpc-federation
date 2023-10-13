@@ -72,39 +72,6 @@ func (m *Message) HasRule() bool {
 	return false
 }
 
-func (m *Message) HasCELValue() bool {
-	if m.Rule == nil {
-		return false
-	}
-	methodCall := m.Rule.MethodCall
-	if methodCall != nil {
-		if methodCall.Request != nil {
-			for _, arg := range methodCall.Request.Args {
-				if arg.Value != nil && arg.Value.CEL != nil {
-					return true
-				}
-			}
-		}
-	}
-	for _, dep := range m.Rule.MessageDependencies {
-		for _, arg := range dep.Args {
-			if arg.Value != nil && arg.Value.CEL != nil {
-				return true
-			}
-		}
-	}
-	for _, field := range m.Fields {
-		if field.Rule == nil {
-			continue
-		}
-		value := field.Rule.Value
-		if value != nil && value.CEL != nil {
-			return true
-		}
-	}
-	return false
-}
-
 func (m *Message) HasCustomResolver() bool {
 	return m.Rule != nil && m.Rule.CustomResolver
 }
