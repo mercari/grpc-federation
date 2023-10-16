@@ -38,6 +38,8 @@ import (
 {{- $serviceName := .ServiceName }}
 {{- $serviceDependencies := .ServiceDependencies }}
 {{- $customResolvers := .CustomResolvers }}
+{{- $oneofTypes := .OneofTypes }}
+{{- $types := .Types }}
 
 // {{ $serviceName }}Config configuration required to initialize the service that use GRPC Federation.
 type {{ $serviceName }}Config struct {
@@ -143,7 +145,7 @@ type {{ $serviceName }} struct {
 	client *{{ $serviceName }}DependencyServiceClient
 }
 
-{{- range .Types }}
+{{- range $types }}
 
 // {{ .Desc }}.
 type {{ .Name }} struct {
@@ -272,6 +274,7 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 			},
 		}
 	}
+	{{- if $oneofTypes }}
 	newOneofSelectorFieldType := func(typ *celtypes.Type, fieldName string, oneofTypes []reflect.Type, getterNames []string, zeroValue reflect.Value) *celtypes.FieldType {
 		isSet := func(_ any) bool {
 			return false
@@ -309,11 +312,11 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 			},
 		}
 	}
-	_ = newOneofSelectorFieldType
+	{{- end }}
 	return &FederationServiceCELTypeHelper{
 		celRegistry: celRegistry,
 		structFieldMap: map[string]map[string]*celtypes.FieldType{
-			{{- range .Types }}
+			{{- range $types }}
 			{{- if .ProtoFQDN }}
 			"{{ .ProtoFQDN }}": map[string]*celtypes.FieldType{
 				{{- if .ProtoFields }}
@@ -325,7 +328,7 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 			{{- end }}
 			{{- end }}
 
-			{{- range .OneofTypes }}
+			{{- range $oneofTypes }}
 			"{{ .MessageProtoFQDN }}": map[string]*celtypes.FieldType{
 				"{{ .Name }}": newOneofSelectorFieldType(
 					{{ .TypeDeclare }}, "{{ .FieldName }}",
