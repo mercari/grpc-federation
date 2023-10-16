@@ -534,7 +534,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	// field binding section.
 	// (grpc.federation.field).alias = "by_field"
 	{
-		_value, err := s.evalCEL("$.by_field", envOpts, evalValues, reflect.TypeOf(ret.ByField))
+		_value, err := s.evalCEL("$.by_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -542,7 +542,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "double_field"
 	{
-		_value, err := s.evalCEL("$.double_field", envOpts, evalValues, reflect.TypeOf(ret.DoubleField))
+		_value, err := s.evalCEL("$.double_field", envOpts, evalValues, reflect.TypeOf(float64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -550,7 +550,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "doubles_field"
 	{
-		_value, err := s.evalCEL("$.doubles_field", envOpts, evalValues, reflect.TypeOf(ret.DoublesField))
+		_value, err := s.evalCEL("$.doubles_field", envOpts, evalValues, reflect.TypeOf([]float64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -558,7 +558,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "float_field"
 	{
-		_value, err := s.evalCEL("$.float_field", envOpts, evalValues, reflect.TypeOf(ret.FloatField))
+		_value, err := s.evalCEL("$.float_field", envOpts, evalValues, reflect.TypeOf(float32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -566,7 +566,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "floats_field"
 	{
-		_value, err := s.evalCEL("$.floats_field", envOpts, evalValues, reflect.TypeOf(ret.FloatsField))
+		_value, err := s.evalCEL("$.floats_field", envOpts, evalValues, reflect.TypeOf([]float32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -574,7 +574,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int32_field"
 	{
-		_value, err := s.evalCEL("$.int32_field", envOpts, evalValues, reflect.TypeOf(ret.Int32Field))
+		_value, err := s.evalCEL("$.int32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -582,7 +582,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int32s_field"
 	{
-		_value, err := s.evalCEL("$.int32s_field", envOpts, evalValues, reflect.TypeOf(ret.Int32SField))
+		_value, err := s.evalCEL("$.int32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -590,7 +590,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int64_field"
 	{
-		_value, err := s.evalCEL("$.int64_field", envOpts, evalValues, reflect.TypeOf(ret.Int64Field))
+		_value, err := s.evalCEL("$.int64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -598,7 +598,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int64s_field"
 	{
-		_value, err := s.evalCEL("$.int64s_field", envOpts, evalValues, reflect.TypeOf(ret.Int64SField))
+		_value, err := s.evalCEL("$.int64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -606,7 +606,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint32_field"
 	{
-		_value, err := s.evalCEL("$.uint32_field", envOpts, evalValues, reflect.TypeOf(ret.Uint32Field))
+		_value, err := s.evalCEL("$.uint32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -614,7 +614,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint32s_field"
 	{
-		_value, err := s.evalCEL("$.uint32s_field", envOpts, evalValues, reflect.TypeOf(ret.Uint32SField))
+		_value, err := s.evalCEL("$.uint32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -622,7 +622,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint64_field"
 	{
-		_value, err := s.evalCEL("$.uint64_field", envOpts, evalValues, reflect.TypeOf(ret.Uint64Field))
+		_value, err := s.evalCEL("$.uint64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -630,7 +630,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint64s_field"
 	{
-		_value, err := s.evalCEL("$.uint64s_field", envOpts, evalValues, reflect.TypeOf(ret.Uint64SField))
+		_value, err := s.evalCEL("$.uint64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -638,7 +638,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint32_field"
 	{
-		_value, err := s.evalCEL("$.sint32_field", envOpts, evalValues, reflect.TypeOf(ret.Sint32Field))
+		_value, err := s.evalCEL("$.sint32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -646,7 +646,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint32s_field"
 	{
-		_value, err := s.evalCEL("$.sint32s_field", envOpts, evalValues, reflect.TypeOf(ret.Sint32SField))
+		_value, err := s.evalCEL("$.sint32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -654,7 +654,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint64_field"
 	{
-		_value, err := s.evalCEL("$.sint64_field", envOpts, evalValues, reflect.TypeOf(ret.Sint64Field))
+		_value, err := s.evalCEL("$.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +662,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint64s_field"
 	{
-		_value, err := s.evalCEL("$.sint64s_field", envOpts, evalValues, reflect.TypeOf(ret.Sint64SField))
+		_value, err := s.evalCEL("$.sint64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -670,7 +670,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed32_field"
 	{
-		_value, err := s.evalCEL("$.fixed32_field", envOpts, evalValues, reflect.TypeOf(ret.Fixed32Field))
+		_value, err := s.evalCEL("$.fixed32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -678,7 +678,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed32s_field"
 	{
-		_value, err := s.evalCEL("$.fixed32s_field", envOpts, evalValues, reflect.TypeOf(ret.Fixed32SField))
+		_value, err := s.evalCEL("$.fixed32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -686,7 +686,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed64_field"
 	{
-		_value, err := s.evalCEL("$.fixed64_field", envOpts, evalValues, reflect.TypeOf(ret.Fixed64Field))
+		_value, err := s.evalCEL("$.fixed64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -694,7 +694,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed64s_field"
 	{
-		_value, err := s.evalCEL("$.fixed64s_field", envOpts, evalValues, reflect.TypeOf(ret.Fixed64SField))
+		_value, err := s.evalCEL("$.fixed64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -702,7 +702,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed32_field"
 	{
-		_value, err := s.evalCEL("$.sfixed32_field", envOpts, evalValues, reflect.TypeOf(ret.Sfixed32Field))
+		_value, err := s.evalCEL("$.sfixed32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -710,7 +710,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed32s_field"
 	{
-		_value, err := s.evalCEL("$.sfixed32s_field", envOpts, evalValues, reflect.TypeOf(ret.Sfixed32SField))
+		_value, err := s.evalCEL("$.sfixed32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -718,7 +718,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed64_field"
 	{
-		_value, err := s.evalCEL("$.sfixed64_field", envOpts, evalValues, reflect.TypeOf(ret.Sfixed64Field))
+		_value, err := s.evalCEL("$.sfixed64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -726,7 +726,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed64s_field"
 	{
-		_value, err := s.evalCEL("$.sfixed64s_field", envOpts, evalValues, reflect.TypeOf(ret.Sfixed64SField))
+		_value, err := s.evalCEL("$.sfixed64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -734,7 +734,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "bool_field"
 	{
-		_value, err := s.evalCEL("$.bool_field", envOpts, evalValues, reflect.TypeOf(ret.BoolField))
+		_value, err := s.evalCEL("$.bool_field", envOpts, evalValues, reflect.TypeOf(false))
 		if err != nil {
 			return nil, err
 		}
@@ -742,7 +742,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "bools_field"
 	{
-		_value, err := s.evalCEL("$.bools_field", envOpts, evalValues, reflect.TypeOf(ret.BoolsField))
+		_value, err := s.evalCEL("$.bools_field", envOpts, evalValues, reflect.TypeOf([]bool(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -750,7 +750,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "string_field"
 	{
-		_value, err := s.evalCEL("$.string_field", envOpts, evalValues, reflect.TypeOf(ret.StringField))
+		_value, err := s.evalCEL("$.string_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -758,7 +758,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "strings_field"
 	{
-		_value, err := s.evalCEL("$.strings_field", envOpts, evalValues, reflect.TypeOf(ret.StringsField))
+		_value, err := s.evalCEL("$.strings_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -766,7 +766,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "byte_string_field"
 	{
-		_value, err := s.evalCEL("$.byte_string_field", envOpts, evalValues, reflect.TypeOf(ret.ByteStringField))
+		_value, err := s.evalCEL("$.byte_string_field", envOpts, evalValues, reflect.TypeOf([]byte(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -774,7 +774,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "byte_strings_field"
 	{
-		_value, err := s.evalCEL("$.byte_strings_field", envOpts, evalValues, reflect.TypeOf(ret.ByteStringsField))
+		_value, err := s.evalCEL("$.byte_strings_field", envOpts, evalValues, reflect.TypeOf([][]byte(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -782,15 +782,15 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "enum_field"
 	{
-		_value, err := s.evalCEL("$.enum_field", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("$.enum_field", envOpts, evalValues, reflect.TypeOf(ContentType(0)))
 		if err != nil {
 			return nil, err
 		}
-		ret.EnumField = ContentType(_value.(int64))
+		ret.EnumField = _value.(ContentType)
 	}
 	// (grpc.federation.field).alias = "enums_field"
 	{
-		_value, err := s.evalCEL("$.enums_field", envOpts, evalValues, reflect.TypeOf(ret.EnumsField))
+		_value, err := s.evalCEL("$.enums_field", envOpts, evalValues, reflect.TypeOf([]ContentType(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -798,7 +798,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "env_field"
 	{
-		_value, err := s.evalCEL("$.env_field", envOpts, evalValues, reflect.TypeOf(ret.EnvField))
+		_value, err := s.evalCEL("$.env_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -806,7 +806,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "envs_field"
 	{
-		_value, err := s.evalCEL("$.envs_field", envOpts, evalValues, reflect.TypeOf(ret.EnvsField))
+		_value, err := s.evalCEL("$.envs_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -814,7 +814,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "message_field"
 	{
-		_value, err := s.evalCEL("$.message_field", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("$.message_field", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -822,7 +822,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "messages_field"
 	{
-		_value, err := s.evalCEL("$.messages_field", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("$.messages_field", envOpts, evalValues, reflect.TypeOf([]*Content(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -941,7 +941,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { field: "by_field", by: "$.id" }
 			{
-				_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(args.ByField))
+				_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -1055,7 +1055,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { name: "by_field", by: "$.id" }
 			{
-				_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(args.ByField))
+				_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -1090,7 +1090,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "content"
 	{
-		_value, err := s.evalCEL("content", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -1098,7 +1098,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "content2"
 	{
-		_value, err := s.evalCEL("content2", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("content2", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -1106,7 +1106,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field"
 	{
-		_value, err := s.evalCEL("content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field", envOpts, evalValues, reflect.TypeOf(ret.CelExpr))
+		_value, err := s.evalCEL("content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}

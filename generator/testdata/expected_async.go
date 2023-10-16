@@ -790,7 +790,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					// { name: "a", by: "a.name" }
 					{
-						_value, err := s.evalCEL("a.name", envOpts, evalValues, reflect.TypeOf(args.A))
+						_value, err := s.evalCEL("a.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							return nil, err
 						}
@@ -852,7 +852,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					// { name: "b", by: "b.name" }
 					{
-						_value, err := s.evalCEL("b.name", envOpts, evalValues, reflect.TypeOf(args.B))
+						_value, err := s.evalCEL("b.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							return nil, err
 						}
@@ -894,7 +894,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				// { name: "c", by: "c.name" }
 				{
-					_value, err := s.evalCEL("c.name", envOpts, evalValues, reflect.TypeOf(args.C))
+					_value, err := s.evalCEL("c.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						return nil, err
 					}
@@ -902,7 +902,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				// { name: "d", by: "d.name" }
 				{
-					_value, err := s.evalCEL("d.name", envOpts, evalValues, reflect.TypeOf(args.D))
+					_value, err := s.evalCEL("d.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						return nil, err
 					}
@@ -966,7 +966,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					// { name: "a", by: "a.name" }
 					{
-						_value, err := s.evalCEL("a.name", envOpts, evalValues, reflect.TypeOf(args.A))
+						_value, err := s.evalCEL("a.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							return nil, err
 						}
@@ -1028,7 +1028,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					// { name: "b", by: "b.name" }
 					{
-						_value, err := s.evalCEL("b.name", envOpts, evalValues, reflect.TypeOf(args.B))
+						_value, err := s.evalCEL("b.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							return nil, err
 						}
@@ -1070,7 +1070,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				// { name: "c", by: "c.name" }
 				{
-					_value, err := s.evalCEL("c.name", envOpts, evalValues, reflect.TypeOf(args.C))
+					_value, err := s.evalCEL("c.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						return nil, err
 					}
@@ -1078,7 +1078,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				// { name: "d", by: "d.name" }
 				{
-					_value, err := s.evalCEL("d.name", envOpts, evalValues, reflect.TypeOf(args.D))
+					_value, err := s.evalCEL("d.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						return nil, err
 					}
@@ -1149,7 +1149,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { name: "e", by: "e.name" }
 			{
-				_value, err := s.evalCEL("e.name", envOpts, evalValues, reflect.TypeOf(args.E))
+				_value, err := s.evalCEL("e.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -1157,7 +1157,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { name: "f", by: "f.name" }
 			{
-				_value, err := s.evalCEL("f.name", envOpts, evalValues, reflect.TypeOf(args.F))
+				_value, err := s.evalCEL("f.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -1165,7 +1165,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { name: "g", by: "g.name" }
 			{
-				_value, err := s.evalCEL("g.name", envOpts, evalValues, reflect.TypeOf(args.G))
+				_value, err := s.evalCEL("g.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -1228,7 +1228,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { name: "i", by: "i.name" }
 			{
-				_value, err := s.evalCEL("i.name", envOpts, evalValues, reflect.TypeOf(args.I))
+				_value, err := s.evalCEL("i.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -1271,7 +1271,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "h.name"
 	{
-		_value, err := s.evalCEL("h.name", envOpts, evalValues, reflect.TypeOf(ret.Hname))
+		_value, err := s.evalCEL("h.name", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -1279,7 +1279,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "j.name"
 	{
-		_value, err := s.evalCEL("j.name", envOpts, evalValues, reflect.TypeOf(ret.Jname))
+		_value, err := s.evalCEL("j.name", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}

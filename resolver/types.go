@@ -223,7 +223,8 @@ func (t *Type) IsNumber() bool {
 		types.Sfixed32,
 		types.Sfixed64,
 		types.Sint32,
-		types.Sint64:
+		types.Sint64,
+		types.Enum:
 		return true
 	}
 	return false

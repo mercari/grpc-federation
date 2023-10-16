@@ -627,7 +627,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- else if .CEL }}
 	{{ .ProtoComment }}
 	{
-		_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, {{ .OutType }})
+		_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 		if err != nil {
 			return nil, err
 		}
@@ -807,7 +807,7 @@ args := &{{ .Resolver.RequestType }}{
 {{- if .CEL }}
 {{ .ProtoComment }}
 {
-	_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, {{ .OutType }})
+	_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 	if err != nil {
 		return nil, err
 	}
