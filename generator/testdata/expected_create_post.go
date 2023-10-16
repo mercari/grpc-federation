@@ -471,7 +471,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	// field binding section.
 	// (grpc.federation.field).by = "$.title"
 	{
-		_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(ret.Title))
+		_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -479,7 +479,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	}
 	// (grpc.federation.field).by = "$.content"
 	{
-		_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(ret.Content))
+		_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -487,7 +487,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	}
 	// (grpc.federation.field).by = "$.user_id"
 	{
-		_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(ret.UserId))
+		_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -529,7 +529,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		}
 		// { name: "title", by: "$.title" }
 		{
-			_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(args.Title))
+			_value, err := s.evalCEL("$.title", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}
@@ -537,7 +537,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		}
 		// { name: "content", by: "$.content" }
 		{
-			_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(args.Content))
+			_value, err := s.evalCEL("$.content", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}
@@ -545,7 +545,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		}
 		// { name: "user_id", by: "$.user_id" }
 		{
-			_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(args.UserId))
+			_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}
@@ -577,7 +577,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		args := &post.CreatePostRequest{}
 		// { field: "post", by: "cp" }
 		{
-			_value, err := s.evalCEL("cp", envOpts, evalValues, nil)
+			_value, err := s.evalCEL("cp", envOpts, evalValues, reflect.TypeOf((*CreatePost)(nil)))
 			if err != nil {
 				return nil, err
 			}
@@ -608,7 +608,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	// field binding section.
 	// (grpc.federation.field).by = "p"
 	{
-		_value, err := s.evalCEL("p", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("p", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
 		if err != nil {
 			return nil, err
 		}

@@ -213,6 +213,23 @@ type Field struct {
 	Type string
 }
 
+func toMakeZeroValue(svc *resolver.Service, t *resolver.Type) string {
+	text := toTypeText(svc, t)
+	if t.Repeated || t.Type == types.Bytes {
+		return fmt.Sprintf("%s(nil)", text)
+	}
+	if t.IsNumber() {
+		return fmt.Sprintf("%s(0)", text)
+	}
+	switch t.Type {
+	case types.Bool:
+		return `false`
+	case types.String:
+		return `""`
+	}
+	return fmt.Sprintf("(%s)(nil)", text)
+}
+
 func toCELTypeDeclare(t *resolver.Type) string {
 	if t.Repeated {
 		cloned := t.Clone()
@@ -985,7 +1002,7 @@ type ReturnField struct {
 	MessageName           string
 	MessageArgumentName   string
 	ProtoComment          string
-	OutType               string
+	ZeroValue             string
 }
 
 type OneofField struct {
@@ -1379,29 +1396,32 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	toType := field.Type
 	fromType := value.Out
 
+	toText := toTypeText(m.Service, toType)
+	fromText := toTypeText(m.Service, fromType)
+
 	var (
 		returnFieldValue string
-		outType          string
+		zeroValue        string
 	)
 	switch fromType.Type {
 	case types.Message:
-		outType = "nil"
-		returnFieldValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, fromType))
+		zeroValue = toMakeZeroValue(m.Service, fromType)
+		returnFieldValue = fmt.Sprintf("_value.(%s)", fromText)
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
 			returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, returnFieldValue)
 		}
 	case types.Enum:
-		outType = "nil"
-		returnFieldValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(m.Service, fromType))
+		zeroValue = toMakeZeroValue(m.Service, fromType)
+		returnFieldValue = fmt.Sprintf("_value.(%s)", fromText)
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
 			returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, returnFieldValue)
 		}
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
-		outType = fmt.Sprintf("reflect.TypeOf(ret.%s)", util.ToPublicGoVariable(field.Name))
-		returnFieldValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, toType))
+		zeroValue = toMakeZeroValue(m.Service, toType)
+		returnFieldValue = fmt.Sprintf("_value.(%s)", toText)
 	}
 	return &ReturnField{
 		Name:  util.ToPublicGoVariable(field.Name),
@@ -1411,7 +1431,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 			Prefix:         "// ",
 			IndentSpaceNum: 2,
 		}),
-		OutType: outType,
+		ZeroValue: zeroValue,
 	}
 }
 
@@ -1741,7 +1761,7 @@ type Argument struct {
 	CEL          *resolver.CELValue
 	InlineFields []*Argument
 	ProtoComment string
-	OutType      string
+	ZeroValue    string
 }
 
 func (r *MessageResolver) Arguments() []*Argument {
@@ -1815,29 +1835,32 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		toType = fromType
 	}
 
+	toText := toTypeText(r.Service, toType)
+	fromText := toTypeText(r.Service, fromType)
+
 	var (
-		argValue string
-		outType  string
+		argValue  string
+		zeroValue string
 	)
 	switch fromType.Type {
 	case types.Message:
-		outType = "nil"
-		argValue = fmt.Sprintf("_value.(%s)", toTypeText(r.Service, fromType))
+		zeroValue = toMakeZeroValue(r.Service, fromType)
+		argValue = fmt.Sprintf("_value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	case types.Enum:
-		outType = "nil"
-		argValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(r.Service, fromType))
+		zeroValue = toMakeZeroValue(r.Service, fromType)
+		argValue = fmt.Sprintf("_value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
-		outType = fmt.Sprintf("reflect.TypeOf(args.%s)", util.ToPublicGoVariable(name))
-		argValue = fmt.Sprintf("_value.(%s)", toTypeText(r.Service, toType))
+		zeroValue = toMakeZeroValue(r.Service, toType)
+		argValue = fmt.Sprintf("_value.(%s)", toText)
 	}
 	return []*Argument{
 		{
@@ -1845,7 +1868,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 			Value:        argValue,
 			CEL:          value.CEL,
 			InlineFields: inlineFields,
-			OutType:      outType,
+			ZeroValue:    zeroValue,
 		},
 	}
 }

@@ -506,7 +506,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		}
 		// { name: "id", by: "$.id" }
 		{
-			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(args.Id))
+			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}
@@ -534,7 +534,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "post"
 	{
-		_value, err := s.evalCEL("post", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("post", envOpts, evalValues, reflect.TypeOf((*Post)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -571,7 +571,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		args := &post.GetPostRequest{}
 		// { field: "id", by: "$.id" }
 		{
-			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(args.Id))
+			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}
@@ -614,7 +614,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		}
 		// { inline: "post" }
 		{
-			_value, err := s.evalCEL("post", envOpts, evalValues, nil)
+			_value, err := s.evalCEL("post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
 			if err != nil {
 				return nil, err
 			}
@@ -650,7 +650,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	ret.Content = valuePost.GetContent() // { name: "post", autobind: true }
 	// (grpc.federation.field).by = "user"
 	{
-		_value, err := s.evalCEL("user", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -685,7 +685,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		args := &user.GetUserRequest{}
 		// { field: "id", by: "$.user_id" }
 		{
-			_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(args.Id))
+			_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}
