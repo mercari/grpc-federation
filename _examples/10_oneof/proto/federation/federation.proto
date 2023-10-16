@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      {
+        name: "sel"
+        message: "UserSelection"
+        args { name: "value", string: "foo" }
+      }
+    ]
+  };
+  User user = 1 [(grpc.federation.field).by = "sel.user"];
+}
+
+message UserSelection {
+  option (grpc.federation.message) = {
+    messages {
+      name: "m"
+      message: "M"
+    }
+  };
+  oneof user {
+    User user_a = 1 [
+      (grpc.federation.field).oneof = {
+        expr: "m.value != $.value"
+        messages {
+          name: "ua"
+          message: "User"
+          args: { name: "user_id", string: "a" }
+        }
+        by: "ua"
+      }
+    ];
+
+    User user_b = 2 [
+      (grpc.federation.field).oneof = {
+        expr: "m.value == $.value"
+        messages {
+          name: "ub"
+          message: "User"
+          args: { name: "user_id", string: "b" }
+        }
+        by: "ub"
+      }
+    ];
+  }
+}
+
+message M {
+  string value = 1 [(grpc.federation.field).string = "foo"];
+}
+
+message User {
+  string id = 1 [(grpc.federation.field).by = "$.user_id"];
+}

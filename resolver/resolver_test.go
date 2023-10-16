@@ -2331,6 +2331,193 @@ func TestMultiUser(t *testing.T) {
 	}
 }
 
+func TestOneof(t *testing.T) {
+	fb := testutil.NewFileBuilder("oneof.proto")
+	ref := testutil.NewBuilderReferenceManager(fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("UserArgument").
+				AddField("user_id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(testutil.NewMessageBuilder("MArgument").Build(t)).
+		AddMessage(
+			testutil.NewMessageBuilder("UserSelectionArgument").
+				AddField("value", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("User").
+				AddFieldWithRule(
+					"id",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("M").
+				AddFieldWithRule("value", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "MArgument")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("UserSelection").
+				AddFieldWithRule(
+					"user_a",
+					ref.Type(t, "org.federation", "User"),
+					testutil.NewFieldRuleBuilder(nil).
+						SetOneof(
+							testutil.NewFieldOneofRuleBuilder().
+								SetExpr("m.value == $.value", resolver.BoolType).
+								AddMessageDependency(
+									"ua",
+									ref.Message(t, "org.federation", "User"),
+									testutil.NewMessageDependencyArgumentBuilder().
+										Add("user_id", resolver.NewStringValue("a")).
+										Build(t),
+									false,
+									true,
+								).
+								SetBy("ua", ref.Type(t, "org.federation", "User")).
+								SetDependencyGraph(
+									testutil.NewDependencyGraphBuilder().
+										Add(ref.Message(t, "org.federation", "User")).
+										Build(t),
+								).
+								AddResolver(
+									testutil.NewMessageResolverGroupBuilder().
+										SetEnd(testutil.NewMessageResolver("ua")).
+										Build(t),
+								).
+								Build(t),
+						).
+						Build(t),
+				).
+				AddFieldWithRule(
+					"user_b",
+					ref.Type(t, "org.federation", "User"),
+					testutil.NewFieldRuleBuilder(nil).
+						SetOneof(
+							testutil.NewFieldOneofRuleBuilder().
+								SetExpr("m.value != $.value", resolver.BoolType).
+								AddMessageDependency(
+									"ub",
+									ref.Message(t, "org.federation", "User"),
+									testutil.NewMessageDependencyArgumentBuilder().
+										Add("user_id", resolver.NewStringValue("b")).
+										Build(t),
+									false,
+									true,
+								).
+								SetBy("ub", ref.Type(t, "org.federation", "User")).
+								SetDependencyGraph(
+									testutil.NewDependencyGraphBuilder().
+										Add(ref.Message(t, "org.federation", "User")).
+										Build(t),
+								).
+								AddResolver(
+									testutil.NewMessageResolverGroupBuilder().
+										SetEnd(testutil.NewMessageResolver("ub")).
+										Build(t),
+								).
+								Build(t),
+						).
+						Build(t),
+				).
+				AddOneof(testutil.NewOneofBuilder("user").AddFieldNames("user_a", "user_b").Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "UserSelectionArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "M")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("m")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(testutil.NewMessageBuilder("GetRequest").Build(t)).
+		AddMessage(testutil.NewMessageBuilder("GetResponseArgument").Build(t)).
+		AddMessage(
+			testutil.NewMessageBuilder("GetResponse").
+				AddFieldWithRule(
+					"user",
+					ref.Type(t, "org.federation", "User"),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(
+							ref.Type(t, "org.federation", "User"),
+							ref.Type(t, "org.federation", "User"),
+							"sel.user",
+						).Build(t),
+					).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddMessageDependency(
+							"sel",
+							ref.Message(t, "org.federation", "UserSelection"),
+							testutil.NewMessageDependencyArgumentBuilder().
+								Add("value", resolver.NewStringValue("foo")).
+								Build(t),
+							false,
+							true,
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "UserSelection")).
+								Build(t),
+						).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								SetEnd(testutil.NewMessageResolver("sel")).
+								Build(t),
+						).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod("Get", ref.Message(t, "org.federation", "GetRequest"), ref.Message(t, "org.federation", "GetResponse"), nil).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
+				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "M"), ref.Message(t, "org.federation", "MArgument")).
+				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
+				AddMessage(ref.Message(t, "org.federation", "UserSelection"), ref.Message(t, "org.federation", "UserSelectionArgument")).
+				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+	federationService := federationFile.Services[0]
+
+	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "oneof.proto")))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Services))
+	}
+	if diff := cmp.Diff(result.Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
 func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 	ub := testutil.NewFileBuilder("user.proto")
 	ref := testutil.NewBuilderReferenceManager(ub)

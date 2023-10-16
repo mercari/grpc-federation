@@ -28,6 +28,14 @@ func (r *CELRegistry) FindStructFieldType(structType, fieldName string) (*celtyp
 				r.enumTypeMap[fieldType.Type] = field.Type.Enum
 			}
 		}
+		oneof := msg.Oneof(fieldName)
+		if !found && oneof != nil && oneof.IsSameType() {
+			// If we refer directly to the name of oneof and all fields in oneof have the same type,
+			// we can refer to the value of a field that is not nil.
+			return &celtypes.FieldType{
+				Type: ToCELType(oneof.Fields[0].Type),
+			}, true
+		}
 	}
 	return fieldType, found
 }

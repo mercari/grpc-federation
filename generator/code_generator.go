@@ -451,6 +451,52 @@ func (s *Service) Types() []*Type {
 	return declTypes
 }
 
+type OneofType struct {
+	Name             string
+	FieldName        string
+	MessageProtoFQDN string
+	TypeDeclare      string
+	FieldZeroValues  []string
+	FieldGetterNames []string
+	ReturnZeroValue  string
+}
+
+func (s *Service) OneofTypes() []*OneofType {
+	var ret []*OneofType
+	for _, msg := range s.Service.Messages {
+		for _, oneof := range msg.Oneofs {
+			if !oneof.IsSameType() {
+				continue
+			}
+			fieldZeroValues := make([]string, 0, len(oneof.Fields))
+			fieldGetterNames := make([]string, 0, len(oneof.Fields))
+			for _, field := range oneof.Fields {
+				fieldZeroValues = append(
+					fieldZeroValues,
+					toMakeZeroValue(s.Service, field.Type),
+				)
+				fieldGetterNames = append(
+					fieldGetterNames,
+					fmt.Sprintf("Get%s", util.ToPublicGoVariable(field.Name)),
+				)
+			}
+			cloned := oneof.Fields[0].Type.Clone()
+			cloned.OneofField = nil
+			returnZeroValue := toMakeZeroValue(s.Service, cloned)
+			ret = append(ret, &OneofType{
+				Name:             oneof.Name,
+				FieldName:        util.ToPublicGoVariable(oneof.Name),
+				MessageProtoFQDN: oneof.Message.FQDN(),
+				TypeDeclare:      toCELTypeDeclare(oneof.Fields[0].Type),
+				FieldZeroValues:  fieldZeroValues,
+				FieldGetterNames: fieldGetterNames,
+				ReturnZeroValue:  returnZeroValue,
+			})
+		}
+	}
+	return ret
+}
+
 type LogValue struct {
 	Name      string
 	ValueType string
@@ -970,6 +1016,25 @@ func (m *Message) DeclVariables() []*DeclVariable {
 			}
 		}
 	}
+	for _, field := range m.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		for _, group := range field.Rule.Oneof.Resolvers {
+			for _, r := range group.Resolvers() {
+				if !r.MessageDependency.Used {
+					continue
+				}
+				valueMap[r.MessageDependency.Name] = &DeclVariable{
+					Name: toUserDefinedVariable(r.MessageDependency.Name),
+					Type: toTypeText(m.Service, &resolver.Type{Type: types.Message, Ref: r.MessageDependency.Message}),
+				}
+			}
+		}
+	}
 	values := make([]*DeclVariable, 0, len(valueMap))
 	for _, value := range valueMap {
 		values = append(values, value)
@@ -1005,9 +1070,39 @@ type ReturnField struct {
 	ZeroValue             string
 }
 
+func (r *ReturnField) HasFieldOneofRule() bool {
+	for _, field := range r.OneofFields {
+		if field.FieldOneofRule != nil {
+			return true
+		}
+	}
+	return false
+}
+
 type OneofField struct {
-	*ReturnField
-	GetValue string
+	Expr           string
+	By             string
+	OutType        string
+	Condition      string
+	Name           string
+	Value          string
+	Message        *Message
+	FieldOneofRule *resolver.FieldOneofRule
+}
+
+func (oneof *OneofField) MessageResolvers() []*MessageResolverGroup {
+	if oneof.FieldOneofRule == nil {
+		return nil
+	}
+	var groups []*MessageResolverGroup
+	for _, group := range oneof.FieldOneofRule.Resolvers {
+		groups = append(groups, &MessageResolverGroup{
+			Service:              oneof.Message.Service,
+			Message:              oneof.Message,
+			MessageResolverGroup: group,
+		})
+	}
+	return groups
 }
 
 type CastField struct {
@@ -1457,20 +1552,57 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 		}
 		rule := field.Rule
 		switch {
-		case rule.Value != nil:
-			value := rule.Value
-			if value.Const != nil {
-				oneofFields = append(oneofFields, &OneofField{
-					ReturnField: m.constValueToReturnField(field, value.Const),
-				})
-			} else {
-				oneofFields = append(oneofFields, &OneofField{
-					ReturnField: m.celValueToReturnField(field, value.CEL),
-				})
-			}
 		case rule.AutoBindField != nil:
+			returnField := m.autoBindFieldToReturnField(field, rule.AutoBindField)
 			oneofFields = append(oneofFields, &OneofField{
-				ReturnField: m.autoBindFieldToReturnField(field, rule.AutoBindField),
+				Condition: fmt.Sprintf("%s != nil", returnField.Value),
+				Name:      returnField.Name,
+				Value:     returnField.Value,
+			})
+		case rule.Oneof != nil:
+			// explicit binding with FieldOneofRule.
+			fromType := rule.Oneof.By.Out
+			toType := field.Type
+
+			fieldName := util.ToPublicGoVariable(field.Name)
+			oneofTypeName := m.Message.Name + "_" + fieldName
+			if toType.OneofField.IsConflict() {
+				oneofTypeName += "_"
+			}
+
+			var (
+				outType  string
+				argValue string
+			)
+			switch fromType.Type {
+			case types.Message:
+				outType = "nil"
+				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, fromType))
+				if requiredCast(fromType, toType) {
+					castFuncName := castFuncName(fromType, toType)
+					argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+				}
+			case types.Enum:
+				outType = "nil"
+				argValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(m.Service, fromType))
+				if requiredCast(fromType, toType) {
+					castFuncName := castFuncName(fromType, toType)
+					argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+				}
+			default:
+				// Since fromType is a primitive type, type conversion is possible on the CEL side.
+				outType = fmt.Sprintf("reflect.TypeOf(new(%s).Get%s())", oneofTypeName, fieldName)
+				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, toType))
+			}
+			oneofFields = append(oneofFields, &OneofField{
+				Expr:           rule.Oneof.Expr.Expr,
+				By:             rule.Oneof.By.Expr,
+				OutType:        outType,
+				Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
+				Name:           fieldName,
+				Value:          fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
+				FieldOneofRule: rule.Oneof,
+				Message:        m,
 			})
 		}
 	}

@@ -151,6 +151,8 @@ message MethodRequest {
   // field name of the request message.
   string field = 1;
   // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
   optional string by = 2;
   // double literal value.
   optional double double = 3;
@@ -261,6 +263,8 @@ message Argument {
   // For example, if `foo` is specified as the name, it is referenced by `$.foo`.
   string name = 1;
   // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
   optional string by = 2;
   // inline like by, it refers to the specified value and expands all fields beyond it.
   // For this reason, the referenced value must always be of message type.
@@ -345,6 +349,8 @@ message FieldRule {
   // If there are any values retrieved by grpc.federation.message option, they are passed as arguments for custom resolver.
   optional bool custom_resolver = 1;
   // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
   optional string by = 2;
   // alias can be used when alias is specified in grpc.federation.message option,
   // and specifies the field name to be referenced among the messages specified in alias of message option.
@@ -422,6 +428,24 @@ message FieldRule {
   optional string env = 38;
   // repeated env literal values.
   repeated string envs = 39;
+  // use to evaluate any one of fields. this field only available in oneof.
+  FieldOneof oneof = 40;
+}
+
+// FieldOneof evaluate "messages" or other field only if expr is true and assign to the oneof field.
+// This feature only available in oneof.
+message FieldOneof {
+  // expr describes the condition to be assigned to field.
+  // The return value must be of type bool.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  string expr = 1;
+  // messages defines a list of dependent messages that must be retrieved to compose a message.
+  repeated Message messages = 2;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule and FieldOneOf's messages field can be used.
+  string by = 3;
 }
 
 // MessageValue represents message literal.

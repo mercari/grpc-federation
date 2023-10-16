@@ -734,8 +734,10 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 
 	switch {
 	case s.cast_User_User_AttrA___to__Federation_User_AttrA_(valueUser.GetAttrA()) != nil:
+
 		ret.Attr = s.cast_User_User_AttrA___to__Federation_User_AttrA_(valueUser.GetAttrA())
 	case s.cast_User_User_B__to__Federation_User_B(valueUser.GetB()) != nil:
+
 		ret.Attr = s.cast_User_User_B__to__Federation_User_B(valueUser.GetB())
 	}
 

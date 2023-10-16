@@ -3,8 +3,37 @@ package resolver
 import (
 	"fmt"
 
+	"github.com/mercari/grpc-federation/types"
 	"github.com/mercari/grpc-federation/util"
 )
+
+func (oneof *Oneof) IsSameType() bool {
+	if len(oneof.Fields) == 0 {
+		return false
+	}
+	var prevType *Type
+	for _, field := range oneof.Fields {
+		fieldType := field.Type
+		if prevType == nil {
+			prevType = fieldType
+		}
+		if prevType.Type != fieldType.Type {
+			return false
+		}
+		switch fieldType.Type {
+		case types.Message:
+			if prevType.Ref != fieldType.Ref {
+				return false
+			}
+		case types.Enum:
+			if prevType.Enum != fieldType.Enum {
+				return false
+			}
+		}
+		prevType = fieldType
+	}
+	return true
+}
 
 func (f *OneofField) IsConflict() bool {
 	msg := f.Oneof.Message

@@ -101,7 +101,7 @@ type MessageRule struct {
 	MethodCall          *MethodCall
 	MessageDependencies MessageDependencies
 	MessageArgument     *Message
-	DependencyGraph     *MessageRuleDependencyGraph
+	DependencyGraph     *MessageDependencyGraph
 	Resolvers           []MessageResolverGroup
 	CustomResolver      bool
 	Alias               *Message
@@ -191,6 +191,17 @@ type FieldRule struct {
 	Alias *Field
 	// AutoBindField valid if `autobind = true` is specified in resolver.response of grpc.federation.message option.
 	AutoBindField *AutoBindField
+	// Oneof represents oneof for field option.
+	Oneof *FieldOneofRule
+}
+
+// FieldOneofRule represents grpc.federation.field.oneof.
+type FieldOneofRule struct {
+	Expr                *CELValue
+	MessageDependencies MessageDependencies
+	By                  *CELValue
+	DependencyGraph     *MessageDependencyGraph
+	Resolvers           []MessageResolverGroup
 }
 
 type Type struct {
@@ -308,6 +319,21 @@ type MessageDependency struct {
 	Args     []*Argument
 	AutoBind bool
 	Used     bool
+	Owner    *MessageDependencyOwner
+}
+
+type MessageDependencyOwnerType int
+
+const (
+	MessageDependencyOwnerUnknown    MessageDependencyOwnerType = 0
+	MessageDependencyOwnerMessage    MessageDependencyOwnerType = 1
+	MessageDependencyOwnerOneofField MessageDependencyOwnerType = 2
+)
+
+type MessageDependencyOwner struct {
+	Type    MessageDependencyOwnerType
+	Message *Message
+	Field   *Field
 }
 
 type MessageDependencies []*MessageDependency
