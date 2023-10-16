@@ -529,7 +529,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "sel.user"
 	{
-		_value, err := s.evalCEL("sel.user", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("sel.user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -566,7 +566,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	// field binding section.
 	// (grpc.federation.field).by = "$.user_id"
 	{
-		_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(ret.Id))
+		_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}

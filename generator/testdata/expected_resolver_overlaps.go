@@ -44,8 +44,8 @@ type FederationServiceConfig struct {
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
 type FederationServiceClientFactory interface {
-	// Post_PostServiceClient create a gRPC Client to be used to call methods in post.PostService.
-	Post_PostServiceClient(FederationServiceClientConfig) (post.PostServiceClient, error)
+	// Org_Post_PostServiceClient create a gRPC Client to be used to call methods in org.post.PostService.
+	Org_Post_PostServiceClient(FederationServiceClientConfig) (post.PostServiceClient, error)
 }
 
 // FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
@@ -61,7 +61,7 @@ type FederationServiceClientConfig struct {
 // FederationServiceDependencyServiceClient has a gRPC client for all services on which the federation service depends.
 // This is provided as an argument when implementing the custom resolver.
 type FederationServiceDependencyServiceClient struct {
-	Post_PostServiceClient post.PostServiceClient
+	Org_Post_PostServiceClient post.PostServiceClient
 }
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
@@ -79,7 +79,7 @@ type FederationServiceUnimplementedResolver struct{}
 type FederationServiceErrorHandler func(ctx context.Context, methodName string, err error) error
 
 const (
-	FederationService_DependentMethod_Post_PostService_GetPost = "/post.PostService/GetPost"
+	FederationService_DependentMethod_Org_Post_PostService_GetPost = "/org.post.PostService/GetPost"
 )
 
 // FederationServiceRecoveredError represents recovered error.
@@ -102,17 +102,24 @@ type FederationService struct {
 	client       *FederationServiceDependencyServiceClient
 }
 
-// Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
-type Federation_GetPostResponseArgument struct {
+// Org_Federation_GetPostResponse1Argument is argument for "org.federation.GetPostResponse1" message.
+type Org_Federation_GetPostResponse1Argument struct {
 	Id     string
 	Post   *Post
 	Client *FederationServiceDependencyServiceClient
 }
 
-// Federation_PostArgument is argument for "federation.Post" message.
-type Federation_PostArgument struct {
+// Org_Federation_GetPostResponse2Argument is argument for "org.federation.GetPostResponse2" message.
+type Org_Federation_GetPostResponse2Argument struct {
 	Id     string
-	Post   *post.Post
+	Post   *Post
+	Client *FederationServiceDependencyServiceClient
+}
+
+// Org_Federation_PostArgument is argument for "org.federation.Post" message.
+type Org_Federation_PostArgument struct {
+	Id     string
+	Res    *post.GetPostResponse
 	Client *FederationServiceDependencyServiceClient
 }
 
@@ -270,7 +277,10 @@ func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
 	return &FederationServiceCELTypeHelper{
 		celRegistry: celRegistry,
 		structFieldMap: map[string]map[string]*celtypes.FieldType{
-			"grpc.federation.private.GetPostResponseArgument": map[string]*celtypes.FieldType{
+			"grpc.federation.private.GetPostResponse1Argument": map[string]*celtypes.FieldType{
+				"id": newFieldType(celtypes.StringType, "Id"),
+			},
+			"grpc.federation.private.GetPostResponse2Argument": map[string]*celtypes.FieldType{
 				"id": newFieldType(celtypes.StringType, "Id"),
 			},
 			"grpc.federation.private.PostArgument": map[string]*celtypes.FieldType{
@@ -285,8 +295,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if err := validateFederationServiceConfig(cfg); err != nil {
 		return nil, err
 	}
-	Post_PostServiceClient, err := cfg.Client.Post_PostServiceClient(FederationServiceClientConfig{
-		Service: "post.PostService",
+	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
+		Service: "org.post.PostService",
 		Name:    "post_service",
 	})
 	if err != nil {
@@ -315,7 +325,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler: errorHandler,
 		env:          env,
 		client: &FederationServiceDependencyServiceClient{
-			Post_PostServiceClient: Post_PostServiceClient,
+			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
 	}, nil
 }
@@ -468,19 +478,17 @@ func (s *FederationService) outputErrorLog(ctx context.Context, err error) {
 	s.logger.ErrorContext(ctx, err.Error())
 }
 
-// GetPost implements "federation.FederationService/GetPost" method.
-func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
+// GetPost1 implements "org.federation.FederationService/GetPost1" method.
+func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (res *GetPostResponse1, e error) {
 	defer func() {
 		if r := recover(); r != nil {
 			e = recoverErrorFederationService(r, debug.Stack())
 			s.outputErrorLog(ctx, e)
 		}
 	}()
-	res, err := withTimeoutFederationService[GetPostResponse](ctx, "federation.FederationService/GetPost", 1000000000 /* 1s */, func(ctx context.Context) (*GetPostResponse, error) {
-		return s.resolve_Federation_GetPostResponse(ctx, &Federation_GetPostResponseArgument{
-			Client: s.client,
-			Id:     req.Id,
-		})
+	res, err := s.resolve_Org_Federation_GetPostResponse1(ctx, &Org_Federation_GetPostResponse1Argument{
+		Client: s.client,
+		Id:     req.Id,
 	})
 	if err != nil {
 		s.outputErrorLog(ctx, err)
@@ -489,15 +497,34 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	return res, nil
 }
 
-// resolve_Federation_GetPostResponse resolve "federation.GetPostResponse" message.
-func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Context, req *Federation_GetPostResponseArgument) (*GetPostResponse, error) {
-	s.logger.DebugContext(ctx, "resolve  federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
+// GetPost2 implements "org.federation.FederationService/GetPost2" method.
+func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (res *GetPostResponse2, e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			e = recoverErrorFederationService(r, debug.Stack())
+			s.outputErrorLog(ctx, e)
+		}
+	}()
+	res, err := s.resolve_Org_Federation_GetPostResponse2(ctx, &Org_Federation_GetPostResponse2Argument{
+		Client: s.client,
+		Id:     req.Id,
+	})
+	if err != nil {
+		s.outputErrorLog(ctx, err)
+		return nil, err
+	}
+	return res, nil
+}
+
+// resolve_Org_Federation_GetPostResponse1 resolve "org.federation.GetPostResponse1" message.
+func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.Context, req *Org_Federation_GetPostResponse1Argument) (*GetPostResponse1, error) {
+	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse1", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse1Argument(req)))
 	var (
 		sg        singleflight.Group
 		valueMu   sync.RWMutex
 		valuePost *Post
 	)
-	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.GetPostResponseArgument"))}
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.GetPostResponse1Argument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 
 	// This section's codes are generated by the following proto definition.
@@ -508,9 +535,9 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	     args { name: "id", by: "$.id" }
 	   }
 	*/
-	resPostIface, err, _ := sg.Do("post_federation.Post", func() (interface{}, error) {
+	resPostIface, err, _ := sg.Do("post_org.federation.Post", func() (interface{}, error) {
 		valueMu.RLock()
-		args := &Federation_PostArgument{
+		args := &Org_Federation_PostArgument{
 			Client: s.client,
 		}
 		// { name: "id", by: "$.id" }
@@ -522,7 +549,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			args.Id = _value.(string)
 		}
 		valueMu.RUnlock()
-		return s.resolve_Federation_Post(ctx, args)
+		return s.resolve_Org_Federation_Post(ctx, args)
 	})
 	if err != nil {
 		return nil, err
@@ -530,7 +557,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	resPost := resPostIface.(*Post)
 	valueMu.Lock()
 	valuePost = resPost // { name: "post", message: "Post" ... }
-	envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("federation.Post")))
+	envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
 	evalValues["post"] = valuePost
 	valueMu.Unlock()
 
@@ -538,7 +565,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	req.Post = valuePost
 
 	// create a message value to be returned.
-	ret := &GetPostResponse{}
+	ret := &GetPostResponse1{}
 
 	// field binding section.
 	// (grpc.federation.field).by = "post"
@@ -550,17 +577,82 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		ret.Post = _value.(*Post)
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.GetPostResponse", slog.Any("federation.GetPostResponse", s.logvalue_Federation_GetPostResponse(ret)))
+	s.logger.DebugContext(ctx, "resolved org.federation.GetPostResponse1", slog.Any("org.federation.GetPostResponse1", s.logvalue_Org_Federation_GetPostResponse1(ret)))
 	return ret, nil
 }
 
-// resolve_Federation_Post resolve "federation.Post" message.
-func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Federation_PostArgument) (*Post, error) {
-	s.logger.DebugContext(ctx, "resolve  federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
+// resolve_Org_Federation_GetPostResponse2 resolve "org.federation.GetPostResponse2" message.
+func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.Context, req *Org_Federation_GetPostResponse2Argument) (*GetPostResponse2, error) {
+	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse2", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse2Argument(req)))
 	var (
 		sg        singleflight.Group
 		valueMu   sync.RWMutex
-		valuePost *post.Post
+		valuePost *Post
+	)
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.GetPostResponse2Argument"))}
+	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
+
+	// This section's codes are generated by the following proto definition.
+	/*
+	   {
+	     name: "post"
+	     message: "Post"
+	     args { name: "id", by: "$.id" }
+	   }
+	*/
+	resPostIface, err, _ := sg.Do("post_org.federation.Post", func() (interface{}, error) {
+		valueMu.RLock()
+		args := &Org_Federation_PostArgument{
+			Client: s.client,
+		}
+		// { name: "id", by: "$.id" }
+		{
+			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
+			if err != nil {
+				return nil, err
+			}
+			args.Id = _value.(string)
+		}
+		valueMu.RUnlock()
+		return s.resolve_Org_Federation_Post(ctx, args)
+	})
+	if err != nil {
+		return nil, err
+	}
+	resPost := resPostIface.(*Post)
+	valueMu.Lock()
+	valuePost = resPost // { name: "post", message: "Post" ... }
+	envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
+	evalValues["post"] = valuePost
+	valueMu.Unlock()
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Post = valuePost
+
+	// create a message value to be returned.
+	ret := &GetPostResponse2{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "post"
+	{
+		_value, err := s.evalCEL("post", envOpts, evalValues, reflect.TypeOf((*Post)(nil)))
+		if err != nil {
+			return nil, err
+		}
+		ret.Post = _value.(*Post)
+	}
+
+	s.logger.DebugContext(ctx, "resolved org.federation.GetPostResponse2", slog.Any("org.federation.GetPostResponse2", s.logvalue_Org_Federation_GetPostResponse2(ret)))
+	return ret, nil
+}
+
+// resolve_Org_Federation_Post resolve "org.federation.Post" message.
+func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req *Org_Federation_PostArgument) (*Post, error) {
+	s.logger.DebugContext(ctx, "resolve  org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
+	var (
+		sg       singleflight.Group
+		valueMu  sync.RWMutex
+		valueRes *post.GetPostResponse
 	)
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.PostArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
@@ -568,12 +660,12 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	// This section's codes are generated by the following proto definition.
 	/*
 	   resolver: {
-	     method: "post.PostService/GetPost"
+	     method: "org.post.PostService/GetPost"
 	     request { field: "id", by: "$.id" }
-	     response { name: "post", field: "post", autobind: true }
+	     response { name: "res" }
 	   }
 	*/
-	resGetPostResponseIface, err, _ := sg.Do("post.PostService/GetPost", func() (interface{}, error) {
+	resGetPostResponseIface, err, _ := sg.Do("org.post.PostService/GetPost", func() (interface{}, error) {
 		valueMu.RLock()
 		args := &post.GetPostRequest{}
 		// { field: "id", by: "$.id" }
@@ -585,45 +677,50 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			args.Id = _value.(string)
 		}
 		valueMu.RUnlock()
-		return s.client.Post_PostServiceClient.GetPost(ctx, args)
+		return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
 	})
 	if err != nil {
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
+		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
 			return nil, err
 		}
 	}
 	resGetPostResponse := resGetPostResponseIface.(*post.GetPostResponse)
 	valueMu.Lock()
-	valuePost = resGetPostResponse.GetPost() // { name: "post", field: "post", autobind: true }
-	envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("post.Post")))
-	evalValues["post"] = valuePost
+	valueRes = resGetPostResponse // { name: "res" }
+	envOpts = append(envOpts, cel.Variable("res", cel.ObjectType("org.post.GetPostResponse")))
+	evalValues["res"] = valueRes
 	valueMu.Unlock()
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = valuePost
+	req.Res = valueRes
 
 	// create a message value to be returned.
 	ret := &Post{}
 
 	// field binding section.
-	ret.Id = valuePost.GetId()           // { name: "post", autobind: true }
-	ret.Title = valuePost.GetTitle()     // { name: "post", autobind: true }
-	ret.Content = valuePost.GetContent() // { name: "post", autobind: true }
+	// (grpc.federation.field).by = "res.post.id"
+	{
+		_value, err := s.evalCEL("res.post.id", envOpts, evalValues, reflect.TypeOf(""))
+		if err != nil {
+			return nil, err
+		}
+		ret.Id = _value.(string)
+	}
 
-	s.logger.DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
+	s.logger.DebugContext(ctx, "resolved org.federation.Post", slog.Any("org.federation.Post", s.logvalue_Org_Federation_Post(ret)))
 	return ret, nil
 }
 
-func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostResponse1(v *GetPostResponse1) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
-		slog.Any("post", s.logvalue_Federation_Post(v.GetPost())),
+		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
 	)
 }
 
-func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *Federation_GetPostResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostResponse1Argument(v *Org_Federation_GetPostResponse1Argument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -632,18 +729,34 @@ func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *Feder
 	)
 }
 
-func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostResponse2(v *GetPostResponse2) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_GetPostResponse2Argument(v *Org_Federation_GetPostResponse2Argument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.Id),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
-		slog.String("title", v.GetTitle()),
-		slog.String("content", v.GetContent()),
 	)
 }
 
-func (s *FederationService) logvalue_Federation_PostArgument(v *Federation_PostArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federation_PostArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

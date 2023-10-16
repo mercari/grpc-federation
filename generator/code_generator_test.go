@@ -26,6 +26,7 @@ func TestCodeGenerate(t *testing.T) {
 		{"autobind"},
 		{"const_value"},
 		{"multi_user"},
+		{"resolver_overlaps"},
 		{"oneof"},
 	}
 	for _, test := range tests {

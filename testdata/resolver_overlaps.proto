@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "nested_post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { name: "post_service", service: "org.post.PostService" }
+    ]
+  };
+  rpc GetPost1(GetPostRequest) returns (GetPostResponse1) {};
+  rpc GetPost2(GetPostRequest) returns (GetPostResponse2) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse1 {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "post", message: "Post", args: [{ name: "id", by: "$.id" }]}
+    ]
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message GetPostResponse2 {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "post", message: "Post", args: [{ name: "id", by: "$.id" }]}
+    ]
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    resolver {
+      method: "org.post.PostService/GetPost"
+      request: [
+        { field: "id", by: "$.id" }
+      ]
+      response: [ { name: "res" } ]
+    }
+  };
+  string id = 1 [(grpc.federation.field).by = "res.post.id"];
+}

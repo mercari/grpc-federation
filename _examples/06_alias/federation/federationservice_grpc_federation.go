@@ -513,7 +513,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		}
 		// { name: "id", by: "$.id" }
 		{
-			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(args.Id))
+			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}
@@ -541,7 +541,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	// field binding section.
 	// (grpc.federation.field).by = "post"
 	{
-		_value, err := s.evalCEL("post", envOpts, evalValues, nil)
+		_value, err := s.evalCEL("post", envOpts, evalValues, reflect.TypeOf((*Post)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -576,7 +576,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		args := &post.GetPostRequest{}
 		// { field: "id", by: "$.id" }
 		{
-			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(args.Id))
+			_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
 				return nil, err
 			}

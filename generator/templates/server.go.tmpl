@@ -578,6 +578,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 {{- end }}
 
 {{- range .Messages }}
+{{- $hasCELValue := .HasCELValue }}
 {{ if .HasRule }}
 // {{ .ResolverName }} resolve "{{ .ProtoFQDN }}" message.
 func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .RequestType }}) (*{{ .ReturnType }}, error) {
@@ -590,7 +591,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- end }}
 	)
 	{{- end }}
-	{{- if .HasCELValue }}
+	{{- if $hasCELValue }}
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("{{ .RequestProtoType }}"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 	{{- end }}
@@ -710,7 +711,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- else if .CEL }}
 	{{ .ProtoComment }}
 	{
-		_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, {{ .OutType }})
+		_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 		if err != nil {
 			return nil, err
 		}
@@ -890,7 +891,7 @@ args := &{{ .Resolver.RequestType }}{
 {{- if .CEL }}
 {{ .ProtoComment }}
 {
-	_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, {{ .OutType }})
+	_value, err := s.evalCEL("{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 	if err != nil {
 		return nil, err
 	}
@@ -983,11 +984,14 @@ if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (interface{}, error) {
 valueMu.Lock()
 {{- end }}
 
+{{- $hasCELValue := .Resolver.Message.HasCELValue }}
 {{- range $responseVariables }}
 {{- if .UseName }}
 {{ .Name }} = {{ .Selector }} {{ .ProtoComment }}
+{{- if $hasCELValue }}
 envOpts = append(envOpts, cel.Variable("{{ .CELExpr }}", {{ .CELType }}))
 evalValues["{{ .CELExpr }}"] = {{ .Name }}
+{{- end }}
 {{- end }}
 {{- end }}
 
