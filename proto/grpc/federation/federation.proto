@@ -3,6 +3,8 @@ syntax = "proto3";
 package grpc.federation;
 
 import "google/protobuf/descriptor.proto";
+import "google/rpc/code.proto";
+import "google/rpc/error_details.proto";
 
 option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
 
@@ -52,8 +54,7 @@ message EnumValueRule {
   repeated string alias = 2;
 }
 
-message OneofRule {
-}
+message OneofRule {}
 
 // ServiceRule define GRPC Federation rules for the service.
 message ServiceRule {
@@ -93,6 +94,11 @@ message MessageRule {
   // If this definition exists, type conversion is automatically performed before the field assignment operation.
   // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
   optional string alias = 4;
+  // validations defines a list of validations that must run using variables defined within the current scope.
+  // The validations in the same Validation block run in order, starting from the validation that is ready for evaluation.
+  // It determines success or failure when all the validations in the same Validation block have been completed.
+  // If the Validation block is marked as failure, an error is returned without waiting for the other Validation blocks.
+  repeated Validation validations = 5;
 }
 
 // Resolver define the gRPC method, how to call it, and which value to use in the return value.
@@ -532,4 +538,57 @@ message MessageFieldValue {
   optional string env = 37;
   // repeated env literal values.
   repeated string envs = 38;
+}
+
+// Validation represents a validation rule against variables defined within the current scope.
+message Validation {
+  // name is a unique name for the validation.
+  // If set, the validation error type will be <message-name><name>Error.
+  // If omitted, the validation error type will be ValidationError.
+  optional string name = 1;
+  // error defines the actual validation rules and an error to returned if the validation fails.
+  ValidationError error = 2;
+}
+
+// ValidationError represents a validation rule and validation error to be returned.
+message ValidationError {
+  // code is a gRPC status code for validation error.
+  google.rpc.Code code = 1;
+  // message is a gRPC status message for validation error.
+  // If omitted, the message will be auto-generated from the configurations.
+  optional string message = 2;
+  // rule specifies validation rule in CEL.
+  // The return value must always be of type boolean.
+  // Either rule or details must be specified.
+  optional string rule = 3;
+  // details is a list of validation rules and error details.
+  // If the validation fails, the corresponding error details are set.
+  // Either rule or details must be specified.
+  repeated ValidationErrorDetail details = 4;
+}
+
+// ValidationErrorDetail represents a pair of validation rule and error details to be set.
+message ValidationErrorDetail {
+  // rule specifies validation rule in CEL.
+  string rule = 1;
+  // error_info describes the cause of the error with structured details.
+  repeated google.rpc.ErrorInfo error_info = 3;
+  // retry_info describes when the clients can retry a failed request.
+  repeated google.rpc.RetryInfo retry_info = 4;
+  // debug_info describes additional debugging info.
+  repeated google.rpc.DebugInfo debug_info = 5;
+  // quota_failure describes how a quota check failed.
+  repeated google.rpc.QuotaFailure quota_failure = 6;
+  // precondition_failure describes what preconditions have failed.
+  repeated google.rpc.PreconditionFailure precondition_failure = 7;
+  // bad_request describes violations in a client request.
+  repeated google.rpc.BadRequest bad_request = 8;
+  // request_info contains metadata about the request that clients can attach.
+  repeated google.rpc.RequestInfo request_info = 9;
+  // resource_info describes the resource that is being accessed.
+  repeated google.rpc.ResourceInfo resource_info = 10;
+  // help provides links to documentation or for performing an out of band action.
+  repeated google.rpc.Help help = 11;
+  // localized_message provides a localized error message that is safe to return to the user.
+  repeated google.rpc.LocalizedMessage localized_message = 12;
 }

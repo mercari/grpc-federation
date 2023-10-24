@@ -1,5 +1,7 @@
 version: v1
-name: github.com/mercari/grpc-federation
+name: buf.build/mercari/grpc-federation
+deps:
+  - buf.build/googleapis/googleapis
 breaking:
   use:
     - FILE

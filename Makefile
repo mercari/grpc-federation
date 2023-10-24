@@ -38,7 +38,7 @@ tools:
 lint: lint/examples lint/golangci-lint lint/gomod
 
 .PHONY: fmt
-fmt: fmt/golangci-lint tidy
+fmt: fmt/golangci-lint tidy fmt/buf
 
 .PHONY: tidy
 tidy:
@@ -64,6 +64,9 @@ lint/gomod: tidy
 
 fmt/golangci-lint:
 	$(GOBIN)/golangci-lint run --fix $(args) ./...
+
+fmt/buf:
+	buf format --write
 
 .PHONY: generate
 generate: generate/buf generate/examples
