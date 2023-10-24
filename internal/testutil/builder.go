@@ -1042,6 +1042,11 @@ func (b *FieldOneofRuleBuilder) SetExpr(expr string, out *resolver.Type) *FieldO
 	return b
 }
 
+func (b *FieldOneofRuleBuilder) SetDefault(v bool) *FieldOneofRuleBuilder {
+	b.rule.Default = true
+	return b
+}
+
 func (b *FieldOneofRuleBuilder) AddMessageDependency(name string, msg *resolver.Message, args []*resolver.Argument, autobind, used bool) *FieldOneofRuleBuilder {
 	dep := &resolver.MessageDependency{
 		Name:     name,

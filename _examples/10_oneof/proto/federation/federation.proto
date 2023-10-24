@@ -57,6 +57,18 @@ message UserSelection {
         by: "ub"
       }
     ];
+
+    User user_c = 3 [
+      (grpc.federation.field).oneof = {
+        default: true
+        messages {
+          name: "uc"
+          message: "User"
+          args: { name: "user_id", string: "c" }
+        }
+        by: "uc"
+      }
+    ];
   }
 }
 

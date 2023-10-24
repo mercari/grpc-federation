@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package org.federation;
 
-import "grpc/federation/federation.proto";
+import "federation.proto";
 
 option go_package = "example/federation;federation";
 
@@ -36,7 +36,7 @@ message UserSelection {
   oneof user {
     User user_a = 1 [
       (grpc.federation.field).oneof = {
-        expr: "m.value == $.value"
+        expr: "true"
         messages {
           name: "ua"
           message: "User"
@@ -46,30 +46,12 @@ message UserSelection {
       }
     ];
 
-    User user_b = 2 [
-      (grpc.federation.field).oneof = {
-        expr: "m.value != $.value"
-        messages {
-          name: "ub"
-          message: "User"
-          args: { name: "user_id", string: "b" }
-        }
-        by: "ub"
-      }
-    ];
-
-    User user_c = 3 [
+    int64 user_b = 2 [
       (grpc.federation.field).oneof = {
         default: true
-        messages {
-          name: "uc"
-          message: "User"
-          args: { name: "user_id", string: "c" }
-        }
-        by: "uc"
+        by: "1"
       }
     ];
-
   }
 }
 

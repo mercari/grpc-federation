@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"fmt"
+
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -13,6 +15,15 @@ type CELRegistry struct {
 	*celtypes.Registry
 	messageMap  map[string]*Message
 	enumTypeMap map[*celtypes.Type]*Enum
+	errs        []error
+}
+
+func (r *CELRegistry) clearErrors() {
+	r.errs = r.errs[:0]
+}
+
+func (r *CELRegistry) errors() []error {
+	return r.errs
 }
 
 func (r *CELRegistry) FindStructFieldType(structType, fieldName string) (*celtypes.FieldType, bool) {
@@ -29,7 +40,14 @@ func (r *CELRegistry) FindStructFieldType(structType, fieldName string) (*celtyp
 			}
 		}
 		oneof := msg.Oneof(fieldName)
-		if !found && oneof != nil && oneof.IsSameType() {
+		if !found && oneof != nil {
+			if !oneof.IsSameType() {
+				r.errs = append(r.errs, fmt.Errorf(
+					`"%[1]s" type has "%[2]s" as oneof name, but "%[2]s" has a difference type and cannot be accessed directly, so "%[2]s" becomes an undefined field`,
+					structType, fieldName,
+				))
+				return fieldType, found
+			}
 			// If we refer directly to the name of oneof and all fields in oneof have the same type,
 			// we can refer to the value of a field that is not nil.
 			return &celtypes.FieldType{

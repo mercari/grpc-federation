@@ -1061,7 +1061,8 @@ type ReturnField struct {
 	IsCustomResolverField bool
 	IsOneofField          bool
 	CEL                   *resolver.CELValue
-	OneofFields           []*OneofField
+	OneofCaseFields       []*OneofField
+	OneofDefaultField     *OneofField
 	ResolverName          string
 	RequestType           string
 	MessageName           string
@@ -1071,10 +1072,13 @@ type ReturnField struct {
 }
 
 func (r *ReturnField) HasFieldOneofRule() bool {
-	for _, field := range r.OneofFields {
+	for _, field := range r.OneofCaseFields {
 		if field.FieldOneofRule != nil {
 			return true
 		}
+	}
+	if r.OneofDefaultField != nil && r.OneofDefaultField.FieldOneofRule != nil {
+		return true
 	}
 	return false
 }
@@ -1545,7 +1549,10 @@ func (m *Message) customResolverToReturnField(field *resolver.Field) *ReturnFiel
 }
 
 func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
-	var oneofFields []*OneofField
+	var (
+		caseFields   []*OneofField
+		defaultField *OneofField
+	)
 	for _, field := range oneof.Fields {
 		if !field.HasRule() {
 			continue
@@ -1554,7 +1561,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 		switch {
 		case rule.AutoBindField != nil:
 			returnField := m.autoBindFieldToReturnField(field, rule.AutoBindField)
-			oneofFields = append(oneofFields, &OneofField{
+			caseFields = append(caseFields, &OneofField{
 				Condition: fmt.Sprintf("%s != nil", returnField.Value),
 				Name:      returnField.Name,
 				Value:     returnField.Value,
@@ -1569,7 +1576,6 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 			if toType.OneofField.IsConflict() {
 				oneofTypeName += "_"
 			}
-
 			var (
 				outType  string
 				argValue string
@@ -1594,22 +1600,35 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 				outType = fmt.Sprintf("reflect.TypeOf(new(%s).Get%s())", oneofTypeName, fieldName)
 				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, toType))
 			}
-			oneofFields = append(oneofFields, &OneofField{
-				Expr:           rule.Oneof.Expr.Expr,
-				By:             rule.Oneof.By.Expr,
-				OutType:        outType,
-				Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
-				Name:           fieldName,
-				Value:          fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
-				FieldOneofRule: rule.Oneof,
-				Message:        m,
-			})
+			if rule.Oneof.Default {
+				defaultField = &OneofField{
+					By:             rule.Oneof.By.Expr,
+					OutType:        outType,
+					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
+					Name:           fieldName,
+					Value:          fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
+					FieldOneofRule: rule.Oneof,
+					Message:        m,
+				}
+			} else {
+				caseFields = append(caseFields, &OneofField{
+					Expr:           rule.Oneof.Expr.Expr,
+					By:             rule.Oneof.By.Expr,
+					OutType:        outType,
+					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
+					Name:           fieldName,
+					Value:          fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
+					FieldOneofRule: rule.Oneof,
+					Message:        m,
+				})
+			}
 		}
 	}
 	return &ReturnField{
-		Name:         util.ToPublicGoVariable(oneof.Name),
-		IsOneofField: true,
-		OneofFields:  oneofFields,
+		Name:              util.ToPublicGoVariable(oneof.Name),
+		IsOneofField:      true,
+		OneofCaseFields:   caseFields,
+		OneofDefaultField: defaultField,
 	}
 }
 
