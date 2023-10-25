@@ -676,6 +676,10 @@ func (f *File) nodeInfoByMessage(node *ast.MessageNode, msg *Message) *ast.NodeI
 				}
 				return f.nodeInfoByField(n, msg.Field)
 			}
+		case *ast.OneOfNode:
+			if info := f.nodeInfoByOneof(n, msg); info != nil {
+				return info
+			}
 		case *ast.EnumNode:
 			if msg.Enum != nil {
 				if string(n.Name.AsIdentifier()) == msg.Enum.Name {
@@ -685,6 +689,28 @@ func (f *File) nodeInfoByMessage(node *ast.MessageNode, msg *Message) *ast.NodeI
 		}
 	}
 	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByOneof(node *ast.OneOfNode, msg *Message) *ast.NodeInfo {
+	for _, decl := range node.Decls {
+		switch n := decl.(type) {
+		case *ast.OptionNode:
+			if !f.matchOption(f.optionName(n), msgOptionName) {
+				continue
+			}
+			if msg.Option != nil {
+				return f.nodeInfoByMessageOption(n, msg.Option)
+			}
+		case *ast.FieldNode:
+			if msg.Field != nil {
+				if string(n.Name.AsIdentifier()) != msg.Field.Name {
+					continue
+				}
+				return f.nodeInfoByField(n, msg.Field)
+			}
+		}
+	}
+	return nil
 }
 
 func (f *File) nodeInfoByEnum(node *ast.EnumNode, enum *Enum) *ast.NodeInfo {
@@ -997,6 +1023,9 @@ func (f *File) nodeInfoByFieldOption(node *ast.OptionNode, opt *FieldOption) *as
 			return f.nodeInfo(n)
 		}
 	case *ast.MessageLiteralNode:
+		if opt.Oneof != nil && strings.HasSuffix(f.optionName(node), "oneof") {
+			return f.nodeInfoByFieldOneof(n, opt.Oneof)
+		}
 		for _, elem := range n.Elements {
 			optName := elem.Name.Name.AsIdentifier()
 			switch {
@@ -1028,6 +1057,8 @@ func (f *File) nodeInfoByFieldOneof(node *ast.MessageLiteralNode, opt *FieldOneo
 				return nil
 			}
 			return f.nodeInfo(value)
+		case opt.Default && fieldName == "default":
+			return f.nodeInfo(elem.Val)
 		case opt.Messages != nil && fieldName == "messages":
 			return f.nodeInfoByMessageDependency(f.getMessageListFromNode(elem.Val), opt.Messages)
 		case opt.By && fieldName == "by":

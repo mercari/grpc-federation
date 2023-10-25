@@ -2436,7 +2436,38 @@ func TestOneof(t *testing.T) {
 						).
 						Build(t),
 				).
-				AddOneof(testutil.NewOneofBuilder("user").AddFieldNames("user_a", "user_b").Build(t)).
+				AddFieldWithRule(
+					"user_c",
+					ref.Type(t, "org.federation", "User"),
+					testutil.NewFieldRuleBuilder(nil).
+						SetOneof(
+							testutil.NewFieldOneofRuleBuilder().
+								SetDefault(true).
+								AddMessageDependency(
+									"uc",
+									ref.Message(t, "org.federation", "User"),
+									testutil.NewMessageDependencyArgumentBuilder().
+										Add("user_id", resolver.NewStringValue("c")).
+										Build(t),
+									false,
+									true,
+								).
+								SetBy("uc", ref.Type(t, "org.federation", "User")).
+								SetDependencyGraph(
+									testutil.NewDependencyGraphBuilder().
+										Add(ref.Message(t, "org.federation", "User")).
+										Build(t),
+								).
+								AddResolver(
+									testutil.NewMessageResolverGroupBuilder().
+										SetEnd(testutil.NewMessageResolver("uc")).
+										Build(t),
+								).
+								Build(t),
+						).
+						Build(t),
+				).
+				AddOneof(testutil.NewOneofBuilder("user").AddFieldNames("user_a", "user_b", "user_c").Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetMessageArgument(ref.Message(t, "org.federation", "UserSelectionArgument")).

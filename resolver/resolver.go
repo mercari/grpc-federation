@@ -579,6 +579,60 @@ func (r *Resolver) resolveFieldRules(ctx *context, msg *Message) {
 	for _, field := range msg.Fields {
 		field.Rule = r.resolveFieldRule(ctx, msg, field, r.fieldToRuleMap[field])
 	}
+	r.validateFieldsOneofRule(ctx, msg)
+}
+
+func (r *Resolver) validateFieldsOneofRule(ctx *context, msg *Message) {
+	var usedDefault bool
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		oneof := field.Rule.Oneof
+		if oneof == nil {
+			continue
+		}
+		if oneof.Default {
+			if usedDefault {
+				ctx.addError(
+					ErrWithLocation(
+						`"default" found multiple times in the "grpc.federation.field.oneof". "default" can only be specified once per oneof`,
+						source.MessageFieldOneofDefaultLocation(
+							msg.File.Name,
+							msg.Name,
+							field.Name,
+						),
+					),
+				)
+			} else {
+				usedDefault = true
+			}
+		}
+		if !oneof.Default && oneof.Expr == nil {
+			ctx.addError(
+				ErrWithLocation(
+					`"expr" or "default" must be specified in "grpc.federation.field.oneof"`,
+					source.MessageFieldOneofLocation(
+						msg.File.Name,
+						msg.Name,
+						field.Name,
+					),
+				),
+			)
+		}
+		if oneof.By == nil {
+			ctx.addError(
+				ErrWithLocation(
+					`"by" must be specified in "grpc.federation.field.oneof"`,
+					source.MessageFieldOneofLocation(
+						msg.File.Name,
+						msg.Name,
+						field.Name,
+					),
+				),
+			)
+		}
+	}
 }
 
 func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
@@ -962,7 +1016,7 @@ func (r *Resolver) resolveFieldOneofRule(ctx *context, msg *Message, field *Fiel
 		ctx.addError(
 			ErrWithLocation(
 				`"oneof" feature can only be used for fields within oneof`,
-				source.MessageFieldOneofLocation(ctx.fileName(), msg.Name, field.Name),
+				source.MessageFieldLocation(ctx.fileName(), msg.Name, field.Name),
 			),
 		)
 		return nil
@@ -974,10 +1028,21 @@ func (r *Resolver) resolveFieldOneofRule(ctx *context, msg *Message, field *Fiel
 			Field: field,
 		}
 	}
+	var (
+		expr *CELValue
+		by   *CELValue
+	)
+	if def.GetExpr() != "" {
+		expr = &CELValue{Expr: def.GetExpr()}
+	}
+	if def.GetBy() != "" {
+		by = &CELValue{Expr: def.GetBy()}
+	}
 	return &FieldOneofRule{
-		Expr:                &CELValue{Expr: def.GetExpr()},
+		Expr:                expr,
+		Default:             def.GetDefault(),
 		MessageDependencies: depMsgs,
-		By:                  &CELValue{Expr: def.GetBy()},
+		By:                  by,
 	}
 }
 
@@ -2002,23 +2067,11 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		}
 		if field.Rule.Oneof != nil {
 			oneof := field.Rule.Oneof
-			if err := r.resolveCELValue(ctx, env, oneof.Expr); err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						source.MessageFieldOneofExprLocation(
-							msg.File.Name,
-							msg.Name,
-							field.Name,
-						),
-					),
-				)
-			}
-			if oneof.Expr.Out != nil {
-				if oneof.Expr.Out.Type != types.Bool {
+			if oneof.Expr != nil {
+				if err := r.resolveCELValue(ctx, env, oneof.Expr); err != nil {
 					ctx.addError(
 						ErrWithLocation(
-							fmt.Sprintf(`return value of "expr" must be bool type but got %s type`, oneof.Expr.Out.Type),
+							err.Error(),
 							source.MessageFieldOneofExprLocation(
 								msg.File.Name,
 								msg.Name,
@@ -2026,6 +2079,20 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 							),
 						),
 					)
+				}
+				if oneof.Expr.Out != nil {
+					if oneof.Expr.Out.Type != types.Bool {
+						ctx.addError(
+							ErrWithLocation(
+								fmt.Sprintf(`return value of "expr" must be bool type but got %s type`, oneof.Expr.Out.Type),
+								source.MessageFieldOneofExprLocation(
+									msg.File.Name,
+									msg.Name,
+									field.Name,
+								),
+							),
+						)
+					}
 				}
 			}
 			var envOpts []cel.EnvOption
@@ -2116,9 +2183,10 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 		return fmt.Errorf("%q is a reserved keyword and cannot be used as a variable name", federation.MessageArgumentVariableName)
 	}
 	expr := strings.Replace(value.Expr, "$", federation.MessageArgumentVariableName, -1)
+	r.celRegistry.clearErrors()
 	ast, issues := env.Compile(expr)
 	if issues.Err() != nil {
-		return issues.Err()
+		return errors.Join(append(r.celRegistry.errors(), issues.Err())...)
 	}
 	out, err := r.fromCELType(ctx, ast.OutputType())
 	if err != nil {

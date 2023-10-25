@@ -670,7 +670,8 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	}
 	{{- else if .IsOneofField }}
 	{{ $name := .Name }}
-	{{ $oneofFields := .OneofFields }}
+	{{ $oneofFields := .OneofCaseFields }}
+	{{- $defaultOneofField := .OneofDefaultField }}
 	{{- if .HasFieldOneofRule }}
 	{{- range $oneofFields }}
 	oneof_{{ .Name }}, err := s.evalCEL("{{ .Expr }}", envOpts, evalValues, reflect.TypeOf(true))
@@ -709,6 +710,36 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		}
 		{{- end }}
 		ret.{{ $name }} = {{ .Value }}
+	{{- end }}
+	{{- if $defaultOneofField }}
+	default:
+		{{- $oneofMsgResolvers := $defaultOneofField.MessageResolvers }}
+		{{- $oneofMsgResolversLen := len $oneofMsgResolvers }}
+		{{- if eq $oneofMsgResolversLen 1 }}
+		{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $oneofMsgResolvers 0)) }}
+		{{- else }}
+		{{- if $oneofMsgResolvers }}
+		eg, ctx1 := errgroup.WithContext(ctx)
+		{{- end }}
+		{{ range $oneofMsgResolvers }}
+		s.goWithRecover(eg, func() (interface{}, error) {
+			{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+			return nil, nil
+		})
+		{{ end }}
+		{{- if $oneofMsgResolvers }}
+		if err := eg.Wait(); err != nil {
+			return nil, err
+		}
+		{{- end }}
+		{{- end }}
+		{{- if $defaultOneofField.By }}
+		_value, err := s.evalCEL("{{ $defaultOneofField.By }}", envOpts, evalValues, {{ $defaultOneofField.OutType }})
+		if err != nil {
+			return nil, err
+		}
+		{{- end }}
+		ret.{{ $name }} = {{ $defaultOneofField.Value }}
 	{{- end }}
 	}
 	{{- else if .CEL }}
