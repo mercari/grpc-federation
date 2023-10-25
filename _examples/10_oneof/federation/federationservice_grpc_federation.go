@@ -705,14 +705,21 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		   {
 		     name: "uc"
 		     message: "User"
-		     args { name: "user_id", string: "c" }
+		     args { name: "user_id", by: "$.value" }
 		   }
 		*/
 		resUserIface, err, _ := sg.Do("uc_org.federation.User", func() (interface{}, error) {
 			valueMu.RLock()
 			args := &Org_Federation_UserArgument{
 				Client: s.client,
-				UserId: "c", // { name: "user_id", string: "c" }
+			}
+			// { name: "user_id", by: "$.value" }
+			{
+				_value, err := s.evalCEL("$.value", envOpts, evalValues, reflect.TypeOf(""))
+				if err != nil {
+					return nil, err
+				}
+				args.UserId = _value.(string)
 			}
 			valueMu.RUnlock()
 			return s.resolve_Org_Federation_User(ctx, args)

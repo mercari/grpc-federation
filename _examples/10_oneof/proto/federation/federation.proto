@@ -64,7 +64,7 @@ message UserSelection {
         messages {
           name: "uc"
           message: "User"
-          args: { name: "user_id", string: "c" }
+          args: { name: "user_id", by: "$.value" }
         }
         by: "uc"
       }
