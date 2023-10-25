@@ -2096,7 +2096,41 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				}
 			}
 			var envOpts []cel.EnvOption
-			for _, dep := range oneof.MessageDependencies {
+			for depIdx, dep := range oneof.MessageDependencies {
+				for argIdx, arg := range dep.Args {
+					if arg.Value == nil {
+						continue
+					}
+					if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
+						if arg.Value.CEL != nil && arg.Value.CEL.Inline {
+							ctx.addError(
+								ErrWithLocation(
+									err.Error(),
+									source.MessageFieldOneofMessageDependencyArgumentInlineLocation(
+										msg.File.Name,
+										msg.Name,
+										field.Name,
+										depIdx,
+										argIdx,
+									),
+								),
+							)
+						} else {
+							ctx.addError(
+								ErrWithLocation(
+									err.Error(),
+									source.MessageFieldOneofMessageDependencyArgumentByLocation(
+										msg.File.Name,
+										msg.Name,
+										field.Name,
+										depIdx,
+										argIdx,
+									),
+								),
+							)
+						}
+					}
+				}
 				if dep.Name == "" {
 					continue
 				}
