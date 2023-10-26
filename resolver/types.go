@@ -198,6 +198,7 @@ type FieldRule struct {
 // FieldOneofRule represents grpc.federation.field.oneof.
 type FieldOneofRule struct {
 	Expr                *CELValue
+	Default             bool
 	MessageDependencies MessageDependencies
 	By                  *CELValue
 	DependencyGraph     *MessageDependencyGraph

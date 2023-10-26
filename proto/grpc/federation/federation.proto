@@ -441,17 +441,24 @@ message FieldRule {
 // FieldOneof evaluate "messages" or other field only if expr is true and assign to the oneof field.
 // This feature only available in oneof.
 message FieldOneof {
-  // expr describes the condition to be assigned to field.
-  // The return value must be of type bool.
-  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
-  // Variables are already defined in MessageRule can be used.
-  string expr = 1;
+  // cond specify either `expr` or `default`. Only one `default` can be set per oneof.
+  oneof cond {
+    // expr describes the condition to be assigned to field.
+    // The return value must be of type bool.
+    // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+    // Variables are already defined in MessageRule can be used.
+    string expr = 1;
+
+    // default used to assign a value when none of the other fields match any of the specified expressions.
+    // Only one value can be defined per oneof.
+    bool default = 2;
+  }
   // messages defines a list of dependent messages that must be retrieved to compose a message.
-  repeated Message messages = 2;
+  repeated Message messages = 3;
   // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
   // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
   // Variables are already defined in MessageRule and FieldOneOf's messages field can be used.
-  string by = 3;
+  string by = 4;
 }
 
 // MessageValue represents message literal.

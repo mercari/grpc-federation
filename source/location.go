@@ -90,6 +90,7 @@ type FieldOption struct {
 // FieldOneof represents grpc.federation.field.oneof location.
 type FieldOneof struct {
 	Expr     bool
+	Default  bool
 	Messages *MessageDependencyOption
 	By       bool
 }
@@ -480,6 +481,24 @@ func MessageFieldOneofExprLocation(fileName, msgName, fieldName string) *Locatio
 				Option: &FieldOption{
 					Oneof: &FieldOneof{
 						Expr: true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageFieldOneofDefaultLocation creates location for default in grpc.federation.field.oneof option.
+func MessageFieldOneofDefaultLocation(fileName, msgName, fieldName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Field: &Field{
+				Name: fieldName,
+				Option: &FieldOption{
+					Oneof: &FieldOneof{
+						Default: true,
 					},
 				},
 			},

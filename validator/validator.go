@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/bufbuild/protocompile/ast"
@@ -80,12 +81,15 @@ func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...Val
 	if result != nil {
 		outs = v.toValidationOutputByWarnings(dirName, result.Warnings)
 	}
-	if err == nil {
-		return outs
-	}
 	for _, e := range resolver.ExtractIndividualErrors(err) {
 		outs = append(outs, v.toValidationOutputByError(dirName, e))
 	}
+	sort.SliceStable(outs, func(i, j int) bool {
+		return outs[i].Start.Col < outs[j].Start.Col
+	})
+	sort.SliceStable(outs, func(i, j int) bool {
+		return outs[i].Start.Line < outs[j].Start.Line
+	})
 	return outs
 }
 
