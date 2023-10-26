@@ -14,6 +14,7 @@ require (
 	go.lsp.dev/uri v0.3.0
 	go.uber.org/multierr v1.9.0
 	go.uber.org/zap v1.24.0
+	golang.org/x/mod v0.10.0
 	golang.org/x/sync v0.2.0
 	golang.org/x/tools v0.9.3
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5
@@ -34,7 +35,6 @@ require (
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
-	golang.org/x/mod v0.10.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect

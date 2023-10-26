@@ -851,6 +851,17 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 	for _, dep := range msg.Rule.MessageDependencies {
 		ret = append(ret, s.dependentMethods(dep.Message)...)
 	}
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		for _, dep := range field.Rule.Oneof.MessageDependencies {
+			ret = append(ret, s.dependentMethods(dep.Message)...)
+		}
+	}
 	return ret
 }
 

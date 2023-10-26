@@ -821,7 +821,9 @@ type ResponseBuilder struct {
 
 func NewResponseBuilder() *ResponseBuilder {
 	return &ResponseBuilder{
-		res: &resolver.Response{},
+		res: &resolver.Response{
+			Fields: []*resolver.ResponseField{},
+		},
 	}
 }
 
