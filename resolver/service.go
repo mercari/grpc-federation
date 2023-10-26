@@ -133,28 +133,49 @@ func (s *Service) ServiceDependencies() []*ServiceDependency {
 }
 
 func (s *Service) UseServices() []*Service {
-	serviceMap := map[*Service]struct{}{}
+	svcMap := map[*Service]struct{}{}
 	for _, method := range s.Methods {
-		rule := method.Response.Rule
-		if rule == nil {
-			continue
+		for _, svc := range s.useServicesByMessage(method.Response, make(map[*MessageResolver]struct{})) {
+			svcMap[svc] = struct{}{}
 		}
-		for _, group := range rule.Resolvers {
+	}
+	svcs := make([]*Service, 0, len(svcMap))
+	for svc := range svcMap {
+		svcs = append(svcs, svc)
+	}
+	sort.Slice(svcs, func(i, j int) bool {
+		return svcs[i].Name < svcs[j].Name
+	})
+	return svcs
+}
+
+func (s *Service) useServicesByMessage(msg *Message, msgResolverMap map[*MessageResolver]struct{}) []*Service {
+	if msg == nil {
+		return nil
+	}
+
+	var svcs []*Service
+	if msg.Rule != nil {
+		for _, group := range msg.Rule.Resolvers {
 			for _, resolver := range group.Resolvers() {
-				for _, svc := range s.useServices(resolver, make(map[*MessageResolver]struct{})) {
-					serviceMap[svc] = struct{}{}
-				}
+				svcs = append(svcs, s.useServices(resolver, msgResolverMap)...)
 			}
 		}
 	}
-	services := make([]*Service, 0, len(serviceMap))
-	for service := range serviceMap {
-		services = append(services, service)
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		for _, group := range field.Rule.Oneof.Resolvers {
+			for _, resolver := range group.Resolvers() {
+				svcs = append(svcs, s.useServices(resolver, msgResolverMap)...)
+			}
+		}
 	}
-	sort.Slice(services, func(i, j int) bool {
-		return services[i].Name < services[j].Name
-	})
-	return services
+	return svcs
 }
 
 func (s *Service) useServices(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
@@ -163,17 +184,14 @@ func (s *Service) useServices(resolver *MessageResolver, msgResolverMap map[*Mes
 	}
 	msgResolverMap[resolver] = struct{}{}
 
-	var services []*Service
+	var svcs []*Service
 	if resolver.MethodCall != nil {
 		methodCall := resolver.MethodCall
-		services = append(services, methodCall.Method.Service)
+		svcs = append(svcs, methodCall.Method.Service)
 	}
-	if resolver.MessageDependency != nil && resolver.MessageDependency.Message != nil && resolver.MessageDependency.Message.Rule != nil {
-		for _, group := range resolver.MessageDependency.Message.Rule.Resolvers {
-			for _, resolver := range group.Resolvers() {
-				services = append(services, s.useServices(resolver, msgResolverMap)...)
-			}
-		}
+	if resolver.MessageDependency == nil {
+		return svcs
 	}
-	return services
+	svcs = append(svcs, s.useServicesByMessage(resolver.MessageDependency.Message, msgResolverMap)...)
+	return svcs
 }

@@ -2333,7 +2333,7 @@ func TestMultiUser(t *testing.T) {
 
 func TestOneof(t *testing.T) {
 	fb := testutil.NewFileBuilder("oneof.proto")
-	ref := testutil.NewBuilderReferenceManager(fb)
+	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
 		SetGoPackage("example/federation", "federation").
@@ -2349,6 +2349,16 @@ func TestOneof(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("M").
+				AddFieldWithRule("value", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "MArgument")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("User").
 				AddFieldWithRule(
 					"id",
@@ -2357,17 +2367,25 @@ func TestOneof(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
+						SetMethodCall(
+							testutil.NewMethodCallBuilder(ref.Method(t, "org.user", "UserService", "GetUser")).
+								SetRequest(
+									testutil.NewRequestBuilder().
+										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+										Build(t),
+								).
+								SetResponse(
+									testutil.NewResponseBuilder().Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
-						Build(t),
-				).
-				Build(t),
-		).
-		AddMessage(
-			testutil.NewMessageBuilder("M").
-				AddFieldWithRule("value", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
-				SetRule(
-					testutil.NewMessageRuleBuilder().
-						SetMessageArgument(ref.Message(t, "org.federation", "MArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.user", "GetUserResponse")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
 						Build(t),
 				).
 				Build(t),
