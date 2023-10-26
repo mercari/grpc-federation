@@ -13,16 +13,36 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"example/federation"
+	user "example/user"
 )
 
 const bufSize = 1024
 
 var (
-	listener *bufconn.Listener
+	listener   *bufconn.Listener
+	userClient user.UserServiceClient
 )
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
 	return listener.Dial()
+}
+
+type clientConfig struct{}
+
+func (c *clientConfig) User_UserServiceClient(cfg federation.FederationServiceClientConfig) (user.UserServiceClient, error) {
+	return userClient, nil
+}
+
+type UserServer struct {
+	*user.UnimplementedUserServiceServer
+}
+
+func (s *UserServer) GetUser(ctx context.Context, req *user.GetUserRequest) (*user.GetUserResponse, error) {
+	return &user.GetUserResponse{
+		User: &user.User{
+			Id: req.Id,
+		},
+	}, nil
 }
 
 func TestFederation(t *testing.T) {
@@ -35,17 +55,21 @@ func TestFederation(t *testing.T) {
 	}
 	defer conn.Close()
 
+	userClient = user.NewUserServiceClient(conn)
+
 	grpcServer := grpc.NewServer()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
+		Client: new(clientConfig),
 		Logger: logger,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	user.RegisterUserServiceServer(grpcServer, &UserServer{})
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 
 	go func() {
