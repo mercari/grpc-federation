@@ -20,7 +20,7 @@ func (h *Handler) validateText(ctx context.Context, docURI uri.URI) {
 	if err != nil {
 		return
 	}
-	errs := h.validator.Validate(ctx, file, validator.ImportPathOption(h.importPaths...), validator.AutoImportOption())
+	errs := h.validator.Validate(ctx, file, validator.ImportPathOption(h.importPaths...))
 	diagnostics := make([]protocol.Diagnostic, 0, len(errs))
 	for _, err := range errs {
 		start := protocol.Position{

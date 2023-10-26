@@ -24,7 +24,7 @@ func TestCompiler(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := compiler.New()
-	protos, err := c.Compile(ctx, file, compiler.AutoImportOption())
+	protos, err := c.Compile(ctx, file)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -30,7 +30,7 @@ func Compile(t *testing.T, path string) []*descriptorpb.FileDescriptorProto {
 	}
 
 	opt := compiler.ImportPathOption(filepath.Join(RepoRoot(), "proto"))
-	desc, err := compiler.New().Compile(context.Background(), file, opt, compiler.AutoImportOption())
+	desc, err := compiler.New().Compile(context.Background(), file, opt)
 	if err != nil {
 		t.Fatal(err)
 	}

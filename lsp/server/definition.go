@@ -63,7 +63,7 @@ func (h *Handler) definition(ctx context.Context, params *protocol.DefinitionPar
 }
 
 func (h *Handler) findMessageDefinition(ctx context.Context, path string, file *source.File, defMsgName string) ([]protocol.Location, error) {
-	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...), compiler.AutoImportOption())
+	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...))
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (h *Handler) findMessageDefinition(ctx context.Context, path string, file *
 }
 
 func (h *Handler) findMethodDefinition(ctx context.Context, path string, file *source.File, defMethodName string) ([]protocol.Location, error) {
-	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...), compiler.AutoImportOption())
+	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...))
 	if err != nil {
 		return nil, err
 	}
