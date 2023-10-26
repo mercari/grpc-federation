@@ -5,6 +5,7 @@ run:
   timeout: 5m
   skip-dirs:
     - bin
+    - proto_deps/googleapis
 
 linters-settings:
 

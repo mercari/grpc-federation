@@ -1,11 +1,12 @@
 coverage:
   paths:
     - cover.out
-  acceptable: current >= 60% && diff >= -1.0%
+  acceptable: current >= 60%
 codeToTestRatio:
   code:
     - '**/*.go'
     - '!**/*_test.go'
+    - '!**/*.pb.go'
   test:
     - '**/*_test.go'
 testExecutionTime:

@@ -17,6 +17,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mercari/grpc-federation/proto/grpc/federation"
+	protodeps "github.com/mercari/grpc-federation/proto_deps"
 	"github.com/mercari/grpc-federation/source"
 
 	_ "embed"
@@ -25,8 +26,8 @@ import (
 // Compiler provides a way to generate file descriptors from a Protocol Buffers file without relying on protoc command.
 // This allows you to do things like validate proto files without relying on protoc.
 type Compiler struct {
-	importPaths []string
-	autoImport  bool
+	importPaths  []string
+	manualImport bool
 }
 
 // Option represents compiler option.
@@ -40,11 +41,12 @@ func ImportPathOption(path ...string) Option {
 	}
 }
 
-// AutoImportOption if `grpc/federation/federation.proto` file does not exist on the import path, automatically imports it.
+// ManualImportOption stops importing `grpc/federation/federation.proto` file and its dependencies
+// By default if `grpc/federation/federation.proto` file and its dependencies do not exist, automatically imports it.
 // The version of the proto file is the same as the version when the compiler is built.
-func AutoImportOption() Option {
+func ManualImportOption() Option {
 	return func(c *Compiler) {
-		c.autoImport = true
+		c.manualImport = true
 	}
 }
 
@@ -83,7 +85,9 @@ func (e *CompilerError) Error() string {
 }
 
 const (
-	grpcFederationFilePath = "grpc/federation/federation.proto"
+	grpcFederationFilePath        = "grpc/federation/federation.proto"
+	googleRPCCodeFilePath         = "google/rpc/code.proto"
+	googleRPCErrorDetailsFilePath = "google/rpc/error_details.proto"
 )
 
 // Compile compile the target Protocol Buffers file and produces all file descriptors.
@@ -110,8 +114,14 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 				}
 				f, err := os.Open(p)
 				if err != nil {
-					if c.autoImport && strings.HasSuffix(p, grpcFederationFilePath) {
+					if !c.manualImport && strings.HasSuffix(p, grpcFederationFilePath) {
 						return io.NopCloser(bytes.NewBuffer(federation.ProtoFile)), nil
+					}
+					if !c.manualImport && strings.HasSuffix(p, googleRPCCodeFilePath) {
+						return io.NopCloser(bytes.NewBuffer(protodeps.GoogleRPCCodeProtoFile)), nil
+					}
+					if !c.manualImport && strings.HasSuffix(p, googleRPCErrorDetailsFilePath) {
+						return io.NopCloser(bytes.NewBuffer(protodeps.GoogleRPCErrorDetailsProtoFile)), nil
 					}
 					return nil, err
 				}
