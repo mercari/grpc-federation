@@ -17,6 +17,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mercari/grpc-federation/proto/grpc/federation"
+	"github.com/mercari/grpc-federation/proto_deps/google/rpc"
 	"github.com/mercari/grpc-federation/source"
 
 	_ "embed"
@@ -83,7 +84,9 @@ func (e *CompilerError) Error() string {
 }
 
 const (
-	grpcFederationFilePath = "grpc/federation/federation.proto"
+	grpcFederationFilePath        = "grpc/federation/federation.proto"
+	googleRPCCodeFilePath         = "google/rpc/code.proto"
+	googleRPCErrorDetailsFilePath = "google/rpc/error_details.proto"
 )
 
 // Compile compile the target Protocol Buffers file and produces all file descriptors.
@@ -112,6 +115,12 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 				if err != nil {
 					if c.autoImport && strings.HasSuffix(p, grpcFederationFilePath) {
 						return io.NopCloser(bytes.NewBuffer(federation.ProtoFile)), nil
+					}
+					if c.autoImport && strings.HasSuffix(p, googleRPCCodeFilePath) {
+						return io.NopCloser(bytes.NewBuffer(rpc.CodeProtoFile)), nil
+					}
+					if c.autoImport && strings.HasSuffix(p, googleRPCErrorDetailsFilePath) {
+						return io.NopCloser(bytes.NewBuffer(rpc.ErrorDetailsProtoFile)), nil
 					}
 					return nil, err
 				}

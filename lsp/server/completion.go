@@ -83,7 +83,7 @@ func (c *Completer) Completion(ctx context.Context, importPaths []string, path s
 	if err != nil {
 		return nil, nil, err
 	}
-	protos, err := c.compiler.Compile(ctx, file, compiler.ImportPathOption(importPaths...))
+	protos, err := c.compiler.Compile(ctx, file, compiler.ImportPathOption(importPaths...), compiler.AutoImportOption())
 	if err != nil {
 		return nil, nil, err
 	}

@@ -5,5 +5,3 @@ breaking:
 lint:
   use:
     - DEFAULT
-deps:
-  - github.com/mercari/grpc-federation

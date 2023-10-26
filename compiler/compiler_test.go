@@ -2,6 +2,7 @@ package compiler_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,12 +24,16 @@ func TestCompiler(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := compiler.New()
-	protos, err := c.Compile(ctx, file)
+	protos, err := c.Compile(ctx, file, compiler.AutoImportOption())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	const expectedProtoNum = 5 // service.proto, post.proto, user.proto, federation.proto, google/protobuf/descriptor.proto
+	for _, proto := range protos {
+		fmt.Println(*proto.Name)
+	}
+
+	const expectedProtoNum = 8 // service.proto, post.proto, user.proto, federation.proto, google/protobuf/descriptor.proto, google/protobuf/duration.proto, google/rpc/error_details.proto, google/rpc/code.proto
 	if len(protos) != expectedProtoNum {
 		t.Fatalf("failed to get protos. expected %d but got %d", expectedProtoNum, len(protos))
 	}

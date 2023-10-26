@@ -44,7 +44,7 @@ func main() {
 		}
 
 		v := validator.New()
-		outs := v.Validate(ctx, file, validator.ImportPathOption(opt.ImportPaths...))
+		outs := v.Validate(ctx, file, validator.ImportPathOption(opt.ImportPaths...), validator.AutoImportOption())
 		if len(outs) == 0 {
 			continue
 		}

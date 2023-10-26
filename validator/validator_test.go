@@ -360,7 +360,7 @@ testdata/message_rule_cyclic_dependency.proto:22:28: found cyclic dependency for
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual := "\n" + validator.Format(v.Validate(ctx, file))
+			actual := "\n" + validator.Format(v.Validate(ctx, file, validator.AutoImportOption()))
 			if test.expected != actual {
 				t.Fatalf("expected error %s\n but got %s", test.expected, actual)
 			}
