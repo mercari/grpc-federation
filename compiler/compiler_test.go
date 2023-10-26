@@ -2,7 +2,6 @@ package compiler_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -27,10 +26,6 @@ func TestCompiler(t *testing.T) {
 	protos, err := c.Compile(ctx, file)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	for _, proto := range protos {
-		fmt.Println(*proto.Name)
 	}
 
 	const expectedProtoNum = 8 // service.proto, post.proto, user.proto, federation.proto, google/protobuf/descriptor.proto, google/protobuf/duration.proto, google/rpc/error_details.proto, google/rpc/code.proto
