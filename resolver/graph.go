@@ -20,7 +20,7 @@ type AllMessageDependencyGraphNode struct {
 
 // CreateAllMessageDependencyGraph creates a dependency graph for all messages with  message options defined.
 func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageDependencyGraph {
-	msgToNode := map[*Message]*AllMessageDependencyGraphNode{}
+	msgToNode := make(map[*Message]*AllMessageDependencyGraphNode)
 	for _, msg := range msgs {
 		if msg.Rule == nil {
 			continue
@@ -62,8 +62,10 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 				depMessage.Message.Rule = &MessageRule{}
 				depNode = &AllMessageDependencyGraphNode{Message: depMessage.Message}
 			}
-			node.Children = append(node.Children, depNode)
-			depNode.Parent = append(depNode.Parent, node)
+			if node != nil {
+				node.Children = append(node.Children, depNode)
+				depNode.Parent = append(depNode.Parent, node)
+			}
 			childMap[depNode] = struct{}{}
 		}
 		for _, field := range msg.Fields {
@@ -102,8 +104,10 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 					depMessage.Message.Rule = &MessageRule{}
 					depNode = &AllMessageDependencyGraphNode{Message: depMessage.Message}
 				}
-				node.Children = append(node.Children, depNode)
-				depNode.Parent = append(depNode.Parent, node)
+				if node != nil {
+					node.Children = append(node.Children, depNode)
+					depNode.Parent = append(depNode.Parent, node)
+				}
 				childMap[depNode] = struct{}{}
 			}
 		}
