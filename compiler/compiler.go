@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mercari/grpc-federation/proto/grpc/federation"
-	protodeps "github.com/mercari/grpc-federation/proto_deps"
+	"github.com/mercari/grpc-federation/proto_deps/google/rpc"
 	"github.com/mercari/grpc-federation/source"
 
 	_ "embed"
@@ -118,10 +118,10 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 						return io.NopCloser(bytes.NewBuffer(federation.ProtoFile)), nil
 					}
 					if !c.manualImport && strings.HasSuffix(p, googleRPCCodeFilePath) {
-						return io.NopCloser(bytes.NewBuffer(protodeps.GoogleRPCCodeProtoFile)), nil
+						return io.NopCloser(bytes.NewBuffer(rpc.GoogleRPCCodeProtoFile)), nil
 					}
 					if !c.manualImport && strings.HasSuffix(p, googleRPCErrorDetailsFilePath) {
-						return io.NopCloser(bytes.NewBuffer(protodeps.GoogleRPCErrorDetailsProtoFile)), nil
+						return io.NopCloser(bytes.NewBuffer(rpc.GoogleRPCErrorDetailsProtoFile)), nil
 					}
 					return nil, err
 				}
