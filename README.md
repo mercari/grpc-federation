@@ -112,6 +112,7 @@ gRPC Federation's proto file is [here](./proto/grpc/federation/federation.proto)
 git clone https://github.com/mercari/grpc-federation.git
 cd grpc-federation
 cp -r proto /path/to/proto
+cp -r proto_deps /path/to/proto_deps
 ```
 
 ### 1.3. Use gRPC Federation proto file in your proto file.
@@ -129,7 +130,7 @@ import "grpc/federation/federation.proto";
 ### 1.4. Run `protoc` command with gRPC Federation plugin
 
 ```console
-protoc -I/path/to/proto --grpc-federation_out=. ./path/to/my_federation.proto
+protoc -I/path/to/proto -I/path/to/proto_deps --grpc-federation_out=. ./path/to/my_federation.proto
 ```
 
 **NOTE**
