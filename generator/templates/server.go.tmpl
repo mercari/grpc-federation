@@ -298,7 +298,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	eg, ctx1 := errgroup.WithContext(ctx)
 	{{- end }}
 	{{ range $msgResolvers }}
-	grpcfed.GoWithRecover(eg, func() (interface{}, error) {
+	grpcfed.GoWithRecover(eg, func() (any, error) {
 		{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
 		return nil, nil
 	})
@@ -376,7 +376,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		eg, ctx1 := errgroup.WithContext(ctx)
 		{{- end }}
 		{{ range $oneofMsgResolvers }}
-		grpcfed.GoWithRecover(eg, func() (interface{}, error) {
+		grpcfed.GoWithRecover(eg, func() (any, error) {
 			{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
 			return nil, nil
 		})
@@ -406,7 +406,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		eg, ctx1 := errgroup.WithContext(ctx)
 		{{- end }}
 		{{ range $oneofMsgResolvers }}
-		grpcfed.GoWithRecover(eg, func() (interface{}, error) {
+		grpcfed.GoWithRecover(eg, func() (any, error) {
 			{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
 			return nil, nil
 		})
@@ -685,7 +685,7 @@ return nil, err
 {{ .Resolver.ProtoComment }}
 */
 {{- if .Resolver.UseResponseVariable }}
-{{ .Resolver.ResponseVariable }}Iface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (interface{}, error) {
+{{ .Resolver.ResponseVariable }}Iface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
 	{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
 })
 if err != nil {
@@ -693,7 +693,7 @@ if err != nil {
 }
 {{ .Resolver.ResponseVariable }} := {{ .Resolver.ResponseVariable }}Iface.({{ .Resolver.Type }})
 {{- else }}
-if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (interface{}, error) {
+if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
 	{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
 }); err != nil {
 	{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
@@ -727,7 +727,7 @@ valueMu.Unlock()
 {{- if .Resolver.IsConcurrent }}
 eg, {{ printf "ctx%d" .Level }} := errgroup.WithContext({{ parentCtx .Level }})
 {{- range .Resolver.Starts }}
-grpcfed.GoWithRecover(eg, func() (interface{}, error) {
+grpcfed.GoWithRecover(eg, func() (any, error) {
 	{{- template "resolverGroup" (map "Level" (add $.Level 1) "Resolver" .) }}
 	return nil, nil
 })

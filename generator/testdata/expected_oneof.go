@@ -194,7 +194,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	     args { name: "value", string: "foo" }
 	   }
 	*/
-	resUserSelectionIface, err, _ := sg.Do("sel_org.federation.UserSelection", func() (interface{}, error) {
+	resUserSelectionIface, err, _ := sg.Do("sel_org.federation.UserSelection", func() (any, error) {
 		valueMu.RLock()
 		args := &Org_Federation_UserSelectionArgument[*FederationServiceDependentClientSet]{
 			Client: s.client,
@@ -264,7 +264,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	     request { field: "id", by: "$.user_id" }
 	   }
 	*/
-	if _, err, _ := sg.Do("org.user.UserService/GetUser", func() (interface{}, error) {
+	if _, err, _ := sg.Do("org.user.UserService/GetUser", func() (any, error) {
 		valueMu.RLock()
 		args := &user.GetUserRequest{}
 		// { field: "id", by: "$.user_id" }
@@ -321,7 +321,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	     message: "M"
 	   }
 	*/
-	resMIface, err, _ := sg.Do("m_org.federation.M", func() (interface{}, error) {
+	resMIface, err, _ := sg.Do("m_org.federation.M", func() (any, error) {
 		valueMu.RLock()
 		args := &Org_Federation_MArgument[*FederationServiceDependentClientSet]{
 			Client: s.client,
@@ -366,7 +366,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		     args { name: "user_id", string: "a" }
 		   }
 		*/
-		resUserIface, err, _ := sg.Do("ua_org.federation.User", func() (interface{}, error) {
+		resUserIface, err, _ := sg.Do("ua_org.federation.User", func() (any, error) {
 			valueMu.RLock()
 			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
@@ -399,7 +399,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		     args { name: "user_id", string: "b" }
 		   }
 		*/
-		resUserIface, err, _ := sg.Do("ub_org.federation.User", func() (interface{}, error) {
+		resUserIface, err, _ := sg.Do("ub_org.federation.User", func() (any, error) {
 			valueMu.RLock()
 			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
@@ -432,7 +432,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		     args { name: "user_id", by: "$.value" }
 		   }
 		*/
-		resUserIface, err, _ := sg.Do("uc_org.federation.User", func() (interface{}, error) {
+		resUserIface, err, _ := sg.Do("uc_org.federation.User", func() (any, error) {
 			valueMu.RLock()
 			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
