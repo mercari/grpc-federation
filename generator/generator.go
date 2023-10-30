@@ -38,7 +38,7 @@ type Generator struct {
 	validator             *validator.Validator
 	importPaths           []string
 	postProcessHandler    PostProcessHandler
-	buildCache            BuildCache
+	buildCacheMap         BuildCacheMap
 	absPathToRelativePath map[string]string
 }
 
@@ -46,7 +46,12 @@ type Option func(*Generator) error
 
 type PostProcessHandler func(context.Context, string, Result) error
 
-type BuildCache map[string][]*pluginpb.CodeGeneratorResponse
+type BuildCache struct {
+	Responses       []*pluginpb.CodeGeneratorResponse
+	FederationFiles []*resolver.File
+}
+
+type BuildCacheMap map[string]*BuildCache
 
 type Result []*ProtoFileResult
 
@@ -140,12 +145,12 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 			return err
 		}
 	}
-	if g.buildCache == nil {
-		buildCache, err := g.GenerateAll(ctx)
+	if g.buildCacheMap == nil {
+		buildCacheMap, err := g.GenerateAll(ctx)
 		if err != nil {
 			return err
 		}
-		g.buildCache = buildCache
+		g.buildCacheMap = buildCacheMap
 	}
 	if g.watcher != nil {
 		defer g.watcher.Close()
@@ -156,7 +161,7 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 	}
 
 	results := g.otherResults(path)
-	if _, exists := g.buildCache[path]; exists {
+	if _, exists := g.buildCacheMap[path]; exists {
 		result, err := g.updateProtoFile(ctx, path)
 		if err != nil {
 			return err
@@ -177,12 +182,12 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 	return nil
 }
 
-func (g *Generator) GenerateAll(ctx context.Context) (BuildCache, error) {
+func (g *Generator) GenerateAll(ctx context.Context) (BuildCacheMap, error) {
 	protoPathMap, err := g.createProtoPathMap()
 	if err != nil {
 		return nil, err
 	}
-	buildCache := BuildCache{}
+	buildCacheMap := BuildCacheMap{}
 	for protoPath := range protoPathMap {
 		req, err := g.compileProto(ctx, protoPath)
 		if err != nil {
@@ -200,10 +205,22 @@ func (g *Generator) GenerateAll(ctx context.Context) (BuildCache, error) {
 			if res == nil {
 				continue
 			}
-			buildCache[protoPath] = append(buildCache[protoPath], res)
+			buildCache := buildCacheMap[protoPath]
+			if buildCache == nil {
+				buildCache = &BuildCache{}
+				buildCacheMap[protoPath] = buildCache
+			}
+			if pluginCfg.Plugin == "protoc-gen-grpc-federation" {
+				files, err := g.createGRPCFederationFiles(pluginReq)
+				if err != nil {
+					return nil, err
+				}
+				buildCache.FederationFiles = append(buildCache.FederationFiles, files...)
+			}
+			buildCache.Responses = append(buildCache.Responses, res)
 		}
 	}
-	return buildCache, nil
+	return buildCacheMap, nil
 }
 
 func newPluginRequest(protoPath string, org *pluginpb.CodeGeneratorRequest, opt string) (*PluginRequest, error) {
@@ -328,8 +345,8 @@ func existsPath(path string) bool {
 }
 
 func (g *Generator) otherResults(path string) []*ProtoFileResult {
-	results := make([]*ProtoFileResult, 0, len(g.buildCache))
-	for p, resp := range g.buildCache {
+	results := make([]*ProtoFileResult, 0, len(g.buildCacheMap))
+	for p, buildCache := range g.buildCacheMap {
 		if path == p {
 			continue
 		}
@@ -341,11 +358,12 @@ func (g *Generator) otherResults(path string) []*ProtoFileResult {
 		}
 
 		result := &ProtoFileResult{
-			ProtoPath: p,
-			Out:       g.cfg.Out,
-			Type:      KeepAction,
+			ProtoPath:       p,
+			Out:             g.cfg.Out,
+			Type:            KeepAction,
+			FederationFiles: buildCache.FederationFiles,
 		}
-		for _, r := range resp {
+		for _, r := range buildCache.Responses {
 			result.Files = append(result.Files, r.GetFile()...)
 		}
 		results = append(results, result)
@@ -363,7 +381,7 @@ func (g *Generator) createProtoFile(ctx context.Context, path string) (*ProtoFil
 }
 
 func (g *Generator) updateProtoFile(ctx context.Context, path string) (*ProtoFileResult, error) {
-	delete(g.buildCache, path)
+	delete(g.buildCacheMap, path)
 
 	result, err := g.createGeneratorResult(ctx, path)
 	if err != nil {
@@ -379,10 +397,14 @@ func (g *Generator) deleteProtoFile(path string) *ProtoFileResult {
 		Type:      DeleteAction,
 		Out:       g.cfg.Out,
 	}
-	for _, resp := range g.buildCache[path] {
-		result.Files = append(result.Files, resp.GetFile()...)
+	buildCache, exists := g.buildCacheMap[path]
+	if exists {
+		result.FederationFiles = buildCache.FederationFiles
+		for _, resp := range buildCache.Responses {
+			result.Files = append(result.Files, resp.GetFile()...)
+		}
 	}
-	delete(g.buildCache, path)
+	delete(g.buildCacheMap, path)
 	return result
 }
 
@@ -407,15 +429,21 @@ func (g *Generator) createGeneratorResult(ctx context.Context, path string) (*Pr
 		if resp == nil {
 			continue
 		}
+		buildCache := g.buildCacheMap[path]
+		if buildCache == nil {
+			buildCache = &BuildCache{}
+			g.buildCacheMap[path] = buildCache
+		}
 		if pluginCfg.Plugin == "protoc-gen-grpc-federation" {
-			files, err := g.createGRPCFederationServices(pluginReq)
+			files, err := g.createGRPCFederationFiles(pluginReq)
 			if err != nil {
 				return nil, err
 			}
 			result.FederationFiles = files
+			buildCache.FederationFiles = append(buildCache.FederationFiles, files...)
 		}
 		result.Files = append(result.Files, resp.GetFile()...)
-		g.buildCache[path] = append(g.buildCache[path], resp)
+		buildCache.Responses = append(buildCache.Responses, resp)
 	}
 	return result, nil
 }
@@ -559,7 +587,7 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 	return &resp, nil
 }
 
-func (g *Generator) createGRPCFederationServices(r *PluginRequest) ([]*resolver.File, error) {
+func (g *Generator) createGRPCFederationFiles(r *PluginRequest) ([]*resolver.File, error) {
 	result, err := resolver.New(r.req.GetProtoFile()).Resolve()
 	if err != nil {
 		return nil, err

@@ -98,7 +98,7 @@ func TestCodeGenerate(t *testing.T) {
 					t.Fatal(err)
 				}
 				g := generator.New(cfg)
-				protoToRespMap, err := g.GenerateAll(context.Background())
+				buildCacheMap, err := g.GenerateAll(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -138,8 +138,8 @@ func TestCodeGenerate(t *testing.T) {
 					t.Fatal(err)
 				}
 				var federationFilePath string
-				for _, responses := range protoToRespMap {
-					for _, response := range responses {
+				for _, buildCache := range buildCacheMap {
+					for _, response := range buildCache.Responses {
 						for _, file := range response.File {
 							path := filepath.Join(tmpDir, test, file.GetName())
 							if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

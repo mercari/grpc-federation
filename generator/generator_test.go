@@ -41,13 +41,13 @@ plugins:
 			t.Fatal(err)
 		}
 		g := generator.New(cfg)
-		protoToRespMap, err := g.GenerateAll(context.Background())
+		buildCacheMap, err := g.GenerateAll(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
-		for name, res := range protoToRespMap {
-			if len(res) != standardPluginNum {
-				t.Fatalf("failed to generate standard plugin for %s. code generator response number is %d", name, len(res))
+		for name, buildCache := range buildCacheMap {
+			if len(buildCache.Responses) != standardPluginNum {
+				t.Fatalf("failed to generate standard plugin for %s. code generator response number is %d", name, len(buildCache.Responses))
 			}
 		}
 	})
@@ -64,13 +64,13 @@ out: .
 			t.Fatal(err)
 		}
 		g := generator.New(cfg)
-		protoToRespMap, err := g.GenerateAll(context.Background())
+		buildCacheMap, err := g.GenerateAll(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
-		for name, res := range protoToRespMap {
-			if len(res) != standardPluginNum {
-				t.Fatalf("failed to generate standard plugin for %s. code generator response number is %d", name, len(res))
+		for name, buildCache := range buildCacheMap {
+			if len(buildCache.Responses) != standardPluginNum {
+				t.Fatalf("failed to generate standard plugin for %s. code generator response number is %d", name, len(buildCache.Responses))
 			}
 		}
 	})
@@ -89,14 +89,14 @@ plugins:
 			t.Fatal(err)
 		}
 		g := generator.New(cfg)
-		protoToRespMap, err := g.GenerateAll(context.Background())
+		buildCacheMap, err := g.GenerateAll(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
 		pluginNum := standardPluginNum + 1 // validate-go
-		for name, res := range protoToRespMap {
-			if len(res) != pluginNum {
-				t.Fatalf("failed to generate standard plugin for %s. code generator response number is %d", name, len(res))
+		for name, buildCache := range buildCacheMap {
+			if len(buildCache.Responses) != pluginNum {
+				t.Fatalf("failed to generate standard plugin for %s. code generator response number is %d", name, len(buildCache.Responses))
 			}
 		}
 	})
