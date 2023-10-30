@@ -5,7 +5,6 @@ go 1.21
 replace github.com/mercari/grpc-federation => ../../
 
 require (
-	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/google/cel-go v0.18.1
 	github.com/mercari/grpc-federation v0.0.0-00010101000000-000000000000
 	golang.org/x/sync v0.4.0
@@ -16,6 +15,7 @@ require (
 
 require (
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
