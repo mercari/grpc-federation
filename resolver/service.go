@@ -40,6 +40,18 @@ func (s *Service) Method(name string) *Method {
 	return nil
 }
 
+func (s *Service) HasMessageInMethod(msg *Message) bool {
+	for _, mtd := range s.Methods {
+		if mtd.Request == msg {
+			return true
+		}
+		if mtd.Response == msg {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Service) GoPackageDependencies() []*GoPackage {
 	pkgMap := map[*GoPackage]struct{}{}
 	pkgMap[s.GoPackage()] = struct{}{}

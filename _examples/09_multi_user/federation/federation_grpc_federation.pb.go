@@ -3,32 +3,55 @@ package federation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"reflect"
 	"runtime/debug"
-	"sort"
-	"strings"
 	"sync"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
-	"github.com/google/cel-go/common/types/ref"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 
 	user "example/user"
 )
+
+// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
+type Org_Federation_GetResponseArgument[T any] struct {
+	Uid    *UserID
+	User   *User
+	User2  *User
+	Client T
+}
+
+// Org_Federation_SubArgument is argument for "org.federation.Sub" message.
+type Org_Federation_SubArgument[T any] struct {
+	Client T
+}
+
+// Org_Federation_UserArgument is argument for "org.federation.User" message.
+type Org_Federation_UserArgument[T any] struct {
+	User               *user.User
+	UserId             string
+	XOrgFederation_Sub *Sub
+	Client             T
+}
+
+// Org_Federation_UserIDArgument is argument for "org.federation.UserID" message.
+type Org_Federation_UserIDArgument[T any] struct {
+	Client T
+}
+
+// Org_Federation_User_NameArgument is custom resolver's argument for "name" field of "org.federation.User" message.
+type Org_Federation_User_NameArgument[T any] struct {
+	*Org_Federation_UserArgument[T]
+	Client T
+}
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
@@ -40,7 +63,7 @@ type FederationServiceConfig struct {
 	Resolver FederationServiceResolver // required
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
-	ErrorHandler FederationServiceErrorHandler
+	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
 }
@@ -61,18 +84,18 @@ type FederationServiceClientConfig struct {
 	Name string
 }
 
-// FederationServiceDependencyServiceClient has a gRPC client for all services on which the federation service depends.
+// FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
 // This is provided as an argument when implementing the custom resolver.
-type FederationServiceDependencyServiceClient struct {
+type FederationServiceDependentClientSet struct {
 	User_UserServiceClient user.UserServiceClient
 }
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
 	// Resolve_Org_Federation_Sub implements resolver for "org.federation.Sub".
-	Resolve_Org_Federation_Sub(context.Context, *Org_Federation_SubArgument) (*Sub, error)
+	Resolve_Org_Federation_Sub(context.Context, *Org_Federation_SubArgument[*FederationServiceDependentClientSet]) (*Sub, error)
 	// Resolve_Org_Federation_User_Name implements resolver for "org.federation.User.name".
-	Resolve_Org_Federation_User_Name(context.Context, *Org_Federation_User_NameArgument) (string, error)
+	Resolve_Org_Federation_User_Name(context.Context, *Org_Federation_User_NameArgument[*FederationServiceDependentClientSet]) (string, error)
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -83,209 +106,40 @@ type FederationServiceUnimplementedResolver struct{}
 
 // Resolve_Org_Federation_Sub resolve "org.federation.Sub".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_Sub(context.Context, *Org_Federation_SubArgument) (ret *Sub, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_Sub(context.Context, *Org_Federation_SubArgument[*FederationServiceDependentClientSet]) (ret *Sub, e error) {
 	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_Sub not implemented")
 	return
 }
 
 // Resolve_Org_Federation_User_Name resolve "org.federation.User.name".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User_Name(context.Context, *Org_Federation_User_NameArgument) (ret string, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User_Name(context.Context, *Org_Federation_User_NameArgument[*FederationServiceDependentClientSet]) (ret string, e error) {
 	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_User_Name not implemented")
 	return
 }
 
-// FederationServiceErrorHandler Federation Service often needs to convert errors received from downstream services.
-// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
-type FederationServiceErrorHandler func(ctx context.Context, methodName string, err error) error
-
 const (
 	FederationService_DependentMethod_User_UserService_GetUser = "/user.UserService/GetUser"
 )
-
-// FederationServiceRecoveredError represents recovered error.
-type FederationServiceRecoveredError struct {
-	Message string
-	Stack   []string
-}
-
-func (e *FederationServiceRecoveredError) Error() string {
-	return fmt.Sprintf("recovered error: %s", e.Message)
-}
 
 // FederationService represents Federation Service.
 type FederationService struct {
 	*UnimplementedFederationServiceServer
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
-	errorHandler FederationServiceErrorHandler
+	errorHandler grpcfed.ErrorHandler
 	env          *cel.Env
 	resolver     FederationServiceResolver
-	client       *FederationServiceDependencyServiceClient
-}
-
-// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type Org_Federation_GetResponseArgument struct {
-	Uid    *UserID
-	User   *User
-	User2  *User
-	Client *FederationServiceDependencyServiceClient
-}
-
-// Org_Federation_SubArgument is argument for "org.federation.Sub" message.
-type Org_Federation_SubArgument struct {
-	Client *FederationServiceDependencyServiceClient
-}
-
-// Org_Federation_UserArgument is argument for "org.federation.User" message.
-type Org_Federation_UserArgument struct {
-	User               *user.User
-	UserId             string
-	XOrgFederation_Sub *Sub
-	Client             *FederationServiceDependencyServiceClient
-}
-
-// Org_Federation_UserIDArgument is argument for "org.federation.UserID" message.
-type Org_Federation_UserIDArgument struct {
-	Client *FederationServiceDependencyServiceClient
-}
-
-// Org_Federation_User_NameArgument is custom resolver's argument for "name" field of "org.federation.User" message.
-type Org_Federation_User_NameArgument struct {
-	*Org_Federation_UserArgument
-	Client *FederationServiceDependencyServiceClient
-}
-
-// FederationServiceCELTypeHelper
-type FederationServiceCELTypeHelper struct {
-	celRegistry    *celtypes.Registry
-	structFieldMap map[string]map[string]*celtypes.FieldType
-	mapMu          sync.RWMutex
-}
-
-func (h *FederationServiceCELTypeHelper) TypeProvider() celtypes.Provider {
-	return h
-}
-
-func (h *FederationServiceCELTypeHelper) TypeAdapter() celtypes.Adapter {
-	return h.celRegistry
-}
-
-func (h *FederationServiceCELTypeHelper) EnumValue(enumName string) ref.Val {
-	return h.celRegistry.EnumValue(enumName)
-}
-
-func (h *FederationServiceCELTypeHelper) FindIdent(identName string) (ref.Val, bool) {
-	return h.celRegistry.FindIdent(identName)
-}
-
-func (h *FederationServiceCELTypeHelper) FindStructType(structType string) (*celtypes.Type, bool) {
-	if st, found := h.celRegistry.FindStructType(structType); found {
-		return st, found
-	}
-	h.mapMu.RLock()
-	defer h.mapMu.RUnlock()
-	if _, exists := h.structFieldMap[structType]; exists {
-		return celtypes.NewObjectType(structType), true
-	}
-	return nil, false
-}
-
-func (h *FederationServiceCELTypeHelper) FindStructFieldNames(structType string) ([]string, bool) {
-	if names, found := h.celRegistry.FindStructFieldNames(structType); found {
-		return names, found
-	}
-
-	h.mapMu.RLock()
-	defer h.mapMu.RUnlock()
-	fieldMap, exists := h.structFieldMap[structType]
-	if !exists {
-		return nil, false
-	}
-	fieldNames := make([]string, 0, len(fieldMap))
-	for fieldName := range fieldMap {
-		fieldNames = append(fieldNames, fieldName)
-	}
-	sort.Strings(fieldNames)
-	return fieldNames, true
-}
-
-func (h *FederationServiceCELTypeHelper) FindStructFieldType(structType, fieldName string) (*celtypes.FieldType, bool) {
-	if field, found := h.celRegistry.FindStructFieldType(structType, fieldName); found {
-		return field, found
-	}
-
-	h.mapMu.RLock()
-	defer h.mapMu.RUnlock()
-	fieldMap, exists := h.structFieldMap[structType]
-	if !exists {
-		return nil, false
-	}
-	field, found := fieldMap[fieldName]
-	return field, found
-}
-
-func (h *FederationServiceCELTypeHelper) NewValue(structType string, fields map[string]ref.Val) ref.Val {
-	return h.celRegistry.NewValue(structType, fields)
-}
-
-func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
-	celRegistry := celtypes.NewEmptyRegistry()
-	protoregistry.GlobalFiles.RangeFiles(func(f protoreflect.FileDescriptor) bool {
-		if err := celRegistry.RegisterDescriptor(f); err != nil {
-			return false
-		}
-		return true
-	})
-	newFieldType := func(typ *celtypes.Type, fieldName string) *celtypes.FieldType {
-		isSet := func(v any, fieldName string) bool {
-			rv := reflect.ValueOf(v)
-			if rv.Kind() == reflect.Pointer {
-				rv = rv.Elem()
-			}
-			if rv.Kind() != reflect.Struct {
-				return false
-			}
-			return rv.FieldByName(fieldName).IsValid()
-		}
-		getFrom := func(v any, fieldName string) (any, error) {
-			rv := reflect.ValueOf(v)
-			if rv.Kind() == reflect.Pointer {
-				rv = rv.Elem()
-			}
-			if rv.Kind() != reflect.Struct {
-				return nil, fmt.Errorf("%T is not struct type", v)
-			}
-			value := rv.FieldByName(fieldName)
-			return value.Interface(), nil
-		}
-		return &celtypes.FieldType{
-			Type: typ,
-			IsSet: func(v any) bool {
-				return isSet(v, fieldName)
-			},
-			GetFrom: func(v any) (any, error) {
-				return getFrom(v, fieldName)
-			},
-		}
-	}
-	return &FederationServiceCELTypeHelper{
-		celRegistry: celRegistry,
-		structFieldMap: map[string]map[string]*celtypes.FieldType{
-			"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{},
-			"grpc.federation.private.SubArgument":         map[string]*celtypes.FieldType{},
-			"grpc.federation.private.UserArgument": map[string]*celtypes.FieldType{
-				"user_id": newFieldType(celtypes.StringType, "UserId"),
-			},
-			"grpc.federation.private.UserIDArgument": map[string]*celtypes.FieldType{},
-		},
-	}
+	client       *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
-	if err := validateFederationServiceConfig(cfg); err != nil {
-		return nil, err
+	if cfg.Client == nil {
+		return nil, fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
+	}
+	if cfg.Resolver == nil {
+		return nil, fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
 	}
 	User_UserServiceClient, err := cfg.Client.User_UserServiceClient(FederationServiceClientConfig{
 		Service: "user.UserService",
@@ -302,7 +156,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := newFederationServiceCELTypeHelper()
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+		"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{},
+		"grpc.federation.private.SubArgument":         map[string]*celtypes.FieldType{},
+		"grpc.federation.private.UserArgument": map[string]*celtypes.FieldType{
+			"user_id": grpcfed.NewCELFieldType(celtypes.StringType, "UserId"),
+		},
+		"grpc.federation.private.UserIDArgument": map[string]*celtypes.FieldType{},
+	})
 	env, err := cel.NewCustomEnv(
 		cel.StdLib(),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
@@ -317,183 +178,32 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler: errorHandler,
 		env:          env,
 		resolver:     cfg.Resolver,
-		client: &FederationServiceDependencyServiceClient{
+		client: &FederationServiceDependentClientSet{
 			User_UserServiceClient: User_UserServiceClient,
 		},
 	}, nil
-}
-
-func validateFederationServiceConfig(cfg FederationServiceConfig) error {
-	if cfg.Client == nil {
-		return fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
-	}
-	if cfg.Resolver == nil {
-		return fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
-	}
-	return nil
-}
-
-func withTimeoutFederationService[T any](ctx context.Context, method string, timeout time.Duration, fn func(context.Context) (*T, error)) (*T, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	var (
-		ret   *T
-		errch = make(chan error)
-	)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				errch <- recoverErrorFederationService(r, debug.Stack())
-			}
-		}()
-
-		res, err := fn(ctx)
-		ret = res
-		errch <- err
-	}()
-	select {
-	case <-ctx.Done():
-		status := grpcstatus.New(grpccodes.DeadlineExceeded, ctx.Err().Error())
-		withDetails, err := status.WithDetails(&errdetails.ErrorInfo{
-			Metadata: map[string]string{
-				"method":  method,
-				"timeout": timeout.String(),
-			},
-		})
-		if err != nil {
-			return nil, status.Err()
-		}
-		return nil, withDetails.Err()
-	case err := <-errch:
-		return ret, err
-	}
-}
-
-func withRetryFederationService[T any](b backoff.BackOff, fn func() (*T, error)) (*T, error) {
-	var res *T
-	if err := backoff.Retry(func() (err error) {
-		res, err = fn()
-		return
-	}, b); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func recoverErrorFederationService(v interface{}, rawStack []byte) *FederationServiceRecoveredError {
-	msg := fmt.Sprint(v)
-	lines := strings.Split(msg, "\n")
-	if len(lines) <= 1 {
-		lines := strings.Split(string(rawStack), "\n")
-		stack := make([]string, 0, len(lines))
-		for _, line := range lines {
-			if line == "" {
-				continue
-			}
-			stack = append(stack, strings.TrimPrefix(line, "\t"))
-		}
-		return &FederationServiceRecoveredError{
-			Message: msg,
-			Stack:   stack,
-		}
-	}
-	// If panic occurs under singleflight, singleflight's recover catches the error and gives a stack trace.
-	// Therefore, once the stack trace is removed.
-	stack := make([]string, 0, len(lines))
-	for _, line := range lines[1:] {
-		if line == "" {
-			continue
-		}
-		stack = append(stack, strings.TrimPrefix(line, "\t"))
-	}
-	return &FederationServiceRecoveredError{
-		Message: lines[0],
-		Stack:   stack,
-	}
-}
-
-func (s *FederationService) evalCEL(expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
-	env, err := s.env.Extend(vars...)
-	if err != nil {
-		return nil, err
-	}
-	expr = strings.Replace(expr, "$", grpcfed.MessageArgumentVariableName, -1)
-	ast, iss := env.Compile(expr)
-	if iss.Err() != nil {
-		return nil, iss.Err()
-	}
-	program, err := env.Program(ast)
-	if err != nil {
-		return nil, err
-	}
-	out, _, err := program.Eval(args)
-	if err != nil {
-		return nil, err
-	}
-	if outType != nil {
-		return out.ConvertToNative(outType)
-	}
-	return out.Value(), nil
-}
-
-func (s *FederationService) goWithRecover(eg *errgroup.Group, fn func() (interface{}, error)) {
-	eg.Go(func() (e error) {
-		defer func() {
-			if r := recover(); r != nil {
-				e = recoverErrorFederationService(r, debug.Stack())
-			}
-		}()
-		_, err := fn()
-		return err
-	})
-}
-
-func (s *FederationService) outputErrorLog(ctx context.Context, err error) {
-	if err == nil {
-		return
-	}
-	if status, ok := grpcstatus.FromError(err); ok {
-		s.logger.ErrorContext(ctx, status.Message(),
-			slog.Group("grpc_status",
-				slog.String("code", status.Code().String()),
-				slog.Any("details", status.Details()),
-			),
-		)
-		return
-	}
-	var recoveredErr *FederationServiceRecoveredError
-	if errors.As(err, &recoveredErr) {
-		trace := make([]interface{}, 0, len(recoveredErr.Stack))
-		for idx, stack := range recoveredErr.Stack {
-			trace = append(trace, slog.String(fmt.Sprint(idx+1), stack))
-		}
-		s.logger.ErrorContext(ctx, recoveredErr.Message, slog.Group("stack_trace", trace...))
-		return
-	}
-	s.logger.ErrorContext(ctx, err.Error())
 }
 
 // Get implements "org.federation.FederationService/Get" method.
 func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
 	defer func() {
 		if r := recover(); r != nil {
-			e = recoverErrorFederationService(r, debug.Stack())
-			s.outputErrorLog(ctx, e)
+			e = grpcfed.RecoverError(r, debug.Stack())
+			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
+	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]{
 		Client: s.client,
 	})
 	if err != nil {
-		s.outputErrorLog(ctx, err)
+		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
 	return res, nil
 }
 
 // resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) (*GetResponse, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
 		sg         singleflight.Group
@@ -513,7 +223,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	*/
 	eg, ctx1 := errgroup.WithContext(ctx)
 
-	s.goWithRecover(eg, func() (interface{}, error) {
+	grpcfed.GoWithRecover(eg, func() (interface{}, error) {
 
 		// This section's codes are generated by the following proto definition.
 		/*
@@ -524,7 +234,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		resUserIDIface, err, _ := sg.Do("uid_org.federation.UserID", func() (interface{}, error) {
 			valueMu.RLock()
-			args := &Org_Federation_UserIDArgument{
+			args := &Org_Federation_UserIDArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
 			}
 			valueMu.RUnlock()
@@ -550,12 +260,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		resUserIface, err, _ := sg.Do("user_org.federation.User", func() (interface{}, error) {
 			valueMu.RLock()
-			args := &Org_Federation_UserArgument{
+			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
 			}
 			// { name: "user_id", by: "uid.value" }
 			{
-				_value, err := s.evalCEL("uid.value", envOpts, evalValues, reflect.TypeOf(""))
+				_value, err := grpcfed.EvalCEL(s.env, "uid.value", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -576,7 +286,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		return nil, nil
 	})
 
-	s.goWithRecover(eg, func() (interface{}, error) {
+	grpcfed.GoWithRecover(eg, func() (interface{}, error) {
 
 		// This section's codes are generated by the following proto definition.
 		/*
@@ -587,7 +297,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		resUserIDIface, err, _ := sg.Do("uid_org.federation.UserID", func() (interface{}, error) {
 			valueMu.RLock()
-			args := &Org_Federation_UserIDArgument{
+			args := &Org_Federation_UserIDArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
 			}
 			valueMu.RUnlock()
@@ -613,12 +323,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		resUserIface, err, _ := sg.Do("user2_org.federation.User", func() (interface{}, error) {
 			valueMu.RLock()
-			args := &Org_Federation_UserArgument{
+			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
 			}
 			// { name: "user_id", by: "uid.value" }
 			{
-				_value, err := s.evalCEL("uid.value", envOpts, evalValues, reflect.TypeOf(""))
+				_value, err := grpcfed.EvalCEL(s.env, "uid.value", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -654,7 +364,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "user"
 	{
-		_value, err := s.evalCEL("user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +372,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "user2"
 	{
-		_value, err := s.evalCEL("user2", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "user2", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -674,7 +384,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 }
 
 // resolve_Org_Federation_Sub resolve "org.federation.Sub" message.
-func (s *FederationService) resolve_Org_Federation_Sub(ctx context.Context, req *Org_Federation_SubArgument) (*Sub, error) {
+func (s *FederationService) resolve_Org_Federation_Sub(ctx context.Context, req *Org_Federation_SubArgument[*FederationServiceDependentClientSet]) (*Sub, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.Sub", slog.Any("message_args", s.logvalue_Org_Federation_SubArgument(req)))
 
 	// create a message value to be returned.
@@ -689,7 +399,7 @@ func (s *FederationService) resolve_Org_Federation_Sub(ctx context.Context, req 
 }
 
 // resolve_Org_Federation_User resolve "org.federation.User" message.
-func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument) (*User, error) {
+func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) (*User, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
 	var (
 		sg                      singleflight.Group
@@ -706,7 +416,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	*/
 	eg, ctx1 := errgroup.WithContext(ctx)
 
-	s.goWithRecover(eg, func() (interface{}, error) {
+	grpcfed.GoWithRecover(eg, func() (interface{}, error) {
 
 		// This section's codes are generated by the following proto definition.
 		/*
@@ -717,7 +427,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		*/
 		resSubIface, err, _ := sg.Do("_org_federation_Sub_org.federation.Sub", func() (interface{}, error) {
 			valueMu.RLock()
-			args := &Org_Federation_SubArgument{
+			args := &Org_Federation_SubArgument[*FederationServiceDependentClientSet]{
 				Client: s.client,
 			}
 			valueMu.RUnlock()
@@ -735,7 +445,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		return nil, nil
 	})
 
-	s.goWithRecover(eg, func() (interface{}, error) {
+	grpcfed.GoWithRecover(eg, func() (interface{}, error) {
 
 		// This section's codes are generated by the following proto definition.
 		/*
@@ -750,7 +460,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			args := &user.GetUserRequest{}
 			// { field: "id", by: "$.user_id" }
 			{
-				_value, err := s.evalCEL("$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+				_value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -789,7 +499,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	{
 		// (grpc.federation.field).custom_resolver = true
 		var err error
-		ret.Name, err = s.resolver.Resolve_Org_Federation_User_Name(ctx, &Org_Federation_User_NameArgument{
+		ret.Name, err = s.resolver.Resolve_Org_Federation_User_Name(ctx, &Org_Federation_User_NameArgument[*FederationServiceDependentClientSet]{
 			Client:                      s.client,
 			Org_Federation_UserArgument: req,
 		})
@@ -803,7 +513,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 }
 
 // resolve_Org_Federation_UserID resolve "org.federation.UserID" message.
-func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, req *Org_Federation_UserIDArgument) (*UserID, error) {
+func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, req *Org_Federation_UserIDArgument[*FederationServiceDependentClientSet]) (*UserID, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.UserID", slog.Any("message_args", s.logvalue_Org_Federation_UserIDArgument(req)))
 	var (
 		sg      singleflight.Group
@@ -819,7 +529,7 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 	*/
 	if _, err, _ := sg.Do("_org_federation_Sub_org.federation.Sub", func() (interface{}, error) {
 		valueMu.RLock()
-		args := &Org_Federation_SubArgument{
+		args := &Org_Federation_SubArgument[*FederationServiceDependentClientSet]{
 			Client: s.client,
 		}
 		valueMu.RUnlock()
@@ -850,7 +560,7 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -864,7 +574,7 @@ func (s *FederationService) logvalue_Org_Federation_Sub(v *Sub) slog.Value {
 	return slog.GroupValue()
 }
 
-func (s *FederationService) logvalue_Org_Federation_SubArgument(v *Org_Federation_SubArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_SubArgument(v *Org_Federation_SubArgument[*FederationServiceDependentClientSet]) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -881,7 +591,7 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -899,7 +609,7 @@ func (s *FederationService) logvalue_Org_Federation_UserID(v *UserID) slog.Value
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_UserIDArgument(v *Org_Federation_UserIDArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_UserIDArgument(v *Org_Federation_UserIDArgument[*FederationServiceDependentClientSet]) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

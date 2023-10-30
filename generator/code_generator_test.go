@@ -52,11 +52,10 @@ func TestCodeGenerate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(result.Services) != 1 {
-				t.Fatalf("faield to get services. expected 1 but got %d", len(result.Services))
+			if len(result.Files) != 1 {
+				t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 			}
-			service := result.Services[0]
-			out, err := generator.NewCodeGenerator().Generate(service)
+			out, err := generator.NewCodeGenerator().Generate(result.Files[0])
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -106,6 +105,7 @@ func TestCodeGenerate(t *testing.T) {
 
 				// TODO: The current implementation expects the `go_package` defined in the proto file of testdata to start with "example/".
 				// To support other packages, this process needs to be modified.
+				modFilePath := filepath.Join(tmpDir, test, "example", "go.mod")
 				modFile := new(modfile.File)
 				if err := modFile.AddModuleStmt("example"); err != nil {
 					t.Fatal(err)
@@ -113,11 +113,23 @@ func TestCodeGenerate(t *testing.T) {
 				if err := modFile.AddGoStmt("1.21"); err != nil {
 					t.Fatal(err)
 				}
+				replacePath, err := filepath.Rel(filepath.Dir(modFilePath), testutil.RepoRoot())
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Logf("replace path: %s", replacePath)
+				if err := modFile.AddReplace(
+					"github.com/mercari/grpc-federation",
+					"",
+					replacePath,
+					"",
+				); err != nil {
+					t.Fatal(err)
+				}
 				modContent, err := modFile.Format()
 				if err != nil {
 					t.Fatal(err)
 				}
-				modFilePath := filepath.Join(tmpDir, test, "example", "go.mod")
 				t.Logf("write %s", modFilePath)
 				if err := os.MkdirAll(filepath.Dir(modFilePath), 0o755); err != nil {
 					t.Fatal(err)
@@ -134,7 +146,7 @@ func TestCodeGenerate(t *testing.T) {
 								t.Fatal(err)
 							}
 							t.Logf("write %s", path)
-							if strings.HasSuffix(path, "_grpc_federation.go") {
+							if resolver.IsGRPCFederationGeneratedFile(path) {
 								federationFilePath = path
 								if err := os.WriteFile(path, out, 0o600); err != nil {
 									t.Fatal(err)

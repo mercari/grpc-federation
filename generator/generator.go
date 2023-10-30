@@ -51,11 +51,11 @@ type BuildCache map[string][]*pluginpb.CodeGeneratorResponse
 type Result []*ProtoFileResult
 
 type ProtoFileResult struct {
-	ProtoPath string
-	Type      ActionType
-	Files     []*pluginpb.CodeGeneratorResponse_File
-	Services  []*resolver.Service
-	Out       string
+	ProtoPath       string
+	Type            ActionType
+	Files           []*pluginpb.CodeGeneratorResponse_File
+	FederationFiles []*resolver.File
+	Out             string
 }
 
 type ActionType string
@@ -196,6 +196,9 @@ func (g *Generator) GenerateAll(ctx context.Context) (BuildCache, error) {
 			res, err := g.generateByPlugin(ctx, pluginReq, pluginCfg)
 			if err != nil {
 				return nil, err
+			}
+			if res == nil {
+				continue
 			}
 			buildCache[protoPath] = append(buildCache[protoPath], res)
 		}
@@ -401,12 +404,15 @@ func (g *Generator) createGeneratorResult(ctx context.Context, path string) (*Pr
 		if err != nil {
 			return nil, err
 		}
+		if resp == nil {
+			continue
+		}
 		if pluginCfg.Plugin == "protoc-gen-grpc-federation" {
-			svcs, err := g.createGRPCFederationServices(pluginReq)
+			files, err := g.createGRPCFederationServices(pluginReq)
 			if err != nil {
 				return nil, err
 			}
-			result.Services = svcs
+			result.FederationFiles = files
 		}
 		result.Files = append(result.Files, resp.GetFile()...)
 		g.buildCache[path] = append(g.buildCache[path], resp)
@@ -533,17 +539,18 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 	if err != nil {
 		return nil, err
 	}
+
 	var resp pluginpb.CodeGeneratorResponse
-	for _, svc := range result.Services {
-		out, err := NewCodeGenerator().Generate(svc)
+	for _, file := range result.Files {
+		out, err := NewCodeGenerator().Generate(file)
 		if err != nil {
 			return nil, err
 		}
-		dir, err := pathResolver.OutputDir(relativePath, svc.File.GoPackage)
+		dir, err := pathResolver.OutputDir(relativePath, file.GoPackage)
 		if err != nil {
 			return nil, err
 		}
-		path := filepath.Join(dir, pathResolver.FileName(svc))
+		path := filepath.Join(dir, pathResolver.FileName(file))
 		resp.File = append(resp.File, &pluginpb.CodeGeneratorResponse_File{
 			Name:    proto.String(path),
 			Content: proto.String(string(out)),
@@ -552,12 +559,12 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 	return &resp, nil
 }
 
-func (g *Generator) createGRPCFederationServices(r *PluginRequest) ([]*resolver.Service, error) {
+func (g *Generator) createGRPCFederationServices(r *PluginRequest) ([]*resolver.File, error) {
 	result, err := resolver.New(r.req.GetProtoFile()).Resolve()
 	if err != nil {
 		return nil, err
 	}
-	return result.Services, nil
+	return result.Files, nil
 }
 
 func (g *Generator) fileNameWithoutExt(name string) string {
@@ -574,13 +581,14 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	if err != nil {
 		return nil, err
 	}
+
 	var resp pluginpb.CodeGeneratorResponse
-	for _, svc := range result.Services {
-		out, err := NewCodeGenerator().Generate(svc)
+	for _, file := range result.Files {
+		out, err := NewCodeGenerator().Generate(file)
 		if err != nil {
 			return nil, err
 		}
-		outputFilePath, err := outputPathResolver.OutputPath(svc)
+		outputFilePath, err := outputPathResolver.OutputPath(file)
 		if err != nil {
 			return nil, err
 		}

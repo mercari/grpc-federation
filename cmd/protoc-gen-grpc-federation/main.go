@@ -27,6 +27,9 @@ func _main() error {
 	if err != nil {
 		return err
 	}
+	if resp == nil {
+		return nil
+	}
 	if err := outputResponse(resp); err != nil {
 		return err
 	}

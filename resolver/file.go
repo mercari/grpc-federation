@@ -13,6 +13,15 @@ func (f *File) PackageName() string {
 	return f.Package.Name
 }
 
+func (f *File) HasServiceWithRule() bool {
+	for _, svc := range f.Services {
+		if svc.Rule != nil {
+			return true
+		}
+	}
+	return false
+}
+
 func (f *File) Message(name string) *Message {
 	for _, msg := range f.Messages {
 		if msg.Name == name {
@@ -76,12 +85,12 @@ func (r *OutputFilePathResolver) OutputDir(fileName string, gopkg *GoPackage) (s
 // OutputPath returns the path to the output file.
 // Three output mode supported by protoc-gen-go are available.
 // FYI: https://protobuf.dev/reference/go/go-generated.
-func (r *OutputFilePathResolver) OutputPath(svc *Service) (string, error) {
-	dir, err := r.OutputDir(svc.File.Name, svc.File.GoPackage)
+func (r *OutputFilePathResolver) OutputPath(file *File) (string, error) {
+	dir, err := r.OutputDir(file.Name, file.GoPackage)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, r.FileName(svc)), nil
+	return filepath.Join(dir, r.FileName(file)), nil
 }
 
 func (r *OutputFilePathResolver) importBasedOutputDir(gopkg *GoPackage) (string, error) {
@@ -120,8 +129,14 @@ func (r *OutputFilePathResolver) modulePrefixBasedOutputDir(gopkg *GoPackage) (s
 	return trimmedSlash, nil
 }
 
-func (r *OutputFilePathResolver) FileName(svc *Service) string {
-	return fmt.Sprintf("%s_grpc_federation.go", strings.ToLower(svc.Name))
+func IsGRPCFederationGeneratedFile(path string) bool {
+	return strings.HasSuffix(path, "_grpc_federation.pb.go")
+}
+
+func (r *OutputFilePathResolver) FileName(file *File) string {
+	baseNameWithExt := filepath.Base(file.Name)
+	baseName := baseNameWithExt[:len(baseNameWithExt)-len(filepath.Ext(baseNameWithExt))]
+	return fmt.Sprintf("%s_grpc_federation.pb.go", strings.ToLower(baseName))
 }
 
 func (r *OutputFilePathResolver) relativePath(filePath string) (string, error) {

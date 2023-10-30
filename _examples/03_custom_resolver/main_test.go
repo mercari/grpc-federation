@@ -42,26 +42,36 @@ type Resolver struct {
 	federation.FederationServiceUnimplementedResolver
 }
 
-func (r *Resolver) Resolve_Federation_User(ctx context.Context, arg *federation.Federation_UserArgument) (*federation.User, error) {
+func (r *Resolver) Resolve_Federation_User(
+	ctx context.Context,
+	arg *federation.Federation_UserArgument[*federation.FederationServiceDependentClientSet]) (*federation.User, error) {
 	return &federation.User{
 		Id:   arg.U.Id,
 		Name: arg.U.Name,
 	}, nil
 }
 
-func (r *Resolver) Resolve_Federation_Post_User(ctx context.Context, arg *federation.Federation_Post_UserArgument) (*federation.User, error) {
+func (r *Resolver) Resolve_Federation_Post_User(
+	ctx context.Context,
+	arg *federation.Federation_Post_UserArgument[*federation.FederationServiceDependentClientSet]) (*federation.User, error) {
 	return arg.Federation_PostArgument.User, nil
 }
 
-func (r *Resolver) Resolve_Federation_Unused(_ context.Context, _ *federation.Federation_UnusedArgument) (*federation.Unused, error) {
+func (r *Resolver) Resolve_Federation_Unused(
+	_ context.Context,
+	_ *federation.Federation_UnusedArgument[*federation.FederationServiceDependentClientSet]) (*federation.Unused, error) {
 	return &federation.Unused{}, nil
 }
 
-func (r *Resolver) Resolve_Federation_ForNameless(_ context.Context, _ *federation.Federation_ForNamelessArgument) (*federation.ForNameless, error) {
+func (r *Resolver) Resolve_Federation_ForNameless(
+	_ context.Context,
+	_ *federation.Federation_ForNamelessArgument[*federation.FederationServiceDependentClientSet]) (*federation.ForNameless, error) {
 	return &federation.ForNameless{}, nil
 }
 
-func (r *Resolver) Resolve_Federation_User_Name(ctx context.Context, arg *federation.Federation_User_NameArgument) (string, error) {
+func (r *Resolver) Resolve_Federation_User_Name(
+	ctx context.Context,
+	arg *federation.Federation_User_NameArgument[*federation.FederationServiceDependentClientSet]) (string, error) {
 	return arg.Federation_User.Name, nil
 }
 

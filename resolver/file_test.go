@@ -13,19 +13,16 @@ func TestOutputFileResolver(t *testing.T) {
 			ImportPaths: []string{"proto"},
 			FilePath:    "proto/buzz/buzz.proto",
 		})
-		path, err := r.OutputPath(&resolver.Service{
-			File: &resolver.File{
-				Name: "buzz.proto",
-				GoPackage: &resolver.GoPackage{
-					ImportPath: "example.com/project/proto/fizz",
-				},
+		path, err := r.OutputPath(&resolver.File{
+			Name: "buzz.proto",
+			GoPackage: &resolver.GoPackage{
+				ImportPath: "example.com/project/proto/fizz",
 			},
-			Name: "Federation",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if path != "example.com/project/proto/fizz/federation_grpc_federation.go" {
+		if path != "example.com/project/proto/fizz/buzz_grpc_federation.pb.go" {
 			t.Fatalf("unexpected path: %s", path)
 		}
 	})
@@ -35,16 +32,13 @@ func TestOutputFileResolver(t *testing.T) {
 			ImportPaths: []string{"proto"},
 			FilePath:    "proto/buzz/buzz.proto",
 		})
-		path, err := r.OutputPath(&resolver.Service{
-			File: &resolver.File{
-				Name: "buzz.proto",
-			},
-			Name: "Federation",
+		path, err := r.OutputPath(&resolver.File{
+			Name: "buzz.proto",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if path != "buzz/federation_grpc_federation.go" {
+		if path != "buzz/buzz_grpc_federation.pb.go" {
 			t.Fatalf("unexpected path: %s", path)
 		}
 	})
@@ -55,19 +49,16 @@ func TestOutputFileResolver(t *testing.T) {
 			FilePath:    "proto/buzz/buzz.proto",
 			Prefix:      "example.com/project",
 		})
-		path, err := r.OutputPath(&resolver.Service{
-			File: &resolver.File{
-				Name: "buzz.proto",
-				GoPackage: &resolver.GoPackage{
-					ImportPath: "example.com/project/proto/fizz",
-				},
+		path, err := r.OutputPath(&resolver.File{
+			Name: "buzz.proto",
+			GoPackage: &resolver.GoPackage{
+				ImportPath: "example.com/project/proto/fizz",
 			},
-			Name: "Federation",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if path != "proto/fizz/federation_grpc_federation.go" {
+		if path != "proto/fizz/buzz_grpc_federation.pb.go" {
 			t.Fatalf("unexpected path: %s", path)
 		}
 	})

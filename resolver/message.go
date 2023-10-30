@@ -26,13 +26,11 @@ func newMessageArgument(msg *Message) *Message {
 		Name:  federation.PrivatePackageName,
 		Files: Files{&file},
 	}
-	arg := &Message{
+	return &Message{
 		File:   &file,
 		Name:   fmt.Sprintf("%sArgument", msg.Name),
 		Fields: []*Field{},
 	}
-	msg.Rule.MessageArgument = arg
-	return arg
 }
 
 func (m *Message) ParentMessageNames() []string {
