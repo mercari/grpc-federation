@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-// CELTypeHelper
+// CELTypeHelper provides the cel.Registry needed to build a cel environment.
 type CELTypeHelper struct {
 	celRegistry    *celtypes.Registry
 	structFieldMap map[string]map[string]*celtypes.FieldType
@@ -135,15 +135,16 @@ func NewOneofSelectorFieldType(typ *celtypes.Type, fieldName string, oneofTypes 
 		field := rv.FieldByName(fieldName)
 		fieldImpl := reflect.ValueOf(field.Interface())
 		for idx, oneofType := range oneofTypes {
-			if fieldImpl.Type() == oneofType {
-				method := reflect.ValueOf(v).MethodByName(getterNames[idx])
-				retValues := method.Call(nil)
-				if len(retValues) != 1 {
-					return nil, fmt.Errorf("failed to call %s for %T", "", v)
-				}
-				retValue := retValues[0]
-				return retValue.Interface(), nil
+			if fieldImpl.Type() != oneofType {
+				continue
 			}
+			method := reflect.ValueOf(v).MethodByName(getterNames[idx])
+			retValues := method.Call(nil)
+			if len(retValues) != 1 {
+				return nil, fmt.Errorf("failed to call %s for %T", "", v)
+			}
+			retValue := retValues[0]
+			return retValue.Interface(), nil
 		}
 		return zeroValue.Interface(), nil
 	}

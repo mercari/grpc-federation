@@ -51,8 +51,12 @@ func WithTimeout[T any](ctx context.Context, method string, timeout time.Duratio
 func WithRetry[T any](b backoff.BackOff, fn func() (*T, error)) (*T, error) {
 	var res *T
 	if err := backoff.Retry(func() (err error) {
-		res, err = fn()
-		return
+		result, err := fn()
+		if err != nil {
+			return err
+		}
+		res = result
+		return nil
 	}, b); err != nil {
 		return nil, err
 	}

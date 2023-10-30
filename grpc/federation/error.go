@@ -65,8 +65,8 @@ func OutputErrorLog(ctx context.Context, logger *slog.Logger, err error) {
 
 func RecoverError(v interface{}, rawStack []byte) *RecoveredError {
 	msg := fmt.Sprint(v)
-	lines := strings.Split(msg, "\n")
-	if len(lines) <= 1 {
+	msgLines := strings.Split(msg, "\n")
+	if len(msgLines) <= 1 {
 		lines := strings.Split(string(rawStack), "\n")
 		stack := make([]string, 0, len(lines))
 		for _, line := range lines {
@@ -82,15 +82,15 @@ func RecoverError(v interface{}, rawStack []byte) *RecoveredError {
 	}
 	// If panic occurs under singleflight, singleflight's recover catches the error and gives a stack trace.
 	// Therefore, once the stack trace is removed.
-	stack := make([]string, 0, len(lines))
-	for _, line := range lines[1:] {
+	stack := make([]string, 0, len(msgLines))
+	for _, line := range msgLines[1:] {
 		if line == "" {
 			continue
 		}
 		stack = append(stack, strings.TrimPrefix(line, "\t"))
 	}
 	return &RecoveredError{
-		Message: lines[0],
+		Message: msgLines[0],
 		Stack:   stack,
 	}
 }
