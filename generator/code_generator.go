@@ -25,15 +25,29 @@ func NewCodeGenerator() *CodeGenerator {
 	return &CodeGenerator{}
 }
 
-func (g *CodeGenerator) Generate(service *resolver.Service) ([]byte, error) {
+func (g *CodeGenerator) Generate(file *resolver.File) ([]byte, error) {
 	tmpl, err := loadTemplate("templates/server.go.tmpl")
 	if err != nil {
 		return nil, err
 	}
-	return generateGoContent(tmpl, &Service{
-		Service:           service,
-		nameToLogValueMap: make(map[string]*LogValue),
+	return generateGoContent(tmpl, &File{
+		File: file,
 	})
+}
+
+type File struct {
+	*resolver.File
+}
+
+func (f *File) Services() []*Service {
+	ret := make([]*Service, 0, len(f.File.Services))
+	for _, svc := range f.File.Services {
+		ret = append(ret, &Service{
+			Service:           svc,
+			nameToLogValueMap: make(map[string]*LogValue),
+		})
+	}
+	return ret
 }
 
 type Service struct {
@@ -41,28 +55,182 @@ type Service struct {
 	nameToLogValueMap map[string]*LogValue
 }
 
-func (s *Service) OutputPackageName() string {
-	return s.GoPackage().Name
-}
-
 type Import struct {
 	Path  string
 	Alias string
 }
 
-func (s *Service) Imports() []*Import {
-	deps := s.GoPackageDependencies()
-	imprts := make([]*Import, 0, len(deps))
-	for _, pkg := range deps {
+func (f *File) Imports() []*Import {
+	depMap := make(map[string]*resolver.GoPackage)
+	for _, svc := range f.File.Services {
+		for _, dep := range svc.GoPackageDependencies() {
+			depMap[dep.ImportPath] = dep
+		}
+	}
+	imprts := make([]*Import, 0, len(depMap))
+	for _, dep := range depMap {
 		imprts = append(imprts, &Import{
-			Path:  pkg.ImportPath,
-			Alias: pkg.Name,
+			Path:  dep.ImportPath,
+			Alias: dep.Name,
 		})
 	}
 	sort.Slice(imprts, func(i, j int) bool {
 		return imprts[i].Path < imprts[j].Path
 	})
 	return imprts
+}
+
+func (f *File) Types() Types {
+	if len(f.File.Services) == 0 {
+		return nil
+	}
+	return newTypeDeclares(f.Messages, f.File.Services[0])
+}
+
+func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
+	declTypes := make(Types, 0, len(msgs))
+	typeNameMap := make(map[string]struct{})
+	for _, msg := range msgs {
+		if !msg.HasRule() {
+			continue
+		}
+		arg := msg.Rule.MessageArgument
+		if arg == nil {
+			continue
+		}
+		msgName := fullMessageName(msg)
+		argName := fmt.Sprintf("%sArgument", msgName)
+		if _, exists := typeNameMap[argName]; exists {
+			continue
+		}
+		msgFQDN := fmt.Sprintf(`%s.%s`, msg.PackageName(), msg.Name)
+		typ := &Type{
+			Name:      argName,
+			Desc:      fmt.Sprintf(`%s is argument for %q message`, argName, msgFQDN),
+			ProtoFQDN: arg.FQDN(),
+		}
+
+		genMsg := &Message{Message: msg, Service: svc}
+		for _, group := range genMsg.MessageResolvers() {
+			for _, msgResolver := range group.Resolvers() {
+				if msgResolver.MethodCall != nil {
+					if msgResolver.MethodCall.Response != nil {
+						for _, responseField := range msgResolver.MethodCall.Response.Fields {
+							if !responseField.Used {
+								continue
+							}
+							typ.Fields = append(typ.Fields, &Field{
+								Name: util.ToPublicGoVariable(responseField.Name),
+								Type: toTypeText(svc, responseField.Type),
+							})
+						}
+					}
+				} else if msgResolver.MessageDependency.Used {
+					fieldName := util.ToPublicGoVariable(msgResolver.MessageDependency.Name)
+					if typ.HasField(fieldName) {
+						continue
+					}
+					typ.Fields = append(typ.Fields, &Field{
+						Name: fieldName,
+						Type: toTypeText(svc, &resolver.Type{
+							Type: types.Message,
+							Ref:  msgResolver.MessageDependency.Message,
+						}),
+					})
+				}
+			}
+		}
+		for _, field := range arg.Fields {
+			typ.Fields = append(typ.Fields, &Field{
+				Name: util.ToPublicGoVariable(field.Name),
+				Type: toTypeText(svc, field.Type),
+			})
+			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
+		}
+		sort.Slice(typ.Fields, func(i, j int) bool {
+			return typ.Fields[i].Name < typ.Fields[j].Name
+		})
+		typeNameMap[argName] = struct{}{}
+		declTypes = append(declTypes, typ)
+		for _, field := range msg.CustomResolverFields() {
+			typeName := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
+			fields := []*Field{{Type: fmt.Sprintf("*%s", argName)}}
+			if msg.HasCustomResolver() {
+				fields = append(fields, &Field{
+					Name: msgName,
+					Type: toTypeText(svc, resolver.NewMessageType(msg, false)),
+				})
+			}
+			sort.Slice(fields, func(i, j int) bool {
+				return fields[i].Name < fields[j].Name
+			})
+			declTypes = append(declTypes, &Type{
+				Name:   typeName,
+				Fields: fields,
+				Desc: fmt.Sprintf(
+					`%s is custom resolver's argument for %q field of %q message`,
+					typeName,
+					field.Name,
+					msgFQDN,
+				),
+			})
+		}
+	}
+	sort.Slice(declTypes, func(i, j int) bool {
+		return declTypes[i].Name < declTypes[j].Name
+	})
+	return declTypes
+}
+
+type OneofType struct {
+	Name             string
+	FieldName        string
+	MessageProtoFQDN string
+	TypeDeclare      string
+	FieldZeroValues  []string
+	FieldGetterNames []string
+	ReturnZeroValue  string
+}
+
+func (s *Service) Types() Types {
+	return newTypeDeclares(s.Service.Messages, s.Service)
+}
+
+func (s *Service) OneofTypes() []*OneofType {
+	var ret []*OneofType
+	svc := s.Service
+	for _, msg := range svc.Messages {
+		for _, oneof := range msg.Oneofs {
+			if !oneof.IsSameType() {
+				continue
+			}
+			fieldZeroValues := make([]string, 0, len(oneof.Fields))
+			fieldGetterNames := make([]string, 0, len(oneof.Fields))
+			for _, field := range oneof.Fields {
+				fieldZeroValues = append(
+					fieldZeroValues,
+					toMakeZeroValue(svc, field.Type),
+				)
+				fieldGetterNames = append(
+					fieldGetterNames,
+					fmt.Sprintf("Get%s", util.ToPublicGoVariable(field.Name)),
+				)
+			}
+			cloned := oneof.Fields[0].Type.Clone()
+			cloned.OneofField = nil
+			returnZeroValue := toMakeZeroValue(svc, cloned)
+			ret = append(ret, &OneofType{
+				Name:             oneof.Name,
+				FieldName:        util.ToPublicGoVariable(oneof.Name),
+				MessageProtoFQDN: oneof.Message.FQDN(),
+				TypeDeclare:      toCELTypeDeclare(oneof.Fields[0].Type),
+				FieldZeroValues:  fieldZeroValues,
+				FieldGetterNames: fieldGetterNames,
+				ReturnZeroValue:  returnZeroValue,
+			})
+		}
+	}
+	return ret
 }
 
 func (s *Service) ServiceName() string {
@@ -173,6 +341,17 @@ func (s *Service) CustomResolvers() []*CustomResolver {
 		})
 	}
 	return ret
+}
+
+type Types []*Type
+
+func (t Types) HasProtoFields() bool {
+	for _, tt := range t {
+		if len(tt.ProtoFields) != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 type Type struct {
@@ -355,148 +534,6 @@ func enumTypeToText(baseSvc *resolver.Service, enum *resolver.Enum) string {
 	return fmt.Sprintf("%s.%s", enum.GoPackage().Name, name)
 }
 
-func (s *Service) Types() []*Type {
-	msgs := s.Service.Messages
-	declTypes := make([]*Type, 0, len(msgs))
-	typeNameMap := make(map[string]struct{})
-	for _, msg := range msgs {
-		if !msg.HasRule() {
-			continue
-		}
-		arg := msg.Rule.MessageArgument
-		msgName := fullMessageName(msg)
-		argName := fmt.Sprintf("%sArgument", msgName)
-		if _, exists := typeNameMap[argName]; exists {
-			continue
-		}
-		msgFQDN := fmt.Sprintf(`%s.%s`, s.Service.PackageName(), msg.Name)
-		typ := &Type{
-			Name:      argName,
-			Desc:      fmt.Sprintf(`%s is argument for %q message`, argName, msgFQDN),
-			ProtoFQDN: arg.FQDN(),
-		}
-
-		genMsg := &Message{Message: msg, Service: s.Service}
-		for _, group := range genMsg.MessageResolvers() {
-			for _, msgResolver := range group.Resolvers() {
-				if msgResolver.MethodCall != nil {
-					if msgResolver.MethodCall.Response != nil {
-						for _, responseField := range msgResolver.MethodCall.Response.Fields {
-							if !responseField.Used {
-								continue
-							}
-							typ.Fields = append(typ.Fields, &Field{
-								Name: util.ToPublicGoVariable(responseField.Name),
-								Type: toTypeText(s.Service, responseField.Type),
-							})
-						}
-					}
-				} else if msgResolver.MessageDependency.Used {
-					fieldName := util.ToPublicGoVariable(msgResolver.MessageDependency.Name)
-					if typ.HasField(fieldName) {
-						continue
-					}
-					typ.Fields = append(typ.Fields, &Field{
-						Name: fieldName,
-						Type: toTypeText(s.Service, &resolver.Type{
-							Type: types.Message,
-							Ref:  msgResolver.MessageDependency.Message,
-						}),
-					})
-				}
-			}
-		}
-		for _, field := range arg.Fields {
-			typ.Fields = append(typ.Fields, &Field{
-				Name: util.ToPublicGoVariable(field.Name),
-				Type: toTypeText(s.Service, field.Type),
-			})
-			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
-		}
-		sort.Slice(typ.Fields, func(i, j int) bool {
-			return typ.Fields[i].Name < typ.Fields[j].Name
-		})
-		typeNameMap[argName] = struct{}{}
-		declTypes = append(declTypes, typ)
-		for _, field := range msg.CustomResolverFields() {
-			typeName := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
-			fields := []*Field{{Type: fmt.Sprintf("*%s", argName)}}
-			if msg.HasCustomResolver() {
-				fields = append(fields, &Field{
-					Name: msgName,
-					Type: toTypeText(
-						s.Service,
-						&resolver.Type{Type: types.Message, Ref: msg},
-					),
-				})
-			}
-			sort.Slice(fields, func(i, j int) bool {
-				return fields[i].Name < fields[j].Name
-			})
-			declTypes = append(declTypes, &Type{
-				Name:   typeName,
-				Fields: fields,
-				Desc: fmt.Sprintf(
-					`%s is custom resolver's argument for %q field of %q message`,
-					typeName,
-					field.Name,
-					msgFQDN,
-				),
-			})
-		}
-	}
-	sort.Slice(declTypes, func(i, j int) bool {
-		return declTypes[i].Name < declTypes[j].Name
-	})
-	return declTypes
-}
-
-type OneofType struct {
-	Name             string
-	FieldName        string
-	MessageProtoFQDN string
-	TypeDeclare      string
-	FieldZeroValues  []string
-	FieldGetterNames []string
-	ReturnZeroValue  string
-}
-
-func (s *Service) OneofTypes() []*OneofType {
-	var ret []*OneofType
-	for _, msg := range s.Service.Messages {
-		for _, oneof := range msg.Oneofs {
-			if !oneof.IsSameType() {
-				continue
-			}
-			fieldZeroValues := make([]string, 0, len(oneof.Fields))
-			fieldGetterNames := make([]string, 0, len(oneof.Fields))
-			for _, field := range oneof.Fields {
-				fieldZeroValues = append(
-					fieldZeroValues,
-					toMakeZeroValue(s.Service, field.Type),
-				)
-				fieldGetterNames = append(
-					fieldGetterNames,
-					fmt.Sprintf("Get%s", util.ToPublicGoVariable(field.Name)),
-				)
-			}
-			cloned := oneof.Fields[0].Type.Clone()
-			cloned.OneofField = nil
-			returnZeroValue := toMakeZeroValue(s.Service, cloned)
-			ret = append(ret, &OneofType{
-				Name:             oneof.Name,
-				FieldName:        util.ToPublicGoVariable(oneof.Name),
-				MessageProtoFQDN: oneof.Message.FQDN(),
-				TypeDeclare:      toCELTypeDeclare(oneof.Fields[0].Type),
-				FieldZeroValues:  fieldZeroValues,
-				FieldGetterNames: fieldGetterNames,
-				ReturnZeroValue:  returnZeroValue,
-			})
-		}
-	}
-	return ret
-}
-
 type LogValue struct {
 	Name      string
 	ValueType string
@@ -532,8 +569,7 @@ type LogValueAttr struct {
 func (s *Service) LogValues() []*LogValue {
 	for _, msg := range s.Service.Messages {
 		if msg.Rule != nil {
-			msg.Rule.MessageArgument.File.Package = msg.File.Package
-			s.setLogValueByMessageArgument(msg.Rule.MessageArgument)
+			s.setLogValueByMessageArgument(msg)
 		}
 		s.setLogValueByMessage(msg)
 	}
@@ -616,19 +652,32 @@ func (s *Service) setLogValueByMapMessage(msg *resolver.Message) {
 }
 
 func (s *Service) setLogValueByMessageArgument(msg *resolver.Message) {
-	name := s.messageToLogValueName(msg)
+	arg := msg.Rule.MessageArgument
+
+	// The message argument belongs to "grpc.federation.private" package,
+	// but we want to change the package name temporarily
+	// because we want to use the name of the package to which the message belongs as log value's function name.
+	pkg := arg.File.Package
+	defer func() {
+		// restore the original package name.
+		arg.File.Package = pkg
+	}()
+	// replace package name to message's package name.
+	arg.File.Package = msg.File.Package
+
+	name := s.messageToLogValueName(arg)
 	if _, exists := s.nameToLogValueMap[name]; exists {
 		return
 	}
-	msgType := &resolver.Type{Type: types.Message, Ref: msg}
+	generics := fmt.Sprintf("[*%sDependentClientSet]", s.Name)
 	logValue := &LogValue{
 		Name:      name,
-		ValueType: "*" + protoFQDNToPublicGoName(msg.FQDN()),
-		Attrs:     make([]*LogValueAttr, 0, len(msg.Fields)),
-		Type:      msgType,
+		ValueType: "*" + protoFQDNToPublicGoName(arg.FQDN()) + generics,
+		Attrs:     make([]*LogValueAttr, 0, len(arg.Fields)),
+		Type:      resolver.NewMessageType(arg, false),
 	}
 	s.nameToLogValueMap[name] = logValue
-	for _, field := range msg.Fields {
+	for _, field := range arg.Fields {
 		logValue.Attrs = append(logValue.Attrs, &LogValueAttr{
 			Type:  s.logType(field.Type),
 			Key:   field.Name,
@@ -1782,7 +1831,7 @@ func (r *MessageResolver) RequestType() string {
 		)
 	}
 	msgName := fullMessageName(r.MessageDependency.Message)
-	return fmt.Sprintf("%sArgument", msgName)
+	return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
 }
 
 func (r *MessageResolver) ReturnType() string {

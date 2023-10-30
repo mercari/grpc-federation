@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package federation;
+
+import "grpc/federation/federation.proto";
+import "federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service OtherService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {
+  string id = 1;
+}
+
+message GetResponse {
+  option (grpc.federation.message).messages = {
+    name: "p"
+    message: "Post"
+  };
+  Post post = 1 [(grpc.federation.field).custom_resolver = true];
+}

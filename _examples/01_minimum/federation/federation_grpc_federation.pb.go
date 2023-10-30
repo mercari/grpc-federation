@@ -15,8 +15,8 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 )
 
-// Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
-type Org_Federation_GetPostResponseArgument[T any] struct {
+// Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
+type Federation_GetPostResponseArgument[T any] struct {
 	Id     string
 	Client T
 }
@@ -54,8 +54,8 @@ type FederationServiceDependentClientSet struct {
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
-	// Resolve_Org_Federation_GetPostResponse implements resolver for "org.federation.GetPostResponse".
-	Resolve_Org_Federation_GetPostResponse(context.Context, *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error)
+	// Resolve_Federation_GetPostResponse implements resolver for "federation.GetPostResponse".
+	Resolve_Federation_GetPostResponse(context.Context, *Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error)
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -64,10 +64,10 @@ type FederationServiceResolver interface {
 // by embedding them in a resolver structure that you have created.
 type FederationServiceUnimplementedResolver struct{}
 
-// Resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse".
+// Resolve_Federation_GetPostResponse resolve "federation.GetPostResponse".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResponse(context.Context, *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (ret *GetPostResponse, e error) {
-	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_GetPostResponse not implemented")
+func (FederationServiceUnimplementedResolver) Resolve_Federation_GetPostResponse(context.Context, *Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (ret *GetPostResponse, e error) {
+	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Federation_GetPostResponse not implemented")
 	return
 }
 
@@ -118,7 +118,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}, nil
 }
 
-// GetPost implements "org.federation.FederationService/GetPost" method.
+// GetPost implements "federation.FederationService/GetPost" method.
 func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -126,7 +126,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]{
+	res, err := s.resolve_Federation_GetPostResponse(ctx, &Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]{
 		Client: s.client,
 		Id:     req.Id,
 	})
@@ -137,31 +137,31 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	return res, nil
 }
 
-// resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error) {
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponseArgument(req)))
+// resolve_Federation_GetPostResponse resolve "federation.GetPostResponse" message.
+func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Context, req *Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error) {
+	s.logger.DebugContext(ctx, "resolve  federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
-	ret, err := s.resolver.Resolve_Org_Federation_GetPostResponse(ctx, req)
+	ret, err := s.resolver.Resolve_Federation_GetPostResponse(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved org.federation.GetPostResponse", slog.Any("org.federation.GetPostResponse", s.logvalue_Org_Federation_GetPostResponse(ret)))
+	s.logger.DebugContext(ctx, "resolved federation.GetPostResponse", slog.Any("federation.GetPostResponse", s.logvalue_Federation_GetPostResponse(ret)))
 	return ret, nil
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
-		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
+		slog.Any("post", s.logvalue_Federation_Post(v.GetPost())),
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -170,7 +170,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *O
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -178,11 +178,11 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
 		slog.String("content", v.GetContent()),
-		slog.Any("user", s.logvalue_Org_Federation_User(v.GetUser())),
+		slog.Any("user", s.logvalue_Federation_User(v.GetUser())),
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
+func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

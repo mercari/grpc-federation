@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/bufbuild/protocompile v0.1.0
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/cel-go v0.18.1
@@ -19,6 +20,7 @@ require (
 	golang.org/x/tools v0.9.3
 	google.golang.org/genproto/googleapis/api v0.0.0-20231002182017-d307bd883b97
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231012201019-e917dd12ba7a
+	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -26,6 +28,7 @@ require (
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/fatih/color v1.10.0 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

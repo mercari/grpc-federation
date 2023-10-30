@@ -164,23 +164,27 @@ func TestProtoFormat(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, svc := range result.Services {
-				for _, msg := range svc.Messages {
-					t.Run(msg.Name, func(t *testing.T) {
-						expected, exists := test.messageOptionToFormatMap[msg.Name]
-						if !exists {
-							t.Fatalf("failed to find %s message option data", msg.Name)
-						}
-						expected = strings.TrimPrefix(expected, "\n")
-						got := msg.Rule.ProtoFormat(&resolver.ProtoFormatOption{
-							IndentLevel:    1,
-							IndentSpaceNum: 2,
-						})
-						if diff := cmp.Diff(got, expected); diff != "" {
-							t.Errorf("(-got, +want)\n%s", diff)
-						}
-					})
+			msgMap := make(map[string]*resolver.Message)
+			for _, file := range result.Files {
+				for _, msg := range file.Messages {
+					msgMap[msg.Name] = msg
 				}
+			}
+			for msgName, format := range test.messageOptionToFormatMap {
+				t.Run(msgName, func(t *testing.T) {
+					expected := strings.TrimPrefix(format, "\n")
+					msg, exists := msgMap[msgName]
+					if !exists {
+						t.Fatalf("failed to find %s message", msgName)
+					}
+					got := msg.Rule.ProtoFormat(&resolver.ProtoFormatOption{
+						IndentLevel:    1,
+						IndentSpaceNum: 2,
+					})
+					if diff := cmp.Diff(got, expected); diff != "" {
+						t.Errorf("(-got, +want)\n%s", diff)
+					}
+				})
 			}
 		})
 	}
@@ -235,20 +239,24 @@ ab ─┤
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, svc := range result.Services {
-				for _, msg := range svc.Messages {
-					t.Run(msg.Name, func(t *testing.T) {
-						expected, exists := test.messageOptionToFormatMap[msg.Name]
-						if !exists {
-							t.Fatalf("failed to find %s message option data", msg.Name)
-						}
-						expected = strings.TrimPrefix(expected, "\n")
-						got := resolver.DependencyGraphTreeFormat(msg.Rule.Resolvers)
-						if diff := cmp.Diff(got, expected); diff != "" {
-							t.Errorf("(-got, +want)\n%s", diff)
-						}
-					})
+			msgMap := make(map[string]*resolver.Message)
+			for _, file := range result.Files {
+				for _, msg := range file.Messages {
+					msgMap[msg.Name] = msg
 				}
+			}
+			for msgName, format := range test.messageOptionToFormatMap {
+				t.Run(msgName, func(t *testing.T) {
+					expected := strings.TrimPrefix(format, "\n")
+					msg, exists := msgMap[msgName]
+					if !exists {
+						t.Fatalf("failed to find message from %s", msgName)
+					}
+					got := resolver.DependencyGraphTreeFormat(msg.Rule.Resolvers)
+					if diff := cmp.Diff(got, expected); diff != "" {
+						t.Errorf("(-got, +want)\n%s", diff)
+					}
+				})
 			}
 		})
 	}

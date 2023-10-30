@@ -65,8 +65,8 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 
 // Result of resolver processing.
 type Result struct {
-	// Services list of services that specify the grpc.federation.service option.
-	Services []*Service
+	// Files list of files with services with the grpc.federation.service option.
+	Files []*File
 	// Warnings all warnings occurred during the resolve process.
 	Warnings []*Warning
 }
@@ -113,8 +113,12 @@ func (r *Resolver) Resolve() (*Result, error) {
 	r.resolveMessageArgument(ctx, files)
 	r.resolveMessageDependencies(ctx, files)
 
-	services := r.servicesWithRule(ctx, files)
-	return &Result{Services: services, Warnings: ctx.warnings()}, ctx.error()
+	r.validateServiceFromFiles(ctx, files)
+
+	return &Result{
+		Files:    r.hasServiceRuleFiles(files),
+		Warnings: ctx.warnings(),
+	}, ctx.error()
 }
 
 // resolvePackageAndFileReference create instances of Package and File to be used inside the resolver from all file descriptor and link them together.
@@ -194,21 +198,32 @@ func (r *Resolver) allMessages(files []*File) []*Message {
 	return msgs
 }
 
-// servicesWithRule returns all services that have a federation rule.
-func (r *Resolver) servicesWithRule(ctx *context, files []*File) []*Service {
-	services := make([]*Service, 0, len(r.cachedServiceMap))
+func (r *Resolver) validateServiceFromFiles(ctx *context, files []*File) {
 	for _, file := range files {
 		ctx := ctx.withFile(file)
-		for _, service := range file.Services {
-			ctx := ctx.withService(service)
-			if service.Rule != nil {
-				r.validateServiceDependency(ctx, service)
-				r.validateMethodResponse(ctx, service)
-				services = append(services, service)
-			}
+		for _, svc := range file.Services {
+			ctx := ctx.withService(svc)
+			r.validateService(ctx, svc)
 		}
 	}
-	return services
+}
+
+func (r *Resolver) hasServiceRuleFiles(files []*File) []*File {
+	var ret []*File
+	for _, file := range files {
+		if file.HasServiceWithRule() {
+			ret = append(ret, file)
+		}
+	}
+	return ret
+}
+
+func (r *Resolver) validateService(ctx *context, svc *Service) {
+	if svc.Rule == nil {
+		return
+	}
+	r.validateServiceDependency(ctx, svc)
+	r.validateMethodResponse(ctx, svc)
 }
 
 func (r *Resolver) validateServiceDependency(ctx *context, service *Service) {
@@ -1808,17 +1823,34 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 
 	svcMsgSet := make(map[*Service]map[*Message]struct{})
 	for _, root := range graph.Roots {
-		reqMsg := r.lookupRequestMessageFromResponseMessage(root.Message)
+		// The root message is always the response message of the method.
+		resMsg := root.Message
+
+		// The message argument of the response message is the request message.
+		// Therefore, the request message is retrieved from the response message.
+		reqMsg := r.lookupRequestMessageFromResponseMessage(resMsg)
 		if reqMsg == nil {
 			continue
 		}
-		msgArg := newMessageArgument(root.Message)
+
+		var msgArg *Message
+		if resMsg.Rule.MessageArgument != nil {
+			msgArg = resMsg.Rule.MessageArgument
+		} else {
+			msgArg = newMessageArgument(resMsg)
+			resMsg.Rule.MessageArgument = msgArg
+		}
 		msgArg.Fields = append(msgArg.Fields, reqMsg.Fields...)
 		r.cachedMessageMap[msgArg.FQDN()] = msgArg
+
 		// Store the messages to serviceMsgMap first to avoid inserting duplicated ones to Service.Messages
-		for _, svc := range root.Message.File.Services {
+		for _, svc := range r.cachedServiceMap {
 			if _, exists := svcMsgSet[svc]; !exists {
 				svcMsgSet[svc] = make(map[*Message]struct{})
+			}
+			// If the method of the service has not a response message, it is excluded.
+			if !svc.HasMessageInMethod(resMsg) {
+				continue
 			}
 			for _, msg := range r.resolveMessageArgumentRecursive(ctx, root) {
 				svcMsgSet[svc][msg] = struct{}{}
@@ -1889,10 +1921,18 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 	}
 	for _, child := range node.Children {
 		depMsg := child.Message
-		depMsgArg := newMessageArgument(depMsg)
-		r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
-		deps := msgToDepsMap[depMsg]
-		depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, msg, deps, depToIdx)...)
+		var depMsgArg *Message
+		if depMsg.Rule.MessageArgument != nil {
+			depMsgArg = depMsg.Rule.MessageArgument
+		} else {
+			depMsgArg = newMessageArgument(depMsg)
+			depMsg.Rule.MessageArgument = depMsgArg
+		}
+		if _, exists := r.cachedMessageMap[depMsgArg.FQDN()]; !exists {
+			r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
+			deps := msgToDepsMap[depMsg]
+			depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, msg, deps, depToIdx)...)
+		}
 		m := r.resolveMessageArgumentRecursive(ctx, child)
 		msgs = append(msgs, m...)
 	}

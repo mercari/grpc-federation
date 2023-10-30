@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+service DebugService {
+  option (grpc.federation.service) = {};
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message).messages = {
+    name: "p"
+    message: "Post"
+  };
+  Post post = 1 [(grpc.federation.field).by = "p"];
+}
+
+message Post {
+  option (grpc.federation.message).messages = {
+    name: "u"
+    message: "User"
+    args { name: "id", string: "foo" }
+    args { name: "name", string: "bar" }
+  };
+  string id = 1 [(grpc.federation.field).string = "post-id"];
+  string title = 2 [(grpc.federation.field).string = "title"];
+  string content = 3 [(grpc.federation.field).string = "content"];
+  User user = 4 [(grpc.federation.field).by = "u"];
+}
+
+message User {
+  string id = 1 [(grpc.federation.field).by = "$.id"];
+  string name = 2 [(grpc.federation.field).by = "$.name"];
+}
+
+message GetStatusRequest {
+}
+
+message GetStatusResponse {
+  option (grpc.federation.message).messages = {
+    name: "u"
+    message: "User"
+    args { name: "id", string: "xxxx" }
+    args { name: "name", string: "yyyy" }
+  };
+
+  User user = 1 [(grpc.federation.field).by = "u"];
+}

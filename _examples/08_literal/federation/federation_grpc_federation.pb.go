@@ -3,108 +3,25 @@ package federation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"reflect"
 	"runtime/debug"
-	"sort"
-	"strings"
 	"sync"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
-	"github.com/google/cel-go/common/types/ref"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 
 	content "example/content"
 )
 
-// FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
-type FederationServiceConfig struct {
-	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
-	// If this interface is not provided, an error is returned during initialization.
-	Client FederationServiceClientFactory // required
-	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
-	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
-	ErrorHandler FederationServiceErrorHandler
-	// Logger sets the logger used to output Debug/Info/Error information.
-	Logger *slog.Logger
-}
-
-// FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
-type FederationServiceClientFactory interface {
-	// Content_ContentServiceClient create a gRPC Client to be used to call methods in content.ContentService.
-	Content_ContentServiceClient(FederationServiceClientConfig) (content.ContentServiceClient, error)
-}
-
-// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
-// Hints for creating a gRPC Client.
-type FederationServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
-	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
-}
-
-// FederationServiceDependencyServiceClient has a gRPC client for all services on which the federation service depends.
-// This is provided as an argument when implementing the custom resolver.
-type FederationServiceDependencyServiceClient struct {
-	Content_ContentServiceClient content.ContentServiceClient
-}
-
-// FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
-type FederationServiceResolver interface {
-}
-
-// FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
-// An Unimplemented error is always returned.
-// This is intended for use when there are many Resolver interfaces that do not need to be implemented,
-// by embedding them in a resolver structure that you have created.
-type FederationServiceUnimplementedResolver struct{}
-
-// FederationServiceErrorHandler Federation Service often needs to convert errors received from downstream services.
-// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
-type FederationServiceErrorHandler func(ctx context.Context, methodName string, err error) error
-
-const (
-	FederationService_DependentMethod_Content_ContentService_GetContent = "/content.ContentService/GetContent"
-)
-
-// FederationServiceRecoveredError represents recovered error.
-type FederationServiceRecoveredError struct {
-	Message string
-	Stack   []string
-}
-
-func (e *FederationServiceRecoveredError) Error() string {
-	return fmt.Sprintf("recovered error: %s", e.Message)
-}
-
-// FederationService represents Federation Service.
-type FederationService struct {
-	*UnimplementedFederationServiceServer
-	cfg          FederationServiceConfig
-	logger       *slog.Logger
-	errorHandler FederationServiceErrorHandler
-	env          *cel.Env
-	client       *FederationServiceDependencyServiceClient
-}
-
 // Org_Federation_ContentArgument is argument for "org.federation.Content" message.
-type Org_Federation_ContentArgument struct {
+type Org_Federation_ContentArgument[T any] struct {
 	BoolField        bool
 	BoolsField       []bool
 	ByField          string
@@ -142,183 +59,79 @@ type Org_Federation_ContentArgument struct {
 	Uint32SField     []uint32
 	Uint64Field      uint64
 	Uint64SField     []uint64
-	Client           *FederationServiceDependencyServiceClient
+	Client           T
 }
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type Org_Federation_GetResponseArgument struct {
+type Org_Federation_GetResponseArgument[T any] struct {
 	Content  *content.Content
 	Content2 *Content
 	Id       string
-	Client   *FederationServiceDependencyServiceClient
+	Client   T
 }
 
-// FederationServiceCELTypeHelper
-type FederationServiceCELTypeHelper struct {
-	celRegistry    *celtypes.Registry
-	structFieldMap map[string]map[string]*celtypes.FieldType
-	mapMu          sync.RWMutex
+// FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
+type FederationServiceConfig struct {
+	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
+	// If this interface is not provided, an error is returned during initialization.
+	Client FederationServiceClientFactory // required
+	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
+	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
+	ErrorHandler grpcfed.ErrorHandler
+	// Logger sets the logger used to output Debug/Info/Error information.
+	Logger *slog.Logger
 }
 
-func (h *FederationServiceCELTypeHelper) TypeProvider() celtypes.Provider {
-	return h
+// FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
+type FederationServiceClientFactory interface {
+	// Content_ContentServiceClient create a gRPC Client to be used to call methods in content.ContentService.
+	Content_ContentServiceClient(FederationServiceClientConfig) (content.ContentServiceClient, error)
 }
 
-func (h *FederationServiceCELTypeHelper) TypeAdapter() celtypes.Adapter {
-	return h.celRegistry
+// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// Hints for creating a gRPC Client.
+type FederationServiceClientConfig struct {
+	// Service returns the name of the service on Protocol Buffers.
+	Service string
+	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
+	// It must be unique among the services on which the Federation Service depends.
+	Name string
 }
 
-func (h *FederationServiceCELTypeHelper) EnumValue(enumName string) ref.Val {
-	return h.celRegistry.EnumValue(enumName)
+// FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
+// This is provided as an argument when implementing the custom resolver.
+type FederationServiceDependentClientSet struct {
+	Content_ContentServiceClient content.ContentServiceClient
 }
 
-func (h *FederationServiceCELTypeHelper) FindIdent(identName string) (ref.Val, bool) {
-	return h.celRegistry.FindIdent(identName)
+// FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
+type FederationServiceResolver interface {
 }
 
-func (h *FederationServiceCELTypeHelper) FindStructType(structType string) (*celtypes.Type, bool) {
-	if st, found := h.celRegistry.FindStructType(structType); found {
-		return st, found
-	}
-	h.mapMu.RLock()
-	defer h.mapMu.RUnlock()
-	if _, exists := h.structFieldMap[structType]; exists {
-		return celtypes.NewObjectType(structType), true
-	}
-	return nil, false
-}
+// FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
+// An Unimplemented error is always returned.
+// This is intended for use when there are many Resolver interfaces that do not need to be implemented,
+// by embedding them in a resolver structure that you have created.
+type FederationServiceUnimplementedResolver struct{}
 
-func (h *FederationServiceCELTypeHelper) FindStructFieldNames(structType string) ([]string, bool) {
-	if names, found := h.celRegistry.FindStructFieldNames(structType); found {
-		return names, found
-	}
+const (
+	FederationService_DependentMethod_Content_ContentService_GetContent = "/content.ContentService/GetContent"
+)
 
-	h.mapMu.RLock()
-	defer h.mapMu.RUnlock()
-	fieldMap, exists := h.structFieldMap[structType]
-	if !exists {
-		return nil, false
-	}
-	fieldNames := make([]string, 0, len(fieldMap))
-	for fieldName := range fieldMap {
-		fieldNames = append(fieldNames, fieldName)
-	}
-	sort.Strings(fieldNames)
-	return fieldNames, true
-}
-
-func (h *FederationServiceCELTypeHelper) FindStructFieldType(structType, fieldName string) (*celtypes.FieldType, bool) {
-	if field, found := h.celRegistry.FindStructFieldType(structType, fieldName); found {
-		return field, found
-	}
-
-	h.mapMu.RLock()
-	defer h.mapMu.RUnlock()
-	fieldMap, exists := h.structFieldMap[structType]
-	if !exists {
-		return nil, false
-	}
-	field, found := fieldMap[fieldName]
-	return field, found
-}
-
-func (h *FederationServiceCELTypeHelper) NewValue(structType string, fields map[string]ref.Val) ref.Val {
-	return h.celRegistry.NewValue(structType, fields)
-}
-
-func newFederationServiceCELTypeHelper() *FederationServiceCELTypeHelper {
-	celRegistry := celtypes.NewEmptyRegistry()
-	protoregistry.GlobalFiles.RangeFiles(func(f protoreflect.FileDescriptor) bool {
-		if err := celRegistry.RegisterDescriptor(f); err != nil {
-			return false
-		}
-		return true
-	})
-	newFieldType := func(typ *celtypes.Type, fieldName string) *celtypes.FieldType {
-		isSet := func(v any, fieldName string) bool {
-			rv := reflect.ValueOf(v)
-			if rv.Kind() == reflect.Pointer {
-				rv = rv.Elem()
-			}
-			if rv.Kind() != reflect.Struct {
-				return false
-			}
-			return rv.FieldByName(fieldName).IsValid()
-		}
-		getFrom := func(v any, fieldName string) (any, error) {
-			rv := reflect.ValueOf(v)
-			if rv.Kind() == reflect.Pointer {
-				rv = rv.Elem()
-			}
-			if rv.Kind() != reflect.Struct {
-				return nil, fmt.Errorf("%T is not struct type", v)
-			}
-			value := rv.FieldByName(fieldName)
-			return value.Interface(), nil
-		}
-		return &celtypes.FieldType{
-			Type: typ,
-			IsSet: func(v any) bool {
-				return isSet(v, fieldName)
-			},
-			GetFrom: func(v any) (any, error) {
-				return getFrom(v, fieldName)
-			},
-		}
-	}
-	return &FederationServiceCELTypeHelper{
-		celRegistry: celRegistry,
-		structFieldMap: map[string]map[string]*celtypes.FieldType{
-			"grpc.federation.private.ContentArgument": map[string]*celtypes.FieldType{
-				"by_field":           newFieldType(celtypes.StringType, "ByField"),
-				"double_field":       newFieldType(celtypes.DoubleType, "DoubleField"),
-				"doubles_field":      newFieldType(celtypes.NewListType(celtypes.DoubleType), "DoublesField"),
-				"float_field":        newFieldType(celtypes.DoubleType, "FloatField"),
-				"floats_field":       newFieldType(celtypes.NewListType(celtypes.DoubleType), "FloatsField"),
-				"int32_field":        newFieldType(celtypes.IntType, "Int32Field"),
-				"int32s_field":       newFieldType(celtypes.NewListType(celtypes.IntType), "Int32SField"),
-				"int64_field":        newFieldType(celtypes.IntType, "Int64Field"),
-				"int64s_field":       newFieldType(celtypes.NewListType(celtypes.IntType), "Int64SField"),
-				"uint32_field":       newFieldType(celtypes.UintType, "Uint32Field"),
-				"uint32s_field":      newFieldType(celtypes.NewListType(celtypes.UintType), "Uint32SField"),
-				"uint64_field":       newFieldType(celtypes.UintType, "Uint64Field"),
-				"uint64s_field":      newFieldType(celtypes.NewListType(celtypes.UintType), "Uint64SField"),
-				"sint32_field":       newFieldType(celtypes.IntType, "Sint32Field"),
-				"sint32s_field":      newFieldType(celtypes.NewListType(celtypes.IntType), "Sint32SField"),
-				"sint64_field":       newFieldType(celtypes.IntType, "Sint64Field"),
-				"sint64s_field":      newFieldType(celtypes.NewListType(celtypes.IntType), "Sint64SField"),
-				"fixed32_field":      newFieldType(celtypes.UintType, "Fixed32Field"),
-				"fixed32s_field":     newFieldType(celtypes.NewListType(celtypes.UintType), "Fixed32SField"),
-				"fixed64_field":      newFieldType(celtypes.UintType, "Fixed64Field"),
-				"fixed64s_field":     newFieldType(celtypes.NewListType(celtypes.UintType), "Fixed64SField"),
-				"sfixed32_field":     newFieldType(celtypes.IntType, "Sfixed32Field"),
-				"sfixed32s_field":    newFieldType(celtypes.NewListType(celtypes.IntType), "Sfixed32SField"),
-				"sfixed64_field":     newFieldType(celtypes.IntType, "Sfixed64Field"),
-				"sfixed64s_field":    newFieldType(celtypes.NewListType(celtypes.IntType), "Sfixed64SField"),
-				"bool_field":         newFieldType(celtypes.BoolType, "BoolField"),
-				"bools_field":        newFieldType(celtypes.NewListType(celtypes.BoolType), "BoolsField"),
-				"string_field":       newFieldType(celtypes.StringType, "StringField"),
-				"strings_field":      newFieldType(celtypes.NewListType(celtypes.StringType), "StringsField"),
-				"byte_string_field":  newFieldType(celtypes.BytesType, "ByteStringField"),
-				"byte_strings_field": newFieldType(celtypes.NewListType(celtypes.BytesType), "ByteStringsField"),
-				"enum_field":         newFieldType(celtypes.IntType, "EnumField"),
-				"enums_field":        newFieldType(celtypes.NewListType(celtypes.IntType), "EnumsField"),
-				"env_field":          newFieldType(celtypes.StringType, "EnvField"),
-				"envs_field":         newFieldType(celtypes.NewListType(celtypes.StringType), "EnvsField"),
-				"messages_field":     newFieldType(celtypes.NewListType(celtypes.NewObjectType("org.federation.Content")), "MessagesField"),
-				"message_field":      newFieldType(celtypes.NewObjectType("org.federation.Content"), "MessageField"),
-			},
-			"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{
-				"id": newFieldType(celtypes.StringType, "Id"),
-			},
-		},
-	}
+// FederationService represents Federation Service.
+type FederationService struct {
+	*UnimplementedFederationServiceServer
+	cfg          FederationServiceConfig
+	logger       *slog.Logger
+	errorHandler grpcfed.ErrorHandler
+	env          *cel.Env
+	client       *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
-	if err := validateFederationServiceConfig(cfg); err != nil {
-		return nil, err
+	if cfg.Client == nil {
+		return nil, fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
 	}
 	Content_ContentServiceClient, err := cfg.Client.Content_ContentServiceClient(FederationServiceClientConfig{
 		Service: "content.ContentService",
@@ -335,7 +148,50 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := newFederationServiceCELTypeHelper()
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+		"grpc.federation.private.ContentArgument": map[string]*celtypes.FieldType{
+			"by_field":           grpcfed.NewCELFieldType(celtypes.StringType, "ByField"),
+			"double_field":       grpcfed.NewCELFieldType(celtypes.DoubleType, "DoubleField"),
+			"doubles_field":      grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.DoubleType), "DoublesField"),
+			"float_field":        grpcfed.NewCELFieldType(celtypes.DoubleType, "FloatField"),
+			"floats_field":       grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.DoubleType), "FloatsField"),
+			"int32_field":        grpcfed.NewCELFieldType(celtypes.IntType, "Int32Field"),
+			"int32s_field":       grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.IntType), "Int32SField"),
+			"int64_field":        grpcfed.NewCELFieldType(celtypes.IntType, "Int64Field"),
+			"int64s_field":       grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.IntType), "Int64SField"),
+			"uint32_field":       grpcfed.NewCELFieldType(celtypes.UintType, "Uint32Field"),
+			"uint32s_field":      grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.UintType), "Uint32SField"),
+			"uint64_field":       grpcfed.NewCELFieldType(celtypes.UintType, "Uint64Field"),
+			"uint64s_field":      grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.UintType), "Uint64SField"),
+			"sint32_field":       grpcfed.NewCELFieldType(celtypes.IntType, "Sint32Field"),
+			"sint32s_field":      grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.IntType), "Sint32SField"),
+			"sint64_field":       grpcfed.NewCELFieldType(celtypes.IntType, "Sint64Field"),
+			"sint64s_field":      grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.IntType), "Sint64SField"),
+			"fixed32_field":      grpcfed.NewCELFieldType(celtypes.UintType, "Fixed32Field"),
+			"fixed32s_field":     grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.UintType), "Fixed32SField"),
+			"fixed64_field":      grpcfed.NewCELFieldType(celtypes.UintType, "Fixed64Field"),
+			"fixed64s_field":     grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.UintType), "Fixed64SField"),
+			"sfixed32_field":     grpcfed.NewCELFieldType(celtypes.IntType, "Sfixed32Field"),
+			"sfixed32s_field":    grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.IntType), "Sfixed32SField"),
+			"sfixed64_field":     grpcfed.NewCELFieldType(celtypes.IntType, "Sfixed64Field"),
+			"sfixed64s_field":    grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.IntType), "Sfixed64SField"),
+			"bool_field":         grpcfed.NewCELFieldType(celtypes.BoolType, "BoolField"),
+			"bools_field":        grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.BoolType), "BoolsField"),
+			"string_field":       grpcfed.NewCELFieldType(celtypes.StringType, "StringField"),
+			"strings_field":      grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.StringType), "StringsField"),
+			"byte_string_field":  grpcfed.NewCELFieldType(celtypes.BytesType, "ByteStringField"),
+			"byte_strings_field": grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.BytesType), "ByteStringsField"),
+			"enum_field":         grpcfed.NewCELFieldType(celtypes.IntType, "EnumField"),
+			"enums_field":        grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.IntType), "EnumsField"),
+			"env_field":          grpcfed.NewCELFieldType(celtypes.StringType, "EnvField"),
+			"envs_field":         grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.StringType), "EnvsField"),
+			"messages_field":     grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.NewObjectType("org.federation.Content")), "MessagesField"),
+			"message_field":      grpcfed.NewCELFieldType(celtypes.NewObjectType("org.federation.Content"), "MessageField"),
+		},
+		"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{
+			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+		},
+	})
 	env, err := cel.NewCustomEnv(
 		cel.StdLib(),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
@@ -349,181 +205,33 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		logger:       logger,
 		errorHandler: errorHandler,
 		env:          env,
-		client: &FederationServiceDependencyServiceClient{
+		client: &FederationServiceDependentClientSet{
 			Content_ContentServiceClient: Content_ContentServiceClient,
 		},
 	}, nil
-}
-
-func validateFederationServiceConfig(cfg FederationServiceConfig) error {
-	if cfg.Client == nil {
-		return fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
-	}
-	return nil
-}
-
-func withTimeoutFederationService[T any](ctx context.Context, method string, timeout time.Duration, fn func(context.Context) (*T, error)) (*T, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	var (
-		ret   *T
-		errch = make(chan error)
-	)
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				errch <- recoverErrorFederationService(r, debug.Stack())
-			}
-		}()
-
-		res, err := fn(ctx)
-		ret = res
-		errch <- err
-	}()
-	select {
-	case <-ctx.Done():
-		status := grpcstatus.New(grpccodes.DeadlineExceeded, ctx.Err().Error())
-		withDetails, err := status.WithDetails(&errdetails.ErrorInfo{
-			Metadata: map[string]string{
-				"method":  method,
-				"timeout": timeout.String(),
-			},
-		})
-		if err != nil {
-			return nil, status.Err()
-		}
-		return nil, withDetails.Err()
-	case err := <-errch:
-		return ret, err
-	}
-}
-
-func withRetryFederationService[T any](b backoff.BackOff, fn func() (*T, error)) (*T, error) {
-	var res *T
-	if err := backoff.Retry(func() (err error) {
-		res, err = fn()
-		return
-	}, b); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func recoverErrorFederationService(v interface{}, rawStack []byte) *FederationServiceRecoveredError {
-	msg := fmt.Sprint(v)
-	lines := strings.Split(msg, "\n")
-	if len(lines) <= 1 {
-		lines := strings.Split(string(rawStack), "\n")
-		stack := make([]string, 0, len(lines))
-		for _, line := range lines {
-			if line == "" {
-				continue
-			}
-			stack = append(stack, strings.TrimPrefix(line, "\t"))
-		}
-		return &FederationServiceRecoveredError{
-			Message: msg,
-			Stack:   stack,
-		}
-	}
-	// If panic occurs under singleflight, singleflight's recover catches the error and gives a stack trace.
-	// Therefore, once the stack trace is removed.
-	stack := make([]string, 0, len(lines))
-	for _, line := range lines[1:] {
-		if line == "" {
-			continue
-		}
-		stack = append(stack, strings.TrimPrefix(line, "\t"))
-	}
-	return &FederationServiceRecoveredError{
-		Message: lines[0],
-		Stack:   stack,
-	}
-}
-
-func (s *FederationService) evalCEL(expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
-	env, err := s.env.Extend(vars...)
-	if err != nil {
-		return nil, err
-	}
-	expr = strings.Replace(expr, "$", grpcfed.MessageArgumentVariableName, -1)
-	ast, iss := env.Compile(expr)
-	if iss.Err() != nil {
-		return nil, iss.Err()
-	}
-	program, err := env.Program(ast)
-	if err != nil {
-		return nil, err
-	}
-	out, _, err := program.Eval(args)
-	if err != nil {
-		return nil, err
-	}
-	if outType != nil {
-		return out.ConvertToNative(outType)
-	}
-	return out.Value(), nil
-}
-
-func (s *FederationService) goWithRecover(eg *errgroup.Group, fn func() (interface{}, error)) {
-	eg.Go(func() (e error) {
-		defer func() {
-			if r := recover(); r != nil {
-				e = recoverErrorFederationService(r, debug.Stack())
-			}
-		}()
-		_, err := fn()
-		return err
-	})
-}
-
-func (s *FederationService) outputErrorLog(ctx context.Context, err error) {
-	if err == nil {
-		return
-	}
-	if status, ok := grpcstatus.FromError(err); ok {
-		s.logger.ErrorContext(ctx, status.Message(),
-			slog.Group("grpc_status",
-				slog.String("code", status.Code().String()),
-				slog.Any("details", status.Details()),
-			),
-		)
-		return
-	}
-	var recoveredErr *FederationServiceRecoveredError
-	if errors.As(err, &recoveredErr) {
-		trace := make([]interface{}, 0, len(recoveredErr.Stack))
-		for idx, stack := range recoveredErr.Stack {
-			trace = append(trace, slog.String(fmt.Sprint(idx+1), stack))
-		}
-		s.logger.ErrorContext(ctx, recoveredErr.Message, slog.Group("stack_trace", trace...))
-		return
-	}
-	s.logger.ErrorContext(ctx, err.Error())
 }
 
 // Get implements "org.federation.FederationService/Get" method.
 func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
 	defer func() {
 		if r := recover(); r != nil {
-			e = recoverErrorFederationService(r, debug.Stack())
-			s.outputErrorLog(ctx, e)
+			e = grpcfed.RecoverError(r, debug.Stack())
+			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
+	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]{
 		Client: s.client,
 		Id:     req.Id,
 	})
 	if err != nil {
-		s.outputErrorLog(ctx, err)
+		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
 	return res, nil
 }
 
 // resolve_Org_Federation_Content resolve "org.federation.Content" message.
-func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, req *Org_Federation_ContentArgument) (*Content, error) {
+func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, req *Org_Federation_ContentArgument[*FederationServiceDependentClientSet]) (*Content, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.Content", slog.Any("message_args", s.logvalue_Org_Federation_ContentArgument(req)))
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.ContentArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
@@ -534,7 +242,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	// field binding section.
 	// (grpc.federation.field).alias = "by_field"
 	{
-		_value, err := s.evalCEL("$.by_field", envOpts, evalValues, reflect.TypeOf(""))
+		_value, err := grpcfed.EvalCEL(s.env, "$.by_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -542,7 +250,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "double_field"
 	{
-		_value, err := s.evalCEL("$.double_field", envOpts, evalValues, reflect.TypeOf(float64(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.double_field", envOpts, evalValues, reflect.TypeOf(float64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -550,7 +258,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "doubles_field"
 	{
-		_value, err := s.evalCEL("$.doubles_field", envOpts, evalValues, reflect.TypeOf([]float64(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.doubles_field", envOpts, evalValues, reflect.TypeOf([]float64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -558,7 +266,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "float_field"
 	{
-		_value, err := s.evalCEL("$.float_field", envOpts, evalValues, reflect.TypeOf(float32(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.float_field", envOpts, evalValues, reflect.TypeOf(float32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -566,7 +274,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "floats_field"
 	{
-		_value, err := s.evalCEL("$.floats_field", envOpts, evalValues, reflect.TypeOf([]float32(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.floats_field", envOpts, evalValues, reflect.TypeOf([]float32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -574,7 +282,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int32_field"
 	{
-		_value, err := s.evalCEL("$.int32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.int32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -582,7 +290,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int32s_field"
 	{
-		_value, err := s.evalCEL("$.int32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.int32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -590,7 +298,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int64_field"
 	{
-		_value, err := s.evalCEL("$.int64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.int64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -598,7 +306,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int64s_field"
 	{
-		_value, err := s.evalCEL("$.int64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.int64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -606,7 +314,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint32_field"
 	{
-		_value, err := s.evalCEL("$.uint32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.uint32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -614,7 +322,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint32s_field"
 	{
-		_value, err := s.evalCEL("$.uint32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.uint32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -622,7 +330,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint64_field"
 	{
-		_value, err := s.evalCEL("$.uint64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.uint64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -630,7 +338,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint64s_field"
 	{
-		_value, err := s.evalCEL("$.uint64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.uint64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -638,7 +346,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint32_field"
 	{
-		_value, err := s.evalCEL("$.sint32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sint32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -646,7 +354,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint32s_field"
 	{
-		_value, err := s.evalCEL("$.sint32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sint32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -654,7 +362,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint64_field"
 	{
-		_value, err := s.evalCEL("$.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +370,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint64s_field"
 	{
-		_value, err := s.evalCEL("$.sint64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sint64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -670,7 +378,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed32_field"
 	{
-		_value, err := s.evalCEL("$.fixed32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.fixed32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -678,7 +386,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed32s_field"
 	{
-		_value, err := s.evalCEL("$.fixed32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.fixed32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -686,7 +394,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed64_field"
 	{
-		_value, err := s.evalCEL("$.fixed64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.fixed64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -694,7 +402,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed64s_field"
 	{
-		_value, err := s.evalCEL("$.fixed64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.fixed64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -702,7 +410,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed32_field"
 	{
-		_value, err := s.evalCEL("$.sfixed32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sfixed32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -710,7 +418,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed32s_field"
 	{
-		_value, err := s.evalCEL("$.sfixed32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sfixed32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -718,7 +426,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed64_field"
 	{
-		_value, err := s.evalCEL("$.sfixed64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sfixed64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -726,7 +434,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed64s_field"
 	{
-		_value, err := s.evalCEL("$.sfixed64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.sfixed64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -734,7 +442,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "bool_field"
 	{
-		_value, err := s.evalCEL("$.bool_field", envOpts, evalValues, reflect.TypeOf(false))
+		_value, err := grpcfed.EvalCEL(s.env, "$.bool_field", envOpts, evalValues, reflect.TypeOf(false))
 		if err != nil {
 			return nil, err
 		}
@@ -742,7 +450,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "bools_field"
 	{
-		_value, err := s.evalCEL("$.bools_field", envOpts, evalValues, reflect.TypeOf([]bool(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.bools_field", envOpts, evalValues, reflect.TypeOf([]bool(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -750,7 +458,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "string_field"
 	{
-		_value, err := s.evalCEL("$.string_field", envOpts, evalValues, reflect.TypeOf(""))
+		_value, err := grpcfed.EvalCEL(s.env, "$.string_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -758,7 +466,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "strings_field"
 	{
-		_value, err := s.evalCEL("$.strings_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.strings_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -766,7 +474,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "byte_string_field"
 	{
-		_value, err := s.evalCEL("$.byte_string_field", envOpts, evalValues, reflect.TypeOf([]byte(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.byte_string_field", envOpts, evalValues, reflect.TypeOf([]byte(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -774,7 +482,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "byte_strings_field"
 	{
-		_value, err := s.evalCEL("$.byte_strings_field", envOpts, evalValues, reflect.TypeOf([][]byte(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.byte_strings_field", envOpts, evalValues, reflect.TypeOf([][]byte(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -782,7 +490,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "enum_field"
 	{
-		_value, err := s.evalCEL("$.enum_field", envOpts, evalValues, reflect.TypeOf(ContentType(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.enum_field", envOpts, evalValues, reflect.TypeOf(ContentType(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -790,7 +498,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "enums_field"
 	{
-		_value, err := s.evalCEL("$.enums_field", envOpts, evalValues, reflect.TypeOf([]ContentType(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.enums_field", envOpts, evalValues, reflect.TypeOf([]ContentType(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -798,7 +506,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "env_field"
 	{
-		_value, err := s.evalCEL("$.env_field", envOpts, evalValues, reflect.TypeOf(""))
+		_value, err := grpcfed.EvalCEL(s.env, "$.env_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			return nil, err
 		}
@@ -806,7 +514,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "envs_field"
 	{
-		_value, err := s.evalCEL("$.envs_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.envs_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -814,7 +522,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "message_field"
 	{
-		_value, err := s.evalCEL("$.message_field", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.message_field", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -822,7 +530,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "messages_field"
 	{
-		_value, err := s.evalCEL("$.messages_field", envOpts, evalValues, reflect.TypeOf([]*Content(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "$.messages_field", envOpts, evalValues, reflect.TypeOf([]*Content(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -834,7 +542,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 }
 
 // resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) (*GetResponse, error) {
 	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
 		sg            singleflight.Group
@@ -851,7 +559,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	*/
 	eg, ctx1 := errgroup.WithContext(ctx)
 
-	s.goWithRecover(eg, func() (interface{}, error) {
+	grpcfed.GoWithRecover(eg, func() (interface{}, error) {
 
 		// This section's codes are generated by the following proto definition.
 		/*
@@ -941,7 +649,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { field: "by_field", by: "$.id" }
 			{
-				_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
+				_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -964,7 +672,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		return nil, nil
 	})
 
-	s.goWithRecover(eg, func() (interface{}, error) {
+	grpcfed.GoWithRecover(eg, func() (interface{}, error) {
 
 		// This section's codes are generated by the following proto definition.
 		/*
@@ -1014,7 +722,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		resContentIface, err, _ := sg.Do("content2_org.federation.Content", func() (interface{}, error) {
 			valueMu.RLock()
-			args := &Org_Federation_ContentArgument{
+			args := &Org_Federation_ContentArgument[*FederationServiceDependentClientSet]{
 				Client:           s.client,
 				DoubleField:      1.23,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // { name: "double_field", double: 1.23 }
 				DoublesField:     []float64{4.56, 7.89},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { name: "doubles_field", doubles: [4.56, 7.89] }
@@ -1055,7 +763,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			// { name: "by_field", by: "$.id" }
 			{
-				_value, err := s.evalCEL("$.id", envOpts, evalValues, reflect.TypeOf(""))
+				_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					return nil, err
 				}
@@ -1090,7 +798,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "content"
 	{
-		_value, err := s.evalCEL("content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -1098,7 +806,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "content2"
 	{
-		_value, err := s.evalCEL("content2", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
+		_value, err := grpcfed.EvalCEL(s.env, "content2", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
 		if err != nil {
 			return nil, err
 		}
@@ -1106,7 +814,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field"
 	{
-		_value, err := s.evalCEL("content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		_value, err := grpcfed.EvalCEL(s.env, "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			return nil, err
 		}
@@ -1241,7 +949,7 @@ func (s *FederationService) logvalue_Org_Federation_Content(v *Content) slog.Val
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_ContentArgument(v *Org_Federation_ContentArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_ContentArgument(v *Org_Federation_ContentArgument[*FederationServiceDependentClientSet]) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1309,7 +1017,7 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
