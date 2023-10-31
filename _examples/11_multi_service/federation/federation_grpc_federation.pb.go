@@ -163,7 +163,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	     message: "Post"
 	   }
 	*/
-	resPostIface, err, _ := sg.Do("p_federation.Post", func() (interface{}, error) {
+	resPostIface, err, _ := sg.Do("p_federation.Post", func() (any, error) {
 		valueMu.RLock()
 		args := &Federation_PostArgument[*FederationServiceDependentClientSet]{
 			Client: s.client,
@@ -223,7 +223,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	     ]
 	   }
 	*/
-	resUserIface, err, _ := sg.Do("u_federation.User", func() (interface{}, error) {
+	resUserIface, err, _ := sg.Do("u_federation.User", func() (any, error) {
 		valueMu.RLock()
 		args := &Federation_UserArgument[*FederationServiceDependentClientSet]{
 			Client: s.client,
@@ -476,7 +476,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	     ]
 	   }
 	*/
-	resUserIface, err, _ := sg.Do("u_federation.User", func() (interface{}, error) {
+	resUserIface, err, _ := sg.Do("u_federation.User", func() (any, error) {
 		valueMu.RLock()
 		args := &Federation_UserArgument[*DebugServiceDependentClientSet]{
 			Client: s.client,

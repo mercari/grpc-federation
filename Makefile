@@ -41,9 +41,14 @@ lint: lint/examples lint/golangci-lint lint/gomod
 fmt: fmt/golangci-lint tidy fmt/buf
 
 .PHONY: tidy
-tidy:
+tidy: tidy/examples
 	go mod tidy
 	cd tools && go mod tidy
+
+tidy/examples: $(foreach var,$(EXAMPLES),tidy/examples/$(var))
+
+tidy/examples/%:
+	cd $* && go mod tidy
 
 lint/examples: $(foreach var,$(EXAMPLES),lint/examples/$(var))
 

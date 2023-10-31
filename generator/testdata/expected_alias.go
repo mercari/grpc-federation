@@ -175,7 +175,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	     args { name: "id", by: "$.id" }
 	   }
 	*/
-	resPostIface, err, _ := sg.Do("post_org.federation.Post", func() (interface{}, error) {
+	resPostIface, err, _ := sg.Do("post_org.federation.Post", func() (any, error) {
 		valueMu.RLock()
 		args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
 			Client: s.client,
@@ -240,7 +240,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	     response { name: "post", field: "post", autobind: true }
 	   }
 	*/
-	resGetPostResponseIface, err, _ := sg.Do("org.post.PostService/GetPost", func() (interface{}, error) {
+	resGetPostResponseIface, err, _ := sg.Do("org.post.PostService/GetPost", func() (any, error) {
 		valueMu.RLock()
 		args := &post.GetPostRequest{}
 		// { field: "id", by: "$.id" }

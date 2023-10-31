@@ -229,7 +229,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	     ]
 	   }
 	*/
-	resCreatePostIface, err, _ := sg.Do("cp_org.federation.CreatePost", func() (interface{}, error) {
+	resCreatePostIface, err, _ := sg.Do("cp_org.federation.CreatePost", func() (any, error) {
 		valueMu.RLock()
 		args := &Org_Federation_CreatePostArgument[*FederationServiceDependentClientSet]{
 			Client: s.client,
@@ -279,7 +279,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	     response { name: "p", field: "post" }
 	   }
 	*/
-	resCreatePostResponseIface, err, _ := sg.Do("org.post.PostService/CreatePost", func() (interface{}, error) {
+	resCreatePostResponseIface, err, _ := sg.Do("org.post.PostService/CreatePost", func() (any, error) {
 		valueMu.RLock()
 		args := &post.CreatePostRequest{}
 		// { field: "post", by: "cp" }

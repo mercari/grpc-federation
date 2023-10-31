@@ -436,7 +436,7 @@ func toCELTypeDeclare(t *resolver.Type) string {
 
 func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
 	if t == nil {
-		return "interface{}"
+		return "any"
 	}
 	var typ string
 	switch t.Type {
@@ -2084,7 +2084,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	}
 }
 
-func toGoConstValue(svc *resolver.Service, typ *resolver.Type, value interface{}) string {
+func toGoConstValue(svc *resolver.Service, typ *resolver.Type, value any) string {
 	if typ.Repeated {
 		rv := reflect.ValueOf(value)
 		length := rv.Len()
@@ -2180,7 +2180,7 @@ func loadTemplate(path string) (*template.Template, error) {
 	return tmpl, nil
 }
 
-func generateGoContent(tmpl *template.Template, params interface{}) ([]byte, error) {
+func generateGoContent(tmpl *template.Template, params any) ([]byte, error) {
 	var b bytes.Buffer
 	if err := tmpl.Execute(&b, params); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
