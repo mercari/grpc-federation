@@ -1021,12 +1021,11 @@ func (m *Message) LogValueReturnType() string {
 }
 
 func (m *Message) MessageResolvers() []*MessageResolverGroup {
-	if m.Message.Rule == nil {
+	if m.Rule == nil {
 		return nil
 	}
-
 	var groups []*MessageResolverGroup
-	for _, group := range m.Message.Rule.Resolvers {
+	for _, group := range m.Rule.Resolvers {
 		groups = append(groups, &MessageResolverGroup{
 			Service:              m.Service,
 			Message:              m,
@@ -1045,12 +1044,14 @@ func (m *Message) DeclVariables() []*DeclVariable {
 	if m.Rule == nil {
 		return nil
 	}
-	valueMap := make(map[string]*DeclVariable)
-	if len(m.Rule.Resolvers) != 0 {
-		valueMap["sg"] = &DeclVariable{Name: "sg", Type: "singleflight.Group"}
-		valueMap["valueMu"] = &DeclVariable{Name: "valueMu", Type: "sync.RWMutex"}
+	if !m.HasResolvers() {
+		return nil
 	}
-	for _, group := range m.Rule.Resolvers {
+	valueMap := map[string]*DeclVariable{
+		"sg":      {Name: "sg", Type: "singleflight.Group"},
+		"valueMu": {Name: "valueMu", Type: "sync.RWMutex"},
+	}
+	for _, group := range m.Message.MessageResolvers() {
 		for _, r := range group.Resolvers() {
 			if r.MethodCall != nil {
 				if r.MethodCall.Response == nil {
@@ -1066,25 +1067,6 @@ func (m *Message) DeclVariables() []*DeclVariable {
 					}
 				}
 			} else {
-				if !r.MessageDependency.Used {
-					continue
-				}
-				valueMap[r.MessageDependency.Name] = &DeclVariable{
-					Name: toUserDefinedVariable(r.MessageDependency.Name),
-					Type: toTypeText(m.Service, &resolver.Type{Type: types.Message, Ref: r.MessageDependency.Message}),
-				}
-			}
-		}
-	}
-	for _, field := range m.Fields {
-		if field.Rule == nil {
-			continue
-		}
-		if field.Rule.Oneof == nil {
-			continue
-		}
-		for _, group := range field.Rule.Oneof.Resolvers {
-			for _, r := range group.Resolvers() {
 				if !r.MessageDependency.Used {
 					continue
 				}

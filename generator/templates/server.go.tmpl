@@ -183,7 +183,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
 		{{- range $types }}
 		{{- if .ProtoFQDN }}
-		"{{ .ProtoFQDN }}": map[string]*celtypes.FieldType{
+		"{{ .ProtoFQDN }}": {
 			{{- if .ProtoFields }}
 			{{- range .ProtoFields }}
 			"{{ .Name }}": grpcfed.NewCELFieldType({{ .TypeDeclare }}, "{{ .FieldName }}"),
@@ -194,7 +194,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		{{- end }}
 
 		{{- range $oneofTypes }}
-		"{{ .MessageProtoFQDN }}": map[string]*celtypes.FieldType{
+		"{{ .MessageProtoFQDN }}": {
 			"{{ .Name }}": grpcfed.NewOneofSelectorFieldType(
 				{{ .TypeDeclare }}, "{{ .FieldName }}",
 				[]reflect.Type{ {{- range .FieldZeroValues }}reflect.TypeOf({{ . }}),{{- end }} },

@@ -593,6 +593,9 @@ func (r *Resolver) resolveMessageRules(ctx *context, msgs []*Message) {
 func (r *Resolver) resolveFieldRules(ctx *context, msg *Message) {
 	for _, field := range msg.Fields {
 		field.Rule = r.resolveFieldRule(ctx, msg, field, r.fieldToRuleMap[field])
+		if msg.Rule == nil && field.Rule != nil {
+			msg.Rule = &MessageRule{}
+		}
 	}
 	r.validateFieldsOneofRule(ctx, msg)
 }
