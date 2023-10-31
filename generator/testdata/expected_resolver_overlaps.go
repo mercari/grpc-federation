@@ -118,13 +118,13 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
-		"grpc.federation.private.GetPostResponse1Argument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.GetPostResponse1Argument": {
 			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
 		},
-		"grpc.federation.private.GetPostResponse2Argument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.GetPostResponse2Argument": {
 			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
 		},
-		"grpc.federation.private.PostArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.PostArgument": {
 			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
 		},
 	})

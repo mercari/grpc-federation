@@ -160,33 +160,33 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
-		"grpc.federation.private.AAArgument": map[string]*celtypes.FieldType{},
-		"grpc.federation.private.AArgument":  map[string]*celtypes.FieldType{},
-		"grpc.federation.private.ABArgument": map[string]*celtypes.FieldType{},
-		"grpc.federation.private.BArgument":  map[string]*celtypes.FieldType{},
-		"grpc.federation.private.CArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.AAArgument": {},
+		"grpc.federation.private.AArgument":  {},
+		"grpc.federation.private.ABArgument": {},
+		"grpc.federation.private.BArgument":  {},
+		"grpc.federation.private.CArgument": {
 			"a": grpcfed.NewCELFieldType(celtypes.StringType, "A"),
 		},
-		"grpc.federation.private.DArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.DArgument": {
 			"b": grpcfed.NewCELFieldType(celtypes.StringType, "B"),
 		},
-		"grpc.federation.private.EArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.EArgument": {
 			"c": grpcfed.NewCELFieldType(celtypes.StringType, "C"),
 			"d": grpcfed.NewCELFieldType(celtypes.StringType, "D"),
 		},
-		"grpc.federation.private.FArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.FArgument": {
 			"c": grpcfed.NewCELFieldType(celtypes.StringType, "C"),
 			"d": grpcfed.NewCELFieldType(celtypes.StringType, "D"),
 		},
-		"grpc.federation.private.GArgument":           map[string]*celtypes.FieldType{},
-		"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{},
-		"grpc.federation.private.HArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.GArgument":           {},
+		"grpc.federation.private.GetResponseArgument": {},
+		"grpc.federation.private.HArgument": {
 			"e": grpcfed.NewCELFieldType(celtypes.StringType, "E"),
 			"f": grpcfed.NewCELFieldType(celtypes.StringType, "F"),
 			"g": grpcfed.NewCELFieldType(celtypes.StringType, "G"),
 		},
-		"grpc.federation.private.IArgument": map[string]*celtypes.FieldType{},
-		"grpc.federation.private.JArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.IArgument": {},
+		"grpc.federation.private.JArgument": {
 			"i": grpcfed.NewCELFieldType(celtypes.StringType, "I"),
 		},
 	})

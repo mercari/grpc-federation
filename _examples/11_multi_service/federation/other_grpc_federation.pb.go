@@ -106,11 +106,11 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
-		"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.GetResponseArgument": {
 			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
 		},
-		"grpc.federation.private.PostArgument": map[string]*celtypes.FieldType{},
-		"grpc.federation.private.UserArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.PostArgument": {},
+		"grpc.federation.private.UserArgument": {
 			"id":   grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
 			"name": grpcfed.NewCELFieldType(celtypes.StringType, "Name"),
 		},

@@ -1048,8 +1048,8 @@ func (m *Message) DeclVariables() []*DeclVariable {
 		return nil
 	}
 	valueMap := map[string]*DeclVariable{
-		"sg":      &DeclVariable{Name: "sg", Type: "singleflight.Group"},
-		"valueMu": &DeclVariable{Name: "valueMu", Type: "sync.RWMutex"},
+		"sg":      {Name: "sg", Type: "singleflight.Group"},
+		"valueMu": {Name: "valueMu", Type: "sync.RWMutex"},
 	}
 	for _, group := range m.Message.MessageResolvers() {
 		for _, r := range group.Resolvers() {

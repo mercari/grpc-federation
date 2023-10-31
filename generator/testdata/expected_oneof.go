@@ -121,15 +121,15 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
-		"grpc.federation.private.GetResponseArgument": map[string]*celtypes.FieldType{},
-		"grpc.federation.private.MArgument":           map[string]*celtypes.FieldType{},
-		"grpc.federation.private.UserArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.GetResponseArgument": {},
+		"grpc.federation.private.MArgument":           {},
+		"grpc.federation.private.UserArgument": {
 			"user_id": grpcfed.NewCELFieldType(celtypes.StringType, "UserId"),
 		},
-		"grpc.federation.private.UserSelectionArgument": map[string]*celtypes.FieldType{
+		"grpc.federation.private.UserSelectionArgument": {
 			"value": grpcfed.NewCELFieldType(celtypes.StringType, "Value"),
 		},
-		"org.federation.UserSelection": map[string]*celtypes.FieldType{
+		"org.federation.UserSelection": {
 			"user": grpcfed.NewOneofSelectorFieldType(
 				celtypes.NewObjectType("org.federation.User"), "User",
 				[]reflect.Type{reflect.TypeOf((*UserSelection_UserA)(nil)), reflect.TypeOf((*UserSelection_UserB)(nil)), reflect.TypeOf((*UserSelection_UserC)(nil))},
