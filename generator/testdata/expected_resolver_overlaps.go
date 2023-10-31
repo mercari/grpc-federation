@@ -149,6 +149,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 
 // GetPost1 implements "org.federation.FederationService/GetPost1" method.
 func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (res *GetPostResponse1, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
@@ -168,6 +169,7 @@ func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (
 
 // GetPost2 implements "org.federation.FederationService/GetPost2" method.
 func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (res *GetPostResponse2, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

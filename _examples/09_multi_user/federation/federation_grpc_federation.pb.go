@@ -186,6 +186,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 
 // Get implements "org.federation.FederationService/Get" method.
 func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

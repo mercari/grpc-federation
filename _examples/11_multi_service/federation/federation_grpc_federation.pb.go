@@ -128,6 +128,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 
 // GetPost implements "federation.FederationService/GetPost" method.
 func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
@@ -438,6 +439,7 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 
 // GetStatus implements "federation.DebugService/GetStatus" method.
 func (s *DebugService) GetStatus(ctx context.Context, req *GetStatusRequest) (res *GetStatusResponse, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

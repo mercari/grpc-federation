@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net"
 	"os"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -142,7 +142,12 @@ func TestFederation(t *testing.T) {
 		Logger:   logger,
 		ErrorHandler: func(ctx context.Context, methodName string, err error) error {
 			federationServiceMethodName, _ := grpc.Method(ctx)
-			log.Printf("FederationServiceMethod: %s DependentMethod: %s", federationServiceMethodName, methodName)
+			grpcfed.Logger(ctx).InfoContext(
+				ctx,
+				"error handler",
+				slog.String("federation-service-method", federationServiceMethodName),
+				slog.String("dependent-method", methodName),
+			)
 			switch methodName {
 			case federation.FederationService_DependentMethod_Post_PostService_GetPost:
 				return nil
