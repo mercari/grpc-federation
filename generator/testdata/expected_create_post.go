@@ -147,6 +147,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 
 // CreatePost implements "org.federation.FederationService/CreatePost" method.
 func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostRequest) (res *CreatePostResponse, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

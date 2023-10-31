@@ -135,6 +135,7 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 
 // Get implements "federation.OtherService/Get" method.
 func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

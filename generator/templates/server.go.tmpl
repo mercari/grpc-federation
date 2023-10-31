@@ -232,6 +232,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 
 // {{ .Name }} implements "{{ .ProtoFQDN }}" method.
 func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestType }}) (res {{ .ReturnType }}, e error) {
+	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
