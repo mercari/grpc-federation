@@ -28,16 +28,10 @@ message GetResponse {
 }
 
 message UserSelection {
-  option (grpc.federation.message) = {
-    messages {
-      name: "m"
-      message: "M"
-    }
-  };
   oneof user {
     User user_a = 1 [
       (grpc.federation.field).oneof = {
-        expr: "m.value != $.value"
+        expr: "false"
         messages {
           name: "ua"
           message: "User"
@@ -49,7 +43,7 @@ message UserSelection {
 
     User user_b = 2 [
       (grpc.federation.field).oneof = {
-        expr: "m.value == $.value"
+        expr: "true"
         messages {
           name: "ub"
           message: "User"

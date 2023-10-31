@@ -190,6 +190,12 @@ testdata/missing_field_option.proto:50:3: "user" field in "federation.Post" mess
 testdata/missing_message_alias.proto:43:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
 43:    PostData data = 4;
        ^
+testdata/missing_message_alias.proto:53:3: "type" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+53:    PostType type = 1;
+       ^
+testdata/missing_message_alias.proto:54:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+54:    string title = 2;
+       ^
 testdata/missing_message_alias.proto:55:3: use "alias" in "grpc.federation.field" option, but "alias" is not defined in "grpc.federation.message" option
 55:    PostContent content = 3 [(grpc.federation.field).alias = "content"];
        ^

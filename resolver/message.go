@@ -61,13 +61,52 @@ func (m *Message) HasRule() bool {
 	if m.HasCustomResolver() {
 		return true
 	}
-	if len(m.Rule.Resolvers) != 0 {
+	if m.HasResolvers() {
 		return true
 	}
 	if m.HasRuleEveryFields() {
 		return true
 	}
 	return false
+}
+
+func (m *Message) HasResolvers() bool {
+	if m.Rule == nil {
+		return false
+	}
+	if len(m.Rule.Resolvers) != 0 {
+		return true
+	}
+	for _, field := range m.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		if len(field.Rule.Oneof.Resolvers) != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Message) MessageResolvers() []MessageResolverGroup {
+	if m.Rule == nil {
+		return nil
+	}
+
+	ret := m.Rule.Resolvers
+	for _, field := range m.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		ret = append(ret, field.Rule.Oneof.Resolvers...)
+	}
+	return ret
 }
 
 func (m *Message) HasCELValue() bool {
