@@ -9,6 +9,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -67,6 +74,28 @@ func dialer(ctx context.Context, address string) (net.Conn, error) {
 func TestFederation(t *testing.T) {
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
+
+	if os.Getenv("ENABLE_JAEGER") != "" {
+		exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(
+				resource.NewWithAttributes(
+					semconv.SchemaURL,
+					semconv.ServiceNameKey.String("example09/multi_user"),
+					semconv.ServiceVersionKey.String("1.0.0"),
+					attribute.String("environment", "dev"),
+				),
+			),
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		)
+		defer tp.Shutdown(ctx)
+		otel.SetTextMapPropagator(propagation.TraceContext{})
+		otel.SetTracerProvider(tp)
+	}
 
 	conn, err := grpc.DialContext(ctx, "", grpc.WithContextDialer(dialer), grpc.WithInsecure())
 	if err != nil {

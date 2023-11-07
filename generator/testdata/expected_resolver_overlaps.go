@@ -13,6 +13,8 @@ import (
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/singleflight"
 
 	post "example/post"
@@ -94,6 +96,7 @@ type FederationService struct {
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
 	env          *cel.Env
+	tracer       trace.Tracer
 	client       *FederationServiceDependentClientSet
 }
 
@@ -141,6 +144,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		logger:       logger,
 		errorHandler: errorHandler,
 		env:          env,
+		tracer:       otel.Tracer("org.federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
@@ -149,6 +153,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 
 // GetPost1 implements "org.federation.FederationService/GetPost1" method.
 func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (res *GetPostResponse1, e error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/GetPost1")
+	defer span.End()
+
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
@@ -161,6 +168,7 @@ func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (
 		Id:     req.Id,
 	})
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
@@ -169,6 +177,9 @@ func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (
 
 // GetPost2 implements "org.federation.FederationService/GetPost2" method.
 func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (res *GetPostResponse2, e error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/GetPost2")
+	defer span.End()
+
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
@@ -181,6 +192,7 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (
 		Id:     req.Id,
 	})
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
@@ -189,6 +201,9 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (
 
 // resolve_Org_Federation_GetPostResponse1 resolve "org.federation.GetPostResponse1" message.
 func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.Context, req *Org_Federation_GetPostResponse1Argument[*FederationServiceDependentClientSet]) (*GetPostResponse1, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse1")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse1", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse1Argument(req)))
 	var (
 		sg        singleflight.Group
@@ -215,6 +230,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 		{
 			_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 			args.Id = _value.(string)
@@ -243,6 +259,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "post", envOpts, evalValues, reflect.TypeOf((*Post)(nil)))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Post = _value.(*Post)
@@ -254,6 +271,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 
 // resolve_Org_Federation_GetPostResponse2 resolve "org.federation.GetPostResponse2" message.
 func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.Context, req *Org_Federation_GetPostResponse2Argument[*FederationServiceDependentClientSet]) (*GetPostResponse2, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse2")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse2", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse2Argument(req)))
 	var (
 		sg        singleflight.Group
@@ -280,6 +300,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 		{
 			_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 			args.Id = _value.(string)
@@ -308,6 +329,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "post", envOpts, evalValues, reflect.TypeOf((*Post)(nil)))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Post = _value.(*Post)
@@ -319,6 +341,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 
 // resolve_Org_Federation_Post resolve "org.federation.Post" message.
 func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req *Org_Federation_PostArgument[*FederationServiceDependentClientSet]) (*Post, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.Post")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
 	var (
 		sg       singleflight.Group
@@ -343,6 +368,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		{
 			_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 			args.Id = _value.(string)
@@ -352,6 +378,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	})
 	if err != nil {
 		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 	}
@@ -373,6 +400,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "res.post.id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Id = _value.(string)

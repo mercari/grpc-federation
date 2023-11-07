@@ -13,6 +13,8 @@ import (
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/singleflight"
 
 	post "example/post"
@@ -91,6 +93,7 @@ type FederationService struct {
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
 	env          *cel.Env
+	tracer       trace.Tracer
 	client       *FederationServiceDependentClientSet
 }
 
@@ -139,6 +142,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		logger:       logger,
 		errorHandler: errorHandler,
 		env:          env,
+		tracer:       otel.Tracer("org.federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
@@ -147,6 +151,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 
 // CreatePost implements "org.federation.FederationService/CreatePost" method.
 func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostRequest) (res *CreatePostResponse, e error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/CreatePost")
+	defer span.End()
+
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
@@ -161,6 +168,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 		UserId:  req.UserId,
 	})
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
@@ -169,6 +177,9 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 
 // resolve_Org_Federation_CreatePost resolve "org.federation.CreatePost" message.
 func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *Org_Federation_CreatePostArgument[*FederationServiceDependentClientSet]) (*CreatePost, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePost")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.CreatePostArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
@@ -181,6 +192,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "$.title", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Title = _value.(string)
@@ -189,6 +201,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "$.content", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Content = _value.(string)
@@ -197,6 +210,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.UserId = _value.(string)
@@ -208,6 +222,9 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 
 // resolve_Org_Federation_CreatePostResponse resolve "org.federation.CreatePostResponse" message.
 func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx context.Context, req *Org_Federation_CreatePostResponseArgument[*FederationServiceDependentClientSet]) (*CreatePostResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePostResponse")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.CreatePostResponse", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostResponseArgument(req)))
 	var (
 		sg      singleflight.Group
@@ -239,6 +256,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		{
 			_value, err := grpcfed.EvalCEL(s.env, "$.title", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 			args.Title = _value.(string)
@@ -247,6 +265,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		{
 			_value, err := grpcfed.EvalCEL(s.env, "$.content", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 			args.Content = _value.(string)
@@ -255,6 +274,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		{
 			_value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 			if err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 			args.UserId = _value.(string)
@@ -287,6 +307,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		{
 			_value, err := grpcfed.EvalCEL(s.env, "cp", envOpts, evalValues, reflect.TypeOf((*CreatePost)(nil)))
 			if err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 			args.Post = s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(_value.(*CreatePost))
@@ -296,6 +317,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	})
 	if err != nil {
 		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_CreatePost, err); err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 	}
@@ -318,6 +340,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "p", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Post = s.cast_Org_Post_Post__to__Org_Federation_Post(_value.(*post.Post))

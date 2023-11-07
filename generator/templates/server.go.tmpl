@@ -22,6 +22,8 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 	"github.com/google/cel-go/cel"
@@ -143,6 +145,7 @@ type {{ $serviceName }} struct {
 	logger *slog.Logger
 	errorHandler grpcfed.ErrorHandler
 	env *cel.Env
+	tracer trace.Tracer
 	{{- if $customResolvers }}
 	resolver {{ $serviceName }}Resolver
 	{{- end }}
@@ -215,6 +218,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		logger: logger,
 		errorHandler: errorHandler,
 		env: env,
+		tracer: otel.Tracer("{{ .FQDN }}"),
 		{{- if $customResolvers }}
 		resolver: cfg.Resolver,
 		{{- end }}
@@ -230,6 +234,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 
 // {{ .Name }} implements "{{ .ProtoFQDN }}" method.
 func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestType }}) (res {{ .ReturnType }}, e error) {
+	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
+	defer span.End()
+
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
@@ -255,6 +262,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	})
 	{{- end }}
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
@@ -268,6 +276,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 {{ if .HasRule }}
 // {{ .ResolverName }} resolve "{{ .ProtoFQDN }}" message.
 func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .RequestType }}[*{{ $serviceName }}DependentClientSet]) (*{{ .ReturnType }}, error) {
+	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  {{ .ProtoFQDN }}", slog.Any("message_args", s.logvalue_{{ .RequestType }}(req)))
 	{{- $declVariables := .DeclVariables }}
 	{{- if $declVariables }}
@@ -303,6 +314,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{ end }}
 	{{- if $msgResolvers }}
 	if err := eg.Wait(); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	{{- end }}
@@ -323,6 +335,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	// `custom_resolver = true` in "grpc.federation.message" option.
 	ret, err := s.resolver.{{ .CustomResolverName }}(ctx, req)
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	{{- else }}
@@ -347,6 +360,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			{{- end }}
 		})
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 	}
@@ -358,6 +372,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- range $oneofFields }}
 	oneof_{{ .Name }}, err := grpcfed.EvalCEL(s.env, "{{ .Expr }}", envOpts, evalValues, reflect.TypeOf(true))
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	{{- end }}
@@ -381,6 +396,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{ end }}
 		{{- if $oneofMsgResolvers }}
 		if err := eg.Wait(); err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		{{- end }}
@@ -388,6 +404,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- if .By }}
 		_value, err := grpcfed.EvalCEL(s.env, "{{ .By }}", envOpts, evalValues, {{ .OutType }})
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		{{- end }}
@@ -411,6 +428,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{ end }}
 		{{- if $oneofMsgResolvers }}
 		if err := eg.Wait(); err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		{{- end }}
@@ -418,6 +436,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- if $defaultOneofField.By }}
 		_value, err := grpcfed.EvalCEL(s.env, "{{ $defaultOneofField.By }}", envOpts, evalValues, {{ $defaultOneofField.OutType }})
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		{{- end }}
@@ -429,6 +448,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.{{ .Name }} = {{ .Value }}
@@ -612,6 +632,7 @@ args := &{{ .Resolver.RequestType }}{
 {
 	_value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	{{- if ne (len .InlineFields) 0 }}
@@ -670,6 +691,7 @@ b = backoff.WithContext(b, {{ .Ctx }})
 {{- define "errorHandler" }}
 {{- if .Resolver.HasErrorHandler }}
 if err := s.errorHandler({{ .Ctx }}, {{ .Resolver.ServiceName }}_DependentMethod_{{ .Resolver.DependentMethodName }}, err); err != nil {
+	grpcfed.RecordErrorToSpan(ctx, err)
 	return nil, err
 }
 {{- else }}
@@ -733,6 +755,7 @@ grpcfed.GoWithRecover(eg, func() (any, error) {
 })
 {{- end }}
 if err := eg.Wait(); err != nil {
+	grpcfed.RecordErrorToSpan(ctx, err)
 	return nil, err
 }
 {{- if .Resolver.ExistsEnd }}
