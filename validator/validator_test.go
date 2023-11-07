@@ -384,9 +384,9 @@ testdata/message_rule_cyclic_dependency.proto:22:28: found cyclic dependency for
                                 ^
 `},
 		{file: "invalid_validation_return_type.proto", expected: `
-testdata/invalid_validation_return_type.proto:39:17: validation rule must always return a boolean value
-39:      validations {
-                     ^
+testdata/invalid_validation_return_type.proto:43:15: validation rule must always return a boolean value
+43:          rule: "post.id"
+                   ^
 `},
 	}
 	ctx := context.Background()

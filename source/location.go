@@ -173,7 +173,8 @@ type ArgumentOption struct {
 }
 
 type MessageValidationOption struct {
-	Idx int
+	Idx  int
+	Rule bool
 }
 
 // Position represents source position in proto file.
@@ -922,6 +923,22 @@ func MessageValidationLocation(fileName, msgName string, idx int) *Location {
 			Option: &MessageOption{
 				Validations: &MessageValidationOption{
 					Idx: idx,
+				},
+			},
+		},
+	}
+}
+
+// MessageValidationRuleLocation creates location for validations[*].error.rule in grpc.federation.message.
+func MessageValidationRuleLocation(fileName, msgName string, idx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				Validations: &MessageValidationOption{
+					Idx:  idx,
+					Rule: true,
 				},
 			},
 		},

@@ -995,7 +995,7 @@ func (r *Resolver) resolveMessageRuleValidations(ctx *context, validations []*fe
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MessageValidationLocation(ctx.fileName(), ctx.messageName(), i),
+					source.MessageValidationRuleLocation(ctx.fileName(), ctx.messageName(), i),
 				),
 			)
 			continue
@@ -2141,7 +2141,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MessageValidationLocation(msg.File.Name, msg.Name, valIdx),
+					source.MessageValidationRuleLocation(msg.File.Name, msg.Name, valIdx),
 				),
 			)
 			continue
@@ -2150,7 +2150,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 			ctx.addError(
 				ErrWithLocation(
 					"validation rule must always return a boolean value",
-					source.MessageValidationLocation(msg.File.Name, msg.Name, valIdx),
+					source.MessageValidationRuleLocation(msg.File.Name, msg.Name, valIdx),
 				),
 			)
 		}
