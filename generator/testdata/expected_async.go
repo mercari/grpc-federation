@@ -12,6 +12,8 @@ import (
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 )
@@ -146,6 +148,7 @@ type FederationService struct {
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
 	env          *cel.Env
+	tracer       trace.Tracer
 	client       *FederationServiceDependentClientSet
 }
 
@@ -203,12 +206,16 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		logger:       logger,
 		errorHandler: errorHandler,
 		env:          env,
+		tracer:       otel.Tracer("org.federation.FederationService"),
 		client:       &FederationServiceDependentClientSet{},
 	}, nil
 }
 
 // Get implements "org.federation.FederationService/Get" method.
 func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/Get")
+	defer span.End()
+
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
@@ -220,6 +227,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 		Client: s.client,
 	})
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
@@ -228,6 +236,9 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 
 // resolve_Org_Federation_A resolve "org.federation.A" message.
 func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *Org_Federation_AArgument[*FederationServiceDependentClientSet]) (*A, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.A")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.A", slog.Any("message_args", s.logvalue_Org_Federation_AArgument(req)))
 	var (
 		sg      singleflight.Group
@@ -289,6 +300,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	})
 
 	if err := eg.Wait(); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 
@@ -304,6 +316,9 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 
 // resolve_Org_Federation_AA resolve "org.federation.AA" message.
 func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *Org_Federation_AAArgument[*FederationServiceDependentClientSet]) (*AA, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.AA")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.AA", slog.Any("message_args", s.logvalue_Org_Federation_AAArgument(req)))
 
 	// create a message value to be returned.
@@ -318,6 +333,9 @@ func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *
 
 // resolve_Org_Federation_AB resolve "org.federation.AB" message.
 func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *Org_Federation_ABArgument[*FederationServiceDependentClientSet]) (*AB, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.AB")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.AB", slog.Any("message_args", s.logvalue_Org_Federation_ABArgument(req)))
 
 	// create a message value to be returned.
@@ -332,6 +350,9 @@ func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *
 
 // resolve_Org_Federation_B resolve "org.federation.B" message.
 func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *Org_Federation_BArgument[*FederationServiceDependentClientSet]) (*B, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.B")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.B", slog.Any("message_args", s.logvalue_Org_Federation_BArgument(req)))
 
 	// create a message value to be returned.
@@ -346,6 +367,9 @@ func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *O
 
 // resolve_Org_Federation_C resolve "org.federation.C" message.
 func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *Org_Federation_CArgument[*FederationServiceDependentClientSet]) (*C, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.C")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.C", slog.Any("message_args", s.logvalue_Org_Federation_CArgument(req)))
 
 	// create a message value to be returned.
@@ -360,6 +384,9 @@ func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *O
 
 // resolve_Org_Federation_D resolve "org.federation.D" message.
 func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *Org_Federation_DArgument[*FederationServiceDependentClientSet]) (*D, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.D")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.D", slog.Any("message_args", s.logvalue_Org_Federation_DArgument(req)))
 
 	// create a message value to be returned.
@@ -374,6 +401,9 @@ func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *O
 
 // resolve_Org_Federation_E resolve "org.federation.E" message.
 func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *Org_Federation_EArgument[*FederationServiceDependentClientSet]) (*E, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.E")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.E", slog.Any("message_args", s.logvalue_Org_Federation_EArgument(req)))
 
 	// create a message value to be returned.
@@ -388,6 +418,9 @@ func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *O
 
 // resolve_Org_Federation_F resolve "org.federation.F" message.
 func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *Org_Federation_FArgument[*FederationServiceDependentClientSet]) (*F, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.F")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.F", slog.Any("message_args", s.logvalue_Org_Federation_FArgument(req)))
 
 	// create a message value to be returned.
@@ -402,6 +435,9 @@ func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *O
 
 // resolve_Org_Federation_G resolve "org.federation.G" message.
 func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *Org_Federation_GArgument[*FederationServiceDependentClientSet]) (*G, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.G")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.G", slog.Any("message_args", s.logvalue_Org_Federation_GArgument(req)))
 
 	// create a message value to be returned.
@@ -416,6 +452,9 @@ func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *O
 
 // resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
 func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) (*GetResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
 		sg      singleflight.Group
@@ -500,6 +539,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					{
 						_value, err := grpcfed.EvalCEL(s.env, "a.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
+							grpcfed.RecordErrorToSpan(ctx, err)
 							return nil, err
 						}
 						args.A = _value.(string)
@@ -562,6 +602,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					{
 						_value, err := grpcfed.EvalCEL(s.env, "b.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
+							grpcfed.RecordErrorToSpan(ctx, err)
 							return nil, err
 						}
 						args.B = _value.(string)
@@ -581,6 +622,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				return nil, nil
 			})
 			if err := eg.Wait(); err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 
@@ -604,6 +646,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				{
 					_value, err := grpcfed.EvalCEL(s.env, "c.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
+						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}
 					args.C = _value.(string)
@@ -612,6 +655,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				{
 					_value, err := grpcfed.EvalCEL(s.env, "d.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
+						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}
 					args.D = _value.(string)
@@ -676,6 +720,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					{
 						_value, err := grpcfed.EvalCEL(s.env, "a.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
+							grpcfed.RecordErrorToSpan(ctx, err)
 							return nil, err
 						}
 						args.A = _value.(string)
@@ -738,6 +783,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					{
 						_value, err := grpcfed.EvalCEL(s.env, "b.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
+							grpcfed.RecordErrorToSpan(ctx, err)
 							return nil, err
 						}
 						args.B = _value.(string)
@@ -757,6 +803,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				return nil, nil
 			})
 			if err := eg.Wait(); err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 
@@ -780,6 +827,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				{
 					_value, err := grpcfed.EvalCEL(s.env, "c.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
+						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}
 					args.C = _value.(string)
@@ -788,6 +836,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				{
 					_value, err := grpcfed.EvalCEL(s.env, "d.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
+						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}
 					args.D = _value.(string)
@@ -835,6 +884,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			return nil, nil
 		})
 		if err := eg.Wait(); err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 
@@ -859,6 +909,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			{
 				_value, err := grpcfed.EvalCEL(s.env, "e.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
+					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}
 				args.E = _value.(string)
@@ -867,6 +918,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			{
 				_value, err := grpcfed.EvalCEL(s.env, "f.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
+					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}
 				args.F = _value.(string)
@@ -875,6 +927,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			{
 				_value, err := grpcfed.EvalCEL(s.env, "g.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
+					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}
 				args.G = _value.(string)
@@ -938,6 +991,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			{
 				_value, err := grpcfed.EvalCEL(s.env, "i.name", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
+					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}
 				args.I = _value.(string)
@@ -958,6 +1012,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	})
 
 	if err := eg.Wait(); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 
@@ -981,6 +1036,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "h.name", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Hname = _value.(string)
@@ -989,6 +1045,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	{
 		_value, err := grpcfed.EvalCEL(s.env, "j.name", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		ret.Jname = _value.(string)
@@ -1000,6 +1057,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 
 // resolve_Org_Federation_H resolve "org.federation.H" message.
 func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *Org_Federation_HArgument[*FederationServiceDependentClientSet]) (*H, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.H")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.H", slog.Any("message_args", s.logvalue_Org_Federation_HArgument(req)))
 
 	// create a message value to be returned.
@@ -1014,6 +1074,9 @@ func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *O
 
 // resolve_Org_Federation_I resolve "org.federation.I" message.
 func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *Org_Federation_IArgument[*FederationServiceDependentClientSet]) (*I, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.I")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.I", slog.Any("message_args", s.logvalue_Org_Federation_IArgument(req)))
 
 	// create a message value to be returned.
@@ -1028,6 +1091,9 @@ func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *O
 
 // resolve_Org_Federation_J resolve "org.federation.J" message.
 func (s *FederationService) resolve_Org_Federation_J(ctx context.Context, req *Org_Federation_JArgument[*FederationServiceDependentClientSet]) (*J, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.J")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.J", slog.Any("message_args", s.logvalue_Org_Federation_JArgument(req)))
 
 	// create a message value to be returned.

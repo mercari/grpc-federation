@@ -10,7 +10,16 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/anypb"
 
@@ -124,7 +133,34 @@ func TestFederation(t *testing.T) {
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
-	conn, err := grpc.DialContext(ctx, "", grpc.WithContextDialer(dialer), grpc.WithInsecure())
+	if os.Getenv("ENABLE_JAEGER") != "" {
+		exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(
+				resource.NewWithAttributes(
+					semconv.SchemaURL,
+					semconv.ServiceNameKey.String("example02/simple"),
+					semconv.ServiceVersionKey.String("1.0.0"),
+					attribute.String("environment", "dev"),
+				),
+			),
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		)
+		defer tp.Shutdown(ctx)
+		otel.SetTextMapPropagator(propagation.TraceContext{})
+		otel.SetTracerProvider(tp)
+	}
+
+	conn, err := grpc.DialContext(
+		ctx, "",
+		grpc.WithContextDialer(dialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,8 +169,7 @@ func TestFederation(t *testing.T) {
 	postClient = post.NewPostServiceClient(conn)
 	userClient = user.NewUserServiceClient(conn)
 
-	grpcServer := grpc.NewServer()
-
+	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -162,6 +197,7 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	profile, err := anypb.New(&user.User{
 		Name: "foo",
 	})

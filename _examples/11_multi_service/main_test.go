@@ -8,6 +8,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"example/federation"
 )
@@ -34,6 +41,30 @@ func (r *Resolver) Resolve_Federation_GetResponse_Post(
 }
 
 func TestFederation(t *testing.T) {
+	ctx := context.Background()
+
+	if os.Getenv("ENABLE_JAEGER") != "" {
+		exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(
+				resource.NewWithAttributes(
+					semconv.SchemaURL,
+					semconv.ServiceNameKey.String("example11/multi_service"),
+					semconv.ServiceVersionKey.String("1.0.0"),
+					attribute.String("environment", "dev"),
+				),
+			),
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		)
+		defer tp.Shutdown(ctx)
+		otel.SetTextMapPropagator(propagation.TraceContext{})
+		otel.SetTracerProvider(tp)
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -59,7 +90,6 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ctx := context.Background()
 		got, err := svc.GetPost(ctx, &federation.GetPostRequest{Id: requestID})
 		if err != nil {
 			t.Fatal(err)
@@ -84,7 +114,6 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ctx := context.Background()
 		got, err := svc.GetStatus(ctx, &federation.GetStatusRequest{})
 		if err != nil {
 			t.Fatal(err)
@@ -107,7 +136,6 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ctx := context.Background()
 		got, err := svc.Get(ctx, &federation.GetRequest{})
 		if err != nil {
 			t.Fatal(err)

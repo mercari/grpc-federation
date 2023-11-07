@@ -11,6 +11,8 @@ import (
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -78,6 +80,7 @@ type FederationService struct {
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
 	env          *cel.Env
+	tracer       trace.Tracer
 	resolver     FederationServiceResolver
 	client       *FederationServiceDependentClientSet
 }
@@ -113,6 +116,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		logger:       logger,
 		errorHandler: errorHandler,
 		env:          env,
+		tracer:       otel.Tracer("org.federation.FederationService"),
 		resolver:     cfg.Resolver,
 		client:       &FederationServiceDependentClientSet{},
 	}, nil
@@ -120,6 +124,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 
 // GetPost implements "org.federation.FederationService/GetPost" method.
 func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/GetPost")
+	defer span.End()
+
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	defer func() {
 		if r := recover(); r != nil {
@@ -132,6 +139,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 		Id:     req.Id,
 	})
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, s.logger, err)
 		return nil, err
 	}
@@ -140,12 +148,16 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 
 // resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse" message.
 func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse")
+	defer span.End()
+
 	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponseArgument(req)))
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
 	ret, err := s.resolver.Resolve_Org_Federation_GetPostResponse(ctx, req)
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 
