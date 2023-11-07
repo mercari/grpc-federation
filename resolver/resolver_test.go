@@ -2662,6 +2662,14 @@ func TestValidation(t *testing.T) {
 							false,
 							true,
 						).
+						AddValidation(
+							"MessageValidation0",
+							testutil.NewCELValueBuilder("post.id == 'some-id'", resolver.BoolType).Build(t),
+						).
+						AddValidation(
+							"MessageValidation1",
+							testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().

@@ -562,6 +562,17 @@ func (b *MessageRuleBuilder) AddMessageDependency(name string, msg *resolver.Mes
 	return b
 }
 
+func (b *MessageRuleBuilder) AddValidation(name string, rule *resolver.CELValue) *MessageRuleBuilder {
+	validation := &resolver.ValidationRule{
+		Name: name,
+		Error: &resolver.ValidationError{
+			ValidationRule: rule,
+		},
+	}
+	b.rule.Validations = append(b.rule.Validations, validation)
+	return b
+}
+
 func (b *MessageRuleBuilder) SetCustomResolver(v bool) *MessageRuleBuilder {
 	b.rule.CustomResolver = v
 	return b
@@ -891,6 +902,24 @@ func NewMessageArgumentValueBuilder(ref, filtered *resolver.Type, expr string) *
 func (b *MessageArgumentValueBuilder) Build(t *testing.T) *resolver.Value {
 	t.Helper()
 	return b.value
+}
+
+type CELValueBuilder struct {
+	cel *resolver.CELValue
+}
+
+func NewCELValueBuilder(expr string, out *resolver.Type) *CELValueBuilder {
+	return &CELValueBuilder{
+		cel: &resolver.CELValue{
+			Expr: expr,
+			Out:  out,
+		},
+	}
+}
+
+func (b *CELValueBuilder) Build(t *testing.T) *resolver.CELValue {
+	t.Helper()
+	return b.cel
 }
 
 type NameReferenceValueBuilder struct {
