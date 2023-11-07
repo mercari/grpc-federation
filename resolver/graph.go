@@ -368,12 +368,12 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 		}
 	}
 
-	var independentValidationNodes []*MessageDependencyGraphNode
+	var rootValidationNodes []*MessageDependencyGraphNode
 	for valIdx, validation := range rule.Validations {
 		validationNode := newMessageDependencyGraphNodeByValidation(baseMsg, validation)
 		referenceNames := validation.Error.ValidationRule.ReferenceNames()
 		if len(referenceNames) == 0 {
-			independentValidationNodes = append(independentValidationNodes, validationNode)
+			rootValidationNodes = append(rootValidationNodes, validationNode)
 			continue
 		}
 		for _, ref := range referenceNames {
@@ -436,7 +436,7 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 			}
 		}
 	}
-	roots = append(roots, independentValidationNodes...)
+	roots = append(roots, rootValidationNodes...)
 	sort.Slice(roots, func(i, j int) bool {
 		return roots[i].FQDN() < roots[j].FQDN()
 	})
