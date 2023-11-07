@@ -2,6 +2,8 @@ MAKEFILE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 GOBIN := $(MAKEFILE_DIR)/../../bin
 PATH := $(GOBIN):$(PATH)
 
+JAEGER_IMAGE := jaegertracing/all-in-one:latest
+
 .PHONY: generate
 generate:
 	$(GOBIN)/buf generate
@@ -21,3 +23,17 @@ grpc-federation/generate:
 .PHONY: grpc-federation/watch
 grpc-federation/watch:
 	@$(GOBIN)/grpc-federation-generator -w
+
+.PHONY: jaeger/start
+jaeger/start:
+	@docker run \
+		-e COLLECTOR_OTLP_ENABLED=true \
+		-p 16686:16686 \
+		-p 4317:4317 \
+		-p 4318:4318 \
+		-d \
+		$(JAEGER_IMAGE)
+
+.PHONY: jaeger/stop
+jaeger/stop:
+	@docker stop $(shell docker ps -q  --filter ancestor=$(JAEGER_IMAGE))
