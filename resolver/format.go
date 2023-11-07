@@ -313,7 +313,7 @@ func (v *ValidationRule) protoFormatError(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
 	var elems []string
 	elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("rule: %q", v.Error.ValidationRule.Expr))
-	return indent + fmt.Sprintf("error: {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+	return indent + fmt.Sprintf("error {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
 func (a *Argument) ProtoFormat(opt *ProtoFormatOption, isRequestArg bool) string {
