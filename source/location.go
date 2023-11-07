@@ -913,7 +913,7 @@ func MessageDependencyArgumentInlineLocation(fileName, msgName string, idx, argI
 	}
 }
 
-// MessageValidationLocation creates location for messages[*].validations[*] in grpc.federation.message.
+// MessageValidationLocation creates location for validations[*] in grpc.federation.message.
 func MessageValidationLocation(fileName, msgName string, idx int) *Location {
 	return &Location{
 		FileName: fileName,
