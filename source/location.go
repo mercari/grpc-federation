@@ -105,9 +105,10 @@ type OneofOption struct {
 
 // MessageOption represents grpc.federation.message option location.
 type MessageOption struct {
-	Resolver *ResolverOption
-	Messages *MessageDependencyOption
-	Alias    bool
+	Resolver    *ResolverOption
+	Messages    *MessageDependencyOption
+	Validations *MessageValidationOption
+	Alias       bool
 }
 
 // ResolverOption represents resolver location of grpc.federation.message option.
@@ -169,6 +170,10 @@ type ArgumentOption struct {
 	Name   bool
 	By     bool
 	Inline bool
+}
+
+type MessageValidationOption struct {
+	Idx int
 }
 
 // Position represents source position in proto file.
@@ -663,7 +668,7 @@ func OneofOptionLocation(fileName, msgName, oneofName string) *Location {
 	}
 }
 
-// MessageAliasOptionLocation creates location for alias in grpc.federaiton.message option.
+// MessageAliasLocation creates location for alias in grpc.federaiton.message option.
 func MessageAliasLocation(fileName, msgName string) *Location {
 	return &Location{
 		FileName: fileName,
@@ -902,6 +907,21 @@ func MessageDependencyArgumentInlineLocation(fileName, msgName string, idx, argI
 						Idx:    argIdx,
 						Inline: true,
 					},
+				},
+			},
+		},
+	}
+}
+
+// MessageValidationLocation creates location for messages[*].validations[*] in grpc.federation.message.
+func MessageValidationLocation(fileName, msgName string, idx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				Validations: &MessageValidationOption{
+					Idx: idx,
 				},
 			},
 		},

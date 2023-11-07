@@ -1,0 +1,601 @@
+syntax = "proto3";
+
+package grpc.federation;
+
+import "google/protobuf/descriptor.proto";
+import "google/rpc/code.proto";
+import "google/rpc/error_details.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
+
+extend google.protobuf.ServiceOptions {
+  ServiceRule service = 70000;
+}
+
+extend google.protobuf.MethodOptions {
+  MethodRule method = 70000;
+}
+
+extend google.protobuf.MessageOptions {
+  MessageRule message = 70000;
+}
+
+extend google.protobuf.FieldOptions {
+  FieldRule field = 70000;
+}
+
+extend google.protobuf.EnumOptions {
+  EnumRule enum = 70000;
+}
+
+extend google.protobuf.EnumValueOptions {
+  EnumValueRule enum_value = 70000;
+}
+
+extend google.protobuf.OneofOptions {
+  OneofRule oneof = 70000;
+}
+
+message EnumRule {
+  // alias mapping between enums defined in other packages and enums defined on the federation service side.
+  // The alias is the FQDN ( <package-name>.<enum-name> ) to the enum.
+  // If this definition exists, type conversion is automatically performed before the enum value assignment operation.
+  // If a enum with this option has a value that is not present in the enum specified by alias, and the alias option is not specified for that value, an error is occurred.
+  optional string alias = 1;
+}
+
+message EnumValueRule {
+  // specifies the default value of the enum.
+  // All values other than those specified in alias will be default values.
+  optional bool default = 1;
+  // alias can be used when alias is specified in grpc.federation.enum option,
+  // and specifies the value name to be referenced among the enums specified in alias of enum option.
+  // multiple value names can be specified for alias.
+  repeated string alias = 2;
+}
+
+message OneofRule {}
+
+// ServiceRule define GRPC Federation rules for the service.
+message ServiceRule {
+  // dependencies defines a unique name for all services on which federation service depends.
+  // The name will be used when creating the gRPC client.
+  repeated ServiceDependency dependencies = 1;
+}
+
+// ServiceDependency assigns a uniquely determined name to the service.
+message ServiceDependency {
+  // name to be used when initializing the gRPC client.
+  optional string name = 1;
+  // service is the name of the dependent service.
+  string service = 2;
+}
+
+message MethodRule {
+  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
+  // If you want to handle this error, you need to implement a custom error handler in Go.
+  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
+  optional string timeout = 1;
+}
+
+// MessageRule define GRPC Federation rules for the message.
+message MessageRule {
+  // resolver defines how to call methods to obtain the values needed to compose the message.
+  optional Resolver resolver = 1;
+  // messages defines a list of dependent messages that must be retrieved to compose a message.
+  repeated Message messages = 2;
+  // if custom_resolver is true, the resolver for this message is implemented by Go.
+  // If there are any values retrieved by resolver or messages, they are passed as arguments for custom resolver.
+  // Each field of the message returned by the custom resolver is automatically bound.
+  // If you want to change the binding process for a particular field, set `custom_resolver=true` option for that field.
+  optional bool custom_resolver = 3;
+  // alias mapping between messages defined in other packages and messages defined on the federation service side.
+  // The alias is the FQDN ( <package-name>.<message-name> ) to the message.
+  // If this definition exists, type conversion is automatically performed before the field assignment operation.
+  // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
+  optional string alias = 4;
+  // validations defines a list of validations that must run using variables defined within the current scope.
+  // The validations in the same Validation block run in order, starting from the validation that is ready for evaluation.
+  // It determines success or failure when all the validations in the same Validation block have been completed.
+  // If the Validation block is marked as failure, an error is returned without waiting for the other Validation blocks.
+  repeated Validation validations = 5;
+}
+
+// Resolver define the gRPC method, how to call it, and which value to use in the return value.
+message Resolver {
+  // method specify the FQDN for the gRPC method. format is `<package-name>.<service-name>/<method-name>`.
+  string method = 1;
+  // request specify request parameters for the gRPC method.
+  repeated MethodRequest request = 2;
+  // response specify which value in the gRPC method response is referenced by which name.
+  repeated MethodResponse response = 3;
+  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
+  // If you want to handle this error, you need to implement a custom error handler in Go.
+  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
+  optional string timeout = 4;
+  // retry specifies the retry policy if the method call fails.
+  optional RetryPolicy retry = 5;
+}
+
+// RetryPolicy define the retry policy if the method call fails.
+message RetryPolicy {
+  oneof policy {
+    // retry according to the "constant" policy.
+    RetryPolicyConstant constant = 1;
+    // retry according to the "exponential backoff" policy.
+    // The following Go library is used in the implementation,
+    // so please refer to the library documentation for how to specify each parameter.
+    // https://pkg.go.dev/github.com/cenkalti/backoff/v4#section-readme.
+    RetryPolicyExponential exponential = 2;
+  }
+}
+
+// RetryPolicyConstant define "constant" based retry policy.
+message RetryPolicyConstant {
+  // interval value. ( default value is 1s ).
+  optional string interval = 1;
+  // max retry count. ( default value is 5. If zero is specified, it never stops )
+  optional uint64 max_retries = 2;
+}
+
+// RetryPolicyExponential define "exponential backoff" based retry policy.
+message RetryPolicyExponential {
+  // initial interval value. ( default value is "500ms" ).
+  optional string initial_interval = 1;
+  // randomization factor value. ( default value is 0.5 ).
+  optional double randomization_factor = 2;
+  // multiplier. ( default value is 1.5 ).
+  optional double multiplier = 3;
+  // max interval value. ( default value is "60s" ).
+  optional string max_interval = 4;
+  // max retry count. ( default value is 5. If zero is specified, it never stops ).
+  optional uint64 max_retries = 5;
+}
+
+// MethodRequest define parameters to be used for gRPC method request.
+message MethodRequest {
+  // field name of the request message.
+  string field = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  optional string by = 2;
+  // double literal value.
+  optional double double = 3;
+  // repeated double literal values.
+  repeated double doubles = 4;
+  // float literal value.
+  optional float float = 5;
+  // repeated float literal values.
+  repeated float floats = 6;
+  // int32 literal value.
+  optional int32 int32 = 7;
+  // repeated int32 literal values.
+  repeated int32 int32s = 8;
+  // int64 literal value.
+  optional int64 int64 = 9;
+  // repeated int64 literal values.
+  repeated int64 int64s = 10;
+  // uint32 literal value.
+  optional uint32 uint32 = 11;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 12;
+  // uint64 literal value.
+  optional uint64 uint64 = 13;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 14;
+  // sint32 literal value.
+  optional sint32 sint32 = 15;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 16;
+  // sint64 literal value.
+  optional sint64 sint64 = 17;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 18;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 19;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 20;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 21;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 22;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 23;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 24;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 25;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 26;
+  // bool literal value.
+  optional bool bool = 27;
+  // repeated bool literal values.
+  repeated bool bools = 28;
+  // string literal value.
+  optional string string = 29;
+  // repeated string literal values.
+  repeated string strings = 30;
+  // bytes literal value.
+  optional bytes byte_string = 31;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 32;
+  // message literal value.
+  optional MessageValue message = 33;
+  // repeated message literal values.
+  repeated MessageValue messages = 34;
+  // enum literal value.
+  optional string enum = 35;
+  // repeated enum literal values.
+  repeated string enums = 36;
+  // env literal value.
+  optional string env = 37;
+  // repeated env literal values.
+  repeated string envs = 38;
+}
+
+// MethodResponse define which value of the method response is referenced.
+message MethodResponse {
+  // name specify the unique name that can be used in a `MessageRule` / `FieldRule` for the same message for a specific field in the response.
+  optional string name = 1;
+  // field name in response message.
+  optional string field = 2;
+  // autobind if the value referenced by `field` is a message type,
+  // the value of a field with the same name and type as the field name of its own message is automatically assigned to the value of the field in the message.
+  // If multiple autobinds are used at the same message,
+  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
+  optional bool autobind = 3;
+}
+
+// Message define dependent message.
+message Message {
+  // name specify a unique name for the dependent message.
+  optional string name = 1;
+  // message specify the message to be referred to by FQDN. format is `<package-name>.<message-name>`.
+  // <package-name> can be omitted when referring to messages in the same package.
+  string message = 2;
+  // args specify the parameters needed to retrieve the message. This is called the message argument.
+  repeated Argument args = 3;
+  // autobind the value of a field with the same name and type as the field name of this message is automatically assigned to the field value in the message.
+  // If multiple autobinds are used at the same message,
+  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
+  optional bool autobind = 4;
+}
+
+// Argument define message argument.
+message Argument {
+  // name of the message argument.
+  // Use this name to refer to the message argument.
+  // For example, if `foo` is specified as the name, it is referenced by `$.foo`.
+  string name = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  optional string by = 2;
+  // inline like by, it refers to the specified value and expands all fields beyond it.
+  // For this reason, the referenced value must always be of message type.
+  optional string inline = 3;
+  // double literal value.
+  optional double double = 4;
+  // repeated double literal values.
+  repeated double doubles = 5;
+  // float literal value.
+  optional float float = 6;
+  // repeated float literal values.
+  repeated float floats = 7;
+  // int32 literal value.
+  optional int32 int32 = 8;
+  // repeated int32 literal values.
+  repeated int32 int32s = 9;
+  // int64 literal value.
+  optional int64 int64 = 10;
+  // repeated int64 literal values.
+  repeated int64 int64s = 11;
+  // uint32 literal value.
+  optional uint32 uint32 = 12;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 13;
+  // uint64 literal value.
+  optional uint64 uint64 = 14;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 15;
+  // sint32 literal value.
+  optional sint32 sint32 = 16;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 17;
+  // sint64 literal value.
+  optional sint64 sint64 = 18;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 19;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 20;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 21;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 22;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 23;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 24;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 25;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 26;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 27;
+  // bool literal value.
+  optional bool bool = 28;
+  // repeated bool literal values.
+  repeated bool bools = 29;
+  // string literal value.
+  optional string string = 30;
+  // repeated string literal values.
+  repeated string strings = 31;
+  // bytes literal value.
+  optional bytes byte_string = 32;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 33;
+  // message literal value.
+  optional MessageValue message = 34;
+  // repeated message literal values.
+  repeated MessageValue messages = 35;
+  // enum literal value.
+  optional string enum = 36;
+  // repeated enum literal values.
+  repeated string enums = 37;
+  // env literal value.
+  optional string env = 38;
+  // repeated env literal values.
+  repeated string envs = 39;
+}
+
+// FieldRule define GRPC Federation rules for the field of message.
+message FieldRule {
+  // If custom_resolver is true, the field binding process is to be implemented in Go.
+  // If there are any values retrieved by grpc.federation.message option, they are passed as arguments for custom resolver.
+  optional bool custom_resolver = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  optional string by = 2;
+  // alias can be used when alias is specified in grpc.federation.message option,
+  // and specifies the field name to be referenced among the messages specified in alias of message option.
+  // If the specified field has the same type or can be converted automatically, its value is assigned.
+  optional string alias = 3;
+  // double literal value.
+  optional double double = 4;
+  // repeated double literal values.
+  repeated double doubles = 5;
+  // float literal value.
+  optional float float = 6;
+  // repeated float literal values.
+  repeated float floats = 7;
+  // int32 literal value.
+  optional int32 int32 = 8;
+  // repeated int32 literal values.
+  repeated int32 int32s = 9;
+  // int64 literal value.
+  optional int64 int64 = 10;
+  // repeated int64 literal values.
+  repeated int64 int64s = 11;
+  // uint32 literal value.
+  optional uint32 uint32 = 12;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 13;
+  // uint64 literal value.
+  optional uint64 uint64 = 14;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 15;
+  // sint32 literal value.
+  optional sint32 sint32 = 16;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 17;
+  // sint64 literal value.
+  optional sint64 sint64 = 18;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 19;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 20;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 21;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 22;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 23;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 24;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 25;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 26;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 27;
+  // bool literal value.
+  optional bool bool = 28;
+  // repeated bool literal values.
+  repeated bool bools = 29;
+  // string literal value.
+  optional string string = 30;
+  // repeated string literal values.
+  repeated string strings = 31;
+  // bytes literal value.
+  optional bytes byte_string = 32;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 33;
+  // message literal value.
+  optional MessageValue message = 34;
+  // repeated message literal values.
+  repeated MessageValue messages = 35;
+  // enum literal value.
+  optional string enum = 36;
+  // repeated enum literal values.
+  repeated string enums = 37;
+  // env literal value.
+  optional string env = 38;
+  // repeated env literal values.
+  repeated string envs = 39;
+  // use to evaluate any one of fields. this field only available in oneof.
+  FieldOneof oneof = 40;
+}
+
+// FieldOneof evaluate "messages" or other field only if expr is true and assign to the oneof field.
+// This feature only available in oneof.
+message FieldOneof {
+  // cond specify either `expr` or `default`. Only one `default` can be set per oneof.
+  oneof cond {
+    // expr describes the condition to be assigned to field.
+    // The return value must be of type bool.
+    // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+    // Variables are already defined in MessageRule can be used.
+    string expr = 1;
+
+    // default used to assign a value when none of the other fields match any of the specified expressions.
+    // Only one value can be defined per oneof.
+    bool default = 2;
+  }
+  // messages defines a list of dependent messages that must be retrieved to compose a message.
+  repeated Message messages = 3;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule and FieldOneOf's messages field can be used.
+  string by = 4;
+}
+
+// MessageValue represents message literal.
+message MessageValue {
+  // name specify the message name to be referred to by FQDN. format is `<package-name>.<message-name>`.
+  // <package-name> can be omitted when referring to messages in the same package.
+  string name = 1;
+  // fields represents message's fields.
+  repeated MessageFieldValue fields = 2;
+}
+
+// MessageFieldValue represents message's field.
+message MessageFieldValue {
+  string field = 1;
+  // double literal value.
+  optional double double = 3;
+  // repeated double literal values.
+  repeated double doubles = 4;
+  // float literal value.
+  optional float float = 5;
+  // repeated float literal values.
+  repeated float floats = 6;
+  // int32 literal value.
+  optional int32 int32 = 7;
+  // repeated int32 literal values.
+  repeated int32 int32s = 8;
+  // int64 literal value.
+  optional int64 int64 = 9;
+  // repeated int64 literal values.
+  repeated int64 int64s = 10;
+  // uint32 literal value.
+  optional uint32 uint32 = 11;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 12;
+  // uint64 literal value.
+  optional uint64 uint64 = 13;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 14;
+  // sint32 literal value.
+  optional sint32 sint32 = 15;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 16;
+  // sint64 literal value.
+  optional sint64 sint64 = 17;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 18;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 19;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 20;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 21;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 22;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 23;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 24;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 25;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 26;
+  // bool literal value.
+  optional bool bool = 27;
+  // repeated bool literal values.
+  repeated bool bools = 28;
+  // string literal value.
+  optional string string = 29;
+  // repeated string literal values.
+  repeated string strings = 30;
+  // bytes literal value.
+  optional bytes byte_string = 31;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 32;
+  // message literal value.
+  optional MessageValue message = 33;
+  // repeated message literal values.
+  repeated MessageValue messages = 34;
+  // enum literal value.
+  optional string enum = 35;
+  // repeated enum literal values.
+  repeated string enums = 36;
+  // env literal value.
+  optional string env = 37;
+  // repeated env literal values.
+  repeated string envs = 38;
+}
+
+// Validation represents a validation rule against variables defined within the current scope.
+message Validation {
+  // name is a unique name for the validation.
+  // If set, the validation error type will be <message-name><name>Error.
+  // If omitted, the validation error type will be ValidationError.
+  optional string name = 1;
+  // error defines the actual validation rules and an error to returned if the validation fails.
+  ValidationError error = 2;
+}
+
+// ValidationError represents a validation rule and validation error to be returned.
+message ValidationError {
+  // code is a gRPC status code for validation error.
+  google.rpc.Code code = 1;
+  // message is a gRPC status message for validation error.
+  // If omitted, the message will be auto-generated from the configurations.
+  optional string message = 2;
+  // rule specifies validation rule in CEL.
+  // The return value must always be of type boolean.
+  // Either rule or details must be specified.
+  optional string rule = 3;
+  // details is a list of validation rules and error details.
+  // If the validation fails, the corresponding error details are set.
+  // Either rule or details must be specified.
+  repeated ValidationErrorDetail details = 4;
+}
+
+// ValidationErrorDetail represents a pair of validation rule and error details to be set.
+message ValidationErrorDetail {
+  // rule specifies validation rule in CEL.
+  string rule = 1;
+  // error_info describes the cause of the error with structured details.
+  repeated google.rpc.ErrorInfo error_info = 3;
+  // retry_info describes when the clients can retry a failed request.
+  repeated google.rpc.RetryInfo retry_info = 4;
+  // debug_info describes additional debugging info.
+  repeated google.rpc.DebugInfo debug_info = 5;
+  // quota_failure describes how a quota check failed.
+  repeated google.rpc.QuotaFailure quota_failure = 6;
+  // precondition_failure describes what preconditions have failed.
+  repeated google.rpc.PreconditionFailure precondition_failure = 7;
+  // bad_request describes violations in a client request.
+  repeated google.rpc.BadRequest bad_request = 8;
+  // request_info contains metadata about the request that clients can attach.
+  repeated google.rpc.RequestInfo request_info = 9;
+  // resource_info describes the resource that is being accessed.
+  repeated google.rpc.ResourceInfo resource_info = 10;
+  // help provides links to documentation or for performing an out of band action.
+  repeated google.rpc.Help help = 11;
+  // localized_message provides a localized error message that is safe to return to the user.
+  repeated google.rpc.LocalizedMessage localized_message = 12;
+}

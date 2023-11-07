@@ -863,7 +863,7 @@ func (b *MessageDependencyArgumentBuilder) Inline(value *resolver.Value) *Messag
 	if value.CEL == nil {
 		value.CEL = &resolver.CELValue{}
 	}
-	value.CEL.Inline = true
+	value.Inline = true
 	b.args = append(b.args, &resolver.Argument{Value: value})
 	return b
 }

@@ -383,6 +383,11 @@ testdata/message_rule_cyclic_dependency.proto:22:28: found cyclic dependency for
 22:        {name: "b", message: "B", args: [{name: "aid", by: "a.id"}, {name: "did", by: "d.id"}]},
                                 ^
 `},
+		{file: "invalid_validation_return_type.proto", expected: `
+testdata/invalid_validation_return_type.proto:39:17: validation rule must always return a boolean value
+39:      validations {
+                     ^
+`},
 	}
 	ctx := context.Background()
 	v := validator.New()

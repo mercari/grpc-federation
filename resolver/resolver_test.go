@@ -2597,6 +2597,115 @@ func TestOneof(t *testing.T) {
 	}
 }
 
+func TestValidation(t *testing.T) {
+	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "validation.proto")))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+	}
+	if len(result.Files[0].Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+	}
+
+	fb := testutil.NewFileBuilder("validation.proto")
+	ref := testutil.NewBuilderReferenceManager(fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("PostArgument").Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("Post").
+				AddFieldWithRule("id", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("some-id")).Build(t)).
+				AddFieldWithRule("title", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("some-title")).Build(t)).
+				AddFieldWithRule("content", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("some-content")).Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponse").
+				AddFieldWithRule(
+					"post",
+					ref.Type(t, "org.federation", "Post"),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(
+							ref.Type(t, "org.federation", "Post"),
+							ref.Type(t, "org.federation", "Post"),
+							"post",
+						).Build(t),
+					).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddMessageDependency(
+							"post",
+							ref.Message(t, "org.federation", "Post"),
+							testutil.NewMessageDependencyArgumentBuilder().
+								Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+								Build(t),
+							false,
+							true,
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "Post")).
+								Build(t),
+						).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("post")).
+								SetEnd(testutil.NewMessageResolver("MessageValidation0")).
+								Build(t),
+						).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("post")).
+								SetEnd(testutil.NewMessageResolver("MessageValidation1")).
+								Build(t),
+						).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod(
+					"GetPost",
+					ref.Message(t, "org.federation", "GetPostRequest"),
+					ref.Message(t, "org.federation", "GetPostResponse"),
+					nil,
+				).
+				SetRule(
+					testutil.NewServiceRuleBuilder().Build(t),
+				).
+				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
+				Build(t),
+		)
+	federationFile := fb.Build(t)
+	service := federationFile.Services[0]
+	if diff := cmp.Diff(result.Files[0].Services[0], service, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
 func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 	ub := testutil.NewFileBuilder("user.proto")
 	ref := testutil.NewBuilderReferenceManager(ub)

@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "google/protobuf/any.proto";
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: []
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    messages: [
+      { name: "post", message: "Post" }
+    ]
+    validations: [
+      {
+        error: {
+          code: FAILED_PRECONDITION,
+          rule: "$.id == 'correct-id'",
+        }
+      },
+      {
+        error: {
+          code: FAILED_PRECONDITION,
+          rule: "post.id == 'some-id'",
+        }
+      },
+      {
+        error: {
+          code: FAILED_PRECONDITION,
+          rule: "post.title == 'some-title'",
+        }
+      }
+    ]
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  string id = 1 [(grpc.federation.field).string = "some-id"];
+  string title = 2 [(grpc.federation.field).string = "some-title"];
+  string content = 3 [(grpc.federation.field).string = "some-content"];
+}

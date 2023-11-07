@@ -156,6 +156,32 @@ func TestProtoFormat(t *testing.T) {
   }`,
 			},
 		},
+		{
+			name: "validation.proto",
+			messageOptionToFormatMap: map[string]string{
+				"GetPostResponse": `
+  option (grpc.federation.message) = {
+    messages {
+      name: "post"
+      message: "Post"
+    }
+    validations: [
+      {
+        name: "MessageValidation0"
+        error: {
+          rule: "post.id == 'some-id'"
+        }
+      },
+      {
+        name: "MessageValidation1"
+        error: {
+          rule: "post.title == 'some-title'"
+        }
+      }
+    ]
+  }`,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

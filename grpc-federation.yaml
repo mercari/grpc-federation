@@ -1,0 +1,11 @@
+# specify import paths.
+imports:
+  - _examples/12_simple_validation/proto
+  - _examples/12_simple_validation/proto_deps
+
+# specify the destination of gRPC Federation's code-generated output.
+out: _examples/12_simple_validation
+
+# specify options to be used during code generation of gRPC Federation.
+opt:
+  paths: source_relative

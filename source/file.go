@@ -807,6 +807,8 @@ func (f *File) nodeInfoByMessageOption(node *ast.OptionNode, opt *MessageOption)
 				return f.nodeInfoByMessageResolver(value, opt.Resolver)
 			case opt.Messages != nil && optName == "messages":
 				return f.nodeInfoByMessageDependency(f.getMessageListFromNode(elem.Val), opt.Messages)
+			case opt.Validations != nil && optName == "validations":
+				return f.nodeInfoByMessageValidation(f.getMessageListFromNode(elem.Val), opt.Validations)
 			case opt.Alias && optName == "alias":
 				return f.nodeInfo(elem.Val)
 			}
@@ -976,6 +978,13 @@ func (f *File) nodeInfoByMessageDependency(list []*ast.MessageLiteralNode, dep *
 		}
 	}
 	return f.nodeInfo(literal)
+}
+
+func (f *File) nodeInfoByMessageValidation(list []*ast.MessageLiteralNode, validation *MessageValidationOption) *ast.NodeInfo {
+	if validation.Idx >= len(list) {
+		return nil
+	}
+	return f.nodeInfo(list[validation.Idx])
 }
 
 func (f *File) nodeInfoByArgument(list []*ast.MessageLiteralNode, arg *ArgumentOption) *ast.NodeInfo {
