@@ -211,33 +211,32 @@ func (g *MessageDependencyGraph) createMessageResolver(ctx *context, node *Messa
 	}
 	ctx.addError(
 		ErrWithLocation(
-			fmt.Sprintf(`%q message has not resolver content`, node.Message.Name),
-			source.MessageLocation(ctx.fileName(), node.Message.Name),
+			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
+			source.MessageLocation(ctx.fileName(), node.BaseMessage.Name),
 		),
 	)
 	return nil
 }
 
 func (g *MessageDependencyGraph) createMessageResolverByMessageRule(ctx *context, node *MessageDependencyGraphNode, rule *MessageRule) *MessageResolver {
-	if rule.MethodCall != nil {
-		if rule.MethodCall.Response.Type == node.Message {
-			var name string
-			methodCall := rule.MethodCall
-			if methodCall.Method != nil {
-				name = methodCall.Method.Name
-			}
-			return &MessageResolver{Name: name, MethodCall: methodCall}
+	if node.Response != nil {
+		var name string
+		methodCall := rule.MethodCall
+		if methodCall.Method != nil {
+			name = methodCall.Method.Name
 		}
+		return &MessageResolver{Name: name, MethodCall: methodCall}
 	}
-	for _, depMessage := range rule.MessageDependencies {
-		if depMessage == node.MessageDependency {
-			return &MessageResolver{Name: depMessage.Name, MessageDependency: depMessage}
-		}
+	if depMessage := node.MessageDependency; depMessage != nil {
+		return &MessageResolver{Name: depMessage.Name, MessageDependency: depMessage}
+	}
+	if validation := node.Validation; validation != nil {
+		return &MessageResolver{Name: validation.Name, Validation: validation}
 	}
 	ctx.addError(
 		ErrWithLocation(
-			fmt.Sprintf(`%q message has not resolver content`, node.Message.Name),
-			source.MessageLocation(ctx.fileName(), node.Message.Name),
+			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
+			source.MessageLocation(ctx.fileName(), node.BaseMessage.Name),
 		),
 	)
 	return nil
@@ -251,8 +250,8 @@ func (g *MessageDependencyGraph) createMessageResolverByFieldOneofRule(ctx *cont
 	}
 	ctx.addError(
 		ErrWithLocation(
-			fmt.Sprintf(`%q message has not resolver content`, node.Message.Name),
-			source.MessageLocation(ctx.fileName(), node.Message.Name),
+			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
+			source.MessageLocation(ctx.fileName(), node.BaseMessage.Name),
 		),
 	)
 	return nil
@@ -267,11 +266,15 @@ type MessageDependencyGraphNode struct {
 	Message           *Message
 	Response          *Response
 	MessageDependency *MessageDependency
+	Validation        *ValidationRule
 }
 
 func (n *MessageDependencyGraphNode) FQDN() string {
 	if n.MessageDependency != nil {
 		return fmt.Sprintf("%s_%s", n.Message.FQDN(), n.MessageDependency.Name)
+	}
+	if n.Validation != nil {
+		return fmt.Sprintf("%s_%s", n.BaseMessage.FQDN(), n.Validation.Name)
 	}
 	return n.Message.FQDN()
 }
@@ -296,12 +299,23 @@ func newMessageDependencyGraphNodeByMessageDependency(baseMsg *Message, dep *Mes
 	}
 }
 
-// CreateMessageRuleDependencyGraph construct a dependency graph using the name-based reference dependencies used in the method calls
-// and the arguments used to retrieve the dependency messages.
-// Requires reference resolution for arguments that use prior name-based references.
+func newMessageDependencyGraphNodeByValidation(baseMsg *Message, validation *ValidationRule) *MessageDependencyGraphNode {
+	return &MessageDependencyGraphNode{
+		BaseMessage: baseMsg,
+		Validation:  validation,
+		ParentMap:   make(map[*MessageDependencyGraphNode]struct{}),
+		ChildrenMap: make(map[*MessageDependencyGraphNode]struct{}),
+	}
+}
+
+// CreateMessageDependencyGraph constructs a dependency graph from name references in the method calls,
+// the arguments, and the validations.
+// Name references in the arguments must be resolved first.
 // If a circular reference occurs, add an error to context.
 func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDependencyGraph {
+	// Maps a variable name to the MessageDependencyGraphNode which returns the variable
 	nameToNode := make(map[string]*MessageDependencyGraphNode)
+	// Maps a Message to a list of MessageDependencyGraphNodes which should return the Message
 	msgToNodes := make(map[*Message][]*MessageDependencyGraphNode)
 	rule := baseMsg.Rule
 	if rule.MethodCall != nil && rule.MethodCall.Response != nil {
@@ -353,6 +367,36 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 			}
 		}
 	}
+
+	var rootValidationNodes []*MessageDependencyGraphNode
+	for valIdx, validation := range rule.Validations {
+		validationNode := newMessageDependencyGraphNodeByValidation(baseMsg, validation)
+		referenceNames := validation.Error.ValidationRule.ReferenceNames()
+		if len(referenceNames) == 0 {
+			rootValidationNodes = append(rootValidationNodes, validationNode)
+			continue
+		}
+		for _, ref := range referenceNames {
+			node, exists := nameToNode[ref]
+			if !exists {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`%q name does not exist`, ref),
+						source.MessageValidationLocation(ctx.fileName(), baseMsg.Name, valIdx),
+					),
+				)
+				continue
+			}
+			if _, exists := node.ChildrenMap[validationNode]; !exists {
+				node.Children = append(node.Children, validationNode)
+				node.ChildrenMap[validationNode] = struct{}{}
+			}
+			if _, exists := validationNode.ParentMap[node]; !exists {
+				validationNode.Parent = append(validationNode.Parent, node)
+				validationNode.ParentMap[node] = struct{}{}
+			}
+		}
+	}
 	for msgIdx, depMessage := range rule.MessageDependencies {
 		for argIdx, arg := range depMessage.Args {
 			refs := arg.Value.ReferenceNames()
@@ -392,6 +436,7 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 			}
 		}
 	}
+	roots = append(roots, rootValidationNodes...)
 	sort.Slice(roots, func(i, j int) bool {
 		return roots[i].FQDN() < roots[j].FQDN()
 	})

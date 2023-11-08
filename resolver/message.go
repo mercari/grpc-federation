@@ -130,6 +130,9 @@ func (m *Message) HasCELValue() bool {
 			}
 		}
 	}
+	if len(m.Rule.Validations) != 0 {
+		return true
+	}
 	for _, field := range m.Fields {
 		if field.Rule == nil {
 			continue

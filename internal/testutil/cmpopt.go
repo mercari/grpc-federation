@@ -16,7 +16,7 @@ func ResolverCmpOpts() []cmp.Option {
 		cmpopts.IgnoreFields(resolver.Enum{}, "File", "Message.Rule"),
 		cmpopts.IgnoreFields(resolver.EnumValue{}, "Enum"),
 		cmpopts.IgnoreFields(resolver.EnumRule{}, "Alias.Rule"),
-		cmpopts.IgnoreFields(resolver.MessageResolver{}, "MethodCall", "MessageDependency"),
+		cmpopts.IgnoreFields(resolver.MessageResolver{}, "MethodCall", "MessageDependency", "Validation"),
 		cmpopts.IgnoreFields(resolver.MessageDependency{}, "Message.Rule", "Owner"),
 		cmpopts.IgnoreFields(resolver.MessageRule{}, "MessageDependencies", "Alias.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageDependencyGraph{}, "MessageRule", "FieldOneofRule"),

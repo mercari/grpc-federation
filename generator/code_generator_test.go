@@ -34,6 +34,7 @@ func TestCodeGenerate(t *testing.T) {
 		"multi_user",
 		"resolver_overlaps",
 		"oneof",
+		"validation",
 	}
 	for _, test := range tests {
 		t.Run(test, func(t *testing.T) {

@@ -962,6 +962,7 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 		CustomResolver:      ruleDef.GetCustomResolver(),
 		Alias:               r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
 		DependencyGraph:     &MessageDependencyGraph{},
+		Validations:         r.resolveMessageRuleValidations(ctx, ruleDef.Validations),
 	}
 }
 
@@ -984,6 +985,51 @@ func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message 
 		return r.resolveMessage(ctx, pkg, name)
 	}
 	return r.resolveMessage(ctx, ctx.file().Package, aliasName)
+}
+
+func (r *Resolver) resolveMessageRuleValidations(ctx *context, validations []*federation.Validation) []*ValidationRule {
+	var resolved []*ValidationRule
+	for i, validation := range validations {
+		v, err := r.resolveMessageRuleValidation(i, validation)
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.MessageValidationRuleLocation(ctx.fileName(), ctx.messageName(), i),
+				),
+			)
+			continue
+		}
+		resolved = append(resolved, v)
+	}
+	return resolved
+}
+
+func (r *Resolver) resolveMessageRuleValidation(idx int, validation *federation.Validation) (*ValidationRule, error) {
+	e := validation.GetError()
+
+	if e.GetRule() != "" && len(e.GetDetails()) != 0 {
+		return nil, errors.New("cannot set both rule and details at the same time")
+	}
+
+	name := validation.GetName()
+	if name == "" {
+		// the default validation name
+		name = fmt.Sprintf("_validation%d", idx)
+	}
+
+	if rule := e.GetRule(); rule != "" {
+		return &ValidationRule{
+			Name: name,
+			Error: &ValidationError{
+				ValidationRule: &CELValue{
+					Expr: rule,
+				},
+			},
+		}, nil
+	}
+
+	return nil, errors.New("details field has not been supported yet")
 }
 
 func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ruleDef *federation.FieldRule) *FieldRule {
@@ -1969,7 +2015,7 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, deps
 			if fieldType == nil {
 				continue
 			}
-			if arg.Value.CEL != nil && arg.Value.CEL.Inline {
+			if arg.Value.CEL != nil && arg.Value.Inline {
 				if fieldType.Type != types.Message {
 					ctx.addError(
 						ErrWithLocation(
@@ -2062,7 +2108,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				continue
 			}
 			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				if arg.Value.CEL != nil && arg.Value.CEL.Inline {
+				if arg.Value.CEL != nil && arg.Value.Inline {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
@@ -2088,6 +2134,25 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 					)
 				}
 			}
+		}
+	}
+	for valIdx, validation := range msg.Rule.Validations {
+		if err := r.resolveCELValue(ctx, env, validation.Error.ValidationRule); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.MessageValidationRuleLocation(msg.File.Name, msg.Name, valIdx),
+				),
+			)
+			continue
+		}
+		if validation.Error.ValidationRule.Out.Type != types.Bool {
+			ctx.addError(
+				ErrWithLocation(
+					"validation rule must always return a boolean value",
+					source.MessageValidationRuleLocation(msg.File.Name, msg.Name, valIdx),
+				),
+			)
 		}
 	}
 	for _, field := range msg.Fields {
@@ -2145,7 +2210,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 						continue
 					}
 					if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-						if arg.Value.CEL != nil && arg.Value.CEL.Inline {
+						if arg.Value.CEL != nil && arg.Value.Inline {
 							ctx.addError(
 								ErrWithLocation(
 									err.Error(),
@@ -2279,13 +2344,16 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 }
 
 func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
-	arg := msg.Rule.MessageArgument
 	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
-		cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(arg.FQDN())),
 	}
+
+	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
+		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
+	}
+
 	if msg.Rule != nil && msg.Rule.MethodCall != nil && msg.Rule.MethodCall.Response != nil {
 		resType := msg.Rule.MethodCall.Response.Type
 		for _, responseField := range msg.Rule.MethodCall.Response.Fields {
@@ -2499,7 +2567,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 		optNames = append(optNames, byOpt)
 	}
 	if def.Inline != nil {
-		value = &Value{CEL: &CELValue{Expr: def.GetInline(), Inline: true}}
+		value = &Value{Inline: true, CEL: &CELValue{Expr: def.GetInline()}}
 		optNames = append(optNames, inlineOpt)
 	}
 	if def.Double != nil {

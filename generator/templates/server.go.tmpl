@@ -37,9 +37,7 @@ import (
 	{{- end }}
 )
 
-{{- $types := .Types }}
-
-{{- range $types }}
+{{- range .Types }}
 
 // {{ .Desc }}.
 type {{ .Name }}[T any] struct {
@@ -294,7 +292,6 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("{{ .RequestProtoType }}"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 	{{- end }}
-
 	{{- $depGraph := .DependencyGraph }}
 	{{- if $depGraph }}
 // A tree view of message dependencies is shown below.
@@ -638,7 +635,7 @@ args := &{{ .Resolver.RequestType }}{
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	{{- if .CEL.Inline }}
+	{{- if ne (len .InlineFields) 0 }}
 	_inlineValue := {{ .Value }}
 	{{- range .InlineFields }}
 	args.{{ .Name }} = {{ .Value }}
@@ -707,43 +704,45 @@ return nil, err
 /*
 {{ .Resolver.ProtoComment }}
 */
-{{- if .Resolver.UseResponseVariable }}
-{{ .Resolver.ResponseVariable }}Iface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
-	{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-})
-if err != nil {
-	{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-}
-{{ .Resolver.ResponseVariable }} := {{ .Resolver.ResponseVariable }}Iface.({{ .Resolver.Type }})
+{{- if .Resolver.MessageResolver.Validation }}
+	{{- template "messageValidation" .Resolver.MessageResolver.Validation }}
 {{- else }}
-if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
-	{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-}); err != nil {
-	{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-}
-{{- end }}
+	{{- if .Resolver.UseResponseVariable }}
+		{{ .Resolver.ResponseVariable }}Iface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
+		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
+		})
+		if err != nil {
+		{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
+		}
+		{{ .Resolver.ResponseVariable }} := {{ .Resolver.ResponseVariable }}Iface.({{ .Resolver.Type }})
+	{{- else }}
+		if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
+		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
+		}); err != nil {
+		{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
+		}
+	{{- end }}
 
-{{- $responseVariables := .Resolver.ResponseVariables }}
-{{- if $responseVariables }}
-valueMu.Lock()
-{{- end }}
+	{{- $responseVariables := .Resolver.ResponseVariables }}
+	{{- if $responseVariables }}
+		valueMu.Lock()
+	{{- end }}
 
-{{- $hasCELValue := .Resolver.Message.HasCELValue }}
-{{- range $responseVariables }}
-{{- if .UseName }}
-{{ .Name }} = {{ .Selector }} {{ .ProtoComment }}
-{{- if $hasCELValue }}
-envOpts = append(envOpts, cel.Variable("{{ .CELExpr }}", {{ .CELType }}))
-evalValues["{{ .CELExpr }}"] = {{ .Name }}
-{{- end }}
-{{- end }}
-{{- end }}
+	{{- $hasCELValue := .Resolver.Message.HasCELValue }}
+	{{- range $responseVariables }}
+		{{- if .UseName }}
+			{{ .Name }} = {{ .Selector }} {{ .ProtoComment }}
+			{{- if $hasCELValue }}
+				envOpts = append(envOpts, cel.Variable("{{ .CELExpr }}", {{ .CELType }}))
+				evalValues["{{ .CELExpr }}"] = {{ .Name }}
+			{{- end }}
+		{{- end }}
+	{{- end }}
 
-{{- if $responseVariables }}
-valueMu.Unlock()
+	{{- if $responseVariables }}
+		valueMu.Unlock()
+	{{- end }}
 {{- end }}
-
-
 {{- end }}
 
 {{- define "resolverGroup" }}
@@ -774,4 +773,18 @@ if err := eg.Wait(); err != nil {
 {{- end }}
 
 {{- end }}
+{{- end }}
+
+{{- define "messageValidation" }}
+{
+	valueMu.RLock()
+	_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.ValidationRule.Expr }}", envOpts, evalValues, reflect.TypeOf(true))
+	valueMu.RUnlock()
+	if err != nil {
+		return nil, err
+	}
+	if !_value.(bool) {
+		return nil, errors.New("validation failure")
+	}
+}
 {{- end }}

@@ -70,6 +70,10 @@ func (r *MessageRule) ProtoFormat(opt *ProtoFormatOption) string {
 	if deps != "" {
 		elems = append(elems, deps)
 	}
+	validations := r.Validations.ProtoFormat(nextOpt)
+	if validations != "" {
+		elems = append(elems, validations)
+	}
 	if r.CustomResolver {
 		elems = append(elems, nextOpt.indentFormat()+"custom_resolver: true")
 	}
@@ -272,6 +276,46 @@ func (d *MessageDependency) protoFormatMessageArgs(opt *ProtoFormatOption) strin
 	return indent + fmt.Sprintf("args: [\n%s\n%s]", strings.Join(formattedArgs, ",\n"), indent)
 }
 
+func (vs MessageValidations) ProtoFormat(opt *ProtoFormatOption) string {
+	if len(vs) == 0 {
+		return ""
+	}
+	indent := opt.indentFormat()
+	if len(vs) == 1 {
+		return indent + fmt.Sprintf("validations %s", strings.TrimLeft(vs[0].ProtoFormat(opt), " "))
+	}
+	validations := make([]string, 0, len(vs))
+	for _, validation := range vs {
+		if format := validation.ProtoFormat(opt.toNextIndentLevel()); format != "" {
+			validations = append(validations, format)
+		}
+	}
+	return indent + fmt.Sprintf("validations: [\n%s\n%s]", strings.Join(validations, ",\n"), indent)
+}
+
+func (v *ValidationRule) ProtoFormat(opt *ProtoFormatOption) string {
+	if v == nil {
+		return ""
+	}
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	elems = append(
+		elems,
+		nextOpt.indentFormat()+fmt.Sprintf("name: %q", v.Name),
+		v.protoFormatError(nextOpt),
+	)
+	return indent + fmt.Sprintf("{\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
+func (v *ValidationRule) protoFormatError(opt *ProtoFormatOption) string {
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("rule: %q", v.Error.ValidationRule.Expr))
+	return indent + fmt.Sprintf("error {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
 func (a *Argument) ProtoFormat(opt *ProtoFormatOption, isRequestArg bool) string {
 	var elems []string
 	if a.Name != "" {
@@ -295,7 +339,7 @@ func (v *Value) ProtoFormat(opt *ProtoFormatOption) string {
 		return ""
 	}
 	if v.CEL != nil {
-		if v.CEL.Inline {
+		if v.Inline {
 			return fmt.Sprintf("inline: %q", v.CEL.Expr)
 		}
 		return fmt.Sprintf("by: %q", v.CEL.Expr)

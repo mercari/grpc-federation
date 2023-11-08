@@ -125,8 +125,8 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 							})
 						}
 					}
-				} else if msgResolver.MessageDependency.Used {
-					fieldName := util.ToPublicGoVariable(msgResolver.MessageDependency.Name)
+				} else if depMessage := msgResolver.MessageDependency; depMessage != nil && depMessage.Used {
+					fieldName := util.ToPublicGoVariable(depMessage.Name)
 					if typ.HasField(fieldName) {
 						continue
 					}
@@ -134,7 +134,7 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 						Name: fieldName,
 						Type: toTypeText(svc, &resolver.Type{
 							Type: types.Message,
-							Ref:  msgResolver.MessageDependency.Message,
+							Ref:  depMessage.Message,
 						}),
 					})
 				}
@@ -1066,7 +1066,7 @@ func (m *Message) DeclVariables() []*DeclVariable {
 						Type: toTypeText(m.Service, field.Type),
 					}
 				}
-			} else {
+			} else if r.MessageDependency != nil {
 				if !r.MessageDependency.Used {
 					continue
 				}
@@ -1445,7 +1445,7 @@ func (m *Message) CustomResolverArguments() []*Argument {
 						argNameMap[name] = struct{}{}
 					}
 				}
-			} else if msgResolver.MessageDependency.Used {
+			} else if depMessage := msgResolver.MessageDependency; depMessage != nil && depMessage.Used {
 				name := msgResolver.MessageDependency.Name
 				if _, exists := argNameMap[name]; exists {
 					continue
@@ -1851,7 +1851,10 @@ func (r *MessageResolver) ProtoComment() string {
 	if r.MethodCall != nil {
 		return r.MethodCall.ProtoFormat(opt)
 	}
-	return r.MessageDependency.ProtoFormat(opt)
+	if r.MessageDependency != nil {
+		return r.MessageDependency.ProtoFormat(opt)
+	}
+	return r.Validation.ProtoFormat(opt)
 }
 
 type ResponseVariable struct {
@@ -2012,7 +2015,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		return nil
 	}
 	var inlineFields []*Argument
-	if value.CEL.Inline {
+	if value.Inline {
 		for _, field := range value.CEL.Out.Ref.Fields {
 			inlineFields = append(inlineFields, &Argument{
 				Name:  util.ToPublicGoVariable(field.Name),

@@ -38,6 +38,10 @@ func (v *CELValue) ReferenceNames() []string {
 		if ref.Name == federation.MessageArgumentVariableName {
 			continue
 		}
+		// Name can be empty sting if the reference points to a function
+		if ref.Name == "" {
+			continue
+		}
 		refNames = append(refNames, ref.Name)
 	}
 	return refNames

@@ -105,6 +105,8 @@ type MessageRule struct {
 	Resolvers           []MessageResolverGroup
 	CustomResolver      bool
 	Alias               *Message
+	// Validations holds all the validations attached to the given message
+	Validations MessageValidations
 }
 
 type MessageResolverGroupType string
@@ -150,6 +152,18 @@ type MessageResolver struct {
 	Name              string
 	MethodCall        *MethodCall
 	MessageDependency *MessageDependency
+	Validation        *ValidationRule
+}
+
+type MessageValidations []*ValidationRule
+
+type ValidationRule struct {
+	Name  string
+	Error *ValidationError
+}
+
+type ValidationError struct {
+	ValidationRule *CELValue
 }
 
 type TypeConversionDecl struct {
@@ -346,13 +360,13 @@ type Argument struct {
 }
 
 type Value struct {
-	CEL   *CELValue
-	Const *ConstValue
+	Inline bool
+	CEL    *CELValue
+	Const  *ConstValue
 }
 
 type CELValue struct {
 	Expr        string
-	Inline      bool
 	Out         *Type
 	CheckedExpr *exprv1.CheckedExpr
 }
