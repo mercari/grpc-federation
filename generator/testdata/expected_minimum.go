@@ -20,6 +20,7 @@ import (
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type Org_Federation_GetPostResponseArgument[T any] struct {
 	Id     string
+	Type   PostType
 	Client T
 }
 
@@ -100,7 +101,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
 		"grpc.federation.private.GetPostResponseArgument": {
-			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"id":   grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"type": grpcfed.NewCELFieldType(celtypes.IntType, "Type"),
 		},
 	})
 	env, err := cel.NewCustomEnv(
@@ -137,6 +139,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]{
 		Client: s.client,
 		Id:     req.Id,
+		Type:   req.Type,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -180,6 +183,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *O
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
+		slog.String("type", s.logvalue_Org_Federation_PostType(v.Type).String()),
 	)
 }
 
@@ -193,6 +197,16 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 		slog.String("content", v.GetContent()),
 		slog.Any("user", s.logvalue_Org_Federation_User(v.GetUser())),
 	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Value {
+	switch v {
+	case PostType_POST_TYPE_1:
+		return slog.StringValue("POST_TYPE_1")
+	case PostType_POST_TYPE_2:
+		return slog.StringValue("POST_TYPE_2")
+	}
+	return slog.StringValue("")
 }
 
 func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {

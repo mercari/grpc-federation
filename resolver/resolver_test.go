@@ -577,14 +577,22 @@ func TestMinimum(t *testing.T) {
 				AddField("user", ref.Type(t, "org.federation", "User")).
 				Build(t),
 		).
+		AddEnum(
+			testutil.NewEnumBuilder("PostType").
+				AddValue("POST_TYPE_1").
+				AddValue("POST_TYPE_2").
+				Build(t),
+		).
 		AddMessage(
 			testutil.NewMessageBuilder("GetPostRequest").
 				AddField("id", resolver.StringType).
+				AddField("type", ref.Type(t, "org.federation", "PostType")).
 				Build(t),
 		).
 		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponseArgument").
 				AddField("id", resolver.StringType).
+				AddField("type", ref.Type(t, "org.federation", "PostType")).
 				Build(t),
 		).
 		AddMessage(
