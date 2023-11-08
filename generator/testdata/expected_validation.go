@@ -191,7 +191,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		/*
 		   {
 		     name: "MessageValidation0"
-		     error: {
+		     error {
 		       rule: "post.id == 'some-id'"
 		     }
 		   }
@@ -241,7 +241,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		/*
 		   {
 		     name: "MessageValidation1"
-		     error: {
+		     error {
 		       rule: "post.title == 'some-title'"
 		     }
 		   }
