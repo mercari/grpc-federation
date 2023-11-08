@@ -32,7 +32,7 @@ message GetPostResponse {
       },
       {
         error: {
-          code: FAILED_PRECONDITION,
+          code: INVALID_ARGUMENT,
           rule: "post.title == 'some-title'",
         }
       }

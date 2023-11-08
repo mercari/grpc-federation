@@ -704,8 +704,8 @@ return nil, err
 /*
 {{ .Resolver.ProtoComment }}
 */
-{{- if .Resolver.MessageResolver.Validation }}
-	{{- template "messageValidation" .Resolver.MessageResolver.Validation }}
+{{- if .Resolver.Validation }}
+	{{- template "messageValidation" .Resolver.MessageValidation }}
 {{- else }}
 	{{- if .Resolver.UseResponseVariable }}
 		{{ .Resolver.ResponseVariable }}Iface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
@@ -778,13 +778,13 @@ if err := eg.Wait(); err != nil {
 {{- define "messageValidation" }}
 {
 	valueMu.RLock()
-	_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.ValidationRule.Expr }}", envOpts, evalValues, reflect.TypeOf(true))
+	_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(true))
 	valueMu.RUnlock()
 	if err != nil {
 		return nil, err
 	}
 	if !_value.(bool) {
-		return nil, errors.New("validation failure")
+		return nil, grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
 	}
 }
 {{- end }}

@@ -371,7 +371,7 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 	var rootValidationNodes []*MessageDependencyGraphNode
 	for valIdx, validation := range rule.Validations {
 		validationNode := newMessageDependencyGraphNodeByValidation(baseMsg, validation)
-		referenceNames := validation.Error.ValidationRule.ReferenceNames()
+		referenceNames := validation.Error.Rule.ReferenceNames()
 		if len(referenceNames) == 0 {
 			rootValidationNodes = append(rootValidationNodes, validationNode)
 			continue

@@ -5,21 +5,23 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"strings"
 	"testing"
 
-	"example/federation"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+
+	"example/federation"
 )
 
 const bufSize = 1024
 
 var listener   *bufconn.Listener
 
-func dialer(ctx context.Context, address string) (net.Conn, error) {
+func dialer(_ context.Context, _ string) (net.Conn, error) {
 	return listener.Dial()
 }
 
@@ -54,11 +56,15 @@ func TestFederation(t *testing.T) {
 
 	client := federation.NewFederationServiceClient(conn)
 
+	type errStatus struct {
+		code codes.Code
+		message string
+	}
 	for _, tc := range []struct{
 		desc string
 		request *federation.GetPostRequest
 		expected *federation.GetPostResponse
-		expectedErr string
+		expectedErr *errStatus
 	} {
 		{
 			desc: "success",
@@ -78,23 +84,35 @@ func TestFederation(t *testing.T) {
 			request: &federation.GetPostRequest{
 				Id: "wrong-id",
 			},
-			expectedErr: "validation failure",
+			expectedErr: &errStatus{
+				code: codes.FailedPrecondition,
+				message: "validation failure",
+			},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
 			res, err := client.GetPost(ctx, tc.request)
 			if err != nil {
-				if tc.expectedErr == "" {
+				if tc.expectedErr == nil {
 					t.Fatalf("failed to call GetPost: %v", err)
 				}
 
-				if !strings.Contains(err.Error(), tc.expectedErr) {
-					t.Fatalf("expected %q contains a substring %q", err.Error(), tc.expectedErr)
+				s, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("failed to extract gRPC Status from the error: %v", err)
+				}
+
+				if got := s.Code(); got != tc.expectedErr.code {
+					t.Errorf("invalida gRPC status code: got: %v, expected: %v", got, tc.expectedErr.code)
+				}
+
+				if got := s.Message(); got != tc.expectedErr.message {
+					t.Errorf("invalida gRPC status message: got: %v, expected: %v", got, tc.expectedErr.message)
 				}
 				return
 			}
 
-			if tc.expectedErr != "" {
+			if tc.expectedErr != nil {
 				t.Fatal("expected to receive an error but got nil")
 			}
 

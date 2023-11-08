@@ -1022,7 +1022,8 @@ func (r *Resolver) resolveMessageRuleValidation(idx int, validation *federation.
 		return &ValidationRule{
 			Name: name,
 			Error: &ValidationError{
-				ValidationRule: &CELValue{
+				Code: e.GetCode(),
+				Rule: &CELValue{
 					Expr: rule,
 				},
 			},
@@ -2137,7 +2138,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		}
 	}
 	for valIdx, validation := range msg.Rule.Validations {
-		if err := r.resolveCELValue(ctx, env, validation.Error.ValidationRule); err != nil {
+		if err := r.resolveCELValue(ctx, env, validation.Error.Rule); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -2146,7 +2147,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 			)
 			continue
 		}
-		if validation.Error.ValidationRule.Out.Type != types.Bool {
+		if validation.Error.Rule.Out.Type != types.Bool {
 			ctx.addError(
 				ErrWithLocation(
 					"validation rule must always return a boolean value",

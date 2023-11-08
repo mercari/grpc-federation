@@ -169,12 +169,14 @@ func TestProtoFormat(t *testing.T) {
       {
         name: "_validation0"
         error {
+          code: FAILED_PRECONDITION
           rule: "post.id == 'some-id'"
         }
       },
       {
         name: "_validation1"
         error {
+          code: INVALID_ARGUMENT
           rule: "post.title == 'some-title'"
         }
       }

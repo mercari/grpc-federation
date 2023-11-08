@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/genproto/googleapis/rpc/code"
+
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
 )
@@ -562,11 +564,12 @@ func (b *MessageRuleBuilder) AddMessageDependency(name string, msg *resolver.Mes
 	return b
 }
 
-func (b *MessageRuleBuilder) AddValidation(name string, rule *resolver.CELValue) *MessageRuleBuilder {
+func (b *MessageRuleBuilder) AddValidation(name string, c code.Code, rule *resolver.CELValue) *MessageRuleBuilder {
 	validation := &resolver.ValidationRule{
 		Name: name,
 		Error: &resolver.ValidationError{
-			ValidationRule: rule,
+			Code: c,
+			Rule: rule,
 		},
 	}
 	b.rule.Validations = append(b.rule.Validations, validation)
