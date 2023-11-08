@@ -2663,11 +2663,11 @@ func TestValidation(t *testing.T) {
 							true,
 						).
 						AddValidation(
-							"MessageValidation0",
+							"_validation0",
 							testutil.NewCELValueBuilder("post.id == 'some-id'", resolver.BoolType).Build(t),
 						).
 						AddValidation(
-							"MessageValidation1",
+							"_validation1",
 							testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
@@ -2679,13 +2679,13 @@ func TestValidation(t *testing.T) {
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
 								AddStart(testutil.NewMessageResolverGroupByName("post")).
-								SetEnd(testutil.NewMessageResolver("MessageValidation0")).
+								SetEnd(testutil.NewMessageResolver("_validation0")).
 								Build(t),
 						).
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
 								AddStart(testutil.NewMessageResolverGroupByName("post")).
-								SetEnd(testutil.NewMessageResolver("MessageValidation1")).
+								SetEnd(testutil.NewMessageResolver("_validation1")).
 								Build(t),
 						).
 						Build(t),

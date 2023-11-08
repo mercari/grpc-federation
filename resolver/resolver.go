@@ -1015,7 +1015,7 @@ func (r *Resolver) resolveMessageRuleValidation(idx int, validation *federation.
 	name := validation.GetName()
 	if name == "" {
 		// the default validation name
-		name = fmt.Sprintf("MessageValidation%d", idx)
+		name = fmt.Sprintf("_validation%d", idx)
 	}
 
 	if rule := e.GetRule(); rule != "" {

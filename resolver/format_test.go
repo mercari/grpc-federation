@@ -167,13 +167,13 @@ func TestProtoFormat(t *testing.T) {
     }
     validations: [
       {
-        name: "MessageValidation0"
+        name: "_validation0"
         error {
           rule: "post.id == 'some-id'"
         }
       },
       {
-        name: "MessageValidation1"
+        name: "_validation1"
         error {
           rule: "post.title == 'some-title'"
         }
