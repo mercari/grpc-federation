@@ -606,16 +606,7 @@ func (s *Service) setLogValueByMessage(msg *resolver.Message) {
 			Key:   field.Name,
 			Value: s.logValue(field),
 		})
-		isMap := field.Type.Ref != nil && field.Type.Ref.IsMapEntry
-		if field.Type.Ref != nil {
-			s.setLogValueByMessage(field.Type.Ref)
-		}
-		if field.Type.Enum != nil {
-			s.setLogValueByEnum(field.Type.Enum)
-		}
-		if field.Type.Repeated && !isMap {
-			s.setLogValueByRepeatedType(field.Type)
-		}
+		s.setLogValueByType(field.Type)
 	}
 	for _, msg := range msg.NestedMessages {
 		s.setLogValueByMessage(msg)
@@ -639,15 +630,19 @@ func (s *Service) setLogValueByMapMessage(msg *resolver.Message) {
 		Value:     s.logMapValue(value),
 	}
 	s.nameToLogValueMap[name] = logValue
-	isMap := value.Type.Ref != nil && value.Type.Ref.IsMapEntry
-	if value.Type.Ref != nil {
-		s.setLogValueByMessage(value.Type.Ref)
+	s.setLogValueByType(value.Type)
+}
+
+func (s *Service) setLogValueByType(typ *resolver.Type) {
+	isMap := typ.Ref != nil && typ.Ref.IsMapEntry
+	if typ.Ref != nil {
+		s.setLogValueByMessage(typ.Ref)
 	}
-	if value.Type.Enum != nil {
-		s.setLogValueByEnum(value.Type.Enum)
+	if typ.Enum != nil {
+		s.setLogValueByEnum(typ.Enum)
 	}
-	if value.Type.Repeated && !isMap {
-		s.setLogValueByRepeatedType(value.Type)
+	if typ.Repeated && !isMap {
+		s.setLogValueByRepeatedType(typ)
 	}
 }
 
@@ -683,9 +678,7 @@ func (s *Service) setLogValueByMessageArgument(msg *resolver.Message) {
 			Key:   field.Name,
 			Value: s.msgArgumentLogValue(field),
 		})
-		if field.Type.Ref != nil {
-			s.setLogValueByMessage(field.Type.Ref)
-		}
+		s.setLogValueByType(field.Type)
 	}
 }
 

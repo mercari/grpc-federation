@@ -13,6 +13,12 @@ service FederationService {
 
 message GetPostRequest {
   string id = 1;
+  PostType type = 2;
+}
+
+enum PostType {
+  POST_TYPE_1 = 0;
+  POST_TYPE_2 = 1;
 }
 
 message GetPostResponse {
