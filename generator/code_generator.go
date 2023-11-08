@@ -11,7 +11,10 @@ import (
 	"strings"
 	"text/template"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"golang.org/x/tools/imports"
+	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
@@ -1949,6 +1952,44 @@ func toCELNativeType(t *resolver.Type) string {
 		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Type)
 	}
 	return ""
+}
+
+type ValidationRule struct {
+	Name  string
+	Error *ValidationError
+}
+
+type ValidationError struct {
+	Code code.Code
+	Rule string
+}
+
+// GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
+// e.g. FAILED_PRECONDITION -> FailedPrecondition.
+func (v *ValidationError) GoGRPCStatusCode() string {
+	strCode := v.Code.String()
+	if strCode == "OK" {
+		// The only exception that the second character is in capital case as well
+		return "OK"
+	}
+
+	parts := strings.Split(strCode, "_")
+	titles := make([]string, 0, len(parts))
+	for _, part := range parts {
+		titles = append(titles, cases.Title(language.Und).String(part))
+	}
+	return strings.Join(titles, "")
+}
+
+func (r *MessageResolver) MessageValidation() *ValidationRule {
+	validation := r.MessageResolver.Validation
+	return &ValidationRule{
+		Name: validation.Name,
+		Error: &ValidationError{
+			Code: validation.Error.Code,
+			Rule: validation.Error.Rule.Expr,
+		},
+	}
 }
 
 type Argument struct {

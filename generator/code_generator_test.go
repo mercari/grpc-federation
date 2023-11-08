@@ -13,6 +13,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/mod/modfile"
+	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/mercari/grpc-federation/generator"
 	"github.com/mercari/grpc-federation/internal/testutil"
@@ -185,6 +186,36 @@ func TestCodeGenerate(t *testing.T) {
 					}
 				})
 			})
+		})
+	}
+}
+
+func TestValidationError_GoGRPCStatusCode(t *testing.T) {
+	tests := []struct {
+		desc     string
+		code     code.Code
+		expected string
+	}{
+		{
+			desc:     "code is OK",
+			code:     code.Code_OK,
+			expected: "OK",
+		},
+		{
+			desc:     "code is FAILED_PRECONDITION",
+			code:     code.Code_FAILED_PRECONDITION,
+			expected: "FailedPrecondition",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			validation := generator.ValidationError{
+				Code: tc.code,
+			}
+			if got := validation.GoGRPCStatusCode(); got != tc.expected {
+				t.Fatalf("received unexpected gRPC status code: got: %s, expected: %s", got, tc.expected)
+			}
 		})
 	}
 }

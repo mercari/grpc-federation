@@ -4,6 +4,7 @@ import (
 	"time"
 
 	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
+	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mercari/grpc-federation/types"
@@ -163,7 +164,8 @@ type ValidationRule struct {
 }
 
 type ValidationError struct {
-	ValidationRule *CELValue
+	Code code.Code
+	Rule *CELValue
 }
 
 type TypeConversionDecl struct {

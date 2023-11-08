@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/mercari/grpc-federation/internal/testutil"
 	"github.com/mercari/grpc-federation/resolver"
@@ -2664,10 +2665,12 @@ func TestValidation(t *testing.T) {
 						).
 						AddValidation(
 							"_validation0",
+							code.Code_FAILED_PRECONDITION,
 							testutil.NewCELValueBuilder("post.id == 'some-id'", resolver.BoolType).Build(t),
 						).
 						AddValidation(
 							"_validation1",
+							code.Code_INVALID_ARGUMENT,
 							testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).

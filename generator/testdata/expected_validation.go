@@ -3,7 +3,6 @@ package federation
 
 import (
 	"context"
-	"errors"
 	"io"
 	"log/slog"
 	"reflect"
@@ -17,6 +16,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
@@ -192,6 +193,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   {
 		     name: "_validation0"
 		     error {
+		       code: FAILED_PRECONDITION
 		       rule: "post.id == 'some-id'"
 		     }
 		   }
@@ -204,7 +206,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil, err
 			}
 			if !_value.(bool) {
-				return nil, errors.New("validation failure")
+				return nil, grpcstatus.Error(grpccodes.FailedPrecondition, "validation failure")
 			}
 		}
 		return nil, nil
@@ -242,6 +244,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   {
 		     name: "_validation1"
 		     error {
+		       code: INVALID_ARGUMENT
 		       rule: "post.title == 'some-title'"
 		     }
 		   }
@@ -254,7 +257,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil, err
 			}
 			if !_value.(bool) {
-				return nil, errors.New("validation failure")
+				return nil, grpcstatus.Error(grpccodes.InvalidArgument, "validation failure")
 			}
 		}
 		return nil, nil
