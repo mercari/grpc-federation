@@ -1009,6 +1009,61 @@ func (f *File) nodeInfoByValidationError(node *ast.MessageLiteralNode, validatio
 				return nil
 			}
 			return f.nodeInfo(value)
+		case validation.Detail != nil && fieldName == "details":
+			return f.nodeInfoByValidationErrorDetail(f.getMessageListFromNode(elem.Val), validation.Detail)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, detail *MessageValidationDetailOption) *ast.NodeInfo {
+	if detail.Idx >= len(list) {
+		return nil
+	}
+	node := list[detail.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case detail.Rule && fieldName == "rule":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case detail.PreconditionFailure != nil && fieldName == "precondition_failures":
+			return f.nodeInfoByPreconditionFailures(f.getMessageListFromNode(elem.Val), detail.PreconditionFailure)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByPreconditionFailures(list []*ast.MessageLiteralNode, failure *MessageValidationDetailPreconditionFailureOption) *ast.NodeInfo {
+	if failure.Idx >= len(list) {
+		return nil
+	}
+	node := list[failure.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		if fieldName == "violations" {
+			return f.nodeInfoByPreconditionFailureViolations(f.getMessageListFromNode(elem.Val), failure.Violation)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLiteralNode, violation MessageValidationDetailPreconditionFailureViolationOption) *ast.NodeInfo {
+	if violation.Idx >= len(list) {
+		return nil
+	}
+	node := list[violation.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		if string(fieldName) == violation.FieldName {
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
 		}
 	}
 	return f.nodeInfo(node)

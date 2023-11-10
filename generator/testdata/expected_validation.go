@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 
+	githubproto "github.com/golang/protobuf/proto"
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
@@ -16,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -200,7 +202,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		{
 			valueMu.RLock()
-			_value, err := grpcfed.EvalCEL(s.env, "post.id == 'some-id'", envOpts, evalValues, reflect.TypeOf(true))
+			_value, err := grpcfed.EvalCEL(s.env, "post.id == 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
 			valueMu.RUnlock()
 			if err != nil {
 				return nil, err
@@ -244,20 +246,66 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   {
 		     name: "_validation1"
 		     error {
-		       code: INVALID_ARGUMENT
-		       rule: "post.title == 'some-title'"
+		       code: FAILED_PRECONDITION
+		       details {
+		         rule: "post.title == 'some-title'"
+		         precondition_failures {...}
+		       }
 		     }
 		   }
 		*/
 		{
-			valueMu.RLock()
-			_value, err := grpcfed.EvalCEL(s.env, "post.title == 'some-title'", envOpts, evalValues, reflect.TypeOf(true))
-			valueMu.RUnlock()
-			if err != nil {
-				return nil, err
+			_success := true
+			var _details []githubproto.Message
+			{
+				valueMu.RLock()
+				_value, err := grpcfed.EvalCEL(s.env, "post.title == 'some-title'", envOpts, evalValues, reflect.TypeOf(false))
+				valueMu.RUnlock()
+				if err != nil {
+					return nil, err
+				}
+				if !_value.(bool) {
+					_success = false
+					{
+						var _validations []*errdetails.PreconditionFailure_Violation
+						{
+							valueMu.RLock()
+							_type, err := grpcfed.EvalCEL(s.env, "'some-type'", envOpts, evalValues, reflect.TypeOf(""))
+							valueMu.RUnlock()
+							if err != nil {
+								return nil, err
+							}
+							valueMu.RLock()
+							_subject, err := grpcfed.EvalCEL(s.env, "'some-subject'", envOpts, evalValues, reflect.TypeOf(""))
+							valueMu.RUnlock()
+							if err != nil {
+								return nil, err
+							}
+							valueMu.RLock()
+							_description, err := grpcfed.EvalCEL(s.env, "'some-description'", envOpts, evalValues, reflect.TypeOf(""))
+							valueMu.RUnlock()
+							if err != nil {
+								return nil, err
+							}
+							_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+								Type:        _type.(string),
+								Subject:     _subject.(string),
+								Description: _description.(string),
+							})
+						}
+						_details = append(_details, &errdetails.PreconditionFailure{
+							Violations: _validations,
+						})
+					}
+				}
 			}
-			if !_value.(bool) {
-				return nil, grpcstatus.Error(grpccodes.InvalidArgument, "validation failure")
+			if !_success {
+				_stts := grpcstatus.New(grpccodes.FailedPrecondition, "validation failure")
+				_stts, err := _stts.WithDetails(_details...)
+				if err != nil {
+					return nil, err
+				}
+				return nil, _stts.Err()
 			}
 		}
 		return nil, nil

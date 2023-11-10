@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/mercari/grpc-federation/internal/testutil"
 	"github.com/mercari/grpc-federation/resolver"
@@ -176,8 +177,11 @@ func TestProtoFormat(t *testing.T) {
       {
         name: "_validation1"
         error {
-          code: INVALID_ARGUMENT
-          rule: "post.title == 'some-title'"
+          code: FAILED_PRECONDITION
+          details {
+            rule: "post.title == 'some-title'"
+            precondition_failures {...}
+          }
         }
       }
     ]
@@ -213,6 +217,211 @@ func TestProtoFormat(t *testing.T) {
 						t.Errorf("(-got, +want)\n%s", diff)
 					}
 				})
+			}
+		})
+	}
+}
+
+func TestValidationRule_ProtoFormat(t *testing.T) {
+	rule := &resolver.ValidationRule{
+		Name: "_validation0",
+		Error: &resolver.ValidationError{
+			Code: code.Code_FAILED_PRECONDITION,
+			Details: resolver.MessageValidationDetails{
+				{
+					Rule: &resolver.CELValue{
+						Expr: "1 == 1",
+					},
+				},
+				{
+					Rule: &resolver.CELValue{
+						Expr: "2 == 2",
+					},
+				},
+			},
+		},
+	}
+
+	opt := resolver.DefaultProtoFormatOption
+	got := rule.ProtoFormat(opt)
+	if diff := cmp.Diff(got, `{
+  name: "_validation0"
+  error {
+    code: FAILED_PRECONDITION
+    details: [
+      {
+        rule: "1 == 1"
+      },
+      {
+        rule: "2 == 2"
+      }
+    ]
+  }
+}`); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
+func TestValidationError_ProtoFormat(t *testing.T) {
+	tests := []struct {
+		desc          string
+		validationErr *resolver.ValidationError
+		expected      string
+	}{
+		{
+			desc: "Rule is set",
+			validationErr: &resolver.ValidationError{
+				Code: code.Code_FAILED_PRECONDITION,
+				Rule: &resolver.CELValue{
+					Expr: "1 == 1",
+				},
+			},
+			expected: `error {
+  code: FAILED_PRECONDITION
+  rule: "1 == 1"
+}`,
+		},
+		{
+			desc: "Details are set",
+			validationErr: &resolver.ValidationError{
+				Code: code.Code_FAILED_PRECONDITION,
+				Details: resolver.MessageValidationDetails{
+					{
+						Rule: &resolver.CELValue{
+							Expr: "1 == 1",
+						},
+					},
+					{
+						Rule: &resolver.CELValue{
+							Expr: "2 == 2",
+						},
+					},
+				},
+			},
+			expected: `error {
+  code: FAILED_PRECONDITION
+  details: [
+    {
+      rule: "1 == 1"
+    },
+    {
+      rule: "2 == 2"
+    }
+  ]
+}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			opt := resolver.DefaultProtoFormatOption
+			got := tc.validationErr.ProtoFormat(opt)
+			if diff := cmp.Diff(got, tc.expected); diff != "" {
+				t.Errorf("(-got, +want)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestValidationErrorDetails_ProtoFormat(t *testing.T) {
+	tests := []struct {
+		desc     string
+		details  resolver.MessageValidationDetails
+		expected string
+	}{
+		{
+			desc: "single detail",
+			details: resolver.MessageValidationDetails{
+				{
+					Rule: &resolver.CELValue{
+						Expr: "1 == 1",
+					},
+				},
+			},
+			expected: `details {
+  rule: "1 == 1"
+}`,
+		},
+		{
+			desc: "multiple details",
+			details: resolver.MessageValidationDetails{
+				{
+					Rule: &resolver.CELValue{
+						Expr: "1 == 1",
+					},
+				},
+				{
+					Rule: &resolver.CELValue{
+						Expr: "2 == 2",
+					},
+				},
+			},
+			expected: `details: [
+  {
+    rule: "1 == 1"
+  },
+  {
+    rule: "2 == 2"
+  }
+]`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			opt := resolver.DefaultProtoFormatOption
+			got := tc.details.ProtoFormat(opt)
+			if diff := cmp.Diff(got, tc.expected); diff != "" {
+				t.Errorf("(-got, +want)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
+	tests := []struct {
+		desc     string
+		detail   *resolver.ValidationErrorDetail
+		expected string
+	}{
+		{
+			desc: "single detail",
+			detail: &resolver.ValidationErrorDetail{
+				Rule: &resolver.CELValue{
+					Expr: "1 == 1",
+				},
+				PreconditionFailures: []*resolver.PreconditionFailure{
+					{},
+				},
+			},
+			expected: `  rule: "1 == 1"
+  precondition_failures {...}`,
+		},
+		{
+			desc: "multiple detail",
+			detail: &resolver.ValidationErrorDetail{
+				Rule: &resolver.CELValue{
+					Expr: "2 == 2",
+				},
+				PreconditionFailures: []*resolver.PreconditionFailure{
+					{},
+					{},
+				},
+			},
+			expected: `  rule: "2 == 2"
+  precondition_failures: [
+    {...},
+    {...}
+  ]`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			opt := resolver.DefaultProtoFormatOption
+			got := tc.detail.ProtoFormat(opt)
+			if diff := cmp.Diff(got, tc.expected); diff != "" {
+				t.Errorf("(-got, +want)\n%s", diff)
 			}
 		})
 	}

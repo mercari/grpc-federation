@@ -303,22 +303,62 @@ func (v *ValidationRule) ProtoFormat(opt *ProtoFormatOption) string {
 	elems = append(
 		elems,
 		nextOpt.indentFormat()+fmt.Sprintf("name: %q", v.Name),
-		v.protoFormatError(nextOpt),
+		v.Error.ProtoFormat(nextOpt),
 	)
 	return indent + fmt.Sprintf("{\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
-func (v *ValidationRule) protoFormatError(opt *ProtoFormatOption) string {
+func (v *ValidationError) ProtoFormat(opt *ProtoFormatOption) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
-	var elems []string
-	e := v.Error
-	elems = append(
-		elems,
-		nextOpt.indentFormat()+fmt.Sprintf("code: %s", e.Code),
-		nextOpt.indentFormat()+fmt.Sprintf("rule: %q", e.Rule.Expr),
-	)
+	elems := []string{
+		nextOpt.indentFormat() + fmt.Sprintf("code: %s", v.Code),
+	}
+	if r := v.Rule; r != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("rule: %q", v.Rule.Expr))
+	}
+	if len(v.Details) != 0 {
+		elems = append(elems, v.Details.ProtoFormat(nextOpt))
+	}
 	return indent + fmt.Sprintf("error {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
+func (v MessageValidationDetails) ProtoFormat(opt *ProtoFormatOption) string {
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	if len(v) == 1 {
+		return indent + fmt.Sprintf("details {\n%s\n%s}", v[0].ProtoFormat(opt), indent)
+	}
+	var elems []string
+	for _, detail := range v {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("{\n%s\n%s}", detail.ProtoFormat(nextOpt), nextOpt.indentFormat()))
+	}
+	return indent + fmt.Sprintf("details: [\n%s\n%s]", strings.Join(elems, ",\n"), indent)
+}
+
+func (v *ValidationErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
+	nextOpt := opt.toNextIndentLevel()
+	elems := []string{
+		nextOpt.indentFormat() + fmt.Sprintf("rule: %q", v.Rule.Expr),
+	}
+	if s := len(v.PreconditionFailures); s != 0 {
+		elems = append(elems, v.protoFormatDetails(nextOpt, "precondition_failures", s))
+	}
+
+	return strings.Join(elems, "\n")
+}
+
+func (v *ValidationErrorDetail) protoFormatDetails(opt *ProtoFormatOption, name string, size int) string {
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	if size == 1 {
+		return indent + fmt.Sprintf("%s {...}", name)
+	}
+	var elems []string
+	for i := 0; i < size; i++ {
+		elems = append(elems, nextOpt.indentFormat()+"{...}")
+	}
+	return indent + fmt.Sprintf("%s: [\n%s\n%s]", name, strings.Join(elems, ",\n"), indent)
 }
 
 func (a *Argument) ProtoFormat(opt *ProtoFormatOption, isRequestArg bool) string {

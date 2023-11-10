@@ -2675,11 +2675,28 @@ func TestValidation(t *testing.T) {
 							"_validation0",
 							code.Code_FAILED_PRECONDITION,
 							testutil.NewCELValueBuilder("post.id == 'some-id'", resolver.BoolType).Build(t),
+							nil,
 						).
 						AddValidation(
 							"_validation1",
-							code.Code_INVALID_ARGUMENT,
-							testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
+							code.Code_FAILED_PRECONDITION,
+							nil,
+							[]*resolver.ValidationErrorDetail{
+								{
+									Rule: testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
+									PreconditionFailures: []*resolver.PreconditionFailure{
+										{
+											Violations: []*resolver.PreconditionFailureViolation{
+												{
+													Type:        testutil.NewCELValueBuilder("'some-type'", resolver.StringType).Build(t),
+													Subject:     testutil.NewCELValueBuilder("'some-subject'", resolver.StringType).Build(t),
+													Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
+												},
+											},
+										},
+									},
+								},
+							},
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(

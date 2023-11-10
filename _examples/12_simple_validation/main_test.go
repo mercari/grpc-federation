@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -59,6 +60,7 @@ func TestFederation(t *testing.T) {
 	type errStatus struct {
 		code codes.Code
 		message string
+		details []any
 	}
 	for _, tc := range []struct{
 		desc string
@@ -87,6 +89,22 @@ func TestFederation(t *testing.T) {
 			expectedErr: &errStatus{
 				code: codes.FailedPrecondition,
 				message: "validation failure",
+				details: []any{
+					&errdetails.PreconditionFailure{
+						Violations: []*errdetails.PreconditionFailure_Violation{
+							{
+								Type: "type1",
+								Subject: "some-id",
+								Description: "description1",
+							},
+							{
+								Type: "type2",
+								Subject: "some-id",
+								Description: "description2",
+							},
+						},
+					},
+				},
 			},
 		},
 	} {
@@ -108,6 +126,12 @@ func TestFederation(t *testing.T) {
 
 				if got := s.Message(); got != tc.expectedErr.message {
 					t.Errorf("invalida gRPC status message: got: %v, expected: %v", got, tc.expectedErr.message)
+				}
+				if diff := cmp.Diff(s.Details(), tc.expectedErr.details, cmpopts.IgnoreUnexported(
+					errdetails.PreconditionFailure{},
+					errdetails.PreconditionFailure_Violation{},
+				)); diff != "" {
+					t.Errorf("(-got, +want)\n%s", diff)
 				}
 				return
 			}

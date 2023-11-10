@@ -564,12 +564,13 @@ func (b *MessageRuleBuilder) AddMessageDependency(name string, msg *resolver.Mes
 	return b
 }
 
-func (b *MessageRuleBuilder) AddValidation(name string, c code.Code, rule *resolver.CELValue) *MessageRuleBuilder {
+func (b *MessageRuleBuilder) AddValidation(name string, c code.Code, rule *resolver.CELValue, details []*resolver.ValidationErrorDetail) *MessageRuleBuilder {
 	validation := &resolver.ValidationRule{
 		Name: name,
 		Error: &resolver.ValidationError{
-			Code: c,
-			Rule: rule,
+			Code:    c,
+			Rule:    rule,
+			Details: details,
 		},
 	}
 	b.rule.Validations = append(b.rule.Validations, validation)

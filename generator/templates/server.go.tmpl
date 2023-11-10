@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"log/slog"
 
+	githubproto "github.com/golang/protobuf/proto"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -777,8 +778,9 @@ if err := eg.Wait(); err != nil {
 
 {{- define "messageValidation" }}
 {
+  {{- if .Error.HasRule }}
 	valueMu.RLock()
-	_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(true))
+	_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(false))
 	valueMu.RUnlock()
 	if err != nil {
 		return nil, err
@@ -786,5 +788,69 @@ if err := eg.Wait(); err != nil {
 	if !_value.(bool) {
 		return nil, grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
 	}
+  {{- else }}
+	_success := true
+	var _details []githubproto.Message
+	{{- range .Error.Details }}
+	{
+	  valueMu.RLock()
+	  _value, err := grpcfed.EvalCEL(s.env, "{{ .Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+	  valueMu.RUnlock()
+	  if err != nil {
+	    return nil, err
+	  }
+	  if !_value.(bool) {
+		  _success = false
+	    {{- range .PreconditionFailures }}
+			{{- template "preconditionFailure" . }}
+			{{- end }}
+		}
+	}
+  {{- end }}
+	if !_success {
+	  _stts := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+	  _stts, err := _stts.WithDetails(_details...)
+	  if err != nil {
+	    return nil, err
+	  }
+	  return nil, _stts.Err()
+	}
+	{{- end }}
+}
+{{- end }}
+
+{{- define "preconditionFailure" }}
+{
+  var _validations []*errdetails.PreconditionFailure_Violation
+	{{- range .Validations }}
+	{
+	  valueMu.RLock()
+	  _type, err := grpcfed.EvalCEL(s.env, "{{ .Type }}", envOpts, evalValues, reflect.TypeOf(""))
+	  valueMu.RUnlock()
+	  if err != nil {
+	    return nil, err
+	  }
+	  valueMu.RLock()
+	  _subject, err := grpcfed.EvalCEL(s.env, "{{ .Subject }}", envOpts, evalValues, reflect.TypeOf(""))
+	  valueMu.RUnlock()
+	  if err != nil {
+	    return nil, err
+	  }
+	  valueMu.RLock()
+	  _description, err := grpcfed.EvalCEL(s.env, "{{ .Description }}", envOpts, evalValues, reflect.TypeOf(""))
+	  valueMu.RUnlock()
+	  if err != nil {
+	    return nil, err
+	  }
+	  _validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+	    Type: _type.(string),
+	    Subject: _subject.(string),
+	    Description: _description.(string),
+	  })
+	}
+	{{- end }}
+  _details = append(_details, &errdetails.PreconditionFailure{
+    Violations: _validations,
+  })
 }
 {{- end }}
