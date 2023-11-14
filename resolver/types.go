@@ -166,7 +166,7 @@ type ValidationRule struct {
 type ValidationError struct {
 	Code    code.Code
 	Rule    *CELValue
-	Details MessageValidationDetails
+	Details ValidationErrorDetails
 }
 
 // ReferenceNames returns all the unique reference names in the error definition.
@@ -195,7 +195,7 @@ func (v *ValidationError) ReferenceNames() []string {
 	return names
 }
 
-type MessageValidationDetails []*ValidationErrorDetail
+type ValidationErrorDetails []*ValidationErrorDetail
 
 type ValidationErrorDetail struct {
 	Rule                 *CELValue

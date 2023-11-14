@@ -323,7 +323,7 @@ func (v *ValidationError) ProtoFormat(opt *ProtoFormatOption) string {
 	return indent + fmt.Sprintf("error {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
-func (v MessageValidationDetails) ProtoFormat(opt *ProtoFormatOption) string {
+func (v ValidationErrorDetails) ProtoFormat(opt *ProtoFormatOption) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	if len(v) == 1 {

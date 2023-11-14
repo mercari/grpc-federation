@@ -227,7 +227,7 @@ func TestValidationRule_ProtoFormat(t *testing.T) {
 		Name: "_validation0",
 		Error: &resolver.ValidationError{
 			Code: code.Code_FAILED_PRECONDITION,
-			Details: resolver.MessageValidationDetails{
+			Details: resolver.ValidationErrorDetails{
 				{
 					Rule: &resolver.CELValue{
 						Expr: "1 == 1",
@@ -285,7 +285,7 @@ func TestValidationError_ProtoFormat(t *testing.T) {
 			desc: "Details are set",
 			validationErr: &resolver.ValidationError{
 				Code: code.Code_FAILED_PRECONDITION,
-				Details: resolver.MessageValidationDetails{
+				Details: resolver.ValidationErrorDetails{
 					{
 						Rule: &resolver.CELValue{
 							Expr: "1 == 1",
@@ -326,12 +326,12 @@ func TestValidationError_ProtoFormat(t *testing.T) {
 func TestValidationErrorDetails_ProtoFormat(t *testing.T) {
 	tests := []struct {
 		desc     string
-		details  resolver.MessageValidationDetails
+		details  resolver.ValidationErrorDetails
 		expected string
 	}{
 		{
 			desc: "single detail",
-			details: resolver.MessageValidationDetails{
+			details: resolver.ValidationErrorDetails{
 				{
 					Rule: &resolver.CELValue{
 						Expr: "1 == 1",
@@ -344,7 +344,7 @@ func TestValidationErrorDetails_ProtoFormat(t *testing.T) {
 		},
 		{
 			desc: "multiple details",
-			details: resolver.MessageValidationDetails{
+			details: resolver.ValidationErrorDetails{
 				{
 					Rule: &resolver.CELValue{
 						Expr: "1 == 1",
