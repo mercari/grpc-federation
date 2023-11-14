@@ -280,29 +280,34 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						{
 							var _validations []*errdetails.PreconditionFailure_Violation
 							{
-								valueMu.RLock()
-								_type, err := grpcfed.EvalCEL(s.env, "'some-type'", envOpts, evalValues, reflect.TypeOf(""))
-								valueMu.RUnlock()
-								if err != nil {
-									return err
-								}
-								valueMu.RLock()
-								_subject, err := grpcfed.EvalCEL(s.env, "'some-subject'", envOpts, evalValues, reflect.TypeOf(""))
-								valueMu.RUnlock()
-								if err != nil {
-									return err
-								}
-								valueMu.RLock()
-								_description, err := grpcfed.EvalCEL(s.env, "'some-description'", envOpts, evalValues, reflect.TypeOf(""))
-								valueMu.RUnlock()
-								if err != nil {
-									return err
-								}
-								_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
-									Type:        _type.(string),
-									Subject:     _subject.(string),
-									Description: _description.(string),
-								})
+								func() {
+									valueMu.RLock()
+									_type, err := grpcfed.EvalCEL(s.env, "'some-type'", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									valueMu.RLock()
+									_subject, err := grpcfed.EvalCEL(s.env, "'some-subject'", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									valueMu.RLock()
+									_description, err := grpcfed.EvalCEL(s.env, "'some-description'", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+										Type:        _type.(string),
+										Subject:     _subject.(string),
+										Description: _description.(string),
+									})
+								}()
 							}
 							_details = append(_details, &errdetails.PreconditionFailure{
 								Violations: _validations,
@@ -311,12 +316,13 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					}
 				}
 				if !_success {
-					_stts := grpcstatus.New(grpccodes.FailedPrecondition, "validation failure")
-					_stts, err := _stts.WithDetails(_details...)
+					_status := grpcstatus.New(grpccodes.FailedPrecondition, "validation failure")
+					_statusWithDetails, err := _status.WithDetails(_details...)
 					if err != nil {
-						return err
+						s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+						return _status.Err()
 					}
-					return _stts.Err()
+					return _statusWithDetails.Err()
 				}
 				return nil
 			}()
