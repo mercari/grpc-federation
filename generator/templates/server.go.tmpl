@@ -775,45 +775,55 @@ if err := eg.Wait(); err != nil {
 {{- end }}
 
 {{- define "messageValidation" }}
-	{
-	{{- if .Error.HasRule }}
-	valueMu.RLock()
-	_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(false))
-	valueMu.RUnlock()
-	if err != nil {
-		return nil, err
-	}
-	if !_value.(bool) {
-		return nil, grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
-	}
-	{{- else }}
-	_success := true
-	var _details []proto.Message
-	{{- range .Error.Details }}
-	{
+{
+	err := func() error {
+		{{- if .Error.HasRule }}
 		valueMu.RLock()
-		_value, err := grpcfed.EvalCEL(s.env, "{{ .Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+		_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(false))
 		valueMu.RUnlock()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if !_value.(bool) {
-			_success = false
-			{{- range .PreconditionFailures }}
-			{{- template "preconditionFailure" . }}
-			{{- end }}
+			return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
 		}
-	}
-	{{- end }}
-	if !_success {
-		_stts := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
-		_stts, err := _stts.WithDetails(_details...)
-		if err != nil {
+		{{- else }}
+		_success := true
+		var _details []proto.Message
+		{{- range .Error.Details }}
+		{
+			valueMu.RLock()
+			_value, err := grpcfed.EvalCEL(s.env, "{{ .Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+			valueMu.RUnlock()
+			if err != nil {
+				return err
+			}
+			if !_value.(bool) {
+				_success = false
+				{{- range .PreconditionFailures }}
+				{{- template "preconditionFailure" . }}
+				{{- end }}
+			}
+		}
+		{{- end }}
+		if !_success {
+			_stts := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+			_stts, err := _stts.WithDetails(_details...)
+			if err != nil {
+				return err
+			}
+			return _stts.Err()
+		}
+		{{- end }}
+		return nil
+	}()
+	if err != nil {
+		if _, ok := grpcstatus.FromError(err); ok {
 			return nil, err
 		}
-		return nil, _stts.Err()
+		s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 	}
-	{{- end }}
 }
 {{- end }}
 
@@ -826,19 +836,19 @@ if err := eg.Wait(); err != nil {
 		_type, err := grpcfed.EvalCEL(s.env, "{{ .Type }}", envOpts, evalValues, reflect.TypeOf(""))
 		valueMu.RUnlock()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		valueMu.RLock()
 		_subject, err := grpcfed.EvalCEL(s.env, "{{ .Subject }}", envOpts, evalValues, reflect.TypeOf(""))
 		valueMu.RUnlock()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		valueMu.RLock()
 		_description, err := grpcfed.EvalCEL(s.env, "{{ .Description }}", envOpts, evalValues, reflect.TypeOf(""))
 		valueMu.RUnlock()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
 			Type: _type.(string),

@@ -201,14 +201,24 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   }
 		*/
 		{
-			valueMu.RLock()
-			_value, err := grpcfed.EvalCEL(s.env, "post.id == 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
-			valueMu.RUnlock()
+			err := func() error {
+				valueMu.RLock()
+				_value, err := grpcfed.EvalCEL(s.env, "post.id == 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
+				valueMu.RUnlock()
+				if err != nil {
+					return err
+				}
+				if !_value.(bool) {
+					return grpcstatus.Error(grpccodes.FailedPrecondition, "validation failure")
+				}
+				return nil
+			}()
 			if err != nil {
-				return nil, err
-			}
-			if !_value.(bool) {
-				return nil, grpcstatus.Error(grpccodes.FailedPrecondition, "validation failure")
+				if _, ok := grpcstatus.FromError(err); ok {
+					return nil, err
+				}
+				s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+				return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 			}
 		}
 		return nil, nil
@@ -255,82 +265,92 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   }
 		*/
 		{
-			_success := true
-			var _details []proto.Message
-			{
-				valueMu.RLock()
-				_value, err := grpcfed.EvalCEL(s.env, "$.id == 'correct-id'", envOpts, evalValues, reflect.TypeOf(false))
-				valueMu.RUnlock()
-				if err != nil {
-					return nil, err
-				}
-				if !_value.(bool) {
-					_success = false
-					{
-						var _validations []*errdetails.PreconditionFailure_Violation
+			err := func() error {
+				_success := true
+				var _details []proto.Message
+				{
+					valueMu.RLock()
+					_value, err := grpcfed.EvalCEL(s.env, "$.id == 'correct-id'", envOpts, evalValues, reflect.TypeOf(false))
+					valueMu.RUnlock()
+					if err != nil {
+						return err
+					}
+					if !_value.(bool) {
+						_success = false
 						{
-							valueMu.RLock()
-							_type, err := grpcfed.EvalCEL(s.env, "'type1'", envOpts, evalValues, reflect.TypeOf(""))
-							valueMu.RUnlock()
-							if err != nil {
-								return nil, err
+							var _validations []*errdetails.PreconditionFailure_Violation
+							{
+								valueMu.RLock()
+								_type, err := grpcfed.EvalCEL(s.env, "'type1'", envOpts, evalValues, reflect.TypeOf(""))
+								valueMu.RUnlock()
+								if err != nil {
+									return err
+								}
+								valueMu.RLock()
+								_subject, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
+								valueMu.RUnlock()
+								if err != nil {
+									return err
+								}
+								valueMu.RLock()
+								_description, err := grpcfed.EvalCEL(s.env, "'description1'", envOpts, evalValues, reflect.TypeOf(""))
+								valueMu.RUnlock()
+								if err != nil {
+									return err
+								}
+								_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+									Type:        _type.(string),
+									Subject:     _subject.(string),
+									Description: _description.(string),
+								})
 							}
-							valueMu.RLock()
-							_subject, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
-							valueMu.RUnlock()
-							if err != nil {
-								return nil, err
+							{
+								valueMu.RLock()
+								_type, err := grpcfed.EvalCEL(s.env, "'type2'", envOpts, evalValues, reflect.TypeOf(""))
+								valueMu.RUnlock()
+								if err != nil {
+									return err
+								}
+								valueMu.RLock()
+								_subject, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
+								valueMu.RUnlock()
+								if err != nil {
+									return err
+								}
+								valueMu.RLock()
+								_description, err := grpcfed.EvalCEL(s.env, "'description2'", envOpts, evalValues, reflect.TypeOf(""))
+								valueMu.RUnlock()
+								if err != nil {
+									return err
+								}
+								_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+									Type:        _type.(string),
+									Subject:     _subject.(string),
+									Description: _description.(string),
+								})
 							}
-							valueMu.RLock()
-							_description, err := grpcfed.EvalCEL(s.env, "'description1'", envOpts, evalValues, reflect.TypeOf(""))
-							valueMu.RUnlock()
-							if err != nil {
-								return nil, err
-							}
-							_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
-								Type:        _type.(string),
-								Subject:     _subject.(string),
-								Description: _description.(string),
+							_details = append(_details, &errdetails.PreconditionFailure{
+								Violations: _validations,
 							})
 						}
-						{
-							valueMu.RLock()
-							_type, err := grpcfed.EvalCEL(s.env, "'type2'", envOpts, evalValues, reflect.TypeOf(""))
-							valueMu.RUnlock()
-							if err != nil {
-								return nil, err
-							}
-							valueMu.RLock()
-							_subject, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
-							valueMu.RUnlock()
-							if err != nil {
-								return nil, err
-							}
-							valueMu.RLock()
-							_description, err := grpcfed.EvalCEL(s.env, "'description2'", envOpts, evalValues, reflect.TypeOf(""))
-							valueMu.RUnlock()
-							if err != nil {
-								return nil, err
-							}
-							_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
-								Type:        _type.(string),
-								Subject:     _subject.(string),
-								Description: _description.(string),
-							})
-						}
-						_details = append(_details, &errdetails.PreconditionFailure{
-							Violations: _validations,
-						})
 					}
 				}
-			}
-			if !_success {
-				_stts := grpcstatus.New(grpccodes.FailedPrecondition, "validation failure")
-				_stts, err := _stts.WithDetails(_details...)
-				if err != nil {
+				if !_success {
+					_stts := grpcstatus.New(grpccodes.FailedPrecondition, "validation failure")
+					_stts, err := _stts.WithDetails(_details...)
+					if err != nil {
+						return err
+					}
+					return _stts.Err()
+				}
+				return nil
+			}()
+			if err != nil {
+				if _, ok := grpcstatus.FromError(err); ok {
 					return nil, err
 				}
-				return nil, _stts.Err()
+				s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+				return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 			}
 		}
 		return nil, nil
