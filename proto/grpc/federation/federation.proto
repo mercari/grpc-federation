@@ -579,23 +579,23 @@ message ValidationErrorDetail {
   // rule specifies validation rule in CEL.
   string rule = 1;
   // error_info describes the cause of the error with structured details.
-  repeated google.rpc.ErrorInfo error_infos = 3;
+  repeated google.rpc.ErrorInfo error_info = 3;
   // retry_info describes when the clients can retry a failed request.
-  repeated google.rpc.RetryInfo retry_infos = 4;
+  repeated google.rpc.RetryInfo retry_info = 4;
   // debug_info describes additional debugging info.
-  repeated google.rpc.DebugInfo debug_infos = 5;
+  repeated google.rpc.DebugInfo debug_info = 5;
   // quota_failure describes how a quota check failed.
-  repeated google.rpc.QuotaFailure quota_failures = 6;
+  repeated google.rpc.QuotaFailure quota_failure = 6;
   // precondition_failure describes what preconditions have failed.
-  repeated google.rpc.PreconditionFailure precondition_failures = 7;
+  repeated google.rpc.PreconditionFailure precondition_failure = 7;
   // bad_request describes violations in a client request.
-  repeated google.rpc.BadRequest bad_requests = 8;
+  repeated google.rpc.BadRequest bad_request = 8;
   // request_info contains metadata about the request that clients can attach.
-  repeated google.rpc.RequestInfo request_infos = 9;
+  repeated google.rpc.RequestInfo request_info = 9;
   // resource_info describes the resource that is being accessed.
-  repeated google.rpc.ResourceInfo resource_infos = 10;
+  repeated google.rpc.ResourceInfo resource_info = 10;
   // help provides links to documentation or for performing an out of band action.
-  repeated google.rpc.Help helps = 11;
+  repeated google.rpc.Help help = 11;
   // localized_message provides a localized error message that is safe to return to the user.
-  repeated google.rpc.LocalizedMessage localized_messages = 12;
+  repeated google.rpc.LocalizedMessage localized_message = 12;
 }

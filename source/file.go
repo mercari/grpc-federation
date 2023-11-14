@@ -1030,7 +1030,7 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 				return nil
 			}
 			return f.nodeInfo(value)
-		case detail.PreconditionFailure != nil && fieldName == "precondition_failures":
+		case detail.PreconditionFailure != nil && fieldName == "precondition_failure":
 			return f.nodeInfoByPreconditionFailures(f.getMessageListFromNode(elem.Val), detail.PreconditionFailure)
 		}
 	}

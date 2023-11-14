@@ -180,7 +180,7 @@ func TestProtoFormat(t *testing.T) {
           code: FAILED_PRECONDITION
           details {
             rule: "post.title == 'some-title'"
-            precondition_failures {...}
+            precondition_failure {...}
           }
         }
       }
@@ -395,7 +395,7 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 				},
 			},
 			expected: `  rule: "1 == 1"
-  precondition_failures {...}`,
+  precondition_failure {...}`,
 		},
 		{
 			desc: "multiple detail",
@@ -409,7 +409,7 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 				},
 			},
 			expected: `  rule: "2 == 2"
-  precondition_failures: [
+  precondition_failure: [
     {...},
     {...}
   ]`,

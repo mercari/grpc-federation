@@ -249,7 +249,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       code: FAILED_PRECONDITION
 		       details {
 		         rule: "post.title == 'some-title'"
-		         precondition_failures {...}
+		         precondition_failure {...}
 		       }
 		     }
 		   }

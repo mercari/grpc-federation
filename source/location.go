@@ -966,7 +966,7 @@ func MessageValidationDetailLocation(fileName, msgName string, vIdx, dIdx int, r
 	}
 }
 
-// MessageValidationDetailPreconditionFailureLocation creates location for validations[*].error.details[*].precondition_failures[*] in grpc.federation.message.
+// MessageValidationDetailPreconditionFailureLocation creates location for validations[*].error.details[*].precondition_failure[*] in grpc.federation.message.
 func MessageValidationDetailPreconditionFailureLocation(fileName, msgName string, vIdx, dIdx, fIdx, fvIdx int, fieldName string) *Location {
 	return &Location{
 		FileName: fileName,

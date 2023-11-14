@@ -342,7 +342,7 @@ func (v *ValidationErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 		nextOpt.indentFormat() + fmt.Sprintf("rule: %q", v.Rule.Expr),
 	}
 	if s := len(v.PreconditionFailures); s != 0 {
-		elems = append(elems, v.protoFormatDetails(nextOpt, "precondition_failures", s))
+		elems = append(elems, v.protoFormatDetails(nextOpt, "precondition_failure", s))
 	}
 
 	return strings.Join(elems, "\n")

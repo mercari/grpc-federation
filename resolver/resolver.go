@@ -1047,7 +1047,7 @@ func (r *Resolver) resolveMessageRuleValidationDetails(details []*federation.Val
 			Rule: &CELValue{
 				Expr: detail.Rule,
 			},
-			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailures()),
+			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailure()),
 		})
 	}
 	return result
