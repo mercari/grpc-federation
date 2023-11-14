@@ -10,12 +10,10 @@ import (
 	"runtime/debug"
 	"log/slog"
 
-	githubproto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/dynamicpb"
@@ -790,7 +788,7 @@ if err := eg.Wait(); err != nil {
 	}
 	{{- else }}
 	_success := true
-	var _details []githubproto.Message
+	var _details []proto.Message
 	{{- range .Error.Details }}
 	{
 		valueMu.RLock()

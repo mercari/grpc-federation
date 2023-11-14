@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 
-	githubproto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
@@ -256,7 +256,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		{
 			_success := true
-			var _details []githubproto.Message
+			var _details []proto.Message
 			{
 				valueMu.RLock()
 				_value, err := grpcfed.EvalCEL(s.env, "post.title == 'some-title'", envOpts, evalValues, reflect.TypeOf(false))
