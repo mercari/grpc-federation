@@ -3053,6 +3053,32 @@ func (r *Resolver) trimPackage(pkg *Package, name string) string {
 	return strings.TrimPrefix(name, fmt.Sprintf("%s.", pkg.Name))
 }
 
+// ReferenceNames returns all the unique reference names in the error definition.
+func (v *ValidationError) ReferenceNames() []string {
+	nameSet := make(map[string]struct{})
+	register := func(names []string) {
+		for _, name := range names {
+			nameSet[name] = struct{}{}
+		}
+	}
+	register(v.Rule.ReferenceNames())
+	for _, detail := range v.Details {
+		register(detail.Rule.ReferenceNames())
+		for _, failure := range detail.PreconditionFailures {
+			for _, violation := range failure.Violations {
+				register(violation.Type.ReferenceNames())
+				register(violation.Subject.ReferenceNames())
+				register(violation.Description.ReferenceNames())
+			}
+		}
+	}
+	names := make([]string, 0, len(nameSet))
+	for name := range nameSet {
+		names = append(names, name)
+	}
+	return names
+}
+
 func splitGoPackageName(goPackage string) (string, string, error) {
 	importPathAndPkgName := strings.Split(goPackage, ";")
 	if len(importPathAndPkgName) == 1 {

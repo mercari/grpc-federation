@@ -169,32 +169,6 @@ type ValidationError struct {
 	Details ValidationErrorDetails
 }
 
-// ReferenceNames returns all the unique reference names in the error definition.
-func (v *ValidationError) ReferenceNames() []string {
-	nameSet := make(map[string]struct{})
-	register := func(names []string) {
-		for _, name := range names {
-			nameSet[name] = struct{}{}
-		}
-	}
-	register(v.Rule.ReferenceNames())
-	for _, detail := range v.Details {
-		register(detail.Rule.ReferenceNames())
-		for _, failure := range detail.PreconditionFailures {
-			for _, violation := range failure.Violations {
-				register(violation.Type.ReferenceNames())
-				register(violation.Subject.ReferenceNames())
-				register(violation.Description.ReferenceNames())
-			}
-		}
-	}
-	var names []string
-	for name := range nameSet {
-		names = append(names, name)
-	}
-	return names
-}
-
 type ValidationErrorDetails []*ValidationErrorDetail
 
 type ValidationErrorDetail struct {
