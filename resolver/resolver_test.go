@@ -4,8 +4,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
-
 	"github.com/google/go-cmp/cmp"
 	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/genproto/googleapis/rpc/code"

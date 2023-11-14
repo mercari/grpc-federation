@@ -180,7 +180,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePost")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.CreatePostArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 
@@ -225,7 +225,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePostResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.CreatePostResponse", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.CreatePostResponse", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostResponseArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueCp *CreatePost

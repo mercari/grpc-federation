@@ -216,7 +216,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
 		sg         singleflight.Group
 		valueMu    sync.RWMutex
@@ -405,7 +405,7 @@ func (s *FederationService) resolve_Org_Federation_Sub(ctx context.Context, req 
 	ctx, span := s.tracer.Start(ctx, "org.federation.Sub")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.Sub", slog.Any("message_args", s.logvalue_Org_Federation_SubArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.Sub", slog.Any("message_args", s.logvalue_Org_Federation_SubArgument(req)))
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
@@ -424,7 +424,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	ctx, span := s.tracer.Start(ctx, "org.federation.User")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
 	var (
 		sg                      singleflight.Group
 		valueMu                 sync.RWMutex
@@ -545,7 +545,7 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 	ctx, span := s.tracer.Start(ctx, "org.federation.UserID")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.UserID", slog.Any("message_args", s.logvalue_Org_Federation_UserIDArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.UserID", slog.Any("message_args", s.logvalue_Org_Federation_UserIDArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueMu sync.RWMutex

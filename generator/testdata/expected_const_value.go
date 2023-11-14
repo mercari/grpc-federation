@@ -244,7 +244,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	ctx, span := s.tracer.Start(ctx, "org.federation.Content")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.Content", slog.Any("message_args", s.logvalue_Org_Federation_ContentArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.Content", slog.Any("message_args", s.logvalue_Org_Federation_ContentArgument(req)))
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.ContentArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 
@@ -595,7 +595,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
 		sg            singleflight.Group
 		valueContent  *content.Content
