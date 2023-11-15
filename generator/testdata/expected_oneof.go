@@ -189,7 +189,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
 		sg       singleflight.Group
 		valueMu  sync.RWMutex
@@ -251,7 +251,7 @@ func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.M")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.M", slog.Any("message_args", s.logvalue_Org_Federation_MArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.M", slog.Any("message_args", s.logvalue_Org_Federation_MArgument(req)))
 
 	// create a message value to be returned.
 	ret := &M{}
@@ -268,7 +268,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	ctx, span := s.tracer.Start(ctx, "org.federation.User")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueMu sync.RWMutex
@@ -327,7 +327,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	ctx, span := s.tracer.Start(ctx, "org.federation.UserSelection")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.UserSelection", slog.Any("message_args", s.logvalue_Org_Federation_UserSelectionArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.UserSelection", slog.Any("message_args", s.logvalue_Org_Federation_UserSelectionArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueM  *M

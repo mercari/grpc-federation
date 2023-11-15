@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
@@ -16,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
@@ -144,7 +146,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.GetPostResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponseArgument(req)))
 	var (
 		sg        singleflight.Group
 		valueMu   sync.RWMutex
@@ -199,14 +201,24 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   }
 		*/
 		{
-			valueMu.RLock()
-			_value, err := grpcfed.EvalCEL(s.env, "post.id == 'some-id'", envOpts, evalValues, reflect.TypeOf(true))
-			valueMu.RUnlock()
+			err := func() error {
+				valueMu.RLock()
+				_value, err := grpcfed.EvalCEL(s.env, "post.id == 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
+				valueMu.RUnlock()
+				if err != nil {
+					return err
+				}
+				if !_value.(bool) {
+					return grpcstatus.Error(grpccodes.FailedPrecondition, "validation failure")
+				}
+				return nil
+			}()
 			if err != nil {
-				return nil, err
-			}
-			if !_value.(bool) {
-				return nil, grpcstatus.Error(grpccodes.FailedPrecondition, "validation failure")
+				if _, ok := grpcstatus.FromError(err); ok {
+					return nil, err
+				}
+				s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+				return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 			}
 		}
 		return nil, nil
@@ -244,20 +256,82 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   {
 		     name: "_validation1"
 		     error {
-		       code: INVALID_ARGUMENT
-		       rule: "post.title == 'some-title'"
+		       code: FAILED_PRECONDITION
+		       details {
+		         rule: "post.title == 'some-title'"
+		         precondition_failure {...}
+		       }
 		     }
 		   }
 		*/
 		{
-			valueMu.RLock()
-			_value, err := grpcfed.EvalCEL(s.env, "post.title == 'some-title'", envOpts, evalValues, reflect.TypeOf(true))
-			valueMu.RUnlock()
+			err := func() error {
+				_success := true
+				var _details []proto.Message
+				{
+					valueMu.RLock()
+					_value, err := grpcfed.EvalCEL(s.env, "post.title == 'some-title'", envOpts, evalValues, reflect.TypeOf(false))
+					valueMu.RUnlock()
+					if err != nil {
+						return err
+					}
+					if !_value.(bool) {
+						_success = false
+						{
+							var _validations []*errdetails.PreconditionFailure_Violation
+							{
+								func() {
+									valueMu.RLock()
+									_type, err := grpcfed.EvalCEL(s.env, "'some-type'", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									valueMu.RLock()
+									_subject, err := grpcfed.EvalCEL(s.env, "'some-subject'", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									valueMu.RLock()
+									_description, err := grpcfed.EvalCEL(s.env, "'some-description'", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+										Type:        _type.(string),
+										Subject:     _subject.(string),
+										Description: _description.(string),
+									})
+								}()
+							}
+							_details = append(_details, &errdetails.PreconditionFailure{
+								Violations: _validations,
+							})
+						}
+					}
+				}
+				if !_success {
+					_status := grpcstatus.New(grpccodes.FailedPrecondition, "validation failure")
+					_statusWithDetails, err := _status.WithDetails(_details...)
+					if err != nil {
+						s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+						return _status.Err()
+					}
+					return _statusWithDetails.Err()
+				}
+				return nil
+			}()
 			if err != nil {
-				return nil, err
-			}
-			if !_value.(bool) {
-				return nil, grpcstatus.Error(grpccodes.InvalidArgument, "validation failure")
+				if _, ok := grpcstatus.FromError(err); ok {
+					return nil, err
+				}
+				s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+				return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 			}
 		}
 		return nil, nil
@@ -294,7 +368,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	ctx, span := s.tracer.Start(ctx, "org.federation.Post")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
 
 	// create a message value to be returned.
 	ret := &Post{}

@@ -1953,8 +1953,14 @@ type ValidationRule struct {
 }
 
 type ValidationError struct {
-	Code code.Code
-	Rule string
+	Code    code.Code
+	Rule    string
+	Details []*ValidationErrorDetail
+}
+
+// HasRule checks if it has rule or not.
+func (v *ValidationError) HasRule() bool {
+	return v.Rule != ""
 }
 
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
@@ -1974,15 +1980,53 @@ func (v *ValidationError) GoGRPCStatusCode() string {
 	return strings.Join(titles, "")
 }
 
+type ValidationErrorDetail struct {
+	Rule                 string
+	PreconditionFailures []*PreconditionFailure
+}
+
+type PreconditionFailure struct {
+	Validations []*PreconditionFailureValidation
+}
+
+type PreconditionFailureValidation struct {
+	Type        string
+	Subject     string
+	Description string
+}
+
 func (r *MessageResolver) MessageValidation() *ValidationRule {
 	validation := r.MessageResolver.Validation
-	return &ValidationRule{
+	vr := &ValidationRule{
 		Name: validation.Name,
 		Error: &ValidationError{
-			Code: validation.Error.Code,
-			Rule: validation.Error.Rule.Expr,
+			Code:    validation.Error.Code,
+			Details: make([]*ValidationErrorDetail, 0, len(validation.Error.Details)),
 		},
 	}
+	if r := validation.Error.Rule; r != nil {
+		vr.Error.Rule = r.Expr
+	}
+	for _, detail := range validation.Error.Details {
+		ved := &ValidationErrorDetail{
+			Rule: detail.Rule.Expr,
+		}
+		for _, failure := range detail.PreconditionFailures {
+			vs := make([]*PreconditionFailureValidation, 0, len(failure.Violations))
+			for _, v := range failure.Violations {
+				vs = append(vs, &PreconditionFailureValidation{
+					Type:        v.Type.Expr,
+					Subject:     v.Subject.Expr,
+					Description: v.Description.Expr,
+				})
+			}
+			ved.PreconditionFailures = append(ved.PreconditionFailures, &PreconditionFailure{
+				Validations: vs,
+			})
+		}
+		vr.Error.Details = append(vr.Error.Details, ved)
+	}
+	return vr
 }
 
 type Argument struct {

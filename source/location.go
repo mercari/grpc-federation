@@ -173,8 +173,25 @@ type ArgumentOption struct {
 }
 
 type MessageValidationOption struct {
-	Idx  int
-	Rule bool
+	Idx    int
+	Rule   bool
+	Detail *MessageValidationDetailOption
+}
+
+type MessageValidationDetailOption struct {
+	Idx                 int
+	Rule                bool
+	PreconditionFailure *MessageValidationDetailPreconditionFailureOption
+}
+
+type MessageValidationDetailPreconditionFailureOption struct {
+	Idx       int
+	Violation MessageValidationDetailPreconditionFailureViolationOption
+}
+
+type MessageValidationDetailPreconditionFailureViolationOption struct {
+	Idx       int
+	FieldName string
 }
 
 // Position represents source position in proto file.
@@ -915,22 +932,7 @@ func MessageDependencyArgumentInlineLocation(fileName, msgName string, idx, argI
 }
 
 // MessageValidationLocation creates location for validations[*] in grpc.federation.message.
-func MessageValidationLocation(fileName, msgName string, idx int) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Option: &MessageOption{
-				Validations: &MessageValidationOption{
-					Idx: idx,
-				},
-			},
-		},
-	}
-}
-
-// MessageValidationRuleLocation creates location for validations[*].error.rule in grpc.federation.message.
-func MessageValidationRuleLocation(fileName, msgName string, idx int) *Location {
+func MessageValidationLocation(fileName, msgName string, idx int, rule bool) *Location {
 	return &Location{
 		FileName: fileName,
 		Message: &Message{
@@ -938,7 +940,51 @@ func MessageValidationRuleLocation(fileName, msgName string, idx int) *Location 
 			Option: &MessageOption{
 				Validations: &MessageValidationOption{
 					Idx:  idx,
-					Rule: true,
+					Rule: rule,
+				},
+			},
+		},
+	}
+}
+
+// MessageValidationDetailLocation creates location for validations[*].error.details[*] in grpc.federation.message.
+func MessageValidationDetailLocation(fileName, msgName string, vIdx, dIdx int, rule bool) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				Validations: &MessageValidationOption{
+					Idx: vIdx,
+					Detail: &MessageValidationDetailOption{
+						Idx:  dIdx,
+						Rule: rule,
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageValidationDetailPreconditionFailureLocation creates location for validations[*].error.details[*].precondition_failure[*] in grpc.federation.message.
+func MessageValidationDetailPreconditionFailureLocation(fileName, msgName string, vIdx, dIdx, fIdx, fvIdx int, fieldName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				Validations: &MessageValidationOption{
+					Idx: vIdx,
+					Detail: &MessageValidationDetailOption{
+						Idx: dIdx,
+						PreconditionFailure: &MessageValidationDetailPreconditionFailureOption{
+							Idx: fIdx,
+							Violation: MessageValidationDetailPreconditionFailureViolationOption{
+								Idx:       fvIdx,
+								FieldName: fieldName,
+							},
+						},
+					},
 				},
 			},
 		},

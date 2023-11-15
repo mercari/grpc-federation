@@ -32,8 +32,17 @@ message GetPostResponse {
       },
       {
         error: {
-          code: INVALID_ARGUMENT,
-          rule: "post.title == 'some-title'",
+          code: FAILED_PRECONDITION,
+          details: {
+            rule: "post.title == 'some-title'"
+            precondition_failure: {
+              violations {
+                type: "'some-type'"
+                subject: "'some-subject'"
+                description: "'some-description'"
+              }
+            }
+          }
         }
       }
     ]

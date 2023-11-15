@@ -204,7 +204,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse1")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse1", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse1Argument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.GetPostResponse1", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse1Argument(req)))
 	var (
 		sg        singleflight.Group
 		valueMu   sync.RWMutex
@@ -274,7 +274,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse2")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetPostResponse2", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse2Argument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.GetPostResponse2", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponse2Argument(req)))
 	var (
 		sg        singleflight.Group
 		valueMu   sync.RWMutex
@@ -344,7 +344,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	ctx, span := s.tracer.Start(ctx, "org.federation.Post")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
 	var (
 		sg       singleflight.Group
 		valueMu  sync.RWMutex

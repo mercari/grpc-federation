@@ -10,11 +10,10 @@ import (
 	"runtime/debug"
 	"log/slog"
 
+	"github.com/golang/protobuf/proto"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/cenkalti/backoff/v4"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/dynamicpb"
@@ -279,7 +278,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  {{ .ProtoFQDN }}", slog.Any("message_args", s.logvalue_{{ .RequestType }}(req)))
+	s.logger.DebugContext(ctx, "resolve {{ .ProtoFQDN }}", slog.Any("message_args", s.logvalue_{{ .RequestType }}(req)))
 	{{- $declVariables := .DeclVariables }}
 	{{- if $declVariables }}
 	var (
@@ -466,8 +465,8 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseType }} {
 	{{- if .IsSlice }}
 	{{- template "castRepeated" .ToSlice }}
-    {{- else if .IsOneof }}
-    {{- template "castOneof" .ToOneof }}
+		{{- else if .IsOneof }}
+		{{- template "castOneof" .ToOneof }}
 	{{- else if .IsStruct }}
 	{{- template "castMessage" .ToStruct }}
 	{{- else if .IsEnum }}
@@ -765,7 +764,7 @@ if err := eg.Wait(); err != nil {
 {{- else }}
 
 {{- if .Resolver.ExistsStart }}
-{{ template "resolverGroup"  (map "Level" .Level "Resolver" .Resolver.Start) }}
+{{ template "resolverGroup" (map "Level" .Level "Resolver" .Resolver.Start) }}
 {{- end }}
 
 {{- if .Resolver.ExistsEnd }}
@@ -777,14 +776,95 @@ if err := eg.Wait(); err != nil {
 
 {{- define "messageValidation" }}
 {
-	valueMu.RLock()
-	_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(true))
-	valueMu.RUnlock()
+	err := func() error {
+		{{- if .Error.HasRule }}
+		valueMu.RLock()
+		_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+		valueMu.RUnlock()
+		if err != nil {
+			return err
+		}
+		if !_value.(bool) {
+			return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+		}
+		{{- else }}
+		_success := true
+		var _details []proto.Message
+		{{- range .Error.Details }}
+		{
+			valueMu.RLock()
+			_value, err := grpcfed.EvalCEL(s.env, "{{ .Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+			valueMu.RUnlock()
+			if err != nil {
+				return err
+			}
+			if !_value.(bool) {
+				_success = false
+				{{- range .PreconditionFailures }}
+				{{- template "preconditionFailure" . }}
+				{{- end }}
+			}
+		}
+		{{- end }}
+		if !_success {
+			_status := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+			_statusWithDetails, err := _status.WithDetails(_details...)
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+				return _status.Err()
+			}
+			return _statusWithDetails.Err()
+		}
+		{{- end }}
+		return nil
+	}()
 	if err != nil {
-		return nil, err
+		if _, ok := grpcstatus.FromError(err); ok {
+			return nil, err
+		}
+		s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 	}
-	if !_value.(bool) {
-		return nil, grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+}
+{{- end }}
+
+{{- define "preconditionFailure" }}
+{
+	var _validations []*errdetails.PreconditionFailure_Violation
+	{{- range $i, $validation := .Validations }}
+	{
+		func() {
+			valueMu.RLock()
+			_type, err := grpcfed.EvalCEL(s.env, "{{ $validation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			valueMu.RLock()
+			_subject, err := grpcfed.EvalCEL(s.env, "{{ $validation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			valueMu.RLock()
+			_description, err := grpcfed.EvalCEL(s.env, "{{ $validation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+				Type: _type.(string),
+				Subject: _subject.(string),
+				Description: _description.(string),
+			})
+		}()
 	}
+	{{- end }}
+	_details = append(_details, &errdetails.PreconditionFailure{
+		Violations: _validations,
+	})
 }
 {{- end }}

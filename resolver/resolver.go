@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -995,7 +996,7 @@ func (r *Resolver) resolveMessageRuleValidations(ctx *context, validations []*fe
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MessageValidationRuleLocation(ctx.fileName(), ctx.messageName(), i),
+					source.MessageValidationLocation(ctx.fileName(), ctx.messageName(), i, true),
 				),
 			)
 			continue
@@ -1017,20 +1018,73 @@ func (r *Resolver) resolveMessageRuleValidation(idx int, validation *federation.
 		// the default validation name
 		name = fmt.Sprintf("_validation%d", idx)
 	}
-
-	if rule := e.GetRule(); rule != "" {
-		return &ValidationRule{
-			Name: name,
-			Error: &ValidationError{
-				Code: e.GetCode(),
-				Rule: &CELValue{
-					Expr: rule,
-				},
-			},
-		}, nil
+	vr := &ValidationRule{
+		Name: name,
+		Error: &ValidationError{
+			Code: e.GetCode(),
+		},
 	}
 
-	return nil, errors.New("details field has not been supported yet")
+	if rule := e.GetRule(); rule != "" {
+		vr.Error.Rule = &CELValue{
+			Expr: rule,
+		}
+		return vr, nil
+	}
+
+	if details := e.GetDetails(); len(details) != 0 {
+		vr.Error.Details = r.resolveMessageRuleValidationDetails(details)
+		return vr, nil
+	}
+
+	return nil, errors.New("either rule or details should be specified")
+}
+
+func (r *Resolver) resolveMessageRuleValidationDetails(details []*federation.ValidationErrorDetail) []*ValidationErrorDetail {
+	result := make([]*ValidationErrorDetail, 0, len(details))
+	for _, detail := range details {
+		result = append(result, &ValidationErrorDetail{
+			Rule: &CELValue{
+				Expr: detail.Rule,
+			},
+			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailure()),
+		})
+	}
+	return result
+}
+
+func (r *Resolver) resolvePreconditionFailures(failures []*errdetails.PreconditionFailure) []*PreconditionFailure {
+	if len(failures) == 0 {
+		return nil
+	}
+	result := make([]*PreconditionFailure, 0, len(failures))
+	for _, failure := range failures {
+		result = append(result, &PreconditionFailure{
+			Violations: r.resolvePreconditionFailureViolations(failure.Violations),
+		})
+	}
+	return result
+}
+
+func (r *Resolver) resolvePreconditionFailureViolations(violations []*errdetails.PreconditionFailure_Violation) []*PreconditionFailureViolation {
+	if len(violations) == 0 {
+		return nil
+	}
+	result := make([]*PreconditionFailureViolation, 0, len(violations))
+	for _, violation := range violations {
+		result = append(result, &PreconditionFailureViolation{
+			Type: &CELValue{
+				Expr: violation.Type,
+			},
+			Subject: &CELValue{
+				Expr: violation.Subject,
+			},
+			Description: &CELValue{
+				Expr: violation.Description,
+			},
+		})
+	}
+	return result
 }
 
 func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ruleDef *federation.FieldRule) *FieldRule {
@@ -2138,22 +2192,28 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		}
 	}
 	for valIdx, validation := range msg.Rule.Validations {
-		if err := r.resolveCELValue(ctx, env, validation.Error.Rule); err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.MessageValidationRuleLocation(msg.File.Name, msg.Name, valIdx),
-				),
-			)
-			continue
+		if validation.Error.Rule != nil {
+			e := validation.Error
+			if err := r.resolveCELValue(ctx, env, e.Rule); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageValidationLocation(msg.File.Name, msg.Name, valIdx, true),
+					),
+				)
+				continue
+			}
+			if e.Rule.Out.Type != types.Bool {
+				ctx.addError(
+					ErrWithLocation(
+						"validation rule must always return a boolean value",
+						source.MessageValidationLocation(msg.File.Name, msg.Name, valIdx, true),
+					),
+				)
+			}
 		}
-		if validation.Error.Rule.Out.Type != types.Bool {
-			ctx.addError(
-				ErrWithLocation(
-					"validation rule must always return a boolean value",
-					source.MessageValidationRuleLocation(msg.File.Name, msg.Name, valIdx),
-				),
-			)
+		for detIdx, detail := range validation.Error.Details {
+			r.resolveMessageValidationErrorDetailCELValues(ctx, env, msg, valIdx, detIdx, detail)
 		}
 	}
 	for _, field := range msg.Fields {
@@ -2275,6 +2335,82 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 	}
 
 	r.resolveUsedNameReference(msg)
+}
+
+func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, env *cel.Env, msg *Message, vIdx, dIdx int, detail *ValidationErrorDetail) {
+	if err := r.resolveCELValue(ctx, env, detail.Rule); err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				source.MessageValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
+			),
+		)
+		return
+	}
+	if detail.Rule.Out.Type != types.Bool {
+		ctx.addError(
+			ErrWithLocation(
+				"rule must always return a boolean value",
+				source.MessageValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
+			),
+		)
+	}
+
+	for fIdx, failure := range detail.PreconditionFailures {
+		for fvIdx, validation := range failure.Violations {
+			if err := r.resolveCELValue(ctx, env, validation.Type); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "type"),
+					),
+				)
+				return
+			}
+			if validation.Type.Out.Type != types.String {
+				ctx.addError(
+					ErrWithLocation(
+						"type must always return a string value",
+						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "type"),
+					),
+				)
+			}
+			if err := r.resolveCELValue(ctx, env, validation.Subject); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "subject"),
+					),
+				)
+				return
+			}
+			if validation.Subject.Out.Type != types.String {
+				ctx.addError(
+					ErrWithLocation(
+						"subject must always return a string value",
+						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "subject"),
+					),
+				)
+			}
+			if err := r.resolveCELValue(ctx, env, validation.Description); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
+					),
+				)
+				return
+			}
+			if validation.Description.Out.Type != types.String {
+				ctx.addError(
+					ErrWithLocation(
+						"description must always return a string value",
+						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
+					),
+				)
+			}
+		}
+	}
 }
 
 func (r *Resolver) resolveUsedNameReference(msg *Message) {
@@ -2915,6 +3051,32 @@ func (r *Resolver) trimPackage(pkg *Package, name string) string {
 		return name
 	}
 	return strings.TrimPrefix(name, fmt.Sprintf("%s.", pkg.Name))
+}
+
+// ReferenceNames returns all the unique reference names in the error definition.
+func (v *ValidationError) ReferenceNames() []string {
+	nameSet := make(map[string]struct{})
+	register := func(names []string) {
+		for _, name := range names {
+			nameSet[name] = struct{}{}
+		}
+	}
+	register(v.Rule.ReferenceNames())
+	for _, detail := range v.Details {
+		register(detail.Rule.ReferenceNames())
+		for _, failure := range detail.PreconditionFailures {
+			for _, violation := range failure.Violations {
+				register(violation.Type.ReferenceNames())
+				register(violation.Subject.ReferenceNames())
+				register(violation.Description.ReferenceNames())
+			}
+		}
+	}
+	names := make([]string, 0, len(nameSet))
+	for name := range nameSet {
+		names = append(names, name)
+	}
+	return names
 }
 
 func splitGoPackageName(goPackage string) (string, string, error) {

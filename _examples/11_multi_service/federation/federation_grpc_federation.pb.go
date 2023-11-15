@@ -159,7 +159,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "federation.GetPostResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueMu sync.RWMutex
@@ -219,7 +219,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	ctx, span := s.tracer.Start(ctx, "federation.Post")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
+	s.logger.DebugContext(ctx, "resolve federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueMu sync.RWMutex
@@ -288,7 +288,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
+	s.logger.DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.UserArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 
@@ -488,7 +488,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	ctx, span := s.tracer.Start(ctx, "federation.GetStatusResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  federation.GetStatusResponse", slog.Any("message_args", s.logvalue_Federation_GetStatusResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve federation.GetStatusResponse", slog.Any("message_args", s.logvalue_Federation_GetStatusResponseArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueMu sync.RWMutex
@@ -554,7 +554,7 @@ func (s *DebugService) resolve_Federation_User(ctx context.Context, req *Federat
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
+	s.logger.DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.UserArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 

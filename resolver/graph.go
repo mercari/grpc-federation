@@ -368,10 +368,11 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 		}
 	}
 
+	// rootValidationNodes holds validation node which is not depend on other nodes and thus should be one of the roots
 	var rootValidationNodes []*MessageDependencyGraphNode
 	for valIdx, validation := range rule.Validations {
 		validationNode := newMessageDependencyGraphNodeByValidation(baseMsg, validation)
-		referenceNames := validation.Error.Rule.ReferenceNames()
+		referenceNames := validation.Error.ReferenceNames()
 		if len(referenceNames) == 0 {
 			rootValidationNodes = append(rootValidationNodes, validationNode)
 			continue
@@ -382,7 +383,7 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 				ctx.addError(
 					ErrWithLocation(
 						fmt.Sprintf(`%q name does not exist`, ref),
-						source.MessageValidationLocation(ctx.fileName(), baseMsg.Name, valIdx),
+						source.MessageValidationLocation(ctx.fileName(), baseMsg.Name, valIdx, false),
 					),
 				)
 				continue

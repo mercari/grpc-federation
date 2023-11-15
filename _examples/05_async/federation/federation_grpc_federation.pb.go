@@ -239,7 +239,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.A")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.A", slog.Any("message_args", s.logvalue_Org_Federation_AArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.A", slog.Any("message_args", s.logvalue_Org_Federation_AArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueMu sync.RWMutex
@@ -319,7 +319,7 @@ func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *
 	ctx, span := s.tracer.Start(ctx, "org.federation.AA")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.AA", slog.Any("message_args", s.logvalue_Org_Federation_AAArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.AA", slog.Any("message_args", s.logvalue_Org_Federation_AAArgument(req)))
 
 	// create a message value to be returned.
 	ret := &AA{}
@@ -336,7 +336,7 @@ func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *
 	ctx, span := s.tracer.Start(ctx, "org.federation.AB")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.AB", slog.Any("message_args", s.logvalue_Org_Federation_ABArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.AB", slog.Any("message_args", s.logvalue_Org_Federation_ABArgument(req)))
 
 	// create a message value to be returned.
 	ret := &AB{}
@@ -353,7 +353,7 @@ func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.B")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.B", slog.Any("message_args", s.logvalue_Org_Federation_BArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.B", slog.Any("message_args", s.logvalue_Org_Federation_BArgument(req)))
 
 	// create a message value to be returned.
 	ret := &B{}
@@ -370,7 +370,7 @@ func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.C")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.C", slog.Any("message_args", s.logvalue_Org_Federation_CArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.C", slog.Any("message_args", s.logvalue_Org_Federation_CArgument(req)))
 
 	// create a message value to be returned.
 	ret := &C{}
@@ -387,7 +387,7 @@ func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.D")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.D", slog.Any("message_args", s.logvalue_Org_Federation_DArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.D", slog.Any("message_args", s.logvalue_Org_Federation_DArgument(req)))
 
 	// create a message value to be returned.
 	ret := &D{}
@@ -404,7 +404,7 @@ func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.E")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.E", slog.Any("message_args", s.logvalue_Org_Federation_EArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.E", slog.Any("message_args", s.logvalue_Org_Federation_EArgument(req)))
 
 	// create a message value to be returned.
 	ret := &E{}
@@ -421,7 +421,7 @@ func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.F")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.F", slog.Any("message_args", s.logvalue_Org_Federation_FArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.F", slog.Any("message_args", s.logvalue_Org_Federation_FArgument(req)))
 
 	// create a message value to be returned.
 	ret := &F{}
@@ -438,7 +438,7 @@ func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.G")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.G", slog.Any("message_args", s.logvalue_Org_Federation_GArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.G", slog.Any("message_args", s.logvalue_Org_Federation_GArgument(req)))
 
 	// create a message value to be returned.
 	ret := &G{}
@@ -455,7 +455,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	var (
 		sg      singleflight.Group
 		valueA  *A
@@ -1060,7 +1060,7 @@ func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.H")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.H", slog.Any("message_args", s.logvalue_Org_Federation_HArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.H", slog.Any("message_args", s.logvalue_Org_Federation_HArgument(req)))
 
 	// create a message value to be returned.
 	ret := &H{}
@@ -1077,7 +1077,7 @@ func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.I")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.I", slog.Any("message_args", s.logvalue_Org_Federation_IArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.I", slog.Any("message_args", s.logvalue_Org_Federation_IArgument(req)))
 
 	// create a message value to be returned.
 	ret := &I{}
@@ -1094,7 +1094,7 @@ func (s *FederationService) resolve_Org_Federation_J(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.J")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve  org.federation.J", slog.Any("message_args", s.logvalue_Org_Federation_JArgument(req)))
+	s.logger.DebugContext(ctx, "resolve org.federation.J", slog.Any("message_args", s.logvalue_Org_Federation_JArgument(req)))
 
 	// create a message value to be returned.
 	ret := &J{}

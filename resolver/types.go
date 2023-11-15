@@ -164,8 +164,26 @@ type ValidationRule struct {
 }
 
 type ValidationError struct {
-	Code code.Code
-	Rule *CELValue
+	Code    code.Code
+	Rule    *CELValue
+	Details ValidationErrorDetails
+}
+
+type ValidationErrorDetails []*ValidationErrorDetail
+
+type ValidationErrorDetail struct {
+	Rule                 *CELValue
+	PreconditionFailures []*PreconditionFailure
+}
+
+type PreconditionFailure struct {
+	Violations []*PreconditionFailureViolation
+}
+
+type PreconditionFailureViolation struct {
+	Type        *CELValue
+	Subject     *CELValue
+	Description *CELValue
 }
 
 type TypeConversionDecl struct {
