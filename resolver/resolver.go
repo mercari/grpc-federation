@@ -2387,8 +2387,8 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 		)
 	}
 	for fIdx, failure := range detail.PreconditionFailures {
-		for fvIdx, validation := range failure.Violations {
-			if err := r.resolveCELValue(ctx, env, validation.Type); err != nil {
+		for fvIdx, violation := range failure.Violations {
+			if err := r.resolveCELValue(ctx, env, violation.Type); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -2396,7 +2396,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if validation.Type.Out != nil && validation.Type.Out.Type != types.String {
+			if violation.Type.Out != nil && violation.Type.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"type must always return a string value",
@@ -2404,7 +2404,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if err := r.resolveCELValue(ctx, env, validation.Subject); err != nil {
+			if err := r.resolveCELValue(ctx, env, violation.Subject); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -2412,7 +2412,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if validation.Subject.Out != nil && validation.Subject.Out.Type != types.String {
+			if violation.Subject.Out != nil && violation.Subject.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"subject must always return a string value",
@@ -2420,7 +2420,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if err := r.resolveCELValue(ctx, env, validation.Description); err != nil {
+			if err := r.resolveCELValue(ctx, env, violation.Description); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -2428,7 +2428,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if validation.Description.Out != nil && validation.Description.Out.Type != types.String {
+			if violation.Description.Out != nil && violation.Description.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"description must always return a string value",
@@ -2440,8 +2440,8 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 	}
 
 	for bIdx, badRequest := range detail.BadRequests {
-		for fvIdx, validation := range badRequest.FieldViolations {
-			if err := r.resolveCELValue(ctx, env, validation.Field); err != nil {
+		for fvIdx, violation := range badRequest.FieldViolations {
+			if err := r.resolveCELValue(ctx, env, violation.Field); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -2449,7 +2449,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if validation.Field.Out != nil && validation.Field.Out.Type != types.String {
+			if violation.Field.Out != nil && violation.Field.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"field must always return a string value",
@@ -2457,7 +2457,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if err := r.resolveCELValue(ctx, env, validation.Description); err != nil {
+			if err := r.resolveCELValue(ctx, env, violation.Description); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -2465,7 +2465,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if validation.Description.Out != nil && validation.Description.Out.Type != types.String {
+			if violation.Description.Out != nil && violation.Description.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"description must always return a string value",
