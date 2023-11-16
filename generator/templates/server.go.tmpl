@@ -803,6 +803,9 @@ if err := eg.Wait(); err != nil {
 				{{- range .PreconditionFailures }}
 				{{- template "preconditionFailure" . }}
 				{{- end }}
+				{{- range .BadRequests }}
+				{{- template "badRequest" . }}
+				{{- end }}
 			}
 		}
 		{{- end }}
@@ -830,32 +833,32 @@ if err := eg.Wait(); err != nil {
 
 {{- define "preconditionFailure" }}
 {
-	var _validations []*errdetails.PreconditionFailure_Violation
-	{{- range $i, $validation := .Validations }}
+	var _violations []*errdetails.PreconditionFailure_Violation
+	{{- range $i, $violation := .Violations }}
 	{
 		func() {
 			valueMu.RLock()
-			_type, err := grpcfed.EvalCEL(s.env, "{{ $validation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
+			_type, err := grpcfed.EvalCEL(s.env, "{{ $violation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			_subject, err := grpcfed.EvalCEL(s.env, "{{ $validation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
+			_subject, err := grpcfed.EvalCEL(s.env, "{{ $violation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			_description, err := grpcfed.EvalCEL(s.env, "{{ $validation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			_description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
-			_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+			_violations = append(_violations, &errdetails.PreconditionFailure_Violation{
 				Type: _type.(string),
 				Subject: _subject.(string),
 				Description: _description.(string),
@@ -864,7 +867,40 @@ if err := eg.Wait(); err != nil {
 	}
 	{{- end }}
 	_details = append(_details, &errdetails.PreconditionFailure{
-		Violations: _validations,
+		Violations: _violations,
+	})
+}
+{{- end }}
+
+{{- define "badRequest" }}
+{
+	var _violations []*errdetails.BadRequest_FieldViolation
+	{{- range $i, $violation := .FieldViolations }}
+	{
+		func() {
+			valueMu.RLock()
+			_field, err := grpcfed.EvalCEL(s.env, "{{ $violation.Field }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation field", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			valueMu.RLock()
+			_description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			_violations = append(_violations, &errdetails.BadRequest_FieldViolation{
+				Field: _field.(string),
+				Description: _description.(string),
+			})
+		}()
+	}
+	{{- end }}
+	_details = append(_details, &errdetails.BadRequest{
+		FieldViolations: _violations,
 	})
 }
 {{- end }}

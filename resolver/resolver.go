@@ -1048,6 +1048,7 @@ func (r *Resolver) resolveMessageRuleValidationDetails(details []*federation.Val
 				Expr: detail.Rule,
 			},
 			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailure()),
+			BadRequests:          r.resolveBadRequests(detail.GetBadRequest()),
 		})
 	}
 	return result
@@ -1060,7 +1061,7 @@ func (r *Resolver) resolvePreconditionFailures(failures []*errdetails.Preconditi
 	result := make([]*PreconditionFailure, 0, len(failures))
 	for _, failure := range failures {
 		result = append(result, &PreconditionFailure{
-			Violations: r.resolvePreconditionFailureViolations(failure.Violations),
+			Violations: r.resolvePreconditionFailureViolations(failure.GetViolations()),
 		})
 	}
 	return result
@@ -1074,13 +1075,44 @@ func (r *Resolver) resolvePreconditionFailureViolations(violations []*errdetails
 	for _, violation := range violations {
 		result = append(result, &PreconditionFailureViolation{
 			Type: &CELValue{
-				Expr: violation.Type,
+				Expr: violation.GetType(),
 			},
 			Subject: &CELValue{
-				Expr: violation.Subject,
+				Expr: violation.GetSubject(),
 			},
 			Description: &CELValue{
-				Expr: violation.Description,
+				Expr: violation.GetDescription(),
+			},
+		})
+	}
+	return result
+}
+
+func (r *Resolver) resolveBadRequests(reqs []*errdetails.BadRequest) []*BadRequest {
+	if len(reqs) == 0 {
+		return nil
+	}
+	result := make([]*BadRequest, 0, len(reqs))
+	for _, req := range reqs {
+		result = append(result, &BadRequest{
+			FieldViolations: r.resolveBadRequestFieldViolations(req.GetFieldViolations()),
+		})
+	}
+	return result
+}
+
+func (r *Resolver) resolveBadRequestFieldViolations(violations []*errdetails.BadRequest_FieldViolation) []*BadRequestFieldViolation {
+	if len(violations) == 0 {
+		return nil
+	}
+	result := make([]*BadRequestFieldViolation, 0, len(violations))
+	for _, violation := range violations {
+		result = append(result, &BadRequestFieldViolation{
+			Field: &CELValue{
+				Expr: violation.GetField(),
+			},
+			Description: &CELValue{
+				Expr: violation.GetDescription(),
 			},
 		})
 	}
@@ -2345,9 +2377,8 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				source.MessageValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
 			),
 		)
-		return
 	}
-	if detail.Rule.Out.Type != types.Bool {
+	if detail.Rule.Out != nil && detail.Rule.Out.Type != types.Bool {
 		ctx.addError(
 			ErrWithLocation(
 				"rule must always return a boolean value",
@@ -2355,7 +2386,6 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 			),
 		)
 	}
-
 	for fIdx, failure := range detail.PreconditionFailures {
 		for fvIdx, validation := range failure.Violations {
 			if err := r.resolveCELValue(ctx, env, validation.Type); err != nil {
@@ -2365,9 +2395,8 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "type"),
 					),
 				)
-				return
 			}
-			if validation.Type.Out.Type != types.String {
+			if validation.Type.Out != nil && validation.Type.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"type must always return a string value",
@@ -2382,9 +2411,8 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "subject"),
 					),
 				)
-				return
 			}
-			if validation.Subject.Out.Type != types.String {
+			if validation.Subject.Out != nil && validation.Subject.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"subject must always return a string value",
@@ -2399,13 +2427,49 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
 					),
 				)
-				return
 			}
-			if validation.Description.Out.Type != types.String {
+			if validation.Description.Out != nil && validation.Description.Out.Type != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"description must always return a string value",
 						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
+					),
+				)
+			}
+		}
+	}
+
+	for bIdx, badRequest := range detail.BadRequests {
+		for fvIdx, validation := range badRequest.FieldViolations {
+			if err := r.resolveCELValue(ctx, env, validation.Field); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "field"),
+					),
+				)
+			}
+			if validation.Field.Out != nil && validation.Field.Out.Type != types.String {
+				ctx.addError(
+					ErrWithLocation(
+						"field must always return a string value",
+						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "field"),
+					),
+				)
+			}
+			if err := r.resolveCELValue(ctx, env, validation.Description); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "description"),
+					),
+				)
+			}
+			if validation.Description.Out != nil && validation.Description.Out.Type != types.String {
+				ctx.addError(
+					ErrWithLocation(
+						"description must always return a string value",
+						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "description"),
 					),
 				)
 			}
@@ -3068,6 +3132,12 @@ func (v *ValidationError) ReferenceNames() []string {
 			for _, violation := range failure.Violations {
 				register(violation.Type.ReferenceNames())
 				register(violation.Subject.ReferenceNames())
+				register(violation.Description.ReferenceNames())
+			}
+		}
+		for _, req := range detail.BadRequests {
+			for _, violation := range req.FieldViolations {
+				register(violation.Field.ReferenceNames())
 				register(violation.Description.ReferenceNames())
 			}
 		}

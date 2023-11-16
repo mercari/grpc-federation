@@ -182,6 +182,7 @@ type MessageValidationDetailOption struct {
 	Idx                 int
 	Rule                bool
 	PreconditionFailure *MessageValidationDetailPreconditionFailureOption
+	BadRequest          *MessageValidationDetailBadRequestOption
 }
 
 type MessageValidationDetailPreconditionFailureOption struct {
@@ -190,6 +191,16 @@ type MessageValidationDetailPreconditionFailureOption struct {
 }
 
 type MessageValidationDetailPreconditionFailureViolationOption struct {
+	Idx       int
+	FieldName string
+}
+
+type MessageValidationDetailBadRequestOption struct {
+	Idx            int
+	FieldViolation MessageValidationDetailBadRequestFieldViolationOption
+}
+
+type MessageValidationDetailBadRequestFieldViolationOption struct {
 	Idx       int
 	FieldName string
 }
@@ -980,6 +991,31 @@ func MessageValidationDetailPreconditionFailureLocation(fileName, msgName string
 						PreconditionFailure: &MessageValidationDetailPreconditionFailureOption{
 							Idx: fIdx,
 							Violation: MessageValidationDetailPreconditionFailureViolationOption{
+								Idx:       fvIdx,
+								FieldName: fieldName,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageValidationDetailBadRequestLocation creates location for validations[*].error.details[*].bad_request[*] in grpc.federation.message.
+func MessageValidationDetailBadRequestLocation(fileName, msgName string, vIdx, dIdx, bIdx, fvIdx int, fieldName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				Validations: &MessageValidationOption{
+					Idx: vIdx,
+					Detail: &MessageValidationDetailOption{
+						Idx: dIdx,
+						BadRequest: &MessageValidationDetailBadRequestOption{
+							Idx: bIdx,
+							FieldViolation: MessageValidationDetailBadRequestFieldViolationOption{
 								Idx:       fvIdx,
 								FieldName: fieldName,
 							},

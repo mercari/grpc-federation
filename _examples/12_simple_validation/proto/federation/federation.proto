@@ -35,16 +35,19 @@ message GetPostResponse {
           code: FAILED_PRECONDITION,
           details: {
             rule: "$.id == 'correct-id'",
-            precondition_failure: {
+            precondition_failure {
               violations: [
                 {
                   type: "'type1'"
                   subject: "post.id"
                   description: "'description1'"
-                },
+                }
+              ]
+            }
+            bad_request {
+              field_violations: [
                 {
-                  type: "'type2'"
-                  subject: "post.id"
+                  field: "post.id"
                   description: "'description2'"
                 }
               ]
