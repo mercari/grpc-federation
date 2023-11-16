@@ -2706,6 +2706,12 @@ func TestValidation(t *testing.T) {
 											},
 										},
 									},
+									LocalizedMessages: []*resolver.LocalizedMessage{
+										{
+											Locale:  testutil.NewCELValueBuilder("'en-US'", resolver.StringType).Build(t),
+											Message: testutil.NewCELValueBuilder("'some-message'", resolver.StringType).Build(t),
+										},
+									},
 								},
 							},
 						).
@@ -3230,6 +3236,24 @@ func TestValidationError_ReferenceNames(t *testing.T) {
 						},
 					},
 				},
+				LocalizedMessages: []*resolver.LocalizedMessage{
+					{
+						Locale: &resolver.CELValue{
+							CheckedExpr: &exprv1.CheckedExpr{
+								ReferenceMap: map[int64]*exprv1.Reference{
+									0: {Name: "name9"},
+								},
+							},
+						},
+						Message: &resolver.CELValue{
+							CheckedExpr: &exprv1.CheckedExpr{
+								ReferenceMap: map[int64]*exprv1.Reference{
+									0: {Name: "name10"},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -3243,6 +3267,8 @@ func TestValidationError_ReferenceNames(t *testing.T) {
 		"name6",
 		"name7",
 		"name8",
+		"name9",
+		"name10",
 	}
 	got := v.ReferenceNames()
 	// the map order is not guaranteed in Go

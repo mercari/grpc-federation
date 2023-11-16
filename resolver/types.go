@@ -175,6 +175,7 @@ type ValidationErrorDetail struct {
 	Rule                 *CELValue
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest
+	LocalizedMessages    []*LocalizedMessage
 }
 
 type PreconditionFailure struct {
@@ -194,6 +195,11 @@ type BadRequest struct {
 type BadRequestFieldViolation struct {
 	Field       *CELValue
 	Description *CELValue
+}
+
+type LocalizedMessage struct {
+	Locale  *CELValue
+	Message *CELValue
 }
 
 type TypeConversionDecl struct {
