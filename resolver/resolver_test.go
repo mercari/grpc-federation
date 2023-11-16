@@ -2696,6 +2696,16 @@ func TestValidation(t *testing.T) {
 											},
 										},
 									},
+									BadRequests: []*resolver.BadRequest{
+										{
+											FieldViolations: []*resolver.BadRequestFieldViolation{
+												{
+													Field:       testutil.NewCELValueBuilder("'some-field'", resolver.StringType).Build(t),
+													Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
+												},
+											},
+										},
+									},
 								},
 							},
 						).
@@ -3198,6 +3208,28 @@ func TestValidationError_ReferenceNames(t *testing.T) {
 						},
 					},
 				},
+				BadRequests: []*resolver.BadRequest{
+					{
+						FieldViolations: []*resolver.BadRequestFieldViolation{
+							{
+								Field: &resolver.CELValue{
+									CheckedExpr: &exprv1.CheckedExpr{
+										ReferenceMap: map[int64]*exprv1.Reference{
+											0: {Name: "name7"},
+										},
+									},
+								},
+								Description: &resolver.CELValue{
+									CheckedExpr: &exprv1.CheckedExpr{
+										ReferenceMap: map[int64]*exprv1.Reference{
+											0: {Name: "name8"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -3209,6 +3241,8 @@ func TestValidationError_ReferenceNames(t *testing.T) {
 		"name4",
 		"name5",
 		"name6",
+		"name7",
+		"name8",
 	}
 	got := v.ReferenceNames()
 	// the map order is not guaranteed in Go

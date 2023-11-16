@@ -988,7 +988,7 @@ func (f *File) nodeInfoByMessageValidation(list []*ast.MessageLiteralNode, valid
 	for _, elem := range literal.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
-		case validation.Rule && fieldName == "error":
+		case fieldName == "error":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
 				return nil
@@ -1031,13 +1031,15 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 			}
 			return f.nodeInfo(value)
 		case detail.PreconditionFailure != nil && fieldName == "precondition_failure":
-			return f.nodeInfoByPreconditionFailures(f.getMessageListFromNode(elem.Val), detail.PreconditionFailure)
+			return f.nodeInfoByPreconditionFailure(f.getMessageListFromNode(elem.Val), detail.PreconditionFailure)
+		case detail.BadRequest != nil && fieldName == "bad_request":
+			return f.nodeInfoByBadRequest(f.getMessageListFromNode(elem.Val), detail.BadRequest)
 		}
 	}
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByPreconditionFailures(list []*ast.MessageLiteralNode, failure *MessageValidationDetailPreconditionFailureOption) *ast.NodeInfo {
+func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, failure *MessageValidationDetailPreconditionFailureOption) *ast.NodeInfo {
 	if failure.Idx >= len(list) {
 		return nil
 	}
@@ -1052,6 +1054,38 @@ func (f *File) nodeInfoByPreconditionFailures(list []*ast.MessageLiteralNode, fa
 }
 
 func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLiteralNode, violation MessageValidationDetailPreconditionFailureViolationOption) *ast.NodeInfo {
+	if violation.Idx >= len(list) {
+		return nil
+	}
+	node := list[violation.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		if string(fieldName) == violation.FieldName {
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *MessageValidationDetailBadRequestOption) *ast.NodeInfo {
+	if req.Idx >= len(list) {
+		return nil
+	}
+	node := list[req.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		if fieldName == "field_violations" {
+			return f.nodeInfoByBadRequestFieldViolations(f.getMessageListFromNode(elem.Val), req.FieldViolation)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByBadRequestFieldViolations(list []*ast.MessageLiteralNode, violation MessageValidationDetailBadRequestFieldViolationOption) *ast.NodeInfo {
 	if violation.Idx >= len(list) {
 		return nil
 	}

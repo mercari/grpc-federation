@@ -344,6 +344,9 @@ func (v *ValidationErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	if s := len(v.PreconditionFailures); s != 0 {
 		elems = append(elems, v.protoFormatDetails(nextOpt, "precondition_failure", s))
 	}
+	if s := len(v.BadRequests); s != 0 {
+		elems = append(elems, v.protoFormatDetails(nextOpt, "bad_request", s))
+	}
 
 	return strings.Join(elems, "\n")
 }

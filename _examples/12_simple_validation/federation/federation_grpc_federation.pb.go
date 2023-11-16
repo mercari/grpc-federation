@@ -260,6 +260,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       details {
 		         rule: "$.id == 'correct-id'"
 		         precondition_failure {...}
+		         bad_request {...}
 		       }
 		     }
 		   }
@@ -278,7 +279,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					if !_value.(bool) {
 						_success = false
 						{
-							var _validations []*errdetails.PreconditionFailure_Violation
+							var _violations []*errdetails.PreconditionFailure_Violation
 							{
 								func() {
 									valueMu.RLock()
@@ -302,37 +303,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", 0), slog.String("error", err.Error()))
 										return
 									}
-									_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
-										Type:        _type.(string),
-										Subject:     _subject.(string),
-										Description: _description.(string),
-									})
-								}()
-							}
-							{
-								func() {
-									valueMu.RLock()
-									_type, err := grpcfed.EvalCEL(s.env, "'type2'", envOpts, evalValues, reflect.TypeOf(""))
-									valueMu.RUnlock()
-									if err != nil {
-										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", 1), slog.String("error", err.Error()))
-										return
-									}
-									valueMu.RLock()
-									_subject, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
-									valueMu.RUnlock()
-									if err != nil {
-										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", 1), slog.String("error", err.Error()))
-										return
-									}
-									valueMu.RLock()
-									_description, err := grpcfed.EvalCEL(s.env, "'description2'", envOpts, evalValues, reflect.TypeOf(""))
-									valueMu.RUnlock()
-									if err != nil {
-										s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", 1), slog.String("error", err.Error()))
-										return
-									}
-									_validations = append(_validations, &errdetails.PreconditionFailure_Violation{
+									_violations = append(_violations, &errdetails.PreconditionFailure_Violation{
 										Type:        _type.(string),
 										Subject:     _subject.(string),
 										Description: _description.(string),
@@ -340,7 +311,35 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 								}()
 							}
 							_details = append(_details, &errdetails.PreconditionFailure{
-								Violations: _validations,
+								Violations: _violations,
+							})
+						}
+						{
+							var _violations []*errdetails.BadRequest_FieldViolation
+							{
+								func() {
+									valueMu.RLock()
+									_field, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation field", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									valueMu.RLock()
+									_description, err := grpcfed.EvalCEL(s.env, "'description2'", envOpts, evalValues, reflect.TypeOf(""))
+									valueMu.RUnlock()
+									if err != nil {
+										s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation description", slog.Int("index", 0), slog.String("error", err.Error()))
+										return
+									}
+									_violations = append(_violations, &errdetails.BadRequest_FieldViolation{
+										Field:       _field.(string),
+										Description: _description.(string),
+									})
+								}()
+							}
+							_details = append(_details, &errdetails.BadRequest{
+								FieldViolations: _violations,
 							})
 						}
 					}

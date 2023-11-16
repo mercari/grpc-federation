@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/validator"
 )
@@ -388,6 +390,30 @@ testdata/invalid_validation_return_type.proto:43:15: validation rule must always
 43:          rule: "post.id"
                    ^
 `},
+		{file: "invalid_validation_details_return_type.proto", expected: `
+testdata/invalid_validation_details_return_type.proto:44:17: rule must always return a boolean value
+44:            rule: "'string'"
+                     ^
+`},
+		{file: "invalid_validation_precondition_failure.proto", expected: `
+testdata/invalid_validation_precondition_failure.proto:48:23: type must always return a string value
+48:                  type: "1",
+                           ^
+testdata/invalid_validation_precondition_failure.proto:49:26: subject must always return a string value
+49:                  subject: "2",
+                              ^
+testdata/invalid_validation_precondition_failure.proto:50:30: description must always return a string value
+50:                  description: "3",
+                                  ^
+`},
+		{file: "invalid_validation_bad_request.proto", expected: `
+testdata/invalid_validation_bad_request.proto:48:24: field must always return a string value
+48:                  field: "1",
+                            ^
+testdata/invalid_validation_bad_request.proto:49:30: description must always return a string value
+49:                  description: "2",
+                                  ^
+`},
 	}
 	ctx := context.Background()
 	v := validator.New()
@@ -403,8 +429,8 @@ testdata/invalid_validation_return_type.proto:43:15: validation rule must always
 				t.Fatal(err)
 			}
 			actual := "\n" + validator.Format(v.Validate(ctx, file))
-			if test.expected != actual {
-				t.Fatalf("expected error %s\n but got %s", test.expected, actual)
+			if diff := cmp.Diff(actual, test.expected); diff != "" {
+				t.Errorf("(-got, +want)\n%s", diff)
 			}
 		})
 	}

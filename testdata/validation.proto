@@ -35,10 +35,16 @@ message GetPostResponse {
           code: FAILED_PRECONDITION,
           details: {
             rule: "post.title == 'some-title'"
-            precondition_failure: {
+            precondition_failure {
               violations {
                 type: "'some-type'"
                 subject: "'some-subject'"
+                description: "'some-description'"
+              }
+            }
+            bad_request {
+              field_violations {
+                field: "'some-field'"
                 description: "'some-description'"
               }
             }

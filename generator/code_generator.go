@@ -1983,15 +1983,25 @@ func (v *ValidationError) GoGRPCStatusCode() string {
 type ValidationErrorDetail struct {
 	Rule                 string
 	PreconditionFailures []*PreconditionFailure
+	BadRequests          []*BadRequest
 }
 
 type PreconditionFailure struct {
-	Validations []*PreconditionFailureValidation
+	Violations []*PreconditionFailureViolation
 }
 
-type PreconditionFailureValidation struct {
+type PreconditionFailureViolation struct {
 	Type        string
 	Subject     string
+	Description string
+}
+
+type BadRequest struct {
+	FieldViolations []*BadRequestFieldViolation
+}
+
+type BadRequestFieldViolation struct {
+	Field       string
 	Description string
 }
 
@@ -2012,16 +2022,28 @@ func (r *MessageResolver) MessageValidation() *ValidationRule {
 			Rule: detail.Rule.Expr,
 		}
 		for _, failure := range detail.PreconditionFailures {
-			vs := make([]*PreconditionFailureValidation, 0, len(failure.Violations))
+			vs := make([]*PreconditionFailureViolation, 0, len(failure.Violations))
 			for _, v := range failure.Violations {
-				vs = append(vs, &PreconditionFailureValidation{
+				vs = append(vs, &PreconditionFailureViolation{
 					Type:        v.Type.Expr,
 					Subject:     v.Subject.Expr,
 					Description: v.Description.Expr,
 				})
 			}
 			ved.PreconditionFailures = append(ved.PreconditionFailures, &PreconditionFailure{
-				Validations: vs,
+				Violations: vs,
+			})
+		}
+		for _, req := range detail.BadRequests {
+			vs := make([]*BadRequestFieldViolation, 0, len(req.FieldViolations))
+			for _, v := range req.FieldViolations {
+				vs = append(vs, &BadRequestFieldViolation{
+					Field:       v.Field.Expr,
+					Description: v.Description.Expr,
+				})
+			}
+			ved.BadRequests = append(ved.BadRequests, &BadRequest{
+				FieldViolations: vs,
 			})
 		}
 		vr.Error.Details = append(vr.Error.Details, ved)

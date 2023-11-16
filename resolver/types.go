@@ -174,6 +174,7 @@ type ValidationErrorDetails []*ValidationErrorDetail
 type ValidationErrorDetail struct {
 	Rule                 *CELValue
 	PreconditionFailures []*PreconditionFailure
+	BadRequests          []*BadRequest
 }
 
 type PreconditionFailure struct {
@@ -183,6 +184,15 @@ type PreconditionFailure struct {
 type PreconditionFailureViolation struct {
 	Type        *CELValue
 	Subject     *CELValue
+	Description *CELValue
+}
+
+type BadRequest struct {
+	FieldViolations []*BadRequestFieldViolation
+}
+
+type BadRequestFieldViolation struct {
+	Field       *CELValue
 	Description *CELValue
 }
 

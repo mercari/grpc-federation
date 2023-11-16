@@ -97,9 +97,12 @@ func TestFederation(t *testing.T) {
 								Subject: "some-id",
 								Description: "description1",
 							},
+						},
+					},
+					&errdetails.BadRequest{
+						FieldViolations: []*errdetails.BadRequest_FieldViolation{
 							{
-								Type: "type2",
-								Subject: "some-id",
+								Field: "some-id",
 								Description: "description2",
 							},
 						},
@@ -130,6 +133,8 @@ func TestFederation(t *testing.T) {
 				if diff := cmp.Diff(s.Details(), tc.expectedErr.details, cmpopts.IgnoreUnexported(
 					errdetails.PreconditionFailure{},
 					errdetails.PreconditionFailure_Violation{},
+					errdetails.BadRequest{},
+					errdetails.BadRequest_FieldViolation{},
 				)); diff != "" {
 					t.Errorf("(-got, +want)\n%s", diff)
 				}
