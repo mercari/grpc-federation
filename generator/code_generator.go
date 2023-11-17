@@ -122,8 +122,12 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 							if !responseField.Used {
 								continue
 							}
+							fieldName := util.ToPublicGoVariable(responseField.Name)
+							if typ.HasField(fieldName) {
+								continue
+							}
 							typ.Fields = append(typ.Fields, &Field{
-								Name: util.ToPublicGoVariable(responseField.Name),
+								Name: fieldName,
 								Type: toTypeText(svc, responseField.Type),
 							})
 						}
