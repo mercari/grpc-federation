@@ -198,7 +198,7 @@ type BadRequestFieldViolation struct {
 }
 
 type LocalizedMessage struct {
-	Locale  *CELValue
+	Locale  string
 	Message *CELValue
 }
 

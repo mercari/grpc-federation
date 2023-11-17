@@ -346,13 +346,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						{
 							func() {
 								valueMu.RLock()
-								_locale, err := grpcfed.EvalCEL(s.env, "'en-US'", envOpts, evalValues, reflect.TypeOf(""))
-								valueMu.RUnlock()
-								if err != nil {
-									s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage locale", slog.String("error", err.Error()))
-									return
-								}
-								valueMu.RLock()
 								_message, err := grpcfed.EvalCEL(s.env, "post.content", envOpts, evalValues, reflect.TypeOf(""))
 								valueMu.RUnlock()
 								if err != nil {
@@ -360,7 +353,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									return
 								}
 								_details = append(_details, &errdetails.LocalizedMessage{
-									Locale:  _locale.(string),
+									Locale:  "en-US",
 									Message: _message.(string),
 								})
 							}()

@@ -43,8 +43,8 @@ message Post {
         details: {
           rule: "post.id == 'correct-id'"
           localized_message {
-            locale: "1",
-            message: "2"
+            locale: "en-US",
+            message: "1"
           }
         }
       }

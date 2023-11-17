@@ -912,13 +912,6 @@ if err := eg.Wait(); err != nil {
 {
 	func() {
 		valueMu.RLock()
-		_locale, err := grpcfed.EvalCEL(s.env, "{{ .Locale }}", envOpts, evalValues, reflect.TypeOf(""))
-		valueMu.RUnlock()
-		if err != nil {
-			s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage locale", slog.String("error", err.Error()))
-			return
-		}
-		valueMu.RLock()
 		_message, err := grpcfed.EvalCEL(s.env, "{{ .Message }}", envOpts, evalValues, reflect.TypeOf(""))
 		valueMu.RUnlock()
 		if err != nil {
@@ -926,7 +919,7 @@ if err := eg.Wait(); err != nil {
 			return
 		}
 		_details = append(_details, &errdetails.LocalizedMessage{
-			Locale: _locale.(string),
+			Locale: "{{ .Locale }}",
 			Message: _message.(string),
 		})
 	}()

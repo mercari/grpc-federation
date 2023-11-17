@@ -1127,9 +1127,7 @@ func (r *Resolver) resolveLocalizedMessages(messages []*errdetails.LocalizedMess
 	result := make([]*LocalizedMessage, 0, len(messages))
 	for _, req := range messages {
 		result = append(result, &LocalizedMessage{
-			Locale: &CELValue{
-				Expr: req.GetLocale(),
-			},
+			Locale: req.GetLocale(),
 			Message: &CELValue{
 				Expr: req.GetMessage(),
 			},
@@ -2496,22 +2494,6 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 	}
 
 	for lIdx, message := range detail.LocalizedMessages {
-		if err := r.resolveCELValue(ctx, env, message.Locale); err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.MessageValidationDetailLocalizedMessageLocation(msg.File.Name, msg.Name, vIdx, dIdx, lIdx, "locale"),
-				),
-			)
-		}
-		if message.Locale.Out != nil && message.Locale.Out.Type != types.String {
-			ctx.addError(
-				ErrWithLocation(
-					"locale must always return a string value",
-					source.MessageValidationDetailLocalizedMessageLocation(msg.File.Name, msg.Name, vIdx, dIdx, lIdx, "locale"),
-				),
-			)
-		}
 		if err := r.resolveCELValue(ctx, env, message.Message); err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -3196,7 +3178,6 @@ func (v *ValidationError) ReferenceNames() []string {
 			}
 		}
 		for _, msg := range detail.LocalizedMessages {
-			register(msg.Locale.ReferenceNames())
 			register(msg.Message.ReferenceNames())
 		}
 	}

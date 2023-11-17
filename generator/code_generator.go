@@ -2054,7 +2054,7 @@ func (r *MessageResolver) MessageValidation() *ValidationRule {
 		}
 		for _, msg := range detail.LocalizedMessages {
 			ved.LocalizedMessages = append(ved.LocalizedMessages, &LocalizedMessage{
-				Locale:  msg.Locale.Expr,
+				Locale:  msg.Locale,
 				Message: msg.Message.Expr,
 			})
 		}

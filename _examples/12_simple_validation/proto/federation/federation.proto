@@ -53,7 +53,7 @@ message GetPostResponse {
               ]
             }
             localized_message {
-              locale: "'en-US'"
+              locale: "en-US"
               message: "post.content"
             }
           },

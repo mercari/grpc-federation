@@ -49,7 +49,7 @@ message GetPostResponse {
               }
             }
             localized_message {
-              locale: "'en-US'"
+              locale: "en-US"
               message: "'some-message'"
             }
           }
