@@ -183,6 +183,7 @@ type MessageValidationDetailOption struct {
 	Rule                bool
 	PreconditionFailure *MessageValidationDetailPreconditionFailureOption
 	BadRequest          *MessageValidationDetailBadRequestOption
+	LocalizedMessage    *MessageValidationDetailLocalizedMessageOption
 }
 
 type MessageValidationDetailPreconditionFailureOption struct {
@@ -201,6 +202,11 @@ type MessageValidationDetailBadRequestOption struct {
 }
 
 type MessageValidationDetailBadRequestFieldViolationOption struct {
+	Idx       int
+	FieldName string
+}
+
+type MessageValidationDetailLocalizedMessageOption struct {
 	Idx       int
 	FieldName string
 }
@@ -1019,6 +1025,28 @@ func MessageValidationDetailBadRequestLocation(fileName, msgName string, vIdx, d
 								Idx:       fvIdx,
 								FieldName: fieldName,
 							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// MessageValidationDetailLocalizedMessageLocation creates location for validations[*].error.details[*].localized_message[*] in grpc.federation.message.
+func MessageValidationDetailLocalizedMessageLocation(fileName, msgName string, vIdx, dIdx, lIdx int, fieldName string) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				Validations: &MessageValidationOption{
+					Idx: vIdx,
+					Detail: &MessageValidationDetailOption{
+						Idx: dIdx,
+						LocalizedMessage: &MessageValidationDetailLocalizedMessageOption{
+							Idx:       lIdx,
+							FieldName: fieldName,
 						},
 					},
 				},

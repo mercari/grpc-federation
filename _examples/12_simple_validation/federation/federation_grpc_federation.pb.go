@@ -261,6 +261,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		         rule: "$.id == 'correct-id'"
 		         precondition_failure {...}
 		         bad_request {...}
+		         localized_message {...}
 		       }
 		     }
 		   }
@@ -341,6 +342,21 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 							_details = append(_details, &errdetails.BadRequest{
 								FieldViolations: _violations,
 							})
+						}
+						{
+							func() {
+								valueMu.RLock()
+								_message, err := grpcfed.EvalCEL(s.env, "post.content", envOpts, evalValues, reflect.TypeOf(""))
+								valueMu.RUnlock()
+								if err != nil {
+									s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage message", slog.String("error", err.Error()))
+									return
+								}
+								_details = append(_details, &errdetails.LocalizedMessage{
+									Locale:  "en-US",
+									Message: _message.(string),
+								})
+							}()
 						}
 					}
 				}

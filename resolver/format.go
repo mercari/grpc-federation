@@ -347,6 +347,9 @@ func (v *ValidationErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	if s := len(v.BadRequests); s != 0 {
 		elems = append(elems, v.protoFormatDetails(nextOpt, "bad_request", s))
 	}
+	if s := len(v.LocalizedMessages); s != 0 {
+		elems = append(elems, v.protoFormatDetails(nextOpt, "localized_message", s))
+	}
 
 	return strings.Join(elems, "\n")
 }

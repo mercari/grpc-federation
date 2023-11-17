@@ -48,6 +48,10 @@ message GetPostResponse {
                 description: "'some-description'"
               }
             }
+            localized_message {
+              locale: "en-US"
+              message: "'some-message'"
+            }
           }
         }
       }

@@ -182,6 +182,7 @@ func TestProtoFormat(t *testing.T) {
             rule: "post.title == 'some-title'"
             precondition_failure {...}
             bad_request {...}
+            localized_message {...}
           }
         }
       }
@@ -397,10 +398,14 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 				BadRequests: []*resolver.BadRequest{
 					{},
 				},
+				LocalizedMessages: []*resolver.LocalizedMessage{
+					{},
+				},
 			},
 			expected: `  rule: "1 == 1"
   precondition_failure {...}
-  bad_request {...}`,
+  bad_request {...}
+  localized_message {...}`,
 		},
 		{
 			desc: "multiple detail",
@@ -416,6 +421,10 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 					{},
 					{},
 				},
+				LocalizedMessages: []*resolver.LocalizedMessage{
+					{},
+					{},
+				},
 			},
 			expected: `  rule: "2 == 2"
   precondition_failure: [
@@ -423,6 +432,10 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
     {...}
   ]
   bad_request: [
+    {...},
+    {...}
+  ]
+  localized_message: [
     {...},
     {...}
   ]`,

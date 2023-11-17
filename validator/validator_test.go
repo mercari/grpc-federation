@@ -414,6 +414,11 @@ testdata/invalid_validation_bad_request.proto:49:30: description must always ret
 49:                  description: "2",
                                   ^
 `},
+		{file: "invalid_validation_localized_message.proto", expected: `
+testdata/invalid_validation_localized_message.proto:47:22: message must always return a string value
+47:              message: "1"
+                          ^
+`},
 	}
 	ctx := context.Background()
 	v := validator.New()

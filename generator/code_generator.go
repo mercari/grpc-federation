@@ -1984,6 +1984,7 @@ type ValidationErrorDetail struct {
 	Rule                 string
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest
+	LocalizedMessages    []*LocalizedMessage
 }
 
 type PreconditionFailure struct {
@@ -2003,6 +2004,11 @@ type BadRequest struct {
 type BadRequestFieldViolation struct {
 	Field       string
 	Description string
+}
+
+type LocalizedMessage struct {
+	Locale  string
+	Message string
 }
 
 func (r *MessageResolver) MessageValidation() *ValidationRule {
@@ -2044,6 +2050,12 @@ func (r *MessageResolver) MessageValidation() *ValidationRule {
 			}
 			ved.BadRequests = append(ved.BadRequests, &BadRequest{
 				FieldViolations: vs,
+			})
+		}
+		for _, msg := range detail.LocalizedMessages {
+			ved.LocalizedMessages = append(ved.LocalizedMessages, &LocalizedMessage{
+				Locale:  msg.Locale,
+				Message: msg.Message.Expr,
 			})
 		}
 		vr.Error.Details = append(vr.Error.Details, ved)

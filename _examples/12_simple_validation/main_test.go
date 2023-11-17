@@ -107,6 +107,10 @@ func TestFederation(t *testing.T) {
 							},
 						},
 					},
+					&errdetails.LocalizedMessage{
+						Locale: "en-US",
+						Message: "some-content",
+					},
 				},
 			},
 		},
@@ -135,6 +139,7 @@ func TestFederation(t *testing.T) {
 					errdetails.PreconditionFailure_Violation{},
 					errdetails.BadRequest{},
 					errdetails.BadRequest_FieldViolation{},
+					errdetails.LocalizedMessage{},
 				)); diff != "" {
 					t.Errorf("(-got, +want)\n%s", diff)
 				}

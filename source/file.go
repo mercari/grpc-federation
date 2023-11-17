@@ -1034,6 +1034,8 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 			return f.nodeInfoByPreconditionFailure(f.getMessageListFromNode(elem.Val), detail.PreconditionFailure)
 		case detail.BadRequest != nil && fieldName == "bad_request":
 			return f.nodeInfoByBadRequest(f.getMessageListFromNode(elem.Val), detail.BadRequest)
+		case detail.LocalizedMessage != nil && fieldName == "localized_message":
+			return f.nodeInfoByLocalizedMessage(f.getMessageListFromNode(elem.Val), detail.LocalizedMessage)
 		}
 	}
 	return f.nodeInfo(node)
@@ -1080,6 +1082,24 @@ func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *Message
 		fieldName := elem.Name.Name.AsIdentifier()
 		if fieldName == "field_violations" {
 			return f.nodeInfoByBadRequestFieldViolations(f.getMessageListFromNode(elem.Val), req.FieldViolation)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByLocalizedMessage(list []*ast.MessageLiteralNode, msg *MessageValidationDetailLocalizedMessageOption) *ast.NodeInfo {
+	if msg.Idx >= len(list) {
+		return nil
+	}
+	node := list[msg.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		if string(fieldName) == msg.FieldName {
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
 		}
 	}
 	return f.nodeInfo(node)
