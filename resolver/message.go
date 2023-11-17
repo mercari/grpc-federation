@@ -58,10 +58,10 @@ func (m *Message) HasRule() bool {
 	if m.Rule == nil {
 		return false
 	}
-	if m.HasCustomResolver() {
+	if m.HasResolvers() {
 		return true
 	}
-	if m.HasResolvers() {
+	if m.HasCustomResolver() {
 		return true
 	}
 	if m.HasRuleEveryFields() {
@@ -75,6 +75,9 @@ func (m *Message) HasResolvers() bool {
 		return false
 	}
 	if len(m.Rule.Resolvers) != 0 {
+		return true
+	}
+	if len(m.Rule.VariableDefinitions) != 0 {
 		return true
 	}
 	for _, field := range m.Fields {
@@ -127,6 +130,30 @@ func (m *Message) HasCELValue() bool {
 		for _, arg := range dep.Args {
 			if arg.Value != nil && arg.Value.CEL != nil {
 				return true
+			}
+		}
+	}
+	for _, varDef := range m.Rule.VariableDefinitions {
+		if varDef.Expr == nil {
+			continue
+		}
+		expr := varDef.Expr
+		switch {
+		case expr.By != nil:
+			return true
+		case expr.Call != nil:
+			if expr.Call.Request != nil {
+				for _, arg := range expr.Call.Request.Args {
+					if arg.Value != nil && arg.Value.CEL != nil {
+						return true
+					}
+				}
+			}
+		case expr.Message != nil:
+			for _, arg := range expr.Message.Args {
+				if arg.Value != nil && arg.Value.CEL != nil {
+					return true
+				}
 			}
 		}
 	}
@@ -183,6 +210,20 @@ func (m *Message) UseAllNameReference() {
 		}
 		msg.Used = true
 	}
+	for _, varDef := range m.Rule.VariableDefinitions {
+		if varDef.Name == "" {
+			continue
+		}
+		varDef.Used = true
+	}
+}
+
+func (e *MessageExpr) ReferenceNames() []string {
+	var refNames []string
+	for _, arg := range e.Args {
+		refNames = append(refNames, arg.Value.ReferenceNames()...)
+	}
+	return refNames
 }
 
 func (m *Message) ReferenceNames() []string {
@@ -202,6 +243,9 @@ func (m *Message) ReferenceNames() []string {
 		for _, arg := range depMessage.Args {
 			refNames = append(refNames, arg.Value.ReferenceNames()...)
 		}
+	}
+	for _, varDef := range rule.VariableDefinitions {
+		refNames = append(refNames, varDef.ReferenceNames()...)
 	}
 	for _, field := range m.Fields {
 		if !field.HasRule() {
@@ -305,6 +349,26 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 			}
 		}
 	}
+	if m.Rule != nil && len(m.Rule.VariableDefinitions) != 0 {
+		for _, varDef := range m.Rule.VariableDefinitions {
+			if varDef.Expr == nil {
+				continue
+			}
+			if varDef.Expr.Call != nil && varDef.Expr.Call.Request != nil {
+				request := varDef.Expr.Call.Request
+				for _, arg := range request.Args {
+					if !request.Type.HasField(arg.Name) {
+						continue
+					}
+					fromType := arg.Value.Type()
+					field := request.Type.Field(arg.Name)
+					toType := field.Type
+					decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
+				}
+			}
+		}
+	}
+
 	for _, field := range m.Fields {
 		decls = append(decls, field.typeConversionDecls(convertedFQDNMap)...)
 	}

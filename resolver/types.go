@@ -107,7 +107,60 @@ type MessageRule struct {
 	CustomResolver      bool
 	Alias               *Message
 	// Validations holds all the validations attached to the given message
-	Validations MessageValidations
+	Validations         MessageValidations
+	VariableDefinitions VariableDefinitions
+}
+
+type VariableDefinition struct {
+	Name     string
+	If       *CELValue
+	AutoBind bool
+	Used     bool
+	Expr     *VariableExpr
+}
+
+type VariableDefinitions []*VariableDefinition
+
+type VariableExpr struct {
+	Type       *Type
+	By         *CELValue
+	Map        *MapExpr
+	Call       *CallExpr
+	Message    *MessageExpr
+	Validation *ValidationExpr
+}
+
+type CallExpr struct {
+	Method  *Method
+	Request *Request
+	Timeout *time.Duration
+	Retry   *RetryPolicy
+}
+
+type MapExpr struct {
+	Iterator *Iterator
+	Expr     *MapIteratorExpr
+}
+
+type Iterator struct {
+	Name   string
+	Source *VariableDefinition
+}
+
+type MapIteratorExpr struct {
+	Type    *Type
+	By      *CELValue
+	Message *MessageExpr
+}
+
+type MessageExpr struct {
+	Message *Message
+	Args    []*Argument
+	Owner   *MessageDependencyOwner
+}
+
+type ValidationExpr struct {
+	Error *ValidationError
 }
 
 type MessageResolverGroupType string
@@ -150,10 +203,11 @@ func (g *ConcurrentMessageResolverGroup) Type() MessageResolverGroupType {
 }
 
 type MessageResolver struct {
-	Name              string
-	MethodCall        *MethodCall
-	MessageDependency *MessageDependency
-	Validation        *ValidationRule
+	Name               string
+	MethodCall         *MethodCall
+	MessageDependency  *MessageDependency
+	Validation         *ValidationRule
+	VariableDefinition *VariableDefinition
 }
 
 type MessageValidations []*ValidationRule
@@ -225,9 +279,10 @@ type OneofField struct {
 }
 
 type AutoBindField struct {
-	ResponseField     *ResponseField
-	MessageDependency *MessageDependency
-	Field             *Field
+	ResponseField      *ResponseField
+	MessageDependency  *MessageDependency
+	VariableDefinition *VariableDefinition
+	Field              *Field
 }
 
 type FieldRule struct {

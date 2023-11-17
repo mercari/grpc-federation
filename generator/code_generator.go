@@ -140,6 +140,27 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 							Ref:  depMessage.Message,
 						}),
 					})
+				} else if def := msgResolver.VariableDefinition; def != nil && def.Used {
+					switch {
+					case def.Expr.Call != nil:
+						fieldName := util.ToPublicGoVariable(def.Name)
+						if typ.HasField(fieldName) {
+							continue
+						}
+						typ.Fields = append(typ.Fields, &Field{
+							Name: fieldName,
+							Type: toTypeText(svc, def.Expr.Type),
+						})
+					case def.Expr.Message != nil:
+						fieldName := util.ToPublicGoVariable(def.Name)
+						if typ.HasField(fieldName) {
+							continue
+						}
+						typ.Fields = append(typ.Fields, &Field{
+							Name: fieldName,
+							Type: toTypeText(svc, def.Expr.Type),
+						})
+					}
 				}
 			}
 		}
@@ -896,6 +917,24 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 	for _, dep := range msg.Rule.MessageDependencies {
 		ret = append(ret, s.dependentMethods(dep.Message)...)
 	}
+	for _, varDef := range msg.Rule.VariableDefinitions {
+		if varDef.Expr == nil {
+			continue
+		}
+		expr := varDef.Expr
+		switch {
+		case expr.Call != nil:
+			if expr.Call.Method != nil {
+				method := expr.Call.Method
+				ret = append(ret, &DependentMethod{
+					Name: fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name),
+					FQDN: "/" + method.FQDN(),
+				})
+			}
+		case expr.Message != nil:
+			ret = append(ret, s.dependentMethods(expr.Message.Message)...)
+		}
+	}
 	for _, field := range msg.Fields {
 		if field.Rule == nil {
 			continue
@@ -1069,6 +1108,14 @@ func (m *Message) DeclVariables() []*DeclVariable {
 				valueMap[r.MessageDependency.Name] = &DeclVariable{
 					Name: toUserDefinedVariable(r.MessageDependency.Name),
 					Type: toTypeText(m.Service, &resolver.Type{Type: types.Message, Ref: r.MessageDependency.Message}),
+				}
+			} else if r.VariableDefinition != nil {
+				if !r.VariableDefinition.Used {
+					continue
+				}
+				valueMap[r.VariableDefinition.Name] = &DeclVariable{
+					Name: toUserDefinedVariable(r.VariableDefinition.Name),
+					Type: toTypeText(m.Service, r.VariableDefinition.Expr.Type),
 				}
 			}
 		}
@@ -1497,6 +1544,8 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		name = autoBindField.ResponseField.Name
 	case autoBindField.MessageDependency != nil:
 		name = autoBindField.MessageDependency.Name
+	case autoBindField.VariableDefinition != nil:
+		name = autoBindField.VariableDefinition.Name
 	}
 
 	valueName := toUserDefinedVariable(name)
@@ -1543,14 +1592,14 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	switch fromType.Type {
 	case types.Message:
 		zeroValue = toMakeZeroValue(m.Service, fromType)
-		returnFieldValue = fmt.Sprintf("_value.(%s)", fromText)
+		returnFieldValue = fmt.Sprintf("value.(%s)", fromText)
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
 			returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, returnFieldValue)
 		}
 	case types.Enum:
 		zeroValue = toMakeZeroValue(m.Service, fromType)
-		returnFieldValue = fmt.Sprintf("_value.(%s)", fromText)
+		returnFieldValue = fmt.Sprintf("value.(%s)", fromText)
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
 			returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, returnFieldValue)
@@ -1558,7 +1607,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
 		zeroValue = toMakeZeroValue(m.Service, toType)
-		returnFieldValue = fmt.Sprintf("_value.(%s)", toText)
+		returnFieldValue = fmt.Sprintf("value.(%s)", toText)
 	}
 	return &ReturnField{
 		Name:  util.ToPublicGoVariable(field.Name),
@@ -1621,14 +1670,14 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 			switch fromType.Type {
 			case types.Message:
 				outType = "nil"
-				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, fromType))
+				argValue = fmt.Sprintf("value.(%s)", toTypeText(m.Service, fromType))
 				if requiredCast(fromType, toType) {
 					castFuncName := castFuncName(fromType, toType)
 					argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 				}
 			case types.Enum:
 				outType = "nil"
-				argValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(m.Service, fromType))
+				argValue = fmt.Sprintf("%s(value.(int64))", toTypeText(m.Service, fromType))
 				if requiredCast(fromType, toType) {
 					castFuncName := castFuncName(fromType, toType)
 					argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
@@ -1636,7 +1685,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 			default:
 				// Since fromType is a primitive type, type conversion is possible on the CEL side.
 				outType = fmt.Sprintf("reflect.TypeOf(new(%s).Get%s())", oneofTypeName, fieldName)
-				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, toType))
+				argValue = fmt.Sprintf("value.(%s)", toTypeText(m.Service, toType))
 			}
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
@@ -1751,6 +1800,9 @@ type MessageResolver struct {
 }
 
 func (r *MessageResolver) Key() string {
+	if r.VariableDefinition != nil {
+		return r.VariableDefinition.Name
+	}
 	if r.MethodCall != nil {
 		return r.MethodCall.Method.FQDN()
 	}
@@ -1758,22 +1810,73 @@ func (r *MessageResolver) Key() string {
 }
 
 func (r *MessageResolver) UseTimeout() bool {
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		return expr.Call != nil && expr.Call.Timeout != nil
+	}
+
 	return r.MethodCall != nil && r.MethodCall.Timeout != nil
 }
 
 func (r *MessageResolver) UseRetry() bool {
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		return expr.Call != nil && expr.Call.Retry != nil
+	}
+
 	return r.MethodCall != nil && r.MethodCall.Retry != nil
 }
 
+func (r *MessageResolver) Retry() *resolver.RetryPolicy {
+	if r.VariableDefinition != nil {
+		return r.VariableDefinition.Expr.Call.Retry
+	}
+
+	return r.MethodCall.Retry
+}
+
 func (r *MessageResolver) MethodFQDN() string {
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		if expr.Call != nil {
+			return expr.Call.Method.FQDN()
+		}
+		return ""
+	}
+
 	return r.MethodCall.Method.FQDN()
 }
 
 func (r *MessageResolver) Timeout() string {
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		if expr.Call != nil {
+			return fmt.Sprintf("%[1]d/* %[1]s */", *expr.Call.Timeout)
+		}
+		return ""
+	}
 	return fmt.Sprintf("%[1]d/* %[1]s */", *r.MethodCall.Timeout)
 }
 
 func (r *MessageResolver) Caller() string {
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		if expr.Call != nil {
+			method := expr.Call.Method
+			methodName := method.Name
+			svcName := fullServiceName(method.Service)
+			return fmt.Sprintf("client.%sClient.%s", svcName, methodName)
+		}
+		if expr.Message != nil {
+			msgName := fullMessageName(expr.Message.Message)
+			if expr.Message.Message.HasRule() {
+				return fmt.Sprintf("resolve_%s", msgName)
+			}
+			return fmt.Sprintf("resolver.Resolve_%s", msgName)
+		}
+		return ""
+	}
+
 	if r.MethodCall != nil {
 		methodCall := r.MethodCall
 		methodName := methodCall.Method.Name
@@ -1788,6 +1891,10 @@ func (r *MessageResolver) Caller() string {
 }
 
 func (r *MessageResolver) HasErrorHandler() bool {
+	if r.VariableDefinition != nil {
+		return r.VariableDefinition.Expr.Call != nil
+	}
+
 	return r.MethodCall != nil
 }
 
@@ -1796,11 +1903,32 @@ func (r *MessageResolver) ServiceName() string {
 }
 
 func (r *MessageResolver) DependentMethodName() string {
+	if r.VariableDefinition != nil {
+		method := r.VariableDefinition.Expr.Call.Method
+		return fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name)
+	}
+
 	method := r.MethodCall.Method
 	return fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name)
 }
 
 func (r *MessageResolver) RequestType() string {
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		if expr.Call != nil {
+			request := r.VariableDefinition.Expr.Call.Request
+			return fmt.Sprintf("%s.%s",
+				request.Type.GoPackage().Name,
+				request.Type.Name,
+			)
+		}
+		if expr.Message != nil {
+			msgName := fullMessageName(expr.Message.Message)
+			return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
+		}
+		return ""
+	}
+
 	if r.MethodCall != nil {
 		request := r.MethodCall.Request
 		return fmt.Sprintf("%s.%s",
@@ -1813,6 +1941,21 @@ func (r *MessageResolver) RequestType() string {
 }
 
 func (r *MessageResolver) ReturnType() string {
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		if expr.Call != nil {
+			response := expr.Call.Method.Response
+			return fmt.Sprintf("%s.%s",
+				response.GoPackage().Name,
+				response.Name,
+			)
+		}
+		if expr.Message != nil {
+			return expr.Message.Message.Name
+		}
+		return ""
+	}
+
 	if r.MethodCall != nil {
 		response := r.MethodCall.Response
 		return fmt.Sprintf("%s.%s",
@@ -1824,6 +1967,10 @@ func (r *MessageResolver) ReturnType() string {
 }
 
 func (r *MessageResolver) UseResponseVariable() bool {
+	if r.VariableDefinition != nil {
+		return r.VariableDefinition.Used
+	}
+
 	if r.MethodCall != nil {
 		if r.MethodCall.Response != nil {
 			for _, field := range r.MethodCall.Response.Fields {
@@ -1839,10 +1986,32 @@ func (r *MessageResolver) UseResponseVariable() bool {
 	return r.MessageDependency.Used
 }
 
+func (r *MessageResolver) IsBy() bool {
+	return r.VariableDefinition != nil && r.VariableDefinition.Expr.By != nil
+}
+
+func (r *MessageResolver) IsValidation() bool {
+	if r.VariableDefinition != nil && r.VariableDefinition.Expr.Validation != nil {
+		return true
+	}
+	return r.Validation != nil
+}
+
+func (r *MessageResolver) By() *resolver.CELValue {
+	return r.VariableDefinition.Expr.By
+}
+
+func (r *MessageResolver) ZeroValue() string {
+	return toMakeZeroValue(r.Service, r.VariableDefinition.Expr.Type)
+}
+
 func (r *MessageResolver) ProtoComment() string {
 	opt := &resolver.ProtoFormatOption{
 		Prefix:         "",
 		IndentSpaceNum: 2,
+	}
+	if r.VariableDefinition != nil {
+		return r.VariableDefinition.ProtoFormat(opt)
 	}
 	if r.MethodCall != nil {
 		return r.MethodCall.ProtoFormat(opt)
@@ -1864,13 +2033,14 @@ type ResponseVariable struct {
 }
 
 func (r *MessageResolver) ResponseVariable() string {
-	if r.MethodCall != nil {
-		return fmt.Sprintf("res%s", r.MethodCall.Response.Type.Name)
-	}
-	return fmt.Sprintf("res%s", r.MessageDependency.Message.Name)
+	return "value"
 }
 
 func (r *MessageResolver) Type() string {
+	if r.VariableDefinition != nil {
+		return toTypeText(r.Service, r.VariableDefinition.Expr.Type)
+	}
+
 	if r.MethodCall != nil {
 		msg := r.MethodCall.Response.Type
 		return toTypeText(r.Service, &resolver.Type{Type: types.Message, Ref: msg})
@@ -1881,6 +2051,39 @@ func (r *MessageResolver) Type() string {
 
 func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
 	var values []*ResponseVariable
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		if expr.Call != nil {
+			values = append(values, &ResponseVariable{
+				UseName:  r.VariableDefinition.Used,
+				Name:     toUserDefinedVariable(r.VariableDefinition.Name),
+				Selector: r.ResponseVariable(),
+				CELExpr:  r.VariableDefinition.Name,
+				CELType:  toCELNativeType(expr.Type),
+			})
+		}
+		if expr.Message != nil {
+			values = append(values, &ResponseVariable{
+				UseName:      r.VariableDefinition.Used,
+				Name:         toUserDefinedVariable(r.VariableDefinition.Name),
+				Selector:     r.ResponseVariable(),
+				ProtoComment: fmt.Sprintf(`// { name: %q, message: %q ... }`, r.VariableDefinition.Name, expr.Message.Message.Name),
+				CELExpr:      r.VariableDefinition.Name,
+				CELType:      toCELNativeType(expr.Type),
+			})
+		}
+		if expr.By != nil {
+			values = append(values, &ResponseVariable{
+				UseName:  r.VariableDefinition.Used,
+				Name:     toUserDefinedVariable(r.VariableDefinition.Name),
+				Selector: r.ResponseVariable(),
+				CELExpr:  r.VariableDefinition.Name,
+				CELType:  toCELNativeType(expr.Type),
+			})
+		}
+		return values
+	}
+
 	if r.MethodCall != nil {
 		for _, field := range r.MethodCall.Response.Fields {
 			var (
@@ -2012,18 +2215,28 @@ type LocalizedMessage struct {
 }
 
 func (r *MessageResolver) MessageValidation() *ValidationRule {
-	validation := r.MessageResolver.Validation
+	var (
+		validationName  string
+		validationError *resolver.ValidationError
+	)
+	if r.VariableDefinition != nil && r.VariableDefinition.Expr.Validation != nil {
+		validationName = r.VariableDefinition.Name
+		validationError = r.VariableDefinition.Expr.Validation.Error
+	} else {
+		validationName = r.MessageResolver.Validation.Name
+		validationError = r.MessageResolver.Validation.Error
+	}
 	vr := &ValidationRule{
-		Name: validation.Name,
+		Name: validationName,
 		Error: &ValidationError{
-			Code:    validation.Error.Code,
-			Details: make([]*ValidationErrorDetail, 0, len(validation.Error.Details)),
+			Code:    validationError.Code,
+			Details: make([]*ValidationErrorDetail, 0, len(validationError.Details)),
 		},
 	}
-	if r := validation.Error.Rule; r != nil {
+	if r := validationError.Rule; r != nil {
 		vr.Error.Rule = r.Expr
 	}
-	for _, detail := range validation.Error.Details {
+	for _, detail := range validationError.Details {
 		ved := &ValidationErrorDetail{
 			Rule: detail.Rule.Expr,
 		}
@@ -2073,14 +2286,28 @@ type Argument struct {
 }
 
 func (r *MessageResolver) Arguments() []*Argument {
-	var args []*resolver.Argument
-	if r.MethodCall != nil {
+	var (
+		isRequestArgument bool
+		args              []*resolver.Argument
+	)
+	if r.VariableDefinition != nil {
+		expr := r.VariableDefinition.Expr
+		if expr.Call != nil {
+			isRequestArgument = true
+			args = expr.Call.Request.Args
+		} else if expr.Message != nil {
+			args = expr.Message.Args
+		} else if expr.By != nil {
+			return nil
+		}
+	} else if r.MethodCall != nil {
+		isRequestArgument = true
 		args = r.MethodCall.Request.Args
 	} else {
 		args = r.MessageDependency.Args
 	}
+
 	var generateArgs []*Argument
-	isRequestArgument := r.MethodCall != nil
 	if !isRequestArgument {
 		generateArgs = append(generateArgs, &Argument{
 			Name:  "Client",
@@ -2131,7 +2358,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		for _, field := range value.CEL.Out.Ref.Fields {
 			inlineFields = append(inlineFields, &Argument{
 				Name:  util.ToPublicGoVariable(field.Name),
-				Value: fmt.Sprintf("_inlineValue.Get%s()", util.ToPublicGoVariable(field.Name)),
+				Value: fmt.Sprintf("inlineValue.Get%s()", util.ToPublicGoVariable(field.Name)),
 			})
 		}
 	}
@@ -2153,14 +2380,14 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	switch fromType.Type {
 	case types.Message:
 		zeroValue = toMakeZeroValue(r.Service, fromType)
-		argValue = fmt.Sprintf("_value.(%s)", fromText)
+		argValue = fmt.Sprintf("value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	case types.Enum:
 		zeroValue = toMakeZeroValue(r.Service, fromType)
-		argValue = fmt.Sprintf("_value.(%s)", fromText)
+		argValue = fmt.Sprintf("value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
@@ -2168,7 +2395,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
 		zeroValue = toMakeZeroValue(r.Service, toType)
-		argValue = fmt.Sprintf("_value.(%s)", toText)
+		argValue = fmt.Sprintf("value.(%s)", toText)
 	}
 	return []*Argument{
 		{

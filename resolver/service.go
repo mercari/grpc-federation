@@ -121,9 +121,11 @@ func (s *Service) customResolversByMessage(msg *Message) []*CustomResolver {
 
 func (s *Service) customResolvers(resolver *MessageResolver) []*CustomResolver {
 	var customResolvers []*CustomResolver
-	dep := resolver.MessageDependency
-	if dep != nil {
+	if dep := resolver.MessageDependency; dep != nil {
 		customResolvers = append(customResolvers, s.customResolversByMessage(dep.Message)...)
+	}
+	if def := resolver.VariableDefinition; def != nil && def.Expr.Message != nil {
+		customResolvers = append(customResolvers, s.customResolversByMessage(def.Expr.Message.Message)...)
 	}
 	return customResolvers
 }
@@ -201,9 +203,17 @@ func (s *Service) useServices(resolver *MessageResolver, msgResolverMap map[*Mes
 		methodCall := resolver.MethodCall
 		svcs = append(svcs, methodCall.Method.Service)
 	}
-	if resolver.MessageDependency == nil {
-		return svcs
+	if resolver.MessageDependency != nil {
+		svcs = append(svcs, s.useServicesByMessage(resolver.MessageDependency.Message, msgResolverMap)...)
 	}
-	svcs = append(svcs, s.useServicesByMessage(resolver.MessageDependency.Message, msgResolverMap)...)
+	if resolver.VariableDefinition != nil {
+		expr := resolver.VariableDefinition.Expr
+		switch {
+		case expr.Call != nil:
+			svcs = append(svcs, expr.Call.Method.Service)
+		case expr.Message != nil:
+			svcs = append(svcs, s.useServicesByMessage(expr.Message.Message, msgResolverMap)...)
+		}
+	}
 	return svcs
 }

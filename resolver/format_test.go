@@ -1,6 +1,7 @@
 package resolver_test
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -22,35 +23,48 @@ func TestProtoFormat(t *testing.T) {
 			messageOptionToFormatMap: map[string]string{
 				"GetPostResponse": `
   option (grpc.federation.message) = {
-    messages {
+    def {
       name: "post"
-      message: "Post"
-      args { name: "id", by: "$.id" }
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
     }
   }`,
 				"Post": `
   option (grpc.federation.message) = {
-    resolver: {
-      method: "org.post.PostService/GetPost"
-      request { field: "id", by: "$.id" }
-      response { name: "post", field: "post", autobind: true }
-    }
-    messages: [
-      {
-        name: "user"
-        message: "User"
-        args { inline: "post" }
-      },
-      {
-        name: "z"
-        message: "Z"
-      },
-      {
-        name: "m"
-        message: "M"
-        autobind: true
+    def {
+      name: "res"
+      call {
+        method: "org.post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
       }
-    ]
+    }
+    def {
+      name: "post"
+      autobind: true
+      by: "res.post"
+    }
+    def {
+      name: "user"
+      message {
+        name: "User"
+        args { inline: "post" }
+      }
+    }
+    def {
+      name: "z"
+      message {
+        name: "Z"
+      }
+    }
+    def {
+      name: "m"
+      autobind: true
+      message {
+        name: "M"
+      }
+    }
   }`,
 				"M": `
   option (grpc.federation.message) = {}`,
@@ -60,10 +74,17 @@ func TestProtoFormat(t *testing.T) {
   }`,
 				"User": `
   option (grpc.federation.message) = {
-    resolver: {
-      method: "org.user.UserService/GetUser"
-      request { field: "id", by: "$.user_id" }
-      response { name: "user", field: "user", autobind: true }
+    def {
+      name: "res"
+      call {
+        method: "org.user.UserService/GetUser"
+        request { field: "id", by: "$.user_id" }
+      }
+    }
+    def {
+      name: "user"
+      autobind: true
+      by: "res.user"
     }
   }`,
 			},
@@ -82,19 +103,27 @@ func TestProtoFormat(t *testing.T) {
 			messageOptionToFormatMap: map[string]string{
 				"CreatePostResponse": `
   option (grpc.federation.message) = {
-    resolver: {
-      method: "org.post.PostService/CreatePost"
-      request { field: "post", by: "cp" }
-      response { name: "p", field: "post" }
-    }
-    messages {
+    def {
       name: "cp"
-      message: "CreatePost"
-      args: [
-        { name: "title", by: "$.title" },
-        { name: "content", by: "$.content" },
-        { name: "user_id", by: "$.user_id" }
-      ]
+      message {
+        name: "CreatePost"
+        args: [
+          { name: "title", by: "$.title" },
+          { name: "content", by: "$.content" },
+          { name: "user_id", by: "$.user_id" }
+        ]
+      }
+    }
+    def {
+      name: "res"
+      call {
+        method: "org.post.PostService/CreatePost"
+        request { field: "post", by: "cp" }
+      }
+    }
+    def {
+      name: "p"
+      by: "res.post"
     }
   }`,
 				"CreatePost": `
@@ -106,31 +135,48 @@ func TestProtoFormat(t *testing.T) {
 			messageOptionToFormatMap: map[string]string{
 				"GetPostResponse": `
   option (grpc.federation.message) = {
-    messages {
+    def {
       name: "post"
-      message: "Post"
-      args { name: "id", by: "$.id" }
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
     }
   }`,
 				"Post": `
   option (grpc.federation.message) = {
-    resolver: {
-      method: "org.post.PostService/GetPost"
-      request { field: "id", by: "$.id" }
-      response { name: "post", field: "post", autobind: true }
+    def {
+      name: "res"
+      call {
+        method: "org.post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+      }
     }
-    messages {
+    def {
+      name: "post"
+      autobind: true
+      by: "res.post"
+    }
+    def {
       name: "user"
-      message: "User"
-      args { inline: "post" }
+      message {
+        name: "User"
+        args { inline: "post" }
+      }
     }
   }`,
 				"User": `
   option (grpc.federation.message) = {
-    resolver: {
-      method: "org.user.UserService/GetUser"
-      request { field: "id", by: "$.user_id" }
-      response { name: "u", field: "user" }
+    def {
+      name: "res"
+      call {
+        method: "org.user.UserService/GetUser"
+        request { field: "id", by: "$.user_id" }
+      }
+    }
+    def {
+      name: "u"
+      by: "res.user"
     }
     custom_resolver: true
   }`,
@@ -141,18 +187,27 @@ func TestProtoFormat(t *testing.T) {
 			messageOptionToFormatMap: map[string]string{
 				"GetPostResponse": `
   option (grpc.federation.message) = {
-    messages {
+    def {
       name: "post"
-      message: "Post"
-      args { name: "id", by: "$.id" }
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
     }
   }`,
 				"Post": `
   option (grpc.federation.message) = {
-    resolver: {
-      method: "org.post.PostService/GetPost"
-      request { field: "id", by: "$.id" }
-      response { name: "post", field: "post", autobind: true }
+    def {
+      name: "res"
+      call {
+        method: "org.post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+      }
+    }
+    def {
+      name: "post"
+      autobind: true
+      by: "res.post"
     }
   }`,
 			},
@@ -162,20 +217,24 @@ func TestProtoFormat(t *testing.T) {
 			messageOptionToFormatMap: map[string]string{
 				"GetPostResponse": `
   option (grpc.federation.message) = {
-    messages {
+    def {
       name: "post"
-      message: "Post"
+      message {
+        name: "Post"
+      }
     }
-    validations: [
-      {
-        name: "_validation0"
+    def {
+      name: "_def1"
+      validation {
         error {
           code: FAILED_PRECONDITION
           rule: "post.id == 'some-id'"
         }
-      },
-      {
-        name: "_validation1"
+      }
+    }
+    def {
+      name: "_def2"
+      validation {
         error {
           code: FAILED_PRECONDITION
           details {
@@ -186,7 +245,7 @@ func TestProtoFormat(t *testing.T) {
           }
         }
       }
-    ]
+    }
   }`,
 			},
 		},
@@ -216,6 +275,7 @@ func TestProtoFormat(t *testing.T) {
 						IndentSpaceNum: 2,
 					})
 					if diff := cmp.Diff(got, expected); diff != "" {
+						fmt.Println(got)
 						t.Errorf("(-got, +want)\n%s", diff)
 					}
 				})

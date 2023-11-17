@@ -199,32 +199,34 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	     autobind: true
 	   }
 	*/
-	resPostIface, err, _ := sg.Do("_org_federation_Post_org.federation.Post", func() (any, error) {
-		valueMu.RLock()
-		args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
-			Client: s.client,
-		}
-		// { name: "id", by: "$.id" }
-		{
-			_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
-			if err != nil {
-				grpcfed.RecordErrorToSpan(ctx, err)
-				return nil, err
+	{
+		valueIface, err, _ := sg.Do("_org_federation_Post_org.federation.Post", func() (any, error) {
+			valueMu.RLock()
+			args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
+				Client: s.client,
 			}
-			args.Id = _value.(string)
+			// { name: "id", by: "$.id" }
+			{
+				value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+				if err != nil {
+					grpcfed.RecordErrorToSpan(ctx, err)
+					return nil, err
+				}
+				args.Id = value.(string)
+			}
+			valueMu.RUnlock()
+			return s.resolve_Org_Federation_Post(ctx, args)
+		})
+		if err != nil {
+			return nil, err
 		}
-		valueMu.RUnlock()
-		return s.resolve_Org_Federation_Post(ctx, args)
-	})
-	if err != nil {
-		return nil, err
+		value := valueIface.(*Post)
+		valueMu.Lock()
+		value_OrgFederation_Post = value // { name: "_org_federation_Post", message: "Post" ... }
+		envOpts = append(envOpts, cel.Variable("_org_federation_Post", cel.ObjectType("org.federation.Post")))
+		evalValues["_org_federation_Post"] = value_OrgFederation_Post
+		valueMu.Unlock()
 	}
-	resPost := resPostIface.(*Post)
-	valueMu.Lock()
-	value_OrgFederation_Post = resPost // { name: "_org_federation_Post", message: "Post" ... }
-	envOpts = append(envOpts, cel.Variable("_org_federation_Post", cel.ObjectType("org.federation.Post")))
-	evalValues["_org_federation_Post"] = value_OrgFederation_Post
-	valueMu.Unlock()
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.XOrgFederation_Post = value_OrgFederation_Post
@@ -274,24 +276,26 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		     autobind: true
 		   }
 		*/
-		resUserIface, err, _ := sg.Do("_org_federation_User_org.federation.User", func() (any, error) {
-			valueMu.RLock()
-			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
-				Client: s.client,
-				UserId: "foo", // { name: "user_id", string: "foo" }
+		{
+			valueIface, err, _ := sg.Do("_org_federation_User_org.federation.User", func() (any, error) {
+				valueMu.RLock()
+				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
+					Client: s.client,
+					UserId: "foo", // { name: "user_id", string: "foo" }
+				}
+				valueMu.RUnlock()
+				return s.resolve_Org_Federation_User(ctx1, args)
+			})
+			if err != nil {
+				return nil, err
 			}
-			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(ctx1, args)
-		})
-		if err != nil {
-			return nil, err
+			value := valueIface.(*User)
+			valueMu.Lock()
+			value_OrgFederation_User = value // { name: "_org_federation_User", message: "User" ... }
+			envOpts = append(envOpts, cel.Variable("_org_federation_User", cel.ObjectType("org.federation.User")))
+			evalValues["_org_federation_User"] = value_OrgFederation_User
+			valueMu.Unlock()
 		}
-		resUser := resUserIface.(*User)
-		valueMu.Lock()
-		value_OrgFederation_User = resUser // { name: "_org_federation_User", message: "User" ... }
-		envOpts = append(envOpts, cel.Variable("_org_federation_User", cel.ObjectType("org.federation.User")))
-		evalValues["_org_federation_User"] = value_OrgFederation_User
-		valueMu.Unlock()
 		return nil, nil
 	})
 
@@ -305,33 +309,35 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		     response { name: "_post_PostService_GetPost", field: "post", autobind: true }
 		   }
 		*/
-		resGetPostResponseIface, err, _ := sg.Do("post.PostService/GetPost", func() (any, error) {
-			valueMu.RLock()
-			args := &post.GetPostRequest{}
-			// { field: "id", by: "$.id" }
-			{
-				_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
-				if err != nil {
+		{
+			valueIface, err, _ := sg.Do("post.PostService/GetPost", func() (any, error) {
+				valueMu.RLock()
+				args := &post.GetPostRequest{}
+				// { field: "id", by: "$.id" }
+				{
+					value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+					if err != nil {
+						grpcfed.RecordErrorToSpan(ctx, err)
+						return nil, err
+					}
+					args.Id = value.(string)
+				}
+				valueMu.RUnlock()
+				return s.client.Post_PostServiceClient.GetPost(ctx1, args)
+			})
+			if err != nil {
+				if err := s.errorHandler(ctx1, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
 					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}
-				args.Id = _value.(string)
 			}
-			valueMu.RUnlock()
-			return s.client.Post_PostServiceClient.GetPost(ctx1, args)
-		})
-		if err != nil {
-			if err := s.errorHandler(ctx1, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
-				grpcfed.RecordErrorToSpan(ctx, err)
-				return nil, err
-			}
+			value := valueIface.(*post.GetPostResponse)
+			valueMu.Lock()
+			value_Post_PostService_GetPost = value.GetPost() // { name: "_post_PostService_GetPost", field: "post", autobind: true }
+			envOpts = append(envOpts, cel.Variable("_post_PostService_GetPost", cel.ObjectType("post.Post")))
+			evalValues["_post_PostService_GetPost"] = value_Post_PostService_GetPost
+			valueMu.Unlock()
 		}
-		resGetPostResponse := resGetPostResponseIface.(*post.GetPostResponse)
-		valueMu.Lock()
-		value_Post_PostService_GetPost = resGetPostResponse.GetPost() // { name: "_post_PostService_GetPost", field: "post", autobind: true }
-		envOpts = append(envOpts, cel.Variable("_post_PostService_GetPost", cel.ObjectType("post.Post")))
-		evalValues["_post_PostService_GetPost"] = value_Post_PostService_GetPost
-		valueMu.Unlock()
 		return nil, nil
 	})
 
@@ -372,12 +378,12 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	// field binding section.
 	// (grpc.federation.field).by = "$.user_id"
 	{
-		_value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.Uid = _value.(string)
+		ret.Uid = value.(string)
 	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.User", slog.Any("org.federation.User", s.logvalue_Org_Federation_User(ret)))

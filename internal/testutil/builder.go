@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -535,6 +536,7 @@ func (b *ServiceBuilder) Build(t *testing.T) *resolver.Service {
 
 type MessageRuleBuilder struct {
 	rule *resolver.MessageRule
+	errs []error
 }
 
 func NewMessageRuleBuilder() *MessageRuleBuilder {
@@ -602,9 +604,296 @@ func (b *MessageRuleBuilder) AddResolver(group resolver.MessageResolverGroup) *M
 	return b
 }
 
+func (b *MessageRuleBuilder) AddVariableDefinition(def *resolver.VariableDefinition) *MessageRuleBuilder {
+	if def.Expr != nil && def.Expr.Map != nil && def.Expr.Map.Iterator != nil {
+		name := def.Expr.Map.Iterator.Source.Name
+		var found bool
+		for _, varDef := range b.rule.VariableDefinitions {
+			if varDef.Name == name {
+				def.Expr.Map.Iterator.Source = varDef
+				found = true
+				break
+			}
+		}
+		if !found {
+			b.errs = append(b.errs, fmt.Errorf("%s variable name is not found", name))
+		}
+	}
+	b.rule.VariableDefinitions = append(b.rule.VariableDefinitions, def)
+	return b
+}
+
 func (b *MessageRuleBuilder) Build(t *testing.T) *resolver.MessageRule {
 	t.Helper()
+	if len(b.errs) != 0 {
+		t.Fatal(errors.Join(b.errs...))
+	}
 	return b.rule
+}
+
+type VariableDefinitionBuilder struct {
+	def *resolver.VariableDefinition
+}
+
+func NewVariableDefinitionBuilder() *VariableDefinitionBuilder {
+	return &VariableDefinitionBuilder{
+		def: &resolver.VariableDefinition{},
+	}
+}
+
+func (b *VariableDefinitionBuilder) SetName(v string) *VariableDefinitionBuilder {
+	b.def.Name = v
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetIf(v *resolver.CELValue) *VariableDefinitionBuilder {
+	b.def.If = v
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetAutoBind(v bool) *VariableDefinitionBuilder {
+	b.def.AutoBind = v
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetUsed(v bool) *VariableDefinitionBuilder {
+	b.def.Used = v
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetBy(v *resolver.CELValue) *VariableDefinitionBuilder {
+	b.def.Expr = &resolver.VariableExpr{
+		By:   v,
+		Type: v.Out,
+	}
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetMap(v *resolver.MapExpr) *VariableDefinitionBuilder {
+	b.def.Expr = &resolver.VariableExpr{
+		Map: v,
+	}
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetCall(v *resolver.CallExpr) *VariableDefinitionBuilder {
+	b.def.Expr = &resolver.VariableExpr{
+		Call: v,
+		Type: resolver.NewMessageType(v.Method.Response, false),
+	}
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetMessage(v *resolver.MessageExpr) *VariableDefinitionBuilder {
+	b.def.Expr = &resolver.VariableExpr{
+		Message: v,
+		Type:    resolver.NewMessageType(v.Message, false),
+	}
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetValidation(v *resolver.ValidationExpr) *VariableDefinitionBuilder {
+	b.def.Expr = &resolver.VariableExpr{
+		Validation: v,
+	}
+	return b
+}
+
+func (b *VariableDefinitionBuilder) Build(t *testing.T) *resolver.VariableDefinition {
+	t.Helper()
+	return b.def
+}
+
+type MapExprBuilder struct {
+	expr *resolver.MapExpr
+}
+
+func NewMapExprBuilder() *MapExprBuilder {
+	return &MapExprBuilder{
+		expr: &resolver.MapExpr{},
+	}
+}
+
+func (b *MapExprBuilder) SetIterator(v *resolver.Iterator) *MapExprBuilder {
+	b.expr.Iterator = v
+	return b
+}
+
+func (b *MapExprBuilder) SetExpr(v *resolver.MapIteratorExpr) *MapExprBuilder {
+	b.expr.Expr = v
+	return b
+}
+
+func (b *MapExprBuilder) Build(t *testing.T) *resolver.MapExpr {
+	t.Helper()
+	return b.expr
+}
+
+type IteratorBuilder struct {
+	iter *resolver.Iterator
+}
+
+func NewIteratorBuilder() *IteratorBuilder {
+	return &IteratorBuilder{
+		iter: &resolver.Iterator{},
+	}
+}
+
+func (b *IteratorBuilder) SetName(v string) *IteratorBuilder {
+	b.iter.Name = v
+	return b
+}
+
+func (b *IteratorBuilder) SetSource(v string) *IteratorBuilder {
+	b.iter.Source = &resolver.VariableDefinition{
+		Name: v,
+	}
+	return b
+}
+
+func (b *IteratorBuilder) Build(t *testing.T) *resolver.Iterator {
+	t.Helper()
+	return b.iter
+}
+
+type MapIteratorExprBuilder struct {
+	expr *resolver.MapIteratorExpr
+}
+
+func NewMapIteratorExprBuilder() *MapIteratorExprBuilder {
+	return &MapIteratorExprBuilder{
+		expr: &resolver.MapIteratorExpr{},
+	}
+}
+
+func (b *MapIteratorExprBuilder) SetBy(v *resolver.CELValue) *MapIteratorExprBuilder {
+	b.expr.By = v
+	return b
+}
+
+func (b *MapIteratorExprBuilder) SetMessage(v *resolver.MessageExpr) *MapIteratorExprBuilder {
+	b.expr.Message = v
+	return b
+}
+
+func (b *MapIteratorExprBuilder) Build(t *testing.T) *resolver.MapIteratorExpr {
+	t.Helper()
+	return b.expr
+}
+
+type CallExprBuilder struct {
+	expr    *resolver.CallExpr
+	timeout string
+}
+
+func NewCallExprBuilder() *CallExprBuilder {
+	return &CallExprBuilder{
+		expr: &resolver.CallExpr{},
+	}
+}
+
+func (b *CallExprBuilder) SetMethod(v *resolver.Method) *CallExprBuilder {
+	b.expr.Method = v
+	return b
+}
+
+func (b *CallExprBuilder) SetRequest(v *resolver.Request) *CallExprBuilder {
+	v.Type = b.expr.Method.Request
+	b.expr.Request = v
+	return b
+}
+
+func (b *CallExprBuilder) SetTimeout(v string) *CallExprBuilder {
+	b.timeout = v
+	return b
+}
+
+func (b *CallExprBuilder) SetRetryPolicyConstant(constant *resolver.RetryPolicyConstant) *CallExprBuilder {
+	b.expr.Retry = &resolver.RetryPolicy{
+		Constant: constant,
+	}
+	return b
+}
+
+func (b *CallExprBuilder) SetRetryPolicyExponential(exp *resolver.RetryPolicyExponential) *CallExprBuilder {
+	b.expr.Retry = &resolver.RetryPolicy{
+		Exponential: exp,
+	}
+	return b
+}
+
+func (b *CallExprBuilder) Build(t *testing.T) *resolver.CallExpr {
+	t.Helper()
+	if b.timeout != "" {
+		timeout, err := time.ParseDuration(b.timeout)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b.expr.Timeout = &timeout
+		if b.expr.Retry != nil && b.expr.Retry.Exponential != nil {
+			b.expr.Retry.Exponential.MaxElapsedTime = timeout
+		}
+	}
+	return b.expr
+}
+
+type MessageExprBuilder struct {
+	expr *resolver.MessageExpr
+}
+
+func NewMessageExprBuilder() *MessageExprBuilder {
+	return &MessageExprBuilder{
+		expr: &resolver.MessageExpr{
+			Args: []*resolver.Argument{},
+		},
+	}
+}
+
+func (b *MessageExprBuilder) SetMessage(v *resolver.Message) *MessageExprBuilder {
+	b.expr.Message = v
+	return b
+}
+
+func (b *MessageExprBuilder) SetArgs(v []*resolver.Argument) *MessageExprBuilder {
+	b.expr.Args = v
+	return b
+}
+
+func (b *MessageExprBuilder) Build(t *testing.T) *resolver.MessageExpr {
+	t.Helper()
+	return b.expr
+}
+
+type ValidationExprBuilder struct {
+	expr *resolver.ValidationExpr
+}
+
+func NewValidationExprBuilder() *ValidationExprBuilder {
+	return &ValidationExprBuilder{
+		expr: &resolver.ValidationExpr{
+			Error: &resolver.ValidationError{},
+		},
+	}
+}
+
+func (b *ValidationExprBuilder) SetCode(v code.Code) *ValidationExprBuilder {
+	b.expr.Error.Code = v
+	return b
+}
+
+func (b *ValidationExprBuilder) SetRule(v *resolver.CELValue) *ValidationExprBuilder {
+	b.expr.Error.Rule = v
+	return b
+}
+
+func (b *ValidationExprBuilder) SetDetails(v []*resolver.ValidationErrorDetail) *ValidationExprBuilder {
+	b.expr.Error.Details = v
+	return b
+}
+
+func (b *ValidationExprBuilder) Build(t *testing.T) *resolver.ValidationExpr {
+	t.Helper()
+	return b.expr
 }
 
 func NewMessageResolver(name string) *resolver.MessageResolver {

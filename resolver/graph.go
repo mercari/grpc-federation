@@ -68,6 +68,47 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 			}
 			childMap[depNode] = struct{}{}
 		}
+		for idx, varDef := range msg.Rule.VariableDefinitions {
+			if varDef.Expr == nil {
+				continue
+			}
+			expr := varDef.Expr
+			switch {
+			case expr.Message != nil:
+				depNode, depNodeExists := msgToNode[expr.Message.Message]
+				if _, exists := childMap[depNode]; exists {
+					continue
+				}
+				if !depNodeExists {
+					if expr.Message.Message == nil {
+						fileName := msg.File.Name
+						ctx.addError(
+							ErrWithLocation(
+								`undefined message specified "grpc.federation.message" option`,
+								source.MessageExprLocation(fileName, msg.Name, idx),
+							),
+						)
+						continue
+					}
+					fileName := msg.File.Name
+					depMsg := expr.Message.Message
+					if !depMsg.HasRuleEveryFields() {
+						ctx.addError(
+							ErrWithLocation(
+								fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
+								source.MessageExprNameLocation(fileName, msg.Name, idx),
+							),
+						)
+					}
+					depNode = &AllMessageDependencyGraphNode{Message: expr.Message.Message}
+				}
+				if node != nil {
+					node.Children = append(node.Children, depNode)
+					depNode.Parent = append(depNode.Parent, node)
+				}
+				childMap[depNode] = struct{}{}
+			}
+		}
 		for _, field := range msg.Fields {
 			if field.Rule == nil {
 				continue
@@ -233,6 +274,9 @@ func (g *MessageDependencyGraph) createMessageResolverByMessageRule(ctx *context
 	if validation := node.Validation; validation != nil {
 		return &MessageResolver{Name: validation.Name, Validation: validation}
 	}
+	if varDef := node.VariableDefinition; varDef != nil {
+		return &MessageResolver{Name: varDef.Name, VariableDefinition: varDef}
+	}
 	ctx.addError(
 		ErrWithLocation(
 			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
@@ -258,15 +302,16 @@ func (g *MessageDependencyGraph) createMessageResolverByFieldOneofRule(ctx *cont
 }
 
 type MessageDependencyGraphNode struct {
-	Parent            []*MessageDependencyGraphNode
-	Children          []*MessageDependencyGraphNode
-	ParentMap         map[*MessageDependencyGraphNode]struct{}
-	ChildrenMap       map[*MessageDependencyGraphNode]struct{}
-	BaseMessage       *Message
-	Message           *Message
-	Response          *Response
-	MessageDependency *MessageDependency
-	Validation        *ValidationRule
+	Parent             []*MessageDependencyGraphNode
+	Children           []*MessageDependencyGraphNode
+	ParentMap          map[*MessageDependencyGraphNode]struct{}
+	ChildrenMap        map[*MessageDependencyGraphNode]struct{}
+	BaseMessage        *Message
+	Message            *Message
+	Response           *Response
+	MessageDependency  *MessageDependency
+	Validation         *ValidationRule
+	VariableDefinition *VariableDefinition
 }
 
 func (n *MessageDependencyGraphNode) FQDN() string {
@@ -275,6 +320,9 @@ func (n *MessageDependencyGraphNode) FQDN() string {
 	}
 	if n.Validation != nil {
 		return fmt.Sprintf("%s_%s", n.BaseMessage.FQDN(), n.Validation.Name)
+	}
+	if n.VariableDefinition != nil {
+		return fmt.Sprintf("%s_%s", n.BaseMessage.FQDN(), n.VariableDefinition.Name)
 	}
 	return n.Message.FQDN()
 }
@@ -296,6 +344,15 @@ func newMessageDependencyGraphNodeByMessageDependency(baseMsg *Message, dep *Mes
 		MessageDependency: dep,
 		ParentMap:         make(map[*MessageDependencyGraphNode]struct{}),
 		ChildrenMap:       make(map[*MessageDependencyGraphNode]struct{}),
+	}
+}
+
+func newMessageDependencyGraphNodeByVariableDefinition(baseMsg *Message, def *VariableDefinition) *MessageDependencyGraphNode {
+	return &MessageDependencyGraphNode{
+		BaseMessage:        baseMsg,
+		VariableDefinition: def,
+		ParentMap:          make(map[*MessageDependencyGraphNode]struct{}),
+		ChildrenMap:        make(map[*MessageDependencyGraphNode]struct{}),
 	}
 }
 
@@ -334,6 +391,13 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 		node := newMessageDependencyGraphNodeByMessageDependency(baseMsg, depMessage)
 		msgToNodes[msg] = append(msgToNodes[msg], node)
 		nameToNode[depMessage.Name] = node
+	}
+	for _, varDef := range rule.VariableDefinitions {
+		if varDef.Name == "" {
+			continue
+		}
+		node := newMessageDependencyGraphNodeByVariableDefinition(baseMsg, varDef)
+		nameToNode[varDef.Name] = node
 	}
 
 	// build dependencies from name reference.
@@ -429,6 +493,39 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 		}
 	}
 
+	var rootDefNodes []*MessageDependencyGraphNode
+	for idx, varDef := range rule.VariableDefinitions {
+		varDefNode := nameToNode[varDef.Name]
+		refs := varDef.ReferenceNames()
+		if len(refs) == 0 {
+			rootDefNodes = append(rootDefNodes, varDefNode)
+			continue
+		}
+		if varDefNode == nil {
+			continue
+		}
+		for _, ref := range refs {
+			node, exists := nameToNode[ref]
+			if !exists {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`%q name does not exist`, ref),
+						source.VariableDefinitionLocation(ctx.fileName(), baseMsg.Name, idx),
+					),
+				)
+				continue
+			}
+			if _, exists := node.ChildrenMap[varDefNode]; !exists {
+				node.Children = append(node.Children, varDefNode)
+				node.ChildrenMap[varDefNode] = struct{}{}
+			}
+			if _, exists := varDefNode.ParentMap[node]; !exists {
+				varDefNode.Parent = append(varDefNode.Parent, node)
+				varDefNode.ParentMap[node] = struct{}{}
+			}
+		}
+	}
+
 	var roots []*MessageDependencyGraphNode
 	for _, nodes := range msgToNodes {
 		for _, node := range nodes {
@@ -438,6 +535,7 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 		}
 	}
 	roots = append(roots, rootValidationNodes...)
+	roots = append(roots, rootDefNodes...)
 	sort.Slice(roots, func(i, j int) bool {
 		return roots[i].FQDN() < roots[j].FQDN()
 	})

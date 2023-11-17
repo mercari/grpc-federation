@@ -20,9 +20,11 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages { name: "uid", message: "UserID" }
-    messages { name: "user", message: "User", args { name: "user_id", by: "uid.value" } }
-    messages { name: "user2", message: "User", args { name: "user_id", by: "uid.value" } }
+    def [
+      { name: "uid" message { name: "UserID" } },
+      { name: "user" message { name: "User" args { name: "user_id" by: "uid.value" } } },
+      { name: "user2" message { name: "User" args { name: "user_id" by: "uid.value" } } }
+    ]
   };
   User user = 1 [(grpc.federation.field).by = "user"];
   User user2 = 2 [(grpc.federation.field).by = "user2"];
@@ -30,12 +32,17 @@ message GetResponse {
 
 message User {
   option (grpc.federation.message) = {
-    resolver {
-      method: "org.user.UserService/GetUser"
-      request { field: "id", by: "$.user_id" }
-      response { name: "user", field: "user", autobind: true  }
-    }
-    messages { message: "Sub" }
+    def [
+      {
+        name: "res"
+        call {
+          method: "org.user.UserService/GetUser"
+          request { field: "id", by: "$.user_id" }
+        }
+      },
+      { name: "user" by: "res.user" autobind: true  },
+      { message { name: "Sub" } }
+    ]
   };
   string id = 1;
   string name = 3 [(grpc.federation.field).custom_resolver = true];
@@ -43,7 +50,7 @@ message User {
 
 message UserID {
   option (grpc.federation.message) = {
-    messages { message: "Sub" }
+    def { message { name: "Sub" } }
   };
 
   string value = 1 [(grpc.federation.field).string = "xxx"];

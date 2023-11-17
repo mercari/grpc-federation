@@ -180,21 +180,23 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	     message: "Post"
 	   }
 	*/
-	resPostIface, err, _ := sg.Do("p_federation.Post", func() (any, error) {
-		valueMu.RLock()
-		args := &Federation_PostArgument[*OtherServiceDependentClientSet]{
-			Client: s.client,
+	{
+		valueIface, err, _ := sg.Do("p_federation.Post", func() (any, error) {
+			valueMu.RLock()
+			args := &Federation_PostArgument[*OtherServiceDependentClientSet]{
+				Client: s.client,
+			}
+			valueMu.RUnlock()
+			return s.resolve_Federation_Post(ctx, args)
+		})
+		if err != nil {
+			return nil, err
 		}
-		valueMu.RUnlock()
-		return s.resolve_Federation_Post(ctx, args)
-	})
-	if err != nil {
-		return nil, err
+		value := valueIface.(*Post)
+		valueMu.Lock()
+		valueP = value // { name: "p", message: "Post" ... }
+		valueMu.Unlock()
 	}
-	resPost := resPostIface.(*Post)
-	valueMu.Lock()
-	valueP = resPost // { name: "p", message: "Post" ... }
-	valueMu.Unlock()
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.P = valueP
@@ -245,25 +247,27 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 	     ]
 	   }
 	*/
-	resUserIface, err, _ := sg.Do("u_federation.User", func() (any, error) {
-		valueMu.RLock()
-		args := &Federation_UserArgument[*OtherServiceDependentClientSet]{
-			Client: s.client,
-			Id:     "foo", // { name: "id", string: "foo" }
-			Name:   "bar", // { name: "name", string: "bar" }
+	{
+		valueIface, err, _ := sg.Do("u_federation.User", func() (any, error) {
+			valueMu.RLock()
+			args := &Federation_UserArgument[*OtherServiceDependentClientSet]{
+				Client: s.client,
+				Id:     "foo", // { name: "id", string: "foo" }
+				Name:   "bar", // { name: "name", string: "bar" }
+			}
+			valueMu.RUnlock()
+			return s.resolve_Federation_User(ctx, args)
+		})
+		if err != nil {
+			return nil, err
 		}
-		valueMu.RUnlock()
-		return s.resolve_Federation_User(ctx, args)
-	})
-	if err != nil {
-		return nil, err
+		value := valueIface.(*User)
+		valueMu.Lock()
+		valueU = value // { name: "u", message: "User" ... }
+		envOpts = append(envOpts, cel.Variable("u", cel.ObjectType("federation.User")))
+		evalValues["u"] = valueU
+		valueMu.Unlock()
 	}
-	resUser := resUserIface.(*User)
-	valueMu.Lock()
-	valueU = resUser // { name: "u", message: "User" ... }
-	envOpts = append(envOpts, cel.Variable("u", cel.ObjectType("federation.User")))
-	evalValues["u"] = valueU
-	valueMu.Unlock()
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.U = valueU
@@ -277,12 +281,12 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 	ret.Content = "content" // (grpc.federation.field).string = "content"
 	// (grpc.federation.field).by = "u"
 	{
-		_value, err := grpcfed.EvalCEL(s.env, "u", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
+		value, err := grpcfed.EvalCEL(s.env, "u", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.User = _value.(*User)
+		ret.User = value.(*User)
 	}
 
 	s.logger.DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
@@ -304,21 +308,21 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 	// field binding section.
 	// (grpc.federation.field).by = "$.id"
 	{
-		_value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.Id = _value.(string)
+		ret.Id = value.(string)
 	}
 	// (grpc.federation.field).by = "$.name"
 	{
-		_value, err := grpcfed.EvalCEL(s.env, "$.name", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(s.env, "$.name", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.Name = _value.(string)
+		ret.Name = value.(string)
 	}
 
 	s.logger.DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
