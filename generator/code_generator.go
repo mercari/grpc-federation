@@ -1410,19 +1410,6 @@ func (f *CastField) ToOneof() *CastOneof {
 	}
 }
 
-func (m *Message) CastFields() []*CastField {
-	var castFields []*CastField
-	for _, decl := range m.TypeConversionDecls() {
-		castFields = append(castFields, &CastField{
-			Name:     castFuncName(decl.From, decl.To),
-			service:  m.Service,
-			fromType: decl.From,
-			toType:   decl.To,
-		})
-	}
-	return castFields
-}
-
 func (m *Message) CustomResolverArguments() []*Argument {
 	args := []*Argument{}
 	argNameMap := make(map[string]struct{})
@@ -2261,6 +2248,29 @@ func (s *Service) Messages() []*Message {
 		return msgs[i].ResolverName() < msgs[j].ResolverName()
 	})
 	return msgs
+}
+
+func (s *Service) CastFields() []*CastField {
+	castFieldMap := make(map[string]*CastField)
+	for _, msg := range s.Service.Messages {
+		for _, decl := range msg.TypeConversionDecls() {
+			fnName := castFuncName(decl.From, decl.To)
+			castFieldMap[fnName] = &CastField{
+				Name:     fnName,
+				service:  s.Service,
+				fromType: decl.From,
+				toType:   decl.To,
+			}
+		}
+	}
+	ret := make([]*CastField, 0, len(castFieldMap))
+	for _, field := range castFieldMap {
+		ret = append(ret, field)
+	}
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].Name < ret[j].Name
+	})
+	return ret
 }
 
 func loadTemplate(path string) (*template.Template, error) {

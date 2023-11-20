@@ -637,6 +637,25 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	return ret, nil
 }
 
+// resolve_Org_Federation_Z resolve "org.federation.Z" message.
+func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (*Z, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.Z")
+	defer span.End()
+
+	s.logger.DebugContext(ctx, "resolve org.federation.Z", slog.Any("message_args", s.logvalue_Org_Federation_ZArgument(req)))
+
+	// create a message value to be returned.
+	// `custom_resolver = true` in "grpc.federation.message" option.
+	ret, err := s.resolver.Resolve_Org_Federation_Z(ctx, req)
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	s.logger.DebugContext(ctx, "resolved org.federation.Z", slog.Any("org.federation.Z", s.logvalue_Org_Federation_Z(ret)))
+	return ret, nil
+}
+
 // cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType cast from "org.user.Item.ItemType" to "org.federation.Item.ItemType".
 func (s *FederationService) cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from user.Item_ItemType) Item_ItemType {
 	switch from {
@@ -664,6 +683,28 @@ func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *us
 	}
 }
 
+// cast_Org_User_UserType__to__Org_Federation_UserType cast from "org.user.UserType" to "org.federation.UserType".
+func (s *FederationService) cast_Org_User_UserType__to__Org_Federation_UserType(from user.UserType) UserType {
+	switch from {
+	case user.UserType_USER_TYPE_1:
+		return UserType_USER_TYPE_1
+	case user.UserType_USER_TYPE_2:
+		return UserType_USER_TYPE_2
+	default:
+		return 0
+	}
+}
+
+// cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_ cast from "org.user.User.attr_a" to "org.federation.User.attr_a".
+func (s *FederationService) cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(from *user.User_AttrA) *User_AttrA_ {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrA_{
+		AttrA: s.cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from),
+	}
+}
+
 // cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA cast from "org.user.User.AttrA" to "org.federation.User.AttrA".
 func (s *FederationService) cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from *user.User_AttrA) *User_AttrA {
 	if from == nil {
@@ -686,16 +727,6 @@ func (s *FederationService) cast_Org_User_User_AttrB__to__Org_Federation_User_At
 	}
 }
 
-// cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_ cast from "org.user.User.attr_a" to "org.federation.User.attr_a".
-func (s *FederationService) cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(from *user.User_AttrA) *User_AttrA_ {
-	if from == nil {
-		return nil
-	}
-	return &User_AttrA_{
-		AttrA: s.cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from),
-	}
-}
-
 // cast_Org_User_User_B__to__Org_Federation_User_B cast from "org.user.User.b" to "org.federation.User.b".
 func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from *user.User_AttrB) *User_B {
 	if from == nil {
@@ -706,18 +737,6 @@ func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from
 	}
 }
 
-// cast_Org_User_UserType__to__Org_Federation_UserType cast from "org.user.UserType" to "org.federation.UserType".
-func (s *FederationService) cast_Org_User_UserType__to__Org_Federation_UserType(from user.UserType) UserType {
-	switch from {
-	case user.UserType_USER_TYPE_1:
-		return UserType_USER_TYPE_1
-	case user.UserType_USER_TYPE_2:
-		return UserType_USER_TYPE_2
-	default:
-		return 0
-	}
-}
-
 // cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item cast from "repeated org.user.Item" to "repeated org.federation.Item".
 func (s *FederationService) cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item(from []*user.Item) []*Item {
 	ret := make([]*Item, 0, len(from))
@@ -725,25 +744,6 @@ func (s *FederationService) cast_repeated_Org_User_Item__to__repeated_Org_Federa
 		ret = append(ret, s.cast_Org_User_Item__to__Org_Federation_Item(v))
 	}
 	return ret
-}
-
-// resolve_Org_Federation_Z resolve "org.federation.Z" message.
-func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (*Z, error) {
-	ctx, span := s.tracer.Start(ctx, "org.federation.Z")
-	defer span.End()
-
-	s.logger.DebugContext(ctx, "resolve org.federation.Z", slog.Any("message_args", s.logvalue_Org_Federation_ZArgument(req)))
-
-	// create a message value to be returned.
-	// `custom_resolver = true` in "grpc.federation.message" option.
-	ret, err := s.resolver.Resolve_Org_Federation_Z(ctx, req)
-	if err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-
-	s.logger.DebugContext(ctx, "resolved org.federation.Z", slog.Any("org.federation.Z", s.logvalue_Org_Federation_Z(ret)))
-	return ret, nil
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Value {
