@@ -311,3 +311,97 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 	uniqueDecls := uniqueTypeConversionDecls(decls)
 	return sortTypeConversionDecls(uniqueDecls)
 }
+
+func (m *Message) CustomResolvers() []*CustomResolver {
+	var ret []*CustomResolver
+	if m.HasCustomResolver() {
+		ret = append(ret, &CustomResolver{Message: m})
+	}
+	for _, field := range m.Fields {
+		if field.HasCustomResolver() {
+			ret = append(ret, &CustomResolver{
+				Message: m,
+				Field:   field,
+			})
+		}
+	}
+	for _, group := range m.Rule.Resolvers {
+		for _, resolver := range group.Resolvers() {
+			ret = append(ret, m.customResolvers(resolver)...)
+		}
+	}
+	return ret
+}
+
+func (m *Message) customResolvers(resolver *MessageResolver) []*CustomResolver {
+	var ret []*CustomResolver
+	dep := resolver.MessageDependency
+	if dep != nil {
+		ret = append(ret, dep.Message.CustomResolvers()...)
+	}
+	return ret
+}
+
+func (m *Message) GoPackageDependencies() []*GoPackage {
+	pkgMap := map[*GoPackage]struct{}{}
+	pkgMap[m.GoPackage()] = struct{}{}
+	for _, svc := range m.DependServices() {
+		pkgMap[svc.GoPackage()] = struct{}{}
+	}
+	pkgs := make([]*GoPackage, 0, len(pkgMap))
+	for pkg := range pkgMap {
+		pkgs = append(pkgs, pkg)
+	}
+	return pkgs
+}
+
+func (m *Message) DependServices() []*Service {
+	if m == nil {
+		return nil
+	}
+
+	return m.dependServices(make(map[*MessageResolver]struct{}))
+}
+
+func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) []*Service {
+	var svcs []*Service
+	if m.Rule != nil {
+		for _, group := range m.Rule.Resolvers {
+			for _, resolver := range group.Resolvers() {
+				svcs = append(svcs, m.dependServicesByResolver(resolver, msgResolverMap)...)
+			}
+		}
+	}
+	for _, field := range m.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		for _, group := range field.Rule.Oneof.Resolvers {
+			for _, resolver := range group.Resolvers() {
+				svcs = append(svcs, m.dependServicesByResolver(resolver, msgResolverMap)...)
+			}
+		}
+	}
+	return svcs
+}
+
+func (m *Message) dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
+	if _, found := msgResolverMap[resolver]; found {
+		return nil
+	}
+	msgResolverMap[resolver] = struct{}{}
+
+	var svcs []*Service
+	if resolver.MethodCall != nil {
+		methodCall := resolver.MethodCall
+		svcs = append(svcs, methodCall.Method.Service)
+	}
+	if resolver.MessageDependency == nil {
+		return svcs
+	}
+	svcs = append(svcs, resolver.MessageDependency.Message.dependServices(msgResolverMap)...)
+	return svcs
+}

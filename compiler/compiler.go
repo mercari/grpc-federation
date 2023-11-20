@@ -90,6 +90,45 @@ const (
 	googleRPCErrorDetailsFilePath = "google/rpc/error_details.proto"
 )
 
+func RelativePathFromImportPaths(protoPath string, importPaths []string) (string, error) {
+	if len(importPaths) == 0 {
+		return protoPath, nil
+	}
+
+	absImportPaths := make([]string, 0, len(importPaths))
+	for _, path := range importPaths {
+		if filepath.IsAbs(path) {
+			absImportPaths = append(absImportPaths, path)
+		} else {
+			abs, err := filepath.Abs(path)
+			if err != nil {
+				return "", fmt.Errorf("failed to get absolute path from %s: %w", path, err)
+			}
+			absImportPaths = append(absImportPaths, abs)
+		}
+	}
+
+	absProtoPath := protoPath
+	if !filepath.IsAbs(protoPath) {
+		path, err := filepath.Abs(protoPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to get absolute path from %s: %w", protoPath, err)
+		}
+		absProtoPath = path
+	}
+
+	for _, importPath := range absImportPaths {
+		if strings.HasPrefix(absProtoPath, importPath) {
+			relPath, err := filepath.Rel(importPath, absProtoPath)
+			if err != nil {
+				return "", fmt.Errorf("failed to get relative path from %s and %s: %w", importPath, absProtoPath, err)
+			}
+			return relPath, nil
+		}
+	}
+	return protoPath, nil
+}
+
 // Compile compile the target Protocol Buffers file and produces all file descriptors.
 func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Option) ([]*descriptorpb.FileDescriptorProto, error) {
 	copied := make([]string, len(c.importPaths))
@@ -100,18 +139,17 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 		opt(c)
 	}
 
-	path := file.Path()
-	dirName := filepath.Dir(path)
-	fileName := filepath.Base(path)
+	relPath, err := RelativePathFromImportPaths(file.Path(), c.importPaths)
+	if err != nil {
+		return nil, err
+	}
+
 	var r errorReporter
 
 	compiler := protocompile.Compiler{
 		Resolver: protocompile.WithStandardImports(&protocompile.SourceResolver{
-			ImportPaths: append(c.importPaths, dirName),
+			ImportPaths: append(c.importPaths, filepath.Dir(relPath), ""),
 			Accessor: func(p string) (io.ReadCloser, error) {
-				if path == p {
-					return io.NopCloser(bytes.NewBuffer(file.Content())), nil
-				}
 				f, err := os.Open(p)
 				if err != nil {
 					if !c.manualImport && strings.HasSuffix(p, grpcFederationFilePath) {
@@ -131,7 +169,7 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 		SourceInfoMode: protocompile.SourceInfoStandard,
 		Reporter:       &r,
 	}
-	files := []string{fileName}
+	files := []string{relPath}
 	files = append(files, file.Imports()...)
 	linkedFiles, err := compiler.Compile(ctx, files...)
 	if err != nil {

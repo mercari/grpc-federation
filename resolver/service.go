@@ -80,7 +80,7 @@ func (r *CustomResolver) FQDN() string {
 func (s *Service) CustomResolvers() []*CustomResolver {
 	resolverMap := make(map[string]*CustomResolver)
 	for _, method := range s.Methods {
-		for _, resolver := range s.customResolversByMessage(method.Response) {
+		for _, resolver := range method.Response.CustomResolvers() {
 			resolverMap[resolver.FQDN()] = resolver
 		}
 	}
@@ -96,36 +96,6 @@ func (s *Service) CustomResolvers() []*CustomResolver {
 
 func (s *Service) ExistsCustomResolver() bool {
 	return len(s.CustomResolvers()) != 0
-}
-
-func (s *Service) customResolversByMessage(msg *Message) []*CustomResolver {
-	var crs []*CustomResolver
-	if msg.HasCustomResolver() {
-		crs = append(crs, &CustomResolver{Message: msg})
-	}
-	for _, field := range msg.Fields {
-		if field.HasCustomResolver() {
-			crs = append(crs, &CustomResolver{
-				Message: msg,
-				Field:   field,
-			})
-		}
-	}
-	for _, group := range msg.Rule.Resolvers {
-		for _, resolver := range group.Resolvers() {
-			crs = append(crs, s.customResolvers(resolver)...)
-		}
-	}
-	return crs
-}
-
-func (s *Service) customResolvers(resolver *MessageResolver) []*CustomResolver {
-	var customResolvers []*CustomResolver
-	dep := resolver.MessageDependency
-	if dep != nil {
-		customResolvers = append(customResolvers, s.customResolversByMessage(dep.Message)...)
-	}
-	return customResolvers
 }
 
 func (s *Service) ServiceDependencies() []*ServiceDependency {
@@ -147,7 +117,7 @@ func (s *Service) ServiceDependencies() []*ServiceDependency {
 func (s *Service) UseServices() []*Service {
 	svcMap := map[*Service]struct{}{}
 	for _, method := range s.Methods {
-		for _, svc := range s.useServicesByMessage(method.Response, make(map[*MessageResolver]struct{})) {
+		for _, svc := range method.Response.DependServices() {
 			svcMap[svc] = struct{}{}
 		}
 	}
@@ -158,52 +128,5 @@ func (s *Service) UseServices() []*Service {
 	sort.Slice(svcs, func(i, j int) bool {
 		return svcs[i].Name < svcs[j].Name
 	})
-	return svcs
-}
-
-func (s *Service) useServicesByMessage(msg *Message, msgResolverMap map[*MessageResolver]struct{}) []*Service {
-	if msg == nil {
-		return nil
-	}
-
-	var svcs []*Service
-	if msg.Rule != nil {
-		for _, group := range msg.Rule.Resolvers {
-			for _, resolver := range group.Resolvers() {
-				svcs = append(svcs, s.useServices(resolver, msgResolverMap)...)
-			}
-		}
-	}
-	for _, field := range msg.Fields {
-		if field.Rule == nil {
-			continue
-		}
-		if field.Rule.Oneof == nil {
-			continue
-		}
-		for _, group := range field.Rule.Oneof.Resolvers {
-			for _, resolver := range group.Resolvers() {
-				svcs = append(svcs, s.useServices(resolver, msgResolverMap)...)
-			}
-		}
-	}
-	return svcs
-}
-
-func (s *Service) useServices(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
-	if _, found := msgResolverMap[resolver]; found {
-		return nil
-	}
-	msgResolverMap[resolver] = struct{}{}
-
-	var svcs []*Service
-	if resolver.MethodCall != nil {
-		methodCall := resolver.MethodCall
-		svcs = append(svcs, methodCall.Method.Service)
-	}
-	if resolver.MessageDependency == nil {
-		return svcs
-	}
-	svcs = append(svcs, s.useServicesByMessage(resolver.MessageDependency.Message, msgResolverMap)...)
 	return svcs
 }
