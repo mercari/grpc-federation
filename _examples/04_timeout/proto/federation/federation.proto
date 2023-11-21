@@ -4,8 +4,17 @@ package federation;
 
 import "grpc/federation/federation.proto";
 import "post/post.proto";
+import "google/protobuf/descriptor.proto";
 
 option go_package = "example/federation;federation";
+
+extend google.protobuf.MethodOptions {
+  Ext ext = 70001;
+}
+
+message Ext {
+  string foo = 1;
+}
 
 service FederationService {
   option (grpc.federation.service) = {
@@ -15,6 +24,7 @@ service FederationService {
   };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {
     option (grpc.federation.method).timeout = "1s";
+    option (ext).foo = "xxx";
   };
 }
 
