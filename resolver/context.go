@@ -8,8 +8,10 @@ type context struct {
 	mtd          *Method
 	msg          *Message
 	enum         *Enum
+	defIdx       int
 	depIdx       int
 	argIdx       int
+	variableMap  map[string]*VariableDefinition
 }
 
 type allWarnings struct {
@@ -20,6 +22,7 @@ func newContext() *context {
 	return &context{
 		errorBuilder: &errorBuilder{},
 		allWarnings:  &allWarnings{},
+		variableMap:  make(map[string]*VariableDefinition),
 	}
 }
 
@@ -32,8 +35,10 @@ func (c *context) clone() *context {
 		mtd:          c.mtd,
 		msg:          c.msg,
 		enum:         c.enum,
+		defIdx:       c.defIdx,
 		depIdx:       c.depIdx,
 		argIdx:       c.argIdx,
+		variableMap:  c.variableMap,
 	}
 }
 
@@ -79,6 +84,25 @@ func (c *context) withArgIndex(idx int) *context {
 	return ctx
 }
 
+func (c *context) withDefIndex(idx int) *context {
+	ctx := c.clone()
+	ctx.defIdx = idx
+	return ctx
+}
+
+func (c *context) clearVariableDefinitions() {
+	c.variableMap = make(map[string]*VariableDefinition)
+}
+
+func (c *context) addVariableDefinition(def *VariableDefinition) *context {
+	c.variableMap[def.Name] = def
+	return c
+}
+
+func (c *context) variableDef(name string) *VariableDefinition {
+	return c.variableMap[name]
+}
+
 func (c *context) file() *File {
 	return c.fileRef
 }
@@ -116,6 +140,10 @@ func (c *context) enumName() string {
 		return ""
 	}
 	return c.enum.Name
+}
+
+func (c *context) defIndex() int {
+	return c.defIdx
 }
 
 func (c *context) depIndex() int {

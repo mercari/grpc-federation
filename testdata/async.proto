@@ -15,17 +15,17 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "a", message: "A" },
-      { name: "b", message: "B" },
-      { name: "c", message: "C", args: [ { name: "a", by: "a.name" }] },
-      { name: "d", message: "D", args: [ { name: "b", by: "b.name" }] },
-      { name: "e", message: "E", args: [ { name: "c", by: "c.name" }, { name: "d", by: "d.name" } ] },
-      { name: "f", message: "F", args: [ { name: "c", by: "c.name" }, { name: "d", by: "d.name" } ] },
-      { name: "g", message: "G" },
-      { name: "h", message: "H", args: [ { name: "e", by: "e.name" }, { name: "f", by: "f.name" }, { name: "g", by: "g.name"} ]},
-      { name: "i", message: "I" },
-      { name: "j", message: "J", args: [ { name: "i", by: "i.name" }] }
+    def [
+      { name: "a" message { name: "A" } },
+      { name: "b" message { name: "B" } },
+      { name: "c" message { name: "C" args { name: "a" by: "a.name" } } },
+      { name: "d" message { name: "D" args { name: "b" by: "b.name" } } },
+      { name: "e" message { name: "E" args [ { name: "c" by: "c.name" }, { name: "d" by: "d.name" } ] } },
+      { name: "f" message { name: "F" args [ { name: "c" by: "c.name" }, { name: "d" by: "d.name" } ] } },
+      { name: "g" message { name: "G" } },
+      { name: "h" message { name: "H" args [ { name: "e", by: "e.name" }, { name: "f", by: "f.name" }, { name: "g", by: "g.name"} ] } },
+      { name: "i" message { name: "I" } },
+      { name: "j" message { name: "J" args { name: "i", by: "i.name" } } }
     ]
   };
   string hname = 1 [(grpc.federation.field).by = "h.name"];
@@ -34,9 +34,9 @@ message GetResponse {
 
 message A {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "aa", message: "AA" },
-      { name: "ab", message: "AB" }
+    def [
+      { name: "aa", message { name: "AA" } },
+      { name: "ab", message { name: "AB" } }
     ]
   };
   string name = 1 [(grpc.federation.field).string = "a"];

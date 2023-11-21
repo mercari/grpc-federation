@@ -388,7 +388,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- end }}
 		{{- end }}
 		{{- if .By }}
-		_value, err := grpcfed.EvalCEL(s.env, "{{ .By }}", envOpts, evalValues, {{ .OutType }})
+		value, err := grpcfed.EvalCEL(s.env, "{{ .By }}", envOpts, evalValues, {{ .OutType }})
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -420,7 +420,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- end }}
 		{{- end }}
 		{{- if $defaultOneofField.By }}
-		_value, err := grpcfed.EvalCEL(s.env, "{{ $defaultOneofField.By }}", envOpts, evalValues, {{ $defaultOneofField.OutType }})
+		value, err := grpcfed.EvalCEL(s.env, "{{ $defaultOneofField.By }}", envOpts, evalValues, {{ $defaultOneofField.OutType }})
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -432,7 +432,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- else if .CEL }}
 	{{ .ProtoComment }}
 	{
-		_value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
+		value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -605,6 +605,7 @@ switch from {
 {{- define "callResolver" }}
 valueMu.RLock()
 {{- $arguments := .Resolver.Arguments }}
+{{- if $arguments }}
 args := &{{ .Resolver.RequestType }}{
 	{{- range $arguments }}
 	{{- if not .CEL }}
@@ -612,17 +613,18 @@ args := &{{ .Resolver.RequestType }}{
 	{{- end }}
 	{{- end }}
 }
+{{- end }}
 {{- range $arguments }}
 {{- if .CEL }}
 {{ .ProtoComment }}
 {
-	_value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
+	value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	{{- if ne (len .InlineFields) 0 }}
-	_inlineValue := {{ .Value }}
+	inlineValue := {{ .Value }}
 	{{- range .InlineFields }}
 	args.{{ .Name }} = {{ .Value }}
 	{{- end }}
@@ -636,7 +638,7 @@ valueMu.RUnlock()
 {{- if .Resolver.UseTimeout }}
 return grpcfed.WithTimeout[{{ .Resolver.ReturnType }}]({{ .Ctx }}, "{{ .Resolver.MethodFQDN }}", {{ .Resolver.Timeout }}, func(ctx context.Context) (*{{ .Resolver.ReturnType }}, error) {
 	{{- if .Resolver.UseRetry }}
-	{{- template "retry" (map "Ctx" .Ctx "Retry" .Resolver.MethodCall.Retry) }}
+	{{- template "retry" (map "Ctx" .Ctx "Retry" .Resolver.Retry) }}
 	return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.ReturnType }}, error) {
 		return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
 	})
@@ -645,10 +647,13 @@ return grpcfed.WithTimeout[{{ .Resolver.ReturnType }}]({{ .Ctx }}, "{{ .Resolver
 	{{- end }}
 })
 {{- else if .Resolver.UseRetry }}
-{{- template "retry" (map "Ctx" .Ctx "Retry" .Resolver.MethodCall.Retry) }}
+{{- template "retry" (map "Ctx" .Ctx "Retry" .Resolver.Retry) }}
 return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.ReturnType }}, error) {
 	return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
 })
+{{- else if .Resolver.IsBy }}
+{{- $by := .Resolver.By }}
+return grpcfed.EvalCEL(s.env, "{{ $by.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .Resolver.ZeroValue }}))
 {{- else }}
 return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
 {{- end }}
@@ -690,45 +695,47 @@ return nil, err
 /*
 {{ .Resolver.ProtoComment }}
 */
-{{- if .Resolver.Validation }}
+{
+	{{- if .Resolver.IsValidation }}
 	{{- template "messageValidation" .Resolver.MessageValidation }}
-{{- else }}
-	{{- if .Resolver.UseResponseVariable }}
-		{{ .Resolver.ResponseVariable }}Iface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
-		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-		})
-		if err != nil {
-		{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-		}
-		{{ .Resolver.ResponseVariable }} := {{ .Resolver.ResponseVariable }}Iface.({{ .Resolver.Type }})
 	{{- else }}
-		if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
+	{{- if .Resolver.UseResponseVariable }}
+	valueIface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
 		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-		}); err != nil {
+	})
+	if err != nil {
 		{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-		}
+	}
+	value := valueIface.({{ .Resolver.Type }})
+	{{- else }}
+	if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
+		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
+	}); err != nil {
+		{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
+	}
 	{{- end }}
 
 	{{- $responseVariables := .Resolver.ResponseVariables }}
 	{{- if $responseVariables }}
-		valueMu.Lock()
+	valueMu.Lock()
 	{{- end }}
 
 	{{- $hasCELValue := .Resolver.Message.HasCELValue }}
 	{{- range $responseVariables }}
-		{{- if .UseName }}
-			{{ .Name }} = {{ .Selector }} {{ .ProtoComment }}
-			{{- if $hasCELValue }}
-				envOpts = append(envOpts, cel.Variable("{{ .CELExpr }}", {{ .CELType }}))
-				evalValues["{{ .CELExpr }}"] = {{ .Name }}
-			{{- end }}
-		{{- end }}
+	{{- if .UseName }}
+	{{ .Name }} = {{ .Selector }} {{ .ProtoComment }}
+	{{- if $hasCELValue }}
+	envOpts = append(envOpts, cel.Variable("{{ .CELExpr }}", {{ .CELType }}))
+	evalValues["{{ .CELExpr }}"] = {{ .Name }}
+	{{- end }}
+	{{- end }}
 	{{- end }}
 
 	{{- if $responseVariables }}
-		valueMu.Unlock()
+	valueMu.Unlock()
 	{{- end }}
-{{- end }}
+	{{- end }}
+}
 {{- end }}
 
 {{- define "resolverGroup" }}
@@ -766,27 +773,27 @@ if err := eg.Wait(); err != nil {
 	err := func() error {
 		{{- if .Error.HasRule }}
 		valueMu.RLock()
-		_value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+		value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(false))
 		valueMu.RUnlock()
 		if err != nil {
 			return err
 		}
-		if !_value.(bool) {
+		if !value.(bool) {
 			return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
 		}
 		{{- else }}
-		_success := true
-		var _details []proto.Message
+		success := true
+		var details []proto.Message
 		{{- range .Error.Details }}
 		{
 			valueMu.RLock()
-			_value, err := grpcfed.EvalCEL(s.env, "{{ .Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+			value, err := grpcfed.EvalCEL(s.env, "{{ .Rule }}", envOpts, evalValues, reflect.TypeOf(false))
 			valueMu.RUnlock()
 			if err != nil {
 				return err
 			}
-			if !_value.(bool) {
-				_success = false
+			if !value.(bool) {
+				success = false
 				{{- range .PreconditionFailures }}
 				{{- template "preconditionFailure" . }}
 				{{- end }}
@@ -799,14 +806,14 @@ if err := eg.Wait(); err != nil {
 			}
 		}
 		{{- end }}
-		if !_success {
-			_status := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
-			_statusWithDetails, err := _status.WithDetails(_details...)
+		if !success {
+			status := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+			statusWithDetails, err := status.WithDetails(details...)
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-				return _status.Err()
+				return status.Err()
 			}
-			return _statusWithDetails.Err()
+			return statusWithDetails.Err()
 		}
 		{{- end }}
 		return nil
@@ -823,74 +830,74 @@ if err := eg.Wait(); err != nil {
 
 {{- define "preconditionFailure" }}
 {
-	var _violations []*errdetails.PreconditionFailure_Violation
+	var violations []*errdetails.PreconditionFailure_Violation
 	{{- range $i, $violation := .Violations }}
 	{
 		func() {
 			valueMu.RLock()
-			_type, err := grpcfed.EvalCEL(s.env, "{{ $violation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
+			typ, err := grpcfed.EvalCEL(s.env, "{{ $violation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			_subject, err := grpcfed.EvalCEL(s.env, "{{ $violation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
+			subject, err := grpcfed.EvalCEL(s.env, "{{ $violation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			_description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
-			_violations = append(_violations, &errdetails.PreconditionFailure_Violation{
-				Type: _type.(string),
-				Subject: _subject.(string),
-				Description: _description.(string),
+			violations = append(violations, &errdetails.PreconditionFailure_Violation{
+				Type: typ.(string),
+				Subject: subject.(string),
+				Description: description.(string),
 			})
 		}()
 	}
 	{{- end }}
-	_details = append(_details, &errdetails.PreconditionFailure{
-		Violations: _violations,
+	details = append(details, &errdetails.PreconditionFailure{
+		Violations: violations,
 	})
 }
 {{- end }}
 
 {{- define "badRequest" }}
 {
-	var _violations []*errdetails.BadRequest_FieldViolation
+	var violations []*errdetails.BadRequest_FieldViolation
 	{{- range $i, $violation := .FieldViolations }}
 	{
 		func() {
 			valueMu.RLock()
-			_field, err := grpcfed.EvalCEL(s.env, "{{ $violation.Field }}", envOpts, evalValues, reflect.TypeOf(""))
+			field, err := grpcfed.EvalCEL(s.env, "{{ $violation.Field }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation field", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			_description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
-			_violations = append(_violations, &errdetails.BadRequest_FieldViolation{
-				Field: _field.(string),
-				Description: _description.(string),
+			violations = append(violations, &errdetails.BadRequest_FieldViolation{
+				Field: field.(string),
+				Description: description.(string),
 			})
 		}()
 	}
 	{{- end }}
-	_details = append(_details, &errdetails.BadRequest{
-		FieldViolations: _violations,
+	details = append(details, &errdetails.BadRequest{
+		FieldViolations: violations,
 	})
 }
 {{- end }}
@@ -899,15 +906,15 @@ if err := eg.Wait(); err != nil {
 {
 	func() {
 		valueMu.RLock()
-		_message, err := grpcfed.EvalCEL(s.env, "{{ .Message }}", envOpts, evalValues, reflect.TypeOf(""))
+		message, err := grpcfed.EvalCEL(s.env, "{{ .Message }}", envOpts, evalValues, reflect.TypeOf(""))
 		valueMu.RUnlock()
 		if err != nil {
 			s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage message", slog.String("error", err.Error()))
 			return
 		}
-		_details = append(_details, &errdetails.LocalizedMessage{
+		details = append(details, &errdetails.LocalizedMessage{
 			Locale: "{{ .Locale }}",
-			Message: _message.(string),
+			Message: message.(string),
 		})
 	}()
 }

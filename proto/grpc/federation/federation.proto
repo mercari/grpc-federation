@@ -80,25 +80,115 @@ message MethodRule {
 
 // MessageRule define GRPC Federation rules for the message.
 message MessageRule {
-  // resolver defines how to call methods to obtain the values needed to compose the message.
-  optional Resolver resolver = 1;
-  // messages defines a list of dependent messages that must be retrieved to compose a message.
-  repeated Message messages = 2;
+  // def specify variables to be used in field binding by `grpc.federation.field` option.
+  repeated VariableDefinition def = 1;
   // if custom_resolver is true, the resolver for this message is implemented by Go.
   // If there are any values retrieved by resolver or messages, they are passed as arguments for custom resolver.
   // Each field of the message returned by the custom resolver is automatically bound.
   // If you want to change the binding process for a particular field, set `custom_resolver=true` option for that field.
-  optional bool custom_resolver = 3;
+  optional bool custom_resolver = 2;
   // alias mapping between messages defined in other packages and messages defined on the federation service side.
   // The alias is the FQDN ( <package-name>.<message-name> ) to the message.
   // If this definition exists, type conversion is automatically performed before the field assignment operation.
   // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
-  optional string alias = 4;
+  optional string alias = 3;
+
+  // resolver defines how to call methods to obtain the values needed to compose the message.
+  optional Resolver resolver = 4 [deprecated = true];
+  // messages defines a list of dependent messages that must be retrieved to compose a message.
+  repeated Message messages = 5 [deprecated = true];
   // validations defines a list of validations that must run using variables defined within the current scope.
   // The validations in the same Validation block run in order, starting from the validation that is ready for evaluation.
   // It determines success or failure when all the validations in the same Validation block have been completed.
   // If the Validation block is marked as failure, an error is returned without waiting for the other Validation blocks.
-  repeated Validation validations = 5;
+  repeated Validation validations = 6 [deprecated = true];
+}
+
+// VariableDefinition represents variable definition.
+message VariableDefinition {
+  // name is a variable name.
+  // This name can be referenced in all CELs defined after itself in the same message.
+  // It can also be referenced in `grpc.federation.field` option.
+  optional string name = 1;
+
+  // if specify the condition for evaluating expr.
+  // this value evaluated by CEL and it must return a boolean value.
+  // If the result of evaluation is `false`, the value assigned to name is the default value of the result of evaluation of `expr`.
+  optional string if = 2;
+
+  // autobind if the result value of `expr` is a message type,
+  // the value of a field with the same name and type as the field name of its own message is automatically assigned to the value of the field in the message.
+  // If multiple autobinds are used at the same message,
+  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
+  optional bool autobind = 3;
+
+  // expr specify the value to be assigned to name.
+  oneof expr {
+    // `by` evaluates with CEL.
+    string by = 11;
+
+    // map apply map operation for the specified repeated type.
+    MapExpr map = 12;
+
+    // message gets with message arguments.
+    MessageDependency message = 13;
+
+    // call specifies how to call gRPC method.
+    CallExpr call = 14;
+
+    // validation defines the validation rule and error.
+    Validation validation = 15;
+  };
+}
+
+// MapExpr apply map operation for the specified repeated type.
+message MapExpr {
+  // iterator define iterator variable.
+  // When evaluating CEL in `expr`, we can refer to the name defined in iterator.
+  Iterator iterator = 1;
+
+  // expr creates map elements using iterator variable.
+  oneof expr {
+    // `by` evaluates with CEL.
+    // this can refer to the variable declared by `iterator`.
+    string by = 11;
+    // message gets with message arguments, and it is made an element of the map.
+    // The result type of MapExpr is the repeated type of the specified message.
+    MessageDependency message = 12;
+  };
+}
+
+// Iterator represents iterator variable.
+message Iterator {
+  // variable name.
+  string name = 1;
+  // src the value that will be the source for creating the iterator.
+  // src must be a repeated type.
+  string src = 2;  
+}
+
+// MessageDependency represents dependent message.
+message MessageDependency {
+  // name specify the message name by FQDN. format is `<package-name>.<message-name>`.
+  // <package-name> can be omitted when referring to messages in the same package.
+  string name = 1;
+
+  // args specify the parameters needed to get the message. This is called the "message arguments".
+  repeated Argument args = 2;
+}
+
+// CallExpr represents how to call gRPC method.
+message CallExpr {
+  // method specify the FQDN for the gRPC method. format is `<package-name>.<service-name>/<method-name>`.
+  string method = 1;
+  // request specify request parameters for the gRPC method.
+  repeated MethodRequest request = 2;
+  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
+  // If you want to handle this error, you need to implement a custom error handler in Go.
+  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
+  optional string timeout = 3;
+  // retry specifies the retry policy if the method call fails.
+  optional RetryPolicy retry = 4;
 }
 
 // Resolver define the gRPC method, how to call it, and which value to use in the return value.
@@ -447,18 +537,24 @@ message FieldOneof {
     // The return value must be of type bool.
     // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
     // Variables are already defined in MessageRule can be used.
-    string expr = 1;
+    string expr = 1 [deprecated=true];
 
     // default used to assign a value when none of the other fields match any of the specified expressions.
     // Only one value can be defined per oneof.
     bool default = 2;
+
+    // if describes the condition to be assigned to field.
+    // The return value must be of type bool.
+    // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+    // Variables are already defined in MessageRule can be used.
+    string if = 3;
   }
   // messages defines a list of dependent messages that must be retrieved to compose a message.
-  repeated Message messages = 3;
+  repeated Message messages = 4;
   // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
   // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
   // Variables are already defined in MessageRule and FieldOneOf's messages field can be used.
-  string by = 4;
+  string by = 5;
 }
 
 // MessageValue represents message literal.

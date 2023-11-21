@@ -199,24 +199,26 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	     args { name: "value", string: "foo" }
 	   }
 	*/
-	resUserSelectionIface, err, _ := sg.Do("sel_org.federation.UserSelection", func() (any, error) {
-		valueMu.RLock()
-		args := &Org_Federation_UserSelectionArgument[*FederationServiceDependentClientSet]{
-			Client: s.client,
-			Value:  "foo", // { name: "value", string: "foo" }
+	{
+		valueIface, err, _ := sg.Do("sel_org.federation.UserSelection", func() (any, error) {
+			valueMu.RLock()
+			args := &Org_Federation_UserSelectionArgument[*FederationServiceDependentClientSet]{
+				Client: s.client,
+				Value:  "foo", // { name: "value", string: "foo" }
+			}
+			valueMu.RUnlock()
+			return s.resolve_Org_Federation_UserSelection(ctx, args)
+		})
+		if err != nil {
+			return nil, err
 		}
-		valueMu.RUnlock()
-		return s.resolve_Org_Federation_UserSelection(ctx, args)
-	})
-	if err != nil {
-		return nil, err
+		value := valueIface.(*UserSelection)
+		valueMu.Lock()
+		valueSel = value // { name: "sel", message: "UserSelection" ... }
+		envOpts = append(envOpts, cel.Variable("sel", cel.ObjectType("org.federation.UserSelection")))
+		evalValues["sel"] = valueSel
+		valueMu.Unlock()
 	}
-	resUserSelection := resUserSelectionIface.(*UserSelection)
-	valueMu.Lock()
-	valueSel = resUserSelection // { name: "sel", message: "UserSelection" ... }
-	envOpts = append(envOpts, cel.Variable("sel", cel.ObjectType("org.federation.UserSelection")))
-	evalValues["sel"] = valueSel
-	valueMu.Unlock()
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.Sel = valueSel
@@ -227,12 +229,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "sel.user"
 	{
-		_value, err := grpcfed.EvalCEL(s.env, "sel.user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
+		value, err := grpcfed.EvalCEL(s.env, "sel.user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.User = _value.(*User)
+		ret.User = value.(*User)
 	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
@@ -259,24 +261,26 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	     request { field: "id", by: "$.user_id" }
 	   }
 	*/
-	if _, err, _ := sg.Do("user.UserService/GetUser", func() (any, error) {
-		valueMu.RLock()
-		args := &user.GetUserRequest{}
-		// { field: "id", by: "$.user_id" }
-		{
-			_value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
-			if err != nil {
+	{
+		if _, err, _ := sg.Do("user.UserService/GetUser", func() (any, error) {
+			valueMu.RLock()
+			args := &user.GetUserRequest{}
+			// { field: "id", by: "$.user_id" }
+			{
+				value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+				if err != nil {
+					grpcfed.RecordErrorToSpan(ctx, err)
+					return nil, err
+				}
+				args.Id = value.(string)
+			}
+			valueMu.RUnlock()
+			return s.client.User_UserServiceClient.GetUser(ctx, args)
+		}); err != nil {
+			if err := s.errorHandler(ctx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
-			args.Id = _value.(string)
-		}
-		valueMu.RUnlock()
-		return s.client.User_UserServiceClient.GetUser(ctx, args)
-	}); err != nil {
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
 		}
 	}
 
@@ -286,12 +290,12 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	// field binding section.
 	// (grpc.federation.field).by = "$.user_id"
 	{
-		_value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.Id = _value.(string)
+		ret.Id = value.(string)
 	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.User", slog.Any("org.federation.User", s.logvalue_Org_Federation_User(ret)))
@@ -340,30 +344,32 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		     args { name: "user_id", string: "a" }
 		   }
 		*/
-		resUserIface, err, _ := sg.Do("ua_org.federation.User", func() (any, error) {
-			valueMu.RLock()
-			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
-				Client: s.client,
-				UserId: "a", // { name: "user_id", string: "a" }
+		{
+			valueIface, err, _ := sg.Do("ua_org.federation.User", func() (any, error) {
+				valueMu.RLock()
+				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
+					Client: s.client,
+					UserId: "a", // { name: "user_id", string: "a" }
+				}
+				valueMu.RUnlock()
+				return s.resolve_Org_Federation_User(ctx, args)
+			})
+			if err != nil {
+				return nil, err
 			}
-			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(ctx, args)
-		})
-		if err != nil {
-			return nil, err
+			value := valueIface.(*User)
+			valueMu.Lock()
+			valueUa = value // { name: "ua", message: "User" ... }
+			envOpts = append(envOpts, cel.Variable("ua", cel.ObjectType("org.federation.User")))
+			evalValues["ua"] = valueUa
+			valueMu.Unlock()
 		}
-		resUser := resUserIface.(*User)
-		valueMu.Lock()
-		valueUa = resUser // { name: "ua", message: "User" ... }
-		envOpts = append(envOpts, cel.Variable("ua", cel.ObjectType("org.federation.User")))
-		evalValues["ua"] = valueUa
-		valueMu.Unlock()
-		_value, err := grpcfed.EvalCEL(s.env, "ua", envOpts, evalValues, nil)
+		value, err := grpcfed.EvalCEL(s.env, "ua", envOpts, evalValues, nil)
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.User = &UserSelection_UserA{UserA: _value.(*User)}
+		ret.User = &UserSelection_UserA{UserA: value.(*User)}
 	case oneof_UserB.(bool):
 
 		// This section's codes are generated by the following proto definition.
@@ -374,30 +380,32 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		     args { name: "user_id", string: "b" }
 		   }
 		*/
-		resUserIface, err, _ := sg.Do("ub_org.federation.User", func() (any, error) {
-			valueMu.RLock()
-			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
-				Client: s.client,
-				UserId: "b", // { name: "user_id", string: "b" }
+		{
+			valueIface, err, _ := sg.Do("ub_org.federation.User", func() (any, error) {
+				valueMu.RLock()
+				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
+					Client: s.client,
+					UserId: "b", // { name: "user_id", string: "b" }
+				}
+				valueMu.RUnlock()
+				return s.resolve_Org_Federation_User(ctx, args)
+			})
+			if err != nil {
+				return nil, err
 			}
-			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(ctx, args)
-		})
-		if err != nil {
-			return nil, err
+			value := valueIface.(*User)
+			valueMu.Lock()
+			valueUb = value // { name: "ub", message: "User" ... }
+			envOpts = append(envOpts, cel.Variable("ub", cel.ObjectType("org.federation.User")))
+			evalValues["ub"] = valueUb
+			valueMu.Unlock()
 		}
-		resUser := resUserIface.(*User)
-		valueMu.Lock()
-		valueUb = resUser // { name: "ub", message: "User" ... }
-		envOpts = append(envOpts, cel.Variable("ub", cel.ObjectType("org.federation.User")))
-		evalValues["ub"] = valueUb
-		valueMu.Unlock()
-		_value, err := grpcfed.EvalCEL(s.env, "ub", envOpts, evalValues, nil)
+		value, err := grpcfed.EvalCEL(s.env, "ub", envOpts, evalValues, nil)
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.User = &UserSelection_UserB{UserB: _value.(*User)}
+		ret.User = &UserSelection_UserB{UserB: value.(*User)}
 	default:
 
 		// This section's codes are generated by the following proto definition.
@@ -408,38 +416,40 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		     args { name: "user_id", by: "$.value" }
 		   }
 		*/
-		resUserIface, err, _ := sg.Do("uc_org.federation.User", func() (any, error) {
-			valueMu.RLock()
-			args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
-				Client: s.client,
-			}
-			// { name: "user_id", by: "$.value" }
-			{
-				_value, err := grpcfed.EvalCEL(s.env, "$.value", envOpts, evalValues, reflect.TypeOf(""))
-				if err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
-					return nil, err
+		{
+			valueIface, err, _ := sg.Do("uc_org.federation.User", func() (any, error) {
+				valueMu.RLock()
+				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
+					Client: s.client,
 				}
-				args.UserId = _value.(string)
+				// { name: "user_id", by: "$.value" }
+				{
+					value, err := grpcfed.EvalCEL(s.env, "$.value", envOpts, evalValues, reflect.TypeOf(""))
+					if err != nil {
+						grpcfed.RecordErrorToSpan(ctx, err)
+						return nil, err
+					}
+					args.UserId = value.(string)
+				}
+				valueMu.RUnlock()
+				return s.resolve_Org_Federation_User(ctx, args)
+			})
+			if err != nil {
+				return nil, err
 			}
-			valueMu.RUnlock()
-			return s.resolve_Org_Federation_User(ctx, args)
-		})
-		if err != nil {
-			return nil, err
+			value := valueIface.(*User)
+			valueMu.Lock()
+			valueUc = value // { name: "uc", message: "User" ... }
+			envOpts = append(envOpts, cel.Variable("uc", cel.ObjectType("org.federation.User")))
+			evalValues["uc"] = valueUc
+			valueMu.Unlock()
 		}
-		resUser := resUserIface.(*User)
-		valueMu.Lock()
-		valueUc = resUser // { name: "uc", message: "User" ... }
-		envOpts = append(envOpts, cel.Variable("uc", cel.ObjectType("org.federation.User")))
-		evalValues["uc"] = valueUc
-		valueMu.Unlock()
-		_value, err := grpcfed.EvalCEL(s.env, "uc", envOpts, evalValues, nil)
+		value, err := grpcfed.EvalCEL(s.env, "uc", envOpts, evalValues, nil)
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ret.User = &UserSelection_UserC{UserC: _value.(*User)}
+		ret.User = &UserSelection_UserC{UserC: value.(*User)}
 	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.UserSelection", slog.Any("org.federation.UserSelection", s.logvalue_Org_Federation_UserSelection(ret)))

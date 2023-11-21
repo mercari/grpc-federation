@@ -149,35 +149,55 @@ func TestSimpleAggregation(t *testing.T) {
 				AddOneof(testutil.NewOneofBuilder("attr").AddFieldNames("attr_a", "b").Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.user", "UserService", "GetUser")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.user", "UserService", "GetUser")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField(
+													"id",
+													resolver.StringType,
+													testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t),
+												).
+												Build(t),
+										).
+										SetTimeout("20s").
+										SetRetryPolicyExponential(
+											testutil.NewRetryPolicyExponentialBuilder().
+												SetInitialInterval("1s").
+												SetRandomizationFactor(0.7).
+												SetMultiplier(1.7).
+												SetMaxInterval("30s").
+												SetMaxRetries(3).
+												Build(t),
+										).
 										Build(t),
 								).
-								SetResponse(
-									testutil.NewResponseBuilder().AddField("user", "user", ref.Type(t, "org.user", "User"), true, true).Build(t),
-								).
-								SetTimeout("20s").
-								SetRetryPolicyExponential(
-									testutil.NewRetryPolicyExponentialBuilder().
-										SetInitialInterval("1s").
-										SetRandomizationFactor(0.7).
-										SetMultiplier(1.7).
-										SetMaxInterval("30s").
-										SetMaxRetries(3).
-										Build(t),
-								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("user").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetBy(testutil.NewCELValueBuilder("res.user", ref.Type(t, "org.user", "User")).Build(t)).
 								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
-								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("res")).
+								SetEnd(testutil.NewMessageResolver("user")).
+								Build(t),
+						).
 						Build(t),
 				).
 				Build(t),
@@ -202,49 +222,75 @@ func TestSimpleAggregation(t *testing.T) {
 				AddFieldWithAutoBind("bar", resolver.Int64Type, ref.Field(t, "org.federation", "M", "bar")).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.post", "PostService", "GetPost")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
-										Build(t),
-								).
-								SetResponse(
-									testutil.NewResponseBuilder().
-										AddField("post", "post", ref.Type(t, "org.post", "Post"), true, true).
-										Build(t),
-								).
-								SetTimeout("10s").
-								SetRetryPolicyConstant(
-									testutil.NewRetryPolicyConstantBuilder().
-										SetInterval("2s").
-										SetMaxRetries(3).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "GetPost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
+										SetTimeout("10s").
+										SetRetryPolicyConstant(
+											testutil.NewRetryPolicyConstantBuilder().
+												SetInterval("2s").
+												SetMaxRetries(3).
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),
 						).
-						AddMessageDependency(
-							"user",
-							ref.Message(t, "org.federation", "User"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Inline(testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.post", "GetPostResponse"), ref.Type(t, "org.post", "Post"), "post").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetBy(testutil.NewCELValueBuilder("res.post", ref.Type(t, "org.post", "Post")).Build(t)).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"z",
-							ref.Message(t, "org.federation", "Z"),
-							nil,
-							false,
-							false,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("user").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "User")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Inline(testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.post", "GetPostResponse"), ref.Type(t, "org.post", "Post"), "post").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
 						).
-						AddMessageDependency(
-							"m",
-							ref.Message(t, "org.federation", "M"),
-							nil,
-							true,
-							true,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("z").
+								SetUsed(false).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Z")).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("m").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "M")).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
 						SetDependencyGraph(
@@ -257,7 +303,12 @@ func TestSimpleAggregation(t *testing.T) {
 						AddResolver(testutil.NewMessageResolverGroupByName("m")).
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("GetPost")).
+								AddStart(
+									testutil.NewMessageResolverGroupBuilder().
+										AddStart(testutil.NewMessageResolverGroupByName("res")).
+										SetEnd(testutil.NewMessageResolver("post")).
+										Build(t),
+								).
 								SetEnd(testutil.NewMessageResolver("user")).
 								Build(t),
 						).
@@ -292,14 +343,21 @@ func TestSimpleAggregation(t *testing.T) {
 				AddFieldWithRule("const", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"post",
-							ref.Message(t, "org.federation", "Post"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Post")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
@@ -468,37 +526,53 @@ func TestCreatePost(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"cp",
-							ref.Message(t, "org.federation", "CreatePost"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("title", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "title").Build(t)).
-								Add("content", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "content").Build(t)).
-								Add("user_id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
-								Build(t),
-							false,
-							true,
-						).
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.post", "PostService", "CreatePost")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField(
-											"post",
-											ref.Type(t, "org.post", "CreatePost"),
-											testutil.NewNameReferenceValueBuilder(
-												ref.Type(t, "org.federation", "CreatePost"),
-												ref.Type(t, "org.federation", "CreatePost"),
-												"cp",
-											).Build(t),
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("cp").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "CreatePost")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("title", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "title").Build(t)).
+												Add("content", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "content").Build(t)).
+												Add("user_id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+												Build(t),
 										).
 										Build(t),
 								).
-								SetResponse(
-									testutil.NewResponseBuilder().
-										AddField("p", "post", ref.Type(t, "org.post", "Post"), false, true).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "CreatePost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField(
+													"post",
+													ref.Type(t, "org.post", "CreatePost"),
+													testutil.NewNameReferenceValueBuilder(
+														ref.Type(t, "org.federation", "CreatePost"),
+														ref.Type(t, "org.federation", "CreatePost"),
+														"cp",
+													).Build(t),
+												).
+												Build(t),
+										).
 										Build(t),
 								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("p").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("res.post", ref.Type(t, "org.post", "Post")).Build(t)).
 								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "CreatePostResponseArgument")).
@@ -509,8 +583,12 @@ func TestCreatePost(t *testing.T) {
 						).
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("cp")).
-								SetEnd(testutil.NewMessageResolver("CreatePost")).
+								AddStart(testutil.NewMessageResolverGroupBuilder().
+									AddStart(testutil.NewMessageResolverGroupByName("cp")).
+									SetEnd(testutil.NewMessageResolver("res")).
+									Build(t),
+								).
+								SetEnd(testutil.NewMessageResolver("p")).
 								Build(t),
 						).
 						Build(t),
@@ -676,16 +754,27 @@ func TestCustomResolver(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.user", "UserService", "GetUser")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.user", "UserService", "GetUser")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+												Build(t),
+										).
 										Build(t),
 								).
-								SetResponse(
-									testutil.NewResponseBuilder().AddField("u", "user", ref.Type(t, "org.user", "User"), false, true).Build(t),
-								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("u").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("res.user", ref.Type(t, "org.user", "User")).Build(t)).
 								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
@@ -695,7 +784,12 @@ func TestCustomResolver(t *testing.T) {
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("res")).
+								SetEnd(testutil.NewMessageResolver("u")).
+								Build(t),
+						).
 						Build(t),
 				).
 				Build(t),
@@ -712,28 +806,45 @@ func TestCustomResolver(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.post", "PostService", "GetPost")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
-										Build(t),
-								).
-								SetResponse(
-									testutil.NewResponseBuilder().
-										AddField("post", "post", ref.Type(t, "org.post", "Post"), true, true).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "GetPost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),
 						).
-						AddMessageDependency(
-							"user",
-							ref.Message(t, "org.federation", "User"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Inline(testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.post", "GetPostResponse"), ref.Type(t, "org.post", "Post"), "post").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetBy(testutil.NewCELValueBuilder("res.post", ref.Type(t, "org.post", "Post")).Build(t)).
 								Build(t),
-							false,
-							true,
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("user").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "User")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Inline(testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.post", "GetPostResponse"), ref.Type(t, "org.post", "Post"), "post").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
 						SetDependencyGraph(
@@ -743,7 +854,11 @@ func TestCustomResolver(t *testing.T) {
 						).
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("GetPost")).
+								AddStart(testutil.NewMessageResolverGroupBuilder().
+									AddStart(testutil.NewMessageResolverGroupByName("res")).
+									SetEnd(testutil.NewMessageResolver("post")).
+									Build(t),
+								).
 								SetEnd(testutil.NewMessageResolver("user")).
 								Build(t),
 						).
@@ -773,14 +888,21 @@ func TestCustomResolver(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"post",
-							ref.Message(t, "org.federation", "Post"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Post")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
@@ -892,19 +1014,27 @@ func TestAsync(t *testing.T) {
 				AddFieldWithRule("name", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("a")).Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"aa",
-							ref.Message(t, "org.federation", "AA"),
-							testutil.NewMessageDependencyArgumentBuilder().Build(t),
-							false,
-							false,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("aa").
+								SetUsed(false).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "AA")).
+										Build(t),
+								).
+								Build(t),
 						).
-						AddMessageDependency(
-							"ab",
-							ref.Message(t, "org.federation", "AB"),
-							testutil.NewMessageDependencyArgumentBuilder().Build(t),
-							false,
-							false,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("ab").
+								SetUsed(false).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "AB")).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "AArgument")).
 						SetDependencyGraph(
@@ -1024,91 +1154,149 @@ func TestAsync(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"a",
-							ref.Message(t, "org.federation", "A"),
-							testutil.NewMessageDependencyArgumentBuilder().Build(t),
-							false,
-							true,
-						).
-						AddMessageDependency(
-							"b",
-							ref.Message(t, "org.federation", "B"),
-							testutil.NewMessageDependencyArgumentBuilder().Build(t),
-							false,
-							true,
-						).
-						AddMessageDependency(
-							"c",
-							ref.Message(t, "org.federation", "C"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("a", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "A"), resolver.StringType, "a.name").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("a").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "A")).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"d",
-							ref.Message(t, "org.federation", "D"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("b", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "B"), resolver.StringType, "b.name").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("b").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "B")).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"e",
-							ref.Message(t, "org.federation", "E"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("c", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "C"), resolver.StringType, "c.name").Build(t)).
-								Add("d", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "D"), resolver.StringType, "d.name").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("c").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "C")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("a", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "A"), resolver.StringType, "a.name").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"f",
-							ref.Message(t, "org.federation", "F"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("c", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "C"), resolver.StringType, "c.name").Build(t)).
-								Add("d", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "D"), resolver.StringType, "d.name").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("d").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "D")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("b", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "B"), resolver.StringType, "b.name").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"g",
-							ref.Message(t, "org.federation", "G"),
-							testutil.NewMessageDependencyArgumentBuilder().Build(t),
-							false,
-							true,
-						).
-						AddMessageDependency(
-							"h",
-							ref.Message(t, "org.federation", "H"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("e", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "E"), resolver.StringType, "e.name").Build(t)).
-								Add("f", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "F"), resolver.StringType, "f.name").Build(t)).
-								Add("g", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "G"), resolver.StringType, "g.name").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("e").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "E")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("c", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "C"), resolver.StringType, "c.name").Build(t)).
+												Add("d", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "D"), resolver.StringType, "d.name").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"i",
-							ref.Message(t, "org.federation", "I"),
-							testutil.NewMessageDependencyArgumentBuilder().Build(t),
-							false,
-							true,
-						).
-						AddMessageDependency(
-							"j",
-							ref.Message(t, "org.federation", "J"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("i", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "I"), resolver.StringType, "i.name").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("f").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "F")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("c", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "C"), resolver.StringType, "c.name").Build(t)).
+												Add("d", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "D"), resolver.StringType, "d.name").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("g").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "G")).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("h").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "H")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("e", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "E"), resolver.StringType, "e.name").Build(t)).
+												Add("f", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "F"), resolver.StringType, "f.name").Build(t)).
+												Add("g", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "G"), resolver.StringType, "g.name").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("i").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "I")).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("j").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "J")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("i", testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "I"), resolver.StringType, "i.name").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
 						SetDependencyGraph(
@@ -1275,18 +1463,28 @@ func TestAlias(t *testing.T) {
 				AddFieldWithAutoBind("data", ref.Type(t, "org.federation", "PostData"), ref.Field(t, "org.post", "Post", "data")).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.post", "PostService", "GetPost")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "GetPost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
 										Build(t),
 								).
-								SetResponse(
-									testutil.NewResponseBuilder().
-										AddField("post", "post", ref.Type(t, "org.post", "Post"), true, true).
-										Build(t),
-								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetBy(testutil.NewCELValueBuilder("res.post", ref.Type(t, "org.post", "Post")).Build(t)).
 								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
@@ -1297,7 +1495,8 @@ func TestAlias(t *testing.T) {
 						).
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
-								SetEnd(testutil.NewMessageResolver("GetPost")).
+								AddStart(testutil.NewMessageResolverGroupByName("res")).
+								SetEnd(testutil.NewMessageResolver("post")).
 								Build(t),
 						).
 						Build(t),
@@ -1326,14 +1525,21 @@ func TestAlias(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"post",
-							ref.Message(t, "org.federation", "Post"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Post")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
@@ -1419,28 +1625,46 @@ func TestAutobind(t *testing.T) {
 				AddFieldWithAutoBind("uid", resolver.StringType, ref.Field(t, "org.federation", "User", "uid")).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.post", "PostService", "GetPost")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
-										Build(t),
-								).
-								SetResponse(
-									testutil.NewResponseBuilder().
-										AddField("_org_post_PostService_GetPost", "post", ref.Type(t, "org.post", "Post"), true, true).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "GetPost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),
 						).
-						AddMessageDependency(
-							"",
-							ref.Message(t, "org.federation", "User"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Inline(testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.post", "GetPostResponse"), ref.Type(t, "org.post", "Post"), "post").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def1").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetBy(testutil.NewCELValueBuilder("res.post", ref.Type(t, "org.post", "Post")).Build(t)).
 								Build(t),
-							true,
-							true,
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def2").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "User")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("user_id", resolver.NewStringValue("foo")).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
 						SetDependencyGraph(
@@ -1449,8 +1673,13 @@ func TestAutobind(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_User")).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetPost")).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("res")).
+								SetEnd(testutil.NewMessageResolver("_def1")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("_def2")).
 						Build(t),
 				).
 				Build(t),
@@ -1472,14 +1701,22 @@ func TestAutobind(t *testing.T) {
 				AddFieldWithAutoBind("content", resolver.StringType, ref.Field(t, "org.federation", "Post", "content")).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"",
-							ref.Message(t, "org.federation", "Post"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def0").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Post")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							true,
-							true,
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
@@ -1487,7 +1724,7 @@ func TestAutobind(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Post")).
+						AddResolver(testutil.NewMessageResolverGroupByName("_def0")).
 						Build(t),
 				).
 				Build(t),
@@ -1903,211 +2140,227 @@ func TestConstValue(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "content", "ContentService", "GetContent")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("by_field", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
-										AddField("double_field", resolver.DoubleType, resolver.NewDoubleValue(1.23)).
-										AddField("doubles_field", resolver.DoubleRepeatedType, resolver.NewDoublesValue(4.56, 7.89)).
-										AddField("float_field", resolver.FloatType, resolver.NewFloatValue(4.56)).
-										AddField("floats_field", resolver.FloatRepeatedType, resolver.NewFloatsValue(7.89, 1.23)).
-										AddField("int32_field", resolver.Int32Type, resolver.NewInt32Value(-1)).
-										AddField("int32s_field", resolver.Int32RepeatedType, resolver.NewInt32sValue(-2, -3)).
-										AddField("int64_field", resolver.Int64Type, resolver.NewInt64Value(-4)).
-										AddField("int64s_field", resolver.Int64RepeatedType, resolver.NewInt64sValue(-5, -6)).
-										AddField("uint32_field", resolver.Uint32Type, resolver.NewUint32Value(1)).
-										AddField("uint32s_field", resolver.Uint32RepeatedType, resolver.NewUint32sValue(2, 3)).
-										AddField("uint64_field", resolver.Uint64Type, resolver.NewUint64Value(4)).
-										AddField("uint64s_field", resolver.Uint64RepeatedType, resolver.NewUint64sValue(5, 6)).
-										AddField("sint32_field", resolver.Sint32Type, resolver.NewSint32Value(-7)).
-										AddField("sint32s_field", resolver.Sint32RepeatedType, resolver.NewSint32sValue(-8, -9)).
-										AddField("sint64_field", resolver.Sint64Type, resolver.NewSint64Value(-10)).
-										AddField("sint64s_field", resolver.Sint64RepeatedType, resolver.NewSint64sValue(-11, -12)).
-										AddField("fixed32_field", resolver.Fixed32Type, resolver.NewFixed32Value(10)).
-										AddField("fixed32s_field", resolver.Fixed32RepeatedType, resolver.NewFixed32sValue(11, 12)).
-										AddField("fixed64_field", resolver.Fixed64Type, resolver.NewFixed64Value(13)).
-										AddField("fixed64s_field", resolver.Fixed64RepeatedType, resolver.NewFixed64sValue(14, 15)).
-										AddField("sfixed32_field", resolver.Sfixed32Type, resolver.NewSfixed32Value(-14)).
-										AddField("sfixed32s_field", resolver.Sfixed32RepeatedType, resolver.NewSfixed32sValue(-15, -16)).
-										AddField("sfixed64_field", resolver.Sfixed64Type, resolver.NewSfixed64Value(-17)).
-										AddField("sfixed64s_field", resolver.Sfixed64RepeatedType, resolver.NewSfixed64sValue(-18, -19)).
-										AddField("bool_field", resolver.BoolType, resolver.NewBoolValue(true)).
-										AddField("bools_field", resolver.BoolRepeatedType, resolver.NewBoolsValue(true, false)).
-										AddField("string_field", resolver.StringType, resolver.NewStringValue("foo")).
-										AddField("strings_field", resolver.StringRepeatedType, resolver.NewStringsValue("hello", "world")).
-										AddField("byte_string_field", resolver.BytesType, resolver.NewByteStringValue([]byte("foo"))).
-										AddField("byte_strings_field", resolver.BytesRepeatedType, resolver.NewByteStringsValue([]byte("foo"), []byte("bar"))).
-										AddField("enum_field", ref.Type(t, "content", "ContentType"), resolver.NewEnumValue(ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_1"))).
-										AddField(
-											"enums_field",
-											ref.RepeatedType(t, "content", "ContentType"),
-											resolver.NewEnumsValue(
-												ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_2"),
-												ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_3"),
-											),
-										).
-										AddField("env_field", resolver.StringType, resolver.NewEnvValue("foo")).
-										AddField("envs_field", resolver.StringRepeatedType, resolver.NewEnvsValue("foo", "bar")).
-										AddField(
-											"message_field",
-											ref.Type(t, "content", "Content"),
-											resolver.NewMessageValue(
-												ref.Type(t, "content", "Content"),
-												map[string]*resolver.Value{
-													"double_field":       resolver.NewDoubleValue(1.23),
-													"doubles_field":      resolver.NewDoublesValue(4.56, 7.89),
-													"float_field":        resolver.NewFloatValue(4.56),
-													"floats_field":       resolver.NewFloatsValue(7.89, 1.23),
-													"int32_field":        resolver.NewInt32Value(-1),
-													"int32s_field":       resolver.NewInt32sValue(-2, -3),
-													"int64_field":        resolver.NewInt64Value(-4),
-													"int64s_field":       resolver.NewInt64sValue(-5, -6),
-													"uint32_field":       resolver.NewUint32Value(1),
-													"uint32s_field":      resolver.NewUint32sValue(2, 3),
-													"uint64_field":       resolver.NewUint64Value(4),
-													"uint64s_field":      resolver.NewUint64sValue(5, 6),
-													"sint32_field":       resolver.NewSint32Value(-7),
-													"sint32s_field":      resolver.NewSint32sValue(-8, -9),
-													"sint64_field":       resolver.NewSint64Value(-10),
-													"sint64s_field":      resolver.NewSint64sValue(-11, -12),
-													"fixed32_field":      resolver.NewFixed32Value(10),
-													"fixed32s_field":     resolver.NewFixed32sValue(11, 12),
-													"fixed64_field":      resolver.NewFixed64Value(13),
-													"fixed64s_field":     resolver.NewFixed64sValue(14, 15),
-													"sfixed32_field":     resolver.NewSfixed32Value(-14),
-													"sfixed32s_field":    resolver.NewSfixed32sValue(-15, -16),
-													"sfixed64_field":     resolver.NewSfixed64Value(-17),
-													"sfixed64s_field":    resolver.NewSfixed64sValue(-18, -19),
-													"bool_field":         resolver.NewBoolValue(true),
-													"bools_field":        resolver.NewBoolsValue(true, false),
-													"string_field":       resolver.NewStringValue("foo"),
-													"strings_field":      resolver.NewStringsValue("hello", "world"),
-													"byte_string_field":  resolver.NewByteStringValue([]byte("foo")),
-													"byte_strings_field": resolver.NewByteStringsValue([]byte("foo"), []byte("bar")),
-													"enum_field":         resolver.NewEnumValue(ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_1")),
-													"enums_field": resolver.NewEnumsValue(
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "content", "ContentService", "GetContent")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("by_field", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												AddField("double_field", resolver.DoubleType, resolver.NewDoubleValue(1.23)).
+												AddField("doubles_field", resolver.DoubleRepeatedType, resolver.NewDoublesValue(4.56, 7.89)).
+												AddField("float_field", resolver.FloatType, resolver.NewFloatValue(4.56)).
+												AddField("floats_field", resolver.FloatRepeatedType, resolver.NewFloatsValue(7.89, 1.23)).
+												AddField("int32_field", resolver.Int32Type, resolver.NewInt32Value(-1)).
+												AddField("int32s_field", resolver.Int32RepeatedType, resolver.NewInt32sValue(-2, -3)).
+												AddField("int64_field", resolver.Int64Type, resolver.NewInt64Value(-4)).
+												AddField("int64s_field", resolver.Int64RepeatedType, resolver.NewInt64sValue(-5, -6)).
+												AddField("uint32_field", resolver.Uint32Type, resolver.NewUint32Value(1)).
+												AddField("uint32s_field", resolver.Uint32RepeatedType, resolver.NewUint32sValue(2, 3)).
+												AddField("uint64_field", resolver.Uint64Type, resolver.NewUint64Value(4)).
+												AddField("uint64s_field", resolver.Uint64RepeatedType, resolver.NewUint64sValue(5, 6)).
+												AddField("sint32_field", resolver.Sint32Type, resolver.NewSint32Value(-7)).
+												AddField("sint32s_field", resolver.Sint32RepeatedType, resolver.NewSint32sValue(-8, -9)).
+												AddField("sint64_field", resolver.Sint64Type, resolver.NewSint64Value(-10)).
+												AddField("sint64s_field", resolver.Sint64RepeatedType, resolver.NewSint64sValue(-11, -12)).
+												AddField("fixed32_field", resolver.Fixed32Type, resolver.NewFixed32Value(10)).
+												AddField("fixed32s_field", resolver.Fixed32RepeatedType, resolver.NewFixed32sValue(11, 12)).
+												AddField("fixed64_field", resolver.Fixed64Type, resolver.NewFixed64Value(13)).
+												AddField("fixed64s_field", resolver.Fixed64RepeatedType, resolver.NewFixed64sValue(14, 15)).
+												AddField("sfixed32_field", resolver.Sfixed32Type, resolver.NewSfixed32Value(-14)).
+												AddField("sfixed32s_field", resolver.Sfixed32RepeatedType, resolver.NewSfixed32sValue(-15, -16)).
+												AddField("sfixed64_field", resolver.Sfixed64Type, resolver.NewSfixed64Value(-17)).
+												AddField("sfixed64s_field", resolver.Sfixed64RepeatedType, resolver.NewSfixed64sValue(-18, -19)).
+												AddField("bool_field", resolver.BoolType, resolver.NewBoolValue(true)).
+												AddField("bools_field", resolver.BoolRepeatedType, resolver.NewBoolsValue(true, false)).
+												AddField("string_field", resolver.StringType, resolver.NewStringValue("foo")).
+												AddField("strings_field", resolver.StringRepeatedType, resolver.NewStringsValue("hello", "world")).
+												AddField("byte_string_field", resolver.BytesType, resolver.NewByteStringValue([]byte("foo"))).
+												AddField("byte_strings_field", resolver.BytesRepeatedType, resolver.NewByteStringsValue([]byte("foo"), []byte("bar"))).
+												AddField("enum_field", ref.Type(t, "content", "ContentType"), resolver.NewEnumValue(ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_1"))).
+												AddField(
+													"enums_field",
+													ref.RepeatedType(t, "content", "ContentType"),
+													resolver.NewEnumsValue(
 														ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_2"),
 														ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_3"),
 													),
-													"env_field":      resolver.NewEnvValue("foo"),
-													"envs_field":     resolver.NewEnvsValue("foo", "bar"),
-													"message_field":  resolver.NewMessageValue(ref.Type(t, "content", "Content"), map[string]*resolver.Value{}),
-													"messages_field": resolver.NewMessagesValue(ref.RepeatedType(t, "content", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{}),
-												},
-											),
+												).
+												AddField("env_field", resolver.StringType, resolver.NewEnvValue("foo")).
+												AddField("envs_field", resolver.StringRepeatedType, resolver.NewEnvsValue("foo", "bar")).
+												AddField(
+													"message_field",
+													ref.Type(t, "content", "Content"),
+													resolver.NewMessageValue(
+														ref.Type(t, "content", "Content"),
+														map[string]*resolver.Value{
+															"double_field":       resolver.NewDoubleValue(1.23),
+															"doubles_field":      resolver.NewDoublesValue(4.56, 7.89),
+															"float_field":        resolver.NewFloatValue(4.56),
+															"floats_field":       resolver.NewFloatsValue(7.89, 1.23),
+															"int32_field":        resolver.NewInt32Value(-1),
+															"int32s_field":       resolver.NewInt32sValue(-2, -3),
+															"int64_field":        resolver.NewInt64Value(-4),
+															"int64s_field":       resolver.NewInt64sValue(-5, -6),
+															"uint32_field":       resolver.NewUint32Value(1),
+															"uint32s_field":      resolver.NewUint32sValue(2, 3),
+															"uint64_field":       resolver.NewUint64Value(4),
+															"uint64s_field":      resolver.NewUint64sValue(5, 6),
+															"sint32_field":       resolver.NewSint32Value(-7),
+															"sint32s_field":      resolver.NewSint32sValue(-8, -9),
+															"sint64_field":       resolver.NewSint64Value(-10),
+															"sint64s_field":      resolver.NewSint64sValue(-11, -12),
+															"fixed32_field":      resolver.NewFixed32Value(10),
+															"fixed32s_field":     resolver.NewFixed32sValue(11, 12),
+															"fixed64_field":      resolver.NewFixed64Value(13),
+															"fixed64s_field":     resolver.NewFixed64sValue(14, 15),
+															"sfixed32_field":     resolver.NewSfixed32Value(-14),
+															"sfixed32s_field":    resolver.NewSfixed32sValue(-15, -16),
+															"sfixed64_field":     resolver.NewSfixed64Value(-17),
+															"sfixed64s_field":    resolver.NewSfixed64sValue(-18, -19),
+															"bool_field":         resolver.NewBoolValue(true),
+															"bools_field":        resolver.NewBoolsValue(true, false),
+															"string_field":       resolver.NewStringValue("foo"),
+															"strings_field":      resolver.NewStringsValue("hello", "world"),
+															"byte_string_field":  resolver.NewByteStringValue([]byte("foo")),
+															"byte_strings_field": resolver.NewByteStringsValue([]byte("foo"), []byte("bar")),
+															"enum_field":         resolver.NewEnumValue(ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_1")),
+															"enums_field": resolver.NewEnumsValue(
+																ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_2"),
+																ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_3"),
+															),
+															"env_field":      resolver.NewEnvValue("foo"),
+															"envs_field":     resolver.NewEnvsValue("foo", "bar"),
+															"message_field":  resolver.NewMessageValue(ref.Type(t, "content", "Content"), map[string]*resolver.Value{}),
+															"messages_field": resolver.NewMessagesValue(ref.RepeatedType(t, "content", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{}),
+														},
+													),
+												).
+												AddField(
+													"messages_field",
+													ref.RepeatedType(t, "content", "Content"),
+													resolver.NewMessagesValue(ref.RepeatedType(t, "content", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{})).
+												Build(t),
 										).
-										AddField(
-											"messages_field",
-											ref.RepeatedType(t, "content", "Content"),
-											resolver.NewMessagesValue(ref.RepeatedType(t, "content", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{})).
-										Build(t),
-								).
-								SetResponse(
-									testutil.NewResponseBuilder().
-										AddField("content", "content", ref.Type(t, "content", "Content"), false, true).
 										Build(t),
 								).
 								Build(t),
 						).
-						AddMessageDependency(
-							"content2",
-							ref.Message(t, "org.federation", "Content"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("by_field", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
-								Add("double_field", resolver.NewDoubleValue(1.23)).
-								Add("doubles_field", resolver.NewDoublesValue(4.56, 7.89)).
-								Add("float_field", resolver.NewFloatValue(4.56)).
-								Add("floats_field", resolver.NewFloatsValue(7.89, 1.23)).
-								Add("int32_field", resolver.NewInt32Value(-1)).
-								Add("int32s_field", resolver.NewInt32sValue(-2, -3)).
-								Add("int64_field", resolver.NewInt64Value(-4)).
-								Add("int64s_field", resolver.NewInt64sValue(-5, -6)).
-								Add("uint32_field", resolver.NewUint32Value(1)).
-								Add("uint32s_field", resolver.NewUint32sValue(2, 3)).
-								Add("uint64_field", resolver.NewUint64Value(4)).
-								Add("uint64s_field", resolver.NewUint64sValue(5, 6)).
-								Add("sint32_field", resolver.NewSint32Value(-7)).
-								Add("sint32s_field", resolver.NewSint32sValue(-8, -9)).
-								Add("sint64_field", resolver.NewSint64Value(-10)).
-								Add("sint64s_field", resolver.NewSint64sValue(-11, -12)).
-								Add("fixed32_field", resolver.NewFixed32Value(10)).
-								Add("fixed32s_field", resolver.NewFixed32sValue(11, 12)).
-								Add("fixed64_field", resolver.NewFixed64Value(13)).
-								Add("fixed64s_field", resolver.NewFixed64sValue(14, 15)).
-								Add("sfixed32_field", resolver.NewSfixed32Value(-14)).
-								Add("sfixed32s_field", resolver.NewSfixed32sValue(-15, -16)).
-								Add("sfixed64_field", resolver.NewSfixed64Value(-17)).
-								Add("sfixed64s_field", resolver.NewSfixed64sValue(-18, -19)).
-								Add("bool_field", resolver.NewBoolValue(true)).
-								Add("bools_field", resolver.NewBoolsValue(true, false)).
-								Add("string_field", resolver.NewStringValue("foo")).
-								Add("strings_field", resolver.NewStringsValue("hello", "world")).
-								Add("byte_string_field", resolver.NewByteStringValue([]byte("foo"))).
-								Add("byte_strings_field", resolver.NewByteStringsValue([]byte("foo"), []byte("bar"))).
-								Add("enum_field", resolver.NewEnumValue(ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_1"))).
-								Add(
-									"enums_field",
-									resolver.NewEnumsValue(
-										ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_2"),
-										ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_3"),
-									),
-								).
-								Add("env_field", resolver.NewEnvValue("foo")).
-								Add("envs_field", resolver.NewEnvsValue("foo", "bar")).
-								Add(
-									"message_field",
-									resolver.NewMessageValue(
-										ref.Type(t, "org.federation", "Content"),
-										map[string]*resolver.Value{
-											"double_field":       resolver.NewDoubleValue(1.23),
-											"doubles_field":      resolver.NewDoublesValue(4.56, 7.89),
-											"float_field":        resolver.NewFloatValue(4.56),
-											"floats_field":       resolver.NewFloatsValue(7.89, 1.23),
-											"int32_field":        resolver.NewInt32Value(-1),
-											"int32s_field":       resolver.NewInt32sValue(-2, -3),
-											"int64_field":        resolver.NewInt64Value(-4),
-											"int64s_field":       resolver.NewInt64sValue(-5, -6),
-											"uint32_field":       resolver.NewUint32Value(1),
-											"uint32s_field":      resolver.NewUint32sValue(2, 3),
-											"uint64_field":       resolver.NewUint64Value(4),
-											"uint64s_field":      resolver.NewUint64sValue(5, 6),
-											"sint32_field":       resolver.NewSint32Value(-7),
-											"sint32s_field":      resolver.NewSint32sValue(-8, -9),
-											"sint64_field":       resolver.NewSint64Value(-10),
-											"sint64s_field":      resolver.NewSint64sValue(-11, -12),
-											"fixed32_field":      resolver.NewFixed32Value(10),
-											"fixed32s_field":     resolver.NewFixed32sValue(11, 12),
-											"fixed64_field":      resolver.NewFixed64Value(13),
-											"fixed64s_field":     resolver.NewFixed64sValue(14, 15),
-											"sfixed32_field":     resolver.NewSfixed32Value(-14),
-											"sfixed32s_field":    resolver.NewSfixed32sValue(-15, -16),
-											"sfixed64_field":     resolver.NewSfixed64Value(-17),
-											"sfixed64s_field":    resolver.NewSfixed64sValue(-18, -19),
-											"bool_field":         resolver.NewBoolValue(true),
-											"bools_field":        resolver.NewBoolsValue(true, false),
-											"string_field":       resolver.NewStringValue("foo"),
-											"strings_field":      resolver.NewStringsValue("hello", "world"),
-											"byte_string_field":  resolver.NewByteStringValue([]byte("foo")),
-											"byte_strings_field": resolver.NewByteStringsValue([]byte("foo"), []byte("bar")),
-											"enum_field":         resolver.NewEnumValue(ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_1")),
-											"enums_field": resolver.NewEnumsValue(
-												ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_2"),
-												ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_3"),
-											),
-											"env_field":      resolver.NewEnvValue("foo"),
-											"envs_field":     resolver.NewEnvsValue("foo", "bar"),
-											"message_field":  resolver.NewMessageValue(ref.Type(t, "org.federation", "Content"), map[string]*resolver.Value{}),
-											"messages_field": resolver.NewMessagesValue(ref.RepeatedType(t, "org.federation", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{}),
-										},
-									),
-								).
-								Add(
-									"messages_field",
-									resolver.NewMessagesValue(ref.RepeatedType(t, "org.federation", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{})).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("content").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("res.content", ref.Type(t, "content", "Content")).Build(t)).
 								Build(t),
-							false,
-							true,
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("content2").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Content")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("by_field", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Add("double_field", resolver.NewDoubleValue(1.23)).
+												Add("doubles_field", resolver.NewDoublesValue(4.56, 7.89)).
+												Add("float_field", resolver.NewFloatValue(4.56)).
+												Add("floats_field", resolver.NewFloatsValue(7.89, 1.23)).
+												Add("int32_field", resolver.NewInt32Value(-1)).
+												Add("int32s_field", resolver.NewInt32sValue(-2, -3)).
+												Add("int64_field", resolver.NewInt64Value(-4)).
+												Add("int64s_field", resolver.NewInt64sValue(-5, -6)).
+												Add("uint32_field", resolver.NewUint32Value(1)).
+												Add("uint32s_field", resolver.NewUint32sValue(2, 3)).
+												Add("uint64_field", resolver.NewUint64Value(4)).
+												Add("uint64s_field", resolver.NewUint64sValue(5, 6)).
+												Add("sint32_field", resolver.NewSint32Value(-7)).
+												Add("sint32s_field", resolver.NewSint32sValue(-8, -9)).
+												Add("sint64_field", resolver.NewSint64Value(-10)).
+												Add("sint64s_field", resolver.NewSint64sValue(-11, -12)).
+												Add("fixed32_field", resolver.NewFixed32Value(10)).
+												Add("fixed32s_field", resolver.NewFixed32sValue(11, 12)).
+												Add("fixed64_field", resolver.NewFixed64Value(13)).
+												Add("fixed64s_field", resolver.NewFixed64sValue(14, 15)).
+												Add("sfixed32_field", resolver.NewSfixed32Value(-14)).
+												Add("sfixed32s_field", resolver.NewSfixed32sValue(-15, -16)).
+												Add("sfixed64_field", resolver.NewSfixed64Value(-17)).
+												Add("sfixed64s_field", resolver.NewSfixed64sValue(-18, -19)).
+												Add("bool_field", resolver.NewBoolValue(true)).
+												Add("bools_field", resolver.NewBoolsValue(true, false)).
+												Add("string_field", resolver.NewStringValue("foo")).
+												Add("strings_field", resolver.NewStringsValue("hello", "world")).
+												Add("byte_string_field", resolver.NewByteStringValue([]byte("foo"))).
+												Add("byte_strings_field", resolver.NewByteStringsValue([]byte("foo"), []byte("bar"))).
+												Add("enum_field", resolver.NewEnumValue(ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_1"))).
+												Add(
+													"enums_field",
+													resolver.NewEnumsValue(
+														ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_2"),
+														ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_3"),
+													),
+												).
+												Add("env_field", resolver.NewEnvValue("foo")).
+												Add("envs_field", resolver.NewEnvsValue("foo", "bar")).
+												Add(
+													"message_field",
+													resolver.NewMessageValue(
+														ref.Type(t, "org.federation", "Content"),
+														map[string]*resolver.Value{
+															"double_field":       resolver.NewDoubleValue(1.23),
+															"doubles_field":      resolver.NewDoublesValue(4.56, 7.89),
+															"float_field":        resolver.NewFloatValue(4.56),
+															"floats_field":       resolver.NewFloatsValue(7.89, 1.23),
+															"int32_field":        resolver.NewInt32Value(-1),
+															"int32s_field":       resolver.NewInt32sValue(-2, -3),
+															"int64_field":        resolver.NewInt64Value(-4),
+															"int64s_field":       resolver.NewInt64sValue(-5, -6),
+															"uint32_field":       resolver.NewUint32Value(1),
+															"uint32s_field":      resolver.NewUint32sValue(2, 3),
+															"uint64_field":       resolver.NewUint64Value(4),
+															"uint64s_field":      resolver.NewUint64sValue(5, 6),
+															"sint32_field":       resolver.NewSint32Value(-7),
+															"sint32s_field":      resolver.NewSint32sValue(-8, -9),
+															"sint64_field":       resolver.NewSint64Value(-10),
+															"sint64s_field":      resolver.NewSint64sValue(-11, -12),
+															"fixed32_field":      resolver.NewFixed32Value(10),
+															"fixed32s_field":     resolver.NewFixed32sValue(11, 12),
+															"fixed64_field":      resolver.NewFixed64Value(13),
+															"fixed64s_field":     resolver.NewFixed64sValue(14, 15),
+															"sfixed32_field":     resolver.NewSfixed32Value(-14),
+															"sfixed32s_field":    resolver.NewSfixed32sValue(-15, -16),
+															"sfixed64_field":     resolver.NewSfixed64Value(-17),
+															"sfixed64s_field":    resolver.NewSfixed64sValue(-18, -19),
+															"bool_field":         resolver.NewBoolValue(true),
+															"bools_field":        resolver.NewBoolsValue(true, false),
+															"string_field":       resolver.NewStringValue("foo"),
+															"strings_field":      resolver.NewStringsValue("hello", "world"),
+															"byte_string_field":  resolver.NewByteStringValue([]byte("foo")),
+															"byte_strings_field": resolver.NewByteStringsValue([]byte("foo"), []byte("bar")),
+															"enum_field":         resolver.NewEnumValue(ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_1")),
+															"enums_field": resolver.NewEnumsValue(
+																ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_2"),
+																ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_3"),
+															),
+															"env_field":      resolver.NewEnvValue("foo"),
+															"envs_field":     resolver.NewEnvsValue("foo", "bar"),
+															"message_field":  resolver.NewMessageValue(ref.Type(t, "org.federation", "Content"), map[string]*resolver.Value{}),
+															"messages_field": resolver.NewMessagesValue(ref.RepeatedType(t, "org.federation", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{}),
+														},
+													),
+												).
+												Add(
+													"messages_field",
+													resolver.NewMessagesValue(ref.RepeatedType(t, "org.federation", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{})).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
 						SetDependencyGraph(
@@ -2116,7 +2369,12 @@ func TestConstValue(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Content")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetContent")).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("res")).
+								SetEnd(testutil.NewMessageResolver("content")).
+								Build(t),
+						).
 						AddResolver(testutil.NewMessageResolverGroupByName("content2")).
 						Build(t),
 				).
@@ -2208,19 +2466,22 @@ func TestMultiUser(t *testing.T) {
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetMessageArgument(ref.Message(t, "org.federation", "UserIDArgument")).
-						AddMessageDependency(
-							"_org_federation_Sub",
-							ref.Message(t, "org.federation", "Sub"),
-							nil,
-							false,
-							false,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def0").
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Sub")).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
 								Add(ref.Message(t, "org.federation", "Sub")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Sub")).
+						AddResolver(testutil.NewMessageResolverGroupByName("_def0")).
 						Build(t),
 				).
 				Build(t),
@@ -2236,24 +2497,40 @@ func TestMultiUser(t *testing.T) {
 				AddFieldWithRule("name", resolver.StringType, testutil.NewFieldRuleBuilder(nil).SetCustomResolver(true).Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.user", "UserService", "GetUser")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.user", "UserService", "GetUser")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+												Build(t),
+										).
 										Build(t),
-								).
-								SetResponse(
-									testutil.NewResponseBuilder().AddField("user", "user", ref.Type(t, "org.user", "User"), true, true).Build(t),
 								).
 								Build(t),
 						).
-						AddMessageDependency(
-							"_org_federation_Sub",
-							ref.Message(t, "org.federation", "Sub"),
-							nil,
-							false,
-							false,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("user").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetBy(testutil.NewCELValueBuilder("res.user", ref.Type(t, "org.user", "User")).Build(t)).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def2").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Sub")).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
 						SetDependencyGraph(
@@ -2262,8 +2539,13 @@ func TestMultiUser(t *testing.T) {
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_org_federation_Sub")).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
+						AddResolver(testutil.NewMessageResolverGroupByName("_def2")).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(testutil.NewMessageResolverGroupByName("res")).
+								SetEnd(testutil.NewMessageResolver("user")).
+								Build(t),
+						).
 						Build(t),
 				).
 				Build(t),
@@ -2296,30 +2578,48 @@ func TestMultiUser(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"user",
-							ref.Message(t, "org.federation", "User"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("user_id", resolver.NewStringValue("1")).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("uid").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "UserID")).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"user2",
-							ref.Message(t, "org.federation", "User"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("user_id", resolver.NewStringValue("2")).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("user").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "User")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("user_id", resolver.NewStringValue("1")).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddMessageDependency(
-							"uid",
-							ref.Message(t, "org.federation", "UserID"),
-							nil,
-							false,
-							false,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("user2").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "User")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("user_id", resolver.NewStringValue("2")).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
 						SetDependencyGraph(
@@ -2414,15 +2714,18 @@ func TestOneof(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						SetMethodCall(
-							testutil.NewMethodCallBuilder(ref.Method(t, "org.user", "UserService", "GetUser")).
-								SetRequest(
-									testutil.NewRequestBuilder().
-										AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def0").
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.user", "UserService", "GetUser")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+												Build(t),
+										).
 										Build(t),
-								).
-								SetResponse(
-									testutil.NewResponseBuilder().Build(t),
 								).
 								Build(t),
 						).
@@ -2432,7 +2735,7 @@ func TestOneof(t *testing.T) {
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("GetUser")).
+						AddResolver(testutil.NewMessageResolverGroupByName("_def0")).
 						Build(t),
 				).
 				Build(t),
@@ -2461,11 +2764,7 @@ func TestOneof(t *testing.T) {
 										Add(ref.Message(t, "org.federation", "User")).
 										Build(t),
 								).
-								AddResolver(
-									testutil.NewMessageResolverGroupBuilder().
-										SetEnd(testutil.NewMessageResolver("ua")).
-										Build(t),
-								).
+								AddResolver(testutil.NewMessageResolverGroupByName("ua")).
 								Build(t),
 						).
 						Build(t),
@@ -2492,11 +2791,7 @@ func TestOneof(t *testing.T) {
 										Add(ref.Message(t, "org.federation", "User")).
 										Build(t),
 								).
-								AddResolver(
-									testutil.NewMessageResolverGroupBuilder().
-										SetEnd(testutil.NewMessageResolver("ub")).
-										Build(t),
-								).
+								AddResolver(testutil.NewMessageResolverGroupByName("ub")).
 								Build(t),
 						).
 						Build(t),
@@ -2523,11 +2818,7 @@ func TestOneof(t *testing.T) {
 										Add(ref.Message(t, "org.federation", "User")).
 										Build(t),
 								).
-								AddResolver(
-									testutil.NewMessageResolverGroupBuilder().
-										SetEnd(testutil.NewMessageResolver("uc")).
-										Build(t),
-								).
+								AddResolver(testutil.NewMessageResolverGroupByName("uc")).
 								Build(t),
 						).
 						Build(t),
@@ -2535,6 +2826,17 @@ func TestOneof(t *testing.T) {
 				AddOneof(testutil.NewOneofBuilder("user").AddFieldNames("user_a", "user_b", "user_c").Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("m").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "M")).
+										Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserSelectionArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
@@ -2563,14 +2865,21 @@ func TestOneof(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"sel",
-							ref.Message(t, "org.federation", "UserSelection"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("value", resolver.NewStringValue("foo")).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("sel").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "UserSelection")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("value", resolver.NewStringValue("foo")).
+												Build(t),
+										).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
 						SetDependencyGraph(
@@ -2578,11 +2887,7 @@ func TestOneof(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "UserSelection")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								SetEnd(testutil.NewMessageResolver("sel")).
-								Build(t),
-						).
+						AddResolver(testutil.NewMessageResolverGroupByName("sel")).
 						Build(t),
 				).
 				Build(t),
@@ -2674,57 +2979,69 @@ func TestValidation(t *testing.T) {
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
-						AddMessageDependency(
-							"post",
-							ref.Message(t, "org.federation", "Post"),
-							testutil.NewMessageDependencyArgumentBuilder().
-								Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Post")).
+										Build(t),
+								).
 								Build(t),
-							false,
-							true,
 						).
-						AddValidation(
-							"_validation0",
-							code.Code_FAILED_PRECONDITION,
-							testutil.NewCELValueBuilder("post.id == 'some-id'", resolver.BoolType).Build(t),
-							nil,
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def1").
+								SetValidation(
+									testutil.NewValidationExprBuilder().
+										SetCode(code.Code_FAILED_PRECONDITION).
+										SetRule(testutil.NewCELValueBuilder("post.id == 'some-id'", resolver.BoolType).Build(t)).
+										Build(t),
+								).
+								Build(t),
 						).
-						AddValidation(
-							"_validation1",
-							code.Code_FAILED_PRECONDITION,
-							nil,
-							[]*resolver.ValidationErrorDetail{
-								{
-									Rule: testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
-									PreconditionFailures: []*resolver.PreconditionFailure{
-										{
-											Violations: []*resolver.PreconditionFailureViolation{
-												{
-													Type:        testutil.NewCELValueBuilder("'some-type'", resolver.StringType).Build(t),
-													Subject:     testutil.NewCELValueBuilder("'some-subject'", resolver.StringType).Build(t),
-													Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def2").
+								SetValidation(
+									testutil.NewValidationExprBuilder().
+										SetCode(code.Code_FAILED_PRECONDITION).
+										SetDetails([]*resolver.ValidationErrorDetail{
+											{
+												Rule: testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
+												PreconditionFailures: []*resolver.PreconditionFailure{
+													{
+														Violations: []*resolver.PreconditionFailureViolation{
+															{
+																Type:        testutil.NewCELValueBuilder("'some-type'", resolver.StringType).Build(t),
+																Subject:     testutil.NewCELValueBuilder("'some-subject'", resolver.StringType).Build(t),
+																Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
+															},
+														},
+													},
+												},
+												BadRequests: []*resolver.BadRequest{
+													{
+														FieldViolations: []*resolver.BadRequestFieldViolation{
+															{
+																Field:       testutil.NewCELValueBuilder("'some-field'", resolver.StringType).Build(t),
+																Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
+															},
+														},
+													},
+												},
+												LocalizedMessages: []*resolver.LocalizedMessage{
+													{
+														Locale:  "en-US",
+														Message: testutil.NewCELValueBuilder("'some-message'", resolver.StringType).Build(t),
+													},
 												},
 											},
-										},
-									},
-									BadRequests: []*resolver.BadRequest{
-										{
-											FieldViolations: []*resolver.BadRequestFieldViolation{
-												{
-													Field:       testutil.NewCELValueBuilder("'some-field'", resolver.StringType).Build(t),
-													Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
-												},
-											},
-										},
-									},
-									LocalizedMessages: []*resolver.LocalizedMessage{
-										{
-											Locale:  "en-US",
-											Message: testutil.NewCELValueBuilder("'some-message'", resolver.StringType).Build(t),
-										},
-									},
-								},
-							},
+										}).
+										Build(t),
+								).
+								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
@@ -2735,13 +3052,13 @@ func TestValidation(t *testing.T) {
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
 								AddStart(testutil.NewMessageResolverGroupByName("post")).
-								SetEnd(testutil.NewMessageResolver("_validation0")).
+								SetEnd(testutil.NewMessageResolver("_def1")).
 								Build(t),
 						).
 						AddResolver(
 							testutil.NewMessageResolverGroupBuilder().
 								AddStart(testutil.NewMessageResolverGroupByName("post")).
-								SetEnd(testutil.NewMessageResolver("_validation1")).
+								SetEnd(testutil.NewMessageResolver("_def2")).
 								Build(t),
 						).
 						Build(t),

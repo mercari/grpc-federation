@@ -16,22 +16,22 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages: [
-      {
-        name: "sel"
-        message: "UserSelection"
+    def {
+      name: "sel"
+      message {
+        name: "UserSelection"
         args { name: "value", string: "foo" }
       }
-    ]
+    }
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
 }
 
 message UserSelection {
   option (grpc.federation.message) = {
-    messages {
+    def {
       name: "m"
-      message: "M"
+      message { name: "M" }
     }
   };
   oneof user {
@@ -80,9 +80,11 @@ message M {
 
 message User {
   option (grpc.federation.message) = {
-    resolver {
-      method: "org.user.UserService/GetUser"
-      request { field: "id", by: "$.user_id" }
+    def {
+      call {
+        method: "org.user.UserService/GetUser"
+        request { field: "id", by: "$.user_id" }
+      }
     }
   };
 

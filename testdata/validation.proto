@@ -20,37 +20,39 @@ message GetPostRequest {
 
 message GetPostResponse {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "post", message: "Post" }
-    ]
-    validations: [
+    def [
+      { name: "post" message { name: "Post" } },
       {
-        error: {
-          code: FAILED_PRECONDITION,
-          rule: "post.id == 'some-id'",
+        validation {
+          error {
+            code: FAILED_PRECONDITION
+            rule: "post.id == 'some-id'"
+          }
         }
       },
       {
-        error: {
-          code: FAILED_PRECONDITION,
-          details: {
-            rule: "post.title == 'some-title'"
-            precondition_failure {
-              violations {
-                type: "'some-type'"
-                subject: "'some-subject'"
-                description: "'some-description'"
+        validation {
+          error {
+            code: FAILED_PRECONDITION
+            details {
+              rule: "post.title == 'some-title'"
+              precondition_failure {
+                violations {
+                  type: "'some-type'"
+                  subject: "'some-subject'"
+                  description: "'some-description'"
+                }
               }
-            }
-            bad_request {
-              field_violations {
-                field: "'some-field'"
-                description: "'some-description'"
+              bad_request {
+                field_violations {
+                  field: "'some-field'"
+                  description: "'some-description'"
+                }
               }
-            }
-            localized_message {
-              locale: "en-US"
-              message: "'some-message'"
+              localized_message {
+                locale: "en-US"
+                message: "'some-message'"
+              }
             }
           }
         }

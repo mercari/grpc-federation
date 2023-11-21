@@ -24,23 +24,27 @@ message CreatePostRequest {
 
 message CreatePostResponse {
   option (grpc.federation.message) = {
-    messages {
-      name: "cp"
-      message: "CreatePost"
-      args: [
-        { name: "title", by: "$.title" },
-        { name: "content", by: "$.content" },
-        { name: "user_id", by: "$.user_id" }
-      ]
-    }
-    resolver: {
-      method: "org.post.PostService/CreatePost"
-      request {
-        field: "post"
-        by: "cp"
-      }
-      response { name: "p", field: "post" }
-    }
+    def [
+      {
+        name: "cp"
+        message {
+          name: "CreatePost"
+          args: [
+            { name: "title", by: "$.title" },
+            { name: "content", by: "$.content" },
+            { name: "user_id", by: "$.user_id" }
+          ]
+        }
+      },
+      {
+        name: "res"
+        call {
+          method: "org.post.PostService/CreatePost"
+          request { field: "post" by: "cp" }
+        }
+      },
+      { name: "p" by: "res.post" }
+    ]
   };
   Post post = 1 [(grpc.federation.field).by = "p"];
 }
