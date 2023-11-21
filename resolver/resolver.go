@@ -1093,7 +1093,7 @@ func (r *Resolver) resolveMapIterator(ctx *context, def *federation.Iterator) *I
 	if name == "" {
 		ctx.addError(
 			ErrWithLocation(
-				"map iterator name must be speficied",
+				"map iterator name must be specified",
 				source.MapIteratorNameLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
 			),
 		)
@@ -1102,7 +1102,7 @@ func (r *Resolver) resolveMapIterator(ctx *context, def *federation.Iterator) *I
 	if src == "" {
 		ctx.addError(
 			ErrWithLocation(
-				"map iterator src must be speficied",
+				"map iterator src must be specified",
 				source.MapIteratorSourceLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
 			),
 		)
@@ -2526,7 +2526,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				continue
 			}
 			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				if arg.Value.CEL != nil && arg.Value.Inline {
+				if arg.Value.Inline {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
@@ -2657,7 +2657,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 						continue
 					}
 					if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-						if arg.Value.CEL != nil && arg.Value.Inline {
+						if arg.Value.Inline {
 							ctx.addError(
 								ErrWithLocation(
 									err.Error(),
@@ -2790,7 +2790,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 				continue
 			}
 			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				if arg.Value.CEL != nil && arg.Value.Inline {
+				if arg.Value.Inline {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
@@ -2867,7 +2867,7 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 				continue
 			}
 			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				if arg.Value.CEL != nil && arg.Value.Inline {
+				if arg.Value.Inline {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
