@@ -63,15 +63,51 @@ type Import struct {
 	Alias string
 }
 
+func (f *File) DefaultImports() []*Import {
+	return []*Import{
+		{Path: "github.com/golang/protobuf/proto"},
+		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation"},
+		{Path: "github.com/cenkalti/backoff/v4"},
+		{Path: "google.golang.org/genproto/googleapis/rpc/errdetails"},
+		{Path: "google.golang.org/protobuf/reflect/protoregistry"},
+		{Path: "google.golang.org/protobuf/types/descriptorpb"},
+		{Path: "google.golang.org/protobuf/types/known/dynamicpb"},
+		{Path: "google.golang.org/protobuf/types/known/anypb"},
+		{Path: "google.golang.org/protobuf/types/known/durationpb"},
+		{Path: "google.golang.org/protobuf/types/known/emptypb"},
+		{Path: "google.golang.org/protobuf/types/known/timestamppb"},
+		{Path: "go.opentelemetry.io/otel"},
+		{Path: "go.opentelemetry.io/otel/trace"},
+		{Path: "golang.org/x/sync/errgroup"},
+		{Path: "golang.org/x/sync/singleflight"},
+		{Path: "github.com/google/cel-go/cel"},
+		{Path: "github.com/google/cel-go/common/types/ref"},
+		{Alias: "celtypes", Path: "github.com/google/cel-go/common/types"},
+		{Alias: "grpccodes", Path: "google.golang.org/grpc/codes"},
+		{Alias: "grpcstatus", Path: "google.golang.org/grpc/status"},
+	}
+}
+
 func (f *File) Imports() []*Import {
+	defaultImportMap := make(map[string]struct{})
+	for _, imprts := range f.DefaultImports() {
+		defaultImportMap[imprts.Path] = struct{}{}
+	}
+
 	depMap := make(map[string]*resolver.GoPackage)
 	for _, svc := range f.File.Services {
 		for _, dep := range svc.GoPackageDependencies() {
+			if _, exists := defaultImportMap[dep.ImportPath]; exists {
+				continue
+			}
 			depMap[dep.ImportPath] = dep
 		}
 	}
 	for _, msg := range f.File.Messages {
 		for _, dep := range msg.GoPackageDependencies() {
+			if _, exists := defaultImportMap[dep.ImportPath]; exists {
+				continue
+			}
 			depMap[dep.ImportPath] = dep
 		}
 	}

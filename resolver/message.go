@@ -344,15 +344,46 @@ func (m *Message) customResolvers(resolver *MessageResolver) []*CustomResolver {
 
 func (m *Message) GoPackageDependencies() []*GoPackage {
 	pkgMap := map[*GoPackage]struct{}{}
-	pkgMap[m.GoPackage()] = struct{}{}
+	gopkg := m.GoPackage()
+	pkgMap[gopkg] = struct{}{}
 	for _, svc := range m.DependServices() {
 		pkgMap[svc.GoPackage()] = struct{}{}
+	}
+	seenMsgMap := make(map[*Message]struct{})
+	for _, field := range m.Fields {
+		if field.Type.Ref == nil {
+			continue
+		}
+		for _, gopkg := range getGoPackageDependencies(gopkg, field.Type.Ref, seenMsgMap) {
+			pkgMap[gopkg] = struct{}{}
+		}
 	}
 	pkgs := make([]*GoPackage, 0, len(pkgMap))
 	for pkg := range pkgMap {
 		pkgs = append(pkgs, pkg)
 	}
 	return pkgs
+}
+
+func getGoPackageDependencies(base *GoPackage, msg *Message, seenMsgMap map[*Message]struct{}) []*GoPackage {
+	var ret []*GoPackage
+	if base != msg.GoPackage() {
+		ret = append(ret, msg.GoPackage())
+	}
+	seenMsgMap[msg] = struct{}{}
+	for _, field := range msg.Fields {
+		if field.Type.Ref == nil {
+			continue
+		}
+		if _, exists := seenMsgMap[field.Type.Ref]; exists {
+			continue
+		}
+		ret = append(ret, getGoPackageDependencies(base, field.Type.Ref, seenMsgMap)...)
+	}
+	for _, m := range msg.NestedMessages {
+		ret = append(ret, getGoPackageDependencies(base, m, seenMsgMap)...)
+	}
+	return ret
 }
 
 func (m *Message) DependServices() []*Service {
@@ -368,7 +399,7 @@ func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) [
 	if m.Rule != nil {
 		for _, group := range m.Rule.Resolvers {
 			for _, resolver := range group.Resolvers() {
-				svcs = append(svcs, m.dependServicesByResolver(resolver, msgResolverMap)...)
+				svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
 			}
 		}
 	}
@@ -381,14 +412,14 @@ func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) [
 		}
 		for _, group := range field.Rule.Oneof.Resolvers {
 			for _, resolver := range group.Resolvers() {
-				svcs = append(svcs, m.dependServicesByResolver(resolver, msgResolverMap)...)
+				svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
 			}
 		}
 	}
 	return svcs
 }
 
-func (m *Message) dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
+func dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
 	if _, found := msgResolverMap[resolver]; found {
 		return nil
 	}
