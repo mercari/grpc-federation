@@ -33,7 +33,7 @@ service MyService {
 
 Name to be used when initializing the gRPC client.
 
-# example
+### example
 
 ```proto
 service MyService {
