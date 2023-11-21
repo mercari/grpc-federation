@@ -70,6 +70,11 @@ func (f *File) Imports() []*Import {
 			depMap[dep.ImportPath] = dep
 		}
 	}
+	for _, msg := range f.File.Messages {
+		for _, dep := range msg.GoPackageDependencies() {
+			depMap[dep.ImportPath] = dep
+		}
+	}
 	imprts := make([]*Import, 0, len(depMap))
 	for _, dep := range depMap {
 		imprts = append(imprts, &Import{
@@ -84,13 +89,10 @@ func (f *File) Imports() []*Import {
 }
 
 func (f *File) Types() Types {
-	if len(f.File.Services) == 0 {
-		return nil
-	}
-	return newTypeDeclares(f.Messages, f.File.Services[0])
+	return newTypeDeclares(f.File, f.Messages)
 }
 
-func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
+func newTypeDeclares(file *resolver.File, msgs []*resolver.Message) []*Type {
 	declTypes := make(Types, 0, len(msgs))
 	typeNameMap := make(map[string]struct{})
 	for _, msg := range msgs {
@@ -113,7 +115,7 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 			ProtoFQDN: arg.FQDN(),
 		}
 
-		genMsg := &Message{Message: msg, Service: svc}
+		genMsg := &Message{Message: msg}
 		for _, group := range genMsg.MessageResolvers() {
 			for _, msgResolver := range group.Resolvers() {
 				if msgResolver.MethodCall != nil {
@@ -128,7 +130,7 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 							}
 							typ.Fields = append(typ.Fields, &Field{
 								Name: fieldName,
-								Type: toTypeText(svc, responseField.Type),
+								Type: toTypeText(file, responseField.Type),
 							})
 						}
 					}
@@ -139,7 +141,7 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 					}
 					typ.Fields = append(typ.Fields, &Field{
 						Name: fieldName,
-						Type: toTypeText(svc, &resolver.Type{
+						Type: toTypeText(file, &resolver.Type{
 							Type: types.Message,
 							Ref:  depMessage.Message,
 						}),
@@ -150,7 +152,7 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 		for _, field := range arg.Fields {
 			typ.Fields = append(typ.Fields, &Field{
 				Name: util.ToPublicGoVariable(field.Name),
-				Type: toTypeText(svc, field.Type),
+				Type: toTypeText(file, field.Type),
 			})
 			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
 		}
@@ -165,7 +167,7 @@ func newTypeDeclares(msgs []*resolver.Message, svc *resolver.Service) []*Type {
 			if msg.HasCustomResolver() {
 				fields = append(fields, &Field{
 					Name: msgName,
-					Type: toTypeText(svc, resolver.NewMessageType(msg, false)),
+					Type: toTypeText(file, resolver.NewMessageType(msg, false)),
 				})
 			}
 			sort.Slice(fields, func(i, j int) bool {
@@ -200,7 +202,7 @@ type OneofType struct {
 }
 
 func (s *Service) Types() Types {
-	return newTypeDeclares(s.Service.Messages, s.Service)
+	return newTypeDeclares(s.Service.File, s.Service.Messages)
 }
 
 func (s *Service) OneofTypes() []*OneofType {
@@ -216,7 +218,7 @@ func (s *Service) OneofTypes() []*OneofType {
 			for _, field := range oneof.Fields {
 				fieldZeroValues = append(
 					fieldZeroValues,
-					toMakeZeroValue(svc, field.Type),
+					toMakeZeroValue(svc.File, field.Type),
 				)
 				fieldGetterNames = append(
 					fieldGetterNames,
@@ -225,7 +227,7 @@ func (s *Service) OneofTypes() []*OneofType {
 			}
 			cloned := oneof.Fields[0].Type.Clone()
 			cloned.OneofField = nil
-			returnZeroValue := toMakeZeroValue(svc, cloned)
+			returnZeroValue := toMakeZeroValue(svc.File, cloned)
 			ret = append(ret, &OneofType{
 				Name:             oneof.Name,
 				FieldName:        util.ToPublicGoVariable(oneof.Name),
@@ -329,10 +331,10 @@ func (r *CustomResolver) ReturnType() string {
 	ur := r.CustomResolver
 	if ur.Field != nil {
 		// field resolver
-		return toTypeText(r.Service, ur.Field.Type)
+		return toTypeText(r.Service.File, ur.Field.Type)
 	}
 	// message resolver
-	return toTypeText(r.Service, &resolver.Type{
+	return toTypeText(r.Service.File, &resolver.Type{
 		Type: types.Message,
 		Ref:  ur.Message,
 	})
@@ -399,8 +401,8 @@ type Field struct {
 	Type string
 }
 
-func toMakeZeroValue(svc *resolver.Service, t *resolver.Type) string {
-	text := toTypeText(svc, t)
+func toMakeZeroValue(file *resolver.File, t *resolver.Type) string {
+	text := toTypeText(file, t)
 	if t.Repeated || t.Type == types.Bytes {
 		return fmt.Sprintf("%s(nil)", text)
 	}
@@ -441,7 +443,7 @@ func toCELTypeDeclare(t *resolver.Type) string {
 	return ""
 }
 
-func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
+func toTypeText(file *resolver.File, t *resolver.Type) string {
 	if t == nil {
 		return "any"
 	}
@@ -478,12 +480,12 @@ func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
 	case types.Bytes:
 		typ = "[]byte"
 	case types.Enum:
-		typ = enumTypeToText(baseSvc, t.Enum)
+		typ = enumTypeToText(file, t.Enum)
 	case types.Message:
 		if t.OneofField != nil {
-			typ = oneofTypeToText(baseSvc, t.OneofField)
+			typ = oneofTypeToText(file, t.OneofField)
 		} else {
-			typ = messageTypeToText(baseSvc, t.Ref)
+			typ = messageTypeToText(file, t.Ref)
 		}
 	default:
 		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Type)
@@ -494,8 +496,8 @@ func toTypeText(baseSvc *resolver.Service, t *resolver.Type) string {
 	return typ
 }
 
-func oneofTypeToText(baseSvc *resolver.Service, oneofField *resolver.OneofField) string {
-	msg := messageTypeToText(baseSvc, oneofField.Oneof.Message)
+func oneofTypeToText(file *resolver.File, oneofField *resolver.OneofField) string {
+	msg := messageTypeToText(file, oneofField.Oneof.Message)
 	oneof := fmt.Sprintf("%s_%s", msg, util.ToPublicGoVariable(oneofField.Field.Name))
 	if oneofField.IsConflict() {
 		oneof += "_"
@@ -503,7 +505,7 @@ func oneofTypeToText(baseSvc *resolver.Service, oneofField *resolver.OneofField)
 	return oneof
 }
 
-func messageTypeToText(baseSvc *resolver.Service, msg *resolver.Message) string {
+func messageTypeToText(file *resolver.File, msg *resolver.Message) string {
 	if msg.PackageName() == "google.protobuf" {
 		switch msg.Name {
 		case "Any":
@@ -517,25 +519,25 @@ func messageTypeToText(baseSvc *resolver.Service, msg *resolver.Message) string 
 		}
 	}
 	if msg.IsMapEntry {
-		key := toTypeText(baseSvc, msg.Field("key").Type)
-		value := toTypeText(baseSvc, msg.Field("value").Type)
+		key := toTypeText(file, msg.Field("key").Type)
+		value := toTypeText(file, msg.Field("value").Type)
 		return fmt.Sprintf("map[%s]%s", key, value)
 	}
 	name := strings.Join(append(msg.ParentMessageNames(), msg.Name), "_")
-	if baseSvc.GoPackage().ImportPath == msg.GoPackage().ImportPath {
+	if file.GoPackage.ImportPath == msg.GoPackage().ImportPath {
 		return fmt.Sprintf("*%s", name)
 	}
 	return fmt.Sprintf("*%s.%s", msg.GoPackage().Name, name)
 }
 
-func enumTypeToText(baseSvc *resolver.Service, enum *resolver.Enum) string {
+func enumTypeToText(file *resolver.File, enum *resolver.Enum) string {
 	var name string
 	if enum.Message != nil {
 		name = fmt.Sprintf("%s_%s", enum.Message.Name, enum.Name)
 	} else {
 		name = enum.Name
 	}
-	if baseSvc.GoPackage().ImportPath == enum.GoPackage().ImportPath {
+	if file.GoPackage.ImportPath == enum.GoPackage().ImportPath {
 		return name
 	}
 	return fmt.Sprintf("%s.%s", enum.GoPackage().Name, name)
@@ -602,7 +604,7 @@ func (s *Service) setLogValueByMessage(msg *resolver.Message) {
 	msgType := &resolver.Type{Type: types.Message, Ref: msg}
 	logValue := &LogValue{
 		Name:      name,
-		ValueType: toTypeText(s.Service, msgType),
+		ValueType: toTypeText(s.Service.File, msgType),
 		Attrs:     make([]*LogValueAttr, 0, len(msg.Fields)),
 		Type:      msgType,
 	}
@@ -632,7 +634,7 @@ func (s *Service) setLogValueByMapMessage(msg *resolver.Message) {
 	msgType := &resolver.Type{Type: types.Message, Ref: msg}
 	logValue := &LogValue{
 		Name:      name,
-		ValueType: toTypeText(s.Service, msgType),
+		ValueType: toTypeText(s.Service.File, msgType),
 		Type:      msgType,
 		Value:     s.logMapValue(value),
 	}
@@ -697,14 +699,14 @@ func (s *Service) setLogValueByEnum(enum *resolver.Enum) {
 	enumType := &resolver.Type{Type: types.Enum, Enum: enum}
 	logValue := &LogValue{
 		Name:      name,
-		ValueType: toTypeText(s.Service, enumType),
+		ValueType: toTypeText(s.Service.File, enumType),
 		Attrs:     make([]*LogValueAttr, 0, len(enum.Values)),
 		Type:      enumType,
 	}
 	for _, value := range enum.Values {
 		logValue.Attrs = append(logValue.Attrs, &LogValueAttr{
 			Key:   value.Value,
-			Value: toEnumValueText(toEnumValuePrefix(s.Service, enumType), value.Value),
+			Value: toEnumValueText(toEnumValuePrefix(s.Service.File, enumType), value.Value),
 		})
 	}
 	s.nameToLogValueMap[name] = logValue
@@ -730,7 +732,7 @@ func (s *Service) setLogValueByRepeatedType(typ *resolver.Type) {
 	}
 	logValue := &LogValue{
 		Name:      name,
-		ValueType: toTypeText(s.Service, typ),
+		ValueType: toTypeText(s.Service.File, typ),
 		Type:      typ,
 		Value:     value,
 	}
@@ -948,14 +950,14 @@ func (m *Method) ArgumentName() string {
 }
 
 func (m *Method) RequestType() string {
-	return toTypeText(m.Service, &resolver.Type{
+	return toTypeText(m.Service.File, &resolver.Type{
 		Type: types.Message,
 		Ref:  m.Request,
 	})
 }
 
 func (m *Method) ReturnType() string {
-	return toTypeText(m.Service, &resolver.Type{
+	return toTypeText(m.Service.File, &resolver.Type{
 		Type: types.Message,
 		Ref:  m.Response,
 	})
@@ -1063,7 +1065,7 @@ func (m *Message) DeclVariables() []*DeclVariable {
 					}
 					valueMap[field.Name] = &DeclVariable{
 						Name: toUserDefinedVariable(field.Name),
-						Type: toTypeText(m.Service, field.Type),
+						Type: toTypeText(m.Service.File, field.Type),
 					}
 				}
 			} else if r.MessageDependency != nil {
@@ -1072,7 +1074,7 @@ func (m *Message) DeclVariables() []*DeclVariable {
 				}
 				valueMap[r.MessageDependency.Name] = &DeclVariable{
 					Name: toUserDefinedVariable(r.MessageDependency.Name),
-					Type: toTypeText(m.Service, &resolver.Type{Type: types.Message, Ref: r.MessageDependency.Message}),
+					Type: toTypeText(m.Service.File, &resolver.Type{Type: types.Message, Ref: r.MessageDependency.Message}),
 				}
 			}
 		}
@@ -1162,13 +1164,13 @@ func (f *CastField) RequestType() string {
 	if f.fromType.OneofField != nil {
 		typ := f.fromType.OneofField.Type.Clone()
 		typ.OneofField = nil
-		return toTypeText(f.service, typ)
+		return toTypeText(f.service.File, typ)
 	}
-	return toTypeText(f.service, f.fromType)
+	return toTypeText(f.service.File, f.fromType)
 }
 
 func (f *CastField) ResponseType() string {
-	return toTypeText(f.service, f.toType)
+	return toTypeText(f.service.File, f.toType)
 }
 
 func (f *CastField) RequestProtoFQDN() string {
@@ -1211,8 +1213,8 @@ func (f *CastField) ToEnum() *CastEnum {
 		return f.toEnumByAlias()
 	}
 	fromEnum := f.fromType.Enum
-	toEnumName := toEnumValuePrefix(f.service, f.toType)
-	fromEnumName := toEnumValuePrefix(f.service, f.fromType)
+	toEnumName := toEnumValuePrefix(f.service.File, f.toType)
+	fromEnumName := toEnumValuePrefix(f.service.File, f.fromType)
 	var enumValues []*CastEnumValue
 	for _, toValue := range toEnum.Values {
 		if toValue.Rule == nil {
@@ -1235,8 +1237,8 @@ func (f *CastField) ToEnum() *CastEnum {
 
 func (f *CastField) toEnumByAlias() *CastEnum {
 	toEnum := f.toType.Enum
-	toEnumName := toEnumValuePrefix(f.service, f.toType)
-	fromEnumName := toEnumValuePrefix(f.service, f.fromType)
+	toEnumName := toEnumValuePrefix(f.service.File, f.toType)
+	fromEnumName := toEnumValuePrefix(f.service.File, f.fromType)
 	var (
 		enumValues   []*CastEnumValue
 		defaultValue = "0"
@@ -1525,7 +1527,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 func (m *Message) constValueToReturnField(field *resolver.Field, constValue *resolver.ConstValue) *ReturnField {
 	return &ReturnField{
 		Name:  util.ToPublicGoVariable(field.Name),
-		Value: toGoConstValue(m.Service, constValue.Type, constValue.Value),
+		Value: toGoConstValue(m.Service.File, constValue.Type, constValue.Value),
 		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
 			Prefix:         "// ",
 			IndentSpaceNum: 2,
@@ -1537,8 +1539,8 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	toType := field.Type
 	fromType := value.Out
 
-	toText := toTypeText(m.Service, toType)
-	fromText := toTypeText(m.Service, fromType)
+	toText := toTypeText(m.Service.File, toType)
+	fromText := toTypeText(m.Service.File, fromType)
 
 	var (
 		returnFieldValue string
@@ -1546,14 +1548,14 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	)
 	switch fromType.Type {
 	case types.Message:
-		zeroValue = toMakeZeroValue(m.Service, fromType)
+		zeroValue = toMakeZeroValue(m.Service.File, fromType)
 		returnFieldValue = fmt.Sprintf("_value.(%s)", fromText)
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
 			returnFieldValue = fmt.Sprintf("s.%s(%s)", castFuncName, returnFieldValue)
 		}
 	case types.Enum:
-		zeroValue = toMakeZeroValue(m.Service, fromType)
+		zeroValue = toMakeZeroValue(m.Service.File, fromType)
 		returnFieldValue = fmt.Sprintf("_value.(%s)", fromText)
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
@@ -1561,7 +1563,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		}
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
-		zeroValue = toMakeZeroValue(m.Service, toType)
+		zeroValue = toMakeZeroValue(m.Service.File, toType)
 		returnFieldValue = fmt.Sprintf("_value.(%s)", toText)
 	}
 	return &ReturnField{
@@ -1625,14 +1627,14 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 			switch fromType.Type {
 			case types.Message:
 				outType = "nil"
-				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, fromType))
+				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service.File, fromType))
 				if requiredCast(fromType, toType) {
 					castFuncName := castFuncName(fromType, toType)
 					argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 				}
 			case types.Enum:
 				outType = "nil"
-				argValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(m.Service, fromType))
+				argValue = fmt.Sprintf("%s(_value.(int64))", toTypeText(m.Service.File, fromType))
 				if requiredCast(fromType, toType) {
 					castFuncName := castFuncName(fromType, toType)
 					argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
@@ -1640,7 +1642,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 			default:
 				// Since fromType is a primitive type, type conversion is possible on the CEL side.
 				outType = fmt.Sprintf("reflect.TypeOf(new(%s).Get%s())", oneofTypeName, fieldName)
-				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service, toType))
+				argValue = fmt.Sprintf("_value.(%s)", toTypeText(m.Service.File, toType))
 			}
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
@@ -1877,10 +1879,10 @@ func (r *MessageResolver) ResponseVariable() string {
 func (r *MessageResolver) Type() string {
 	if r.MethodCall != nil {
 		msg := r.MethodCall.Response.Type
-		return toTypeText(r.Service, &resolver.Type{Type: types.Message, Ref: msg})
+		return toTypeText(r.Service.File, &resolver.Type{Type: types.Message, Ref: msg})
 	}
 	msg := r.MessageDependency.Message
-	return toTypeText(r.Service, &resolver.Type{Type: types.Message, Ref: msg})
+	return toTypeText(r.Service.File, &resolver.Type{Type: types.Message, Ref: msg})
 }
 
 func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
@@ -2103,9 +2105,9 @@ func (r *MessageResolver) Arguments() []*Argument {
 	return generateArgs
 }
 
-func toValue(svc *resolver.Service, typ *resolver.Type, value *resolver.Value) string {
+func toValue(file *resolver.File, typ *resolver.Type, value *resolver.Value) string {
 	if value.Const != nil {
-		return toGoConstValue(svc, value.Const.Type, value.Const.Value)
+		return toGoConstValue(file, value.Const.Type, value.Const.Value)
 	}
 	var selectors []string
 	selectors = append(selectors, "foo")
@@ -2123,7 +2125,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		return []*Argument{
 			{
 				Name:  util.ToPublicGoVariable(name),
-				Value: toGoConstValue(r.Service, value.Const.Type, value.Const.Value),
+				Value: toGoConstValue(r.Service.File, value.Const.Type, value.Const.Value),
 			},
 		}
 	}
@@ -2147,8 +2149,8 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		toType = fromType
 	}
 
-	toText := toTypeText(r.Service, toType)
-	fromText := toTypeText(r.Service, fromType)
+	toText := toTypeText(r.Service.File, toType)
+	fromText := toTypeText(r.Service.File, fromType)
 
 	var (
 		argValue  string
@@ -2156,14 +2158,14 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	)
 	switch fromType.Type {
 	case types.Message:
-		zeroValue = toMakeZeroValue(r.Service, fromType)
+		zeroValue = toMakeZeroValue(r.Service.File, fromType)
 		argValue = fmt.Sprintf("_value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	case types.Enum:
-		zeroValue = toMakeZeroValue(r.Service, fromType)
+		zeroValue = toMakeZeroValue(r.Service.File, fromType)
 		argValue = fmt.Sprintf("_value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
@@ -2171,7 +2173,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		}
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
-		zeroValue = toMakeZeroValue(r.Service, toType)
+		zeroValue = toMakeZeroValue(r.Service.File, toType)
 		argValue = fmt.Sprintf("_value.(%s)", toText)
 	}
 	return []*Argument{
@@ -2185,7 +2187,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	}
 }
 
-func toGoConstValue(svc *resolver.Service, typ *resolver.Type, value any) string {
+func toGoConstValue(file *resolver.File, typ *resolver.Type, value any) string {
 	if typ.Repeated {
 		rv := reflect.ValueOf(value)
 		length := rv.Len()
@@ -2193,9 +2195,9 @@ func toGoConstValue(svc *resolver.Service, typ *resolver.Type, value any) string
 		copied.Repeated = false
 		var values []string
 		for i := 0; i < length; i++ {
-			values = append(values, toGoConstValue(svc, &copied, rv.Index(i).Interface()))
+			values = append(values, toGoConstValue(file, &copied, rv.Index(i).Interface()))
 		}
-		return fmt.Sprintf("%s{%s}", toTypeText(svc, typ), strings.Join(values, ","))
+		return fmt.Sprintf("%s{%s}", toTypeText(file, typ), strings.Join(values, ","))
 	}
 	switch typ.Type {
 	case types.Bool:
@@ -2214,7 +2216,7 @@ func toGoConstValue(svc *resolver.Service, typ *resolver.Type, value any) string
 		return fmt.Sprintf("[]byte{%s}", strings.Join(byts, ","))
 	case types.Enum:
 		enumValue := value.(*resolver.EnumValue)
-		prefix := toEnumValuePrefix(svc, &resolver.Type{
+		prefix := toEnumValuePrefix(file, &resolver.Type{
 			Type: types.Enum,
 			Enum: enumValue.Enum,
 		})
@@ -2238,11 +2240,11 @@ func toGoConstValue(svc *resolver.Service, typ *resolver.Type, value any) string
 				fmt.Sprintf(
 					"%s: %s",
 					util.ToPublicGoVariable(field.Name),
-					toValue(svc, field.Type, v),
+					toValue(file, field.Type, v),
 				),
 			)
 		}
-		if svc.GoPackage().ImportPath == typ.Ref.GoPackage().ImportPath {
+		if file.GoPackage.ImportPath == typ.Ref.GoPackage().ImportPath {
 			return fmt.Sprintf("&%s{%s}", typ.Ref.Name, strings.Join(fields, ","))
 		}
 		return fmt.Sprintf("&%s.%s{%s}", typ.Ref.GoPackage().Name, typ.Ref.Name, strings.Join(fields, ","))
@@ -2300,7 +2302,7 @@ func toUserDefinedVariable(name string) string {
 	return util.ToPrivateGoVariable(fmt.Sprintf("value_%s", name))
 }
 
-func toEnumValuePrefix(svc *resolver.Service, typ *resolver.Type) string {
+func toEnumValuePrefix(file *resolver.File, typ *resolver.Type) string {
 	enum := typ.Enum
 	var name string
 	if enum.Message != nil {
@@ -2308,7 +2310,7 @@ func toEnumValuePrefix(svc *resolver.Service, typ *resolver.Type) string {
 	} else {
 		name = enum.Name
 	}
-	if svc.GoPackage().ImportPath == enum.GoPackage().ImportPath {
+	if file.GoPackage.ImportPath == enum.GoPackage().ImportPath {
 		return name
 	}
 	return fmt.Sprintf("%s.%s", enum.GoPackage().Name, name)

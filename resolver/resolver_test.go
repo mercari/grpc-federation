@@ -15,7 +15,8 @@ import (
 )
 
 func TestSimpleAggregation(t *testing.T) {
-	fb := testutil.NewFileBuilder("simple_aggregation.proto")
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "simple_aggregation.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -336,7 +337,7 @@ func TestSimpleAggregation(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "simple_aggregation.proto")))
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -353,7 +354,7 @@ func TestSimpleAggregation(t *testing.T) {
 
 	t.Run("candidates", func(t *testing.T) {
 		candidates := r.Candidates(&source.Location{
-			FileName: "simple_aggregation.proto",
+			FileName: fileName,
 			Message: &source.Message{
 				Name: "Post",
 				Option: &source.MessageOption{
@@ -378,7 +379,8 @@ func TestSimpleAggregation(t *testing.T) {
 }
 
 func TestCreatePost(t *testing.T) {
-	fb := testutil.NewFileBuilder("create_post.proto")
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "create_post.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -531,7 +533,7 @@ func TestCreatePost(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "create_post.proto")))
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -548,7 +550,8 @@ func TestCreatePost(t *testing.T) {
 }
 
 func TestMinimum(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "minimum.proto")))
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "minimum.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -560,7 +563,7 @@ func TestMinimum(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
-	fb := testutil.NewFileBuilder("minimum.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(fb)
 
 	fb.SetPackage("org.federation").
@@ -628,7 +631,8 @@ func TestMinimum(t *testing.T) {
 }
 
 func TestCustomResolver(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "custom_resolver.proto")))
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "custom_resolver.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -640,7 +644,7 @@ func TestCustomResolver(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
-	fb := testutil.NewFileBuilder("custom_resolver.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -812,7 +816,8 @@ func TestCustomResolver(t *testing.T) {
 }
 
 func TestAsync(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "async.proto")))
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "async.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -824,7 +829,7 @@ func TestAsync(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
-	fb := testutil.NewFileBuilder("async.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(fb)
 
 	fb.SetPackage("org.federation").
@@ -1192,7 +1197,8 @@ func TestAsync(t *testing.T) {
 }
 
 func TestAlias(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "alias.proto")))
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "alias.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1204,7 +1210,7 @@ func TestAlias(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
-	fb := testutil.NewFileBuilder("alias.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getNestedPostProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -1361,7 +1367,8 @@ func TestAlias(t *testing.T) {
 }
 
 func TestAutobind(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "autobind.proto")))
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "autobind.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1373,7 +1380,7 @@ func TestAutobind(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
-	fb := testutil.NewFileBuilder("autobind.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getPostProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -1507,7 +1514,8 @@ func TestAutobind(t *testing.T) {
 }
 
 func TestConstValue(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "const_value.proto")))
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "const_value.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1519,7 +1527,7 @@ func TestConstValue(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
-	fb := testutil.NewFileBuilder("const_value.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getContentProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -2175,7 +2183,8 @@ func TestConstValue(t *testing.T) {
 }
 
 func TestMultiUser(t *testing.T) {
-	fb := testutil.NewFileBuilder("multi_user.proto")
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "multi_user.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -2352,7 +2361,7 @@ func TestMultiUser(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "multi_user.proto")))
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2369,7 +2378,8 @@ func TestMultiUser(t *testing.T) {
 }
 
 func TestOneof(t *testing.T) {
-	fb := testutil.NewFileBuilder("oneof.proto")
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "oneof.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), fb)
 
 	fb.SetPackage("org.federation").
@@ -2591,7 +2601,7 @@ func TestOneof(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "oneof.proto")))
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2608,7 +2618,8 @@ func TestOneof(t *testing.T) {
 }
 
 func TestValidation(t *testing.T) {
-	r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", "validation.proto")))
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "validation.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2620,7 +2631,7 @@ func TestValidation(t *testing.T) {
 		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
-	fb := testutil.NewFileBuilder("validation.proto")
+	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(fb)
 
 	fb.SetPackage("org.federation").

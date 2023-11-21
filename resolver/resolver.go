@@ -117,7 +117,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 	r.validateServiceFromFiles(ctx, files)
 
 	return &Result{
-		Files:    r.hasServiceRuleFiles(files),
+		Files:    r.resultFiles(files),
 		Warnings: ctx.warnings(),
 	}, ctx.error()
 }
@@ -209,12 +209,41 @@ func (r *Resolver) validateServiceFromFiles(ctx *context, files []*File) {
 	}
 }
 
+func (r *Resolver) resultFiles(allFiles []*File) []*File {
+	fileMap := make(map[*File]struct{})
+	ret := make([]*File, 0, len(allFiles))
+	for _, file := range r.hasServiceRuleFiles(allFiles) {
+		ret = append(ret, file)
+		fileMap[file] = struct{}{}
+
+		for _, samePkgFile := range r.samePackageFiles(file) {
+			if _, exists := fileMap[samePkgFile]; exists {
+				continue
+			}
+			ret = append(ret, samePkgFile)
+			fileMap[samePkgFile] = struct{}{}
+		}
+	}
+	return ret
+}
+
 func (r *Resolver) hasServiceRuleFiles(files []*File) []*File {
 	var ret []*File
 	for _, file := range files {
 		if file.HasServiceWithRule() {
 			ret = append(ret, file)
 		}
+	}
+	return ret
+}
+
+func (r *Resolver) samePackageFiles(src *File) []*File {
+	ret := make([]*File, 0, len(src.Package.Files))
+	for _, file := range src.Package.Files {
+		if file == src {
+			continue
+		}
+		ret = append(ret, file)
 	}
 	return ret
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -75,14 +74,13 @@ func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...Val
 		return v.compilerErrorToValidationOutputs(compilerErr)
 	}
 	r := resolver.New(protos)
-	dirName := filepath.Dir(file.Path())
 	result, err := r.Resolve()
 	var outs []*ValidationOutput
 	if result != nil {
-		outs = v.toValidationOutputByWarnings(dirName, result.Warnings)
+		outs = v.toValidationOutputByWarnings(result.Warnings)
 	}
 	for _, e := range resolver.ExtractIndividualErrors(err) {
-		outs = append(outs, v.toValidationOutputByError(dirName, e))
+		outs = append(outs, v.toValidationOutputByError(e))
 	}
 	sort.SliceStable(outs, func(i, j int) bool {
 		return outs[i].Start.Col < outs[j].Start.Col
@@ -110,26 +108,26 @@ func (v *Validator) compilerErrorToValidationOutputs(err *compiler.CompilerError
 	return outs
 }
 
-func (v *Validator) toValidationOutputByWarnings(dirName string, warnings []*resolver.Warning) []*ValidationOutput {
+func (v *Validator) toValidationOutputByWarnings(warnings []*resolver.Warning) []*ValidationOutput {
 	outs := make([]*ValidationOutput, 0, len(warnings))
 	for _, warn := range warnings {
-		out := v.toValidationOutput(dirName, warn.Location, warn.Message)
+		out := v.toValidationOutput(warn.Location, warn.Message)
 		out.IsWarning = true
 		outs = append(outs, out)
 	}
 	return outs
 }
 
-func (v *Validator) toValidationOutputByError(dirName string, err error) *ValidationOutput {
+func (v *Validator) toValidationOutputByError(err error) *ValidationOutput {
 	locErr := resolver.ToLocationError(err)
 	if locErr == nil {
 		return &ValidationOutput{Message: err.Error()}
 	}
-	return v.toValidationOutput(dirName, locErr.Location, locErr.Message)
+	return v.toValidationOutput(locErr.Location, locErr.Message)
 }
 
-func (v *Validator) toValidationOutput(dirName string, loc *source.Location, msg string) *ValidationOutput {
-	path := filepath.Join(dirName, loc.FileName)
+func (v *Validator) toValidationOutput(loc *source.Location, msg string) *ValidationOutput {
+	path := loc.FileName
 	file := v.getFile(path)
 	if file == nil {
 		return &ValidationOutput{
