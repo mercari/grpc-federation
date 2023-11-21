@@ -63,33 +63,35 @@ type Import struct {
 	Alias string
 }
 
-var defaultImportLibraries = []string{
-	"github.com/golang/protobuf/proto",
-	"github.com/mercari/grpc-federation/grpc/federation",
-	"github.com/cenkalti/backoff/v4",
-	"google.golang.org/genproto/googleapis/rpc/errdetails",
-	"google.golang.org/protobuf/reflect/protoregistry",
-	"google.golang.org/protobuf/types/descriptorpb",
-	"google.golang.org/protobuf/types/known/dynamicpb",
-	"google.golang.org/protobuf/types/known/anypb",
-	"google.golang.org/protobuf/types/known/durationpb",
-	"google.golang.org/protobuf/types/known/emptypb",
-	"google.golang.org/protobuf/types/known/timestamppb",
-	"go.opentelemetry.io/otel",
-	"go.opentelemetry.io/otel/trace",
-	"golang.org/x/sync/errgroup",
-	"golang.org/x/sync/singleflight",
-	"github.com/google/cel-go/cel",
-	"github.com/google/cel-go/common/types/ref",
-	"github.com/google/cel-go/common/types",
-	"google.golang.org/grpc/codes",
-	"google.golang.org/grpc/status",
+func (f *File) DefaultImports() []*Import {
+	return []*Import{
+		{Path: "github.com/golang/protobuf/proto"},
+		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation"},
+		{Path: "github.com/cenkalti/backoff/v4"},
+		{Path: "google.golang.org/genproto/googleapis/rpc/errdetails"},
+		{Path: "google.golang.org/protobuf/reflect/protoregistry"},
+		{Path: "google.golang.org/protobuf/types/descriptorpb"},
+		{Path: "google.golang.org/protobuf/types/known/dynamicpb"},
+		{Path: "google.golang.org/protobuf/types/known/anypb"},
+		{Path: "google.golang.org/protobuf/types/known/durationpb"},
+		{Path: "google.golang.org/protobuf/types/known/emptypb"},
+		{Path: "google.golang.org/protobuf/types/known/timestamppb"},
+		{Path: "go.opentelemetry.io/otel"},
+		{Path: "go.opentelemetry.io/otel/trace"},
+		{Path: "golang.org/x/sync/errgroup"},
+		{Path: "golang.org/x/sync/singleflight"},
+		{Path: "github.com/google/cel-go/cel"},
+		{Path: "github.com/google/cel-go/common/types/ref"},
+		{Alias: "celtypes", Path: "github.com/google/cel-go/common/types"},
+		{Alias: "grpccodes", Path: "google.golang.org/grpc/codes"},
+		{Alias: "grpcstatus", Path: "google.golang.org/grpc/status"},
+	}
 }
 
 func (f *File) Imports() []*Import {
 	defaultImportMap := make(map[string]struct{})
-	for _, lib := range defaultImportLibraries {
-		defaultImportMap[lib] = struct{}{}
+	for _, imprts := range f.DefaultImports() {
+		defaultImportMap[imprts.Path] = struct{}{}
 	}
 
 	depMap := make(map[string]*resolver.GoPackage)
