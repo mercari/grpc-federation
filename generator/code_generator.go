@@ -63,15 +63,49 @@ type Import struct {
 	Alias string
 }
 
+var defaultImportLibraries = []string{
+	"github.com/golang/protobuf/proto",
+	"github.com/mercari/grpc-federation/grpc/federation",
+	"github.com/cenkalti/backoff/v4",
+	"google.golang.org/genproto/googleapis/rpc/errdetails",
+	"google.golang.org/protobuf/reflect/protoregistry",
+	"google.golang.org/protobuf/types/descriptorpb",
+	"google.golang.org/protobuf/types/known/dynamicpb",
+	"google.golang.org/protobuf/types/known/anypb",
+	"google.golang.org/protobuf/types/known/durationpb",
+	"google.golang.org/protobuf/types/known/emptypb",
+	"google.golang.org/protobuf/types/known/timestamppb",
+	"go.opentelemetry.io/otel",
+	"go.opentelemetry.io/otel/trace",
+	"golang.org/x/sync/errgroup",
+	"golang.org/x/sync/singleflight",
+	"github.com/google/cel-go/cel",
+	"github.com/google/cel-go/common/types/ref",
+	"github.com/google/cel-go/common/types",
+	"google.golang.org/grpc/codes",
+	"google.golang.org/grpc/status",
+}
+
 func (f *File) Imports() []*Import {
+	defaultImportMap := make(map[string]struct{})
+	for _, lib := range defaultImportLibraries {
+		defaultImportMap[lib] = struct{}{}
+	}
+
 	depMap := make(map[string]*resolver.GoPackage)
 	for _, svc := range f.File.Services {
 		for _, dep := range svc.GoPackageDependencies() {
+			if _, exists := defaultImportMap[dep.ImportPath]; exists {
+				continue
+			}
 			depMap[dep.ImportPath] = dep
 		}
 	}
 	for _, msg := range f.File.Messages {
 		for _, dep := range msg.GoPackageDependencies() {
+			if _, exists := defaultImportMap[dep.ImportPath]; exists {
+				continue
+			}
 			depMap[dep.ImportPath] = dep
 		}
 	}
