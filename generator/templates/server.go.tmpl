@@ -10,26 +10,13 @@ import (
 	"runtime/debug"
 	"log/slog"
 
-	"github.com/golang/protobuf/proto"
-	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
-	"github.com/cenkalti/backoff/v4"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/known/dynamicpb"
-	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/singleflight"
-	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/common/types/ref"
-	celtypes "github.com/google/cel-go/common/types"
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
+	{{- range .DefaultImports }}
+	{{- if .Alias }}
+	{{ .Alias }} "{{ .Path }}"
+	{{- else }}
+	"{{ .Path }}"
+	{{- end }}
+	{{- end }}
 
 	{{ range .Imports }}
 	{{ .Alias }} "{{ .Path }}"
@@ -460,6 +447,8 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	s.logger.DebugContext(ctx, "resolved {{ .ProtoFQDN }}", slog.Any("{{ .ProtoFQDN }}", s.logvalue_{{ .LogValueReturnType }}(ret)))
 	return ret, nil
 }
+{{ end }}
+{{- end }}
 {{ range .CastFields }}
 // {{ .Name }} cast from "{{ .RequestProtoFQDN }}" to "{{ .ResponseProtoFQDN }}".
 func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseType }} {
@@ -476,8 +465,6 @@ func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseTy
 	{{- end }}
 }
 {{ end }}
-{{ end }}
-{{- end }}
 {{ range .LogValues }}
 {{- if .IsRepeated }}
 func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {

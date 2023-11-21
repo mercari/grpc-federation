@@ -627,7 +627,7 @@ func (f *File) NodeInfoByLocation(loc *Location) *ast.NodeInfo {
 	if loc.FileName == "" {
 		return nil
 	}
-	if f.fileNode.Name() != loc.FileName {
+	if f.fileNode.Name() != filepath.Base(loc.FileName) {
 		return nil
 	}
 	for _, decl := range f.fileNode.Decls {

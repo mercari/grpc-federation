@@ -43,10 +43,15 @@ func TestCodeGenerate(t *testing.T) {
 
 			var dependentFiles []string
 			for _, file := range files {
-				if strings.Contains(file.GetName(), "/") {
+				fileName := file.GetName()
+				if filepath.IsAbs(fileName) {
+					dependentFiles = append(dependentFiles, fileName)
 					continue
 				}
-				dependentFiles = append(dependentFiles, file.GetName())
+				if !strings.Contains(fileName, "/") {
+					dependentFiles = append(dependentFiles, fileName)
+					continue
+				}
 			}
 
 			r := resolver.New(files)
@@ -75,7 +80,11 @@ func TestCodeGenerate(t *testing.T) {
 			t.Run("build test", func(t *testing.T) {
 				var srcFiles []string
 				for _, dependentFile := range dependentFiles {
-					srcFiles = append(srcFiles, filepath.Join("..", "testdata", dependentFile))
+					if filepath.IsAbs(dependentFile) {
+						srcFiles = append(srcFiles, dependentFile)
+					} else {
+						srcFiles = append(srcFiles, filepath.Join("..", "testdata", dependentFile))
+					}
 				}
 				content, err := yaml.Marshal(struct {
 					Imports []string                  `yaml:"imports"`

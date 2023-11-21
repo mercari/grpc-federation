@@ -11,7 +11,7 @@ import (
 
 func (r *Resolver) Candidates(loc *source.Location) []string {
 	for _, file := range r.files {
-		if file.GetName() == loc.FileName {
+		if strings.HasSuffix(file.GetName(), loc.FileName) {
 			protoPkgName := file.GetPackage()
 			switch {
 			case loc.Message != nil:

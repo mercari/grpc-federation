@@ -118,7 +118,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 	r.validateServiceFromFiles(ctx, files)
 
 	return &Result{
-		Files:    r.hasServiceRuleFiles(files),
+		Files:    r.resultFiles(files),
 		Warnings: ctx.warnings(),
 	}, ctx.error()
 }
@@ -210,12 +210,41 @@ func (r *Resolver) validateServiceFromFiles(ctx *context, files []*File) {
 	}
 }
 
+func (r *Resolver) resultFiles(allFiles []*File) []*File {
+	fileMap := make(map[*File]struct{})
+	ret := make([]*File, 0, len(allFiles))
+	for _, file := range r.hasServiceRuleFiles(allFiles) {
+		ret = append(ret, file)
+		fileMap[file] = struct{}{}
+
+		for _, samePkgFile := range r.samePackageFiles(file) {
+			if _, exists := fileMap[samePkgFile]; exists {
+				continue
+			}
+			ret = append(ret, samePkgFile)
+			fileMap[samePkgFile] = struct{}{}
+		}
+	}
+	return ret
+}
+
 func (r *Resolver) hasServiceRuleFiles(files []*File) []*File {
 	var ret []*File
 	for _, file := range files {
 		if file.HasServiceWithRule() {
 			ret = append(ret, file)
 		}
+	}
+	return ret
+}
+
+func (r *Resolver) samePackageFiles(src *File) []*File {
+	ret := make([]*File, 0, len(src.Package.Files))
+	for _, file := range src.Package.Files {
+		if file == src {
+			continue
+		}
+		ret = append(ret, file)
 	}
 	return ret
 }
@@ -303,7 +332,7 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string) *Serv
 		)
 		return nil
 	}
-	ruleDef, err := getServiceRule(serviceDef)
+	ruleDef, err := getExtensionRule[*federation.ServiceRule](serviceDef.GetOptions(), federation.E_Service)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -403,7 +432,7 @@ func (r *Resolver) resolveMethod(ctx *context, service *Service, methodDef *desc
 		resType := r.trimPackage(resPkg, methodDef.GetOutputType())
 		res = r.resolveMessage(ctx, resPkg, resType)
 	}
-	ruleDef, err := getMethodRule(methodDef)
+	ruleDef, err := getExtensionRule[*federation.MethodRule](methodDef.GetOptions(), federation.E_Method)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -471,7 +500,7 @@ func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string) *Mess
 	}
 	opt := msgDef.GetOptions()
 	msg.IsMapEntry = opt.GetMapEntry()
-	rule, err := getMessageRule(msgDef)
+	rule, err := getExtensionRule[*federation.MessageRule](msgDef.GetOptions(), federation.E_Message)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -495,7 +524,7 @@ func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string) *Mess
 }
 
 func (r *Resolver) resolveOneof(ctx *context, def *descriptorpb.OneofDescriptorProto) *Oneof {
-	rule, err := getOneofRule(def)
+	rule, err := getExtensionRule[*federation.OneofRule](def.GetOptions(), federation.E_Oneof)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -534,7 +563,7 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 	}
 	for _, valueDef := range def.GetValue() {
 		valueName := valueDef.GetName()
-		rule, err := getEnumValueRule(valueDef)
+		rule, err := getExtensionRule[*federation.EnumValueRule](valueDef.GetOptions(), federation.E_EnumValue)
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -548,7 +577,7 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string) *Enum {
 		r.enumValueToRuleMap[enumValue] = rule
 	}
 	enum.Values = values
-	rule, err := getEnumRule(def)
+	rule, err := getExtensionRule[*federation.EnumRule](def.GetOptions(), federation.E_Enum)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -1701,7 +1730,7 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 		field.Oneof = oneof
 		typ.OneofField = &OneofField{Field: field}
 	}
-	rule, err := getFieldRule(fieldDef)
+	rule, err := getExtensionRule[*federation.FieldRule](fieldDef.GetOptions(), federation.E_Field)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(

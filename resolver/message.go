@@ -375,3 +375,138 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 	uniqueDecls := uniqueTypeConversionDecls(decls)
 	return sortTypeConversionDecls(uniqueDecls)
 }
+
+func (m *Message) CustomResolvers() []*CustomResolver {
+	var ret []*CustomResolver
+	if m.HasCustomResolver() {
+		ret = append(ret, &CustomResolver{Message: m})
+	}
+	for _, field := range m.Fields {
+		if field.HasCustomResolver() {
+			ret = append(ret, &CustomResolver{
+				Message: m,
+				Field:   field,
+			})
+		}
+	}
+	for _, group := range m.Rule.Resolvers {
+		for _, resolver := range group.Resolvers() {
+			ret = append(ret, m.customResolvers(resolver)...)
+		}
+	}
+	return ret
+}
+
+func (m *Message) customResolvers(resolver *MessageResolver) []*CustomResolver {
+	var ret []*CustomResolver
+	if dep := resolver.MessageDependency; dep != nil {
+		ret = append(ret, dep.Message.CustomResolvers()...)
+	}
+	if def := resolver.VariableDefinition; def != nil && def.Expr.Message != nil {
+		ret = append(ret, def.Expr.Message.Message.CustomResolvers()...)
+	}
+	return ret
+}
+
+func (m *Message) GoPackageDependencies() []*GoPackage {
+	pkgMap := map[*GoPackage]struct{}{}
+	gopkg := m.GoPackage()
+	pkgMap[gopkg] = struct{}{}
+	for _, svc := range m.DependServices() {
+		pkgMap[svc.GoPackage()] = struct{}{}
+	}
+	seenMsgMap := make(map[*Message]struct{})
+	for _, field := range m.Fields {
+		if field.Type.Ref == nil {
+			continue
+		}
+		for _, gopkg := range getGoPackageDependencies(gopkg, field.Type.Ref, seenMsgMap) {
+			pkgMap[gopkg] = struct{}{}
+		}
+	}
+	pkgs := make([]*GoPackage, 0, len(pkgMap))
+	for pkg := range pkgMap {
+		pkgs = append(pkgs, pkg)
+	}
+	return pkgs
+}
+
+func getGoPackageDependencies(base *GoPackage, msg *Message, seenMsgMap map[*Message]struct{}) []*GoPackage {
+	var ret []*GoPackage
+	if base != msg.GoPackage() {
+		ret = append(ret, msg.GoPackage())
+	}
+	seenMsgMap[msg] = struct{}{}
+	for _, field := range msg.Fields {
+		if field.Type.Ref == nil {
+			continue
+		}
+		if _, exists := seenMsgMap[field.Type.Ref]; exists {
+			continue
+		}
+		ret = append(ret, getGoPackageDependencies(base, field.Type.Ref, seenMsgMap)...)
+	}
+	for _, m := range msg.NestedMessages {
+		ret = append(ret, getGoPackageDependencies(base, m, seenMsgMap)...)
+	}
+	return ret
+}
+
+func (m *Message) DependServices() []*Service {
+	if m == nil {
+		return nil
+	}
+
+	return m.dependServices(make(map[*MessageResolver]struct{}))
+}
+
+func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) []*Service {
+	var svcs []*Service
+	if m.Rule != nil {
+		for _, group := range m.Rule.Resolvers {
+			for _, resolver := range group.Resolvers() {
+				svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
+			}
+		}
+	}
+	for _, field := range m.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		for _, group := range field.Rule.Oneof.Resolvers {
+			for _, resolver := range group.Resolvers() {
+				svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
+			}
+		}
+	}
+	return svcs
+}
+
+func dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
+	if _, found := msgResolverMap[resolver]; found {
+		return nil
+	}
+	msgResolverMap[resolver] = struct{}{}
+
+	var svcs []*Service
+	if resolver.MethodCall != nil {
+		methodCall := resolver.MethodCall
+		svcs = append(svcs, methodCall.Method.Service)
+	}
+	if resolver.MessageDependency != nil {
+		svcs = append(svcs, resolver.MessageDependency.Message.dependServices(msgResolverMap)...)
+	}
+	if resolver.VariableDefinition != nil {
+		expr := resolver.VariableDefinition.Expr
+		switch {
+		case expr.Call != nil:
+			svcs = append(svcs, expr.Call.Method.Service)
+		case expr.Message != nil:
+			svcs = append(svcs, expr.Message.Message.dependServices(msgResolverMap)...)
+		}
+	}
+	return svcs
+}

@@ -487,15 +487,6 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	return ret, nil
 }
 
-// cast_repeated_User_Item__to__repeated_Federation_Item cast from "repeated user.Item" to "repeated federation.Item".
-func (s *FederationService) cast_repeated_User_Item__to__repeated_Federation_Item(from []*user.Item) []*Item {
-	ret := make([]*Item, 0, len(from))
-	for _, v := range from {
-		ret = append(ret, s.cast_User_Item__to__Federation_Item(v))
-	}
-	return ret
-}
-
 // cast_User_Item_ItemType__to__Federation_Item_ItemType cast from "user.Item.ItemType" to "federation.Item.ItemType".
 func (s *FederationService) cast_User_Item_ItemType__to__Federation_Item_ItemType(from user.Item_ItemType) Item_ItemType {
 	switch from {
@@ -509,6 +500,16 @@ func (s *FederationService) cast_User_Item_ItemType__to__Federation_Item_ItemTyp
 		return Item_ITEM_TYPE_3
 	default:
 		return 0
+	}
+}
+
+// cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_ cast from "user.Item.Location.addr_a" to "federation.Item.Location.addr_a".
+func (s *FederationService) cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(from *user.Item_Location_AddrA) *Item_Location_AddrA_ {
+	if from == nil {
+		return nil
+	}
+	return &Item_Location_AddrA_{
+		AddrA: s.cast_User_Item_Location_AddrA__to__Federation_Item_Location_AddrA(from),
 	}
 }
 
@@ -531,16 +532,6 @@ func (s *FederationService) cast_User_Item_Location_AddrB__to__Federation_Item_L
 
 	return &Item_Location_AddrB{
 		Bar: from.GetBar(),
-	}
-}
-
-// cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_ cast from "user.Item.Location.addr_a" to "federation.Item.Location.addr_a".
-func (s *FederationService) cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(from *user.Item_Location_AddrA) *Item_Location_AddrA_ {
-	if from == nil {
-		return nil
-	}
-	return &Item_Location_AddrA_{
-		AddrA: s.cast_User_Item_Location_AddrA__to__Federation_Item_Location_AddrA(from),
 	}
 }
 
@@ -588,6 +579,16 @@ func (s *FederationService) cast_User_Item__to__Federation_Item(from *user.Item)
 	}
 }
 
+// cast_User_User_AttrA___to__Federation_User_AttrA_ cast from "user.User.attr_a" to "federation.User.attr_a".
+func (s *FederationService) cast_User_User_AttrA___to__Federation_User_AttrA_(from *user.User_AttrA) *User_AttrA_ {
+	if from == nil {
+		return nil
+	}
+	return &User_AttrA_{
+		AttrA: s.cast_User_User_AttrA__to__Federation_User_AttrA(from),
+	}
+}
+
 // cast_User_User_AttrA__to__Federation_User_AttrA cast from "user.User.AttrA" to "federation.User.AttrA".
 func (s *FederationService) cast_User_User_AttrA__to__Federation_User_AttrA(from *user.User_AttrA) *User_AttrA {
 	if from == nil {
@@ -610,16 +611,6 @@ func (s *FederationService) cast_User_User_AttrB__to__Federation_User_AttrB(from
 	}
 }
 
-// cast_User_User_AttrA___to__Federation_User_AttrA_ cast from "user.User.attr_a" to "federation.User.attr_a".
-func (s *FederationService) cast_User_User_AttrA___to__Federation_User_AttrA_(from *user.User_AttrA) *User_AttrA_ {
-	if from == nil {
-		return nil
-	}
-	return &User_AttrA_{
-		AttrA: s.cast_User_User_AttrA__to__Federation_User_AttrA(from),
-	}
-}
-
 // cast_User_User_B__to__Federation_User_B cast from "user.User.b" to "federation.User.b".
 func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.User_AttrB) *User_B {
 	if from == nil {
@@ -628,6 +619,15 @@ func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.U
 	return &User_B{
 		B: s.cast_User_User_AttrB__to__Federation_User_AttrB(from),
 	}
+}
+
+// cast_repeated_User_Item__to__repeated_Federation_Item cast from "repeated user.Item" to "repeated federation.Item".
+func (s *FederationService) cast_repeated_User_Item__to__repeated_Federation_Item(from []*user.Item) []*Item {
+	ret := make([]*Item, 0, len(from))
+	for _, v := range from {
+		ret = append(ret, s.cast_User_Item__to__Federation_Item(v))
+	}
+	return ret
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {

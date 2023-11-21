@@ -475,8 +475,12 @@ func (g *Generator) compileProto(ctx context.Context, protoPath string) (*plugin
 	if err != nil {
 		return nil, err
 	}
+	relPath, err := compiler.RelativePathFromImportPaths(protoPath, g.importPaths)
+	if err != nil {
+		return nil, err
+	}
 	return &pluginpb.CodeGeneratorRequest{
-		FileToGenerate: []string{filepath.Base(protoPath)},
+		FileToGenerate: []string{relPath},
 		ProtoFile:      protos,
 	}, nil
 }
@@ -508,7 +512,8 @@ func (g *Generator) generateByProtogenGo(r *PluginRequest) (*pluginpb.CodeGenera
 			return nil, err
 		}
 		c := string(content)
-		path := filepath.Join(dir, g.fileNameWithoutExt(f.Proto.GetName())+".pb.go")
+		fileName := filepath.Base(f.Proto.GetName())
+		path := filepath.Join(dir, g.fileNameWithoutExt(fileName)+".pb.go")
 		res.File = append(res.File, &pluginpb.CodeGeneratorResponse_File{
 			Name:    &path,
 			Content: &c,
@@ -545,7 +550,8 @@ func (g *Generator) generateByProtogenGoGRPC(r *PluginRequest) (*pluginpb.CodeGe
 			return nil, err
 		}
 		c := string(content)
-		path := filepath.Join(dir, g.fileNameWithoutExt(f.Proto.GetName())+"_grpc.pb.go")
+		fileName := filepath.Base(f.Proto.GetName())
+		path := filepath.Join(dir, g.fileNameWithoutExt(fileName)+"_grpc.pb.go")
 		res.File = append(res.File, &pluginpb.CodeGeneratorResponse_File{
 			Name:    &path,
 			Content: &c,
