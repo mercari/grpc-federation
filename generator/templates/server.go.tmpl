@@ -460,6 +460,8 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	s.logger.DebugContext(ctx, "resolved {{ .ProtoFQDN }}", slog.Any("{{ .ProtoFQDN }}", s.logvalue_{{ .LogValueReturnType }}(ret)))
 	return ret, nil
 }
+{{ end }}
+{{- end }}
 {{ range .CastFields }}
 // {{ .Name }} cast from "{{ .RequestProtoFQDN }}" to "{{ .ResponseProtoFQDN }}".
 func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseType }} {
@@ -476,8 +478,6 @@ func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseTy
 	{{- end }}
 }
 {{ end }}
-{{ end }}
-{{- end }}
 {{ range .LogValues }}
 {{- if .IsRepeated }}
 func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
