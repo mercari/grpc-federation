@@ -403,6 +403,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		return nil, err
 	}
 
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Post = valuePost
+
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
 

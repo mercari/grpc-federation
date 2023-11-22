@@ -1080,6 +1080,18 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		return nil, err
 	}
 
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.A = valueA
+	req.B = valueB
+	req.C = valueC
+	req.D = valueD
+	req.E = valueE
+	req.F = valueF
+	req.G = valueG
+	req.H = valueH
+	req.I = valueI
+	req.J = valueJ
+
 	// create a message value to be returned.
 	ret := &GetResponse{}
 

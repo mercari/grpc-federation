@@ -32,6 +32,7 @@ type Org_Federation_CreatePostArgument[T any] struct {
 type Org_Federation_CreatePostResponseArgument[T any] struct {
 	Content string
 	Cp      *CreatePost
+	P       *post.Post
 	Res     *post.CreatePostResponse
 	Title   string
 	UserId  string
@@ -360,6 +361,11 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		evalValues["p"] = valueP
 		valueMu.Unlock()
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Cp = valueCp
+	req.P = valueP
+	req.Res = valueRes
 
 	// create a message value to be returned.
 	ret := &CreatePostResponse{}

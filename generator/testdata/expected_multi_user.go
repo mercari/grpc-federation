@@ -39,6 +39,7 @@ type Org_Federation_SubArgument[T any] struct {
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
 type Org_Federation_UserArgument[T any] struct {
 	Res    *user.GetUserResponse
+	User   *user.User
 	UserId string
 	XDef2  *Sub
 	Client T
@@ -384,6 +385,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		return nil, err
 	}
 
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Uid = valueUid
+	req.User = valueUser
+	req.User2 = valueUser2
+
 	// create a message value to be returned.
 	ret := &GetResponse{}
 
@@ -559,6 +565,11 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Res = valueRes
+	req.User = valueUser
+	req.XDef2 = value_Def2
 
 	// create a message value to be returned.
 	ret := &User{}

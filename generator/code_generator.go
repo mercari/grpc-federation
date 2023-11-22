@@ -184,6 +184,15 @@ func newTypeDeclares(file *resolver.File, msgs []*resolver.Message) []*Type {
 					})
 				} else if def := msgResolver.VariableDefinition; def != nil && def.Used {
 					switch {
+					case def.Expr.By != nil:
+						fieldName := util.ToPublicGoVariable(def.Name)
+						if typ.HasField(fieldName) {
+							continue
+						}
+						typ.Fields = append(typ.Fields, &Field{
+							Name: fieldName,
+							Type: toTypeText(file, def.Expr.Type),
+						})
 					case def.Expr.Call != nil:
 						fieldName := util.ToPublicGoVariable(def.Name)
 						if typ.HasField(fieldName) {
@@ -1519,6 +1528,16 @@ func (m *Message) CustomResolverArguments() []*Argument {
 				}
 			} else if depMessage := msgResolver.MessageDependency; depMessage != nil && depMessage.Used {
 				name := msgResolver.MessageDependency.Name
+				if _, exists := argNameMap[name]; exists {
+					continue
+				}
+				args = append(args, &Argument{
+					Name:  util.ToPublicGoVariable(name),
+					Value: toUserDefinedVariable(name),
+				})
+				argNameMap[name] = struct{}{}
+			} else if varDef := msgResolver.VariableDefinition; varDef != nil && varDef.Used {
+				name := msgResolver.VariableDefinition.Name
 				if _, exists := argNameMap[name]; exists {
 					continue
 				}

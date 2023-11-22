@@ -229,6 +229,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		valueMu.Unlock()
 	}
 
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Sel = valueSel
+
 	// create a message value to be returned.
 	ret := &GetResponse{}
 
@@ -375,6 +378,9 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		evalValues["m"] = valueM
 		valueMu.Unlock()
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.M = valueM
 
 	// create a message value to be returned.
 	ret := &UserSelection{}

@@ -32,6 +32,7 @@ type Org_Federation_GetPostResponseArgument[T any] struct {
 type Org_Federation_PostArgument[T any] struct {
 	Id     string
 	Res    *post.GetPostResponse
+	XDef1  *post.Post
 	XDef2  *User
 	Client T
 }
@@ -230,6 +231,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		valueMu.Unlock()
 	}
 
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.XDef0 = value_Def0
+
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
 
@@ -374,6 +378,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Res = valueRes
+	req.XDef1 = value_Def1
+	req.XDef2 = value_Def2
 
 	// create a message value to be returned.
 	ret := &Post{}

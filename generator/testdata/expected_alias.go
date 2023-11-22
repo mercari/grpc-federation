@@ -30,6 +30,7 @@ type Org_Federation_GetPostResponseArgument[T any] struct {
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type Org_Federation_PostArgument[T any] struct {
 	Id     string
+	Post   *post.Post
 	Res    *post.GetPostResponse
 	Client T
 }
@@ -218,6 +219,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		valueMu.Unlock()
 	}
 
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Post = valuePost
+
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
 
@@ -315,6 +319,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		evalValues["post"] = valuePost
 		valueMu.Unlock()
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Post = valuePost
+	req.Res = valueRes
 
 	// create a message value to be returned.
 	ret := &Post{}
