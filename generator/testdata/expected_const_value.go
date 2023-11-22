@@ -66,6 +66,7 @@ type Org_Federation_ContentArgument[T any] struct {
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
 type Org_Federation_GetResponseArgument[T any] struct {
+	Content  *content.Content
 	Content2 *Content
 	Id       string
 	Res      *content.GetContentResponse
@@ -877,6 +878,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Content = valueContent
+	req.Content2 = valueContent2
+	req.Res = valueRes
 
 	// create a message value to be returned.
 	ret := &GetResponse{}

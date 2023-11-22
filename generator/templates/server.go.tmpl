@@ -605,7 +605,7 @@ switch from {
 {{- define "callResolver" }}
 valueMu.RLock()
 {{- $arguments := .Resolver.Arguments }}
-{{- if $arguments }}
+{{- if not .Resolver.IsBy }}
 args := &{{ .Resolver.RequestType }}{
 	{{- range $arguments }}
 	{{- if not .CEL }}

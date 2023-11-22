@@ -252,6 +252,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 		valueMu.Unlock()
 	}
 
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Post = valuePost
+
 	// create a message value to be returned.
 	ret := &GetPostResponse1{}
 
@@ -322,6 +325,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 		evalValues["post"] = valuePost
 		valueMu.Unlock()
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Post = valuePost
 
 	// create a message value to be returned.
 	ret := &GetPostResponse2{}
@@ -394,6 +400,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		evalValues["res"] = valueRes
 		valueMu.Unlock()
 	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Res = valueRes
 
 	// create a message value to be returned.
 	ret := &Post{}
