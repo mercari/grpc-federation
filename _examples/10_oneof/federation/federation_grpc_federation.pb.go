@@ -26,6 +26,11 @@ type Org_Federation_GetResponseArgument[T any] struct {
 	Client T
 }
 
+// Org_Federation_MArgument is argument for "org.federation.M" message.
+type Org_Federation_MArgument[T any] struct {
+	Client T
+}
+
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
 type Org_Federation_UserArgument[T any] struct {
 	UserId string

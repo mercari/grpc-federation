@@ -30,6 +30,11 @@ type Federation_GetPostResponseArgument[T any] struct {
 	Client T
 }
 
+// Federation_ItemArgument is argument for "federation.Item" message.
+type Federation_ItemArgument[T any] struct {
+	Client T
+}
+
 // Federation_PostArgument is argument for "federation.Post" message.
 type Federation_PostArgument[T any] struct {
 	Id     string
