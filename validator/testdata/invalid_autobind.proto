@@ -15,9 +15,9 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "a", message: "A", autobind: true },
-      { name: "b", message: "B", autobind: true }
+    def [
+      { name: "a", message { name: "A" }, autobind: true },
+      { name: "b", message { name: "B" }, autobind: true }
     ]
   };
   string id = 1;

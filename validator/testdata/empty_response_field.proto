@@ -23,14 +23,17 @@ message EchoRequest {
 
 message EchoResponse {
   option (grpc.federation.message) = {
-    resolver {
+    def {
+      name: "echo"
+      call {
         method: "echo.EchoService/Echo"
         request: [
           { field: "id", by: "$.id" },
           { field: "body", by: "$.body" }
         ]
-        response: [ { name: "echo", autobind: true  } ]
       }
+      autobind: true
+    }
   };
   string id = 1;
   string body = 2;

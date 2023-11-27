@@ -116,23 +116,6 @@ func (m *Message) HasCELValue() bool {
 	if m.Rule == nil {
 		return false
 	}
-	methodCall := m.Rule.MethodCall
-	if methodCall != nil {
-		if methodCall.Request != nil {
-			for _, arg := range methodCall.Request.Args {
-				if arg.Value != nil && arg.Value.CEL != nil {
-					return true
-				}
-			}
-		}
-	}
-	for _, dep := range m.Rule.MessageDependencies {
-		for _, arg := range dep.Args {
-			if arg.Value != nil && arg.Value.CEL != nil {
-				return true
-			}
-		}
-	}
 	for _, varDef := range m.Rule.VariableDefinitions {
 		if varDef.Expr == nil {
 			continue
@@ -155,10 +138,9 @@ func (m *Message) HasCELValue() bool {
 					return true
 				}
 			}
+		case expr.Validation != nil:
+			return true
 		}
-	}
-	if len(m.Rule.Validations) != 0 {
-		return true
 	}
 	for _, field := range m.Fields {
 		if field.Rule == nil {
@@ -168,7 +150,7 @@ func (m *Message) HasCELValue() bool {
 		if value != nil && value.CEL != nil {
 			return true
 		}
-		if field.Rule.Oneof != nil && field.Rule.Oneof.Expr != nil {
+		if field.Rule.Oneof != nil && field.Rule.Oneof.If != nil {
 			return true
 		}
 		if field.Rule.Oneof != nil && field.Rule.Oneof.By != nil {
@@ -199,17 +181,6 @@ func (m *Message) UseAllNameReference() {
 	if m.Rule == nil {
 		return
 	}
-	if m.Rule.MethodCall != nil && m.Rule.MethodCall.Response != nil {
-		for _, field := range m.Rule.MethodCall.Response.Fields {
-			field.Used = true
-		}
-	}
-	for _, msg := range m.Rule.MessageDependencies {
-		if msg.Name == "" {
-			continue
-		}
-		msg.Used = true
-	}
 	for _, varDef := range m.Rule.VariableDefinitions {
 		if varDef.Name == "" {
 			continue
@@ -233,17 +204,6 @@ func (m *Message) ReferenceNames() []string {
 
 	rule := m.Rule
 	var refNames []string
-	methodCall := rule.MethodCall
-	if methodCall != nil && methodCall.Request != nil {
-		for _, arg := range methodCall.Request.Args {
-			refNames = append(refNames, arg.Value.ReferenceNames()...)
-		}
-	}
-	for _, depMessage := range rule.MessageDependencies {
-		for _, arg := range depMessage.Args {
-			refNames = append(refNames, arg.Value.ReferenceNames()...)
-		}
-	}
 	for _, varDef := range rule.VariableDefinitions {
 		refNames = append(refNames, varDef.ReferenceNames()...)
 	}
@@ -253,7 +213,7 @@ func (m *Message) ReferenceNames() []string {
 		}
 		refNames = append(refNames, field.Rule.Value.ReferenceNames()...)
 		if field.Rule.Oneof != nil {
-			refNames = append(refNames, field.Rule.Oneof.Expr.ReferenceNames()...)
+			refNames = append(refNames, field.Rule.Oneof.If.ReferenceNames()...)
 		}
 	}
 	return refNames
@@ -335,20 +295,6 @@ func (m *Message) DependencyGraphTreeFormat() string {
 func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 	convertedFQDNMap := make(map[string]struct{})
 	var decls []*TypeConversionDecl
-	if m.Rule != nil && m.Rule.MethodCall != nil && m.Rule.MethodCall.Response != nil {
-		request := m.Rule.MethodCall.Request
-		if request != nil {
-			for _, arg := range request.Args {
-				if !request.Type.HasField(arg.Name) {
-					continue
-				}
-				fromType := arg.Value.Type()
-				field := request.Type.Field(arg.Name)
-				toType := field.Type
-				decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
-			}
-		}
-	}
 	if m.Rule != nil && len(m.Rule.VariableDefinitions) != 0 {
 		for _, varDef := range m.Rule.VariableDefinitions {
 			if varDef.Expr == nil {
@@ -399,9 +345,6 @@ func (m *Message) CustomResolvers() []*CustomResolver {
 
 func (m *Message) customResolvers(resolver *MessageResolver) []*CustomResolver {
 	var ret []*CustomResolver
-	if dep := resolver.MessageDependency; dep != nil {
-		ret = append(ret, dep.Message.CustomResolvers()...)
-	}
 	if def := resolver.VariableDefinition; def != nil && def.Expr.Message != nil {
 		ret = append(ret, def.Expr.Message.Message.CustomResolvers()...)
 	}
@@ -492,20 +435,15 @@ func dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*Mes
 	msgResolverMap[resolver] = struct{}{}
 
 	var svcs []*Service
-	if resolver.MethodCall != nil {
-		methodCall := resolver.MethodCall
-		svcs = append(svcs, methodCall.Method.Service)
-	}
-	if resolver.MessageDependency != nil {
-		svcs = append(svcs, resolver.MessageDependency.Message.dependServices(msgResolverMap)...)
-	}
 	if resolver.VariableDefinition != nil {
 		expr := resolver.VariableDefinition.Expr
 		switch {
 		case expr.Call != nil:
 			svcs = append(svcs, expr.Call.Method.Service)
 		case expr.Message != nil:
-			svcs = append(svcs, expr.Message.Message.dependServices(msgResolverMap)...)
+			if expr.Message.Message != nil {
+				svcs = append(svcs, expr.Message.Message.dependServices(msgResolverMap)...)
+			}
 		}
 	}
 	return svcs

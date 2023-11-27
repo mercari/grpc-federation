@@ -4,12 +4,16 @@ package federation;
 
 import "federation.proto";
 import "post.proto";
+import "user.proto";
 
 option go_package = "example/federation;federation";
 
 service FederationService {
   option (grpc.federation.service) = {
-    dependencies: []
+    dependencies: [
+      { name: "post_service", service: "post.PostService" },
+      { name: "user_service", service: "user.UserService" }
+    ]
   };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
 }
@@ -41,14 +45,12 @@ message Post {
           request { field: "id", by: "$.id" }
         }
       },
-      { name: "post", by: "res.post", autobind: true },
+      { name: "post", by: "", autobind: true },
       {
-        validation {
-          name: "invalidReturnType",
-          error {
-            code: FAILED_PRECONDITION
-            rule: "post.id"
-          }
+        name: "user"
+        message {
+          name: ""
+          args { inline: "post" }
         }
       }
     ]
@@ -56,4 +58,20 @@ message Post {
   string id = 1;
   string title = 2;
   string content = 3;
+  User user = 4 [(grpc.federation.field).by = "user"];
+}
+
+message User {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "user.UserService/GetUser"
+        request { field: "id", by: "$.user_id" }
+      }
+    }
+    def { name: "user", by: "res.user", autobind: true }
+  };
+  string id = 1;
+  string name = 2;
 }

@@ -17,9 +17,9 @@ message GetRequest {
 }
 
 message GetResponse {
-  option (grpc.federation.message).messages = {
+  option (grpc.federation.message).def = {
     name: "p"
-    message: "Post"
+    message { name: "Post" }
   };
   Post post = 1 [(grpc.federation.field).custom_resolver = true];
 }

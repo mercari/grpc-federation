@@ -70,11 +70,22 @@ func TestCandidates(t *testing.T) {
 							{Name: "x_arg1", Type: Int64Type},
 						},
 					},
-					MethodCall: &MethodCall{
-						Method: barMethod,
-					},
-					MessageDependencies: []*MessageDependency{
-						{Name: "y", Message: msgY},
+					VariableDefinitions: []*VariableDefinition{
+						{
+							Expr: &VariableExpr{
+								Call: &CallExpr{
+									Method: barMethod,
+								},
+							},
+						},
+						{
+							Name: "y",
+							Expr: &VariableExpr{
+								Message: &MessageExpr{
+									Message: msgY,
+								},
+							},
+						},
 					},
 				},
 			},
@@ -103,30 +114,34 @@ func TestCandidates(t *testing.T) {
 					Option: &source.MessageOption{},
 				},
 			},
-			expected: []string{"resolver", "messages"},
+			expected: []string{"def", "custom_resolver", "alias"},
 		},
 		{
-			name: "resolver",
+			name: "def.call",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Call: &source.CallExprOption{},
+						},
 					},
 				},
 			},
-			expected: []string{"method", "request", "response"},
+			expected: []string{"method", "request", "timeout", "retry"},
 		},
 		{
-			name: "resolver.method",
+			name: "def.call.method",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Method: true,
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Call: &source.CallExprOption{
+								Method: true,
+							},
 						},
 					},
 				},
@@ -134,14 +149,16 @@ func TestCandidates(t *testing.T) {
 			expected: []string{"bar.BarExample/Call"},
 		},
 		{
-			name: "resolver.request",
+			name: "def.call.request",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Request: &source.RequestOption{},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Call: &source.CallExprOption{
+								Request: &source.RequestOption{},
+							},
 						},
 					},
 				},
@@ -149,15 +166,17 @@ func TestCandidates(t *testing.T) {
 			expected: []string{"field", "by"},
 		},
 		{
-			name: "resolver.request.field",
+			name: "def.call.request.field",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Request: &source.RequestOption{
-								Field: true,
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Call: &source.CallExprOption{
+								Request: &source.RequestOption{
+									Field: true,
+								},
 							},
 						},
 					},
@@ -166,15 +185,17 @@ func TestCandidates(t *testing.T) {
 			expected: []string{"bar_req_param"},
 		},
 		{
-			name: "resolver.request.by",
+			name: "def.call.request.by",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Request: &source.RequestOption{
-								By: true,
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Call: &source.CallExprOption{
+								Request: &source.RequestOption{
+									By: true,
+								},
 							},
 						},
 					},
@@ -183,104 +204,48 @@ func TestCandidates(t *testing.T) {
 			expected: []string{"$.x_arg1"},
 		},
 		{
-			name: "resolver.response.name",
+			name: "def.message",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Response: &source.ResponseOption{
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Message: &source.MessageExprOption{},
+						},
+					},
+				},
+			},
+			expected: []string{"name", "args"},
+		},
+		{
+			name: "def.message.name",
+			location: &source.Location{
+				FileName: "foo.proto",
+				Message: &source.Message{
+					Name: "x",
+					Option: &source.MessageOption{
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Message: &source.MessageExprOption{
 								Name: true,
 							},
 						},
 					},
 				},
 			},
-			expected: []string{},
+			expected: []string{"y", "z"},
 		},
 		{
-			name: "resolver.response.field",
+			name: "def.message.args",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Response: &source.ResponseOption{
-								Field: true,
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Message: &source.MessageExprOption{
+								Args: &source.ArgumentOption{},
 							},
-						},
-					},
-				},
-			},
-			expected: []string{"bar_res_param"},
-		},
-		{
-			name: "resolver.response.autobind",
-			location: &source.Location{
-				FileName: "foo.proto",
-				Message: &source.Message{
-					Name: "x",
-					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Response: &source.ResponseOption{
-								AutoBind: true,
-							},
-						},
-					},
-				},
-			},
-			expected: []string{"true", "false"},
-		},
-		{
-			name: "messages",
-			location: &source.Location{
-				FileName: "foo.proto",
-				Message: &source.Message{
-					Name: "x",
-					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{},
-					},
-				},
-			},
-			expected: []string{"name", "message", "args"},
-		},
-		{
-			name: "messages.name",
-			location: &source.Location{
-				FileName: "foo.proto",
-				Message: &source.Message{
-					Name: "x",
-					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{Name: true},
-					},
-				},
-			},
-			expected: []string{},
-		},
-		{
-			name: "messages.message",
-			location: &source.Location{
-				FileName: "foo.proto",
-				Message: &source.Message{
-					Name: "x",
-					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{Message: true},
-					},
-				},
-			},
-			expected: []string{"z"},
-		},
-		{
-			name: "messages.args",
-			location: &source.Location{
-				FileName: "foo.proto",
-				Message: &source.Message{
-					Name: "x",
-					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Args: &source.ArgumentOption{},
 						},
 					},
 				},
@@ -288,14 +253,16 @@ func TestCandidates(t *testing.T) {
 			expected: []string{"name", "by", "inline"},
 		},
 		{
-			name: "messages.args.name",
+			name: "def.message.args.name",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Args: &source.ArgumentOption{Name: true},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Message: &source.MessageExprOption{
+								Args: &source.ArgumentOption{Name: true},
+							},
 						},
 					},
 				},
@@ -303,14 +270,16 @@ func TestCandidates(t *testing.T) {
 			expected: []string{},
 		},
 		{
-			name: "messages.args.by",
+			name: "def.message.args.by",
 			location: &source.Location{
 				FileName: "foo.proto",
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Args: &source.ArgumentOption{By: true},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Message: &source.MessageExprOption{
+								Args: &source.ArgumentOption{By: true},
+							},
 						},
 					},
 				},
@@ -329,7 +298,7 @@ func TestCandidates(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"$.x_arg0"},
+			expected: []string{"y", "$.x_arg0"},
 		},
 	}
 	for _, test := range tests {

@@ -62,18 +62,6 @@ func (r *MessageRule) ProtoFormat(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
 
 	var elems []string
-	methodCall := r.MethodCall.ProtoFormat(nextOpt)
-	if methodCall != "" {
-		elems = append(elems, methodCall)
-	}
-	deps := r.MessageDependencies.ProtoFormat(nextOpt)
-	if deps != "" {
-		elems = append(elems, deps)
-	}
-	validations := r.Validations.ProtoFormat(nextOpt)
-	if validations != "" {
-		elems = append(elems, validations)
-	}
 	varDefs := r.VariableDefinitions.ProtoFormat(nextOpt)
 	if varDefs != "" {
 		elems = append(elems, varDefs)
@@ -103,26 +91,6 @@ func (defs VariableDefinitions) ProtoFormat(opt *ProtoFormatOption) string {
 		formattedDefs = append(formattedDefs, format)
 	}
 	return strings.Join(formattedDefs, "\n")
-}
-
-func (deps MessageDependencies) ProtoFormat(opt *ProtoFormatOption) string {
-	if len(deps) == 0 {
-		return ""
-	}
-	indent := opt.indentFormat()
-	if len(deps) == 1 {
-		return indent + fmt.Sprintf("messages %s", strings.TrimLeft(deps[0].ProtoFormat(opt), " "))
-	}
-
-	formattedDeps := make([]string, 0, len(deps))
-	for _, dep := range deps {
-		format := dep.ProtoFormat(opt.toNextIndentLevel())
-		if format == "" {
-			continue
-		}
-		formattedDeps = append(formattedDeps, format)
-	}
-	return indent + fmt.Sprintf("messages: [\n%s\n%s]", strings.Join(formattedDeps, ",\n"), indent)
 }
 
 func (def *VariableDefinition) ProtoFormat(opt *ProtoFormatOption) string {
@@ -234,33 +202,6 @@ func (e *ValidationExpr) ProtoFormat(opt *ProtoFormatOption) string {
 	return indent + fmt.Sprintf("validation {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
-func (c *MethodCall) ProtoFormat(opt *ProtoFormatOption) string {
-	if c == nil {
-		return ""
-	}
-
-	indent := opt.indentFormat()
-	nextOpt := opt.toNextIndentLevel()
-
-	var elems []string
-	method := c.Method.ProtoFormat(nextOpt)
-	if method != "" {
-		elems = append(elems, method)
-	}
-	request := c.Request.ProtoFormat(nextOpt)
-	if request != "" {
-		elems = append(elems, request)
-	}
-	response := c.Response.ProtoFormat(nextOpt)
-	if response != "" {
-		elems = append(elems, response)
-	}
-	if len(elems) == 0 {
-		return ""
-	}
-	return indent + fmt.Sprintf("resolver: {\n%s\n%s}", strings.Join(elems, "\n"), indent)
-}
-
 func (m *Method) ProtoFormat(opt *ProtoFormatOption) string {
 	if m == nil {
 		return ""
@@ -296,112 +237,11 @@ func (r *Request) ProtoFormat(opt *ProtoFormatOption) string {
 	return indent + fmt.Sprintf("request: [\n%s\n%s]", strings.Join(formattedFields, ",\n"), indent)
 }
 
-func (r *Response) ProtoFormat(opt *ProtoFormatOption) string {
-	if r == nil {
-		return ""
-	}
-	indent := opt.indentFormat()
-	fields := make([]string, 0, len(r.Fields))
-	for _, responseField := range r.Fields {
-		field := strings.TrimLeft(responseField.ProtoFormat(opt), " ")
-		if field == "" {
-			continue
-		}
-		fields = append(fields, field)
-	}
-	if len(fields) == 0 {
-		return ""
-	}
-	if len(fields) == 1 {
-		return indent + fmt.Sprintf("response %s", fields[0])
-	}
-
-	nextOpt := opt.toNextIndentLevel()
-	formattedFields := make([]string, 0, len(fields))
-	for _, field := range fields {
-		formattedFields = append(formattedFields, nextOpt.indentFormat()+field)
-	}
-	return indent + fmt.Sprintf("response: [\n%s\n%s]", strings.Join(formattedFields, ",\n"), indent)
-}
-
 func (f *AutoBindField) ProtoFormat(opt *ProtoFormatOption) string {
-	switch {
-	case f.ResponseField != nil:
-		return f.ResponseField.ProtoFormat(opt)
-	case f.MessageDependency != nil:
-		return f.MessageDependency.ProtoFormat(opt)
+	if f.VariableDefinition != nil {
+		return f.VariableDefinition.ProtoFormat(opt)
 	}
 	return ""
-}
-
-func (f *ResponseField) ProtoFormat(opt *ProtoFormatOption) string {
-	var elems []string
-	if f.Name != "" {
-		elems = append(elems, fmt.Sprintf("name: %q", f.Name))
-	}
-	if f.FieldName != "" {
-		elems = append(elems, fmt.Sprintf("field: %q", f.FieldName))
-	}
-	if f.AutoBind {
-		elems = append(elems, `autobind: true`)
-	}
-	if len(elems) == 0 {
-		return ""
-	}
-	indent := opt.indentFormat()
-	return indent + fmt.Sprintf("{ %s }", strings.Join(elems, ", "))
-}
-
-func (d *MessageDependency) ProtoFormat(opt *ProtoFormatOption) string {
-	if d == nil {
-		return ""
-	}
-	indent := opt.indentFormat()
-	nextOpt := opt.toNextIndentLevel()
-	var elems []string
-	if d.Name != "" {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("name: %q", d.Name))
-	}
-	if d.Message != nil {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("message: %q", d.Message.Name))
-	}
-	args := d.protoFormatMessageArgs(nextOpt)
-	if args != "" {
-		elems = append(elems, args)
-	}
-	if d.AutoBind {
-		elems = append(elems, nextOpt.indentFormat()+`autobind: true`)
-	}
-	if len(elems) == 0 {
-		return ""
-	}
-	return indent + fmt.Sprintf("{\n%s\n%s}", strings.Join(elems, "\n"), indent)
-}
-
-func (d *MessageDependency) protoFormatMessageArgs(opt *ProtoFormatOption) string {
-	var args []string
-	for _, arg := range d.Args {
-		value := arg.ProtoFormat(opt, false)
-		if value == "" {
-			continue
-		}
-		args = append(args, value)
-	}
-
-	indent := opt.indentFormat()
-	if len(args) == 0 {
-		return ""
-	}
-	if len(args) == 1 {
-		return indent + fmt.Sprintf(`args %s`, args[0])
-	}
-
-	nextOpt := opt.toNextIndentLevel()
-	formattedArgs := make([]string, 0, len(args))
-	for _, arg := range args {
-		formattedArgs = append(formattedArgs, nextOpt.indentFormat()+arg)
-	}
-	return indent + fmt.Sprintf("args: [\n%s\n%s]", strings.Join(formattedArgs, ",\n"), indent)
 }
 
 func (vs MessageValidations) ProtoFormat(opt *ProtoFormatOption) string {

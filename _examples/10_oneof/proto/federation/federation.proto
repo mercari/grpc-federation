@@ -16,13 +16,13 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages: [
-      {
-        name: "sel"
-        message: "UserSelection"
+    def {
+      name: "sel"
+      message {
+        name: "UserSelection"
         args { name: "value", string: "foo" }
       }
-    ]
+    }
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
 }
@@ -31,11 +31,13 @@ message UserSelection {
   oneof user {
     User user_a = 1 [
       (grpc.federation.field).oneof = {
-        expr: "false"
-        messages {
+        if: "false"
+        def {
           name: "ua"
-          message: "User"
-          args: { name: "user_id", string: "a" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "a" }
+          }
         }
         by: "ua"
       }
@@ -43,11 +45,13 @@ message UserSelection {
 
     User user_b = 2 [
       (grpc.federation.field).oneof = {
-        expr: "true"
-        messages {
+        if: "true"
+        def {
           name: "ub"
-          message: "User"
-          args: { name: "user_id", string: "b" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "b" }
+          }
         }
         by: "ub"
       }
@@ -56,10 +60,12 @@ message UserSelection {
     User user_c = 3 [
       (grpc.federation.field).oneof = {
         default: true
-        messages {
+        def {
           name: "uc"
-          message: "User"
-          args: { name: "user_id", by: "$.value" }
+          message {
+            name: "User"
+            args { name: "user_id", by: "$.value" }
+          }
         }
         by: "uc"
       }
@@ -73,9 +79,11 @@ message M {
 
 message User {
   option (grpc.federation.message) = {
-    resolver {
-      method: "user.UserService/GetUser"
-      request { field: "id", by: "$.user_id" }
+    def {
+      call {
+        method: "user.UserService/GetUser"
+        request { field: "id", by: "$.user_id" }
+      }
     }
   };
 

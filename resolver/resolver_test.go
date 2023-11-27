@@ -416,8 +416,10 @@ func TestSimpleAggregation(t *testing.T) {
 			Message: &source.Message{
 				Name: "Post",
 				Option: &source.MessageOption{
-					Resolver: &source.ResolverOption{
-						Method: true,
+					VariableDefinitions: &source.VariableDefinitionOption{
+						Call: &source.CallExprOption{
+							Method: true,
+						},
 					},
 				},
 			},
@@ -2748,15 +2750,21 @@ func TestOneof(t *testing.T) {
 					testutil.NewFieldRuleBuilder(nil).
 						SetOneof(
 							testutil.NewFieldOneofRuleBuilder().
-								SetExpr("m.value == $.value", resolver.BoolType).
-								AddMessageDependency(
-									"ua",
-									ref.Message(t, "org.federation", "User"),
-									testutil.NewMessageDependencyArgumentBuilder().
-										Add("user_id", resolver.NewStringValue("a")).
+								SetIf("m.value == $.value", resolver.BoolType).
+								AddVariableDefinition(
+									testutil.NewVariableDefinitionBuilder().
+										SetName("ua").
+										SetUsed(true).
+										SetMessage(
+											testutil.NewMessageExprBuilder().
+												SetMessage(ref.Message(t, "org.federation", "User")).
+												SetArgs(testutil.NewMessageDependencyArgumentBuilder().
+													Add("user_id", resolver.NewStringValue("a")).
+													Build(t),
+												).
+												Build(t),
+										).
 										Build(t),
-									false,
-									true,
 								).
 								SetBy("ua", ref.Type(t, "org.federation", "User")).
 								SetDependencyGraph(
@@ -2775,15 +2783,21 @@ func TestOneof(t *testing.T) {
 					testutil.NewFieldRuleBuilder(nil).
 						SetOneof(
 							testutil.NewFieldOneofRuleBuilder().
-								SetExpr("m.value != $.value", resolver.BoolType).
-								AddMessageDependency(
-									"ub",
-									ref.Message(t, "org.federation", "User"),
-									testutil.NewMessageDependencyArgumentBuilder().
-										Add("user_id", resolver.NewStringValue("b")).
+								SetIf("m.value != $.value", resolver.BoolType).
+								AddVariableDefinition(
+									testutil.NewVariableDefinitionBuilder().
+										SetName("ub").
+										SetUsed(true).
+										SetMessage(
+											testutil.NewMessageExprBuilder().
+												SetMessage(ref.Message(t, "org.federation", "User")).
+												SetArgs(testutil.NewMessageDependencyArgumentBuilder().
+													Add("user_id", resolver.NewStringValue("b")).
+													Build(t),
+												).
+												Build(t),
+										).
 										Build(t),
-									false,
-									true,
 								).
 								SetBy("ub", ref.Type(t, "org.federation", "User")).
 								SetDependencyGraph(
@@ -2803,14 +2817,20 @@ func TestOneof(t *testing.T) {
 						SetOneof(
 							testutil.NewFieldOneofRuleBuilder().
 								SetDefault(true).
-								AddMessageDependency(
-									"uc",
-									ref.Message(t, "org.federation", "User"),
-									testutil.NewMessageDependencyArgumentBuilder().
-										Add("user_id", resolver.NewStringValue("c")).
+								AddVariableDefinition(
+									testutil.NewVariableDefinitionBuilder().
+										SetName("uc").
+										SetUsed(true).
+										SetMessage(
+											testutil.NewMessageExprBuilder().
+												SetMessage(ref.Message(t, "org.federation", "User")).
+												SetArgs(testutil.NewMessageDependencyArgumentBuilder().
+													Add("user_id", resolver.NewStringValue("c")).
+													Build(t),
+												).
+												Build(t),
+										).
 										Build(t),
-									false,
-									true,
 								).
 								SetBy("uc", ref.Type(t, "org.federation", "User")).
 								SetDependencyGraph(

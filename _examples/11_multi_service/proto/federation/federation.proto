@@ -21,19 +21,21 @@ message GetPostRequest {
 }
 
 message GetPostResponse {
-  option (grpc.federation.message).messages = {
+  option (grpc.federation.message).def = {
     name: "p"
-    message: "Post"
+    message { name: "Post" }
   };
   Post post = 1 [(grpc.federation.field).by = "p"];
 }
 
 message Post {
-  option (grpc.federation.message).messages = {
+  option (grpc.federation.message).def = {
     name: "u"
-    message: "User"
-    args { name: "id", string: "foo" }
-    args { name: "name", string: "bar" }
+    message {
+      name: "User"
+      args { name: "id", string: "foo" }
+      args { name: "name", string: "bar" }
+    }
   };
   string id = 1 [(grpc.federation.field).string = "post-id"];
   string title = 2 [(grpc.federation.field).string = "title"];
@@ -50,11 +52,13 @@ message GetStatusRequest {
 }
 
 message GetStatusResponse {
-  option (grpc.federation.message).messages = {
+  option (grpc.federation.message).def = {
     name: "u"
-    message: "User"
-    args { name: "id", string: "xxxx" }
-    args { name: "name", string: "yyyy" }
+    message {
+      name: "User"
+      args { name: "id", string: "xxxx" }
+      args { name: "name", string: "yyyy" }
+    }
   };
 
   User user = 1 [(grpc.federation.field).by = "u"];

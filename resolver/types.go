@@ -99,19 +99,17 @@ type EnumValueRule struct {
 }
 
 type MessageRule struct {
-	MethodCall          *MethodCall
-	MessageDependencies MessageDependencies
 	MessageArgument     *Message
 	DependencyGraph     *MessageDependencyGraph
 	Resolvers           []MessageResolverGroup
 	CustomResolver      bool
 	Alias               *Message
-	// Validations holds all the validations attached to the given message
-	Validations         MessageValidations
 	VariableDefinitions VariableDefinitions
 }
 
 type VariableDefinition struct {
+	Idx      int
+	Owner    *VariableDefinitionOwner
 	Name     string
 	If       *CELValue
 	AutoBind bool
@@ -156,7 +154,6 @@ type MapIteratorExpr struct {
 type MessageExpr struct {
 	Message *Message
 	Args    []*Argument
-	Owner   *MessageDependencyOwner
 }
 
 type ValidationExpr struct {
@@ -204,9 +201,6 @@ func (g *ConcurrentMessageResolverGroup) Type() MessageResolverGroupType {
 
 type MessageResolver struct {
 	Name               string
-	MethodCall         *MethodCall
-	MessageDependency  *MessageDependency
-	Validation         *ValidationRule
 	VariableDefinition *VariableDefinition
 }
 
@@ -279,8 +273,6 @@ type OneofField struct {
 }
 
 type AutoBindField struct {
-	ResponseField      *ResponseField
-	MessageDependency  *MessageDependency
 	VariableDefinition *VariableDefinition
 	Field              *Field
 }
@@ -302,9 +294,9 @@ type FieldRule struct {
 
 // FieldOneofRule represents grpc.federation.field.oneof.
 type FieldOneofRule struct {
-	Expr                *CELValue
+	If                  *CELValue
 	Default             bool
-	MessageDependencies MessageDependencies
+	VariableDefinitions VariableDefinitions
 	By                  *CELValue
 	DependencyGraph     *MessageDependencyGraph
 	Resolvers           []MessageResolverGroup
@@ -365,11 +357,10 @@ func (t *Type) FQDN() string {
 }
 
 type MethodCall struct {
-	Method   *Method
-	Request  *Request
-	Response *Response
-	Timeout  *time.Duration
-	Retry    *RetryPolicy
+	Method  *Method
+	Request *Request
+	Timeout *time.Duration
+	Retry   *RetryPolicy
 }
 
 type RetryPolicy struct {
@@ -406,43 +397,19 @@ type Request struct {
 	Type *Message
 }
 
-type Response struct {
-	Fields []*ResponseField
-	Type   *Message
-}
-
-type ResponseField struct {
-	Name      string
-	FieldName string
-	Type      *Type
-	AutoBind  bool
-	Used      bool
-}
-
-type MessageDependency struct {
-	Name     string
-	Message  *Message
-	Args     []*Argument
-	AutoBind bool
-	Used     bool
-	Owner    *MessageDependencyOwner
-}
-
-type MessageDependencyOwnerType int
+type VariableDefinitionOwnerType int
 
 const (
-	MessageDependencyOwnerUnknown    MessageDependencyOwnerType = 0
-	MessageDependencyOwnerMessage    MessageDependencyOwnerType = 1
-	MessageDependencyOwnerOneofField MessageDependencyOwnerType = 2
+	VariableDefinitionOwnerUnknown    VariableDefinitionOwnerType = 0
+	VariableDefinitionOwnerMessage    VariableDefinitionOwnerType = 1
+	VariableDefinitionOwnerOneofField VariableDefinitionOwnerType = 2
 )
 
-type MessageDependencyOwner struct {
-	Type    MessageDependencyOwnerType
+type VariableDefinitionOwner struct {
+	Type    VariableDefinitionOwnerType
 	Message *Message
 	Field   *Field
 }
-
-type MessageDependencies []*MessageDependency
 
 type Argument struct {
 	Name  string

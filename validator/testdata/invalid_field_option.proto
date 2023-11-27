@@ -23,22 +23,27 @@ message GetPostRequest {
 
 message GetPostResponse {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "post", message: "Post", args: [{ name: "id", by: "$.id" }]}
-    ]
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
+    }
   };
   Post post = 1 [(grpc.federation.field) = { by: "post.invalid" }];
 }
 
 message Post {
   option (grpc.federation.message) = {
-    resolver {
-      method: "post.PostService/GetPost"
-      request: [
-        { field: "id", by: "$.id" }
-      ]
-      response: [ { name: "post", field: "post", autobind: true  } ]
+    def {
+      name: "res"
+      call {
+        method: "post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+      }
     }
+    def { name: "post", by: "res.post", autobind: true  }
   };
   string id = 1;
   string title = 2;

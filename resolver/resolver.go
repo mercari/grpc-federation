@@ -666,10 +666,10 @@ func (r *Resolver) validateFieldsOneofRule(ctx *context, msg *Message) {
 				usedDefault = true
 			}
 		}
-		if !oneof.Default && oneof.Expr == nil {
+		if !oneof.Default && oneof.If == nil {
 			ctx.addError(
 				ErrWithLocation(
-					`"expr" or "default" must be specified in "grpc.federation.field.oneof"`,
+					`"if" or "default" must be specified in "grpc.federation.field.oneof"`,
 					source.MessageFieldOneofLocation(
 						msg.File.Name,
 						msg.Name,
@@ -702,36 +702,6 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 	}
 	rule := msg.Rule
 	autobindFieldMap := make(map[string][]*AutoBindField)
-	if rule.MethodCall != nil && rule.MethodCall.Response != nil {
-		for _, responseField := range rule.MethodCall.Response.Fields {
-			if !responseField.AutoBind {
-				continue
-			}
-			if responseField.Type == nil {
-				continue
-			}
-			if responseField.Type.Ref == nil {
-				continue
-			}
-			for _, field := range responseField.Type.Ref.Fields {
-				autobindFieldMap[field.Name] = append(autobindFieldMap[field.Name], &AutoBindField{
-					ResponseField: responseField,
-					Field:         field,
-				})
-			}
-		}
-	}
-	for _, dep := range rule.MessageDependencies {
-		if !dep.AutoBind {
-			continue
-		}
-		for _, field := range dep.Message.Fields {
-			autobindFieldMap[field.Name] = append(autobindFieldMap[field.Name], &AutoBindField{
-				MessageDependency: dep,
-				Field:             field,
-			})
-		}
-	}
 	for _, varDef := range rule.VariableDefinitions {
 		if !varDef.AutoBind {
 			continue
@@ -761,11 +731,7 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 		if len(autoBindFields) > 1 {
 			var locates []string
 			for _, autoBindField := range autoBindFields {
-				if autoBindField.ResponseField != nil {
-					locates = append(locates, fmt.Sprintf(`%q name at response`, autoBindField.ResponseField.Name))
-				} else if autoBindField.MessageDependency != nil {
-					locates = append(locates, fmt.Sprintf(`%q name at messages`, autoBindField.MessageDependency.Name))
-				} else if autoBindField.VariableDefinition != nil {
+				if autoBindField.VariableDefinition != nil {
 					locates = append(locates, fmt.Sprintf(`%q name at def`, autoBindField.VariableDefinition.Name))
 				}
 			}
@@ -784,12 +750,7 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 		if autoBindField.Field.Type.Type != field.Type.Type {
 			continue
 		}
-		switch {
-		case autoBindField.ResponseField != nil:
-			autoBindField.ResponseField.Used = true
-		case autoBindField.MessageDependency != nil:
-			autoBindField.MessageDependency.Used = true
-		case autoBindField.VariableDefinition != nil:
+		if autoBindField.VariableDefinition != nil {
 			autoBindField.VariableDefinition.Used = true
 		}
 		field.Rule = &FieldRule{
@@ -1010,22 +971,15 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 	if ruleDef == nil {
 		return
 	}
-	methodCall := r.resolveMethodCall(ctx, ruleDef.Resolver) //nolint: staticcheck
-	depMsgs := r.resolveMessages(ctx, msg, ruleDef.Messages) //nolint: staticcheck
-	for _, depMsg := range depMsgs {
-		depMsg.Owner = &MessageDependencyOwner{
-			Type:    MessageDependencyOwnerMessage,
-			Message: msg,
-		}
-	}
+	ctx = ctx.withDefOwner(&VariableDefinitionOwner{
+		Type:    VariableDefinitionOwnerMessage,
+		Message: msg,
+	})
 	msg.Rule = &MessageRule{
-		MethodCall:          methodCall,
-		MessageDependencies: depMsgs,
+		VariableDefinitions: r.resolveVariableDefinitions(ctx, ruleDef.GetDef()),
 		CustomResolver:      ruleDef.GetCustomResolver(),
 		Alias:               r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
 		DependencyGraph:     &MessageDependencyGraph{},
-		Validations:         r.resolveMessageRuleValidations(ctx, ruleDef.Validations), //nolint: staticcheck
-		VariableDefinitions: r.resolveVariableDefinitions(ctx, ruleDef.GetDef()),
 	}
 }
 
@@ -1048,6 +1002,8 @@ func (r *Resolver) resolveVariableDefinition(ctx *context, varDef *federation.Va
 		ifValue = &CELValue{Expr: varDef.GetIf()}
 	}
 	return &VariableDefinition{
+		Idx:      ctx.defIndex(),
+		Owner:    ctx.defOwner(),
 		Name:     r.resolveVariableName(ctx, varDef.GetName()),
 		If:       ifValue,
 		AutoBind: varDef.GetAutobind(),
@@ -1132,7 +1088,7 @@ func (r *Resolver) resolveMapIteratorExpr(ctx *context, def *federation.MapExpr)
 	return nil
 }
 
-func (r *Resolver) resolveMessageExpr(ctx *context, def *federation.MessageDependency) *MessageExpr {
+func (r *Resolver) resolveMessageExpr(ctx *context, def *federation.MessageExpr) *MessageExpr {
 	if def == nil {
 		return nil
 	}
@@ -1145,9 +1101,17 @@ func (r *Resolver) resolveMessageExpr(ctx *context, def *federation.MessageDepen
 			),
 		)
 	}
+	if ctx.msg == msg {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(`recursive definition: %q is own message name`, msg.Name),
+				source.MessageExprNameLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
+			),
+		)
+	}
 	args := make([]*Argument, 0, len(def.GetArgs()))
 	for idx, argDef := range def.GetArgs() {
-		args = append(args, r.resolveMessageDependencyArgument(ctx.withArgIndex(idx), argDef))
+		args = append(args, r.resolveMessageExprArgument(ctx.withArgIndex(idx), argDef))
 	}
 	return &MessageExpr{
 		Message: msg,
@@ -1210,7 +1174,7 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr) *Call
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MethodTimeoutLocation(ctx.fileName(), ctx.messageName()),
+					source.MethodTimeoutLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
 				),
 			)
 		} else {
@@ -1226,13 +1190,13 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr) *Call
 	}
 }
 
-func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validation) *ValidationExpr {
+func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.ValidationExpr) *ValidationExpr {
 	e := def.GetError()
 	if e.GetRule() != "" && len(e.GetDetails()) != 0 {
 		ctx.addError(
 			ErrWithLocation(
 				"cannot set both rule and details at the same time",
-				source.MessageValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
+				source.ValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
 			),
 		)
 		return nil
@@ -1259,7 +1223,7 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 	ctx.addError(
 		ErrWithLocation(
 			"either rule or details should be specified",
-			source.MessageValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
+			source.ValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
 		),
 	)
 	return nil
@@ -1284,58 +1248,6 @@ func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message 
 		return r.resolveMessage(ctx, pkg, name)
 	}
 	return r.resolveMessage(ctx, ctx.file().Package, aliasName)
-}
-
-func (r *Resolver) resolveMessageRuleValidations(ctx *context, validations []*federation.Validation) []*ValidationRule {
-	var resolved []*ValidationRule
-	for i, validation := range validations {
-		v, err := r.resolveMessageRuleValidation(i, validation)
-		if err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.MessageValidationLocation(ctx.fileName(), ctx.messageName(), i, true),
-				),
-			)
-			continue
-		}
-		resolved = append(resolved, v)
-	}
-	return resolved
-}
-
-func (r *Resolver) resolveMessageRuleValidation(idx int, validation *federation.Validation) (*ValidationRule, error) {
-	e := validation.GetError()
-
-	if e.GetRule() != "" && len(e.GetDetails()) != 0 {
-		return nil, errors.New("cannot set both rule and details at the same time")
-	}
-
-	name := validation.GetName()
-	if name == "" {
-		// the default validation name
-		name = fmt.Sprintf("_validation%d", idx)
-	}
-	vr := &ValidationRule{
-		Name: name,
-		Error: &ValidationError{
-			Code: e.GetCode(),
-		},
-	}
-
-	if rule := e.GetRule(); rule != "" {
-		vr.Error.Rule = &CELValue{
-			Expr: rule,
-		}
-		return vr, nil
-	}
-
-	if details := e.GetDetails(); len(details) != 0 {
-		vr.Error.Details = r.resolveMessageRuleValidationDetails(details)
-		return vr, nil
-	}
-
-	return nil, errors.New("either rule or details should be specified")
 }
 
 func (r *Resolver) resolveMessageRuleValidationDetails(details []*federation.ValidationErrorDetail) []*ValidationErrorDetail {
@@ -1487,27 +1399,24 @@ func (r *Resolver) resolveFieldOneofRule(ctx *context, msg *Message, field *Fiel
 		)
 		return nil
 	}
-	depMsgs := r.resolveMessages(ctx, msg, def.GetMessages())
-	for _, depMsg := range depMsgs {
-		depMsg.Owner = &MessageDependencyOwner{
-			Type:  MessageDependencyOwnerOneofField,
-			Field: field,
-		}
-	}
 	var (
-		expr *CELValue
-		by   *CELValue
+		ifValue *CELValue
+		by      *CELValue
 	)
-	if e := def.GetExpr(); e != "" { //nolint: staticcheck
-		expr = &CELValue{Expr: e}
+	if v := def.GetIf(); v != "" {
+		ifValue = &CELValue{Expr: v}
 	}
 	if b := def.GetBy(); b != "" {
 		by = &CELValue{Expr: b}
 	}
+	ctx = ctx.withDefOwner(&VariableDefinitionOwner{
+		Type:  VariableDefinitionOwnerOneofField,
+		Field: field,
+	})
 	return &FieldOneofRule{
-		Expr:                expr,
+		If:                  ifValue,
 		Default:             def.GetDefault(),
-		MessageDependencies: depMsgs,
+		VariableDefinitions: r.resolveVariableDefinitions(ctx, def.GetDef()),
 		By:                  by,
 	}
 }
@@ -1792,77 +1701,6 @@ func (r *Resolver) resolveType(ctx *context, typeName string, typ types.Type, la
 	}, nil
 }
 
-func (r *Resolver) resolveMethodCall(ctx *context, resolverDef *federation.Resolver) *MethodCall {
-	if resolverDef == nil {
-		return nil
-	}
-	pkgName, serviceName, methodName, err := r.splitMethodFullName(ctx.file().Package, resolverDef.GetMethod())
-	if err != nil {
-		ctx.addError(
-			ErrWithLocation(
-				err.Error(),
-				source.MethodLocation(ctx.fileName(), ctx.messageName()),
-			),
-		)
-		return nil
-	}
-	pkg, exists := r.protoPackageNameToPackage[pkgName]
-	if !exists {
-		ctx.addError(
-			ErrWithLocation(
-				fmt.Sprintf(`%q package does not exist`, pkgName),
-				source.MethodLocation(ctx.fileName(), ctx.messageName()),
-			),
-		)
-		return nil
-	}
-	service := r.resolveService(ctx, pkg, serviceName)
-	if service == nil {
-		ctx.addError(
-			ErrWithLocation(
-				fmt.Sprintf(`cannot find %q method because the service to which the method belongs does not exist`, methodName),
-				source.MethodLocation(ctx.fileName(), ctx.messageName()),
-			),
-		)
-		return nil
-	}
-
-	method := service.Method(methodName)
-	if method == nil {
-		ctx.addError(
-			ErrWithLocation(
-				fmt.Sprintf(`%q method does not exist in %s service`, methodName, service.Name),
-				source.MethodLocation(ctx.fileName(), ctx.messageName()),
-			),
-		)
-		return nil
-	}
-
-	var timeout *time.Duration
-	timeoutDef := resolverDef.GetTimeout()
-	if timeoutDef != "" {
-		duration, err := time.ParseDuration(timeoutDef)
-		if err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.MethodTimeoutLocation(ctx.fileName(), ctx.messageName()),
-				),
-			)
-		} else {
-			timeout = &duration
-		}
-	}
-
-	return &MethodCall{
-		Method:   method,
-		Request:  r.resolveRequest(ctx, method, resolverDef.GetRequest()),
-		Response: r.resolveResponse(ctx, method, resolverDef.GetResponse()),
-		Timeout:  timeout,
-		Retry:    r.resolveRetry(ctx, resolverDef.GetRetry(), timeout),
-	}
-}
-
 func (r *Resolver) resolveRetry(ctx *context, def *federation.RetryPolicy, timeout *time.Duration) *RetryPolicy {
 	if def == nil {
 		return nil
@@ -1896,7 +1734,7 @@ func (r *Resolver) resolveRetryConstant(ctx *context, def *federation.RetryPolic
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MethodRetryConstantIntervalLocation(ctx.fileName(), ctx.messageName()),
+					source.MethodRetryConstantIntervalLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
 				),
 			)
 		} else {
@@ -1927,7 +1765,7 @@ func (r *Resolver) resolveRetryExponential(ctx *context, def *federation.RetryPo
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MethodRetryExponentialInitialIntervalLocation(ctx.fileName(), ctx.messageName()),
+					source.MethodRetryExponentialInitialIntervalLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
 				),
 			)
 		} else {
@@ -1952,7 +1790,7 @@ func (r *Resolver) resolveRetryExponential(ctx *context, def *federation.RetryPo
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MethodRetryExponentialMaxIntervalLocation(ctx.fileName(), ctx.messageName()),
+					source.MethodRetryExponentialMaxIntervalLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
 				),
 			)
 		} else {
@@ -1989,7 +1827,7 @@ func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*fe
 		if !reqType.HasField(fieldName) {
 			ctx.addError(ErrWithLocation(
 				fmt.Sprintf(`%q field does not exist in "%s.%s" message for method request`, fieldName, reqType.PackageName(), reqType.Name),
-				source.RequestFieldLocation(ctx.fileName(), ctx.messageName(), idx),
+				source.RequestFieldLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), idx),
 			))
 		} else {
 			argType = reqType.Field(fieldName).Type
@@ -1998,7 +1836,7 @@ func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*fe
 		if err != nil {
 			ctx.addError(ErrWithLocation(
 				err.Error(),
-				source.RequestByLocation(ctx.fileName(), ctx.messageName(), idx),
+				source.RequestByLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), idx),
 			))
 		}
 		args = append(args, &Argument{
@@ -2010,119 +1848,7 @@ func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*fe
 	return &Request{Args: args, Type: reqType}
 }
 
-func (r *Resolver) resolveResponse(ctx *context, method *Method, responseDef []*federation.MethodResponse) *Response {
-	resType := method.Response
-	fields := make([]*ResponseField, 0, len(responseDef))
-	for idx, res := range responseDef {
-		name := res.GetName()
-		if err := r.validateName(name); err != nil {
-			ctx.addError(ErrWithLocation(
-				err.Error(),
-				source.ResponseFieldLocation(ctx.fileName(), ctx.messageName(), idx),
-			))
-			continue
-		}
-		if name == "" {
-			name = "_" + r.protoFQDNToNormalizedName(method.FQDN())
-		}
-		fieldName := res.GetField()
-		if fieldName == "" {
-			fields = append(fields, &ResponseField{
-				Name:     name,
-				Type:     &Type{Type: types.Message, Ref: resType},
-				AutoBind: res.GetAutobind(),
-			})
-			continue
-		}
-		var fieldType *Type
-		if !resType.HasField(fieldName) {
-			ctx.addError(ErrWithLocation(
-				fmt.Sprintf(`%q field does not exist in "%s.%s" message for method response`, fieldName, resType.PackageName(), resType.Name),
-				source.ResponseFieldLocation(ctx.fileName(), ctx.messageName(), idx),
-			))
-		} else {
-			fieldType = resType.Field(fieldName).Type
-		}
-		fields = append(fields, &ResponseField{
-			Name:      name,
-			FieldName: fieldName,
-			Type:      fieldType,
-			AutoBind:  res.GetAutobind(),
-		})
-	}
-	return &Response{Fields: fields, Type: resType}
-}
-
-func (r *Resolver) protoFQDNToNormalizedName(fqdn string) string {
-	names := strings.Split(fqdn, ".")
-	formattedNames := make([]string, 0, len(names))
-	for _, name := range names {
-		name = strings.Replace(name, "-", "_", -1)
-		name = strings.Replace(name, "/", "_", -1)
-		formattedNames = append(formattedNames, name)
-	}
-	return strings.Join(formattedNames, "_")
-}
-
-func (r *Resolver) resolveMessages(ctx *context, baseMsg *Message, msgs []*federation.Message) []*MessageDependency {
-	deps := make([]*MessageDependency, 0, len(msgs))
-	for idx, msgDef := range msgs {
-		ctx := ctx.withDepIndex(idx)
-		msgName := msgDef.GetMessage()
-		var msg *Message
-		if strings.Contains(msgName, ".") {
-			pkg, err := r.lookupPackage(msgName)
-			if err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						source.MessageDependencyMessageLocation(ctx.fileName(), ctx.messageName(), idx),
-					),
-				)
-				continue
-			}
-			name := r.trimPackage(pkg, msgName)
-			msg = r.resolveMessage(ctx, pkg, name)
-		} else {
-			file := ctx.file()
-			msg = r.resolveMessage(ctx, file.Package, msgName)
-		}
-		if msg == baseMsg {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(`recursive definition: %q is own message name`, msg.Name),
-					source.MessageDependencyMessageLocation(ctx.fileName(), ctx.messageName(), idx),
-				),
-			)
-			continue
-		}
-		args := make([]*Argument, 0, len(msgDef.GetArgs()))
-		for idx, argDef := range msgDef.GetArgs() {
-			args = append(args, r.resolveMessageDependencyArgument(ctx.withArgIndex(idx), argDef))
-		}
-
-		name := msgDef.GetName()
-		if err := r.validateName(name); err != nil {
-			ctx.addError(ErrWithLocation(
-				err.Error(),
-				source.MessageDependencyMessageLocation(ctx.fileName(), ctx.messageName(), idx),
-			))
-			continue
-		}
-		if name == "" {
-			name = "_" + r.protoFQDNToNormalizedName(msg.FQDN())
-		}
-		deps = append(deps, &MessageDependency{
-			Name:     name,
-			Message:  msg,
-			Args:     args,
-			AutoBind: msgDef.GetAutobind(),
-		})
-	}
-	return deps
-}
-
-func (r *Resolver) resolveMessageDependencyArgument(ctx *context, argDef *federation.Argument) *Argument {
+func (r *Resolver) resolveMessageExprArgument(ctx *context, argDef *federation.Argument) *Argument {
 	value, err := r.resolveValue(ctx, argumentToCommonValueDef(argDef))
 	if err != nil {
 		switch {
@@ -2130,10 +1856,10 @@ func (r *Resolver) resolveMessageDependencyArgument(ctx *context, argDef *federa
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MessageDependencyArgumentByLocation(
+					source.MessageExprArgumentByLocation(
 						ctx.fileName(),
 						ctx.messageName(),
-						ctx.depIndex(),
+						ctx.defIndex(),
 						ctx.argIndex(),
 					),
 				),
@@ -2142,10 +1868,10 @@ func (r *Resolver) resolveMessageDependencyArgument(ctx *context, argDef *federa
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MessageDependencyArgumentInlineLocation(
+					source.MessageExprArgumentInlineLocation(
 						ctx.fileName(),
 						ctx.messageName(),
-						ctx.depIndex(),
+						ctx.defIndex(),
 						ctx.argIndex(),
 					),
 				),
@@ -2156,10 +1882,10 @@ func (r *Resolver) resolveMessageDependencyArgument(ctx *context, argDef *federa
 	if err := r.validateName(name); err != nil {
 		ctx.addError(ErrWithLocation(
 			err.Error(),
-			source.MessageDependencyArgumentNameLocation(
+			source.MessageExprArgumentNameLocation(
 				ctx.fileName(),
 				ctx.messageName(),
-				ctx.depIndex(),
+				ctx.defIndex(),
 				ctx.argIndex(),
 			),
 		))
@@ -2354,30 +2080,19 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		)
 		return nil
 	}
-	r.resolveMessageCELValues(ctx, env, msg)
+	r.resolveMessageCELValues(ctx.withFile(msg.File).withMessage(msg), env, msg)
 
 	msgs := []*Message{msg}
-	msgToDepsMap := make(map[*Message][]*MessageDependency)
-	depToIdx := make(map[*MessageDependency]int)
-	for idx, dep := range msg.Rule.MessageDependencies {
-		msgToDepsMap[dep.Message] = append(msgToDepsMap[dep.Message], dep)
-		depToIdx[dep] = idx
-	}
-	for idx, varDef := range msg.Rule.VariableDefinitions {
+	msgToDefsMap := make(map[*Message][]*VariableDefinition)
+	for _, varDef := range msg.Rule.VariableDefinitions {
 		if varDef.Expr == nil {
 			continue
 		}
-		expr := varDef.Expr
-		switch {
-		case expr.Message != nil:
-			dep := &MessageDependency{
-				Name:    varDef.Name,
-				Message: expr.Message.Message,
-				Args:    expr.Message.Args,
-			}
-			msgToDepsMap[expr.Message.Message] = append(msgToDepsMap[expr.Message.Message], dep)
-			depToIdx[dep] = idx
+		if varDef.Expr.Message == nil {
+			continue
 		}
+		msgExpr := varDef.Expr.Message
+		msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
 	}
 	for _, field := range msg.Fields {
 		if field.Rule == nil {
@@ -2386,14 +2101,23 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		for idx, dep := range field.Rule.Oneof.MessageDependencies {
-			msgToDepsMap[dep.Message] = append(msgToDepsMap[dep.Message], dep)
-			depToIdx[dep] = idx
+		for _, varDef := range field.Rule.Oneof.VariableDefinitions {
+			if varDef.Expr == nil {
+				continue
+			}
+			if varDef.Expr.Message == nil {
+				continue
+			}
+			msgExpr := varDef.Expr.Message
+			msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
 		}
 	}
 	for _, child := range node.Children {
 		depMsg := child.Message
 		var depMsgArg *Message
+		if depMsg.Rule == nil {
+			continue
+		}
 		if depMsg.Rule.MessageArgument != nil {
 			depMsgArg = depMsg.Rule.MessageArgument
 		} else {
@@ -2402,8 +2126,8 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		}
 		if _, exists := r.cachedMessageMap[depMsgArg.FQDN()]; !exists {
 			r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
-			deps := msgToDepsMap[depMsg]
-			depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, msg, deps, depToIdx)...)
+			defs := msgToDefsMap[depMsg]
+			depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, msg, defs)...)
 		}
 		m := r.resolveMessageArgumentRecursive(ctx, child)
 		msgs = append(msgs, m...)
@@ -2411,10 +2135,16 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 	return msgs
 }
 
-func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, deps []*MessageDependency, depToIdx map[*MessageDependency]int) []*Field {
+func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, defs []*VariableDefinition) []*Field {
 	argNameMap := make(map[string]struct{})
-	for _, dep := range deps {
-		for _, arg := range dep.Args {
+	for _, varDef := range defs {
+		if varDef.Expr == nil {
+			continue
+		}
+		if varDef.Expr.Message == nil {
+			continue
+		}
+		for _, arg := range varDef.Expr.Message.Args {
 			if arg.Name == "" {
 				continue
 			}
@@ -2424,10 +2154,15 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, deps
 
 	evaluatedArgNameMap := make(map[string]struct{})
 	var fields []*Field
-	for _, dep := range deps {
-		depIdx := depToIdx[dep]
-		r.validateMessageDependencyArgumentName(ctx, argNameMap, msg, dep, depIdx)
-		for argIdx, arg := range dep.Args {
+	for _, varDef := range defs {
+		if varDef.Expr == nil {
+			continue
+		}
+		if varDef.Expr.Message == nil {
+			continue
+		}
+		r.validateMessageDependencyArgumentName(ctx, argNameMap, msg, varDef)
+		for argIdx, arg := range varDef.Expr.Message.Args {
 			if _, exists := evaluatedArgNameMap[arg.Name]; exists {
 				continue
 			}
@@ -2443,10 +2178,10 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, deps
 					ctx.addError(
 						ErrWithLocation(
 							"inline value is not message type",
-							source.MessageDependencyArgumentInlineLocation(
+							source.MessageExprArgumentInlineLocation(
 								msg.File.Name,
 								msg.Name,
-								depToIdx[dep],
+								varDef.Idx,
 								argIdx,
 							),
 						),
@@ -2466,9 +2201,15 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, deps
 	return fields
 }
 
-func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMap map[string]struct{}, msg *Message, dep *MessageDependency, depIdx int) {
+func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMap map[string]struct{}, msg *Message, def *VariableDefinition) {
+	if def.Expr == nil {
+		return
+	}
+	if def.Expr.Message == nil {
+		return
+	}
 	curDepArgNameMap := make(map[string]struct{})
-	for _, arg := range dep.Args {
+	for _, arg := range def.Expr.Message.Args {
 		if arg.Name == "" {
 			continue
 		}
@@ -2479,20 +2220,20 @@ func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMa
 			continue
 		}
 		var errLoc *source.Location
-		switch dep.Owner.Type {
-		case MessageDependencyOwnerMessage:
-			errLoc = source.MessageDependencyArgumentLocation(
+		switch def.Owner.Type {
+		case VariableDefinitionOwnerMessage:
+			errLoc = source.MessageExprArgumentLocation(
 				msg.File.Name,
 				msg.Name,
-				depIdx,
+				def.Idx,
 				0,
 			)
-		case MessageDependencyOwnerOneofField:
-			errLoc = source.MessageFieldOneofMessageDependencyArgumentLocation(
+		case VariableDefinitionOwnerOneofField:
+			errLoc = source.MessageFieldOneofDefMessageArgumentLocation(
 				msg.File.Name,
 				msg.Name,
-				dep.Owner.Field.Name,
-				depIdx,
+				def.Owner.Field.Name,
+				def.Idx,
 				0,
 			)
 		}
@@ -2509,82 +2250,8 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 	if msg.Rule == nil {
 		return
 	}
-	methodCall := msg.Rule.MethodCall
-	if methodCall != nil && methodCall.Request != nil {
-		for idx, arg := range methodCall.Request.Args {
-			if arg.Value == nil {
-				continue
-			}
-			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						source.RequestByLocation(msg.File.Name, msg.Name, idx),
-					),
-				)
-			}
-		}
-	}
-	for depIdx, depMessage := range msg.Rule.MessageDependencies {
-		for argIdx, arg := range depMessage.Args {
-			if arg.Value == nil {
-				continue
-			}
-			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				if arg.Value.Inline {
-					ctx.addError(
-						ErrWithLocation(
-							err.Error(),
-							source.MessageDependencyArgumentInlineLocation(
-								msg.File.Name,
-								msg.Name,
-								depIdx,
-								argIdx,
-							),
-						),
-					)
-				} else {
-					ctx.addError(
-						ErrWithLocation(
-							err.Error(),
-							source.MessageDependencyArgumentByLocation(
-								msg.File.Name,
-								msg.Name,
-								depIdx,
-								argIdx,
-							),
-						),
-					)
-				}
-			}
-		}
-	}
-	for valIdx, validation := range msg.Rule.Validations {
-		if validation.Error.Rule != nil {
-			e := validation.Error
-			if err := r.resolveCELValue(ctx, env, e.Rule); err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						source.MessageValidationLocation(msg.File.Name, msg.Name, valIdx, true),
-					),
-				)
-				continue
-			}
-			if e.Rule.Out.Type != types.Bool {
-				ctx.addError(
-					ErrWithLocation(
-						"validation rule must always return a boolean value",
-						source.MessageValidationLocation(msg.File.Name, msg.Name, valIdx, true),
-					),
-				)
-			}
-		}
-		for detIdx, detail := range validation.Error.Details {
-			r.resolveMessageValidationErrorDetailCELValues(ctx, env, msg, valIdx, detIdx, detail)
-		}
-	}
 	for idx, varDef := range msg.Rule.VariableDefinitions {
+		ctx := ctx.withDefIndex(idx)
 		if varDef.Expr == nil {
 			continue
 		}
@@ -2626,13 +2293,14 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 			}
 		}
 		if field.Rule.Oneof != nil {
+			fieldEnv, _ := env.Extend()
 			oneof := field.Rule.Oneof
-			if oneof.Expr != nil {
-				if err := r.resolveCELValue(ctx, env, oneof.Expr); err != nil {
+			if oneof.If != nil {
+				if err := r.resolveCELValue(ctx, fieldEnv, oneof.If); err != nil {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
-							source.MessageFieldOneofExprLocation(
+							source.MessageFieldOneofIfLocation(
 								msg.File.Name,
 								msg.Name,
 								field.Name,
@@ -2640,12 +2308,12 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 						),
 					)
 				}
-				if oneof.Expr.Out != nil {
-					if oneof.Expr.Out.Type != types.Bool {
+				if oneof.If.Out != nil {
+					if oneof.If.Out.Type != types.Bool {
 						ctx.addError(
 							ErrWithLocation(
-								fmt.Sprintf(`return value of "expr" must be bool type but got %s type`, oneof.Expr.Out.Type),
-								source.MessageFieldOneofExprLocation(
+								fmt.Sprintf(`return value of "if" must be bool type but got %s type`, oneof.If.Out.Type),
+								source.MessageFieldOneofIfLocation(
 									msg.File.Name,
 									msg.Name,
 									field.Name,
@@ -2655,62 +2323,31 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 					}
 				}
 			}
-			var envOpts []cel.EnvOption
-			for depIdx, dep := range oneof.MessageDependencies {
-				for argIdx, arg := range dep.Args {
-					if arg.Value == nil {
-						continue
-					}
-					if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-						if arg.Value.Inline {
-							ctx.addError(
-								ErrWithLocation(
-									err.Error(),
-									source.MessageFieldOneofMessageDependencyArgumentInlineLocation(
-										msg.File.Name,
-										msg.Name,
-										field.Name,
-										depIdx,
-										argIdx,
-									),
-								),
-							)
-						} else {
-							ctx.addError(
-								ErrWithLocation(
-									err.Error(),
-									source.MessageFieldOneofMessageDependencyArgumentByLocation(
-										msg.File.Name,
-										msg.Name,
-										field.Name,
-										depIdx,
-										argIdx,
-									),
-								),
-							)
-						}
-					}
-				}
-				if dep.Name == "" {
+			for idx, varDef := range oneof.VariableDefinitions {
+				if varDef.Expr == nil {
 					continue
 				}
-				envOpts = append(envOpts, cel.Variable(dep.Name, ToCELType(NewMessageType(dep.Message, false))))
+				r.resolveVariableExprCELValues(ctx, fieldEnv, varDef.Expr)
+				if varDef.Name != "" && varDef.Expr.Type != nil {
+					newEnv, err := fieldEnv.Extend(cel.Variable(varDef.Name, ToCELType(varDef.Expr.Type)))
+					if err != nil {
+						ctx.addError(
+							ErrWithLocation(
+								fmt.Sprintf(`failed to extend cel.Env from variables of messages: %s`, err.Error()),
+								source.MessageFieldOneofDefMessageLocation(
+									msg.File.Name,
+									msg.Name,
+									field.Name,
+									idx,
+								),
+							),
+						)
+						continue
+					}
+					fieldEnv = newEnv
+				}
 			}
-			newEnv, err := env.Extend(envOpts...)
-			if err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(`failed to extend cel.Env from variables of messages: %s`, err.Error()),
-						source.MessageFieldOneofLocation(
-							msg.File.Name,
-							msg.Name,
-							field.Name,
-						),
-					),
-				)
-				continue
-			}
-			if err := r.resolveCELValue(ctx, newEnv, oneof.By); err != nil {
+			if err := r.resolveCELValue(ctx, fieldEnv, oneof.By); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -2830,7 +2467,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.MessageValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
+						source.ValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
 					),
 				)
 				return
@@ -2839,7 +2476,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 				ctx.addError(
 					ErrWithLocation(
 						"validation rule must always return a boolean value",
-						source.MessageValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
+						source.ValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
 					),
 				)
 			}
@@ -2908,7 +2545,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
-				source.MessageValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
+				source.ValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
 			),
 		)
 	}
@@ -2916,7 +2553,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 		ctx.addError(
 			ErrWithLocation(
 				"rule must always return a boolean value",
-				source.MessageValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
+				source.ValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
 			),
 		)
 	}
@@ -2926,7 +2563,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "type"),
+						source.ValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "type"),
 					),
 				)
 			}
@@ -2934,7 +2571,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						"type must always return a string value",
-						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "type"),
+						source.ValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "type"),
 					),
 				)
 			}
@@ -2942,7 +2579,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "subject"),
+						source.ValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "subject"),
 					),
 				)
 			}
@@ -2950,7 +2587,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						"subject must always return a string value",
-						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "subject"),
+						source.ValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "subject"),
 					),
 				)
 			}
@@ -2958,7 +2595,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
+						source.ValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
 					),
 				)
 			}
@@ -2966,7 +2603,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						"description must always return a string value",
-						source.MessageValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
+						source.ValidationDetailPreconditionFailureLocation(msg.File.Name, msg.Name, vIdx, dIdx, fIdx, fvIdx, "description"),
 					),
 				)
 			}
@@ -2979,7 +2616,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "field"),
+						source.ValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "field"),
 					),
 				)
 			}
@@ -2987,7 +2624,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						"field must always return a string value",
-						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "field"),
+						source.ValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "field"),
 					),
 				)
 			}
@@ -2995,7 +2632,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "description"),
+						source.ValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "description"),
 					),
 				)
 			}
@@ -3003,7 +2640,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				ctx.addError(
 					ErrWithLocation(
 						"description must always return a string value",
-						source.MessageValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "description"),
+						source.ValidationDetailBadRequestLocation(msg.File.Name, msg.Name, vIdx, dIdx, bIdx, fvIdx, "description"),
 					),
 				)
 			}
@@ -3015,7 +2652,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					source.MessageValidationDetailLocalizedMessageLocation(msg.File.Name, msg.Name, vIdx, dIdx, lIdx, "message"),
+					source.ValidationDetailLocalizedMessageLocation(msg.File.Name, msg.Name, vIdx, dIdx, lIdx, "message"),
 				),
 			)
 		}
@@ -3023,7 +2660,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 			ctx.addError(
 				ErrWithLocation(
 					"message must always return a string value",
-					source.MessageValidationDetailLocalizedMessageLocation(msg.File.Name, msg.Name, vIdx, dIdx, lIdx, "message"),
+					source.ValidationDetailLocalizedMessageLocation(msg.File.Name, msg.Name, vIdx, dIdx, lIdx, "message"),
 				),
 			)
 		}
@@ -3034,22 +2671,9 @@ func (r *Resolver) resolveUsedNameReference(msg *Message) {
 	if msg.Rule == nil {
 		return
 	}
-	methodCall := msg.Rule.MethodCall
 	nameMap := make(map[string]struct{})
 	for _, name := range msg.ReferenceNames() {
 		nameMap[name] = struct{}{}
-	}
-	if methodCall != nil && methodCall.Response != nil {
-		for _, field := range methodCall.Response.Fields {
-			if _, exists := nameMap[field.Name]; exists {
-				field.Used = true
-			}
-		}
-	}
-	for _, depMessage := range msg.Rule.MessageDependencies {
-		if _, exists := nameMap[depMessage.Name]; exists {
-			depMessage.Used = true
-		}
 	}
 	for _, varDef := range msg.Rule.VariableDefinitions {
 		if _, exists := nameMap[varDef.Name]; exists {
@@ -3068,9 +2692,9 @@ func (r *Resolver) resolveUsedNameReference(msg *Message) {
 		for _, name := range oneof.By.ReferenceNames() {
 			oneofNameMap[name] = struct{}{}
 		}
-		for _, depMessage := range oneof.MessageDependencies {
-			if _, exists := oneofNameMap[depMessage.Name]; exists {
-				depMessage.Used = true
+		for _, varDef := range oneof.VariableDefinitions {
+			if _, exists := oneofNameMap[varDef.Name]; exists {
+				varDef.Used = true
 			}
 		}
 	}
@@ -3111,34 +2735,6 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 
 	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
 		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
-	}
-
-	if msg.Rule != nil && msg.Rule.MethodCall != nil && msg.Rule.MethodCall.Response != nil {
-		resType := msg.Rule.MethodCall.Response.Type
-		for _, responseField := range msg.Rule.MethodCall.Response.Fields {
-			if responseField.Name == "" {
-				continue
-			}
-			typ := NewMessageType(resType, false)
-			if responseField.FieldName != "" {
-				field := resType.Field(responseField.FieldName)
-				if field == nil {
-					// The case of an invalid field in the response field has already been verified in the `resolveResponse()`,
-					// so there is no need to add the error to context here.
-					continue
-				}
-				typ = field.Type
-			}
-			envOpts = append(envOpts, cel.Variable(responseField.Name, ToCELType(typ)))
-		}
-	}
-	if msg.Rule != nil {
-		for _, dep := range msg.Rule.MessageDependencies {
-			if dep.Name == "" {
-				continue
-			}
-			envOpts = append(envOpts, cel.Variable(dep.Name, ToCELType(NewMessageType(dep.Message, false))))
-		}
 	}
 	env, err := cel.NewCustomEnv(envOpts...)
 	if err != nil {
