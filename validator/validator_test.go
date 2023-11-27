@@ -299,6 +299,11 @@ testdata/invalid_message_name.proto:44:32: undefined message specified "grpc.fed
 testdata/invalid_message_name.proto:50:50: unknown type is required
 50:    User user = 4 [(grpc.federation.field) = { by: "user" }];
                                                       ^
+testdata/invalid_message_name.proto:58:28: ERROR: <input>:1:8: undefined field 'user_id'
+ | __ARG__.user_id
+ | .......^
+58:          { field: "id", by: "$.user_id" }
+                                ^
 `},
 		{file: "invalid_message_argument.proto", expected: `
 testdata/invalid_message_argument.proto:44:53: ERROR: <input>:1:11: type 'string' does not support field selection

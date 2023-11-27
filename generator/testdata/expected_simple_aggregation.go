@@ -33,6 +33,11 @@ type Org_Federation_GetPostResponseArgument[T any] struct {
 	Client T
 }
 
+// Org_Federation_ItemArgument is argument for "org.federation.Item" message.
+type Org_Federation_ItemArgument[T any] struct {
+	Client T
+}
+
 // Org_Federation_MArgument is argument for "org.federation.M" message.
 type Org_Federation_MArgument[T any] struct {
 	Client T

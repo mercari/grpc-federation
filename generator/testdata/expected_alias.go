@@ -35,6 +35,16 @@ type Org_Federation_PostArgument[T any] struct {
 	Client T
 }
 
+// Org_Federation_PostContentArgument is argument for "org.federation.PostContent" message.
+type Org_Federation_PostContentArgument[T any] struct {
+	Client T
+}
+
+// Org_Federation_PostDataArgument is argument for "org.federation.PostData" message.
+type Org_Federation_PostDataArgument[T any] struct {
+	Client T
+}
+
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
 	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.

@@ -2277,13 +2277,6 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 		// The root message is always the response message of the method.
 		resMsg := root.Message
 
-		// The message argument of the response message is the request message.
-		// Therefore, the request message is retrieved from the response message.
-		reqMsg := r.lookupRequestMessageFromResponseMessage(resMsg)
-		if reqMsg == nil {
-			continue
-		}
-
 		var msgArg *Message
 		if resMsg.Rule.MessageArgument != nil {
 			msgArg = resMsg.Rule.MessageArgument
@@ -2291,6 +2284,18 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 			msgArg = newMessageArgument(resMsg)
 			resMsg.Rule.MessageArgument = msgArg
 		}
+
+		// The message argument of the response message is the request message.
+		// Therefore, the request message is retrieved from the response message.
+		reqMsg := r.lookupRequestMessageFromResponseMessage(resMsg)
+		if reqMsg == nil {
+			// A non-response message may also become a root message.
+			// In such a case, the message argument field does not exist.
+			// However, since it is necessary to resolve the CEL reference, needs to call recursive message argument resolver.
+			_ = r.resolveMessageArgumentRecursive(ctx, root)
+			continue
+		}
+
 		msgArg.Fields = append(msgArg.Fields, reqMsg.Fields...)
 		r.cachedMessageMap[msgArg.FQDN()] = msgArg
 
