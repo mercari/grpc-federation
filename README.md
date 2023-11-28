@@ -214,7 +214,8 @@ grpc-federation-generator -w
 
 # Contribution
 
-*NOTE*: Currently, we do not accept pull requests from anyone other than the development team. Please report feature requests or bug fix requests via Issues.
+> [!IMPORTANT]
+> Currently, we do not accept pull requests from anyone other than the development team. Please report feature requests or bug fix requests via Issues.
 
 Please read the CLA carefully before submitting your contribution to Mercari. Under any circumstances, by submitting your contribution, you are deemed to accept and agree to be bound by the terms and conditions of the CLA.
 
