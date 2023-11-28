@@ -154,35 +154,7 @@ func newTypeDeclares(file *resolver.File, msgs []*resolver.Message) []*Type {
 		genMsg := &Message{Message: msg}
 		for _, group := range genMsg.MessageResolvers() {
 			for _, msgResolver := range group.Resolvers() {
-				if msgResolver.MethodCall != nil {
-					if msgResolver.MethodCall.Response != nil {
-						for _, responseField := range msgResolver.MethodCall.Response.Fields {
-							if !responseField.Used {
-								continue
-							}
-							fieldName := util.ToPublicGoVariable(responseField.Name)
-							if typ.HasField(fieldName) {
-								continue
-							}
-							typ.Fields = append(typ.Fields, &Field{
-								Name: fieldName,
-								Type: toTypeText(file, responseField.Type),
-							})
-						}
-					}
-				} else if depMessage := msgResolver.MessageDependency; depMessage != nil && depMessage.Used {
-					fieldName := util.ToPublicGoVariable(depMessage.Name)
-					if typ.HasField(fieldName) {
-						continue
-					}
-					typ.Fields = append(typ.Fields, &Field{
-						Name: fieldName,
-						Type: toTypeText(file, &resolver.Type{
-							Type: types.Message,
-							Ref:  depMessage.Message,
-						}),
-					})
-				} else if def := msgResolver.VariableDefinition; def != nil && def.Used {
+				if def := msgResolver.VariableDefinition; def != nil && def.Used {
 					switch {
 					case def.Expr.By != nil:
 						fieldName := util.ToPublicGoVariable(def.Name)
@@ -958,16 +930,6 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 		return nil
 	}
 	var ret []*DependentMethod
-	if msg.Rule.MethodCall != nil && msg.Rule.MethodCall.Method != nil {
-		method := msg.Rule.MethodCall.Method
-		ret = append(ret, &DependentMethod{
-			Name: fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name),
-			FQDN: "/" + method.FQDN(),
-		})
-	}
-	for _, dep := range msg.Rule.MessageDependencies {
-		ret = append(ret, s.dependentMethods(dep.Message)...)
-	}
 	for _, varDef := range msg.Rule.VariableDefinitions {
 		if varDef.Expr == nil {
 			continue
@@ -993,8 +955,23 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		for _, dep := range field.Rule.Oneof.MessageDependencies {
-			ret = append(ret, s.dependentMethods(dep.Message)...)
+		for _, varDef := range field.Rule.Oneof.VariableDefinitions {
+			if varDef.Expr == nil {
+				continue
+			}
+			expr := varDef.Expr
+			switch {
+			case expr.Call != nil:
+				if expr.Call.Method != nil {
+					method := expr.Call.Method
+					ret = append(ret, &DependentMethod{
+						Name: fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name),
+						FQDN: "/" + method.FQDN(),
+					})
+				}
+			case expr.Message != nil:
+				ret = append(ret, s.dependentMethods(expr.Message.Message)...)
+			}
 		}
 	}
 	return ret
@@ -1139,28 +1116,7 @@ func (m *Message) DeclVariables() []*DeclVariable {
 	}
 	for _, group := range m.Message.MessageResolvers() {
 		for _, r := range group.Resolvers() {
-			if r.MethodCall != nil {
-				if r.MethodCall.Response == nil {
-					continue
-				}
-				for _, field := range r.MethodCall.Response.Fields {
-					if !field.Used {
-						continue
-					}
-					valueMap[field.Name] = &DeclVariable{
-						Name: toUserDefinedVariable(field.Name),
-						Type: toTypeText(m.Service.File, field.Type),
-					}
-				}
-			} else if r.MessageDependency != nil {
-				if !r.MessageDependency.Used {
-					continue
-				}
-				valueMap[r.MessageDependency.Name] = &DeclVariable{
-					Name: toUserDefinedVariable(r.MessageDependency.Name),
-					Type: toTypeText(m.Service.File, &resolver.Type{Type: types.Message, Ref: r.MessageDependency.Message}),
-				}
-			} else if r.VariableDefinition != nil {
+			if r.VariableDefinition != nil {
 				if !r.VariableDefinition.Used {
 					continue
 				}
@@ -1509,34 +1465,7 @@ func (m *Message) CustomResolverArguments() []*Argument {
 	argNameMap := make(map[string]struct{})
 	for _, group := range m.MessageResolvers() {
 		for _, msgResolver := range group.Resolvers() {
-			if msgResolver.MethodCall != nil {
-				if msgResolver.MethodCall.Response != nil {
-					for _, field := range msgResolver.MethodCall.Response.Fields {
-						if !field.Used {
-							continue
-						}
-						name := field.Name
-						if _, exists := argNameMap[name]; exists {
-							continue
-						}
-						args = append(args, &Argument{
-							Name:  util.ToPublicGoVariable(name),
-							Value: toUserDefinedVariable(name),
-						})
-						argNameMap[name] = struct{}{}
-					}
-				}
-			} else if depMessage := msgResolver.MessageDependency; depMessage != nil && depMessage.Used {
-				name := msgResolver.MessageDependency.Name
-				if _, exists := argNameMap[name]; exists {
-					continue
-				}
-				args = append(args, &Argument{
-					Name:  util.ToPublicGoVariable(name),
-					Value: toUserDefinedVariable(name),
-				})
-				argNameMap[name] = struct{}{}
-			} else if varDef := msgResolver.VariableDefinition; varDef != nil && varDef.Used {
+			if varDef := msgResolver.VariableDefinition; varDef != nil && varDef.Used {
 				name := msgResolver.VariableDefinition.Name
 				if _, exists := argNameMap[name]; exists {
 					continue
@@ -1587,12 +1516,7 @@ func (m *Message) ReturnFields() []*ReturnField {
 
 func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindField *resolver.AutoBindField) *ReturnField {
 	var name string
-	switch {
-	case autoBindField.ResponseField != nil:
-		name = autoBindField.ResponseField.Name
-	case autoBindField.MessageDependency != nil:
-		name = autoBindField.MessageDependency.Name
-	case autoBindField.VariableDefinition != nil:
+	if autoBindField.VariableDefinition != nil {
 		name = autoBindField.VariableDefinition.Name
 	}
 
@@ -1747,7 +1671,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 				}
 			} else {
 				caseFields = append(caseFields, &OneofField{
-					Expr:           rule.Oneof.Expr.Expr,
+					Expr:           rule.Oneof.If.Expr,
 					By:             rule.Oneof.By.Expr,
 					OutType:        outType,
 					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
@@ -1848,102 +1772,83 @@ type MessageResolver struct {
 }
 
 func (r *MessageResolver) Key() string {
-	if r.VariableDefinition != nil {
-		return r.VariableDefinition.Name
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-	if r.MethodCall != nil {
-		return r.MethodCall.Method.FQDN()
-	}
-	return fmt.Sprintf("%s_%s", r.MessageDependency.Name, r.MessageDependency.Message.FQDN())
+	return r.VariableDefinition.Name
 }
 
 func (r *MessageResolver) UseTimeout() bool {
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		return expr.Call != nil && expr.Call.Timeout != nil
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	return r.MethodCall != nil && r.MethodCall.Timeout != nil
+	expr := r.VariableDefinition.Expr
+	return expr.Call != nil && expr.Call.Timeout != nil
 }
 
 func (r *MessageResolver) UseRetry() bool {
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		return expr.Call != nil && expr.Call.Retry != nil
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	return r.MethodCall != nil && r.MethodCall.Retry != nil
+	expr := r.VariableDefinition.Expr
+	return expr.Call != nil && expr.Call.Retry != nil
 }
 
 func (r *MessageResolver) Retry() *resolver.RetryPolicy {
-	if r.VariableDefinition != nil {
-		return r.VariableDefinition.Expr.Call.Retry
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	return r.MethodCall.Retry
+	return r.VariableDefinition.Expr.Call.Retry
 }
 
 func (r *MessageResolver) MethodFQDN() string {
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		if expr.Call != nil {
-			return expr.Call.Method.FQDN()
-		}
-		return ""
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	return r.MethodCall.Method.FQDN()
+	expr := r.VariableDefinition.Expr
+	if expr.Call != nil {
+		return expr.Call.Method.FQDN()
+	}
+	return ""
 }
 
 func (r *MessageResolver) Timeout() string {
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		if expr.Call != nil {
-			return fmt.Sprintf("%[1]d/* %[1]s */", *expr.Call.Timeout)
-		}
-		return ""
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-	return fmt.Sprintf("%[1]d/* %[1]s */", *r.MethodCall.Timeout)
+	expr := r.VariableDefinition.Expr
+	if expr.Call != nil {
+		return fmt.Sprintf("%[1]d/* %[1]s */", *expr.Call.Timeout)
+	}
+	return ""
 }
 
 func (r *MessageResolver) Caller() string {
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		if expr.Call != nil {
-			method := expr.Call.Method
-			methodName := method.Name
-			svcName := fullServiceName(method.Service)
-			return fmt.Sprintf("client.%sClient.%s", svcName, methodName)
-		}
-		if expr.Message != nil {
-			msgName := fullMessageName(expr.Message.Message)
-			if expr.Message.Message.HasRule() {
-				return fmt.Sprintf("resolve_%s", msgName)
-			}
-			return fmt.Sprintf("resolver.Resolve_%s", msgName)
-		}
-		return ""
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	if r.MethodCall != nil {
-		methodCall := r.MethodCall
-		methodName := methodCall.Method.Name
-		svcName := fullServiceName(methodCall.Method.Service)
+	expr := r.VariableDefinition.Expr
+	switch {
+	case expr.Call != nil:
+		method := expr.Call.Method
+		methodName := method.Name
+		svcName := fullServiceName(method.Service)
 		return fmt.Sprintf("client.%sClient.%s", svcName, methodName)
+	case expr.Message != nil:
+		msgName := fullMessageName(expr.Message.Message)
+		if expr.Message.Message.HasRule() {
+			return fmt.Sprintf("resolve_%s", msgName)
+		}
+		return fmt.Sprintf("resolver.Resolve_%s", msgName)
 	}
-	msgName := fullMessageName(r.MessageDependency.Message)
-	if r.MessageDependency.Message.HasRule() {
-		return fmt.Sprintf("resolve_%s", msgName)
-	}
-	return fmt.Sprintf("resolver.Resolve_%s", msgName)
+	return ""
 }
 
 func (r *MessageResolver) HasErrorHandler() bool {
-	if r.VariableDefinition != nil {
-		return r.VariableDefinition.Expr.Call != nil
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	return r.MethodCall != nil
+	return r.VariableDefinition.Expr.Call != nil
 }
 
 func (r *MessageResolver) ServiceName() string {
@@ -1951,98 +1856,69 @@ func (r *MessageResolver) ServiceName() string {
 }
 
 func (r *MessageResolver) DependentMethodName() string {
-	if r.VariableDefinition != nil {
-		method := r.VariableDefinition.Expr.Call.Method
-		return fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name)
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	method := r.MethodCall.Method
+	method := r.VariableDefinition.Expr.Call.Method
 	return fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name)
 }
 
 func (r *MessageResolver) RequestType() string {
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		if expr.Call != nil {
-			request := r.VariableDefinition.Expr.Call.Request
-			return fmt.Sprintf("%s.%s",
-				request.Type.GoPackage().Name,
-				request.Type.Name,
-			)
-		}
-		if expr.Message != nil {
-			msgName := fullMessageName(expr.Message.Message)
-			return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
-		}
-		return ""
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	if r.MethodCall != nil {
-		request := r.MethodCall.Request
+	expr := r.VariableDefinition.Expr
+	switch {
+	case expr.Call != nil:
+		request := r.VariableDefinition.Expr.Call.Request
 		return fmt.Sprintf("%s.%s",
 			request.Type.GoPackage().Name,
 			request.Type.Name,
 		)
+	case expr.Message != nil:
+		msgName := fullMessageName(expr.Message.Message)
+		return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
 	}
-	msgName := fullMessageName(r.MessageDependency.Message)
-	return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
+	return ""
 }
 
 func (r *MessageResolver) ReturnType() string {
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		if expr.Call != nil {
-			response := expr.Call.Method.Response
-			return fmt.Sprintf("%s.%s",
-				response.GoPackage().Name,
-				response.Name,
-			)
-		}
-		if expr.Message != nil {
-			return expr.Message.Message.Name
-		}
-		return ""
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	if r.MethodCall != nil {
-		response := r.MethodCall.Response
+	expr := r.VariableDefinition.Expr
+	switch {
+	case expr.Call != nil:
+		response := expr.Call.Method.Response
 		return fmt.Sprintf("%s.%s",
-			response.Type.GoPackage().Name,
-			response.Type.Name,
+			response.GoPackage().Name,
+			response.Name,
 		)
+	case expr.Message != nil:
+		return expr.Message.Message.Name
 	}
-	return r.MessageDependency.Message.Name
+	return ""
 }
 
 func (r *MessageResolver) UseResponseVariable() bool {
-	if r.VariableDefinition != nil {
-		return r.VariableDefinition.Used
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	if r.MethodCall != nil {
-		if r.MethodCall.Response != nil {
-			for _, field := range r.MethodCall.Response.Fields {
-				if field.Used {
-					return true
-				}
-			}
-		}
-	}
-	if r.MessageDependency == nil {
-		return false
-	}
-	return r.MessageDependency.Used
+	return r.VariableDefinition.Used
 }
 
 func (r *MessageResolver) IsBy() bool {
-	return r.VariableDefinition != nil && r.VariableDefinition.Expr.By != nil
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
+	}
+	return r.VariableDefinition.Expr.By != nil
 }
 
 func (r *MessageResolver) IsValidation() bool {
-	if r.VariableDefinition != nil && r.VariableDefinition.Expr.Validation != nil {
-		return true
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-	return r.Validation != nil
+	return r.VariableDefinition.Expr.Validation != nil
 }
 
 func (r *MessageResolver) By() *resolver.CELValue {
@@ -2054,20 +1930,14 @@ func (r *MessageResolver) ZeroValue() string {
 }
 
 func (r *MessageResolver) ProtoComment() string {
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
+	}
 	opt := &resolver.ProtoFormatOption{
 		Prefix:         "",
 		IndentSpaceNum: 2,
 	}
-	if r.VariableDefinition != nil {
-		return r.VariableDefinition.ProtoFormat(opt)
-	}
-	if r.MethodCall != nil {
-		return r.MethodCall.ProtoFormat(opt)
-	}
-	if r.MessageDependency != nil {
-		return r.MessageDependency.ProtoFormat(opt)
-	}
-	return r.Validation.ProtoFormat(opt)
+	return r.VariableDefinition.ProtoFormat(opt)
 }
 
 type ResponseVariable struct {
@@ -2085,87 +1955,44 @@ func (r *MessageResolver) ResponseVariable() string {
 }
 
 func (r *MessageResolver) Type() string {
-	if r.VariableDefinition != nil {
-		return toTypeText(r.Service.File, r.VariableDefinition.Expr.Type)
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
-
-	if r.MethodCall != nil {
-		msg := r.MethodCall.Response.Type
-		return toTypeText(r.Service.File, &resolver.Type{Type: types.Message, Ref: msg})
-	}
-	msg := r.MessageDependency.Message
-	return toTypeText(r.Service.File, &resolver.Type{Type: types.Message, Ref: msg})
+	return toTypeText(r.Service.File, r.VariableDefinition.Expr.Type)
 }
 
 func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
-	var values []*ResponseVariable
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		if expr.Call != nil {
-			values = append(values, &ResponseVariable{
-				UseName:  r.VariableDefinition.Used,
-				Name:     toUserDefinedVariable(r.VariableDefinition.Name),
-				Selector: r.ResponseVariable(),
-				CELExpr:  r.VariableDefinition.Name,
-				CELType:  toCELNativeType(expr.Type),
-			})
-		}
-		if expr.Message != nil {
-			values = append(values, &ResponseVariable{
-				UseName:      r.VariableDefinition.Used,
-				Name:         toUserDefinedVariable(r.VariableDefinition.Name),
-				Selector:     r.ResponseVariable(),
-				ProtoComment: fmt.Sprintf(`// { name: %q, message: %q ... }`, r.VariableDefinition.Name, expr.Message.Message.Name),
-				CELExpr:      r.VariableDefinition.Name,
-				CELType:      toCELNativeType(expr.Type),
-			})
-		}
-		if expr.By != nil {
-			values = append(values, &ResponseVariable{
-				UseName:  r.VariableDefinition.Used,
-				Name:     toUserDefinedVariable(r.VariableDefinition.Name),
-				Selector: r.ResponseVariable(),
-				CELExpr:  r.VariableDefinition.Name,
-				CELType:  toCELNativeType(expr.Type),
-			})
-		}
-		return values
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
 
-	if r.MethodCall != nil {
-		for _, field := range r.MethodCall.Response.Fields {
-			var (
-				selector string
-				typ      *resolver.Type
-			)
-			if field.FieldName == "" {
-				selector = r.ResponseVariable()
-				typ = resolver.NewMessageType(r.MethodCall.Response.Type, false)
-			} else {
-				selector = r.ResponseVariable() + "." + fmt.Sprintf("Get%s()", util.ToPublicGoVariable(field.FieldName))
-				typ = r.MethodCall.Response.Type.Field(field.FieldName).Type
-			}
-			format := field.ProtoFormat(resolver.DefaultProtoFormatOption)
-			if format != "" {
-				format = "// " + format
-			}
-			values = append(values, &ResponseVariable{
-				UseName:      field.Used,
-				Name:         toUserDefinedVariable(field.Name),
-				Selector:     selector,
-				ProtoComment: format,
-				CELExpr:      field.Name,
-				CELType:      toCELNativeType(typ),
-			})
-		}
-	} else {
+	var values []*ResponseVariable
+	expr := r.VariableDefinition.Expr
+	switch {
+	case expr.Call != nil:
 		values = append(values, &ResponseVariable{
-			UseName:      r.MessageDependency.Used,
-			Name:         toUserDefinedVariable(r.MessageDependency.Name),
+			UseName:  r.VariableDefinition.Used,
+			Name:     toUserDefinedVariable(r.VariableDefinition.Name),
+			Selector: r.ResponseVariable(),
+			CELExpr:  r.VariableDefinition.Name,
+			CELType:  toCELNativeType(expr.Type),
+		})
+	case expr.Message != nil:
+		values = append(values, &ResponseVariable{
+			UseName:      r.VariableDefinition.Used,
+			Name:         toUserDefinedVariable(r.VariableDefinition.Name),
 			Selector:     r.ResponseVariable(),
-			ProtoComment: fmt.Sprintf(`// { name: %q, message: %q ... }`, r.MessageDependency.Name, r.MessageDependency.Message.Name),
-			CELExpr:      r.MessageDependency.Name,
-			CELType:      toCELNativeType(resolver.NewMessageType(r.MessageDependency.Message, false)),
+			ProtoComment: fmt.Sprintf(`// { name: %q, message: %q ... }`, r.VariableDefinition.Name, expr.Message.Message.Name),
+			CELExpr:      r.VariableDefinition.Name,
+			CELType:      toCELNativeType(expr.Type),
+		})
+	case expr.By != nil:
+		values = append(values, &ResponseVariable{
+			UseName:  r.VariableDefinition.Used,
+			Name:     toUserDefinedVariable(r.VariableDefinition.Name),
+			Selector: r.ResponseVariable(),
+			CELExpr:  r.VariableDefinition.Name,
+			CELType:  toCELNativeType(expr.Type),
 		})
 	}
 	return values
@@ -2263,17 +2090,12 @@ type LocalizedMessage struct {
 }
 
 func (r *MessageResolver) MessageValidation() *ValidationRule {
-	var (
-		validationName  string
-		validationError *resolver.ValidationError
-	)
-	if r.VariableDefinition != nil && r.VariableDefinition.Expr.Validation != nil {
-		validationName = r.VariableDefinition.Name
-		validationError = r.VariableDefinition.Expr.Validation.Error
-	} else {
-		validationName = r.MessageResolver.Validation.Name
-		validationError = r.MessageResolver.Validation.Error
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
 	}
+
+	validationName := r.VariableDefinition.Name
+	validationError := r.VariableDefinition.Expr.Validation.Error
 	vr := &ValidationRule{
 		Name: validationName,
 		Error: &ValidationError{
@@ -2334,25 +2156,23 @@ type Argument struct {
 }
 
 func (r *MessageResolver) Arguments() []*Argument {
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
+	}
+
 	var (
 		isRequestArgument bool
 		args              []*resolver.Argument
 	)
-	if r.VariableDefinition != nil {
-		expr := r.VariableDefinition.Expr
-		if expr.Call != nil {
-			isRequestArgument = true
-			args = expr.Call.Request.Args
-		} else if expr.Message != nil {
-			args = expr.Message.Args
-		} else if expr.By != nil {
-			return nil
-		}
-	} else if r.MethodCall != nil {
+	expr := r.VariableDefinition.Expr
+	switch {
+	case expr.Call != nil:
 		isRequestArgument = true
-		args = r.MethodCall.Request.Args
-	} else {
-		args = r.MessageDependency.Args
+		args = expr.Call.Request.Args
+	case expr.Message != nil:
+		args = expr.Message.Args
+	case expr.By != nil:
+		return nil
 	}
 
 	var generateArgs []*Argument

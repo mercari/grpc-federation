@@ -23,9 +23,11 @@ func TestFile(t *testing.T) {
 		Message: &source.Message{
 			Name: "GetPostResponse",
 			Option: &source.MessageOption{
-				Messages: &source.MessageDependencyOption{
-					Idx:  0,
-					Name: true,
+				VariableDefinitions: &source.VariableDefinitionOption{
+					Idx: 0,
+					Message: &source.MessageExprOption{
+						Name: true,
+					},
 				},
 			},
 		},
@@ -35,7 +37,7 @@ func TestFile(t *testing.T) {
 		if n == nil {
 			t.Fatal("failed to get node info")
 		}
-		if n.RawText() != `"post"` {
+		if n.RawText() != `"Post"` {
 			t.Fatalf("failed to get text %s", n.RawText())
 		}
 	})

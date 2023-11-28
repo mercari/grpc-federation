@@ -15,32 +15,34 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages: [
-      {
-        name: "sel"
-        message: "UserSelection"
+    def {
+      name: "sel"
+      message {
+        name: "UserSelection"
         args { name: "value", string: "foo" }
       }
-    ]
+    }
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
 }
 
 message UserSelection {
   option (grpc.federation.message) = {
-    messages {
+    def {
       name: "m"
-      message: "M"
+      message { name: "M" }
     }
   };
   oneof user {
     User user_a = 1 [
       (grpc.federation.field).oneof = {
-        expr: "true"
-        messages {
+        if: "true"
+        def {
           name: "ua"
-          message: "User"
-          args: { name: "user_id", string: "a" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "a" }
+          }
         }
         by: "ua"
       }

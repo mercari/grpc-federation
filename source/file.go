@@ -90,10 +90,9 @@ type findContext struct {
 	method           *Method
 	field            *Field
 	fieldOption      *FieldOption
-	messageOption    *MessageOption
-	messageDepOption *MessageDependencyOption
 	serviceDepOption *ServiceDependencyOption
-	resolver         *ResolverOption
+	messageOption    *MessageOption
+	def              *VariableDefinitionOption
 }
 
 func (f *File) buildLocation(ctx findContext) *Location {
@@ -118,13 +117,10 @@ func (f *File) buildLocation(ctx findContext) *Location {
 			}
 		}
 		if ctx.messageOption != nil {
-			loc.Message.Option = ctx.messageOption
-			if ctx.messageDepOption != nil {
-				loc.Message.Option.Messages = ctx.messageDepOption
-			}
-			if ctx.resolver != nil {
-				loc.Message.Option.Resolver = ctx.resolver
-			}
+			loc.Message.Option = &MessageOption{}
+		}
+		if ctx.def != nil {
+			loc.Message.Option.VariableDefinitions = ctx.def
 		}
 	}
 	return loc
@@ -186,23 +182,27 @@ func (f *File) findFieldByPos(ctx findContext, pos Position, node *ast.FieldNode
 }
 
 func (f *File) findFieldOptionByPos(ctx findContext, pos Position, node *ast.OptionNode) *Location {
-	literal, ok := node.Val.(*ast.MessageLiteralNode)
-	if !ok {
-		return nil
-	}
-	fieldOption := &FieldOption{}
-	ctx.fieldOption = fieldOption
-	for _, elem := range literal.Elements {
-		optName := elem.Name.Name.AsIdentifier()
-		switch optName {
-		case "by":
-			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			if f.containsPos(value, pos) {
-				fieldOption.By = true
+	switch n := node.Val.(type) {
+	case *ast.StringLiteralNode:
+		if strings.HasSuffix(f.optionName(node), "by") {
+			if f.containsPos(n, pos) {
+				ctx.fieldOption = &FieldOption{By: true}
 				return f.buildLocation(ctx)
+			}
+		}
+	case *ast.MessageLiteralNode:
+		for _, elem := range n.Elements {
+			optName := elem.Name.Name.AsIdentifier()
+			switch optName {
+			case "by":
+				value, ok := elem.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.fieldOption = &FieldOption{By: true}
+					return f.buildLocation(ctx)
+				}
 			}
 		}
 	}
@@ -218,16 +218,8 @@ func (f *File) findMessageOptionByPos(ctx findContext, pos Position, node *ast.O
 	for _, elem := range literal.Elements {
 		optName := elem.Name.Name.AsIdentifier()
 		switch optName {
-		case "resolver":
-			value, ok := elem.Val.(*ast.MessageLiteralNode)
-			if !ok {
-				return nil
-			}
-			if found := f.findResolverByPos(ctx, pos, value); found != nil {
-				return found
-			}
-		case "messages":
-			if found := f.findMessageDependencyByPos(ctx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
+		case "def":
+			if found := f.findDefByPos(ctx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
 				return found
 			}
 		}
@@ -256,117 +248,89 @@ func (f *File) getMessageListFromNode(node ast.Node) []*ast.MessageLiteralNode {
 	return nil
 }
 
-func (f *File) findMessageDependencyByPos(ctx findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
-	for idx, literal := range list {
-		for _, dep := range literal.Elements {
-			fieldName := dep.Name.Name.AsIdentifier()
+func (f *File) findDefByPos(ctx findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
+	for idx, node := range list {
+		for _, elem := range node.Elements {
+			fieldName := elem.Name.Name.AsIdentifier()
 			switch fieldName {
 			case "name":
-				value, ok := dep.Val.(*ast.StringLiteralNode)
+				value, ok := elem.Val.(*ast.StringLiteralNode)
 				if !ok {
 					return nil
 				}
 				if f.containsPos(value, pos) {
-					ctx.messageDepOption = &MessageDependencyOption{
+					ctx.def = &VariableDefinitionOption{
 						Idx:  idx,
 						Name: true,
 					}
 					return f.buildLocation(ctx)
 				}
-			case "message":
-				value, ok := dep.Val.(*ast.StringLiteralNode)
+			case "if":
+				value, ok := elem.Val.(*ast.StringLiteralNode)
 				if !ok {
 					return nil
 				}
 				if f.containsPos(value, pos) {
-					ctx.messageDepOption = &MessageDependencyOption{
-						Idx:     idx,
-						Message: true,
-					}
-					return f.buildLocation(ctx)
-				}
-			case "args":
-				ctx.messageDepOption = &MessageDependencyOption{Idx: idx}
-				if found := f.findMessageArgumentByPos(ctx, pos, f.getMessageListFromNode(dep.Val)); found != nil {
-					return found
-				}
-			}
-		}
-		if f.containsPos(literal, pos) {
-			ctx.messageDepOption = &MessageDependencyOption{Idx: idx}
-			return f.buildLocation(ctx)
-		}
-	}
-	return nil
-}
-
-func (f *File) findMessageArgumentByPos(ctx findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
-	for idx, literal := range list {
-		for _, arg := range literal.Elements {
-			fieldName := arg.Name.Name.AsIdentifier()
-			switch fieldName {
-			case "name":
-				value, ok := arg.Val.(*ast.StringLiteralNode)
-				if !ok {
-					return nil
-				}
-				if f.containsPos(value, pos) {
-					ctx.messageDepOption.Args = &ArgumentOption{
-						Idx:  idx,
-						Name: true,
-					}
 					return f.buildLocation(ctx)
 				}
 			case "by":
-				value, ok := arg.Val.(*ast.StringLiteralNode)
+				value, ok := elem.Val.(*ast.StringLiteralNode)
 				if !ok {
 					return nil
 				}
 				if f.containsPos(value, pos) {
-					ctx.messageDepOption.Args = &ArgumentOption{
+					ctx.def = &VariableDefinitionOption{
 						Idx: idx,
 						By:  true,
 					}
 					return f.buildLocation(ctx)
 				}
-			case "inline":
-				value, ok := arg.Val.(*ast.StringLiteralNode)
+			case "call":
+				value, ok := elem.Val.(*ast.MessageLiteralNode)
 				if !ok {
 					return nil
 				}
-				if f.containsPos(value, pos) {
-					ctx.messageDepOption.Args = &ArgumentOption{
-						Idx:    idx,
-						Inline: true,
-					}
-					return f.buildLocation(ctx)
+				if found := f.findCallExprByPos(ctx, idx, pos, value); found != nil {
+					return found
+				}
+			case "message":
+				value, ok := elem.Val.(*ast.MessageLiteralNode)
+				if !ok {
+					return nil
+				}
+				if found := f.findMessageExprByPos(ctx, idx, pos, value); found != nil {
+					return found
 				}
 			}
 		}
 	}
+	if len(list) == 0 {
+		return nil
+	}
+	if f.containsPos(list[0], pos) {
+		return f.buildLocation(ctx)
+	}
 	return nil
 }
 
-func (f *File) findResolverByPos(ctx findContext, pos Position, node *ast.MessageLiteralNode) *Location {
-	ctx.resolver = &ResolverOption{}
+func (f *File) findMessageExprByPos(ctx findContext, defIdx int, pos Position, node *ast.MessageLiteralNode) *Location {
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch fieldName {
-		case "method":
+		case "name":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil
 			}
 			if f.containsPos(value, pos) {
-				ctx.resolver.Method = true
+				ctx.def = &VariableDefinitionOption{
+					Idx:     defIdx,
+					Message: &MessageExprOption{Name: true},
+				}
 				return f.buildLocation(ctx)
 			}
-		case "request":
-			if found := f.findMethodRequestByPos(ctx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
-				return found
-			}
-		case "response":
-			if found := f.findMethodResponseByPos(ctx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
+		case "args":
+			if found := f.findMessageArgumentByPos(ctx, defIdx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
 				return found
 			}
 		}
@@ -377,7 +341,101 @@ func (f *File) findResolverByPos(ctx findContext, pos Position, node *ast.Messag
 	return nil
 }
 
-func (f *File) findMethodRequestByPos(ctx findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
+func (f *File) findMessageArgumentByPos(ctx findContext, defIdx int, pos Position, list []*ast.MessageLiteralNode) *Location {
+	for argIdx, literal := range list {
+		for _, arg := range literal.Elements {
+			fieldName := arg.Name.Name.AsIdentifier()
+			switch fieldName {
+			case "name":
+				value, ok := arg.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.def = &VariableDefinitionOption{
+						Idx: defIdx,
+						Message: &MessageExprOption{
+							Args: &ArgumentOption{
+								Idx:  argIdx,
+								Name: true,
+							},
+						},
+					}
+					return f.buildLocation(ctx)
+				}
+			case "by":
+				value, ok := arg.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.def = &VariableDefinitionOption{
+						Idx: defIdx,
+						Message: &MessageExprOption{
+							Args: &ArgumentOption{
+								Idx: argIdx,
+								By:  true,
+							},
+						},
+					}
+					return f.buildLocation(ctx)
+				}
+			case "inline":
+				value, ok := arg.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.def = &VariableDefinitionOption{
+						Idx: defIdx,
+						Message: &MessageExprOption{
+							Args: &ArgumentOption{
+								Idx:    argIdx,
+								Inline: true,
+							},
+						},
+					}
+					return f.buildLocation(ctx)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (f *File) findCallExprByPos(ctx findContext, defIdx int, pos Position, node *ast.MessageLiteralNode) *Location {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch fieldName {
+		case "method":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			if f.containsPos(value, pos) {
+				ctx.def = &VariableDefinitionOption{
+					Idx:  defIdx,
+					Call: &CallExprOption{Method: true},
+				}
+				return f.buildLocation(ctx)
+			}
+		case "request":
+			if found := f.findMethodRequestByPos(ctx, defIdx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
+				return found
+			}
+		}
+	}
+	if f.containsPos(node, pos) {
+		ctx.def = &VariableDefinitionOption{
+			Idx:  defIdx,
+			Call: &CallExprOption{},
+		}
+		return f.buildLocation(ctx)
+	}
+	return nil
+}
+
+func (f *File) findMethodRequestByPos(ctx findContext, defIdx int, pos Position, list []*ast.MessageLiteralNode) *Location {
 	for idx, literal := range list {
 		for _, field := range literal.Elements {
 			fieldName := field.Name.Name.AsIdentifier()
@@ -388,9 +446,14 @@ func (f *File) findMethodRequestByPos(ctx findContext, pos Position, list []*ast
 					return nil
 				}
 				if f.containsPos(value, pos) {
-					ctx.resolver.Request = &RequestOption{
-						Idx:   idx,
-						Field: true,
+					ctx.def = &VariableDefinitionOption{
+						Idx: defIdx,
+						Call: &CallExprOption{
+							Request: &RequestOption{
+								Idx:   idx,
+								Field: true,
+							},
+						},
 					}
 					return f.buildLocation(ctx)
 				}
@@ -400,70 +463,27 @@ func (f *File) findMethodRequestByPos(ctx findContext, pos Position, list []*ast
 					return nil
 				}
 				if f.containsPos(value, pos) {
-					ctx.resolver.Request = &RequestOption{
+					ctx.def = &VariableDefinitionOption{
+						Idx: defIdx,
+						Call: &CallExprOption{
+							Request: &RequestOption{
+								Idx: idx,
+								By:  true,
+							},
+						},
+					}
+					return f.buildLocation(ctx)
+				}
+			}
+		}
+		if f.containsPos(literal, pos) {
+			ctx.def = &VariableDefinitionOption{
+				Idx: defIdx,
+				Call: &CallExprOption{
+					Request: &RequestOption{
 						Idx: idx,
-						By:  true,
-					}
-					return f.buildLocation(ctx)
-				}
-			}
-		}
-		if f.containsPos(literal, pos) {
-			ctx.resolver.Request = &RequestOption{
-				Idx: idx,
-			}
-			return f.buildLocation(ctx)
-		}
-	}
-	return nil
-}
-
-func (f *File) findMethodResponseByPos(ctx findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
-	for idx, literal := range list {
-		for _, res := range literal.Elements {
-			fieldName := res.Name.Name.AsIdentifier()
-			switch fieldName {
-			case "name":
-				value, ok := res.Val.(*ast.StringLiteralNode)
-				if !ok {
-					return nil
-				}
-				if f.containsPos(value, pos) {
-					ctx.resolver.Response = &ResponseOption{
-						Idx:  idx,
-						Name: true,
-					}
-					return f.buildLocation(ctx)
-				}
-			case "field":
-				value, ok := res.Val.(*ast.StringLiteralNode)
-				if !ok {
-					return nil
-				}
-				if f.containsPos(value, pos) {
-					ctx.resolver.Response = &ResponseOption{
-						Idx:   idx,
-						Field: true,
-					}
-					return f.buildLocation(ctx)
-				}
-			case "autobind":
-				value, ok := res.Val.(*ast.IdentNode)
-				if !ok {
-					return nil
-				}
-				if f.containsPos(value, pos) {
-					ctx.resolver.Response = &ResponseOption{
-						Idx:      idx,
-						AutoBind: true,
-					}
-					return f.buildLocation(ctx)
-				}
-			}
-		}
-		if f.containsPos(literal, pos) {
-			ctx.resolver.Response = &ResponseOption{
-				Idx: idx,
+					},
+				},
 			}
 			return f.buildLocation(ctx)
 		}
@@ -799,16 +819,8 @@ func (f *File) nodeInfoByMessageOption(node *ast.OptionNode, opt *MessageOption)
 		for _, elem := range n.Elements {
 			optName := elem.Name.Name.AsIdentifier()
 			switch {
-			case opt.Resolver != nil && optName == "resolver":
-				value, ok := elem.Val.(*ast.MessageLiteralNode)
-				if !ok {
-					return nil
-				}
-				return f.nodeInfoByMessageResolver(value, opt.Resolver)
-			case opt.Messages != nil && optName == "messages":
-				return f.nodeInfoByMessageDependency(f.getMessageListFromNode(elem.Val), opt.Messages)
-			case opt.Validations != nil && optName == "validations":
-				return f.nodeInfoByMessageValidation(f.getMessageListFromNode(elem.Val), opt.Validations)
+			case opt.VariableDefinitions != nil && optName == "def":
+				return f.nodeInfoByDef(f.getMessageListFromNode(elem.Val), opt.VariableDefinitions)
 			case opt.Alias && optName == "alias":
 				return f.nodeInfo(elem.Val)
 			}
@@ -817,28 +829,79 @@ func (f *File) nodeInfoByMessageOption(node *ast.OptionNode, opt *MessageOption)
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByMessageResolver(node *ast.MessageLiteralNode, resolver *ResolverOption) *ast.NodeInfo {
+func (f *File) nodeInfoByDef(list []*ast.MessageLiteralNode, def *VariableDefinitionOption) *ast.NodeInfo {
+	if def.Idx >= len(list) {
+		return nil
+	}
+	node := list[def.Idx]
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
-		case resolver.Method && fieldName == "method":
+		case def.Name && fieldName == "name":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil
 			}
 			return f.nodeInfo(value)
-		case resolver.Request != nil && fieldName == "request":
-			return f.nodeInfoByMethodRequest(f.getMessageListFromNode(elem.Val), resolver.Request)
-		case resolver.Response != nil && fieldName == "response":
-			return f.nodeInfoByMethodResponse(f.getMessageListFromNode(elem.Val), resolver.Response)
-		case resolver.Timeout && fieldName == "timeout":
-			return f.nodeInfo(elem.Val)
-		case resolver.Retry != nil && fieldName == "retry":
+		case def.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case def.Map != nil && fieldName == "map":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
 				return nil
 			}
-			return f.nodeInfoByRetry(value, resolver.Retry)
+			return f.nodeInfoByMapExpr(value, def.Map)
+		case def.Call != nil && fieldName == "call":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByCallExpr(value, def.Call)
+		case def.Message != nil && fieldName == "message":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByMessageExpr(value, def.Message)
+		case def.Validation != nil && fieldName == "validation":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByValidationExpr(value, def.Validation)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByMapExpr(node *ast.MessageLiteralNode, _ *MapExprOption) *ast.NodeInfo {
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByCallExpr(node *ast.MessageLiteralNode, call *CallExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case call.Method && fieldName == "method":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case call.Request != nil && fieldName == "request":
+			return f.nodeInfoByMethodRequest(f.getMessageListFromNode(elem.Val), call.Request)
+		case call.Timeout && fieldName == "timeout":
+			return f.nodeInfo(elem.Val)
+		case call.Retry != nil && fieldName == "retry":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByRetry(value, call.Retry)
 		}
 	}
 	return f.nodeInfo(node)
@@ -860,37 +923,6 @@ func (f *File) nodeInfoByMethodRequest(list []*ast.MessageLiteralNode, req *Requ
 			return f.nodeInfo(value)
 		case req.By && fieldName == "by":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfo(value)
-		}
-	}
-	return f.nodeInfo(literal)
-}
-
-func (f *File) nodeInfoByMethodResponse(list []*ast.MessageLiteralNode, res *ResponseOption) *ast.NodeInfo {
-	if res.Idx >= len(list) {
-		return nil
-	}
-	literal := list[res.Idx]
-	for _, elem := range literal.Elements {
-		fieldName := elem.Name.Name.AsIdentifier()
-		switch {
-		case res.Name && fieldName == "name":
-			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfo(value)
-		case res.Field && fieldName == "field":
-			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfo(value)
-		case res.AutoBind && fieldName == "autobind":
-			value, ok := elem.Val.(*ast.IdentNode)
 			if !ok {
 				return nil
 			}
@@ -953,70 +985,62 @@ func (f *File) nodeInfoByRetryExponential(node *ast.MessageLiteralNode, exp *Ret
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByMessageDependency(list []*ast.MessageLiteralNode, dep *MessageDependencyOption) *ast.NodeInfo {
-	if dep.Idx >= len(list) {
-		return nil
-	}
-	literal := list[dep.Idx]
-	for _, elem := range literal.Elements {
-		fieldName := elem.Name.Name.AsIdentifier()
-		switch {
-		case dep.Name && fieldName == "name":
-			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfo(value)
-		case dep.Message && fieldName == "message":
-			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfo(value)
-		case dep.Args != nil && fieldName == "args":
-			return f.nodeInfoByArgument(f.getMessageListFromNode(elem.Val), dep.Args)
-		}
-	}
-	return f.nodeInfo(literal)
-}
-
-func (f *File) nodeInfoByMessageValidation(list []*ast.MessageLiteralNode, validation *MessageValidationOption) *ast.NodeInfo {
-	if validation.Idx >= len(list) {
-		return nil
-	}
-	literal := list[validation.Idx]
-	for _, elem := range literal.Elements {
-		fieldName := elem.Name.Name.AsIdentifier()
-		switch {
-		case fieldName == "error":
-			value, ok := elem.Val.(*ast.MessageLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfoByValidationError(value, validation)
-		}
-	}
-	return f.nodeInfo(list[validation.Idx])
-}
-
-func (f *File) nodeInfoByValidationError(node *ast.MessageLiteralNode, validation *MessageValidationOption) *ast.NodeInfo {
+func (f *File) nodeInfoByMessageExpr(node *ast.MessageLiteralNode, msg *MessageExprOption) *ast.NodeInfo {
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
-		case validation.Rule && fieldName == "rule":
+		case msg.Name && fieldName == "name":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil
 			}
 			return f.nodeInfo(value)
-		case validation.Detail != nil && fieldName == "details":
-			return f.nodeInfoByValidationErrorDetail(f.getMessageListFromNode(elem.Val), validation.Detail)
+		case msg.Args != nil && fieldName == "args":
+			return f.nodeInfoByArgument(f.getMessageListFromNode(elem.Val), msg.Args)
 		}
 	}
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, detail *MessageValidationDetailOption) *ast.NodeInfo {
+func (f *File) nodeInfoByValidationExpr(node *ast.MessageLiteralNode, opt *ValidationExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.Name && fieldName == "name":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case fieldName == "error":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByValidationError(value, opt)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByValidationError(node *ast.MessageLiteralNode, opt *ValidationExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.Rule && fieldName == "rule":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.Detail != nil && fieldName == "details":
+			return f.nodeInfoByValidationErrorDetail(f.getMessageListFromNode(elem.Val), opt.Detail)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, detail *ValidationDetailOption) *ast.NodeInfo {
 	if detail.Idx >= len(list) {
 		return nil
 	}
@@ -1041,7 +1065,7 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, failure *MessageValidationDetailPreconditionFailureOption) *ast.NodeInfo {
+func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, failure *ValidationDetailPreconditionFailureOption) *ast.NodeInfo {
 	if failure.Idx >= len(list) {
 		return nil
 	}
@@ -1055,7 +1079,7 @@ func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, fai
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLiteralNode, violation MessageValidationDetailPreconditionFailureViolationOption) *ast.NodeInfo {
+func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLiteralNode, violation ValidationDetailPreconditionFailureViolationOption) *ast.NodeInfo {
 	if violation.Idx >= len(list) {
 		return nil
 	}
@@ -1073,7 +1097,7 @@ func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLitera
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *MessageValidationDetailBadRequestOption) *ast.NodeInfo {
+func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *ValidationDetailBadRequestOption) *ast.NodeInfo {
 	if req.Idx >= len(list) {
 		return nil
 	}
@@ -1087,7 +1111,7 @@ func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *Message
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByLocalizedMessage(list []*ast.MessageLiteralNode, msg *MessageValidationDetailLocalizedMessageOption) *ast.NodeInfo {
+func (f *File) nodeInfoByLocalizedMessage(list []*ast.MessageLiteralNode, msg *ValidationDetailLocalizedMessageOption) *ast.NodeInfo {
 	if msg.Idx >= len(list) {
 		return nil
 	}
@@ -1105,7 +1129,7 @@ func (f *File) nodeInfoByLocalizedMessage(list []*ast.MessageLiteralNode, msg *M
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByBadRequestFieldViolations(list []*ast.MessageLiteralNode, violation MessageValidationDetailBadRequestFieldViolationOption) *ast.NodeInfo {
+func (f *File) nodeInfoByBadRequestFieldViolations(list []*ast.MessageLiteralNode, violation ValidationDetailBadRequestFieldViolationOption) *ast.NodeInfo {
 	if violation.Idx >= len(list) {
 		return nil
 	}
@@ -1196,7 +1220,7 @@ func (f *File) nodeInfoByFieldOneof(node *ast.MessageLiteralNode, opt *FieldOneo
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
-		case opt.Expr && fieldName == "expr":
+		case opt.If && fieldName == "if":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil
@@ -1204,8 +1228,8 @@ func (f *File) nodeInfoByFieldOneof(node *ast.MessageLiteralNode, opt *FieldOneo
 			return f.nodeInfo(value)
 		case opt.Default && fieldName == "default":
 			return f.nodeInfo(elem.Val)
-		case opt.Messages != nil && fieldName == "messages":
-			return f.nodeInfoByMessageDependency(f.getMessageListFromNode(elem.Val), opt.Messages)
+		case opt.VariableDefinitions != nil && fieldName == "def":
+			return f.nodeInfoByDef(f.getMessageListFromNode(elem.Val), opt.VariableDefinitions)
 		case opt.By && fieldName == "by":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {

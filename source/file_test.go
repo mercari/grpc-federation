@@ -116,112 +116,64 @@ func TestFile_FindLocationByPos(t *testing.T) {
 			},
 		},
 		{
-			desc: "find a ResolverOption method",
+			desc: "find a CallExprOption method",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 44,
-				Col:  15,
+				Line: 51,
+				Col:  20,
 			},
 			expected: &source.Location{
 				FileName: "service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{Method: true},
-					},
-				},
-			},
-		},
-		{
-			desc: "find a ResolverOption request field",
-			file: "service.proto",
-			pos: source.Position{
-				Line: 46,
-				Col:  18,
-			},
-			expected: &source.Location{
-				FileName: "service.proto",
-				Message: &source.Message{
-					Name: "Post",
-					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Request: &source.RequestOption{Field: true},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Idx:  0,
+							Call: &source.CallExprOption{Method: true},
 						},
 					},
 				},
 			},
 		},
 		{
-			desc: "find a ResolverOption request by",
+			desc: "find a CallExprOption request field",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 46,
-				Col:  28,
+				Line: 52,
+				Col:  29,
 			},
 			expected: &source.Location{
 				FileName: "service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Request: &source.RequestOption{By: true},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Idx: 0,
+							Call: &source.CallExprOption{
+								Request: &source.RequestOption{Field: true},
+							},
 						},
 					},
 				},
 			},
 		},
 		{
-			desc: "find a ResolverOption response name",
+			desc: "find a CallExprOption request by",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 48,
-				Col:  27,
+				Line: 52,
+				Col:  39,
 			},
 			expected: &source.Location{
 				FileName: "service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Response: &source.ResponseOption{Name: true},
-						},
-					},
-				},
-			},
-		},
-		{
-			desc: "find a ResolverOption response field",
-			file: "service.proto",
-			pos: source.Position{
-				Line: 48,
-				Col:  42,
-			},
-			expected: &source.Location{
-				FileName: "service.proto",
-				Message: &source.Message{
-					Name: "Post",
-					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Response: &source.ResponseOption{Field: true},
-						},
-					},
-				},
-			},
-		},
-		{
-			desc: "find a ResolverOption response autobind",
-			file: "service.proto",
-			pos: source.Position{
-				Line: 48,
-				Col:  60,
-			},
-			expected: &source.Location{
-				FileName: "service.proto",
-				Message: &source.Message{
-					Name: "Post",
-					Option: &source.MessageOption{
-						Resolver: &source.ResolverOption{
-							Response: &source.ResponseOption{AutoBind: true},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Idx: 0,
+							Call: &source.CallExprOption{
+								Request: &source.RequestOption{By: true},
+							},
 						},
 					},
 				},
@@ -231,8 +183,8 @@ func TestFile_FindLocationByPos(t *testing.T) {
 			desc: "find a FieldOption by",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 38,
-				Col:  50,
+				Line: 42,
+				Col:  47,
 			},
 			expected: &source.Location{
 				FileName: "service.proto",
@@ -246,10 +198,10 @@ func TestFile_FindLocationByPos(t *testing.T) {
 			},
 		},
 		{
-			desc: "find a MessageDependencyOption name",
+			desc: "find a MessageExprOption message",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 35,
+				Line: 37,
 				Col:  15,
 			},
 			expected: &source.Location{
@@ -257,89 +209,77 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Idx:  0,
-							Name: true,
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Idx: 0,
+							Message: &source.MessageExprOption{
+								Name: true,
+							},
 						},
 					},
 				},
 			},
 		},
 		{
-			desc: "find a MessageDependencyOption message",
+			desc: "find a MessageExprOption arg name",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 35,
-				Col:  32,
+				Line: 38,
+				Col:  24,
 			},
 			expected: &source.Location{
 				FileName: "service.proto",
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Idx:     0,
-							Message: true,
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Idx: 0,
+							Message: &source.MessageExprOption{
+								Args: &source.ArgumentOption{Name: true},
+							},
 						},
 					},
 				},
 			},
 		},
 		{
-			desc: "find a MessageDependencyOption arg name",
+			desc: "find a MessageExprOption arg by",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 35,
-				Col:  55,
+				Line: 38,
+				Col:  34,
 			},
 			expected: &source.Location{
 				FileName: "service.proto",
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Idx:  0,
-							Args: &source.ArgumentOption{Name: true},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Idx: 0,
+							Message: &source.MessageExprOption{
+								Args: &source.ArgumentOption{By: true},
+							},
 						},
 					},
 				},
 			},
 		},
 		{
-			desc: "find a MessageDependencyOption arg by",
+			desc: "find a MessageExprOption arg inline",
 			file: "service.proto",
 			pos: source.Position{
-				Line: 35,
-				Col:  65,
-			},
-			expected: &source.Location{
-				FileName: "service.proto",
-				Message: &source.Message{
-					Name: "GetPostResponse",
-					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Idx:  0,
-							Args: &source.ArgumentOption{By: true},
-						},
-					},
-				},
-			},
-		},
-		{
-			desc: "find a MessageDependencyOption arg inline",
-			file: "service.proto",
-			pos: source.Position{
-				Line: 51,
-				Col:  57,
+				Line: 60,
+				Col:  26,
 			},
 			expected: &source.Location{
 				FileName: "service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						Messages: &source.MessageDependencyOption{
-							Idx:  0,
-							Args: &source.ArgumentOption{Inline: true},
+						VariableDefinitions: &source.VariableDefinitionOption{
+							Idx: 2,
+							Message: &source.MessageExprOption{
+								Args: &source.ArgumentOption{Inline: true},
+							},
 						},
 					},
 				},

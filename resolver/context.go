@@ -8,6 +8,7 @@ type context struct {
 	mtd          *Method
 	msg          *Message
 	enum         *Enum
+	owner        *VariableDefinitionOwner
 	defIdx       int
 	depIdx       int
 	argIdx       int
@@ -35,6 +36,7 @@ func (c *context) clone() *context {
 		mtd:          c.mtd,
 		msg:          c.msg,
 		enum:         c.enum,
+		owner:        c.owner,
 		defIdx:       c.defIdx,
 		depIdx:       c.depIdx,
 		argIdx:       c.argIdx,
@@ -81,6 +83,12 @@ func (c *context) withDepIndex(idx int) *context {
 func (c *context) withArgIndex(idx int) *context {
 	ctx := c.clone()
 	ctx.argIdx = idx
+	return ctx
+}
+
+func (c *context) withDefOwner(owner *VariableDefinitionOwner) *context {
+	ctx := c.clone()
+	ctx.owner = owner
 	return ctx
 }
 
@@ -140,6 +148,10 @@ func (c *context) enumName() string {
 		return ""
 	}
 	return c.enum.Name
+}
+
+func (c *context) defOwner() *VariableDefinitionOwner {
+	return c.owner
 }
 
 func (c *context) defIndex() int {

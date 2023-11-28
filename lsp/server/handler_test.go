@@ -77,15 +77,15 @@ func TestHandler_Completion(t *testing.T) {
 		expectedErr string
 	}{
 		{
-			desc: "resolver method",
+			desc: "def.call.method",
 			params: &protocol.CompletionParams{
 				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 					TextDocument: protocol.TextDocumentIdentifier{
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      36,
-						Character: 15,
+						Line:      43,
+						Character: 18,
 					},
 				},
 			},
@@ -94,15 +94,16 @@ func TestHandler_Completion(t *testing.T) {
 					{
 						Kind:  protocol.CompletionItemKindText,
 						Label: "post.PostService/GetPost",
+						Data:  0,
 						TextEdit: &protocol.TextEdit{
 							Range: protocol.Range{
 								Start: protocol.Position{
-									Line:      36,
-									Character: 39,
+									Line:      43,
+									Character: 43,
 								},
 								End: protocol.Position{
-									Line:      36,
-									Character: 39,
+									Line:      43,
+									Character: 43,
 								},
 							},
 						},
@@ -110,15 +111,16 @@ func TestHandler_Completion(t *testing.T) {
 					{
 						Kind:  protocol.CompletionItemKindText,
 						Label: "post.PostService/GetPosts",
+						Data:  1,
 						TextEdit: &protocol.TextEdit{
 							Range: protocol.Range{
 								Start: protocol.Position{
-									Line:      36,
-									Character: 39,
+									Line:      43,
+									Character: 43,
 								},
 								End: protocol.Position{
-									Line:      36,
-									Character: 39,
+									Line:      43,
+									Character: 43,
 								},
 							},
 							NewText: "s",
@@ -128,15 +130,15 @@ func TestHandler_Completion(t *testing.T) {
 			},
 		},
 		{
-			desc: "resolver request field",
+			desc: "def.call.request.field",
 			params: &protocol.CompletionParams{
 				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 					TextDocument: protocol.TextDocumentIdentifier{
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      38,
-						Character: 17,
+						Line:      44,
+						Character: 27,
 					},
 				},
 			},
@@ -145,15 +147,16 @@ func TestHandler_Completion(t *testing.T) {
 					{
 						Kind:  protocol.CompletionItemKindText,
 						Label: "id",
+						Data:  0,
 						TextEdit: &protocol.TextEdit{
 							Range: protocol.Range{
 								Start: protocol.Position{
-									Line:      38,
-									Character: 20,
+									Line:      44,
+									Character: 30,
 								},
 								End: protocol.Position{
-									Line:      38,
-									Character: 20,
+									Line:      44,
+									Character: 30,
 								},
 							},
 						},
@@ -162,15 +165,15 @@ func TestHandler_Completion(t *testing.T) {
 			},
 		},
 		{
-			desc: "resolver request by",
+			desc: "def.call.request.by",
 			params: &protocol.CompletionParams{
 				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 					TextDocument: protocol.TextDocumentIdentifier{
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      38,
-						Character: 28,
+						Line:      44,
+						Character: 37,
 					},
 				},
 			},
@@ -179,15 +182,16 @@ func TestHandler_Completion(t *testing.T) {
 					{
 						Kind:  protocol.CompletionItemKindText,
 						Label: "$.id",
+						Data:  0,
 						TextEdit: &protocol.TextEdit{
 							Range: protocol.Range{
 								Start: protocol.Position{
-									Line:      38,
-									Character: 32,
+									Line:      44,
+									Character: 42,
 								},
 								End: protocol.Position{
-									Line:      38,
-									Character: 32,
+									Line:      44,
+									Character: 42,
 								},
 							},
 						},
@@ -196,15 +200,15 @@ func TestHandler_Completion(t *testing.T) {
 			},
 		},
 		{
-			desc: "resolver response field",
+			desc: "filter response",
 			params: &protocol.CompletionParams{
 				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 					TextDocument: protocol.TextDocumentIdentifier{
-						URI: mustTestdataAbs(t, "testdata/service.proto"),
+						URI: mustTestdataAbs(t, "testdata/completion.proto"),
 					},
 					Position: protocol.Position{
-						Line:      40,
-						Character: 41,
+						Line:      47,
+						Character: 27,
 					},
 				},
 			},
@@ -212,16 +216,36 @@ func TestHandler_Completion(t *testing.T) {
 				Items: []protocol.CompletionItem{
 					{
 						Kind:  protocol.CompletionItemKindText,
-						Label: "post",
+						Label: "res",
+						Data:  0,
 						TextEdit: &protocol.TextEdit{
+							NewText: "res",
 							Range: protocol.Range{
 								Start: protocol.Position{
-									Line:      40,
-									Character: 46,
+									Line:      47,
+									Character: 27,
 								},
 								End: protocol.Position{
-									Line:      40,
-									Character: 46,
+									Line:      47,
+									Character: 27,
+								},
+							},
+						},
+					},
+					{
+						Kind:  protocol.CompletionItemKindText,
+						Label: "$.id",
+						Data:  1,
+						TextEdit: &protocol.TextEdit{
+							NewText: "$.id",
+							Range: protocol.Range{
+								Start: protocol.Position{
+									Line:      47,
+									Character: 27,
+								},
+								End: protocol.Position{
+									Line:      47,
+									Character: 27,
 								},
 							},
 						},
@@ -230,76 +254,77 @@ func TestHandler_Completion(t *testing.T) {
 			},
 		},
 		{
-			desc: "messages message",
+			desc: "message",
 			params: &protocol.CompletionParams{
 				TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 					TextDocument: protocol.TextDocumentIdentifier{
-						URI: mustTestdataAbs(t, "testdata/service.proto"),
+						URI: mustTestdataAbs(t, "testdata/completion.proto"),
 					},
 					Position: protocol.Position{
-						Line:      43,
-						Character: 32,
+						Line:      51,
+						Character: 17,
 					},
 				},
 			},
 			expected: &protocol.CompletionList{
 				Items: []protocol.CompletionItem{
-					{Data: 0, Kind: protocol.CompletionItemKindText, Label: "GetPostRequest"},
-					{Data: 1, Kind: protocol.CompletionItemKindText, Label: "GetPostResponse"},
-					{Data: 2, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.DescriptorProto"},
-					{Data: 3, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.DescriptorProto.ExtensionRange"},
-					{Data: 4, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.DescriptorProto.ReservedRange"},
-					{Data: 5, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.Duration"},
-					{Data: 6, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.EnumDescriptorProto"},
-					{Data: 7, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.EnumDescriptorProto.EnumReservedRange"},
-					{Data: 8, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.EnumOptions"},
-					{Data: 9, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.EnumValueDescriptorProto"},
-					{Data: 10, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.EnumValueOptions"},
-					{Data: 11, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.ExtensionRangeOptions"},
-					{Data: 12, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.ExtensionRangeOptions.Declaration"},
-					{Data: 13, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.FieldDescriptorProto"},
-					{Data: 14, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.FieldOptions"},
-					{Data: 15, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.FileDescriptorProto"},
-					{Data: 16, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.FileDescriptorSet"},
-					{Data: 17, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.FileOptions"},
-					{Data: 18, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.GeneratedCodeInfo"},
-					{Data: 19, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.GeneratedCodeInfo.Annotation"},
-					{Data: 20, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.MessageOptions"},
-					{Data: 21, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.MethodDescriptorProto"},
-					{Data: 22, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.MethodOptions"},
-					{Data: 23, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.OneofDescriptorProto"},
-					{Data: 24, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.OneofOptions"},
-					{Data: 25, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.ServiceDescriptorProto"},
-					{Data: 26, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.ServiceOptions"},
-					{Data: 27, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.SourceCodeInfo"},
-					{Data: 28, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.SourceCodeInfo.Location"},
-					{Data: 29, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.UninterpretedOption"},
-					{Data: 30, Kind: protocol.CompletionItemKindText, Label: "google.protobuf.UninterpretedOption.NamePart"},
-					{Data: 31, Kind: protocol.CompletionItemKindText, Label: "google.rpc.BadRequest"},
-					{Data: 32, Kind: protocol.CompletionItemKindText, Label: "google.rpc.BadRequest.FieldViolation"},
-					{Data: 33, Kind: protocol.CompletionItemKindText, Label: "google.rpc.DebugInfo"},
-					{Data: 34, Kind: protocol.CompletionItemKindText, Label: "google.rpc.ErrorInfo"},
-					{Data: 35, Kind: protocol.CompletionItemKindText, Label: "google.rpc.ErrorInfo.MetadataEntry"},
-					{Data: 36, Kind: protocol.CompletionItemKindText, Label: "google.rpc.Help"},
-					{Data: 37, Kind: protocol.CompletionItemKindText, Label: "google.rpc.Help.Link"},
-					{Data: 38, Kind: protocol.CompletionItemKindText, Label: "google.rpc.LocalizedMessage"},
-					{Data: 39, Kind: protocol.CompletionItemKindText, Label: "google.rpc.PreconditionFailure"},
-					{Data: 40, Kind: protocol.CompletionItemKindText, Label: "google.rpc.PreconditionFailure.Violation"},
-					{Data: 41, Kind: protocol.CompletionItemKindText, Label: "google.rpc.QuotaFailure"},
-					{Data: 42, Kind: protocol.CompletionItemKindText, Label: "google.rpc.QuotaFailure.Violation"},
-					{Data: 43, Kind: protocol.CompletionItemKindText, Label: "google.rpc.RequestInfo"},
-					{Data: 44, Kind: protocol.CompletionItemKindText, Label: "google.rpc.ResourceInfo"},
-					{Data: 45, Kind: protocol.CompletionItemKindText, Label: "google.rpc.RetryInfo"},
-					{Data: 46, Kind: protocol.CompletionItemKindText, Label: "post.GetPostRequest"},
-					{Data: 47, Kind: protocol.CompletionItemKindText, Label: "post.GetPostResponse"},
-					{Data: 48, Kind: protocol.CompletionItemKindText, Label: "post.GetPostsRequest"},
-					{Data: 49, Kind: protocol.CompletionItemKindText, Label: "post.GetPostsResponse"},
-					{Data: 50, Kind: protocol.CompletionItemKindText, Label: "post.Post"},
-					{Data: 51, Kind: protocol.CompletionItemKindText, Label: "user.GetUserRequest"},
-					{Data: 52, Kind: protocol.CompletionItemKindText, Label: "user.GetUserResponse"},
-					{Data: 53, Kind: protocol.CompletionItemKindText, Label: "user.GetUsersRequest"},
-					{Data: 54, Kind: protocol.CompletionItemKindText, Label: "user.GetUsersResponse"},
-					{Data: 55, Kind: protocol.CompletionItemKindText, Label: "user.User"},
+					messageCompletionItem(0, "GetPostRequest"),
+					messageCompletionItem(1, "GetPostResponse"),
+					messageCompletionItem(2, "User"),
+					messageCompletionItem(3, "google.protobuf.DescriptorProto"),
+					messageCompletionItem(4, "google.protobuf.DescriptorProto.ExtensionRange"),
+					messageCompletionItem(5, "google.protobuf.DescriptorProto.ReservedRange"),
+					messageCompletionItem(6, "google.protobuf.Duration"),
+					messageCompletionItem(7, "google.protobuf.EnumDescriptorProto"),
+					messageCompletionItem(8, "google.protobuf.EnumDescriptorProto.EnumReservedRange"),
+					messageCompletionItem(9, "google.protobuf.EnumOptions"),
+					messageCompletionItem(10, "google.protobuf.EnumValueDescriptorProto"),
+					messageCompletionItem(11, "google.protobuf.EnumValueOptions"),
+					messageCompletionItem(12, "google.protobuf.ExtensionRangeOptions"),
+					messageCompletionItem(13, "google.protobuf.ExtensionRangeOptions.Declaration"),
+					messageCompletionItem(14, "google.protobuf.FieldDescriptorProto"),
+					messageCompletionItem(15, "google.protobuf.FieldOptions"),
+					messageCompletionItem(16, "google.protobuf.FileDescriptorProto"),
+					messageCompletionItem(17, "google.protobuf.FileDescriptorSet"),
+					messageCompletionItem(18, "google.protobuf.FileOptions"),
+					messageCompletionItem(19, "google.protobuf.GeneratedCodeInfo"),
+					messageCompletionItem(20, "google.protobuf.GeneratedCodeInfo.Annotation"),
+					messageCompletionItem(21, "google.protobuf.MessageOptions"),
+					messageCompletionItem(22, "google.protobuf.MethodDescriptorProto"),
+					messageCompletionItem(23, "google.protobuf.MethodOptions"),
+					messageCompletionItem(24, "google.protobuf.OneofDescriptorProto"),
+					messageCompletionItem(25, "google.protobuf.OneofOptions"),
+					messageCompletionItem(26, "google.protobuf.ServiceDescriptorProto"),
+					messageCompletionItem(27, "google.protobuf.ServiceOptions"),
+					messageCompletionItem(28, "google.protobuf.SourceCodeInfo"),
+					messageCompletionItem(29, "google.protobuf.SourceCodeInfo.Location"),
+					messageCompletionItem(30, "google.protobuf.UninterpretedOption"),
+					messageCompletionItem(31, "google.protobuf.UninterpretedOption.NamePart"),
+					messageCompletionItem(32, "google.rpc.BadRequest"),
+					messageCompletionItem(33, "google.rpc.BadRequest.FieldViolation"),
+					messageCompletionItem(34, "google.rpc.DebugInfo"),
+					messageCompletionItem(35, "google.rpc.ErrorInfo"),
+					messageCompletionItem(36, "google.rpc.ErrorInfo.MetadataEntry"),
+					messageCompletionItem(37, "google.rpc.Help"),
+					messageCompletionItem(38, "google.rpc.Help.Link"),
+					messageCompletionItem(39, "google.rpc.LocalizedMessage"),
+					messageCompletionItem(40, "google.rpc.PreconditionFailure"),
+					messageCompletionItem(41, "google.rpc.PreconditionFailure.Violation"),
+					messageCompletionItem(42, "google.rpc.QuotaFailure"),
+					messageCompletionItem(43, "google.rpc.QuotaFailure.Violation"),
+					messageCompletionItem(44, "google.rpc.RequestInfo"),
+					messageCompletionItem(45, "google.rpc.ResourceInfo"),
+					messageCompletionItem(46, "google.rpc.RetryInfo"),
+					messageCompletionItem(47, "post.GetPostRequest"),
+					messageCompletionItem(48, "post.GetPostResponse"),
+					messageCompletionItem(49, "post.GetPostsRequest"),
+					messageCompletionItem(50, "post.GetPostsResponse"),
+					messageCompletionItem(51, "post.Post"),
+					messageCompletionItem(52, "user.GetUserRequest"),
+					messageCompletionItem(53, "user.GetUserResponse"),
+					messageCompletionItem(54, "user.GetUsersRequest"),
+					messageCompletionItem(55, "user.GetUsersResponse"),
+					messageCompletionItem(56, "user.User"),
 				},
 			},
 		},
@@ -322,8 +347,8 @@ func TestHandler_Completion(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      49,
-						Character: 50,
+						Line:      60,
+						Character: 47,
 					},
 				},
 			},
@@ -332,15 +357,16 @@ func TestHandler_Completion(t *testing.T) {
 					{
 						Kind:  protocol.CompletionItemKindText,
 						Label: "user",
+						Data:  0,
 						TextEdit: &protocol.TextEdit{
 							Range: protocol.Range{
 								Start: protocol.Position{
-									Line:      49,
-									Character: 54,
+									Line:      60,
+									Character: 51,
 								},
 								End: protocol.Position{
-									Line:      49,
-									Character: 54,
+									Line:      60,
+									Character: 51,
 								},
 							},
 						},
@@ -398,6 +424,27 @@ func TestHandler_Completion(t *testing.T) {
 				t.Errorf("(-want +got)\n%s", diff)
 			}
 		})
+	}
+}
+
+func messageCompletionItem(idx int, candidate string) protocol.CompletionItem {
+	return protocol.CompletionItem{
+		Data:  idx,
+		Kind:  protocol.CompletionItemKindText,
+		Label: candidate,
+		TextEdit: &protocol.TextEdit{
+			NewText: candidate,
+			Range: protocol.Range{
+				Start: protocol.Position{
+					Line:      51,
+					Character: 17,
+				},
+				End: protocol.Position{
+					Line:      51,
+					Character: 17,
+				},
+			},
+		},
 	}
 }
 
@@ -538,8 +585,8 @@ func TestHandler_Definition(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      43,
-						Character: 32,
+						Line:      29,
+						Character: 15,
 					},
 				},
 			},
@@ -547,8 +594,8 @@ func TestHandler_Definition(t *testing.T) {
 				{
 					URI: mustTestdataAbs(t, "testdata/service.proto"),
 					Range: protocol.Range{
-						Start: protocol.Position{Line: 52, Character: 8},
-						End:   protocol.Position{Line: 52, Character: 12},
+						Start: protocol.Position{Line: 37, Character: 8},
+						End:   protocol.Position{Line: 37, Character: 12},
 					},
 				},
 			},
@@ -561,8 +608,8 @@ func TestHandler_Definition(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      36,
-						Character: 15,
+						Line:      43,
+						Character: 19,
 					},
 				},
 			},

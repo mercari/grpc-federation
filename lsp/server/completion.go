@@ -48,6 +48,7 @@ func (h *Handler) completion(ctx context.Context, params *protocol.CompletionPar
 			items = append(items, protocol.CompletionItem{
 				Label: candidate,
 				Kind:  protocol.CompletionItemKindText,
+				Data:  len(items),
 				TextEdit: &protocol.TextEdit{
 					Range:   protocol.Range{Start: start, End: end},
 					NewText: candidate[len(curText):],

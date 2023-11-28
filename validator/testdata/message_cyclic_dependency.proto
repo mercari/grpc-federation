@@ -15,9 +15,9 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "a", message: "A" },
-      { name: "b", message: "B" }
+    def [
+      { name: "a", message { name: "A" } },
+      { name: "b", message { name: "B" } }
     ]
   };
   string aaaname = 1 [(grpc.federation.field).by = "a.aaaname"];
@@ -26,9 +26,9 @@ message GetResponse {
 
 message A {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "aa", message: "AA" },
-      { name: "ab", message: "AB" }
+    def [
+      { name: "aa", message { name: "AA" } },
+      { name: "ab", message { name: "AB" } }
     ]
   };
   string aaaname = 1 [(grpc.federation.field).by = "aa.aaaname"];
@@ -37,9 +37,7 @@ message A {
 
 message AA {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "aaa", message: "AAA" }
-    ]
+    def { name: "aaa", message { name: "AAA" } }
   };
   string aaaname = 1 [(grpc.federation.field).by = "aaa.name"];
 }
@@ -50,9 +48,7 @@ message AB {
 
 message AAA {
   option (grpc.federation.message) = {
-    messages: [
-      { name: "a", message: "A" }
-    ]
+    def { name: "a", message { name: "A" } }
   };
   string name = 1 [(grpc.federation.field).by = "a.aaaname"];
 }

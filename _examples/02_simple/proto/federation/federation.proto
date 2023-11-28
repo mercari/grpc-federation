@@ -25,9 +25,13 @@ message GetPostRequest {
 
 message GetPostResponse {
   option (.grpc.federation.message) = {
-    messages: [
-      { name: "post", message: "Post", args: [{ name: "id", by: "$.id" }]}
-    ]
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
+    }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).string = "hello"];
@@ -35,22 +39,29 @@ message GetPostResponse {
 
 message Post {
   option (grpc.federation.message) = {
-    resolver {
-      method: "post.PostService/GetPost"
-      request: [
-        { field: "id", by: "$.id" }
-      ]
-      response: [ { name: "post", field: "post", autobind: true  } ]
-      timeout: "10s"
-      retry {
-        constant {
-          interval: "2s"
-          max_retries: 3
+    def [
+      {
+        name: "res"
+        call {
+          method: "post.PostService/GetPost"
+          request { field: "id", by: "$.id" }      
+          timeout: "10s"
+          retry {
+            constant {
+              interval: "2s"
+              max_retries: 3
+            }
+          }
+        }
+      },
+      { name: "post", by: "res.post", autobind: true },
+      {
+        name: "user"
+        message {
+          name: "User"
+          args { inline: "post" }
         }
       }
-    }
-    messages: [
-      { name: "user", message: "User", args: [{ inline: "post" }]}
     ]
   };
   string id = 1;
@@ -61,23 +72,26 @@ message Post {
 
 message User {
   option (grpc.federation.message) = {
-    resolver {
-      method: "user.UserService/GetUser"
-      request: [
-        { field: "id", by: "$.user_id" }
-      ]
-      response: [ { name: "user", field: "user", autobind: true  } ]
-      timeout: "20s"
-      retry {
-        exponential {
-          initial_interval: "1s"
-          randomization_factor: 0.7
-          multiplier: 1.7
-          max_interval: "30s"
-          max_retries: 3
+    def [
+      {
+        name: "res"
+        call {
+          method: "user.UserService/GetUser"
+          request { field: "id", by: "$.user_id" }
+          timeout: "20s"
+          retry {
+            exponential {
+              initial_interval: "1s"
+              randomization_factor: 0.7
+              multiplier: 1.7
+              max_interval: "30s"
+              max_retries: 3
+            }
+          }
         }
-      }
-    }
+      },
+      { name: "user", by: "res.user", autobind: true }
+    ]
   };
   string id = 1;
   string name = 2;

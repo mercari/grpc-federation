@@ -37,11 +37,13 @@ message UserSelection {
   oneof user {
     User user_a = 1 [
       (grpc.federation.field).oneof = {
-        expr: "m.value == $.value"
-        messages {
+        if: "m.value == $.value"
+        def {
           name: "ua"
-          message: "User"
-          args: { name: "user_id", string: "a" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "a" }
+          }
         }
         by: "ua"
       }
@@ -49,11 +51,13 @@ message UserSelection {
 
     User user_b = 2 [
       (grpc.federation.field).oneof = {
-        expr: "m.value != $.value"
-        messages {
+        if: "m.value != $.value"
+        def {
           name: "ub"
-          message: "User"
-          args: { name: "user_id", string: "b" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "b" }
+          }
         }
         by: "ub"
       }
@@ -62,10 +66,12 @@ message UserSelection {
     User user_c = 3 [
       (grpc.federation.field).oneof = {
         default: true
-        messages {
+        def {
           name: "uc"
-          message: "User"
-          args: { name: "user_id", by: "$.value" }
+          message {
+            name: "User"
+            args { name: "user_id", by: "$.value" }
+          }
         }
         by: "uc"
       }

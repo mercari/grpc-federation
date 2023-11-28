@@ -6,8 +6,68 @@ import (
 	"strings"
 
 	"github.com/mercari/grpc-federation/source"
-	"github.com/mercari/grpc-federation/types"
 )
+
+type ValueCandidate struct {
+	Name string
+	Type *Type
+}
+
+type ValueCandidates []*ValueCandidate
+
+func (c ValueCandidates) Names() []string {
+	ret := make([]string, 0, len(c))
+	for _, cc := range c {
+		ret = append(ret, cc.Name)
+	}
+	return ret
+}
+
+func (c ValueCandidates) Unique() ValueCandidates {
+	ret := make(ValueCandidates, 0, len(c))
+	nameMap := make(map[string]struct{})
+	for _, cc := range c {
+		if _, exists := nameMap[cc.Name]; exists {
+			continue
+		}
+		ret = append(ret, cc)
+		nameMap[cc.Name] = struct{}{}
+	}
+	return ret
+}
+
+func (c ValueCandidates) Filter(typ *Type) ValueCandidates {
+	ret := make(ValueCandidates, 0, len(c))
+	for _, cc := range c {
+		if cc.Type == nil || typ == nil {
+			ret = append(ret, cc)
+			continue
+		}
+		if cc.Type.Ref == nil && cc.Type.Enum == nil {
+			if cc.Type.Type == typ.Type {
+				ret = append(ret, cc)
+				continue
+			}
+		}
+		if cc.Type == typ {
+			ret = append(ret, cc)
+			continue
+		}
+		if cc.Type.IsNumber() && typ.IsNumber() {
+			ret = append(ret, cc)
+			continue
+		}
+		if cc.Type.Ref != nil && typ.Ref != nil && cc.Type.Ref == typ.Ref {
+			ret = append(ret, cc)
+			continue
+		}
+		if cc.Type.Enum != nil && typ.Enum != nil && cc.Type.Enum == typ.Enum {
+			ret = append(ret, cc)
+			continue
+		}
+	}
+	return ret
+}
 
 func (r *Resolver) Candidates(loc *source.Location) []string {
 	for _, file := range r.files {
@@ -16,7 +76,7 @@ func (r *Resolver) Candidates(loc *source.Location) []string {
 			switch {
 			case loc.Message != nil:
 				msg := r.cachedMessageMap[fmt.Sprintf("%s.%s", protoPkgName, loc.Message.Name)]
-				return r.candidatesFromMessage(msg, loc.Message)
+				return r.candidatesMessage(msg, loc.Message)
 			case loc.Service != nil:
 			}
 		}
@@ -24,108 +84,112 @@ func (r *Resolver) Candidates(loc *source.Location) []string {
 	return nil
 }
 
-func (r *Resolver) candidatesFromMessage(msg *Message, loc *source.Message) []string {
+func (r *Resolver) candidatesMessage(msg *Message, loc *source.Message) []string {
 	switch {
 	case loc.Option != nil:
-		return r.candidatesFromMessageOption(msg, loc.Option)
+		return r.candidatesMessageOption(msg, loc.Option)
 	case loc.Field != nil:
-		return r.candidatesFromField(msg, loc.Field)
+		return r.candidatesField(msg, loc.Field)
 	}
 	return nil
 }
 
-func (r *Resolver) candidatesFromMessageOption(msg *Message, opt *source.MessageOption) []string {
+func (r *Resolver) candidatesMessageOption(msg *Message, opt *source.MessageOption) []string {
 	switch {
-	case opt.Resolver != nil:
-		return r.candidatesFromResolver(msg, opt.Resolver)
-	case opt.Messages != nil:
-		return r.candidatesFromMessageDependency(msg, opt.Messages)
+	case opt.VariableDefinitions != nil:
+		return r.candidatesVariableDefinitions(msg, opt.VariableDefinitions)
 	}
-	return []string{"resolver", "messages"}
+	return []string{"def", "custom_resolver", "alias"}
 }
 
-func (r *Resolver) candidatesFromField(msg *Message, field *source.Field) []string {
+func (r *Resolver) candidatesField(msg *Message, field *source.Field) []string {
 	switch {
 	case field.Option != nil:
-		return r.candidatesFromFieldOption(msg, field)
+		return r.candidatesFieldOption(msg, field)
 	}
 	return nil
 }
 
-func (r *Resolver) candidatesFromFieldOption(msg *Message, field *source.Field) []string {
+func (r *Resolver) candidatesFieldOption(msg *Message, field *source.Field) []string {
 	switch {
 	case field.Option.By:
 		f := msg.Field(field.Name)
 		if f == nil {
 			return nil
 		}
-		return r.candidatesFieldValue(f.Type, msg)
+		if msg.Rule == nil {
+			return []string{}
+		}
+		defIdx := len(msg.Rule.VariableDefinitions) - 1
+		return r.candidatesCELValue(msg, defIdx).Unique().Filter(f.Type).Names()
 	}
 	return []string{"by"}
 }
 
-func (r *Resolver) candidatesFromResolver(msg *Message, resolver *source.ResolverOption) []string {
+func (r *Resolver) candidatesVariableDefinitions(msg *Message, opt *source.VariableDefinitionOption) []string {
 	switch {
-	case resolver.Method:
-		return r.candidatesResolverMethodName(msg)
-	case resolver.Request != nil:
-		return r.candidatesFromRequest(msg, resolver.Request)
-	case resolver.Response != nil:
-		return r.candidatesFromResponse(msg, resolver.Response)
+	case opt.Name:
+		return []string{}
+	case opt.By:
+		return r.candidatesCELValue(msg, opt.Idx-1).Unique().Names()
+	case opt.Map != nil:
+		return r.candidatesMapExpr(msg, opt.Idx, opt.Map)
+	case opt.Call != nil:
+		return r.candidatesCallExpr(msg, opt.Idx, opt.Call)
+	case opt.Message != nil:
+		return r.candidatesMessageExpr(msg, opt.Idx, opt.Message)
 	}
-	return []string{"method", "request", "response"}
+	return []string{"name", "by", "map", "call", "message", "validation"}
 }
 
-func (r *Resolver) candidatesFromRequest(msg *Message, req *source.RequestOption) []string {
+func (r *Resolver) candidatesCallExpr(msg *Message, defIdx int, opt *source.CallExprOption) []string {
 	switch {
-	case req.Field:
-		return r.candidatesResolverRequestField(msg)
-	case req.By:
-		expectedType := r.requestFieldType(msg, req.Idx)
-		return r.candidatesResolverRequestValue(expectedType, msg)
+	case opt.Method:
+		return r.candidatesMethodName(msg)
+	case opt.Request != nil:
+		return r.candidatesRequest(msg, defIdx, opt.Request)
+	case opt.Timeout:
+	case opt.Retry != nil:
+	}
+	return []string{"method", "request", "timeout", "retry"}
+}
+
+func (r *Resolver) candidatesRequest(msg *Message, defIdx int, opt *source.RequestOption) []string {
+	switch {
+	case opt.Field:
+		return r.candidatesRequestField(msg, defIdx)
+	case opt.By:
+		typ := r.requestFieldType(msg, defIdx, opt.Idx)
+		return r.candidatesCELValue(msg, defIdx).Unique().Filter(typ).Names()
 	}
 	return []string{"field", "by"}
 }
 
-func (r *Resolver) candidatesFromResponse(msg *Message, res *source.ResponseOption) []string {
+func (r *Resolver) candidatesMessageExpr(msg *Message, defIdx int, opt *source.MessageExprOption) []string {
 	switch {
-	case res.Name:
-		return []string{}
-	case res.Field:
-		return r.candidatesResolverResponseField(msg)
-	case res.AutoBind:
-		return []string{"true", "false"}
+	case opt.Name:
+		return r.candidatesMessageName(msg)
+	case opt.Args != nil:
+		return r.candidatesMessageExprArguments(msg, defIdx, opt.Args)
 	}
-	return []string{"name", "field", "autobind"}
+	return []string{"name", "args"}
 }
 
-func (r *Resolver) candidatesFromMessageDependency(msg *Message, dep *source.MessageDependencyOption) []string {
-	switch {
-	case dep.Name:
-		return []string{}
-	case dep.Message:
-		return r.candidatesDependencyMessageValue(msg)
-	case dep.Args != nil:
-		return r.candidatesFromMessageCallArguments(msg, dep.Idx, dep.Args)
-	}
-	return []string{"name", "message", "args"}
+func (r *Resolver) candidatesMapExpr(msg *Message, defIdx int, opt *source.MapExprOption) []string {
+	return nil
 }
 
-func (r *Resolver) candidatesFromMessageCallArguments(msg *Message, depIdx int, arg *source.ArgumentOption) []string {
+func (r *Resolver) candidatesMessageExprArguments(msg *Message, defIdx int, arg *source.ArgumentOption) []string {
 	switch {
 	case arg.Name:
 		return []string{}
-	case arg.By:
-		expectedType := r.messageCallArgumentType(msg, depIdx, arg.Idx)
-		return r.candidatesMessageCallArgumentValue(expectedType, msg, depIdx)
-	case arg.Inline:
-		expectedType := &Type{Type: types.Message}
-		return r.candidatesMessageCallArgumentValue(expectedType, msg, depIdx)
+	case arg.By, arg.Inline:
+		return r.candidatesCELValue(msg, defIdx).Unique().Names()
 	}
 	return []string{"name", "by", "inline"}
 }
 
-func (r *Resolver) candidatesResolverMethodName(msg *Message) []string {
+func (r *Resolver) candidatesMethodName(msg *Message) []string {
 	selfPkgName := fmt.Sprintf("%s.", msg.PackageName())
 	names := make([]string, 0, len(r.cachedMethodMap))
 	for name := range r.cachedMethodMap {
@@ -138,137 +202,69 @@ func (r *Resolver) candidatesResolverMethodName(msg *Message) []string {
 	return names
 }
 
-func (r *Resolver) candidatesResolverRequestField(msg *Message) []string {
+func (r *Resolver) candidatesRequestField(msg *Message, defIdx int) []string {
 	if msg.Rule == nil {
 		return nil
 	}
 
-	methodCall := msg.Rule.MethodCall
-	if methodCall == nil {
-		return nil
-	}
-	if methodCall.Method == nil {
-		return nil
-	}
-	if methodCall.Method.Request == nil {
+	if len(msg.Rule.VariableDefinitions) <= defIdx {
 		return nil
 	}
 
-	names := make([]string, 0, len(methodCall.Method.Request.Fields))
-	for _, field := range methodCall.Method.Request.Fields {
+	def := msg.Rule.VariableDefinitions[defIdx]
+	if def.Expr == nil {
+		return nil
+	}
+	if def.Expr.Call == nil {
+		return nil
+	}
+	if def.Expr.Call.Method == nil {
+		return nil
+	}
+	if def.Expr.Call.Method.Request == nil {
+		return nil
+	}
+
+	fields := def.Expr.Call.Method.Request.Fields
+	names := make([]string, 0, len(fields))
+	for _, field := range fields {
 		names = append(names, field.Name)
 	}
 	return names
 }
 
-func (r *Resolver) candidatesResolverResponseField(msg *Message) []string {
+func (r *Resolver) requestFieldType(msg *Message, defIdx, reqIdx int) *Type {
 	if msg.Rule == nil {
 		return nil
 	}
-
-	methodCall := msg.Rule.MethodCall
-	if methodCall == nil {
-		return nil
-	}
-	if methodCall.Method == nil {
-		return nil
-	}
-	if methodCall.Method.Response == nil {
+	if len(msg.Rule.VariableDefinitions) <= defIdx {
 		return nil
 	}
 
-	names := make([]string, 0, len(methodCall.Method.Response.Fields))
-	for _, field := range methodCall.Method.Response.Fields {
-		names = append(names, field.Name)
+	def := msg.Rule.VariableDefinitions[defIdx]
+	if def.Expr == nil {
+		return nil
 	}
-	return names
+	if def.Expr.Call == nil {
+		return nil
+	}
+	if def.Expr.Call.Method == nil {
+		return nil
+	}
+	if def.Expr.Call.Method.Request == nil {
+		return nil
+	}
+
+	fields := def.Expr.Call.Method.Request.Fields
+	if len(fields) <= reqIdx {
+		return nil
+	}
+	return fields[reqIdx].Type
 }
 
-func (r *Resolver) candidatesResolverRequestValue(expectedType *Type, msg *Message) []string {
-	var names []string
-	names = append(names, r.candidatesFromMessageDependencyName(expectedType, msg)...)
-	names = append(names, r.candidatesFromMessageArguments(expectedType, msg)...)
-	return names
-}
-
-func (r *Resolver) requestFieldType(msg *Message, idx int) *Type {
-	if msg.Rule == nil {
-		return nil
-	}
-
-	methodCall := msg.Rule.MethodCall
-	if methodCall == nil {
-		return nil
-	}
-	if methodCall.Method == nil {
-		return nil
-	}
-	if methodCall.Method.Request == nil {
-		return nil
-	}
-	if len(methodCall.Method.Request.Fields) <= idx {
-		return nil
-	}
-	return methodCall.Method.Request.Fields[idx].Type
-}
-
-func (r *Resolver) messageCallArgumentType(msg *Message, msgIdx, argIdx int) *Type {
-	if msg.Rule == nil {
-		return nil
-	}
-	if len(msg.Rule.MessageDependencies) <= msgIdx {
-		return nil
-	}
-	dep := msg.Rule.MessageDependencies[msgIdx]
-	if dep.Message == nil {
-		return nil
-	}
-	if len(dep.Args) <= argIdx {
-		return nil
-	}
-	argName := dep.Args[argIdx].Name
-	if dep.Message.Rule == nil {
-		return nil
-	}
-	if dep.Message.Rule.MessageArgument == nil {
-		return nil
-	}
-	for _, argField := range dep.Message.Rule.MessageArgument.Fields {
-		if argField.Name == argName {
-			return argField.Type
-		}
-	}
-	return nil
-}
-
-func (r *Resolver) candidatesMessageCallArgumentValue(expectedType *Type, msg *Message, depIdx int) []string {
-	var names []string
-	names = append(names, r.candidatesFromResolverResponseName(expectedType, msg, false)...)
-	names = append(names, r.candidatesFromMessageDependencyNameWithIgnoreIdx(expectedType, msg, depIdx)...)
-	names = append(names, r.candidatesFromMessageArguments(expectedType, msg)...)
-	return names
-}
-
-func (r *Resolver) candidatesFieldValue(expectedType *Type, msg *Message) []string {
-	var names []string
-	names = append(names, r.candidatesFromResolverResponseName(expectedType, msg, true)...)
-	names = append(names, r.candidatesFromMessageDependencyName(expectedType, msg)...)
-	names = append(names, r.candidatesFromMessageArguments(expectedType, msg)...)
-	return names
-}
-
-func (r *Resolver) candidatesDependencyMessageValue(msg *Message) []string {
+func (r *Resolver) candidatesMessageName(msg *Message) []string {
 	const federationPkgName = "grpc.federation."
 
-	definedMessageNameMap := make(map[string]struct{})
-	if msg.Rule != nil {
-		for _, dep := range msg.Rule.MessageDependencies {
-			if dep.Message == nil {
-				continue
-			}
-			definedMessageNameMap[dep.Message.Name] = struct{}{}
-		}
-	}
 	selfPkgName := fmt.Sprintf("%s.", msg.PackageName())
 	selfName := fmt.Sprintf("%s.%s", msg.PackageName(), msg.Name)
 	names := make([]string, 0, len(r.cachedMessageMap))
@@ -280,16 +276,46 @@ func (r *Resolver) candidatesDependencyMessageValue(msg *Message) []string {
 			continue
 		}
 		name = strings.TrimPrefix(name, selfPkgName)
-		if _, exists := definedMessageNameMap[name]; exists {
-			continue
-		}
 		names = append(names, name)
 	}
 	sort.Strings(names)
 	return names
 }
 
-func (r *Resolver) candidatesFromMessageArguments(expectedType *Type, msg *Message) []string {
+func (r *Resolver) candidatesCELValue(msg *Message, defIdx int) ValueCandidates {
+	var ret ValueCandidates
+	ret = append(ret, r.candidatesVariableName(msg, defIdx)...)
+	ret = append(ret, r.candidatesMessageArguments(msg)...)
+	return ret
+}
+
+func (r *Resolver) candidatesVariableName(msg *Message, defIdx int) []*ValueCandidate {
+	if msg.Rule == nil {
+		return nil
+	}
+	if len(msg.Rule.VariableDefinitions) <= defIdx {
+		return nil
+	}
+
+	var ret []*ValueCandidate
+	for i := 0; i < defIdx+1; i++ {
+		def := msg.Rule.VariableDefinitions[defIdx]
+		name := def.Name
+		if name == "" || strings.HasPrefix(name, "_") {
+			continue
+		}
+		if def.Expr == nil {
+			continue
+		}
+		ret = append(ret, &ValueCandidate{
+			Name: name,
+			Type: def.Expr.Type,
+		})
+	}
+	return ret
+}
+
+func (r *Resolver) candidatesMessageArguments(msg *Message) []*ValueCandidate {
 	if msg.Rule == nil {
 		return nil
 	}
@@ -297,84 +323,12 @@ func (r *Resolver) candidatesFromMessageArguments(expectedType *Type, msg *Messa
 		return nil
 	}
 	arg := msg.Rule.MessageArgument
-	names := make([]string, 0, len(arg.Fields))
+	names := make(ValueCandidates, 0, len(arg.Fields))
 	for _, field := range arg.Fields {
-		if !r.isAssignableType(expectedType, field.Type) {
-			continue
-		}
-		names = append(names, fmt.Sprintf("$.%s", field.Name))
+		names = append(names, &ValueCandidate{
+			Name: fmt.Sprintf("$.%s", field.Name),
+			Type: field.Type,
+		})
 	}
 	return names
-}
-
-func (r *Resolver) candidatesFromMessageDependencyName(expectedType *Type, msg *Message) []string {
-	return r.candidatesFromMessageDependencyNameWithIgnoreIdx(expectedType, msg, -1)
-}
-
-func (r *Resolver) candidatesFromMessageDependencyNameWithIgnoreIdx(expectedType *Type, msg *Message, ignoreIdx int) []string {
-	if msg.Rule == nil {
-		return nil
-	}
-
-	var names []string
-	for idx, dep := range msg.Rule.MessageDependencies {
-		if idx == ignoreIdx {
-			continue
-		}
-		if dep.Name == "" {
-			continue
-		}
-		typ := &Type{Type: types.Message, Ref: dep.Message}
-		if !r.isAssignableType(expectedType, typ) {
-			continue
-		}
-		names = append(names, dep.Name)
-	}
-	return names
-}
-
-func (r *Resolver) candidatesFromResolverResponseName(expectedType *Type, msg *Message, expandAutoBindField bool) []string {
-	if msg.Rule == nil {
-		return nil
-	}
-	if msg.Rule.MethodCall == nil {
-		return nil
-	}
-	if msg.Rule.MethodCall.Response == nil {
-		return nil
-	}
-
-	var names []string
-	for _, field := range msg.Rule.MethodCall.Response.Fields {
-		if expandAutoBindField && field.AutoBind && field.Type != nil && field.Type.Ref != nil {
-			for _, autoBindField := range field.Type.Ref.Fields {
-				if autoBindField.Name == "" {
-					continue
-				}
-				if r.isAssignableType(expectedType, autoBindField.Type) {
-					names = append(names, autoBindField.Name)
-				}
-			}
-		}
-		if field.Name != "" && r.isAssignableType(expectedType, field.Type) {
-			names = append(names, field.Name)
-		}
-	}
-	return names
-}
-
-func (r *Resolver) isAssignableType(expected, got *Type) bool {
-	if expected == nil {
-		return true
-	}
-	if got == nil {
-		return true
-	}
-	if expected.Type == got.Type {
-		return true
-	}
-	if expected.IsNumber() && got.IsNumber() {
-		return true
-	}
-	return false
 }

@@ -25,8 +25,8 @@ func TestCompletion(t *testing.T) {
 	t.Run("method", func(t *testing.T) {
 		// resolver.method value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 37,
-			Col:  16,
+			Line: 44,
+			Col:  19,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -45,8 +45,8 @@ func TestCompletion(t *testing.T) {
 	t.Run("request.field", func(t *testing.T) {
 		// resolver.request.field value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 39,
-			Col:  20,
+			Line: 45,
+			Col:  28,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -62,8 +62,8 @@ func TestCompletion(t *testing.T) {
 	t.Run("request.by", func(t *testing.T) {
 		// resolver.request.by value position os Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 39,
-			Col:  29,
+			Line: 45,
+			Col:  38,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -76,28 +76,29 @@ func TestCompletion(t *testing.T) {
 		}
 	})
 
-	t.Run("response.field", func(t *testing.T) {
+	t.Run("filter response", func(t *testing.T) {
 		// resolver.response.field value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 41,
-			Col:  43,
+			Line: 48,
+			Col:  28,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if diff := cmp.Diff(candidates, []string{
-			"post",
+			"res",
+			"$.id",
 		}); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
 	})
 
 	t.Run("message", func(t *testing.T) {
-		// messages[0].message value position of Post in service.proto file
+		// def[2].message value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 44,
-			Col:  34,
+			Line: 52,
+			Col:  17,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -107,6 +108,7 @@ func TestCompletion(t *testing.T) {
 			// federation package messages.
 			"GetPostRequest",
 			"GetPostResponse",
+			"User",
 
 			// google messages
 			"google.protobuf.DescriptorProto",

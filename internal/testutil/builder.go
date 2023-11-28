@@ -405,12 +405,27 @@ func (b *MessageBuilder) AddFieldWithTypeNameAndRule(t *testing.T, name, typeNam
 }
 
 func (b *MessageBuilder) AddFieldWithRule(name string, typ *resolver.Type, rule *resolver.FieldRule) *MessageBuilder {
-	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ, Rule: rule})
+	field := &resolver.Field{Name: name, Type: typ, Rule: rule}
+	if rule.Oneof != nil {
+		for _, def := range rule.Oneof.VariableDefinitions {
+			if def.Owner == nil {
+				continue
+			}
+			def.Owner.Field = field
+		}
+	}
+	b.msg.Fields = append(b.msg.Fields, field)
 	return b
 }
 
 func (b *MessageBuilder) SetRule(rule *resolver.MessageRule) *MessageBuilder {
 	b.msg.Rule = rule
+	for _, def := range rule.VariableDefinitions {
+		if def.Owner == nil {
+			continue
+		}
+		def.Owner.Message = b.msg
+	}
 	return b
 }
 
@@ -545,40 +560,6 @@ func NewMessageRuleBuilder() *MessageRuleBuilder {
 	}
 }
 
-func (b *MessageRuleBuilder) SetMethodCall(call *resolver.MethodCall) *MessageRuleBuilder {
-	b.rule.MethodCall = call
-	return b
-}
-
-func (b *MessageRuleBuilder) Method() *resolver.MethodCall {
-	return b.rule.MethodCall
-}
-
-func (b *MessageRuleBuilder) AddMessageDependency(name string, msg *resolver.Message, args []*resolver.Argument, autobind, used bool) *MessageRuleBuilder {
-	dep := &resolver.MessageDependency{
-		Name:     name,
-		Message:  msg,
-		Args:     args,
-		AutoBind: autobind,
-		Used:     used,
-	}
-	b.rule.MessageDependencies = append(b.rule.MessageDependencies, dep)
-	return b
-}
-
-func (b *MessageRuleBuilder) AddValidation(name string, c code.Code, rule *resolver.CELValue, details []*resolver.ValidationErrorDetail) *MessageRuleBuilder {
-	validation := &resolver.ValidationRule{
-		Name: name,
-		Error: &resolver.ValidationError{
-			Code:    c,
-			Rule:    rule,
-			Details: details,
-		},
-	}
-	b.rule.Validations = append(b.rule.Validations, validation)
-	return b
-}
-
 func (b *MessageRuleBuilder) SetCustomResolver(v bool) *MessageRuleBuilder {
 	b.rule.CustomResolver = v
 	return b
@@ -618,6 +599,10 @@ func (b *MessageRuleBuilder) AddVariableDefinition(def *resolver.VariableDefinit
 		if !found {
 			b.errs = append(b.errs, fmt.Errorf("%s variable name is not found", name))
 		}
+	}
+	def.Idx = len(b.rule.VariableDefinitions)
+	def.Owner = &resolver.VariableDefinitionOwner{
+		Type: resolver.VariableDefinitionOwnerMessage,
 	}
 	b.rule.VariableDefinitions = append(b.rule.VariableDefinitions, def)
 	return b
@@ -960,12 +945,6 @@ func (b *MethodCallBuilder) SetRequest(req *resolver.Request) *MethodCallBuilder
 	return b
 }
 
-func (b *MethodCallBuilder) SetResponse(res *resolver.Response) *MethodCallBuilder {
-	res.Type = b.call.Method.Response
-	b.call.Response = res
-	return b
-}
-
 func (b *MethodCallBuilder) SetTimeout(timeout string) *MethodCallBuilder {
 	b.timeout = timeout
 	return b
@@ -1117,34 +1096,6 @@ func (b *RequestBuilder) AddField(name string, typ *resolver.Type, value *resolv
 func (b *RequestBuilder) Build(t *testing.T) *resolver.Request {
 	t.Helper()
 	return b.req
-}
-
-type ResponseBuilder struct {
-	res *resolver.Response
-}
-
-func NewResponseBuilder() *ResponseBuilder {
-	return &ResponseBuilder{
-		res: &resolver.Response{
-			Fields: []*resolver.ResponseField{},
-		},
-	}
-}
-
-func (b *ResponseBuilder) AddField(name, field string, typ *resolver.Type, autobind, used bool) *ResponseBuilder {
-	b.res.Fields = append(b.res.Fields, &resolver.ResponseField{
-		Name:      name,
-		FieldName: field,
-		Type:      typ,
-		AutoBind:  autobind,
-		Used:      used,
-	})
-	return b
-}
-
-func (b *ResponseBuilder) Build(t *testing.T) *resolver.Response {
-	t.Helper()
-	return b.res
 }
 
 type MessageDependencyArgumentBuilder struct {
@@ -1349,6 +1300,7 @@ func (b *MethodRuleBuilder) Build(t *testing.T) *resolver.MethodRule {
 }
 
 type FieldOneofRuleBuilder struct {
+	errs []error
 	rule *resolver.FieldOneofRule
 }
 
@@ -1358,9 +1310,9 @@ func NewFieldOneofRuleBuilder() *FieldOneofRuleBuilder {
 	}
 }
 
-func (b *FieldOneofRuleBuilder) SetExpr(expr string, out *resolver.Type) *FieldOneofRuleBuilder {
-	b.rule.Expr = &resolver.CELValue{
-		Expr: expr,
+func (b *FieldOneofRuleBuilder) SetIf(v string, out *resolver.Type) *FieldOneofRuleBuilder {
+	b.rule.If = &resolver.CELValue{
+		Expr: v,
 		Out:  out,
 	}
 	return b
@@ -1371,15 +1323,26 @@ func (b *FieldOneofRuleBuilder) SetDefault(v bool) *FieldOneofRuleBuilder {
 	return b
 }
 
-func (b *FieldOneofRuleBuilder) AddMessageDependency(name string, msg *resolver.Message, args []*resolver.Argument, autobind, used bool) *FieldOneofRuleBuilder {
-	dep := &resolver.MessageDependency{
-		Name:     name,
-		Message:  msg,
-		Args:     args,
-		AutoBind: autobind,
-		Used:     used,
+func (b *FieldOneofRuleBuilder) AddVariableDefinition(def *resolver.VariableDefinition) *FieldOneofRuleBuilder {
+	if def.Expr != nil && def.Expr.Map != nil && def.Expr.Map.Iterator != nil {
+		name := def.Expr.Map.Iterator.Source.Name
+		var found bool
+		for _, varDef := range b.rule.VariableDefinitions {
+			if varDef.Name == name {
+				def.Expr.Map.Iterator.Source = varDef
+				found = true
+				break
+			}
+		}
+		if !found {
+			b.errs = append(b.errs, fmt.Errorf("%s variable name is not found", name))
+		}
 	}
-	b.rule.MessageDependencies = append(b.rule.MessageDependencies, dep)
+	def.Idx = len(b.rule.VariableDefinitions)
+	def.Owner = &resolver.VariableDefinitionOwner{
+		Type: resolver.VariableDefinitionOwnerOneofField,
+	}
+	b.rule.VariableDefinitions = append(b.rule.VariableDefinitions, def)
 	return b
 }
 
@@ -1403,5 +1366,8 @@ func (b *FieldOneofRuleBuilder) AddResolver(group resolver.MessageResolverGroup)
 
 func (b *FieldOneofRuleBuilder) Build(t *testing.T) *resolver.FieldOneofRule {
 	t.Helper()
+	if len(b.errs) != 0 {
+		t.Fatal(errors.Join(b.errs...))
+	}
 	return b.rule
 }

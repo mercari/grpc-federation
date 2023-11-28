@@ -92,16 +92,6 @@ message MessageRule {
   // If this definition exists, type conversion is automatically performed before the field assignment operation.
   // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
   optional string alias = 3;
-
-  // resolver defines how to call methods to obtain the values needed to compose the message.
-  optional Resolver resolver = 4 [deprecated = true];
-  // messages defines a list of dependent messages that must be retrieved to compose a message.
-  repeated Message messages = 5 [deprecated = true];
-  // validations defines a list of validations that must run using variables defined within the current scope.
-  // The validations in the same Validation block run in order, starting from the validation that is ready for evaluation.
-  // It determines success or failure when all the validations in the same Validation block have been completed.
-  // If the Validation block is marked as failure, an error is returned without waiting for the other Validation blocks.
-  repeated Validation validations = 6 [deprecated = true];
 }
 
 // VariableDefinition represents variable definition.
@@ -131,13 +121,13 @@ message VariableDefinition {
     MapExpr map = 12;
 
     // message gets with message arguments.
-    MessageDependency message = 13;
+    MessageExpr message = 13;
 
     // call specifies how to call gRPC method.
     CallExpr call = 14;
 
     // validation defines the validation rule and error.
-    Validation validation = 15;
+    ValidationExpr validation = 15;
   };
 }
 
@@ -154,7 +144,7 @@ message MapExpr {
     string by = 11;
     // message gets with message arguments, and it is made an element of the map.
     // The result type of MapExpr is the repeated type of the specified message.
-    MessageDependency message = 12;
+    MessageExpr message = 12;
   };
 }
 
@@ -167,8 +157,8 @@ message Iterator {
   string src = 2;  
 }
 
-// MessageDependency represents dependent message.
-message MessageDependency {
+// MessageExpr represents dependent message.
+message MessageExpr {
   // name specify the message name by FQDN. format is `<package-name>.<message-name>`.
   // <package-name> can be omitted when referring to messages in the same package.
   string name = 1;
@@ -189,22 +179,6 @@ message CallExpr {
   optional string timeout = 3;
   // retry specifies the retry policy if the method call fails.
   optional RetryPolicy retry = 4;
-}
-
-// Resolver define the gRPC method, how to call it, and which value to use in the return value.
-message Resolver {
-  // method specify the FQDN for the gRPC method. format is `<package-name>.<service-name>/<method-name>`.
-  string method = 1;
-  // request specify request parameters for the gRPC method.
-  repeated MethodRequest request = 2;
-  // response specify which value in the gRPC method response is referenced by which name.
-  repeated MethodResponse response = 3;
-  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
-  // If you want to handle this error, you need to implement a custom error handler in Go.
-  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
-  optional string timeout = 4;
-  // retry specifies the retry policy if the method call fails.
-  optional RetryPolicy retry = 5;
 }
 
 // RetryPolicy define the retry policy if the method call fails.
@@ -335,21 +309,6 @@ message MethodResponse {
   // If multiple autobinds are used at the same message,
   // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
   optional bool autobind = 3;
-}
-
-// Message define dependent message.
-message Message {
-  // name specify a unique name for the dependent message.
-  optional string name = 1;
-  // message specify the message to be referred to by FQDN. format is `<package-name>.<message-name>`.
-  // <package-name> can be omitted when referring to messages in the same package.
-  string message = 2;
-  // args specify the parameters needed to retrieve the message. This is called the message argument.
-  repeated Argument args = 3;
-  // autobind the value of a field with the same name and type as the field name of this message is automatically assigned to the field value in the message.
-  // If multiple autobinds are used at the same message,
-  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
-  optional bool autobind = 4;
 }
 
 // Argument define message argument.
@@ -533,28 +492,24 @@ message FieldRule {
 message FieldOneof {
   // cond specify either `expr` or `default`. Only one `default` can be set per oneof.
   oneof cond {
-    // expr describes the condition to be assigned to field.
-    // The return value must be of type bool.
-    // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
-    // Variables are already defined in MessageRule can be used.
-    string expr = 1 [deprecated=true];
-
-    // default used to assign a value when none of the other fields match any of the specified expressions.
-    // Only one value can be defined per oneof.
-    bool default = 2;
-
     // if describes the condition to be assigned to field.
     // The return value must be of type bool.
     // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
     // Variables are already defined in MessageRule can be used.
-    string if = 3;
+    string if = 1;
+
+    // default used to assign a value when none of the other fields match any of the specified expressions.
+    // Only one value can be defined per oneof.
+    bool default = 2;
   }
-  // messages defines a list of dependent messages that must be retrieved to compose a message.
-  repeated Message messages = 4;
+
+  // def specify variables to be used in current oneof field's scope for field binding.
+  repeated VariableDefinition def = 3;
+
   // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
   // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
-  // Variables are already defined in MessageRule and FieldOneOf's messages field can be used.
-  string by = 5;
+  // Variables are already defined in MessageRule and FieldOneOf can be used.
+  string by = 4;
 }
 
 // MessageValue represents message literal.
@@ -644,7 +599,7 @@ message MessageFieldValue {
 }
 
 // Validation represents a validation rule against variables defined within the current scope.
-message Validation {
+message ValidationExpr {
   // name is a unique name for the validation.
   // If set, the validation error type will be <message-name><name>Error.
   // If omitted, the validation error type will be ValidationError.

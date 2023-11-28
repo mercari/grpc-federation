@@ -15,32 +15,34 @@ message GetRequest {}
 
 message GetResponse {
   option (grpc.federation.message) = {
-    messages: [
-      {
-        name: "sel"
-        message: "UserSelection"
+    def {
+      name: "sel"
+      message {
+        name: "UserSelection"
         args { name: "value", string: "foo" }
       }
-    ]
+    }
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
 }
 
 message UserSelection {
   option (grpc.federation.message) = {
-    messages {
+    def {
       name: "m"
-      message: "M"
+      message { name: "M" }
     }
   };
   oneof user {
     User user_a = 1 [
       (grpc.federation.field).oneof = {
-        expr: "1"
-        messages {
+        if: "1"
+        def {
           name: "ua"
-          message: "User"
-          args: { name: "user_id", string: "a" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "a" }
+          }
         }
         by: "ua"
       }
@@ -48,10 +50,12 @@ message UserSelection {
 
     User user_b = 2 [
       (grpc.federation.field).oneof = {
-        messages {
+        def {
           name: "ub"
-          message: "User"
-          args: { name: "user_id", string: "b" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "b" }
+          }
         }
         by: "ub"
       }
@@ -60,10 +64,12 @@ message UserSelection {
     User user_c = 3 [
       (grpc.federation.field).oneof = {
         default: true
-        messages {
+        def {
           name: "uc"
-          message: "User"
-          args: { name: "user_id", string: "c" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "c" }
+          }
         }
       }
     ];
@@ -71,17 +77,19 @@ message UserSelection {
     User user_d = 4 [
       (grpc.federation.field).oneof = {
         default: true
-        messages {
+        def {
           name: "ud"
-          message: "User"
-          args: { name: "user_id", string: "d" }
+          message {
+            name: "User"
+            args { name: "user_id", string: "d" }
+          }
         }
         by: "ud"
       }
     ];
   }
   bool foo = 5 [(grpc.federation.field).oneof = {
-    expr: "true"
+    if: "true"
     by: "true"
   }];
 }
