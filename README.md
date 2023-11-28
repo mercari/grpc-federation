@@ -6,8 +6,8 @@
 
 gRPC Federation is a mechanism to automatically generate a BFF (Backend for frontend) server that aggregates and returns the results of gRPC protocol based microservices by writing Protocol Buffer's option.
 
-
-*NOTE*: gRPC Federation is still in alpha version. Please do not use it in production, as the design may change significantly.
+> [!WARNING]
+> gRPC Federation is still in alpha version. Please do not use it in production, as the design may change significantly.
 
 # Motivation
 
