@@ -835,10 +835,28 @@ TODO..
 
 ## (grpc.federation.message).custom_resolver
 
+There is a limit to what can be expressed in proto, so if you want to execute a process that cannot be expressed in proto, you will need to implement it yourself in the Go language.  
+
 If custom_resolver is true, the resolver for this message is implemented by Go.
-If there are any values retrieved by resolver or messages, they are passed as arguments for custom resolver.
+If there are any values retrieved by `def`, they are passed as arguments for custom resolver.
 Each field of the message returned by the custom resolver is automatically bound.
 If you want to change the binding process for a particular field, set `custom_resolver=true` option for that field.
+
+### example
+
+```proto
+message Foo {
+  option (grpc.federation.message).custom_resolver = true;
+}
+```
+
+or
+
+```proto
+message Foo {
+  User user = 1 [(grpc.federation.field).custom_resolver = true];
+}
+```
 
 ## (grpc.federation.message).alias
 
@@ -870,7 +888,7 @@ You need to use `$.` to refer to the message argument.
 | ----- | ---- | -------------------- |
 | [`if`](#grpcfederationfieldoneofif) | CEL | optional |
 | [`default`](#grpcfederationfieldoneofdefault) | bool | optional |
-| [`messages`](#grpcfederationfieldoneofmessages) | repeated MessageExpr | optional |
+| [`def`](#grpcfederationfieldoneofdef) | repeated VariableDefinition | optional |
 | [`by`](#grpcfederationfieldoneofby) | CEL | optional |
 
 ## (grpc.federation.field).oneof.if
@@ -883,9 +901,9 @@ The return value must be of bool type.
 `default` used to assign a value when none of the other fields match any of the specified expressions.
 Only one value can be defined per oneof.
 
-## (grpc.federation.field).oneof.messages
+## (grpc.federation.field).oneof.def
 
-`messages` defines a list of dependent messages that must be retrieved to compose a message.
+`def` defines the list of variables to which the oneof field refers.
 
 ## (grpc.federation.field).oneof.by
 
@@ -921,3 +939,19 @@ Also, the message argument should be `$.` can be used to refer to them.
 ## Pre-defined variables
 
 TODO...
+
+# Message Argument
+
+Message argument is an argument passed when depends on other messages via the `def.message` feature. This parameter propagates the information necessary to resolve message dependencies.
+
+Normally, only values explicitly specified in `args` can be referenced as message arguments.
+
+However, exceptionally, a field in the gRPC method's request message can be referenced as a message argument to the method's response.
+
+For example, consider the `GetPost` method of the `FederationService`: the `GetPostReply` message implicitly allows the fields of the `GetPostRequest` message to be used as message arguments.
+
+In summary, it looks like this.
+
+1. For the response message of rpc, the request message fields are the message arguments.
+2. For other messages, the parameters explicitly passed in `def.message.args` option are the message arguments.
+3. You can access to the message argument with `$.` prefix.
