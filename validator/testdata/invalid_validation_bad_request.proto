@@ -44,7 +44,7 @@ message Post {
       { name: "post", by: "res.post", autobind: true },
       {
         validation {
-          name: "invalidBadRequest",
+          name: "invalid_bad_request",
           error {
             code: FAILED_PRECONDITION
             details: {

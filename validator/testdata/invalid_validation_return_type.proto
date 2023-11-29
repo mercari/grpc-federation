@@ -44,7 +44,7 @@ message Post {
       { name: "post", by: "res.post", autobind: true },
       {
         validation {
-          name: "invalidReturnType",
+          name: "invalid_return_type",
           error {
             code: FAILED_PRECONDITION
             rule: "post.id"
