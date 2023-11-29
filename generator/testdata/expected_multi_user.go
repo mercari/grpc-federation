@@ -261,7 +261,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*UserID)
 			valueMu.Lock()
-			valueUid = value // { name: "uid", message: "UserID" ... }
+			valueUid = value
 			envOpts = append(envOpts, cel.Variable("uid", cel.ObjectType("org.federation.UserID")))
 			evalValues["uid"] = valueUid
 			valueMu.Unlock()
@@ -300,7 +300,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*User)
 			valueMu.Lock()
-			valueUser = value // { name: "user", message: "User" ... }
+			valueUser = value
 			envOpts = append(envOpts, cel.Variable("user", cel.ObjectType("org.federation.User")))
 			evalValues["user"] = valueUser
 			valueMu.Unlock()
@@ -333,7 +333,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*UserID)
 			valueMu.Lock()
-			valueUid = value // { name: "uid", message: "UserID" ... }
+			valueUid = value
 			envOpts = append(envOpts, cel.Variable("uid", cel.ObjectType("org.federation.UserID")))
 			evalValues["uid"] = valueUid
 			valueMu.Unlock()
@@ -372,7 +372,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*User)
 			valueMu.Lock()
-			valueUser2 = value // { name: "user2", message: "User" ... }
+			valueUser2 = value
 			envOpts = append(envOpts, cel.Variable("user2", cel.ObjectType("org.federation.User")))
 			evalValues["user2"] = valueUser2
 			valueMu.Unlock()
@@ -484,7 +484,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			}
 			value := valueIface.(*Sub)
 			valueMu.Lock()
-			value_Def2 = value // { name: "_def2", message: "Sub" ... }
+			value_Def2 = value
 			envOpts = append(envOpts, cel.Variable("_def2", cel.ObjectType("org.federation.Sub")))
 			evalValues["_def2"] = value_Def2
 			valueMu.Unlock()
@@ -624,8 +624,6 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 		}); err != nil {
 			return nil, err
 		}
-		valueMu.Lock()
-		valueMu.Unlock()
 	}
 
 	// create a message value to be returned.

@@ -8,9 +8,15 @@ func (e *MapExpr) ReferenceNames() []string {
 	}
 
 	refNameMap := make(map[string]struct{})
-	if e.Iterator != nil && e.Iterator.Name != "" {
-		refNameMap[e.Iterator.Name] = struct{}{}
+	if e.Iterator != nil {
+		if e.Iterator.Name != "" {
+			refNameMap[e.Iterator.Name] = struct{}{}
+		}
+		if e.Iterator.Source != nil && e.Iterator.Source.Name != "" {
+			refNameMap[e.Iterator.Source.Name] = struct{}{}
+		}
 	}
+
 	for _, name := range e.Expr.ReferenceNames() {
 		refNameMap[name] = struct{}{}
 	}

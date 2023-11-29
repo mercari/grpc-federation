@@ -183,6 +183,15 @@ func newTypeDeclares(file *resolver.File, msgs []*resolver.Message) []*Type {
 							Name: fieldName,
 							Type: toTypeText(file, def.Expr.Type),
 						})
+					case def.Expr.Map != nil:
+						fieldName := util.ToPublicGoVariable(def.Name)
+						if typ.HasField(fieldName) {
+							continue
+						}
+						typ.Fields = append(typ.Fields, &Field{
+							Name: fieldName,
+							Type: toTypeText(file, def.Expr.Type),
+						})
 					}
 				}
 			}
@@ -934,9 +943,9 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 		if varDef.Expr == nil {
 			continue
 		}
+
 		expr := varDef.Expr
-		switch {
-		case expr.Call != nil:
+		if expr.Call != nil {
 			if expr.Call.Method != nil {
 				method := expr.Call.Method
 				ret = append(ret, &DependentMethod{
@@ -944,8 +953,11 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 					FQDN: "/" + method.FQDN(),
 				})
 			}
-		case expr.Message != nil:
-			ret = append(ret, s.dependentMethods(expr.Message.Message)...)
+			continue
+		}
+
+		for _, msgExpr := range varDef.MessageExprs() {
+			ret = append(ret, s.dependentMethods(msgExpr.Message)...)
 		}
 	}
 	for _, field := range msg.Fields {
@@ -960,8 +972,7 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 				continue
 			}
 			expr := varDef.Expr
-			switch {
-			case expr.Call != nil:
+			if expr.Call != nil {
 				if expr.Call.Method != nil {
 					method := expr.Call.Method
 					ret = append(ret, &DependentMethod{
@@ -969,8 +980,10 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 						FQDN: "/" + method.FQDN(),
 					})
 				}
-			case expr.Message != nil:
-				ret = append(ret, s.dependentMethods(expr.Message.Message)...)
+				continue
+			}
+			for _, msgExpr := range varDef.MessageExprs() {
+				ret = append(ret, s.dependentMethods(msgExpr.Message)...)
 			}
 		}
 	}
@@ -1823,6 +1836,20 @@ func (r *MessageResolver) Timeout() string {
 	return ""
 }
 
+func (r *MessageResolver) UseArgs() bool {
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
+	}
+	expr := r.VariableDefinition.Expr
+	switch {
+	case expr.By != nil:
+		return false
+	case expr.Map != nil:
+		return false
+	}
+	return true
+}
+
 func (r *MessageResolver) Caller() string {
 	if r.VariableDefinition == nil {
 		panic("unspecified variable definition")
@@ -1914,6 +1941,117 @@ func (r *MessageResolver) IsBy() bool {
 	return r.VariableDefinition.Expr.By != nil
 }
 
+func (r *MessageResolver) IsMap() bool {
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
+	}
+	return r.VariableDefinition.Expr.Map != nil
+}
+
+func (r *MessageResolver) MapResolver() *MapResolver {
+	return &MapResolver{
+		File:    r.Service.File,
+		Service: r.Service,
+		MapExpr: r.VariableDefinition.Expr.Map,
+	}
+}
+
+type MapResolver struct {
+	File    *resolver.File
+	Service *resolver.Service
+	MapExpr *resolver.MapExpr
+}
+
+func (r *MapResolver) Source() string {
+	return toUserDefinedVariable(r.MapExpr.Iterator.Source.Name)
+}
+
+func (r *MapResolver) SourceZeroValue() string {
+	return toMakeZeroValue(r.File, r.MapExpr.Iterator.Source.Expr.Type)
+}
+
+func (r *MapResolver) SourceType() string {
+	return toTypeText(r.File, r.MapExpr.Iterator.Source.Expr.Type)
+}
+
+func (r *MapResolver) IsBy() bool {
+	return r.MapExpr.Expr.By != nil
+}
+
+func (r *MapResolver) IsMessage() bool {
+	return r.MapExpr.Expr.Message != nil
+}
+
+func (r *MapResolver) IteratorName() string {
+	return r.MapExpr.Iterator.Name
+}
+
+func (r *MapResolver) IteratorCELType() string {
+	iterType := r.MapExpr.Iterator.Source.Expr.Type.Clone()
+	iterType.Repeated = false
+	return toCELNativeType(iterType)
+}
+
+func (r *MapResolver) IteratorType() string {
+	return toTypeText(r.File, r.MapExpr.Expr.Type)
+}
+
+func (r *MapResolver) Arguments() []*Argument {
+	var (
+		isRequestArgument bool
+		args              []*resolver.Argument
+	)
+	expr := r.MapExpr.Expr
+	switch {
+	case expr.Message != nil:
+		args = expr.Message.Args
+	case expr.By != nil:
+		return nil
+	}
+
+	var generateArgs []*Argument
+	if !isRequestArgument {
+		generateArgs = append(generateArgs, &Argument{
+			Name:  "Client",
+			Value: "s.client",
+		})
+	}
+	for _, arg := range args {
+		for _, generatedArg := range argument(r.File, arg.Name, arg.Type, arg.Value) {
+			format := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
+			if format != "" {
+				generatedArg.ProtoComment = "// " + format
+			}
+			generateArgs = append(generateArgs, generatedArg)
+		}
+	}
+	return generateArgs
+}
+
+func (r *MapResolver) MapOutType() string {
+	cloned := r.MapExpr.Expr.Type.Clone()
+	cloned.Repeated = true
+	return toTypeText(r.File, cloned)
+}
+
+func (r *MapResolver) Caller() string {
+	msgName := fullMessageName(r.MapExpr.Expr.Message.Message)
+	if r.MapExpr.Expr.Message.Message.HasRule() {
+		return fmt.Sprintf("resolve_%s", msgName)
+	}
+	return fmt.Sprintf("resolver.Resolve_%s", msgName)
+}
+
+func (r *MapResolver) RequestType() string {
+	expr := r.MapExpr.Expr
+	switch {
+	case expr.Message != nil:
+		msgName := fullMessageName(expr.Message.Message)
+		return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
+	}
+	return ""
+}
+
 func (r *MessageResolver) IsValidation() bool {
 	if r.VariableDefinition == nil {
 		panic("unspecified variable definition")
@@ -1944,14 +2082,9 @@ type ResponseVariable struct {
 	UseName      bool
 	Type         string
 	Name         string
-	Selector     string
 	ProtoComment string
 	CELExpr      string
 	CELType      string
-}
-
-func (r *MessageResolver) ResponseVariable() string {
-	return "value"
 }
 
 func (r *MessageResolver) Type() string {
@@ -1961,41 +2094,21 @@ func (r *MessageResolver) Type() string {
 	return toTypeText(r.Service.File, r.VariableDefinition.Expr.Type)
 }
 
-func (r *MessageResolver) ResponseVariables() []*ResponseVariable {
+func (r *MessageResolver) ResponseVariable() *ResponseVariable {
 	if r.VariableDefinition == nil {
 		panic("unspecified variable definition")
 	}
 
-	var values []*ResponseVariable
-	expr := r.VariableDefinition.Expr
-	switch {
-	case expr.Call != nil:
-		values = append(values, &ResponseVariable{
-			UseName:  r.VariableDefinition.Used,
-			Name:     toUserDefinedVariable(r.VariableDefinition.Name),
-			Selector: r.ResponseVariable(),
-			CELExpr:  r.VariableDefinition.Name,
-			CELType:  toCELNativeType(expr.Type),
-		})
-	case expr.Message != nil:
-		values = append(values, &ResponseVariable{
-			UseName:      r.VariableDefinition.Used,
-			Name:         toUserDefinedVariable(r.VariableDefinition.Name),
-			Selector:     r.ResponseVariable(),
-			ProtoComment: fmt.Sprintf(`// { name: %q, message: %q ... }`, r.VariableDefinition.Name, expr.Message.Message.Name),
-			CELExpr:      r.VariableDefinition.Name,
-			CELType:      toCELNativeType(expr.Type),
-		})
-	case expr.By != nil:
-		values = append(values, &ResponseVariable{
-			UseName:  r.VariableDefinition.Used,
-			Name:     toUserDefinedVariable(r.VariableDefinition.Name),
-			Selector: r.ResponseVariable(),
-			CELExpr:  r.VariableDefinition.Name,
-			CELType:  toCELNativeType(expr.Type),
-		})
+	if !r.VariableDefinition.Used {
+		return nil
 	}
-	return values
+
+	return &ResponseVariable{
+		UseName: r.VariableDefinition.Used,
+		Name:    toUserDefinedVariable(r.VariableDefinition.Name),
+		CELExpr: r.VariableDefinition.Name,
+		CELType: toCELNativeType(r.VariableDefinition.Expr.Type),
+	}
 }
 
 func toCELNativeType(t *resolver.Type) string {
@@ -2203,7 +2316,7 @@ func (r *MessageResolver) Arguments() []*Argument {
 		})
 	}
 	for _, arg := range args {
-		for _, generatedArg := range r.argument(arg.Name, arg.Type, arg.Value) {
+		for _, generatedArg := range argument(r.Service.File, arg.Name, arg.Type, arg.Value) {
 			format := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
 			if format != "" {
 				generatedArg.ProtoComment = "// " + format
@@ -2229,12 +2342,12 @@ func toValue(file *resolver.File, typ *resolver.Type, value *resolver.Value) str
 	return fmt.Sprintf("s.%s(%s)", castFuncName, strings.Join(selectors, "."))
 }
 
-func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resolver.Value) []*Argument {
+func argument(file *resolver.File, name string, typ *resolver.Type, value *resolver.Value) []*Argument {
 	if value.Const != nil {
 		return []*Argument{
 			{
 				Name:  util.ToPublicGoVariable(name),
-				Value: toGoConstValue(r.Service.File, value.Const.Type, value.Const.Value),
+				Value: toGoConstValue(file, value.Const.Type, value.Const.Value),
 			},
 		}
 	}
@@ -2258,8 +2371,8 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		toType = fromType
 	}
 
-	toText := toTypeText(r.Service.File, toType)
-	fromText := toTypeText(r.Service.File, fromType)
+	toText := toTypeText(file, toType)
+	fromText := toTypeText(file, fromType)
 
 	var (
 		argValue  string
@@ -2267,14 +2380,14 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 	)
 	switch fromType.Type {
 	case types.Message:
-		zeroValue = toMakeZeroValue(r.Service.File, fromType)
+		zeroValue = toMakeZeroValue(file, fromType)
 		argValue = fmt.Sprintf("value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	case types.Enum:
-		zeroValue = toMakeZeroValue(r.Service.File, fromType)
+		zeroValue = toMakeZeroValue(file, fromType)
 		argValue = fmt.Sprintf("value.(%s)", fromText)
 		if requiredCast(fromType, toType) {
 			castFuncName := castFuncName(fromType, toType)
@@ -2282,7 +2395,7 @@ func (r *MessageResolver) argument(name string, typ *resolver.Type, value *resol
 		}
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
-		zeroValue = toMakeZeroValue(r.Service.File, toType)
+		zeroValue = toMakeZeroValue(file, toType)
 		argValue = fmt.Sprintf("value.(%s)", toText)
 	}
 	return []*Argument{

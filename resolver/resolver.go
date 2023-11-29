@@ -2116,20 +2116,8 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 	msgs := []*Message{msg}
 	msgToDefsMap := make(map[*Message][]*VariableDefinition)
 	for _, varDef := range msg.Rule.VariableDefinitions {
-		if varDef.Expr == nil {
-			continue
-		}
-		switch {
-		case varDef.Expr.Message != nil:
-			msgExpr := varDef.Expr.Message
+		for _, msgExpr := range varDef.MessageExprs() {
 			msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
-		case varDef.Expr.Validation != nil:
-			for _, detail := range varDef.Expr.Validation.Error.Details {
-				for _, message := range detail.Messages {
-					msgExpr := message.Expr.Message
-					msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], message)
-				}
-			}
 		}
 	}
 	for _, field := range msg.Fields {
@@ -2140,14 +2128,9 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 			continue
 		}
 		for _, varDef := range field.Rule.Oneof.VariableDefinitions {
-			if varDef.Expr == nil {
-				continue
+			for _, msgExpr := range varDef.MessageExprs() {
+				msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
 			}
-			if varDef.Expr.Message == nil {
-				continue
-			}
-			msgExpr := varDef.Expr.Message
-			msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
 		}
 	}
 	for _, child := range node.Children {
@@ -2176,120 +2159,108 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, defs []*VariableDefinition) []*Field {
 	argNameMap := make(map[string]struct{})
 	for _, varDef := range defs {
-		if varDef.Expr == nil {
-			continue
-		}
-		if varDef.Expr.Message == nil {
-			continue
-		}
-		for _, arg := range varDef.Expr.Message.Args {
-			if arg.Name == "" {
-				continue
+		for _, msgExpr := range varDef.MessageExprs() {
+			for _, arg := range msgExpr.Args {
+				if arg.Name == "" {
+					continue
+				}
+				argNameMap[arg.Name] = struct{}{}
 			}
-			argNameMap[arg.Name] = struct{}{}
 		}
 	}
 
 	evaluatedArgNameMap := make(map[string]struct{})
 	var fields []*Field
 	for _, varDef := range defs {
-		if varDef.Expr == nil {
-			continue
-		}
-		if varDef.Expr.Message == nil {
-			continue
-		}
-		r.validateMessageDependencyArgumentName(ctx, argNameMap, msg, varDef)
-		for argIdx, arg := range varDef.Expr.Message.Args {
-			if _, exists := evaluatedArgNameMap[arg.Name]; exists {
-				continue
-			}
-			if arg.Value == nil {
-				continue
-			}
-			fieldType := arg.Value.Type()
-			if fieldType == nil {
-				continue
-			}
-			if arg.Value.CEL != nil && arg.Value.Inline {
-				if fieldType.Type != types.Message {
-					ctx.addError(
-						ErrWithLocation(
-							"inline value is not message type",
-							source.MessageExprArgumentInlineLocation(
-								msg.File.Name,
-								msg.Name,
-								varDef.Idx,
-								argIdx,
-							),
-						),
-					)
+		for _, msgExpr := range varDef.MessageExprs() {
+			r.validateMessageDependencyArgumentName(ctx, argNameMap, msg, varDef)
+			for argIdx, arg := range msgExpr.Args {
+				if _, exists := evaluatedArgNameMap[arg.Name]; exists {
 					continue
 				}
-				fields = append(fields, fieldType.Ref.Fields...)
-			} else {
-				fields = append(fields, &Field{
-					Name: arg.Name,
-					Type: fieldType,
-				})
+				if arg.Value == nil {
+					continue
+				}
+				fieldType := arg.Value.Type()
+				if fieldType == nil {
+					continue
+				}
+				if arg.Value.CEL != nil && arg.Value.Inline {
+					if fieldType.Type != types.Message {
+						ctx.addError(
+							ErrWithLocation(
+								"inline value is not message type",
+								source.MessageExprArgumentInlineLocation(
+									msg.File.Name,
+									msg.Name,
+									varDef.Idx,
+									argIdx,
+								),
+							),
+						)
+						continue
+					}
+					fields = append(fields, fieldType.Ref.Fields...)
+				} else {
+					fields = append(fields, &Field{
+						Name: arg.Name,
+						Type: fieldType,
+					})
+				}
+				evaluatedArgNameMap[arg.Name] = struct{}{}
 			}
-			evaluatedArgNameMap[arg.Name] = struct{}{}
 		}
 	}
 	return fields
 }
 
 func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMap map[string]struct{}, msg *Message, def *VariableDefinition) {
-	if def.Expr == nil {
-		return
-	}
-	if def.Expr.Message == nil {
-		return
-	}
-	curDepArgNameMap := make(map[string]struct{})
-	for _, arg := range def.Expr.Message.Args {
-		if arg.Name == "" {
-			continue
+	for _, msgExpr := range def.MessageExprs() {
+		curDepArgNameMap := make(map[string]struct{})
+		for _, arg := range msgExpr.Args {
+			if arg.Name == "" {
+				continue
+			}
+			curDepArgNameMap[arg.Name] = struct{}{}
 		}
-		curDepArgNameMap[arg.Name] = struct{}{}
-	}
-	for name := range argNameMap {
-		if _, exists := curDepArgNameMap[name]; exists {
-			continue
+		for name := range argNameMap {
+			if _, exists := curDepArgNameMap[name]; exists {
+				continue
+			}
+			var errLoc *source.Location
+			switch def.Owner.Type {
+			case VariableDefinitionOwnerMessage:
+				errLoc = source.MessageExprArgumentLocation(
+					msg.File.Name,
+					msg.Name,
+					def.Idx,
+					0,
+				)
+			case VariableDefinitionOwnerOneofField:
+				errLoc = source.MessageFieldOneofDefMessageArgumentLocation(
+					msg.File.Name,
+					msg.Name,
+					def.Owner.Field.Name,
+					def.Idx,
+					0,
+				)
+			case VariableDefinitionOwnerValidationErrorDetailMessage:
+				errLoc = source.VariableDefinitionValidationDetailMessageArgumentLocation(
+					msg.File.Name,
+					msg.Name,
+					def.Owner.ValidationErrorIndexes.DefIdx,
+					def.Owner.ValidationErrorIndexes.ErrDetailIdx,
+					def.Idx,
+					0,
+				)
+			}
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf("%q argument is defined in other message dependency arguments, but not in this context", name),
+					errLoc,
+				),
+			)
 		}
-		var errLoc *source.Location
-		switch def.Owner.Type {
-		case VariableDefinitionOwnerMessage:
-			errLoc = source.MessageExprArgumentLocation(
-				msg.File.Name,
-				msg.Name,
-				def.Idx,
-				0,
-			)
-		case VariableDefinitionOwnerOneofField:
-			errLoc = source.MessageFieldOneofDefMessageArgumentLocation(
-				msg.File.Name,
-				msg.Name,
-				def.Owner.Field.Name,
-				def.Idx,
-				0,
-			)
-		case VariableDefinitionOwnerValidationErrorDetailMessage:
-			errLoc = source.VariableDefinitionValidationDetailMessageArgumentLocation(
-				msg.File.Name,
-				msg.Name,
-				def.Owner.ValidationErrorIndexes.DefIdx,
-				def.Owner.ValidationErrorIndexes.ErrDetailIdx,
-				def.Idx,
-				0,
-			)
-		}
-		ctx.addError(
-			ErrWithLocation(
-				fmt.Sprintf("%q argument is defined in other message dependency arguments, but not in this context", name),
-				errLoc,
-			),
-		)
 	}
 }
 
@@ -2432,7 +2403,22 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		mapEnv := env
 		iter := expr.Map.Iterator
 		if iter != nil && iter.Name != "" && iter.Source != nil {
-			newEnv, err := env.Extend(cel.Variable(iter.Name, ToCELType(iter.Source.Expr.Type)))
+			if !iter.Source.Expr.Type.Repeated {
+				ctx.addError(
+					ErrWithLocation(
+						`map iterator's src value type must be repeated type`,
+						source.MapIteratorSourceLocation(
+							ctx.fileName(),
+							ctx.messageName(),
+							ctx.defIndex(),
+						),
+					),
+				)
+				return
+			}
+			iterType := iter.Source.Expr.Type.Clone()
+			iterType.Repeated = false
+			newEnv, err := env.Extend(cel.Variable(iter.Name, ToCELType(iterType)))
 			if err != nil {
 				ctx.addError(
 					ErrWithLocation(

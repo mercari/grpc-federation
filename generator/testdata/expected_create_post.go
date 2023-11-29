@@ -297,7 +297,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		}
 		value := valueIface.(*CreatePost)
 		valueMu.Lock()
-		valueCp = value // { name: "cp", message: "CreatePost" ... }
+		valueCp = value
 		envOpts = append(envOpts, cel.Variable("cp", cel.ObjectType("org.federation.CreatePost")))
 		evalValues["cp"] = valueCp
 		valueMu.Unlock()

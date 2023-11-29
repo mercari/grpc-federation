@@ -223,7 +223,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		}
 		value := valueIface.(*UserSelection)
 		valueMu.Lock()
-		valueSel = value // { name: "sel", message: "UserSelection" ... }
+		valueSel = value
 		envOpts = append(envOpts, cel.Variable("sel", cel.ObjectType("org.federation.UserSelection")))
 		evalValues["sel"] = valueSel
 		valueMu.Unlock()
@@ -311,8 +311,6 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				return nil, err
 			}
 		}
-		valueMu.Lock()
-		valueMu.Unlock()
 	}
 
 	// create a message value to be returned.
@@ -373,7 +371,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		}
 		value := valueIface.(*M)
 		valueMu.Lock()
-		valueM = value // { name: "m", message: "M" ... }
+		valueM = value
 		envOpts = append(envOpts, cel.Variable("m", cel.ObjectType("org.federation.M")))
 		evalValues["m"] = valueM
 		valueMu.Unlock()
@@ -425,7 +423,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			}
 			value := valueIface.(*User)
 			valueMu.Lock()
-			valueUa = value // { name: "ua", message: "User" ... }
+			valueUa = value
 			envOpts = append(envOpts, cel.Variable("ua", cel.ObjectType("org.federation.User")))
 			evalValues["ua"] = valueUa
 			valueMu.Unlock()
@@ -463,7 +461,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			}
 			value := valueIface.(*User)
 			valueMu.Lock()
-			valueUb = value // { name: "ub", message: "User" ... }
+			valueUb = value
 			envOpts = append(envOpts, cel.Variable("ub", cel.ObjectType("org.federation.User")))
 			evalValues["ub"] = valueUb
 			valueMu.Unlock()
@@ -509,7 +507,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			}
 			value := valueIface.(*User)
 			valueMu.Lock()
-			valueUc = value // { name: "uc", message: "User" ... }
+			valueUc = value
 			envOpts = append(envOpts, cel.Variable("uc", cel.ObjectType("org.federation.User")))
 			evalValues["uc"] = valueUc
 			valueMu.Unlock()

@@ -460,17 +460,23 @@ func dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*Mes
 	}
 	msgResolverMap[resolver] = struct{}{}
 
-	var svcs []*Service
-	if resolver.VariableDefinition != nil {
-		expr := resolver.VariableDefinition.Expr
-		switch {
-		case expr.Call != nil:
-			svcs = append(svcs, expr.Call.Method.Service)
-		case expr.Message != nil:
-			if expr.Message.Message != nil {
-				svcs = append(svcs, expr.Message.Message.dependServices(msgResolverMap)...)
-			}
+	varDef := resolver.VariableDefinition
+	if varDef == nil {
+		return nil
+	}
+
+	expr := varDef.Expr
+	if expr == nil {
+		return nil
+	}
+	if expr.Call != nil {
+		return []*Service{expr.Call.Method.Service}
+	}
+	var ret []*Service
+	for _, msgExpr := range varDef.MessageExprs() {
+		if msgExpr.Message != nil {
+			ret = append(ret, msgExpr.Message.dependServices(msgResolverMap)...)
 		}
 	}
-	return svcs
+	return ret
 }

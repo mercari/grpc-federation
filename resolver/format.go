@@ -121,6 +121,8 @@ func (e *VariableExpr) ProtoFormat(opt *ProtoFormatOption) string {
 		return e.Call.ProtoFormat(opt)
 	case e.Message != nil:
 		return e.Message.ProtoFormat(opt)
+	case e.Map != nil:
+		return e.Map.ProtoFormat(opt)
 	case e.Validation != nil:
 		return e.Validation.ProtoFormat(opt)
 	}
@@ -147,6 +149,58 @@ func (e *CallExpr) ProtoFormat(opt *ProtoFormatOption) string {
 		return ""
 	}
 	return indent + fmt.Sprintf("call {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
+func (e *MapExpr) ProtoFormat(opt *ProtoFormatOption) string {
+	if e == nil {
+		return ""
+	}
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	if e.Iterator != nil {
+		elems = append(elems, e.Iterator.ProtoFormat(nextOpt))
+	}
+	if e.Expr != nil {
+		elems = append(elems, e.Expr.ProtoFormat(nextOpt)...)
+	}
+	if len(elems) == 0 {
+		return ""
+	}
+	return indent + fmt.Sprintf("map {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
+func (iter *Iterator) ProtoFormat(opt *ProtoFormatOption) string {
+	if iter == nil {
+		return ""
+	}
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	if iter.Name != "" {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("name: %q", iter.Name))
+	}
+	if iter.Source != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("src: %q", iter.Source.Name))
+	}
+	if len(elems) == 0 {
+		return ""
+	}
+	return indent + fmt.Sprintf("iterator {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
+func (e *MapIteratorExpr) ProtoFormat(opt *ProtoFormatOption) []string {
+	if e == nil {
+		return nil
+	}
+	var elems []string
+	if e.By != nil {
+		elems = append(elems, opt.indentFormat()+fmt.Sprintf("by: %q", e.By.Expr))
+	}
+	if e.Message != nil {
+		elems = append(elems, e.Message.ProtoFormat(opt))
+	}
+	return elems
 }
 
 func (e *MessageExpr) ProtoFormat(opt *ProtoFormatOption) string {

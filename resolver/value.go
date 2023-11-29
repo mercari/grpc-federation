@@ -533,6 +533,15 @@ func messageFieldValueToCommonValueDef(def *federation.MessageFieldValue) *commo
 	}
 }
 
+func NewByValue(expr string, out *Type) *Value {
+	return &Value{
+		CEL: &CELValue{
+			Expr: expr,
+			Out:  out,
+		},
+	}
+}
+
 func NewDoubleValue(v float64) *Value {
 	return &Value{Const: &ConstValue{Type: DoubleType, Value: v}}
 }

@@ -301,7 +301,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		}
 		value := valueIface.(*Post)
 		valueMu.Lock()
-		valuePost = value // { name: "post", message: "Post" ... }
+		valuePost = value
 		envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
 		evalValues["post"] = valuePost
 		valueMu.Unlock()
@@ -399,7 +399,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			}
 			value := valueIface.(*M)
 			valueMu.Lock()
-			valueM = value // { name: "m", message: "M" ... }
+			valueM = value
 			envOpts = append(envOpts, cel.Variable("m", cel.ObjectType("org.federation.M")))
 			evalValues["m"] = valueM
 			valueMu.Unlock()
@@ -518,7 +518,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			}
 			value := valueIface.(*User)
 			valueMu.Lock()
-			valueUser = value // { name: "user", message: "User" ... }
+			valueUser = value
 			envOpts = append(envOpts, cel.Variable("user", cel.ObjectType("org.federation.User")))
 			evalValues["user"] = valueUser
 			valueMu.Unlock()
@@ -548,8 +548,6 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			}); err != nil {
 				return nil, err
 			}
-			valueMu.Lock()
-			valueMu.Unlock()
 		}
 		return nil, nil
 	})
