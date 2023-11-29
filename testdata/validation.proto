@@ -36,6 +36,22 @@ message GetPostResponse {
             code: FAILED_PRECONDITION
             details {
               rule: "post.title == 'some-title'"
+              message: [
+                {
+                  name: "CustomMessage",
+                  args: {
+                    name: "message",
+                    string: "message1"
+                  }
+                },
+                {
+                  name: "CustomMessage",
+                  args: {
+                    name: "message",
+                    string: "message2"
+                  }
+                }
+              ]
               precondition_failure {
                 violations {
                   type: "'some-type'"
@@ -66,4 +82,8 @@ message Post {
   string id = 1 [(grpc.federation.field).string = "some-id"];
   string title = 2 [(grpc.federation.field).string = "some-title"];
   string content = 3 [(grpc.federation.field).string = "some-content"];
+}
+
+message CustomMessage {
+  string message = 1 [(grpc.federation.field).by = "$.message"];
 }

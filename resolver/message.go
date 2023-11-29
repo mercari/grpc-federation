@@ -100,6 +100,17 @@ func (m *Message) MessageResolvers() []MessageResolverGroup {
 	}
 
 	ret := m.Rule.Resolvers
+	for _, def := range m.Rule.VariableDefinitions {
+		if def.Expr == nil {
+			continue
+		}
+		if def.Expr.Validation == nil || def.Expr.Validation.Error == nil {
+			continue
+		}
+		for _, detail := range def.Expr.Validation.Error.Details {
+			ret = append(ret, detail.Resolvers...)
+		}
+	}
 	for _, field := range m.Fields {
 		if field.Rule == nil {
 			continue
@@ -409,6 +420,21 @@ func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) [
 		for _, group := range m.Rule.Resolvers {
 			for _, resolver := range group.Resolvers() {
 				svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
+			}
+		}
+		for _, def := range m.Rule.VariableDefinitions {
+			if def.Expr == nil {
+				continue
+			}
+			if def.Expr.Validation == nil || def.Expr.Validation.Error == nil {
+				continue
+			}
+			for _, detail := range def.Expr.Validation.Error.Details {
+				for _, group := range detail.Resolvers {
+					for _, resolver := range group.Resolvers() {
+						svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
+					}
+				}
 			}
 		}
 	}

@@ -12,6 +12,7 @@ type context struct {
 	defIdx       int
 	depIdx       int
 	argIdx       int
+	errDetailIdx int
 	variableMap  map[string]*VariableDefinition
 }
 
@@ -40,6 +41,7 @@ func (c *context) clone() *context {
 		defIdx:       c.defIdx,
 		depIdx:       c.depIdx,
 		argIdx:       c.argIdx,
+		errDetailIdx: c.errDetailIdx,
 		variableMap:  c.variableMap,
 	}
 }
@@ -95,6 +97,12 @@ func (c *context) withDefOwner(owner *VariableDefinitionOwner) *context {
 func (c *context) withDefIndex(idx int) *context {
 	ctx := c.clone()
 	ctx.defIdx = idx
+	return ctx
+}
+
+func (c *context) withErrDetailIndex(idx int) *context {
+	ctx := c.clone()
+	ctx.errDetailIdx = idx
 	return ctx
 }
 
@@ -164,6 +172,10 @@ func (c *context) depIndex() int {
 
 func (c *context) argIndex() int {
 	return c.argIdx
+}
+
+func (c *context) errDetailIndex() int {
+	return c.errDetailIdx
 }
 
 func (c *context) addError(e *LocationError) {

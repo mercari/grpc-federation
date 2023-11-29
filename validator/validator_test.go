@@ -403,6 +403,13 @@ testdata/invalid_validation_details_return_type.proto:51:21: rule must always re
 51:                rule: "'string'"
                          ^
 `},
+		{file: "invalid_validation_message_argument.proto", expected: `
+testdata/invalid_validation_message_argument.proto:71:52: ERROR: <input>:1:8: undefined field 'message'
+ | __ARG__.message
+ | .......^
+71:    string message = 1 [(grpc.federation.field).by = "$.message"];
+                                                        ^
+`},
 		{file: "invalid_validation_precondition_failure.proto", expected: `
 testdata/invalid_validation_precondition_failure.proto:54:25: type must always return a string value
 54:                    type: "1",

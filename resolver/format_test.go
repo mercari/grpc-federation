@@ -239,6 +239,10 @@ func TestProtoFormat(t *testing.T) {
           code: FAILED_PRECONDITION
           details {
             rule: "post.title == 'some-title'"
+            message: [
+              {...},
+              {...}
+            ]
             precondition_failure {...}
             bad_request {...}
             localized_message {...}

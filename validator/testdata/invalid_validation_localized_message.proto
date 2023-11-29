@@ -44,7 +44,7 @@ message Post {
       { name: "post", by: "res.post", autobind: true },
       {
         validation {
-          name: "invalidLocalizedMessage",
+          name: "invalid_localized_message",
           error {
             code: FAILED_PRECONDITION
             details: {

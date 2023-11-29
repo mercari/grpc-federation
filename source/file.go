@@ -1054,6 +1054,8 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 				return nil
 			}
 			return f.nodeInfo(value)
+		case detail.Message != nil && fieldName == "message":
+			return f.nodeInfoByDetailMessage(f.getMessageListFromNode(elem.Val), detail.Message)
 		case detail.PreconditionFailure != nil && fieldName == "precondition_failure":
 			return f.nodeInfoByPreconditionFailure(f.getMessageListFromNode(elem.Val), detail.PreconditionFailure)
 		case detail.BadRequest != nil && fieldName == "bad_request":
@@ -1063,6 +1065,13 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 		}
 	}
 	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByDetailMessage(list []*ast.MessageLiteralNode, message *ValidationDetailMessageOption) *ast.NodeInfo {
+	if message.Idx >= len(list) {
+		return nil
+	}
+	return f.nodeInfoByMessageExpr(list[message.Idx], message.Message)
 }
 
 func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, failure *ValidationDetailPreconditionFailureOption) *ast.NodeInfo {

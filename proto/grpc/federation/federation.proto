@@ -128,7 +128,7 @@ message VariableDefinition {
 
     // validation defines the validation rule and error.
     ValidationExpr validation = 15;
-  };
+  }
 }
 
 // MapExpr apply map operation for the specified repeated type.
@@ -145,7 +145,7 @@ message MapExpr {
     // message gets with message arguments, and it is made an element of the map.
     // The result type of MapExpr is the repeated type of the specified message.
     MessageExpr message = 12;
-  };
+  }
 }
 
 // Iterator represents iterator variable.
@@ -154,7 +154,7 @@ message Iterator {
   string name = 1;
   // src the value that will be the source for creating the iterator.
   // src must be a repeated type.
-  string src = 2;  
+  string src = 2;
 }
 
 // MessageExpr represents dependent message.
@@ -629,6 +629,8 @@ message ValidationError {
 message ValidationErrorDetail {
   // rule specifies validation rule in CEL.
   string rule = 1;
+  // message represents arbitrary messages to describe the detail of the error
+  repeated MessageExpr message = 2;
   // error_info describes the cause of the error with structured details.
   repeated google.rpc.ErrorInfo error_info = 3;
   // retry_info describes when the clients can retry a failed request.

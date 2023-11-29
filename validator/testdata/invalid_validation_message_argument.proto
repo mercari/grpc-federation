@@ -44,11 +44,18 @@ message Post {
       { name: "post", by: "res.post", autobind: true },
       {
         validation {
-          name: "invalid_detail_rule",
+          name: "invalid_message_argument",
           error {
             code: FAILED_PRECONDITION
             details: {
-              rule: "'string'"
+              rule: "post.id == 'correct-id'"
+              message {
+                name: "CustomMessage",
+                args: {
+                  name: "wrong",
+                  string: "message1"
+                }
+              }
             }
           }
         }
@@ -58,4 +65,8 @@ message Post {
   string id = 1;
   string title = 2;
   string content = 3;
+}
+
+message CustomMessage {
+  string message = 1 [(grpc.federation.field).by = "$.message"];
 }

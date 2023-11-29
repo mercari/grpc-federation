@@ -2975,6 +2975,19 @@ func TestValidation(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("CustomMessageArgument").
+				AddField("message", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("CustomMessage").
+				AddFieldWithRule("message", resolver.StringType, testutil.NewFieldRuleBuilder(&resolver.Value{CEL: testutil.NewCELValueBuilder("$.message", resolver.StringType).Build(t)}).Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().SetMessageArgument(ref.Message(t, "org.federation", "CustomMessageArgument")).Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("GetPostRequest").
 				AddField("id", resolver.StringType).
 				Build(t),
@@ -3030,6 +3043,51 @@ func TestValidation(t *testing.T) {
 										SetDetails([]*resolver.ValidationErrorDetail{
 											{
 												Rule: testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
+												Messages: []*resolver.VariableDefinition{
+													testutil.NewVariableDefinitionBuilder().
+														SetName("_def2_err_detail0_msg0").
+														SetUsed(true).
+														SetOwner(&resolver.VariableDefinitionOwner{
+															Type: resolver.VariableDefinitionOwnerValidationErrorDetailMessage,
+															ValidationErrorIndexes: &resolver.ValidationErrorIndexes{
+																DefIdx:       2,
+																ErrDetailIdx: 0,
+															},
+														}).
+														SetMessage(
+															testutil.NewMessageExprBuilder().
+																SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
+																SetArgs(
+																	testutil.NewMessageDependencyArgumentBuilder().
+																		Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
+																		Build(t),
+																).
+																Build(t),
+														).
+														Build(t),
+													testutil.NewVariableDefinitionBuilder().
+														SetName("_def2_err_detail0_msg1").
+														SetUsed(true).
+														SetIdx(1).
+														SetOwner(&resolver.VariableDefinitionOwner{
+															Type: resolver.VariableDefinitionOwnerValidationErrorDetailMessage,
+															ValidationErrorIndexes: &resolver.ValidationErrorIndexes{
+																DefIdx:       2,
+																ErrDetailIdx: 0,
+															},
+														}).
+														SetMessage(
+															testutil.NewMessageExprBuilder().
+																SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
+																SetArgs(
+																	testutil.NewMessageDependencyArgumentBuilder().
+																		Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
+																		Build(t),
+																).
+																Build(t),
+														).
+														Build(t),
+												},
 												PreconditionFailures: []*resolver.PreconditionFailure{
 													{
 														Violations: []*resolver.PreconditionFailureViolation{
@@ -3096,6 +3154,7 @@ func TestValidation(t *testing.T) {
 				SetRule(
 					testutil.NewServiceRuleBuilder().Build(t),
 				).
+				AddMessage(ref.Message(t, "org.federation", "CustomMessage"), ref.Message(t, "org.federation", "CustomMessageArgument")).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
 				Build(t),
