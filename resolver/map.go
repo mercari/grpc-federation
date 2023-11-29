@@ -53,3 +53,11 @@ func (e *MapIteratorExpr) ReferenceNames() []string {
 	sort.Strings(refNames)
 	return refNames
 }
+
+func (e *MapIteratorExpr) ToVariableExpr() *VariableExpr {
+	return &VariableExpr{
+		Type:    e.Type,
+		By:      e.By,
+		Message: e.Message,
+	}
+}

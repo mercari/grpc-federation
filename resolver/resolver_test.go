@@ -3237,17 +3237,17 @@ func TestMap(t *testing.T) {
 				AddFieldWithRule(
 					"ids",
 					resolver.StringRepeatedType,
-					testutil.NewFieldRuleBuilder(resolver.NewByValue("posts.map(e, e.id)", resolver.StringRepeatedType)).Build(t),
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("ids", resolver.StringRepeatedType)).Build(t),
 				).
 				AddFieldWithRule(
 					"titles",
 					resolver.StringRepeatedType,
-					testutil.NewFieldRuleBuilder(resolver.NewByValue("posts.map(e, e.title)", resolver.StringRepeatedType)).Build(t),
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("posts.map(post, post.title)", resolver.StringRepeatedType)).Build(t),
 				).
 				AddFieldWithRule(
 					"contents",
 					resolver.StringRepeatedType,
-					testutil.NewFieldRuleBuilder(resolver.NewByValue("posts.map(e, e.content)", resolver.StringRepeatedType)).Build(t),
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("posts.map(post, post.content)", resolver.StringRepeatedType)).Build(t),
 				).
 				AddFieldWithRule(
 					"users",
@@ -3285,6 +3285,27 @@ func TestMap(t *testing.T) {
 						).
 						AddVariableDefinition(
 							testutil.NewVariableDefinitionBuilder().
+								SetName("ids").
+								SetUsed(true).
+								SetMap(
+									testutil.NewMapExprBuilder().
+										SetIterator(
+											testutil.NewIteratorBuilder().
+												SetName("post").
+												SetSource("posts").
+												Build(t),
+										).
+										SetExpr(
+											testutil.NewMapIteratorExprBuilder().
+												SetBy(testutil.NewCELValueBuilder("post.id", resolver.StringType).Build(t)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
 								SetName("users").
 								SetUsed(true).
 								SetMap(
@@ -3317,6 +3338,17 @@ func TestMap(t *testing.T) {
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
 								Add(ref.Message(t, "org.post", "GetPostsResponse"), ref.Message(t, "org.federation", "User")).
+								Build(t),
+						).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(
+									testutil.NewMessageResolverGroupBuilder().
+										AddStart(testutil.NewMessageResolverGroupByName("res")).
+										SetEnd(testutil.NewMessageResolver("posts")).
+										Build(t),
+								).
+								SetEnd(testutil.NewMessageResolver("ids")).
 								Build(t),
 						).
 						AddResolver(

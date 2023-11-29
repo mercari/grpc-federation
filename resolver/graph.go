@@ -39,7 +39,7 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 				continue
 			}
 			switch {
-			case expr.Map != nil && expr.Map.Expr != nil:
+			case expr.Map != nil && expr.Map.Expr != nil && expr.Map.Expr.Message != nil:
 				msgExpr := expr.Map.Expr.Message
 				depMsg := msgExpr.Message
 				depNode, depNodeExists := msgToNode[depMsg]

@@ -26,8 +26,10 @@ func (def *VariableDefinition) MessageExprs() []*MessageExpr {
 	}
 	expr := def.Expr
 	switch {
-	case expr.Map != nil && expr.Map.Expr != nil:
-		return []*MessageExpr{expr.Map.Expr.Message}
+	case expr.Map != nil:
+		if expr.Map.Expr != nil && expr.Map.Expr.Message != nil {
+			return []*MessageExpr{expr.Map.Expr.Message}
+		}
 	case expr.Message != nil:
 		return []*MessageExpr{expr.Message}
 	case expr.Validation != nil && expr.Validation.Error != nil:

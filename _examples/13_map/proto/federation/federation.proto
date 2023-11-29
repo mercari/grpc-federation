@@ -43,6 +43,16 @@ message Posts {
       },
       { name: "posts", by: "res.posts" },
       {
+        name: "ids"
+        map {
+          iterator {
+            name: "post"
+            src: "posts"
+          }
+          by: "post.id"
+        }
+      },
+      {
         name: "users"
         map {
           iterator {
@@ -57,9 +67,9 @@ message Posts {
       }
     ]
   };
-  repeated string ids = 1 [(grpc.federation.field).by = "posts.map(e, e.id)"];
-  repeated string titles = 2 [(grpc.federation.field).by = "posts.map(e, e.title)"];
-  repeated string contents = 3 [(grpc.federation.field).by = "posts.map(e, e.content)"];
+  repeated string ids = 1 [(grpc.federation.field).by = "ids"];
+  repeated string titles = 2 [(grpc.federation.field).by = "posts.map(post, post.title)"];
+  repeated string contents = 3 [(grpc.federation.field).by = "posts.map(post, post.content)"];
   repeated User users = 4 [(grpc.federation.field).by = "users"];
 }
 

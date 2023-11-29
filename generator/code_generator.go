@@ -1956,102 +1956,6 @@ func (r *MessageResolver) MapResolver() *MapResolver {
 	}
 }
 
-type MapResolver struct {
-	File    *resolver.File
-	Service *resolver.Service
-	MapExpr *resolver.MapExpr
-}
-
-func (r *MapResolver) Source() string {
-	return toUserDefinedVariable(r.MapExpr.Iterator.Source.Name)
-}
-
-func (r *MapResolver) SourceZeroValue() string {
-	return toMakeZeroValue(r.File, r.MapExpr.Iterator.Source.Expr.Type)
-}
-
-func (r *MapResolver) SourceType() string {
-	return toTypeText(r.File, r.MapExpr.Iterator.Source.Expr.Type)
-}
-
-func (r *MapResolver) IsBy() bool {
-	return r.MapExpr.Expr.By != nil
-}
-
-func (r *MapResolver) IsMessage() bool {
-	return r.MapExpr.Expr.Message != nil
-}
-
-func (r *MapResolver) IteratorName() string {
-	return r.MapExpr.Iterator.Name
-}
-
-func (r *MapResolver) IteratorCELType() string {
-	iterType := r.MapExpr.Iterator.Source.Expr.Type.Clone()
-	iterType.Repeated = false
-	return toCELNativeType(iterType)
-}
-
-func (r *MapResolver) IteratorType() string {
-	return toTypeText(r.File, r.MapExpr.Expr.Type)
-}
-
-func (r *MapResolver) Arguments() []*Argument {
-	var (
-		isRequestArgument bool
-		args              []*resolver.Argument
-	)
-	expr := r.MapExpr.Expr
-	switch {
-	case expr.Message != nil:
-		args = expr.Message.Args
-	case expr.By != nil:
-		return nil
-	}
-
-	var generateArgs []*Argument
-	if !isRequestArgument {
-		generateArgs = append(generateArgs, &Argument{
-			Name:  "Client",
-			Value: "s.client",
-		})
-	}
-	for _, arg := range args {
-		for _, generatedArg := range argument(r.File, arg.Name, arg.Type, arg.Value) {
-			format := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
-			if format != "" {
-				generatedArg.ProtoComment = "// " + format
-			}
-			generateArgs = append(generateArgs, generatedArg)
-		}
-	}
-	return generateArgs
-}
-
-func (r *MapResolver) MapOutType() string {
-	cloned := r.MapExpr.Expr.Type.Clone()
-	cloned.Repeated = true
-	return toTypeText(r.File, cloned)
-}
-
-func (r *MapResolver) Caller() string {
-	msgName := fullMessageName(r.MapExpr.Expr.Message.Message)
-	if r.MapExpr.Expr.Message.Message.HasRule() {
-		return fmt.Sprintf("resolve_%s", msgName)
-	}
-	return fmt.Sprintf("resolver.Resolve_%s", msgName)
-}
-
-func (r *MapResolver) RequestType() string {
-	expr := r.MapExpr.Expr
-	switch {
-	case expr.Message != nil:
-		msgName := fullMessageName(expr.Message.Message)
-		return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
-	}
-	return ""
-}
-
 func (r *MessageResolver) IsValidation() bool {
 	if r.VariableDefinition == nil {
 		panic("unspecified variable definition")
@@ -2078,20 +1982,17 @@ func (r *MessageResolver) ProtoComment() string {
 	return r.VariableDefinition.ProtoFormat(opt)
 }
 
-type ResponseVariable struct {
-	UseName      bool
-	Type         string
-	Name         string
-	ProtoComment string
-	CELExpr      string
-	CELType      string
-}
-
 func (r *MessageResolver) Type() string {
 	if r.VariableDefinition == nil {
 		panic("unspecified variable definition")
 	}
 	return toTypeText(r.Service.File, r.VariableDefinition.Expr.Type)
+}
+
+type ResponseVariable struct {
+	Name    string
+	CELExpr string
+	CELType string
 }
 
 func (r *MessageResolver) ResponseVariable() *ResponseVariable {
@@ -2104,11 +2005,78 @@ func (r *MessageResolver) ResponseVariable() *ResponseVariable {
 	}
 
 	return &ResponseVariable{
-		UseName: r.VariableDefinition.Used,
 		Name:    toUserDefinedVariable(r.VariableDefinition.Name),
 		CELExpr: r.VariableDefinition.Name,
 		CELType: toCELNativeType(r.VariableDefinition.Expr.Type),
 	}
+}
+
+type MapResolver struct {
+	File    *resolver.File
+	Service *resolver.Service
+	MapExpr *resolver.MapExpr
+}
+
+func (r *MapResolver) IteratorName() string {
+	return r.MapExpr.Iterator.Name
+}
+
+func (r *MapResolver) IteratorCELType() string {
+	iterType := r.MapExpr.Iterator.Source.Expr.Type.Clone()
+	iterType.Repeated = false
+	return toCELNativeType(iterType)
+}
+
+func (r *MapResolver) IteratorType() string {
+	iterType := r.MapExpr.Expr.Type.Clone()
+	iterType.Repeated = false
+	return toTypeText(r.File, iterType)
+}
+
+func (r *MapResolver) IteratorZeroValue() string {
+	iterType := r.MapExpr.Expr.Type.Clone()
+	iterType.Repeated = false
+	return toMakeZeroValue(r.File, iterType)
+}
+
+func (r *MapResolver) IteratorSource() string {
+	return toUserDefinedVariable(r.MapExpr.Iterator.Source.Name)
+}
+
+func (r *MapResolver) IsBy() bool {
+	return r.MapExpr.Expr.By != nil
+}
+
+func (r *MapResolver) IsMessage() bool {
+	return r.MapExpr.Expr.Message != nil
+}
+
+func (r *MapResolver) Arguments() []*Argument {
+	return arguments(r.File, r.MapExpr.Expr.ToVariableExpr())
+}
+
+func (r *MapResolver) MapOutType() string {
+	cloned := r.MapExpr.Expr.Type.Clone()
+	cloned.Repeated = true
+	return toTypeText(r.File, cloned)
+}
+
+func (r *MapResolver) Caller() string {
+	msgName := fullMessageName(r.MapExpr.Expr.Message.Message)
+	if r.MapExpr.Expr.Message.Message.HasRule() {
+		return fmt.Sprintf("resolve_%s", msgName)
+	}
+	return fmt.Sprintf("resolver.Resolve_%s", msgName)
+}
+
+func (r *MapResolver) RequestType() string {
+	expr := r.MapExpr.Expr
+	switch {
+	case expr.Message != nil:
+		msgName := fullMessageName(expr.Message.Message)
+		return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
+	}
+	return ""
 }
 
 func toCELNativeType(t *resolver.Type) string {
@@ -2292,12 +2260,29 @@ func (r *MessageResolver) Arguments() []*Argument {
 	if r.VariableDefinition == nil {
 		panic("unspecified variable definition")
 	}
+	return arguments(r.Service.File, r.VariableDefinition.Expr)
+}
 
+func toValue(file *resolver.File, typ *resolver.Type, value *resolver.Value) string {
+	if value.Const != nil {
+		return toGoConstValue(file, value.Const.Type, value.Const.Value)
+	}
+	var selectors []string
+	selectors = append(selectors, "foo")
+	fromType := value.CEL.Out
+	toType := typ
+	if !requiredCast(fromType, toType) {
+		return strings.Join(selectors, ".")
+	}
+	castFuncName := castFuncName(fromType, toType)
+	return fmt.Sprintf("s.%s(%s)", castFuncName, strings.Join(selectors, "."))
+}
+
+func arguments(file *resolver.File, expr *resolver.VariableExpr) []*Argument {
 	var (
 		isRequestArgument bool
 		args              []*resolver.Argument
 	)
-	expr := r.VariableDefinition.Expr
 	switch {
 	case expr.Call != nil:
 		isRequestArgument = true
@@ -2316,7 +2301,7 @@ func (r *MessageResolver) Arguments() []*Argument {
 		})
 	}
 	for _, arg := range args {
-		for _, generatedArg := range argument(r.Service.File, arg.Name, arg.Type, arg.Value) {
+		for _, generatedArg := range argument(file, arg.Name, arg.Type, arg.Value) {
 			format := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
 			if format != "" {
 				generatedArg.ProtoComment = "// " + format
@@ -2325,21 +2310,6 @@ func (r *MessageResolver) Arguments() []*Argument {
 		}
 	}
 	return generateArgs
-}
-
-func toValue(file *resolver.File, typ *resolver.Type, value *resolver.Value) string {
-	if value.Const != nil {
-		return toGoConstValue(file, value.Const.Type, value.Const.Value)
-	}
-	var selectors []string
-	selectors = append(selectors, "foo")
-	fromType := value.CEL.Out
-	toType := typ
-	if !requiredCast(fromType, toType) {
-		return strings.Join(selectors, ".")
-	}
-	castFuncName := castFuncName(fromType, toType)
-	return fmt.Sprintf("s.%s(%s)", castFuncName, strings.Join(selectors, "."))
 }
 
 func argument(file *resolver.File, name string, typ *resolver.Type, value *resolver.Value) []*Argument {
