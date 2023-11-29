@@ -41,14 +41,14 @@ message GetPostResponse {
                   name: "CustomMessage",
                   args: {
                     name: "message",
-                    by: "'message1'"
+                    string: "message1"
                   }
                 },
                 {
                   name: "CustomMessage",
                   args: {
                     name: "message",
-                    by: "'message2'"
+                    string: "message2"
                   }
                 }
               ]

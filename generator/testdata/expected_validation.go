@@ -347,7 +347,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										     name: "_def2_err_detail0_msg0"
 										     message {
 										       name: "CustomMessage"
-										       args { name: "message", by: "'message1'" }
+										       args { name: "message", string: "message1" }
 										     }
 										   }
 										*/
@@ -355,16 +355,8 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											valueIface, err, _ := sg.Do("_def2_err_detail0_msg0", func() (any, error) {
 												valueMu.RLock()
 												args := &Org_Federation_CustomMessageArgument[*FederationServiceDependentClientSet]{
-													Client: s.client,
-												}
-												// { name: "message", by: "'message1'" }
-												{
-													value, err := grpcfed.EvalCEL(s.env, "'message1'", envOpts, evalValues, reflect.TypeOf(""))
-													if err != nil {
-														grpcfed.RecordErrorToSpan(ctx, err)
-														return nil, err
-													}
-													args.Message = value.(string)
+													Client:  s.client,
+													Message: "message1", // { name: "message", string: "message1" }
 												}
 												valueMu.RUnlock()
 												return s.resolve_Org_Federation_CustomMessage(ctx1, args)
@@ -389,7 +381,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										     name: "_def2_err_detail0_msg1"
 										     message {
 										       name: "CustomMessage"
-										       args { name: "message", by: "'message2'" }
+										       args { name: "message", string: "message2" }
 										     }
 										   }
 										*/
@@ -397,16 +389,8 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											valueIface, err, _ := sg.Do("_def2_err_detail0_msg1", func() (any, error) {
 												valueMu.RLock()
 												args := &Org_Federation_CustomMessageArgument[*FederationServiceDependentClientSet]{
-													Client: s.client,
-												}
-												// { name: "message", by: "'message2'" }
-												{
-													value, err := grpcfed.EvalCEL(s.env, "'message2'", envOpts, evalValues, reflect.TypeOf(""))
-													if err != nil {
-														grpcfed.RecordErrorToSpan(ctx, err)
-														return nil, err
-													}
-													args.Message = value.(string)
+													Client:  s.client,
+													Message: "message2", // { name: "message", string: "message2" }
 												}
 												valueMu.RUnlock()
 												return s.resolve_Org_Federation_CustomMessage(ctx1, args)
