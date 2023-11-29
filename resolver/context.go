@@ -41,6 +41,7 @@ func (c *context) clone() *context {
 		defIdx:       c.defIdx,
 		depIdx:       c.depIdx,
 		argIdx:       c.argIdx,
+		errDetailIdx: c.errDetailIdx,
 		variableMap:  c.variableMap,
 	}
 }
