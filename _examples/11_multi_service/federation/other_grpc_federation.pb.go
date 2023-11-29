@@ -196,7 +196,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 		}
 		value := valueIface.(*Post)
 		valueMu.Lock()
-		valueP = value // { name: "p", message: "Post" ... }
+		valueP = value
 		valueMu.Unlock()
 	}
 
@@ -267,7 +267,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		}
 		value := valueIface.(*User)
 		valueMu.Lock()
-		valueU = value // { name: "u", message: "User" ... }
+		valueU = value
 		envOpts = append(envOpts, cel.Variable("u", cel.ObjectType("federation.User")))
 		evalValues["u"] = valueU
 		valueMu.Unlock()

@@ -75,5 +75,5 @@ message User {
     def { name: "user" by: "res.user" autobind: true }
   };
   string id = 1;
-  string name = 3;
+  string name = 2;
 }

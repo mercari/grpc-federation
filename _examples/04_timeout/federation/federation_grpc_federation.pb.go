@@ -215,7 +215,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		}
 		value := valueIface.(*Post)
 		valueMu.Lock()
-		valuePost = value // { name: "post", message: "Post" ... }
+		valuePost = value
 		envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("federation.Post")))
 		evalValues["post"] = valuePost
 		valueMu.Unlock()

@@ -352,7 +352,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		}
 		value := valueIface.(*Post)
 		valueMu.Lock()
-		valuePost = value // { name: "post", message: "Post" ... }
+		valuePost = value
 		envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("federation.Post")))
 		evalValues["post"] = valuePost
 		valueMu.Unlock()
@@ -433,7 +433,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			}
 			value := valueIface.(*ForNameless)
 			valueMu.Lock()
-			value_Def4 = value // { name: "_def4", message: "ForNameless" ... }
+			value_Def4 = value
 			envOpts = append(envOpts, cel.Variable("_def4", cel.ObjectType("federation.ForNameless")))
 			evalValues["_def4"] = value_Def4
 			valueMu.Unlock()
@@ -468,7 +468,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			}
 			value := valueIface.(*Unused)
 			valueMu.Lock()
-			valueUnused = value // { name: "unused", message: "Unused" ... }
+			valueUnused = value
 			envOpts = append(envOpts, cel.Variable("unused", cel.ObjectType("federation.Unused")))
 			evalValues["unused"] = valueUnused
 			valueMu.Unlock()
@@ -580,7 +580,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			}
 			value := valueIface.(*User)
 			valueMu.Lock()
-			valueUser = value // { name: "user", message: "User" ... }
+			valueUser = value
 			envOpts = append(envOpts, cel.Variable("user", cel.ObjectType("federation.User")))
 			evalValues["user"] = valueUser
 			valueMu.Unlock()

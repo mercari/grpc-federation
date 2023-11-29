@@ -273,8 +273,6 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 			}); err != nil {
 				return nil, err
 			}
-			valueMu.Lock()
-			valueMu.Unlock()
 		}
 		return nil, nil
 	})
@@ -301,8 +299,6 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 			}); err != nil {
 				return nil, err
 			}
-			valueMu.Lock()
-			valueMu.Unlock()
 		}
 		return nil, nil
 	})
@@ -528,7 +524,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*A)
 					valueMu.Lock()
-					valueA = value // { name: "a", message: "A" ... }
+					valueA = value
 					envOpts = append(envOpts, cel.Variable("a", cel.ObjectType("org.federation.A")))
 					evalValues["a"] = valueA
 					valueMu.Unlock()
@@ -567,7 +563,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*C)
 					valueMu.Lock()
-					valueC = value // { name: "c", message: "C" ... }
+					valueC = value
 					envOpts = append(envOpts, cel.Variable("c", cel.ObjectType("org.federation.C")))
 					evalValues["c"] = valueC
 					valueMu.Unlock()
@@ -599,7 +595,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*B)
 					valueMu.Lock()
-					valueB = value // { name: "b", message: "B" ... }
+					valueB = value
 					envOpts = append(envOpts, cel.Variable("b", cel.ObjectType("org.federation.B")))
 					evalValues["b"] = valueB
 					valueMu.Unlock()
@@ -638,7 +634,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*D)
 					valueMu.Lock()
-					valueD = value // { name: "d", message: "D" ... }
+					valueD = value
 					envOpts = append(envOpts, cel.Variable("d", cel.ObjectType("org.federation.D")))
 					evalValues["d"] = valueD
 					valueMu.Unlock()
@@ -695,7 +691,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				value := valueIface.(*E)
 				valueMu.Lock()
-				valueE = value // { name: "e", message: "E" ... }
+				valueE = value
 				envOpts = append(envOpts, cel.Variable("e", cel.ObjectType("org.federation.E")))
 				evalValues["e"] = valueE
 				valueMu.Unlock()
@@ -729,7 +725,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*A)
 					valueMu.Lock()
-					valueA = value // { name: "a", message: "A" ... }
+					valueA = value
 					envOpts = append(envOpts, cel.Variable("a", cel.ObjectType("org.federation.A")))
 					evalValues["a"] = valueA
 					valueMu.Unlock()
@@ -768,7 +764,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*C)
 					valueMu.Lock()
-					valueC = value // { name: "c", message: "C" ... }
+					valueC = value
 					envOpts = append(envOpts, cel.Variable("c", cel.ObjectType("org.federation.C")))
 					evalValues["c"] = valueC
 					valueMu.Unlock()
@@ -800,7 +796,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*B)
 					valueMu.Lock()
-					valueB = value // { name: "b", message: "B" ... }
+					valueB = value
 					envOpts = append(envOpts, cel.Variable("b", cel.ObjectType("org.federation.B")))
 					evalValues["b"] = valueB
 					valueMu.Unlock()
@@ -839,7 +835,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}
 					value := valueIface.(*D)
 					valueMu.Lock()
-					valueD = value // { name: "d", message: "D" ... }
+					valueD = value
 					envOpts = append(envOpts, cel.Variable("d", cel.ObjectType("org.federation.D")))
 					evalValues["d"] = valueD
 					valueMu.Unlock()
@@ -896,7 +892,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				value := valueIface.(*F)
 				valueMu.Lock()
-				valueF = value // { name: "f", message: "F" ... }
+				valueF = value
 				envOpts = append(envOpts, cel.Variable("f", cel.ObjectType("org.federation.F")))
 				evalValues["f"] = valueF
 				valueMu.Unlock()
@@ -928,7 +924,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				value := valueIface.(*G)
 				valueMu.Lock()
-				valueG = value // { name: "g", message: "G" ... }
+				valueG = value
 				envOpts = append(envOpts, cel.Variable("g", cel.ObjectType("org.federation.G")))
 				evalValues["g"] = valueG
 				valueMu.Unlock()
@@ -995,7 +991,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*H)
 			valueMu.Lock()
-			valueH = value // { name: "h", message: "H" ... }
+			valueH = value
 			envOpts = append(envOpts, cel.Variable("h", cel.ObjectType("org.federation.H")))
 			evalValues["h"] = valueH
 			valueMu.Unlock()
@@ -1028,7 +1024,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*I)
 			valueMu.Lock()
-			valueI = value // { name: "i", message: "I" ... }
+			valueI = value
 			envOpts = append(envOpts, cel.Variable("i", cel.ObjectType("org.federation.I")))
 			evalValues["i"] = valueI
 			valueMu.Unlock()
@@ -1067,7 +1063,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*J)
 			valueMu.Lock()
-			valueJ = value // { name: "j", message: "J" ... }
+			valueJ = value
 			envOpts = append(envOpts, cel.Variable("j", cel.ObjectType("org.federation.J")))
 			evalValues["j"] = valueJ
 			valueMu.Unlock()
