@@ -309,6 +309,9 @@ func (v *ValidationErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	elems := []string{
 		nextOpt.indentFormat() + fmt.Sprintf("rule: %q", v.Rule.Expr),
 	}
+	if s := len(v.Messages); s != 0 {
+		elems = append(elems, v.protoFormatDetails(nextOpt, "message", s))
+	}
 	if s := len(v.PreconditionFailures); s != 0 {
 		elems = append(elems, v.protoFormatDetails(nextOpt, "precondition_failure", s))
 	}

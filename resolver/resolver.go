@@ -1216,7 +1216,7 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 	}
 
 	if details := e.GetDetails(); len(details) != 0 {
-		vr.Error.Details = r.resolveMessageRuleValidationDetails(details)
+		vr.Error.Details = r.resolveMessageRuleValidationDetails(ctx, details)
 		return vr
 	}
 
@@ -1250,19 +1250,50 @@ func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message 
 	return r.resolveMessage(ctx, ctx.file().Package, aliasName)
 }
 
-func (r *Resolver) resolveMessageRuleValidationDetails(details []*federation.ValidationErrorDetail) []*ValidationErrorDetail {
+func (r *Resolver) resolveMessageRuleValidationDetails(ctx *context, details []*federation.ValidationErrorDetail) []*ValidationErrorDetail {
 	result := make([]*ValidationErrorDetail, 0, len(details))
-	for _, detail := range details {
+	for idx, detail := range details {
+		ctx := ctx.withErrDetailIndex(idx)
 		result = append(result, &ValidationErrorDetail{
 			Rule: &CELValue{
 				Expr: detail.Rule,
 			},
+			Messages:             r.resolveValidationDetailMessages(ctx, detail.GetMessage()),
 			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailure()),
 			BadRequests:          r.resolveBadRequests(detail.GetBadRequest()),
 			LocalizedMessages:    r.resolveLocalizedMessages(detail.GetLocalizedMessage()),
 		})
 	}
 	return result
+}
+
+func (r *Resolver) resolveValidationDetailMessages(ctx *context, messages []*federation.MessageExpr) VariableDefinitions {
+	if len(messages) == 0 {
+		return nil
+	}
+	msgs := make([]*federation.VariableDefinition, 0, len(messages))
+	for idx, message := range messages {
+		name := fmt.Sprintf("_def%d_err_detail%d_msg%d", ctx.defIndex(), ctx.errDetailIndex(), idx)
+		msgs = append(msgs, &federation.VariableDefinition{
+			Name: &name,
+			Expr: &federation.VariableDefinition_Message{
+				Message: message,
+			},
+		})
+	}
+	ctx = ctx.withDefOwner(&VariableDefinitionOwner{
+		Type: VariableDefinitionOwnerValidationErrorDetailMessage,
+		ValidationErrorIndexes: &ValidationErrorIndexes{
+			DefIdx:       ctx.defIndex(),
+			ErrDetailIdx: ctx.errDetailIndex(),
+		},
+	})
+	defs := make([]*VariableDefinition, 0, len(msgs))
+	for _, def := range r.resolveVariableDefinitions(ctx, msgs) {
+		def.Used = true
+		defs = append(defs, def)
+	}
+	return defs
 }
 
 func (r *Resolver) resolvePreconditionFailures(failures []*errdetails.PreconditionFailure) []*PreconditionFailure {
@@ -2088,11 +2119,18 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		if varDef.Expr == nil {
 			continue
 		}
-		if varDef.Expr.Message == nil {
-			continue
+		switch {
+		case varDef.Expr.Message != nil:
+			msgExpr := varDef.Expr.Message
+			msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
+		case varDef.Expr.Validation != nil:
+			for _, detail := range varDef.Expr.Validation.Error.Details {
+				for _, message := range detail.Messages {
+					msgExpr := message.Expr.Message
+					msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], message)
+				}
+			}
 		}
-		msgExpr := varDef.Expr.Message
-		msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
 	}
 	for _, field := range msg.Fields {
 		if field.Rule == nil {
@@ -2233,6 +2271,15 @@ func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMa
 				msg.File.Name,
 				msg.Name,
 				def.Owner.Field.Name,
+				def.Idx,
+				0,
+			)
+		case VariableDefinitionOwnerValidationErrorDetailMessage:
+			errLoc = source.VariableDefinitionValidationDetailMessageArgumentLocation(
+				msg.File.Name,
+				msg.Name,
+				def.Owner.ValidationErrorIndexes.DefIdx,
+				def.Owner.ValidationErrorIndexes.ErrDetailIdx,
 				def.Idx,
 				0,
 			)
@@ -2557,6 +2604,9 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 			),
 		)
 	}
+	for _, message := range detail.Messages {
+		r.resolveVariableExprCELValues(ctx, env, message.Expr)
+	}
 	for fIdx, failure := range detail.PreconditionFailures {
 		for fvIdx, violation := range failure.Violations {
 			if err := r.resolveCELValue(ctx, env, violation.Type); err != nil {
@@ -2855,6 +2905,22 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 		if graph := CreateMessageDependencyGraph(ctx, msg); graph != nil {
 			msg.Rule.DependencyGraph = graph
 			msg.Rule.Resolvers = graph.MessageResolverGroups(ctx)
+		}
+		for defIdx, def := range msg.Rule.VariableDefinitions {
+			if def.Expr == nil {
+				continue
+			}
+			if def.Expr.Validation == nil || def.Expr.Validation.Error == nil {
+				continue
+			}
+			ctx := ctx.withDefIndex(defIdx)
+			for detIdx, detail := range def.Expr.Validation.Error.Details {
+				ctx := ctx.withErrDetailIndex(detIdx)
+				if graph := CreateMessageDependencyGraphByValidationErrorDetailMessages(ctx, msg, detail.Messages); graph != nil {
+					detail.DependencyGraph = graph
+					detail.Resolvers = graph.MessageResolverGroups(ctx)
+				}
+			}
 		}
 		for _, field := range msg.Fields {
 			if field.Rule == nil {
@@ -3290,6 +3356,9 @@ func (v *ValidationError) ReferenceNames() []string {
 	register(v.Rule.ReferenceNames())
 	for _, detail := range v.Details {
 		register(detail.Rule.ReferenceNames())
+		for _, message := range detail.Messages {
+			register(message.ReferenceNames())
+		}
 		for _, failure := range detail.PreconditionFailures {
 			for _, violation := range failure.Violations {
 				register(violation.Type.ReferenceNames())

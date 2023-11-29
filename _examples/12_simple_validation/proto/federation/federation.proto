@@ -21,12 +21,20 @@ message GetPostRequest {
 message GetPostResponse {
   option (grpc.federation.message) = {
     def [
-      { name: "post", message { name: "Post" } },
+      { name: "post" message { name: "Post" } },
       {
         validation {
-          error: {
-            code: FAILED_PRECONDITION,
-            rule: "post.id == 'some-id'",
+          error {
+            code: FAILED_PRECONDITION
+            rule: "post.id == 'some-id'"
+          }
+        }
+      },
+      {
+        validation {
+          error {
+            code: FAILED_PRECONDITION
+            rule: "post.id == 'some-id'"
           }
         }
       },
@@ -36,24 +44,44 @@ message GetPostResponse {
             code: FAILED_PRECONDITION,
             details: {
               rule: "$.id == 'correct-id'",
-              precondition_failure {
-                violations {
-                  type: "'type1'"
-                  subject: "post.id"
-                  description: "'description1'"
+              message: [
+                {
+                  name: "CustomMessage",
+                  args: {
+                    name: "message",
+                    by: "'message1'"
+                  }
+                },
+                {
+                  name: "CustomMessage",
+                  args: {
+                    name: "message",
+                    by: "'message2'"
+                  }
                 }
+              ]
+              precondition_failure {
+                violations: [
+                  {
+                    type: "'type1'"
+                    subject: "post.id"
+                    description: "'description1'"
+                  }
+                ]
               }
               bad_request {
-                field_violations {
-                  field: "post.id"
-                  description: "'description2'"
-                }
+                field_violations: [
+                  {
+                    field: "post.id"
+                    description: "'description2'"
+                  }
+                ]
               }
               localized_message {
                 locale: "en-US"
                 message: "post.content"
               }
-            }
+            },
           }
         }
       }
@@ -66,4 +94,8 @@ message Post {
   string id = 1 [(grpc.federation.field).string = "some-id"];
   string title = 2 [(grpc.federation.field).string = "some-title"];
   string content = 3 [(grpc.federation.field).string = "some-content"];
+}
+
+message CustomMessage {
+  string message = 1 [(grpc.federation.field).by = "$.message"];
 }

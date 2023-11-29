@@ -90,6 +90,12 @@ func TestFederation(t *testing.T) {
 				code: codes.FailedPrecondition,
 				message: "validation failure",
 				details: []any{
+					&federation.CustomMessage{
+						Message: "message1",
+					},
+					&federation.CustomMessage{
+						Message: "message2",
+					},
 					&errdetails.PreconditionFailure{
 						Violations: []*errdetails.PreconditionFailure_Violation{
 							{
@@ -135,6 +141,7 @@ func TestFederation(t *testing.T) {
 					t.Errorf("invalida gRPC status message: got: %v, expected: %v", got, tc.expectedErr.message)
 				}
 				if diff := cmp.Diff(s.Details(), tc.expectedErr.details, cmpopts.IgnoreUnexported(
+					federation.CustomMessage{},
 					errdetails.PreconditionFailure{},
 					errdetails.PreconditionFailure_Violation{},
 					errdetails.BadRequest{},

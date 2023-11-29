@@ -794,6 +794,7 @@ if err := eg.Wait(); err != nil {
 			}
 			if !value.(bool) {
 				success = false
+				{{- template "detailMessages" . }}
 				{{- range .PreconditionFailures }}
 				{{- template "preconditionFailure" . }}
 				{{- end }}
@@ -826,6 +827,50 @@ if err := eg.Wait(); err != nil {
 		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 	}
 }
+{{- end }}
+
+{{- define "detailMessages" }}
+{{- $msgResolvers := .MessageResolvers }}
+{{- $msgResolversLen := len $msgResolvers }}
+{{- if gt $msgResolversLen 0 }}
+func(){
+	_, err := func() (any, error) {
+		{{- if eq $msgResolversLen 1 }}
+		{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $msgResolvers 0)) }}
+		{{- else }}
+		{{- if . }}
+		eg, ctx1 := errgroup.WithContext(ctx)
+		{{- end }}
+		{{- range $msgResolvers }}
+		grpcfed.GoWithRecover(eg, func() (any, error) {
+		{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+			return nil, nil
+		})
+		{{- end }}
+		{{- if $msgResolvers }}
+		if err := eg.Wait(); err != nil {
+			return nil, err
+		}
+		{{- end }}
+		{{- end }}
+		return nil, nil
+	}()
+	if err != nil {
+		s.logger.ErrorContext(ctx, "failed resolving messages", slog.String("error", err.Error()))
+		return
+	}
+	{{- range $i, $message := .Messages }}
+	func() {
+		msg, err := grpcfed.EvalCEL(s.env, "{{ $message.Name }}", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
+		if err != nil {
+			s.logger.ErrorContext(ctx, "failed evaluating validation error detail message", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+			return
+		}
+		details = append(details, msg.(proto.Message))
+	}()
+	{{- end }}
+}()
+{{- end }}
 {{- end }}
 
 {{- define "preconditionFailure" }}

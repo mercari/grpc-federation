@@ -221,9 +221,12 @@ type ValidationErrorDetails []*ValidationErrorDetail
 
 type ValidationErrorDetail struct {
 	Rule                 *CELValue
+	Messages             VariableDefinitions
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest
 	LocalizedMessages    []*LocalizedMessage
+	DependencyGraph      *MessageDependencyGraph
+	Resolvers            []MessageResolverGroup
 }
 
 type PreconditionFailure struct {
@@ -400,15 +403,22 @@ type Request struct {
 type VariableDefinitionOwnerType int
 
 const (
-	VariableDefinitionOwnerUnknown    VariableDefinitionOwnerType = 0
-	VariableDefinitionOwnerMessage    VariableDefinitionOwnerType = 1
-	VariableDefinitionOwnerOneofField VariableDefinitionOwnerType = 2
+	VariableDefinitionOwnerUnknown                      VariableDefinitionOwnerType = 0
+	VariableDefinitionOwnerMessage                      VariableDefinitionOwnerType = 1
+	VariableDefinitionOwnerOneofField                   VariableDefinitionOwnerType = 2
+	VariableDefinitionOwnerValidationErrorDetailMessage VariableDefinitionOwnerType = 3
 )
 
 type VariableDefinitionOwner struct {
-	Type    VariableDefinitionOwnerType
-	Message *Message
-	Field   *Field
+	Type                   VariableDefinitionOwnerType
+	Message                *Message
+	Field                  *Field
+	ValidationErrorIndexes *ValidationErrorIndexes
+}
+
+type ValidationErrorIndexes struct {
+	DefIdx       int
+	ErrDetailIdx int
 }
 
 type Argument struct {

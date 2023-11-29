@@ -72,6 +72,43 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 					depNode.Parent = append(depNode.Parent, node)
 				}
 				childMap[depNode] = struct{}{}
+			case expr.Validation != nil && expr.Validation.Error != nil:
+				for dIdx, detail := range expr.Validation.Error.Details {
+					for mIdx, message := range detail.Messages {
+						depMsg := message.Expr.Message.Message
+						depNode, depNodeExists := msgToNode[depMsg]
+						if _, exists := childMap[depNode]; exists {
+							continue
+						}
+						if !depNodeExists {
+							if depMsg == nil {
+								fileName := msg.File.Name
+								ctx.addError(
+									ErrWithLocation(
+										`undefined message specified "grpc.federation.message" option`,
+										source.VariableDefinitionValidationDetailMessageLocation(fileName, msg.Name, idx, dIdx, mIdx),
+									),
+								)
+								continue
+							}
+							fileName := msg.File.Name
+							if !depMsg.HasRuleEveryFields() {
+								ctx.addError(
+									ErrWithLocation(
+										fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
+										source.VariableDefinitionValidationDetailMessageNameLocation(fileName, msg.Name, idx, dIdx, mIdx),
+									),
+								)
+							}
+							depNode = &AllMessageDependencyGraphNode{Message: depMsg}
+						}
+						if node != nil {
+							node.Children = append(node.Children, depNode)
+							depNode.Parent = append(depNode.Parent, node)
+						}
+						childMap[depNode] = struct{}{}
+					}
+				}
 			}
 		}
 		for _, field := range msg.Fields {
@@ -444,6 +481,80 @@ func CreateMessageDependencyGraphByFieldOneof(ctx *context, baseMsg *Message, fi
 	if err := validateMessageGraph(graph); err != nil {
 		ctx.addError(err)
 		return nil
+	}
+	return graph
+}
+
+func CreateMessageDependencyGraphByValidationErrorDetailMessages(ctx *context, baseMsg *Message, messages VariableDefinitions) *MessageDependencyGraph {
+	allReferences := baseMsg.ReferenceNames()
+	allRefMap := make(map[string]struct{})
+	for _, ref := range allReferences {
+		allRefMap[ref] = struct{}{}
+	}
+
+	for msgIdx, msg := range messages {
+		for argIdx, arg := range msg.Expr.Message.Args {
+			refs := arg.Value.ReferenceNames()
+			if len(refs) == 0 {
+				continue
+			}
+			for _, ref := range refs {
+				if _, exists := allRefMap[ref]; !exists {
+					message := fmt.Sprintf(`%q name does not exist`, ref)
+					if arg.Value.Inline {
+						ctx.addError(
+							ErrWithLocation(
+								message,
+								source.VariableDefinitionValidationDetailMessageArgumentInlineLocation(
+									ctx.fileName(),
+									baseMsg.Name,
+									ctx.defIndex(),
+									ctx.errDetailIndex(),
+									msgIdx,
+									argIdx,
+								),
+							),
+						)
+					} else {
+						ctx.addError(
+							ErrWithLocation(
+								message,
+								source.VariableDefinitionValidationDetailMessageArgumentByLocation(
+									ctx.fileName(),
+									baseMsg.Name,
+									ctx.defIndex(),
+									ctx.errDetailIndex(),
+									msgIdx,
+									argIdx,
+								),
+							),
+						)
+					}
+					continue
+				}
+			}
+		}
+	}
+
+	// Each node won't depend on each other, so they all should be a root
+	var roots []*MessageDependencyGraphNode
+	for _, msg := range messages {
+		node := newMessageDependencyGraphNodeByVariableDefinition(baseMsg, msg)
+		roots = append(roots, node)
+	}
+
+	sort.Slice(roots, func(i, j int) bool {
+		return roots[i].FQDN() < roots[j].FQDN()
+	})
+	if len(roots) == 0 {
+		return nil
+	}
+
+	graph := &MessageDependencyGraph{
+		MessageRule: &MessageRule{
+			VariableDefinitions: messages,
+		},
+		Roots: roots,
 	}
 	return graph
 }

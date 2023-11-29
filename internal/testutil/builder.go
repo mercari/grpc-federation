@@ -626,6 +626,16 @@ func NewVariableDefinitionBuilder() *VariableDefinitionBuilder {
 	}
 }
 
+func (b *VariableDefinitionBuilder) SetIdx(idx int) *VariableDefinitionBuilder {
+	b.def.Idx = idx
+	return b
+}
+
+func (b *VariableDefinitionBuilder) SetOwner(owner *resolver.VariableDefinitionOwner) *VariableDefinitionBuilder {
+	b.def.Owner = owner
+	return b
+}
+
 func (b *VariableDefinitionBuilder) SetName(v string) *VariableDefinitionBuilder {
 	b.def.Name = v
 	return b

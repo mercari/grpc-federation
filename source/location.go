@@ -192,9 +192,15 @@ type ValidationExprOption struct {
 type ValidationDetailOption struct {
 	Idx                 int
 	Rule                bool
+	Message             *ValidationDetailMessageOption
 	PreconditionFailure *ValidationDetailPreconditionFailureOption
 	BadRequest          *ValidationDetailBadRequestOption
 	LocalizedMessage    *ValidationDetailLocalizedMessageOption
+}
+
+type ValidationDetailMessageOption struct {
+	Idx     int
+	Message *MessageExprOption
 }
 
 type ValidationDetailPreconditionFailureOption struct {
@@ -1301,6 +1307,141 @@ func VariableDefinitionByLocation(fileName, msgName string, defIdx int) *Locatio
 				VariableDefinitions: &VariableDefinitionOption{
 					Idx: defIdx,
 					By:  true,
+				},
+			},
+		},
+	}
+}
+
+// VariableDefinitionValidationDetailMessageLocation creates location for def.validation[*].error.details[*].message[*] in grpc.federation.message.
+func VariableDefinitionValidationDetailMessageLocation(fileName, msgName string, defIdx, detIdx, msgIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					Validation: &ValidationExprOption{
+						Detail: &ValidationDetailOption{
+							Idx: detIdx,
+							Message: &ValidationDetailMessageOption{
+								Idx: msgIdx,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// VariableDefinitionValidationDetailMessageNameLocation creates location for def.validation[*].error.details[*].message[*] in grpc.federation.message.
+func VariableDefinitionValidationDetailMessageNameLocation(fileName, msgName string, defIdx, detIdx, msgIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					Validation: &ValidationExprOption{
+						Detail: &ValidationDetailOption{
+							Idx: detIdx,
+							Message: &ValidationDetailMessageOption{
+								Idx: msgIdx,
+								Message: &MessageExprOption{
+									Name: true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// VariableDefinitionValidationDetailMessageArgumentLocation creates location for def.validation[*].error.details[*].message[*].args[*] in grpc.federation.message.
+func VariableDefinitionValidationDetailMessageArgumentLocation(fileName, msgName string, defIdx, detIdx, msgIdx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					Validation: &ValidationExprOption{
+						Detail: &ValidationDetailOption{
+							Idx: detIdx,
+							Message: &ValidationDetailMessageOption{
+								Idx: msgIdx,
+								Message: &MessageExprOption{
+									Args: &ArgumentOption{
+										Idx: argIdx,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// VariableDefinitionValidationDetailMessageArgumentByLocation creates location for def.validation[*].error.details[*].message[*].args[*].by in grpc.federation.message.
+func VariableDefinitionValidationDetailMessageArgumentByLocation(fileName, msgName string, defIdx, detIdx, msgIdx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					Validation: &ValidationExprOption{
+						Detail: &ValidationDetailOption{
+							Idx: detIdx,
+							Message: &ValidationDetailMessageOption{
+								Idx: msgIdx,
+								Message: &MessageExprOption{
+									Args: &ArgumentOption{
+										Idx: argIdx,
+										By:  true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// VariableDefinitionValidationDetailMessageArgumentInlineLocation creates location for def.validation[*].error.details[*].message[*].args[*].inline in grpc.federation.message.
+func VariableDefinitionValidationDetailMessageArgumentInlineLocation(fileName, msgName string, defIdx, detIdx, msgIdx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					Validation: &ValidationExprOption{
+						Detail: &ValidationDetailOption{
+							Idx: detIdx,
+							Message: &ValidationDetailMessageOption{
+								Idx: msgIdx,
+								Message: &MessageExprOption{
+									Args: &ArgumentOption{
+										Idx:    argIdx,
+										Inline: true,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

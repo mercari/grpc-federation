@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+import "post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: []
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
+    }
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    def [
+      {
+        name: "res"
+        call {
+          method: "post.PostService/GetPost"
+          request { field: "id", by: "$.id" }
+        }
+      },
+      { name: "post", by: "res.post", autobind: true },
+      {
+        validation {
+          name: "invalidMessageArgument",
+          error {
+            code: FAILED_PRECONDITION
+            details: {
+              rule: "post.id == 'correct-id'"
+              message {
+                name: "CustomMessage",
+                args: {
+                  name: "wrong",
+                  by: "'message1'"
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  };
+  string id = 1;
+  string title = 2;
+  string content = 3;
+}
+
+message CustomMessage {
+  string message = 1 [(grpc.federation.field).by = "$.message"];
+}

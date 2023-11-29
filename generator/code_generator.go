@@ -2059,10 +2059,26 @@ func (v *ValidationError) GoGRPCStatusCode() string {
 }
 
 type ValidationErrorDetail struct {
+	Service              *resolver.Service
+	Message              *Message
 	Rule                 string
+	Messages             resolver.VariableDefinitions
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest
 	LocalizedMessages    []*LocalizedMessage
+	Resolvers            []resolver.MessageResolverGroup
+}
+
+func (d *ValidationErrorDetail) MessageResolvers() []*MessageResolverGroup {
+	var groups []*MessageResolverGroup
+	for _, group := range d.Resolvers {
+		groups = append(groups, &MessageResolverGroup{
+			Service:              d.Service,
+			Message:              d.Message,
+			MessageResolverGroup: group,
+		})
+	}
+	return groups
 }
 
 type PreconditionFailure struct {
@@ -2108,7 +2124,11 @@ func (r *MessageResolver) MessageValidation() *ValidationRule {
 	}
 	for _, detail := range validationError.Details {
 		ved := &ValidationErrorDetail{
-			Rule: detail.Rule.Expr,
+			Service:   r.Service,
+			Message:   r.Message,
+			Rule:      detail.Rule.Expr,
+			Messages:  detail.Messages,
+			Resolvers: detail.Resolvers,
 		}
 		for _, failure := range detail.PreconditionFailures {
 			vs := make([]*PreconditionFailureViolation, 0, len(failure.Violations))
