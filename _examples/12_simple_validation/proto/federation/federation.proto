@@ -81,7 +81,7 @@ message GetPostResponse {
                 locale: "en-US"
                 message: "post.content"
               }
-            },
+            }
           }
         }
       }
