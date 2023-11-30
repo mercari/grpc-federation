@@ -273,6 +273,7 @@ testdata/missing_enum_value_alias.proto:56:3: specified "alias" in grpc.federati
 56:    POST_TYPE_BAR = 2;
        ^
 `},
+		{file: "valid_enum_value_reference.proto", expected: ""},
 		{file: "missing_message_field_alias.proto", expected: `
 testdata/missing_message_field_alias.proto:80:3: specified "alias" in grpc.federation.message option, but "dup_body" field does not exist in "org.post.PostContent" message
 80:    string dup_body = 4;
@@ -486,8 +487,15 @@ testdata/invalid_validation_localized_message.proto:54:26: message must always r
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual := "\n" + validator.Format(v.Validate(ctx, file))
-			if diff := cmp.Diff(actual, test.expected); diff != "" {
+			got := validator.Format(v.Validate(ctx, file))
+			if test.expected == "" {
+				if got != "" {
+					t.Errorf("expected to receive no validation error but got: %s", got)
+				}
+				return
+			}
+
+			if diff := cmp.Diff("\n"+got, test.expected); diff != "" {
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
 		})

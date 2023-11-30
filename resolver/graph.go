@@ -358,7 +358,7 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 	rule := baseMsg.Rule
 
 	var rootDefNodes []*MessageDependencyGraphNode
-	for idx, varDef := range rule.VariableDefinitions {
+	for _, varDef := range rule.VariableDefinitions {
 		varDefNode := newMessageDependencyGraphNodeByVariableDefinition(baseMsg, varDef)
 		if varDef.Name != "" {
 			nameToNode[varDef.Name] = varDefNode
@@ -382,12 +382,9 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 			}
 			node, exists := nameToNode[ref]
 			if !exists {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(`%q name does not exist`, ref),
-						source.VariableDefinitionLocation(ctx.fileName(), baseMsg.Name, idx),
-					),
-				)
+				// It can be either a reference registered directly from a file descriptor such as an enum value
+				// or just an unknown reference name. cel-go detects the later case and returns an error, so we
+				// can safely ignore it here
 				continue
 			}
 			if _, exists := node.ChildrenMap[varDefNode]; !exists {
@@ -438,7 +435,7 @@ func CreateMessageDependencyGraphByFieldOneof(ctx *context, baseMsg *Message, fi
 	}
 
 	var rootDefNodes []*MessageDependencyGraphNode
-	for idx, varDef := range fieldOneof.VariableDefinitions {
+	for _, varDef := range fieldOneof.VariableDefinitions {
 		varDefNode := newMessageDependencyGraphNodeByVariableDefinition(baseMsg, varDef)
 		if varDef.Name != "" {
 			nameToNode[varDef.Name] = varDefNode
@@ -458,17 +455,9 @@ func CreateMessageDependencyGraphByFieldOneof(ctx *context, baseMsg *Message, fi
 				continue
 			}
 			if _, exists := allRefMap[ref]; !exists {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(`%q name does not exist`, ref),
-						source.MessageFieldOneofDefLocation(
-							ctx.fileName(),
-							baseMsg.Name,
-							field.Name,
-							idx,
-						),
-					),
-				)
+				// It can be either a reference registered directly from a file descriptor such as an enum value
+				// or just an unknown reference name. cel-go detects the later case and returns an error, so we
+				// can safely ignore it here
 				continue
 			}
 
@@ -517,57 +506,7 @@ func CreateMessageDependencyGraphByFieldOneof(ctx *context, baseMsg *Message, fi
 	return graph
 }
 
-func CreateMessageDependencyGraphByValidationErrorDetailMessages(ctx *context, baseMsg *Message, messages VariableDefinitions) *MessageDependencyGraph {
-	allReferences := baseMsg.ReferenceNames()
-	allRefMap := make(map[string]struct{})
-	for _, ref := range allReferences {
-		allRefMap[ref] = struct{}{}
-	}
-
-	for msgIdx, msg := range messages {
-		for argIdx, arg := range msg.Expr.Message.Args {
-			refs := arg.Value.ReferenceNames()
-			if len(refs) == 0 {
-				continue
-			}
-			for _, ref := range refs {
-				if _, exists := allRefMap[ref]; !exists {
-					message := fmt.Sprintf(`%q name does not exist`, ref)
-					if arg.Value.Inline {
-						ctx.addError(
-							ErrWithLocation(
-								message,
-								source.VariableDefinitionValidationDetailMessageArgumentInlineLocation(
-									ctx.fileName(),
-									baseMsg.Name,
-									ctx.defIndex(),
-									ctx.errDetailIndex(),
-									msgIdx,
-									argIdx,
-								),
-							),
-						)
-					} else {
-						ctx.addError(
-							ErrWithLocation(
-								message,
-								source.VariableDefinitionValidationDetailMessageArgumentByLocation(
-									ctx.fileName(),
-									baseMsg.Name,
-									ctx.defIndex(),
-									ctx.errDetailIndex(),
-									msgIdx,
-									argIdx,
-								),
-							),
-						)
-					}
-					continue
-				}
-			}
-		}
-	}
-
+func CreateMessageDependencyGraphByValidationErrorDetailMessages(baseMsg *Message, messages VariableDefinitions) *MessageDependencyGraph {
 	// Each node won't depend on each other, so they all should be a root
 	var roots []*MessageDependencyGraphNode
 	for _, msg := range messages {

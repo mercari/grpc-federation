@@ -497,22 +497,6 @@ func MessageFieldByLocation(fileName, msgName, fieldName string) *Location {
 	}
 }
 
-// MessageFieldAliasLocation creates location for alias in grpc.federation.field option.
-func MessageFieldAliasLocation(fileName, msgName, fieldName string) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Field: &Field{
-				Name: fieldName,
-				Option: &FieldOption{
-					Alias: true,
-				},
-			},
-		},
-	}
-}
-
 // MessageFieldOneofLocation creates location for oneof in grpc.federation.field option.
 func MessageFieldOneofLocation(fileName, msgName, fieldName string) *Location {
 	return &Location{
@@ -581,26 +565,6 @@ func MessageFieldOneofByLocation(fileName, msgName, fieldName string) *Location 
 	}
 }
 
-// MessageFieldOneofDefLocation creates location for def in grpc.federation.field.oneof option.
-func MessageFieldOneofDefLocation(fileName, msgName, fieldName string, idx int) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Field: &Field{
-				Name: fieldName,
-				Option: &FieldOption{
-					Oneof: &FieldOneof{
-						VariableDefinitions: &VariableDefinitionOption{
-							Idx: idx,
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
 // MessageFieldOneofDefMessageLocation creates location for def[*].message in grpc.federation.field.oneof.
 func MessageFieldOneofDefMessageLocation(fileName, msgName, fieldName string, idx int) *Location {
 	return &Location{
@@ -637,83 +601,6 @@ func MessageFieldOneofDefMessageArgumentLocation(fileName, msgName, fieldName st
 							Message: &MessageExprOption{
 								Args: &ArgumentOption{
 									Idx: argIdx,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// MessageFieldOneofDefMessageArgumentNameLocation creates location for def[*].message.args[].name in grpc.federation.field.oneof.
-func MessageFieldOneofDefMessageArgumentNameLocation(fileName, msgName, fieldName string, idx, argIdx int) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Field: &Field{
-				Option: &FieldOption{
-					Oneof: &FieldOneof{
-						VariableDefinitions: &VariableDefinitionOption{
-							Idx: idx,
-							Message: &MessageExprOption{
-								Args: &ArgumentOption{
-									Idx:  argIdx,
-									Name: true,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// MessageFieldOneofDefMessageArgumentByLocation creates location for def[*].message.args[].by in grpc.federation.field.oneof.
-func MessageFieldOneofDefMessageArgumentByLocation(fileName, msgName, fieldName string, idx, argIdx int) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Field: &Field{
-				Name: fieldName,
-				Option: &FieldOption{
-					Oneof: &FieldOneof{
-						VariableDefinitions: &VariableDefinitionOption{
-							Idx: idx,
-							Message: &MessageExprOption{
-								Args: &ArgumentOption{
-									Idx: argIdx,
-									By:  true,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// MessageFieldOneofDefMessageArgumentInlineLocation creates location for def[*].message.args[].inline in grpc.federation.field.oneof.
-func MessageFieldOneofDefMessageArgumentInlineLocation(fileName, msgName, fieldName string, idx, argIdx int) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Field: &Field{
-				Name: fieldName,
-				Option: &FieldOption{
-					Oneof: &FieldOneof{
-						VariableDefinitions: &VariableDefinitionOption{
-							Idx: idx,
-							Message: &MessageExprOption{
-								Args: &ArgumentOption{
-									Idx:    argIdx,
-									Inline: true,
 								},
 							},
 						},
@@ -1417,64 +1304,6 @@ func VariableDefinitionValidationDetailMessageArgumentLocation(fileName, msgName
 								Message: &MessageExprOption{
 									Args: &ArgumentOption{
 										Idx: argIdx,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// VariableDefinitionValidationDetailMessageArgumentByLocation creates location for def.validation[*].error.details[*].message[*].args[*].by in grpc.federation.message.
-func VariableDefinitionValidationDetailMessageArgumentByLocation(fileName, msgName string, defIdx, detIdx, msgIdx, argIdx int) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Option: &MessageOption{
-				VariableDefinitions: &VariableDefinitionOption{
-					Idx: defIdx,
-					Validation: &ValidationExprOption{
-						Detail: &ValidationDetailOption{
-							Idx: detIdx,
-							Message: &ValidationDetailMessageOption{
-								Idx: msgIdx,
-								Message: &MessageExprOption{
-									Args: &ArgumentOption{
-										Idx: argIdx,
-										By:  true,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// VariableDefinitionValidationDetailMessageArgumentInlineLocation creates location for def.validation[*].error.details[*].message[*].args[*].inline in grpc.federation.message.
-func VariableDefinitionValidationDetailMessageArgumentInlineLocation(fileName, msgName string, defIdx, detIdx, msgIdx, argIdx int) *Location {
-	return &Location{
-		FileName: fileName,
-		Message: &Message{
-			Name: msgName,
-			Option: &MessageOption{
-				VariableDefinitions: &VariableDefinitionOption{
-					Idx: defIdx,
-					Validation: &ValidationExprOption{
-						Detail: &ValidationDetailOption{
-							Idx: detIdx,
-							Message: &ValidationDetailMessageOption{
-								Idx: msgIdx,
-								Message: &MessageExprOption{
-									Args: &ArgumentOption{
-										Idx:    argIdx,
-										Inline: true,
 									},
 								},
 							},

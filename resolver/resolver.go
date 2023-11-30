@@ -2903,7 +2903,7 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 			ctx := ctx.withDefIndex(defIdx)
 			for detIdx, detail := range def.Expr.Validation.Error.Details {
 				ctx := ctx.withErrDetailIndex(detIdx)
-				if graph := CreateMessageDependencyGraphByValidationErrorDetailMessages(ctx, msg, detail.Messages); graph != nil {
+				if graph := CreateMessageDependencyGraphByValidationErrorDetailMessages(msg, detail.Messages); graph != nil {
 					detail.DependencyGraph = graph
 					detail.Resolvers = graph.MessageResolverGroups(ctx)
 				}
