@@ -661,9 +661,11 @@ return value, err
 {{- $mapResolver := .Resolver.MapResolver }}
 env, err := s.env.Extend(cel.Variable("{{ $mapResolver.IteratorName }}", {{ $mapResolver.IteratorCELType }}))
 if err != nil {
+	grpcfed.RecordErrorToSpan(ctx, err)
 	return nil, err
 }
 valueMu.RLock()
+defer valueMu.RUnlock()
 var value {{ $mapResolver.MapOutType }}
 for _, iter := range {{ $mapResolver.IteratorSource }} {
 	iterValues := make(map[string]any)
@@ -676,6 +678,7 @@ for _, iter := range {{ $mapResolver.IteratorSource }} {
 	{{- $by := $mapResolver.MapExpr.Expr.By }}
 	resultValue, err := grpcfed.EvalCEL(env, "{{ $by.Expr }}", envOpts, iterValues, reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}))
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	iterValue := resultValue.({{ $mapResolver.IteratorType }})
@@ -710,12 +713,12 @@ for _, iter := range {{ $mapResolver.IteratorSource }} {
 	{{- end }}
 	iterValue, err := s.{{ $mapResolver.Caller }}({{ .Ctx }}, args)
 	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	{{- end }}
 	value = append(value, iterValue)
 }
-valueMu.RUnlock()
 return value, nil
 {{- else }}
 return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
