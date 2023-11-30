@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPosts(GetPostsRequest) returns (GetPostsResponse) {};
+}
+
+message GetPostsRequest {
+  repeated string ids = 1;
+}
+    
+message GetPostsResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "posts"
+      message {
+        name: "Posts"
+        args { name: "ids", by: "$.ids" }
+      }
+    }
+  };
+  Posts posts = 1 [(grpc.federation.field).by = "posts"];
+}
+
+message Posts {
+  option (grpc.federation.message) = {
+    def [
+      {
+        name: "post_ids"
+        by: "'foo'"
+      },
+      {
+        name: "users"
+        map {
+          iterator {
+            name: "iter"
+            src: "post_ids"
+          }
+          message {
+            name: "User"
+            args { name: "user_id", by: "'foo'" }
+          }
+        }
+      }
+    ]
+  };
+  repeated string ids = 1 [(grpc.federation.field).by = "$.ids"];
+  repeated User users = 4 [(grpc.federation.field).by = "users"];
+}
+
+message User {
+  string id = 1 [(grpc.federation.field).by = "$.user_id"];
+}

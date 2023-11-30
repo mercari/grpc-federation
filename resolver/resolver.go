@@ -1054,23 +1054,24 @@ func (r *Resolver) resolveMapIterator(ctx *context, def *federation.Iterator) *I
 			),
 		)
 	}
-	src := def.GetSrc()
-	if src == "" {
+	var srcDef *VariableDefinition
+	if src := def.GetSrc(); src == "" {
 		ctx.addError(
 			ErrWithLocation(
 				"map iterator src must be specified",
 				source.MapIteratorSourceLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
 			),
 		)
-	}
-	srcDef := ctx.variableDef(src)
-	if srcDef == nil {
-		ctx.addError(
-			ErrWithLocation(
-				fmt.Sprintf(`%q variable is not defined`, src),
-				source.MapIteratorSourceLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
-			),
-		)
+	} else {
+		srcDef = ctx.variableDef(src)
+		if srcDef == nil {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(`%q variable is not defined`, src),
+					source.MapIteratorSourceLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex()),
+				),
+			)
+		}
 	}
 	return &Iterator{
 		Name:   name,
