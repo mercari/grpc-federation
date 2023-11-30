@@ -665,8 +665,11 @@ func (b *VariableDefinitionBuilder) SetBy(v *resolver.CELValue) *VariableDefinit
 }
 
 func (b *VariableDefinitionBuilder) SetMap(v *resolver.MapExpr) *VariableDefinitionBuilder {
+	mapExprType := v.Expr.Type.Clone()
+	mapExprType.Repeated = true
 	b.def.Expr = &resolver.VariableExpr{
-		Map: v,
+		Map:  v,
+		Type: mapExprType,
 	}
 	return b
 }
@@ -763,11 +766,13 @@ func NewMapIteratorExprBuilder() *MapIteratorExprBuilder {
 
 func (b *MapIteratorExprBuilder) SetBy(v *resolver.CELValue) *MapIteratorExprBuilder {
 	b.expr.By = v
+	b.expr.Type = v.Out
 	return b
 }
 
 func (b *MapIteratorExprBuilder) SetMessage(v *resolver.MessageExpr) *MapIteratorExprBuilder {
 	b.expr.Message = v
+	b.expr.Type = resolver.NewMessageType(v.Message, false)
 	return b
 }
 

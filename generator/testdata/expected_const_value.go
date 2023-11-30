@@ -742,7 +742,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			valueIface, err, _ := sg.Do("content", func() (any, error) {
 				valueMu.RLock()
 				valueMu.RUnlock()
-				return grpcfed.EvalCEL(s.env, "res.content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
+				valueMu.RLock()
+				value, err := grpcfed.EvalCEL(s.env, "res.content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
+				valueMu.RUnlock()
+				return value, err
 			})
 			if err != nil {
 				return nil, err
@@ -866,7 +869,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}
 			value := valueIface.(*Content)
 			valueMu.Lock()
-			valueContent2 = value // { name: "content2", message: "Content" ... }
+			valueContent2 = value
 			envOpts = append(envOpts, cel.Variable("content2", cel.ObjectType("org.federation.Content")))
 			evalValues["content2"] = valueContent2
 			valueMu.Unlock()

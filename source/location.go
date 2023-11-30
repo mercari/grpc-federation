@@ -1197,6 +1197,44 @@ func MapExprByLocation(fileName, msgName string, defIdx int) *Location {
 	}
 }
 
+// MapExprMessageLocation creates location for def.map.message in grpc.federation.message.
+func MapExprMessageLocation(fileName, msgName string, defIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					Map: &MapExprOption{
+						Message: &MessageExprOption{},
+					},
+				},
+			},
+		},
+	}
+}
+
+// MapExprMessageNameLocation creates location for def.map.message.name in grpc.federation.message.
+func MapExprMessageNameLocation(fileName, msgName string, defIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					Map: &MapExprOption{
+						Message: &MessageExprOption{
+							Name: true,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 // MapMessageExprArgumentInlineLocation creates location for def.map.message.args[*].inline in grpc.federation.message.
 func MapMessageExprArgumentInlineLocation(fileName, msgName string, defIdx, argIdx int) *Location {
 	return &Location{

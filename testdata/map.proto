@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "google/protobuf/any.proto";
+import "grpc/federation/federation.proto";
+import "post.proto";
+import "user.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPosts(GetPostsRequest) returns (GetPostsResponse) {};
+}
+
+message GetPostsRequest {
+  repeated string ids = 1;
+}
+    
+message GetPostsResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "posts"
+      message {
+        name: "Posts"
+        args { name: "post_ids", by: "$.ids" }
+      }
+    }
+  };
+  Posts posts = 1 [(grpc.federation.field).by = "posts"];
+}
+
+message Posts {
+  option (grpc.federation.message) = {
+    def [
+      {
+         name: "res"
+         call {
+          method: "org.post.PostService/GetPosts"
+          request { field: "ids" by: "$.post_ids" }
+         }
+      },
+      { name: "posts", by: "res.posts" },
+      {
+        name: "ids"
+        map {
+          iterator {
+            name: "post"
+            src: "posts"
+          }
+          by: "post.id"
+        }
+      },
+      {
+        name: "users"
+        map {
+          iterator {
+            name: "iter"
+            src: "posts"
+          }
+          message {
+            name: "User"
+            args { name: "user_id", by: "iter.user_id" }
+          }
+        }
+      }
+    ]
+  };
+  repeated string ids = 1 [(grpc.federation.field).by = "ids"];
+  repeated string titles = 2 [(grpc.federation.field).by = "posts.map(post, post.title)"];
+  repeated string contents = 3 [(grpc.federation.field).by = "posts.map(post, post.content)"];
+  repeated User users = 4 [(grpc.federation.field).by = "users"];
+}
+
+message User {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "org.user.UserService/GetUser"
+        request { field: "id" by: "$.user_id" }
+      }
+    }
+    def { name: "user" by: "res.user" autobind: true }
+  };
+  string id = 1;
+  string name = 2;
+}

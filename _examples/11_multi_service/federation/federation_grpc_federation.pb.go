@@ -191,7 +191,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		}
 		value := valueIface.(*Post)
 		valueMu.Lock()
-		valueP = value // { name: "p", message: "Post" ... }
+		valueP = value
 		envOpts = append(envOpts, cel.Variable("p", cel.ObjectType("federation.Post")))
 		evalValues["p"] = valueP
 		valueMu.Unlock()
@@ -261,7 +261,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		}
 		value := valueIface.(*User)
 		valueMu.Lock()
-		valueU = value // { name: "u", message: "User" ... }
+		valueU = value
 		envOpts = append(envOpts, cel.Variable("u", cel.ObjectType("federation.User")))
 		evalValues["u"] = valueU
 		valueMu.Unlock()
@@ -534,7 +534,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 		}
 		value := valueIface.(*User)
 		valueMu.Lock()
-		valueU = value // { name: "u", message: "User" ... }
+		valueU = value
 		envOpts = append(envOpts, cel.Variable("u", cel.ObjectType("federation.User")))
 		evalValues["u"] = valueU
 		valueMu.Unlock()

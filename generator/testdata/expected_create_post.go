@@ -297,7 +297,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		}
 		value := valueIface.(*CreatePost)
 		valueMu.Lock()
-		valueCp = value // { name: "cp", message: "CreatePost" ... }
+		valueCp = value
 		envOpts = append(envOpts, cel.Variable("cp", cel.ObjectType("org.federation.CreatePost")))
 		evalValues["cp"] = valueCp
 		valueMu.Unlock()
@@ -354,7 +354,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		valueIface, err, _ := sg.Do("p", func() (any, error) {
 			valueMu.RLock()
 			valueMu.RUnlock()
-			return grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+			valueMu.RLock()
+			value, err := grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+			valueMu.RUnlock()
+			return value, err
 		})
 		if err != nil {
 			return nil, err

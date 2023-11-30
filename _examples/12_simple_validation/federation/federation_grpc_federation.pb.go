@@ -228,7 +228,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			}
 			value := valueIface.(*Post)
 			valueMu.Lock()
-			valuePost = value // { name: "post", message: "Post" ... }
+			valuePost = value
 			envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
 			evalValues["post"] = valuePost
 			valueMu.Unlock()
@@ -297,7 +297,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			}
 			value := valueIface.(*Post)
 			valueMu.Lock()
-			valuePost = value // { name: "post", message: "Post" ... }
+			valuePost = value
 			envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
 			evalValues["post"] = valuePost
 			valueMu.Unlock()
@@ -366,7 +366,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			}
 			value := valueIface.(*Post)
 			valueMu.Lock()
-			valuePost = value // { name: "post", message: "Post" ... }
+			valuePost = value
 			envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
 			evalValues["post"] = valuePost
 			valueMu.Unlock()
@@ -437,7 +437,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											}
 											value := valueIface.(*CustomMessage)
 											valueMu.Lock()
-											value_Def3ErrDetail0Msg0 = value // { name: "_def3_err_detail0_msg0", message: "CustomMessage" ... }
+											value_Def3ErrDetail0Msg0 = value
 											envOpts = append(envOpts, cel.Variable("_def3_err_detail0_msg0", cel.ObjectType("org.federation.CustomMessage")))
 											evalValues["_def3_err_detail0_msg0"] = value_Def3ErrDetail0Msg0
 											valueMu.Unlock()
@@ -471,7 +471,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											}
 											value := valueIface.(*CustomMessage)
 											valueMu.Lock()
-											value_Def3ErrDetail0Msg1 = value // { name: "_def3_err_detail0_msg1", message: "CustomMessage" ... }
+											value_Def3ErrDetail0Msg1 = value
 											envOpts = append(envOpts, cel.Variable("_def3_err_detail0_msg1", cel.ObjectType("org.federation.CustomMessage")))
 											evalValues["_def3_err_detail0_msg1"] = value_Def3ErrDetail0Msg1
 											valueMu.Unlock()

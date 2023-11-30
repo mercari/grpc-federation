@@ -47,6 +47,36 @@ testdata/invalid_enum_alias_target.proto:71:43: required specify alias = "org.po
 71:      option (grpc.federation.enum).alias = "org.post.FakePostContent.FakeCategory";
                                                ^
 `},
+		{file: "invalid_map_iterator_src_type.proto", expected: `
+testdata/invalid_map_iterator_src_type.proto:40:13: map iterator's src value type must be repeated type
+40:          map {
+                 ^
+testdata/invalid_map_iterator_src_type.proto:54:57: ERROR: <input>:1:1: undeclared reference to 'users' (in container '')
+ | users
+ | ^
+54:    repeated User users = 4 [(grpc.federation.field).by = "users"];
+                                                             ^
+testdata/invalid_map_iterator_src_type.proto:58:47: ERROR: <input>:1:8: undefined field 'user_id'
+ | __ARG__.user_id
+ | .......^
+58:    string id = 1 [(grpc.federation.field).by = "$.user_id"];
+                                                   ^
+`},
+		{file: "invalid_map_iterator_src.proto", expected: `
+testdata/invalid_map_iterator_src.proto:36:13: "posts" variable is not defined
+36:          map {
+                 ^
+testdata/invalid_map_iterator_src.proto:36:13: ERROR: <input>:1:1: undeclared reference to 'iter' (in container '')
+ | iter.id
+ | ^
+36:          map {
+                 ^
+testdata/invalid_map_iterator_src.proto:54:47: ERROR: <input>:1:8: undefined field 'user_id'
+ | __ARG__.user_id
+ | .......^
+54:    string id = 1 [(grpc.federation.field).by = "$.user_id"];
+                                                   ^
+`},
 		{file: "invalid_message_alias_target.proto", expected: `
 testdata/invalid_message_alias_target.proto:60:44: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
 60:    option (grpc.federation.message).alias = "org.post.FakePostData";
@@ -187,6 +217,14 @@ testdata/invalid_method_request.proto:45:43: ERROR: <input>:1:8: undefined field
 testdata/missing_field_option.proto:61:3: "user" field in "federation.Post" message needs to specify "grpc.federation.field" option
 61:    User user = 4;
        ^
+`},
+		{file: "missing_map_iterator.proto", expected: `
+testdata/missing_map_iterator.proto:36:13: map iterator name must be specified
+36:          map {
+                 ^
+testdata/missing_map_iterator.proto:36:13: map iterator src must be specified
+36:          map {
+                 ^
 `},
 		{file: "missing_message_alias.proto", expected: `
 testdata/missing_message_alias.proto:48:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind

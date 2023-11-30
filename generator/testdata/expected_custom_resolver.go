@@ -294,7 +294,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		}
 		value := valueIface.(*Post)
 		valueMu.Lock()
-		valuePost = value // { name: "post", message: "Post" ... }
+		valuePost = value
 		envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
 		evalValues["post"] = valuePost
 		valueMu.Unlock()
@@ -389,7 +389,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		valueIface, err, _ := sg.Do("post", func() (any, error) {
 			valueMu.RLock()
 			valueMu.RUnlock()
-			return grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+			valueMu.RLock()
+			value, err := grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+			valueMu.RUnlock()
+			return value, err
 		})
 		if err != nil {
 			return nil, err
@@ -439,7 +442,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		}
 		value := valueIface.(*User)
 		valueMu.Lock()
-		valueUser = value // { name: "user", message: "User" ... }
+		valueUser = value
 		envOpts = append(envOpts, cel.Variable("user", cel.ObjectType("org.federation.User")))
 		evalValues["user"] = valueUser
 		valueMu.Unlock()
@@ -540,7 +543,10 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		valueIface, err, _ := sg.Do("u", func() (any, error) {
 			valueMu.RLock()
 			valueMu.RUnlock()
-			return grpcfed.EvalCEL(s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
+			valueMu.RLock()
+			value, err := grpcfed.EvalCEL(s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
+			valueMu.RUnlock()
+			return value, err
 		})
 		if err != nil {
 			return nil, err
