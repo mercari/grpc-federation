@@ -324,7 +324,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			valueIface, err, _ := sg.Do("_def1", func() (any, error) {
 				valueMu.RLock()
 				valueMu.RUnlock()
-				return grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+				valueMu.RLock()
+				value, err := grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+				valueMu.RUnlock()
+				return value, err
 			})
 			if err != nil {
 				return nil, err

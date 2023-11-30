@@ -468,7 +468,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			valueIface, err, _ := sg.Do("post", func() (any, error) {
 				valueMu.RLock()
 				valueMu.RUnlock()
-				return grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+				valueMu.RLock()
+				value, err := grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+				valueMu.RUnlock()
+				return value, err
 			})
 			if err != nil {
 				return nil, err
@@ -667,7 +670,10 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		valueIface, err, _ := sg.Do("user", func() (any, error) {
 			valueMu.RLock()
 			valueMu.RUnlock()
-			return grpcfed.EvalCEL(s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
+			valueMu.RLock()
+			value, err := grpcfed.EvalCEL(s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
+			valueMu.RUnlock()
+			return value, err
 		})
 		if err != nil {
 			return nil, err

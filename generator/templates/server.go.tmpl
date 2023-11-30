@@ -653,16 +653,19 @@ return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.Re
 })
 {{- else if .Resolver.IsBy }}
 {{- $by := .Resolver.By }}
-return grpcfed.EvalCEL(s.env, "{{ $by.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .Resolver.ZeroValue }}))
+valueMu.RLock()
+value, err := grpcfed.EvalCEL(s.env, "{{ $by.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .Resolver.ZeroValue }}))
+valueMu.RUnlock()
+return value, err
 {{- else if .Resolver.IsMap }}
 {{- $mapResolver := .Resolver.MapResolver }}
 env, err := s.env.Extend(cel.Variable("{{ $mapResolver.IteratorName }}", {{ $mapResolver.IteratorCELType }}))
 if err != nil {
 	return nil, err
 }
+valueMu.RLock()
 var value {{ $mapResolver.MapOutType }}
 for _, iter := range {{ $mapResolver.IteratorSource }} {
-	valueMu.RLock()
 	iterValues := make(map[string]any)
 	for k, v := range evalValues {
 		iterValues[k] = v
@@ -710,9 +713,9 @@ for _, iter := range {{ $mapResolver.IteratorSource }} {
 		return nil, err
 	}
 	{{- end }}
-	valueMu.RUnlock()
 	value = append(value, iterValue)
 }
+valueMu.RUnlock()
 return value, nil
 {{- else }}
 return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)

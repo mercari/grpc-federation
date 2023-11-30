@@ -347,7 +347,10 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			valueIface, err, _ := sg.Do("posts", func() (any, error) {
 				valueMu.RLock()
 				valueMu.RUnlock()
-				return grpcfed.EvalCEL(s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
+				valueMu.RLock()
+				value, err := grpcfed.EvalCEL(s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
+				valueMu.RUnlock()
+				return value, err
 			})
 			if err != nil {
 				return nil, err
@@ -381,9 +384,9 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				if err != nil {
 					return nil, err
 				}
+				valueMu.RLock()
 				var value []string
 				for _, iter := range valuePosts {
-					valueMu.RLock()
 					iterValues := make(map[string]any)
 					for k, v := range evalValues {
 						iterValues[k] = v
@@ -394,9 +397,9 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 						return nil, err
 					}
 					iterValue := resultValue.(string)
-					valueMu.RUnlock()
 					value = append(value, iterValue)
 				}
+				valueMu.RUnlock()
 				return value, nil
 			})
 			if err != nil {
@@ -465,7 +468,10 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			valueIface, err, _ := sg.Do("posts", func() (any, error) {
 				valueMu.RLock()
 				valueMu.RUnlock()
-				return grpcfed.EvalCEL(s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
+				valueMu.RLock()
+				value, err := grpcfed.EvalCEL(s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
+				valueMu.RUnlock()
+				return value, err
 			})
 			if err != nil {
 				return nil, err
@@ -502,9 +508,9 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				if err != nil {
 					return nil, err
 				}
+				valueMu.RLock()
 				var value []*User
 				for _, iter := range valuePosts {
-					valueMu.RLock()
 					iterValues := make(map[string]any)
 					for k, v := range evalValues {
 						iterValues[k] = v
@@ -526,9 +532,9 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 					if err != nil {
 						return nil, err
 					}
-					valueMu.RUnlock()
 					value = append(value, iterValue)
 				}
+				valueMu.RUnlock()
 				return value, nil
 			})
 			if err != nil {
@@ -667,7 +673,10 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		valueIface, err, _ := sg.Do("user", func() (any, error) {
 			valueMu.RLock()
 			valueMu.RUnlock()
-			return grpcfed.EvalCEL(s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
+			valueMu.RLock()
+			value, err := grpcfed.EvalCEL(s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
+			valueMu.RUnlock()
+			return value, err
 		})
 		if err != nil {
 			return nil, err
