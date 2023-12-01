@@ -22,21 +22,21 @@ func (def *VariableDefinition) ReferenceNames() []string {
 	return refNames
 }
 
-func (expr *VariableExpr) ReferenceNames() []string {
-	if expr == nil {
+func (e *VariableExpr) ReferenceNames() []string {
+	if e == nil {
 		return nil
 	}
 	switch {
-	case expr.By != nil:
-		return expr.By.ReferenceNames()
-	case expr.Map != nil:
-		return expr.Map.ReferenceNames()
-	case expr.Call != nil:
-		return expr.Call.ReferenceNames()
-	case expr.Message != nil:
-		return expr.Message.ReferenceNames()
-	case expr.Validation != nil:
-		return expr.Validation.Error.ReferenceNames()
+	case e.By != nil:
+		return e.By.ReferenceNames()
+	case e.Map != nil:
+		return e.Map.ReferenceNames()
+	case e.Call != nil:
+		return e.Call.ReferenceNames()
+	case e.Message != nil:
+		return e.Message.ReferenceNames()
+	case e.Validation != nil:
+		return e.Validation.Error.ReferenceNames()
 	}
 	return nil
 }
