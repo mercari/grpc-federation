@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
+	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/types"
 )
@@ -2794,6 +2795,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.StdLib(),
+		cel.Lib(grpcfedcel.NewLibrary()),
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
 	}
