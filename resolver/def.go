@@ -1,10 +1,31 @@
 package resolver
 
+import (
+	"sort"
+)
+
 func (def *VariableDefinition) ReferenceNames() []string {
-	if def.Expr == nil {
+	refNameMap := make(map[string]struct{})
+	if def.If != nil {
+		for _, refName := range def.If.ReferenceNames() {
+			refNameMap[refName] = struct{}{}
+		}
+	}
+	for _, refName := range def.Expr.ReferenceNames() {
+		refNameMap[refName] = struct{}{}
+	}
+	refNames := make([]string, 0, len(refNameMap))
+	for refName := range refNameMap {
+		refNames = append(refNames, refName)
+	}
+	sort.Strings(refNames)
+	return refNames
+}
+
+func (expr *VariableExpr) ReferenceNames() []string {
+	if expr == nil {
 		return nil
 	}
-	expr := def.Expr
 	switch {
 	case expr.By != nil:
 		return expr.By.ReferenceNames()

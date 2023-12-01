@@ -339,6 +339,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			{
 				value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
+					valueMu.RUnlock()
 					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}
@@ -496,6 +497,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				{
 					value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
+						valueMu.RUnlock()
 						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}
@@ -566,6 +568,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				{
 					value, err := grpcfed.EvalCEL(s.env, "post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
 					if err != nil {
+						valueMu.RUnlock()
 						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}
@@ -679,6 +682,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 			{
 				value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
+					valueMu.RUnlock()
 					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}

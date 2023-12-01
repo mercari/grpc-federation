@@ -1791,6 +1791,20 @@ func (r *MessageResolver) Key() string {
 	return r.VariableDefinition.Name
 }
 
+func (r *MessageResolver) UseIf() bool {
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
+	}
+	return r.VariableDefinition.If != nil
+}
+
+func (r *MessageResolver) If() string {
+	if r.VariableDefinition == nil {
+		panic("unspecified variable definition")
+	}
+	return r.VariableDefinition.If.Expr
+}
+
 func (r *MessageResolver) UseTimeout() bool {
 	if r.VariableDefinition == nil {
 		panic("unspecified variable definition")

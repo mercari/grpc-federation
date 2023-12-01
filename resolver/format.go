@@ -102,6 +102,9 @@ func (def *VariableDefinition) ProtoFormat(opt *ProtoFormatOption) string {
 	if def.Name != "" {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("name: %q", def.Name))
 	}
+	if def.If != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", def.If.Expr))
+	}
 	if def.AutoBind {
 		elems = append(elems, nextOpt.indentFormat()+`autobind: true`)
 	}

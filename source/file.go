@@ -271,6 +271,10 @@ func (f *File) findDefByPos(ctx findContext, pos Position, list []*ast.MessageLi
 					return nil
 				}
 				if f.containsPos(value, pos) {
+					ctx.def = &VariableDefinitionOption{
+						Idx: idx,
+						If:  true,
+					}
 					return f.buildLocation(ctx)
 				}
 			case "by":
@@ -838,6 +842,12 @@ func (f *File) nodeInfoByDef(list []*ast.MessageLiteralNode, def *VariableDefini
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
 		case def.Name && fieldName == "name":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case def.If && fieldName == "if":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil

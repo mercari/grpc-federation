@@ -37,6 +37,7 @@ func TestCodeGenerate(t *testing.T) {
 		"oneof",
 		"validation",
 		"map",
+		"condition",
 	}
 	for _, test := range tests {
 		t.Run(test, func(t *testing.T) {

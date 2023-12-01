@@ -2271,6 +2271,34 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 	}
 	for idx, varDef := range msg.Rule.VariableDefinitions {
 		ctx := ctx.withDefIndex(idx)
+		if varDef.If != nil {
+			if err := r.resolveCELValue(ctx, env, varDef.If); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.VariableDefinitionIfLocation(
+							msg.File.Name,
+							msg.Name,
+							idx,
+						),
+					),
+				)
+			}
+			if varDef.If.Out != nil {
+				if varDef.If.Out.Type != types.Bool {
+					ctx.addError(
+						ErrWithLocation(
+							fmt.Sprintf(`return value of "if" must be bool type but got %s type`, varDef.If.Out.Type),
+							source.VariableDefinitionIfLocation(
+								msg.File.Name,
+								msg.Name,
+								idx,
+							),
+						),
+					)
+				}
+			}
+		}
 		if varDef.Expr == nil {
 			continue
 		}

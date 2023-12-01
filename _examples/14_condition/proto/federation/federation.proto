@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "google/protobuf/any.proto";
+import "grpc/federation/federation.proto";
+import "post/post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+    
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
+    }
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    def [
+      {
+        if: "$.id != ''"
+        name: "res"
+        call {
+          method: "post.PostService/GetPost"
+          request { field: "id" by: "$.id" }
+         }
+      },
+      {
+        if: "res != null"
+        name: "post"
+        by: "res.post"
+      },
+      {
+        if: "post != null"
+        name: "user"
+        message {
+          name: "User"
+          args {
+            name: "user_id"
+            by: "post.user_id"
+          }
+        }
+      },
+      { name: "posts", by: "[post]" },
+      {
+        if: "user != null"
+        name: "users"
+        map {
+          iterator {
+            name: "iter"
+            src: "posts"
+          }
+          message {
+            name: "User"
+            args {
+              name: "user_id"
+              by: "iter.user_id"
+            }
+          }
+        }
+      },
+      {
+        if: "users.size() > 0"
+        validation {
+          error {
+            code: INVALID_ARGUMENT
+            rule: "users[0].id != ''"
+          }
+        }
+      }
+    ]
+  };
+  string id = 1 [(grpc.federation.field).by = "post.id"];
+  string title = 2 [(grpc.federation.field).by = "post.title"];
+  User user = 4 [(grpc.federation.field).by = "users[0]"];
+}
+
+message User {
+  string id = 1 [(grpc.federation.field).by = "$.user_id"];
+}

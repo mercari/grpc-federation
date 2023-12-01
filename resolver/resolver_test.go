@@ -3446,6 +3446,274 @@ func TestMap(t *testing.T) {
 	}
 }
 
+func TestCondition(t *testing.T) {
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "condition.proto")
+	fb := testutil.NewFileBuilder(fileName)
+	ref := testutil.NewBuilderReferenceManager(getPostProtoBuilder(t), fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("PostArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("UserArgument").
+				AddField("user_id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("User").
+				AddFieldWithRule(
+					"id",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("$.user_id", resolver.StringType)).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("Post").
+				AddFieldWithRule(
+					"id",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("post.id", resolver.StringType)).Build(t),
+				).
+				AddFieldWithRule(
+					"title",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("post.title)", resolver.StringType)).Build(t),
+				).
+				AddFieldWithRule(
+					"user",
+					ref.Type(t, "org.federation", "User"),
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("users[0]", ref.Type(t, "org.federation", "User"))).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetIf("$.id != ''").
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "GetPost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField(
+													"id",
+													resolver.StringType,
+													resolver.NewByValue("$.id", resolver.StringType),
+												).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetIf("res != null").
+								SetName("post").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("res.post", ref.Type(t, "org.post", "Post")).Build(t)).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetIf("post != null").
+								SetName("user").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "User")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("user_id", resolver.NewByValue("post.user_id", resolver.StringType)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("posts").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("[post]", ref.RepeatedType(t, "org.post", "Post")).Build(t)).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetIf("user != null").
+								SetName("users").
+								SetUsed(true).
+								SetMap(
+									testutil.NewMapExprBuilder().
+										SetIterator(
+											testutil.NewIteratorBuilder().
+												SetName("iter").
+												SetSource("posts").
+												Build(t),
+										).
+										SetExpr(
+											testutil.NewMapIteratorExprBuilder().
+												SetMessage(
+													testutil.NewMessageExprBuilder().
+														SetMessage(ref.Message(t, "org.federation", "User")).
+														SetArgs(
+															testutil.NewMessageDependencyArgumentBuilder().
+																Add("user_id", resolver.NewByValue("iter.user_id", resolver.StringType)).
+																Build(t),
+														).
+														Build(t),
+												).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetIf("users.size() > 0").
+								SetName("_def5").
+								SetValidation(
+									testutil.NewValidationExprBuilder().
+										SetCode(code.Code_INVALID_ARGUMENT).
+										SetRule(testutil.NewCELValueBuilder("users[0].id != ''", resolver.BoolType).Build(t)).
+										Build(t),
+								).
+								Build(t),
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
+								Build(t),
+						).
+						AddResolver(
+							testutil.NewMessageResolverGroupBuilder().
+								AddStart(
+									testutil.NewMessageResolverGroupBuilder().
+										AddStart(
+											testutil.NewMessageResolverGroupBuilder().
+												AddStart(
+													testutil.NewMessageResolverGroupBuilder().
+														AddStart(testutil.NewMessageResolverGroupByName("res")).
+														SetEnd(testutil.NewMessageResolver("post")).
+														Build(t),
+												).
+												SetEnd(testutil.NewMessageResolver("posts")).
+												Build(t),
+										).
+										AddStart(
+											testutil.NewMessageResolverGroupBuilder().
+												AddStart(
+													testutil.NewMessageResolverGroupBuilder().
+														AddStart(testutil.NewMessageResolverGroupByName("res")).
+														SetEnd(testutil.NewMessageResolver("post")).
+														Build(t),
+												).
+												SetEnd(testutil.NewMessageResolver("user")).
+												Build(t),
+										).
+										SetEnd(testutil.NewMessageResolver("users")).
+										Build(t),
+								).
+								SetEnd(testutil.NewMessageResolver("_def5")).
+								Build(t),
+						).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponse").
+				AddFieldWithRule(
+					"post",
+					ref.Type(t, "org.federation", "Post"),
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("post", ref.Type(t, "org.federation", "Post"))).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Post")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("id", resolver.NewByValue("$.id", resolver.StringType)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "Post")).
+								Build(t),
+						).
+						AddResolver(testutil.NewMessageResolverGroupByName("post")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod(
+					"GetPost",
+					ref.Message(t, "org.federation", "GetPostRequest"),
+					ref.Message(t, "org.federation", "GetPostResponse"),
+					nil,
+				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
+				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
+				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
+				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+	federationService := federationFile.Services[0]
+
+	r := resolver.New(testutil.Compile(t, fileName))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+	}
+	if len(result.Files[0].Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+	}
+	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
 func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 	ub := testutil.NewFileBuilder("user.proto")
 	ref := testutil.NewBuilderReferenceManager(ub)
