@@ -22,7 +22,6 @@ import (
 
 	"example/federation"
 	"example/post"
-	"example/user"
 )
 
 const bufSize = 1024
@@ -30,7 +29,6 @@ const bufSize = 1024
 var (
 	listener   *bufconn.Listener
 	postClient post.PostServiceClient
-	userClient user.UserServiceClient
 )
 
 type clientConfig struct{}
