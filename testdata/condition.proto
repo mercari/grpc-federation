@@ -80,7 +80,7 @@ message Post {
         validation {
           error {
             code: INVALID_ARGUMENT
-            rule: "users[0].id != ''"
+            if: "users[0].id == ''"
           }
         }
       }

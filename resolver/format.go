@@ -339,8 +339,8 @@ func (v *ValidationError) ProtoFormat(opt *ProtoFormatOption) string {
 	elems := []string{
 		nextOpt.indentFormat() + fmt.Sprintf("code: %s", v.Code),
 	}
-	if r := v.Rule; r != nil {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("rule: %q", v.Rule.Expr))
+	if r := v.If; r != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", v.If.Expr))
 	}
 	if len(v.Details) != 0 {
 		elems = append(elems, v.Details.ProtoFormat(nextOpt))
@@ -364,7 +364,7 @@ func (v ValidationErrorDetails) ProtoFormat(opt *ProtoFormatOption) string {
 func (v *ValidationErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
 	elems := []string{
-		nextOpt.indentFormat() + fmt.Sprintf("rule: %q", v.Rule.Expr),
+		nextOpt.indentFormat() + fmt.Sprintf("if: %q", v.If.Expr),
 	}
 	if s := len(v.Messages); s != 0 {
 		elems = append(elems, v.protoFormatDetails(nextOpt, "message", s))

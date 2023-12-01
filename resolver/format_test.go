@@ -228,7 +228,7 @@ func TestProtoFormat(t *testing.T) {
       validation {
         error {
           code: FAILED_PRECONDITION
-          rule: "post.id == 'some-id'"
+          if: "post.id != 'some-id'"
         }
       }
     }
@@ -238,7 +238,7 @@ func TestProtoFormat(t *testing.T) {
         error {
           code: FAILED_PRECONDITION
           details {
-            rule: "post.title == 'some-title'"
+            if: "post.title != 'some-title'"
             message: [
               {...},
               {...}
@@ -295,12 +295,12 @@ func TestValidationRule_ProtoFormat(t *testing.T) {
 			Code: code.Code_FAILED_PRECONDITION,
 			Details: resolver.ValidationErrorDetails{
 				{
-					Rule: &resolver.CELValue{
+					If: &resolver.CELValue{
 						Expr: "1 == 1",
 					},
 				},
 				{
-					Rule: &resolver.CELValue{
+					If: &resolver.CELValue{
 						Expr: "2 == 2",
 					},
 				},
@@ -316,10 +316,10 @@ func TestValidationRule_ProtoFormat(t *testing.T) {
     code: FAILED_PRECONDITION
     details: [
       {
-        rule: "1 == 1"
+        if: "1 == 1"
       },
       {
-        rule: "2 == 2"
+        if: "2 == 2"
       }
     ]
   }
@@ -338,13 +338,13 @@ func TestValidationError_ProtoFormat(t *testing.T) {
 			desc: "Rule is set",
 			validationErr: &resolver.ValidationError{
 				Code: code.Code_FAILED_PRECONDITION,
-				Rule: &resolver.CELValue{
+				If: &resolver.CELValue{
 					Expr: "1 == 1",
 				},
 			},
 			expected: `error {
   code: FAILED_PRECONDITION
-  rule: "1 == 1"
+  if: "1 == 1"
 }`,
 		},
 		{
@@ -353,12 +353,12 @@ func TestValidationError_ProtoFormat(t *testing.T) {
 				Code: code.Code_FAILED_PRECONDITION,
 				Details: resolver.ValidationErrorDetails{
 					{
-						Rule: &resolver.CELValue{
+						If: &resolver.CELValue{
 							Expr: "1 == 1",
 						},
 					},
 					{
-						Rule: &resolver.CELValue{
+						If: &resolver.CELValue{
 							Expr: "2 == 2",
 						},
 					},
@@ -368,10 +368,10 @@ func TestValidationError_ProtoFormat(t *testing.T) {
   code: FAILED_PRECONDITION
   details: [
     {
-      rule: "1 == 1"
+      if: "1 == 1"
     },
     {
-      rule: "2 == 2"
+      if: "2 == 2"
     }
   ]
 }`,
@@ -399,35 +399,35 @@ func TestValidationErrorDetails_ProtoFormat(t *testing.T) {
 			desc: "single detail",
 			details: resolver.ValidationErrorDetails{
 				{
-					Rule: &resolver.CELValue{
+					If: &resolver.CELValue{
 						Expr: "1 == 1",
 					},
 				},
 			},
 			expected: `details {
-  rule: "1 == 1"
+  if: "1 == 1"
 }`,
 		},
 		{
 			desc: "multiple details",
 			details: resolver.ValidationErrorDetails{
 				{
-					Rule: &resolver.CELValue{
+					If: &resolver.CELValue{
 						Expr: "1 == 1",
 					},
 				},
 				{
-					Rule: &resolver.CELValue{
+					If: &resolver.CELValue{
 						Expr: "2 == 2",
 					},
 				},
 			},
 			expected: `details: [
   {
-    rule: "1 == 1"
+    if: "1 == 1"
   },
   {
-    rule: "2 == 2"
+    if: "2 == 2"
   }
 ]`,
 		},
@@ -453,7 +453,7 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 		{
 			desc: "single detail",
 			detail: &resolver.ValidationErrorDetail{
-				Rule: &resolver.CELValue{
+				If: &resolver.CELValue{
 					Expr: "1 == 1",
 				},
 				PreconditionFailures: []*resolver.PreconditionFailure{
@@ -466,7 +466,7 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 					{},
 				},
 			},
-			expected: `  rule: "1 == 1"
+			expected: `  if: "1 == 1"
   precondition_failure {...}
   bad_request {...}
   localized_message {...}`,
@@ -474,7 +474,7 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 		{
 			desc: "multiple detail",
 			detail: &resolver.ValidationErrorDetail{
-				Rule: &resolver.CELValue{
+				If: &resolver.CELValue{
 					Expr: "2 == 2",
 				},
 				PreconditionFailures: []*resolver.PreconditionFailure{
@@ -490,7 +490,7 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 					{},
 				},
 			},
-			expected: `  rule: "2 == 2"
+			expected: `  if: "2 == 2"
   precondition_failure: [
     {...},
     {...}

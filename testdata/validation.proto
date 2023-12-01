@@ -26,7 +26,7 @@ message GetPostResponse {
         validation {
           error {
             code: FAILED_PRECONDITION
-            rule: "post.id == 'some-id'"
+            if: "post.id != 'some-id'"
           }
         }
       },
@@ -35,7 +35,7 @@ message GetPostResponse {
           error {
             code: FAILED_PRECONDITION
             details {
-              rule: "post.title == 'some-title'"
+              if: "post.title != 'some-title'"
               message: [
                 {
                   name: "CustomMessage",

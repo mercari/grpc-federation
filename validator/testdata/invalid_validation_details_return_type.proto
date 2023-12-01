@@ -48,7 +48,7 @@ message Post {
           error {
             code: FAILED_PRECONDITION
             details: {
-              rule: "'string'"
+              if: "'string'"
             }
           }
         }

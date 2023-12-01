@@ -213,14 +213,14 @@ type ValidationRule struct {
 
 type ValidationError struct {
 	Code    code.Code
-	Rule    *CELValue
+	If      *CELValue
 	Details ValidationErrorDetails
 }
 
 type ValidationErrorDetails []*ValidationErrorDetail
 
 type ValidationErrorDetail struct {
-	Rule                 *CELValue
+	If                   *CELValue
 	Messages             VariableDefinitions
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest

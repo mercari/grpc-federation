@@ -239,7 +239,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		     validation {
 		       error {
 		         code: FAILED_PRECONDITION
-		         rule: "post.id == 'some-id'"
+		         if: "post.id != 'some-id'"
 		       }
 		     }
 		   }
@@ -248,12 +248,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			{
 				err := func() error {
 					valueMu.RLock()
-					value, err := grpcfed.EvalCEL(s.env, "post.id == 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
+					value, err := grpcfed.EvalCEL(s.env, "post.id != 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
 					valueMu.RUnlock()
 					if err != nil {
 						return err
 					}
-					if !value.(bool) {
+					if value.(bool) {
 						return grpcstatus.Error(grpccodes.FailedPrecondition, "validation failure")
 					}
 					return nil
@@ -309,7 +309,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       error {
 		         code: FAILED_PRECONDITION
 		         details {
-		           rule: "post.title == 'some-title'"
+		           if: "post.title != 'some-title'"
 		           message: [
 		             {...},
 		             {...}
@@ -329,12 +329,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					var details []proto.Message
 					{
 						valueMu.RLock()
-						value, err := grpcfed.EvalCEL(s.env, "post.title == 'some-title'", envOpts, evalValues, reflect.TypeOf(false))
+						value, err := grpcfed.EvalCEL(s.env, "post.title != 'some-title'", envOpts, evalValues, reflect.TypeOf(false))
 						valueMu.RUnlock()
 						if err != nil {
 							return err
 						}
-						if !value.(bool) {
+						if value.(bool) {
 							success = false
 							func() {
 								_, err := func() (any, error) {

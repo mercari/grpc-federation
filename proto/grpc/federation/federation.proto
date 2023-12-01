@@ -615,10 +615,11 @@ message ValidationError {
   // message is a gRPC status message for validation error.
   // If omitted, the message will be auto-generated from the configurations.
   optional string message = 2;
-  // rule specifies validation rule in CEL.
+  // if specifies validation rule in CEL.
+  // If the condition is true, the validation returns an error.
   // The return value must always be of type boolean.
-  // Either rule or details must be specified.
-  optional string rule = 3;
+  // Either if or details must be specified.
+  optional string if = 3;
   // details is a list of validation rules and error details.
   // If the validation fails, the corresponding error details are set.
   // Either rule or details must be specified.
@@ -627,8 +628,8 @@ message ValidationError {
 
 // ValidationErrorDetail represents a pair of validation rule and error details to be set.
 message ValidationErrorDetail {
-  // rule specifies validation rule in CEL.
-  string rule = 1;
+  // if specifies validation rule in CEL. If the condition is true, the validation returns an error.
+  string if = 1;
   // message represents arbitrary messages to describe the detail of the error
   repeated MessageExpr message = 2;
   // error_info describes the cause of the error with structured details.

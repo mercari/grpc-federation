@@ -848,14 +848,14 @@ if err := eg.Wait(); err != nil {
 {{- define "messageValidation" }}
 {
 	err := func() error {
-		{{- if .Error.HasRule }}
+		{{- if .Error.HasIf }}
 		valueMu.RLock()
-		value, err := grpcfed.EvalCEL(s.env, "{{ .Error.Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+		value, err := grpcfed.EvalCEL(s.env, "{{ .Error.If }}", envOpts, evalValues, reflect.TypeOf(false))
 		valueMu.RUnlock()
 		if err != nil {
 			return err
 		}
-		if !value.(bool) {
+		if value.(bool) {
 			return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
 		}
 		{{- else }}
@@ -864,12 +864,12 @@ if err := eg.Wait(); err != nil {
 		{{- range .Error.Details }}
 		{
 			valueMu.RLock()
-			value, err := grpcfed.EvalCEL(s.env, "{{ .Rule }}", envOpts, evalValues, reflect.TypeOf(false))
+			value, err := grpcfed.EvalCEL(s.env, "{{ .If }}", envOpts, evalValues, reflect.TypeOf(false))
 			valueMu.RUnlock()
 			if err != nil {
 				return err
 			}
-			if !value.(bool) {
+			if value.(bool) {
 				success = false
 				{{- template "detailMessages" . }}
 				{{- range .PreconditionFailures }}

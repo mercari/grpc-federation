@@ -1037,7 +1037,7 @@ func (f *File) nodeInfoByValidationError(node *ast.MessageLiteralNode, opt *Vali
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
-		case opt.Rule && fieldName == "rule":
+		case opt.If && fieldName == "if":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil
@@ -1058,7 +1058,7 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
-		case detail.Rule && fieldName == "rule":
+		case detail.If && fieldName == "if":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil

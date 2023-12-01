@@ -438,14 +438,14 @@ testdata/message_cyclic_dependency.proto:27:1: found cyclic dependency in "org.f
      ^
 `},
 		{file: "invalid_validation_return_type.proto", expected: `
-testdata/invalid_validation_return_type.proto:50:19: validation rule must always return a boolean value
-50:              rule: "post.id"
-                       ^
+testdata/invalid_validation_return_type.proto:50:17: if must always return a boolean value
+50:              if: "post.id"
+                     ^
 `},
 		{file: "invalid_validation_details_return_type.proto", expected: `
-testdata/invalid_validation_details_return_type.proto:51:21: rule must always return a boolean value
-51:                rule: "'string'"
-                         ^
+testdata/invalid_validation_details_return_type.proto:51:19: if must always return a boolean value
+51:                if: "'string'"
+                       ^
 `},
 		{file: "invalid_validation_message_argument.proto", expected: `
 testdata/invalid_validation_message_argument.proto:71:52: ERROR: <input>:1:8: undefined field 'message'

@@ -2127,13 +2127,13 @@ type ValidationRule struct {
 
 type ValidationError struct {
 	Code    code.Code
-	Rule    string
+	If      string
 	Details []*ValidationErrorDetail
 }
 
-// HasRule checks if it has rule or not.
-func (v *ValidationError) HasRule() bool {
-	return v.Rule != ""
+// HasIf checks if it has rule or not.
+func (v *ValidationError) HasIf() bool {
+	return v.If != ""
 }
 
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
@@ -2156,7 +2156,7 @@ func (v *ValidationError) GoGRPCStatusCode() string {
 type ValidationErrorDetail struct {
 	Service              *resolver.Service
 	Message              *Message
-	Rule                 string
+	If                   string
 	Messages             resolver.VariableDefinitions
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest
@@ -2214,14 +2214,14 @@ func (r *MessageResolver) MessageValidation() *ValidationRule {
 			Details: make([]*ValidationErrorDetail, 0, len(validationError.Details)),
 		},
 	}
-	if r := validationError.Rule; r != nil {
-		vr.Error.Rule = r.Expr
+	if r := validationError.If; r != nil {
+		vr.Error.If = r.Expr
 	}
 	for _, detail := range validationError.Details {
 		ved := &ValidationErrorDetail{
 			Service:   r.Service,
 			Message:   r.Message,
-			Rule:      detail.Rule.Expr,
+			If:        detail.If.Expr,
 			Messages:  detail.Messages,
 			Resolvers: detail.Resolvers,
 		}
