@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+import "nested_post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { name: "post_service", service: "org.post.PostService" }
+    ]
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
+    }
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "org.post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+      }
+    }
+    def { name: "post", by: "res.post", autobind: true }
+  };
+  string id = 1;
+  PostType type = 2 [(grpc.federation.field).by = "org.federation.PostType.FICTION"];
+}
+
+enum PostType {
+  UNKNOWN = 0;
+  FICTION = 1;
+}
