@@ -113,6 +113,7 @@ type MessageOption struct {
 type VariableDefinitionOption struct {
 	Idx        int
 	Name       bool
+	If         bool
 	By         bool
 	Map        *MapExprOption
 	Call       *CallExprOption
@@ -1216,6 +1217,22 @@ func VariableDefinitionLocation(fileName, msgName string, defIdx int) *Location 
 			Option: &MessageOption{
 				VariableDefinitions: &VariableDefinitionOption{
 					Idx: defIdx,
+				},
+			},
+		},
+	}
+}
+
+// VariableDefinitionIfLocation creates location for def.if in grpc.federation.message.
+func VariableDefinitionIfLocation(fileName, msgName string, defIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Message: &Message{
+			Name: msgName,
+			Option: &MessageOption{
+				VariableDefinitions: &VariableDefinitionOption{
+					Idx: defIdx,
+					If:  true,
 				},
 			},
 		},

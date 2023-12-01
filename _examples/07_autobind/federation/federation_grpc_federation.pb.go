@@ -212,6 +212,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			{
 				value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
+					valueMu.RUnlock()
 					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, err
 				}
@@ -290,6 +291,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				{
 					value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
+						valueMu.RUnlock()
 						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}

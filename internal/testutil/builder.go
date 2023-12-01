@@ -641,8 +641,11 @@ func (b *VariableDefinitionBuilder) SetName(v string) *VariableDefinitionBuilder
 	return b
 }
 
-func (b *VariableDefinitionBuilder) SetIf(v *resolver.CELValue) *VariableDefinitionBuilder {
-	b.def.If = v
+func (b *VariableDefinitionBuilder) SetIf(v string) *VariableDefinitionBuilder {
+	b.def.If = &resolver.CELValue{
+		Expr: v,
+		Out:  resolver.BoolType,
+	}
 	return b
 }
 

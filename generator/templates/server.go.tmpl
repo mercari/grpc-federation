@@ -603,6 +603,18 @@ switch from {
 {{- end }}
 
 {{- define "callResolver" }}
+{{- if .Resolver.UseIf }}
+valueMu.RLock()
+ifValue, err := grpcfed.EvalCEL(s.env, "{{ .Resolver.If }}", envOpts, evalValues, reflect.TypeOf(false))
+valueMu.RUnlock()
+if err != nil {
+	grpcfed.RecordErrorToSpan(ctx, err)
+	return nil, err
+}
+if !ifValue.(bool) {
+	return {{ .Resolver.ZeroValue }}, nil
+}
+{{- end }}
 valueMu.RLock()
 {{- $arguments := .Resolver.Arguments }}
 {{- if .Resolver.UseArgs }}
@@ -620,6 +632,7 @@ args := &{{ .Resolver.RequestType }}{
 {
 	value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 	if err != nil {
+		valueMu.RUnlock()
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}

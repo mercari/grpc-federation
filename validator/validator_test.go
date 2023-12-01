@@ -27,6 +27,11 @@ testdata/invalid_autobind.proto:23:3: "id" field in "org.federation.GetResponse"
 23:    string id = 1;
        ^
 `},
+		{file: "invalid_condition_type.proto", expected: `
+testdata/invalid_condition_type.proto:36:13: return value of "if" must be bool type but got TYPE_STRING type
+36:          if: "$.id"
+                 ^
+`},
 		{file: "invalid_field_option.proto", expected: `
 testdata/invalid_field_option.proto:34:50: ERROR: <input>:1:5: undefined field 'invalid'
  | post.invalid
