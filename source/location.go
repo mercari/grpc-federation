@@ -186,13 +186,13 @@ type ArgumentOption struct {
 
 type ValidationExprOption struct {
 	Name   bool
-	Rule   bool
+	If     bool
 	Detail *ValidationDetailOption
 }
 
 type ValidationDetailOption struct {
 	Idx                 int
-	Rule                bool
+	If                  bool
 	Message             *ValidationDetailMessageOption
 	PreconditionFailure *ValidationDetailPreconditionFailureOption
 	BadRequest          *ValidationDetailBadRequestOption
@@ -911,7 +911,7 @@ func MessageExprArgumentInlineLocation(fileName, msgName string, idx, argIdx int
 }
 
 // ValidationLocation creates location for def[*].validation in grpc.federation.message.
-func ValidationLocation(fileName, msgName string, idx int, rule bool) *Location {
+func ValidationLocation(fileName, msgName string, idx int, ifExpr bool) *Location {
 	return &Location{
 		FileName: fileName,
 		Message: &Message{
@@ -920,7 +920,7 @@ func ValidationLocation(fileName, msgName string, idx int, rule bool) *Location 
 				VariableDefinitions: &VariableDefinitionOption{
 					Idx: idx,
 					Validation: &ValidationExprOption{
-						Rule: rule,
+						If: ifExpr,
 					},
 				},
 			},
@@ -929,7 +929,7 @@ func ValidationLocation(fileName, msgName string, idx int, rule bool) *Location 
 }
 
 // ValidationDetailLocation creates location for def[*].validation.error.details[*] in grpc.federation.message.
-func ValidationDetailLocation(fileName, msgName string, vIdx, dIdx int, rule bool) *Location {
+func ValidationDetailLocation(fileName, msgName string, vIdx, dIdx int, ifExpr bool) *Location {
 	return &Location{
 		FileName: fileName,
 		Message: &Message{
@@ -939,8 +939,8 @@ func ValidationDetailLocation(fileName, msgName string, vIdx, dIdx int, rule boo
 					Idx: vIdx,
 					Validation: &ValidationExprOption{
 						Detail: &ValidationDetailOption{
-							Idx:  dIdx,
-							Rule: rule,
+							Idx: dIdx,
+							If:  ifExpr,
 						},
 					},
 				},

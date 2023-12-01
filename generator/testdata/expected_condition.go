@@ -629,7 +629,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	     validation {
 	       error {
 	         code: INVALID_ARGUMENT
-	         rule: "users[0].id != ''"
+	         if: "users[0].id == ''"
 	       }
 	     }
 	   }
@@ -638,12 +638,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		{
 			err := func() error {
 				valueMu.RLock()
-				value, err := grpcfed.EvalCEL(s.env, "users[0].id != ''", envOpts, evalValues, reflect.TypeOf(false))
+				value, err := grpcfed.EvalCEL(s.env, "users[0].id == ''", envOpts, evalValues, reflect.TypeOf(false))
 				valueMu.RUnlock()
 				if err != nil {
 					return err
 				}
-				if !value.(bool) {
+				if value.(bool) {
 					return grpcstatus.Error(grpccodes.InvalidArgument, "validation failure")
 				}
 				return nil

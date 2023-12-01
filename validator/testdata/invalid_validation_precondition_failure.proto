@@ -48,7 +48,7 @@ message Post {
           error {
             code: FAILED_PRECONDITION
             details: {
-              rule: "post.id == 'correct-id'"
+              if: "post.id != 'correct-id'"
               precondition_failure {
                 violations {
                   type: "1",

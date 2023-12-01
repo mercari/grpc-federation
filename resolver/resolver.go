@@ -1193,7 +1193,7 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr) *Call
 
 func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.ValidationExpr) *ValidationExpr {
 	e := def.GetError()
-	if e.GetRule() != "" && len(e.GetDetails()) != 0 {
+	if e.GetIf() != "" && len(e.GetDetails()) != 0 {
 		ctx.addError(
 			ErrWithLocation(
 				"cannot set both rule and details at the same time",
@@ -1209,9 +1209,9 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 		},
 	}
 
-	if rule := e.GetRule(); rule != "" {
-		vr.Error.Rule = &CELValue{
-			Expr: rule,
+	if expr := e.GetIf(); expr != "" {
+		vr.Error.If = &CELValue{
+			Expr: expr,
 		}
 		return vr
 	}
@@ -1256,8 +1256,8 @@ func (r *Resolver) resolveMessageRuleValidationDetails(ctx *context, details []*
 	for idx, detail := range details {
 		ctx := ctx.withErrDetailIndex(idx)
 		result = append(result, &ValidationErrorDetail{
-			Rule: &CELValue{
-				Expr: detail.Rule,
+			If: &CELValue{
+				Expr: detail.GetIf(),
 			},
 			Messages:             r.resolveValidationDetailMessages(ctx, detail.GetMessage()),
 			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailure()),
@@ -2523,9 +2523,9 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		}
 		expr.Type = NewMessageType(expr.Message.Message, false)
 	case expr.Validation != nil:
-		if expr.Validation.Error.Rule != nil {
+		if expr.Validation.Error.If != nil {
 			e := expr.Validation.Error
-			if err := r.resolveCELValue(ctx, env, e.Rule); err != nil {
+			if err := r.resolveCELValue(ctx, env, e.If); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -2534,10 +2534,10 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 				)
 				return
 			}
-			if e.Rule.Out.Type != types.Bool {
+			if e.If.Out.Type != types.Bool {
 				ctx.addError(
 					ErrWithLocation(
-						"validation rule must always return a boolean value",
+						"if must always return a boolean value",
 						source.ValidationLocation(ctx.fileName(), ctx.messageName(), ctx.defIndex(), true),
 					),
 				)
@@ -2603,7 +2603,7 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 }
 
 func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, env *cel.Env, msg *Message, vIdx, dIdx int, detail *ValidationErrorDetail) {
-	if err := r.resolveCELValue(ctx, env, detail.Rule); err != nil {
+	if err := r.resolveCELValue(ctx, env, detail.If); err != nil {
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
@@ -2611,10 +2611,10 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 			),
 		)
 	}
-	if detail.Rule.Out != nil && detail.Rule.Out.Type != types.Bool {
+	if detail.If.Out != nil && detail.If.Out.Type != types.Bool {
 		ctx.addError(
 			ErrWithLocation(
-				"rule must always return a boolean value",
+				"if must always return a boolean value",
 				source.ValidationDetailLocation(msg.File.Name, msg.Name, vIdx, dIdx, true),
 			),
 		)
@@ -3368,9 +3368,9 @@ func (v *ValidationError) ReferenceNames() []string {
 			nameSet[name] = struct{}{}
 		}
 	}
-	register(v.Rule.ReferenceNames())
+	register(v.If.ReferenceNames())
 	for _, detail := range v.Details {
-		register(detail.Rule.ReferenceNames())
+		register(detail.If.ReferenceNames())
 		for _, message := range detail.Messages {
 			register(message.ReferenceNames())
 		}

@@ -47,7 +47,7 @@ message Post {
           name: "invalid_return_type",
           error {
             code: FAILED_PRECONDITION
-            rule: "post.id"
+            if: "post.id"
           }
         }
       }

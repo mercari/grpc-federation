@@ -201,19 +201,19 @@ func TestCodeGenerate(t *testing.T) {
 	}
 }
 
-func TestValidationError_HasRule(t *testing.T) {
+func TestValidationError_HasIf(t *testing.T) {
 	tests := []struct {
 		desc     string
 		rule     string
 		expected bool
 	}{
 		{
-			desc:     "rule exists",
+			desc:     "if exists",
 			rule:     "some rule",
 			expected: true,
 		},
 		{
-			desc:     "rule does not exist",
+			desc:     "if does not exist",
 			rule:     "",
 			expected: false,
 		},
@@ -222,9 +222,9 @@ func TestValidationError_HasRule(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			validation := generator.ValidationError{
-				Rule: tc.rule,
+				If: tc.rule,
 			}
-			if got := validation.HasRule(); got != tc.expected {
+			if got := validation.HasIf(); got != tc.expected {
 				t.Fatalf("received unexpected result: got: %v, expected: %v", got, tc.expected)
 			}
 		})

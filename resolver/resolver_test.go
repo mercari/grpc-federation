@@ -3029,7 +3029,7 @@ func TestValidation(t *testing.T) {
 								SetValidation(
 									testutil.NewValidationExprBuilder().
 										SetCode(code.Code_FAILED_PRECONDITION).
-										SetRule(testutil.NewCELValueBuilder("post.id == 'some-id'", resolver.BoolType).Build(t)).
+										SetIf(testutil.NewCELValueBuilder("post.id != 'some-id'", resolver.BoolType).Build(t)).
 										Build(t),
 								).
 								Build(t),
@@ -3042,7 +3042,7 @@ func TestValidation(t *testing.T) {
 										SetCode(code.Code_FAILED_PRECONDITION).
 										SetDetails([]*resolver.ValidationErrorDetail{
 											{
-												Rule: testutil.NewCELValueBuilder("post.title == 'some-title'", resolver.BoolType).Build(t),
+												If: testutil.NewCELValueBuilder("post.title != 'some-title'", resolver.BoolType).Build(t),
 												Messages: []*resolver.VariableDefinition{
 													testutil.NewVariableDefinitionBuilder().
 														SetName("_def2_err_detail0_msg0").
@@ -3587,7 +3587,7 @@ func TestCondition(t *testing.T) {
 								SetValidation(
 									testutil.NewValidationExprBuilder().
 										SetCode(code.Code_INVALID_ARGUMENT).
-										SetRule(testutil.NewCELValueBuilder("users[0].id != ''", resolver.BoolType).Build(t)).
+										SetIf(testutil.NewCELValueBuilder("users[0].id == ''", resolver.BoolType).Build(t)).
 										Build(t),
 								).
 								Build(t),
@@ -4101,7 +4101,7 @@ func getContentProtoBuilder(t *testing.T) *testutil.FileBuilder {
 
 func TestValidationError_ReferenceNames(t *testing.T) {
 	v := &resolver.ValidationError{
-		Rule: &resolver.CELValue{
+		If: &resolver.CELValue{
 			CheckedExpr: &exprv1.CheckedExpr{
 				ReferenceMap: map[int64]*exprv1.Reference{
 					0: {Name: "name1"},
@@ -4110,7 +4110,7 @@ func TestValidationError_ReferenceNames(t *testing.T) {
 		},
 		Details: []*resolver.ValidationErrorDetail{
 			{
-				Rule: &resolver.CELValue{
+				If: &resolver.CELValue{
 					CheckedExpr: &exprv1.CheckedExpr{
 						ReferenceMap: map[int64]*exprv1.Reference{
 							0: {Name: "name2"},

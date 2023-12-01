@@ -884,8 +884,8 @@ func (b *ValidationExprBuilder) SetCode(v code.Code) *ValidationExprBuilder {
 	return b
 }
 
-func (b *ValidationExprBuilder) SetRule(v *resolver.CELValue) *ValidationExprBuilder {
-	b.expr.Error.Rule = v
+func (b *ValidationExprBuilder) SetIf(v *resolver.CELValue) *ValidationExprBuilder {
+	b.expr.Error.If = v
 	return b
 }
 
