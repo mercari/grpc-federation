@@ -122,6 +122,7 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 	env, err := cel.NewCustomEnv(
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary()),
+		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
 	)

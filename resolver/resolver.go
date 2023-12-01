@@ -2796,6 +2796,7 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary()),
+		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
 	}
