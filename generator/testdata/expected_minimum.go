@@ -11,6 +11,7 @@ import (
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	grpccodes "google.golang.org/grpc/codes"
@@ -107,6 +108,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	})
 	env, err := cel.NewCustomEnv(
 		cel.StdLib(),
+		cel.Lib(grpcfedcel.NewLibrary()),
+		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
 	)

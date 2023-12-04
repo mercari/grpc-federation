@@ -67,6 +67,7 @@ func (f *File) DefaultImports() []*Import {
 	return []*Import{
 		{Path: "github.com/golang/protobuf/proto"},
 		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation"},
+		{Alias: "grpcfedcel", Path: "github.com/mercari/grpc-federation/grpc/federation/cel"},
 		{Path: "github.com/cenkalti/backoff/v4"},
 		{Path: "google.golang.org/genproto/googleapis/rpc/errdetails"},
 		{Path: "google.golang.org/protobuf/reflect/protoregistry"},
