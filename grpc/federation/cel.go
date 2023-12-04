@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -190,6 +191,13 @@ func EvalCEL(env *cel.Env, expr string, vars []cel.EnvOption, args map[string]an
 	out, _, err := program.Eval(args)
 	if err != nil {
 		return nil, err
+	}
+	opt, ok := out.(*types.Optional)
+	if ok {
+		if opt == types.OptionalNone {
+			return reflect.Zero(outType).Interface(), nil
+		}
+		out = opt.GetValue()
 	}
 	if outType != nil {
 		return out.ConvertToNative(outType)

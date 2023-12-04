@@ -2865,7 +2865,10 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 			types.Message,
 			descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL,
 		)
+	case celtypes.OpaqueKind:
+		return r.fromCELType(ctx, typ.Parameters()[0])
 	}
+
 	return nil, errors.New("unknown type is required")
 }
 

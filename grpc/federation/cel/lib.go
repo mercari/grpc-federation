@@ -10,6 +10,7 @@ func NewLibrary() *Library {
 	return &Library{
 		subLibs: []cel.SingletonLibrary{
 			new(TimeLibrary),
+			new(ListLibrary),
 		},
 	}
 }
