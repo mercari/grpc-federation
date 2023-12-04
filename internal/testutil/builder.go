@@ -884,6 +884,11 @@ func (b *ValidationExprBuilder) SetCode(v code.Code) *ValidationExprBuilder {
 	return b
 }
 
+func (b *ValidationExprBuilder) SetMessage(v string) *ValidationExprBuilder {
+	b.expr.Error.Message = v
+	return b
+}
+
 func (b *ValidationExprBuilder) SetIf(v *resolver.CELValue) *ValidationExprBuilder {
 	b.expr.Error.If = v
 	return b

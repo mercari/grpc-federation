@@ -23,9 +23,17 @@ message GetPostResponse {
     def [
       { name: "post" message { name: "Post" } },
       {
+        name: "customHandler"
+        message {
+          name: "CustomHandlerMessage",
+          args: {name: "arg", string: "some-arg"}
+        }
+      },
+      {
         validation {
           error {
             code: FAILED_PRECONDITION
+            message: "validation1 failed!",
             if: "post.id != 'some-id'"
           }
         }
@@ -34,6 +42,7 @@ message GetPostResponse {
         validation {
           error {
             code: FAILED_PRECONDITION
+            message: "validation2 failed!",
             if: "post.id != 'some-id'"
           }
         }
@@ -42,6 +51,7 @@ message GetPostResponse {
         validation {
           error: {
             code: FAILED_PRECONDITION,
+            message: "validation3 failed!",
             details: {
               if: "$.id != 'correct-id'",
               message: [
@@ -98,4 +108,18 @@ message Post {
 
 message CustomMessage {
   string message = 1 [(grpc.federation.field).by = "$.message"];
+}
+
+message CustomHandlerMessage {
+  option (grpc.federation.message) = {
+    def {
+      validation {
+        error {
+          code: FAILED_PRECONDITION
+          if: "$.arg == 'wrong'"
+        }
+      }
+    }
+    custom_resolver: true
+  };
 }

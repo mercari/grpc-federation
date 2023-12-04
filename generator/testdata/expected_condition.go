@@ -638,26 +638,41 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	   }
 	*/
 	{
-		{
-			err := func() error {
-				valueMu.RLock()
-				value, err := grpcfed.EvalCEL(s.env, "users[0].id == ''", envOpts, evalValues, reflect.TypeOf(false))
-				valueMu.RUnlock()
-				if err != nil {
-					return err
-				}
-				if value.(bool) {
-					return grpcstatus.Error(grpccodes.InvalidArgument, "validation failure")
-				}
-				return nil
-			}()
+		if _, err, _ := sg.Do("_def5", func() (any, error) {
+			valueMu.RLock()
+			ifValue, err := grpcfed.EvalCEL(s.env, "users.size() > 0", envOpts, evalValues, reflect.TypeOf(false))
+			valueMu.RUnlock()
 			if err != nil {
-				if _, ok := grpcstatus.FromError(err); ok {
-					return nil, err
-				}
-				s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
-				return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
+				grpcfed.RecordErrorToSpan(ctx, err)
+				return nil, err
 			}
+			if !ifValue.(bool) {
+				return false, nil
+			}
+			{
+				err := func() error {
+					valueMu.RLock()
+					value, err := grpcfed.EvalCEL(s.env, "users[0].id == ''", envOpts, evalValues, reflect.TypeOf(false))
+					valueMu.RUnlock()
+					if err != nil {
+						return err
+					}
+					if value.(bool) {
+						return grpcstatus.Error(grpccodes.InvalidArgument, "")
+					}
+					return nil
+				}()
+				if err != nil {
+					if _, ok := grpcstatus.FromError(err); ok {
+						return nil, err
+					}
+					s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+					return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
+				}
+				return nil, nil
+			}
+		}); err != nil {
+			return nil, err
 		}
 	}
 

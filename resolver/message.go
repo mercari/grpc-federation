@@ -196,6 +196,10 @@ func (m *Message) UseAllNameReference() {
 		if varDef.Name == "" {
 			continue
 		}
+		// Validation results won't be referenced
+		if varDef.Expr.Validation != nil {
+			continue
+		}
 		varDef.Used = true
 	}
 }
