@@ -191,6 +191,13 @@ func EvalCEL(env *cel.Env, expr string, vars []cel.EnvOption, args map[string]an
 	if err != nil {
 		return nil, err
 	}
+	opt, ok := out.(*celtypes.Optional)
+	if ok {
+		if opt == celtypes.OptionalNone {
+			return reflect.Zero(outType).Interface(), nil
+		}
+		out = opt.GetValue()
+	}
 	if outType != nil {
 		return out.ConvertToNative(outType)
 	}
