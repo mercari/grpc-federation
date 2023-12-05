@@ -11,7 +11,7 @@
 `dependencies` defines a unique name for all services on which federation service depends.
 The name will be used when creating the gRPC client.
 
-### example
+### Example
 
 ```proto
 service MyService {
@@ -33,7 +33,7 @@ service MyService {
 
 Name to be used when initializing the gRPC client.
 
-### example
+### Example
 
 ```proto
 service MyService {
@@ -48,7 +48,7 @@ service MyService {
 
 Service is the name of the dependent service.
 
-### example
+### Example
 
 ```proto
 service MyService {
@@ -70,7 +70,7 @@ the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED sta
 If you want to handle this error, you need to implement a custom error handler in Go.  
 The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
 
-### example
+### Example
 
 ```proto
 service MyService {
@@ -94,7 +94,7 @@ The `alias` is the FQDN ( `<package-name>.<enum-name>` ) to the enum.
 If this definition exists, type conversion is automatically performed before the enum value assignment operation.
 If a enum with this option has a value that is not present in the enum specified by alias, and the alias option is not specified for that value, an error is occurred.
 
-### example
+### Example
 
 ```proto
 package mypkg;
@@ -119,7 +119,7 @@ enum FooEnum {
 Specifies the default value of the enum.
 All values other than those specified in alias will be default values.
 
-### example
+### Example
 
 - myservice.proto
 
@@ -155,7 +155,7 @@ enum FooEnum {
 and specifies the value name to be referenced among the enums specified in alias of enum option.
 multiple value names can be specified for `alias`.
 
-### example
+### Example
 
 - myservice.proto
 
@@ -225,7 +225,7 @@ the field binding is automatically performed.
 If multiple autobinds are used at the same message,
 you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
 
-### example
+### Example
 
 - myservice.proto
 
@@ -268,7 +268,7 @@ message GetFooReply {
 
 ## (grpc.federation.message).def.if
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -294,7 +294,7 @@ message MyMessage {
 
 Binds the result of evaluating the [CEL](#cel) defined in `by` to the variable defined in name.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -312,7 +312,7 @@ message MyMessage {
 
 `call` is used to call the gRPC method and assign the result to a variable.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -345,7 +345,7 @@ message MyMessage {
 
 Specify the FQDN for the gRPC method. format is `<package-name>.<service-name>/<method-name>`.
 
-### example
+### Example
 
 - myservice.proto
 
@@ -380,7 +380,7 @@ service FooService {
 Specify the request parameters for the gRPC method.
 The `field` corresponds to the field name in the request message, and the `by` or `string` specifies which value is associated with the field.
 
-### example
+### Example
 
 - myservice.proto
 
@@ -446,7 +446,7 @@ The time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED sta
 If you want to handle this error, you need to implement a custom error handler in Go.  
 The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.   
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -483,7 +483,7 @@ Retry according to the "constant" policy.
 
 Interval value. Default value is `1s`.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -506,7 +506,7 @@ message MyMessage {
 
 Max retry count. Default value is `5`. If `0` is specified, it never stops.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -539,7 +539,7 @@ message MyMessage {
 
 Initial interval value. Default value is `500ms`.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -562,7 +562,7 @@ message MyMessage {
 
 Randomization factor value. Default value is `0.5`.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -585,7 +585,7 @@ message MyMessage {
 
 Multiplier. Default value is `1.5`.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -608,7 +608,7 @@ message MyMessage {
 
 Max interval value. Default value is `60s`.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -631,7 +631,7 @@ message MyMessage {
 
 Max retry count. Default value is `5`. If `0` is specified, it never stops.
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -665,7 +665,7 @@ The parameters necessary to obtain a message must be passed as message arguments
 Specify the message name with FQDN. format is `<package-name>.<message-name>`.  
 `<package-name>` can be omitted when referring to messages in the same package.
 
-### example
+### Example
 
 ```proto
 package mypkg;
@@ -691,7 +691,7 @@ message Foo {
 
 Specify the parameters needed to retrieve the message. This is called the message argument.
 
-### example
+### Example
 
 ```proto
 package mypkg;
@@ -767,7 +767,7 @@ Create the iterator variable.
 - `src` must be a repeated type
 - `name` defines the name of the iterator variable
 
-### example
+### Example
 
 ```proto
 message MyMessage {
@@ -831,7 +831,135 @@ Create map elements using `message` value by referencing variables created with 
 
 ## (grpc.federation.message).def.validation
 
-TODO..
+A validation rule against variables defined within the current scope.
+
+| field                                               | type            | required or optional |
+|-----------------------------------------------------|-----------------|----------------------|
+| [`name`](#grpcfederationmessagedefvalidationname)   | string          | optional             |
+| [`error`](#grpcfederationmessagedefvalidationerror) | ValidationError | required             |
+
+## (grpc.federation.message).def.validation.name
+A unique name for the validation.
+If set, the validation error type will be <message-name><name>Error.
+If omitted, the validation error type will be ValidationError.
+
+## (grpc.federation.message).def.validation.error
+
+A validation rule and validation error to be returned.
+
+| field                                                        | type                           | required or optional |
+|--------------------------------------------------------------|--------------------------------|----------------------|
+| [`code`](#grpcfederationmessagedefvalidationerrorcode)       | google.rpc.Code                | required             |
+| [`message`](#grpcfederationmessagedefvalidationerrormessage) | string                         | optional             |
+| [`if`](#grpcfederationmessagedefvalidationerrorif)           | CEL                            | optional             |
+| [`details`](#grpcfederationmessagedefvalidationerrordetails) | repeated ValidationErrorDetail | optional             |
+
+## (grpc.federation.message).def.validation.error.code
+A gRPC status code to be returned in case of validation error. For the available Enum codes, check [googleapis/google/rpc /code.proto](https://github.com/googleapis/googleapis/blob/89b562b76f5b215990a20d3ea08bc6e1c0377906/google/rpc/code.proto#L32-L186).
+
+## (grpc.federation.message).def.validation.error.message
+A gRPC status message in case of validation error. If omitted, the message will be auto-generated from the configurations.
+
+## (grpc.federation.message).def.validation.error.if
+A validation rule in CEL. If the condition is true, the validation returns the error.
+The return value must always be of type boolean. Either `if` or `details` must be specified.
+
+### Example
+
+```proto
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      validation {
+        name: "myMessageValidation",
+        error {
+          code: FAILED_PRECONDITION
+          message: "MyMessage validation failed",
+          if: "$.id == 'wrong'"
+        }
+      }
+    }
+  };
+  ...
+}
+```
+
+## (grpc.federation.message).def.validation.error.details
+
+`details` is a list of validation rules and error details. If the validation fails, the corresponding error details are set.
+Either `if` or `details` must be specified. The other error detail types will be supported soon.
+
+| field                                                                                        | type                                    | required or optional |
+|----------------------------------------------------------------------------------------------|-----------------------------------------|----------------------|
+| [`if`](#grpcfederationmessagedefvalidationerrordetailsif)                                    | CEL                                     | required             |
+| [`message`](#grpcfederationmessagedefvalidationerrordetailsmessage)                          | repeated MessageExpr                    | optional             |
+| [`precondition_failure`](#grpcfederationmessagedefvalidationerrordetailspreconditionfailure) | repeated google.rpc.PreconditionFailure | optional             |
+| [`bad_request`](#grpcfederationmessagedefvalidationerrordetailsbadrequest)                   | repeated google.rpc.BadRequest          | optional             |
+| [`localized_message`](#grpcfederationmessagedefvalidationerrordetailslocalizedmessage)       | repeated google.rpc.LocalizedMessage    | optional             |
+
+```proto
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      validation {
+        name: "myMessageValidation",
+        error {
+          code: FAILED_PRECONDITION
+          message: "MyMessage validation failed",
+          details {
+            if: "$.id == 'wrong'",
+            message {
+              name: "ErrorMessage",
+              args {
+                name: "message",
+                string: "some message"
+              }
+            }
+            precondition_failure {
+              violations {
+                type: "'some-type'"
+                subject: "'some-subject'"
+                description: "'some-desc'"
+              }
+            }
+            bad_request {
+              field_violations {
+                field: "'some-field'"
+                description: "'some-desc'"
+              }
+            }
+            localized_message {
+              locale: "en-US"
+              message: "'some message'"
+            }
+          }
+        }
+      }
+    }
+  };
+  ...
+}
+```
+
+## (grpc.federation.message).def.validation.error.details.if
+
+`if` specifies validation rule in CEL. If the condition is true, the validation returns an error with the specified details.
+
+## (grpc.federation.message).def.validation.error.details.message
+
+`message` represents arbitrary proto messages to describe the error detail.
+
+## (grpc.federation.message).def.validation.error.details.precondition_failure
+
+`precondition_failure` describes what preconditions have failed. See [google.rpc.PreconditionFailure](https://github.com/googleapis/googleapis/blob/89b562b76f5b215990a20d3ea08bc6e1c0377906/google/rpc/error_details.proto#L144) for the details.
+
+## (grpc.federation.message).def.validation.error.details.bad_request
+
+`bad_request` describes violations in a client request. See [google.rpc.BadRequest](https://github.com/googleapis/googleapis/blob/89b562b76f5b215990a20d3ea08bc6e1c0377906/google/rpc/error_details.proto#L170) for the details.
+
+## (grpc.federation.message).def.validation.error.details.localized_message
+
+`localized_message` provides a localized error message that is safe to return to the user. See [google.rpc.BadRequest](https://github.com/googleapis/googleapis/blob/89b562b76f5b215990a20d3ea08bc6e1c0377906/google/rpc/error_details.proto#L277) for the details.
 
 ## (grpc.federation.message).custom_resolver
 
@@ -842,7 +970,7 @@ If there are any values retrieved by `def`, they are passed as arguments for cus
 Each field of the message returned by the custom resolver is automatically bound.
 If you want to change the binding process for a particular field, set `custom_resolver=true` option for that field.
 
-### example
+### Example
 
 ```proto
 message Foo {
