@@ -11,6 +11,8 @@ func NewLibrary() *Library {
 		subLibs: []cel.SingletonLibrary{
 			new(TimeLibrary),
 			new(ListLibrary),
+			new(RandLibrary),
+			new(UUIDLibrary),
 		},
 	}
 }
