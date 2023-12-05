@@ -1483,7 +1483,7 @@ func (m *Message) CustomResolverArguments() []*Argument {
 			if varDef == nil || !varDef.Used {
 				continue
 			}
-			name := msgResolver.VariableDefinition.Name
+			name := varDef.Name
 			if _, exists := argNameMap[name]; exists {
 				continue
 			}
