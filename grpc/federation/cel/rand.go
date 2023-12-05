@@ -111,7 +111,7 @@ func (lib *RandLibrary) CompileOptions() []cel.EnvOption {
 			cel.MemberOverload(createRandID("seed_source_int"), []*cel.Type{SourceType, cel.IntType}, cel.BoolType,
 				cel.BinaryBinding(func(self, seed ref.Val) ref.Val {
 					self.(*Source).Seed(int64(seed.(types.Int)))
-					return types.Bool(types.True)
+					return types.True
 				}),
 			),
 		),
@@ -122,7 +122,7 @@ func (lib *RandLibrary) CompileOptions() []cel.EnvOption {
 			cel.Overload(createRandID("new_source_rand"), []*cel.Type{SourceType}, RandType,
 				cel.UnaryBinding(func(source ref.Val) ref.Val {
 					return &Rand{
-						Rand: rand.New(source.(*Source)),
+						Rand: rand.New(source.(*Source)), //nolint:gosec
 					}
 				}),
 			),
@@ -212,7 +212,7 @@ func (lib *RandLibrary) CompileOptions() []cel.EnvOption {
 			cel.MemberOverload(createRandID("seed_rand_int_bool"), []*cel.Type{RandType, cel.IntType}, cel.BoolType,
 				cel.BinaryBinding(func(self, seed ref.Val) ref.Val {
 					self.(*Rand).Seed(int64(seed.(types.Int)))
-					return types.Bool(types.True)
+					return types.True
 				}),
 			),
 		),

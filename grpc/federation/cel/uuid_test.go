@@ -26,7 +26,7 @@ func TestUUID(t *testing.T) {
 			name: "new",
 			expr: "grpc.federation.uuid.new()",
 			cmp: func(got any) error {
-				gotV, ok := got.(*cellib.UUID)
+				gotV, ok := got.(*cellib.UUID) //nolint: staticcheck
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
@@ -40,7 +40,7 @@ func TestUUID(t *testing.T) {
 			name: "newRandom",
 			expr: "grpc.federation.uuid.newRandom()",
 			cmp: func(got any) error {
-				gotV, ok := got.(*cellib.UUID)
+				gotV, ok := got.(*cellib.UUID) //nolint: staticcheck
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
@@ -58,7 +58,7 @@ func TestUUID(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix()))
+				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())) //nolint: gosec
 				id, err := uuid.NewRandomFromReader(r)
 				if err != nil {
 					return err
@@ -78,7 +78,7 @@ func TestUUID(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix()))
+				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())) //nolint: gosec
 				id, err := uuid.NewRandomFromReader(r)
 				if err != nil {
 					return err
@@ -98,7 +98,7 @@ func TestUUID(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix()))
+				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())) //nolint: gosec
 				id, err := uuid.NewRandomFromReader(r)
 				if err != nil {
 					return err
@@ -118,7 +118,7 @@ func TestUUID(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix()))
+				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())) //nolint: gosec
 				id, err := uuid.NewRandomFromReader(r)
 				if err != nil {
 					return err
@@ -138,7 +138,7 @@ func TestUUID(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix()))
+				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())) //nolint: gosec
 				id, err := uuid.NewRandomFromReader(r)
 				if err != nil {
 					return err
@@ -158,7 +158,7 @@ func TestUUID(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix()))
+				r := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())) //nolint: gosec
 				id, err := uuid.NewRandomFromReader(r)
 				if err != nil {
 					return err

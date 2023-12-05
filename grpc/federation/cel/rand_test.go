@@ -75,8 +75,8 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int()
-				if diff := cmp.Diff(int(gotV.Int()), expected); diff != "" {
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int() //nolint: gosec
+				if diff := cmp.Diff(gotV.Int(), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
 				return nil
@@ -90,7 +90,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).ExpFloat64()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).ExpFloat64() //nolint: gosec
 				if diff := cmp.Diff(float64(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -105,7 +105,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Float32()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Float32() //nolint: gosec
 				if diff := cmp.Diff(float32(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -120,7 +120,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Float64()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Float64() //nolint: gosec
 				if diff := cmp.Diff(float64(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -135,7 +135,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int() //nolint: gosec
 				if diff := cmp.Diff(int(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -150,7 +150,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int31()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int31() //nolint: gosec
 				if diff := cmp.Diff(int32(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -165,7 +165,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int31n(10)
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int31n(10) //nolint: gosec
 				if diff := cmp.Diff(int32(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -180,7 +180,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int63()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int63() //nolint: gosec
 				if diff := cmp.Diff(int64(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -195,7 +195,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int63n(10)
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Int63n(10) //nolint: gosec
 				if diff := cmp.Diff(int64(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -210,7 +210,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Intn(10)
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Intn(10) //nolint: gosec
 				if diff := cmp.Diff(int(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -225,7 +225,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).NormFloat64()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).NormFloat64() //nolint: gosec
 				if diff := cmp.Diff(float64(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -240,7 +240,7 @@ func TestRand(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Uint32()
+				expected := rand.New(rand.NewSource(time.Date(2023, 12, 25, 12, 0, 0, 0, time.UTC).Unix())).Uint32() //nolint: gosec
 				if diff := cmp.Diff(uint32(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
