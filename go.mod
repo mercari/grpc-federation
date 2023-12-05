@@ -9,6 +9,7 @@ require (
 	github.com/goccy/go-yaml v1.11.0
 	github.com/google/cel-go v0.18.1
 	github.com/google/go-cmp v0.6.0
+	github.com/google/uuid v1.3.0
 	github.com/jessevdk/go-flags v1.5.0
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.0
