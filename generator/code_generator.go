@@ -1130,13 +1130,13 @@ func (m *Message) DeclVariables() []*DeclVariable {
 	}
 	for _, group := range m.Message.MessageResolvers() {
 		for _, r := range group.Resolvers() {
-			if r.VariableDefinition != nil {
-				if !r.VariableDefinition.Used {
+			if varDef := r.VariableDefinition; varDef != nil {
+				if !varDef.Used {
 					continue
 				}
-				valueMap[r.VariableDefinition.Name] = &DeclVariable{
-					Name: toUserDefinedVariable(r.VariableDefinition.Name),
-					Type: toTypeText(m.Service.File, r.VariableDefinition.Expr.Type),
+				valueMap[varDef.Name] = &DeclVariable{
+					Name: toUserDefinedVariable(varDef.Name),
+					Type: toTypeText(m.Service.File, varDef.Expr.Type),
 				}
 			}
 		}
@@ -1479,17 +1479,19 @@ func (m *Message) CustomResolverArguments() []*Argument {
 	argNameMap := make(map[string]struct{})
 	for _, group := range m.MessageResolvers() {
 		for _, msgResolver := range group.Resolvers() {
-			if varDef := msgResolver.VariableDefinition; varDef != nil && varDef.Used {
-				name := msgResolver.VariableDefinition.Name
-				if _, exists := argNameMap[name]; exists {
-					continue
-				}
-				args = append(args, &Argument{
-					Name:  util.ToPublicGoVariable(name),
-					Value: toUserDefinedVariable(name),
-				})
-				argNameMap[name] = struct{}{}
+			varDef := msgResolver.VariableDefinition
+			if varDef == nil || !varDef.Used {
+				continue
 			}
+			name := varDef.Name
+			if _, exists := argNameMap[name]; exists {
+				continue
+			}
+			args = append(args, &Argument{
+				Name:  util.ToPublicGoVariable(name),
+				Value: toUserDefinedVariable(name),
+			})
+			argNameMap[name] = struct{}{}
 		}
 	}
 	sort.Slice(args, func(i, j int) bool {
@@ -2129,6 +2131,7 @@ type ValidationRule struct {
 type ValidationError struct {
 	Code    code.Code
 	If      string
+	Message string
 	Details []*ValidationErrorDetail
 }
 
@@ -2212,6 +2215,7 @@ func (r *MessageResolver) MessageValidation() *ValidationRule {
 		Name: validationName,
 		Error: &ValidationError{
 			Code:    validationError.Code,
+			Message: validationError.Message,
 			Details: make([]*ValidationErrorDetail, 0, len(validationError.Details)),
 		},
 	}

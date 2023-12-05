@@ -339,8 +339,11 @@ func (v *ValidationError) ProtoFormat(opt *ProtoFormatOption) string {
 	elems := []string{
 		nextOpt.indentFormat() + fmt.Sprintf("code: %s", v.Code),
 	}
-	if r := v.If; r != nil {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", v.If.Expr))
+	if val := v.If; val != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", val.Expr))
+	}
+	if m := v.Message; m != "" {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("message: %q", m))
 	}
 	if len(v.Details) != 0 {
 		elems = append(elems, v.Details.ProtoFormat(nextOpt))

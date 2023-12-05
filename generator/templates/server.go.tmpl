@@ -617,6 +617,9 @@ if !ifValue.(bool) {
 	return {{ .Resolver.ZeroValue }}, nil
 }
 {{- end }}
+{{- if .Resolver.IsValidation }}
+{{- template "messageValidation" .Resolver.MessageValidation }}
+{{- else }}
 valueMu.RLock()
 {{- $arguments := .Resolver.Arguments }}
 {{- if .Resolver.UseArgs }}
@@ -738,7 +741,7 @@ return value, nil
 {{- else }}
 return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
 {{- end }}
-
+{{- end }}
 {{- end }}
 
 {{- define "retry" }}
@@ -777,9 +780,6 @@ return nil, err
 {{ .Resolver.ProtoComment }}
 */
 {
-	{{- if .Resolver.IsValidation }}
-	{{- template "messageValidation" .Resolver.MessageValidation }}
-	{{- else }}
 	{{- if .Resolver.UseResponseVariable }}
 	valueIface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
 		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
@@ -812,7 +812,6 @@ return nil, err
 
 	{{- if $responseVariable }}
 	valueMu.Unlock()
-	{{- end }}
 	{{- end }}
 }
 {{- end }}
@@ -858,7 +857,7 @@ if err := eg.Wait(); err != nil {
 			return err
 		}
 		if value.(bool) {
-			return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+			return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
 		}
 		{{- else }}
 		success := true
@@ -887,7 +886,7 @@ if err := eg.Wait(); err != nil {
 		}
 		{{- end }}
 		if !success {
-			status := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "validation failure")
+			status := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
 			statusWithDetails, err := status.WithDetails(details...)
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -905,6 +904,7 @@ if err := eg.Wait(); err != nil {
 		s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
 		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
 	}
+	return nil, nil
 }
 {{- end }}
 

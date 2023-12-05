@@ -18,6 +18,12 @@ import (
 	"example/federation"
 )
 
+type Resolver struct {}
+
+func (r *Resolver) Resolve_Org_Federation_CustomHandlerMessage(context.Context, *federation.Org_Federation_CustomHandlerMessageArgument[*federation.FederationServiceDependentClientSet]) (*federation.CustomHandlerMessage, error) {
+	return &federation.CustomHandlerMessage{}, nil
+}
+
 const bufSize = 1024
 
 var listener   *bufconn.Listener
@@ -42,6 +48,7 @@ func TestFederation(t *testing.T) {
 		Level: slog.LevelDebug,
 	}))
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
+		Resolver: &Resolver{},
 		Logger: logger,
 	})
 	if err != nil {
@@ -88,7 +95,7 @@ func TestFederation(t *testing.T) {
 			},
 			expectedErr: &errStatus{
 				code: codes.FailedPrecondition,
-				message: "validation failure",
+				message: "validation3 failed!",
 				details: []any{
 					&federation.CustomMessage{
 						Message: "message1",

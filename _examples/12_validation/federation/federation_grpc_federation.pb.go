@@ -3,6 +3,7 @@ package federation
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"reflect"
@@ -22,6 +23,12 @@ import (
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 )
+
+// Org_Federation_CustomHandlerMessageArgument is argument for "org.federation.CustomHandlerMessage" message.
+type Org_Federation_CustomHandlerMessageArgument[T any] struct {
+	Arg    string
+	Client T
+}
 
 // Org_Federation_CustomMessageArgument is argument for "org.federation.CustomMessage" message.
 type Org_Federation_CustomMessageArgument[T any] struct {
@@ -43,6 +50,9 @@ type Org_Federation_PostArgument[T any] struct {
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
+	// Resolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
+	// If this interface is not provided, an error is returned during initialization.
+	Resolver FederationServiceResolver // required
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -71,6 +81,8 @@ type FederationServiceDependentClientSet struct {
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
+	// Resolve_Org_Federation_CustomHandlerMessage implements resolver for "org.federation.CustomHandlerMessage".
+	Resolve_Org_Federation_CustomHandlerMessage(context.Context, *Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]) (*CustomHandlerMessage, error)
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -78,6 +90,13 @@ type FederationServiceResolver interface {
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
 // by embedding them in a resolver structure that you have created.
 type FederationServiceUnimplementedResolver struct{}
+
+// Resolve_Org_Federation_CustomHandlerMessage resolve "org.federation.CustomHandlerMessage".
+// This method always returns Unimplemented error.
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_CustomHandlerMessage(context.Context, *Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]) (ret *CustomHandlerMessage, e error) {
+	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_CustomHandlerMessage not implemented")
+	return
+}
 
 // FederationService represents Federation Service.
 type FederationService struct {
@@ -87,11 +106,15 @@ type FederationService struct {
 	errorHandler grpcfed.ErrorHandler
 	env          *cel.Env
 	tracer       trace.Tracer
+	resolver     FederationServiceResolver
 	client       *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
+	if cfg.Resolver == nil {
+		return nil, fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
+	}
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
@@ -101,6 +124,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+		"grpc.federation.private.CustomHandlerMessageArgument": {
+			"arg": grpcfed.NewCELFieldType(celtypes.StringType, "Arg"),
+		},
 		"grpc.federation.private.CustomMessageArgument": {
 			"message": grpcfed.NewCELFieldType(celtypes.StringType, "Message"),
 		},
@@ -125,6 +151,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler: errorHandler,
 		env:          env,
 		tracer:       otel.Tracer("org.federation.FederationService"),
+		resolver:     cfg.Resolver,
 		client:       &FederationServiceDependentClientSet{},
 	}, nil
 }
@@ -151,6 +178,72 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 		return nil, err
 	}
 	return res, nil
+}
+
+// resolve_Org_Federation_CustomHandlerMessage resolve "org.federation.CustomHandlerMessage" message.
+func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx context.Context, req *Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]) (*CustomHandlerMessage, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.CustomHandlerMessage")
+	defer span.End()
+
+	s.logger.DebugContext(ctx, "resolve org.federation.CustomHandlerMessage", slog.Any("message_args", s.logvalue_Org_Federation_CustomHandlerMessageArgument(req)))
+	var (
+		sg      singleflight.Group
+		valueMu sync.RWMutex
+	)
+	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.CustomHandlerMessageArgument"))}
+	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
+
+	// This section's codes are generated by the following proto definition.
+	/*
+	   def {
+	     name: "_def0"
+	     validation {
+	       error {
+	         code: FAILED_PRECONDITION
+	         if: "$.arg == 'wrong'"
+	       }
+	     }
+	   }
+	*/
+	{
+		if _, err, _ := sg.Do("_def0", func() (any, error) {
+			{
+				err := func() error {
+					valueMu.RLock()
+					value, err := grpcfed.EvalCEL(s.env, "$.arg == 'wrong'", envOpts, evalValues, reflect.TypeOf(false))
+					valueMu.RUnlock()
+					if err != nil {
+						return err
+					}
+					if value.(bool) {
+						return grpcstatus.Error(grpccodes.FailedPrecondition, "")
+					}
+					return nil
+				}()
+				if err != nil {
+					if _, ok := grpcstatus.FromError(err); ok {
+						return nil, err
+					}
+					s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+					return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
+				}
+				return nil, nil
+			}
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	// create a message value to be returned.
+	// `custom_resolver = true` in "grpc.federation.message" option.
+	ret, err := s.resolver.Resolve_Org_Federation_CustomHandlerMessage(ctx, req)
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	s.logger.DebugContext(ctx, "resolved org.federation.CustomHandlerMessage", slog.Any("org.federation.CustomHandlerMessage", s.logvalue_Org_Federation_CustomHandlerMessage(ret)))
+	return ret, nil
 }
 
 // resolve_Org_Federation_CustomMessage resolve "org.federation.CustomMessage" message.
@@ -190,17 +283,20 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		sg                       singleflight.Group
 		valueMu                  sync.RWMutex
 		valuePost                *Post
-		value_Def2ErrDetail0Msg0 *CustomMessage
-		value_Def2ErrDetail0Msg1 *CustomMessage
+		value_Def4ErrDetail0Msg0 *CustomMessage
+		value_Def4ErrDetail0Msg1 *CustomMessage
 	)
 	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.GetPostResponseArgument"))}
 	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
 	// A tree view of message dependencies is shown below.
 	/*
 	   post ─┐
-	         _def1 ─┐
-	   post ─┐      │
-	         _def2 ─┤
+	                 _def2 ─┐
+	   post ─┐              │
+	                 _def3 ─┤
+	   post ─┐              │
+	                 _def4 ─┤
+	         customHandler ─┤
 	*/
 	eg, ctx1 := errgroup.WithContext(ctx)
 
@@ -238,18 +334,18 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		// This section's codes are generated by the following proto definition.
 		/*
 		   def {
-		     name: "_def1"
+		     name: "_def2"
 		     validation {
 		       error {
 		         code: FAILED_PRECONDITION
 		         if: "post.id != 'some-id'"
-		         message: "validation message 1"
+		         message: "validation1 failed!"
 		       }
 		     }
 		   }
 		*/
 		{
-			if _, err, _ := sg.Do("_def1", func() (any, error) {
+			if _, err, _ := sg.Do("_def2", func() (any, error) {
 				{
 					err := func() error {
 						valueMu.RLock()
@@ -259,7 +355,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 							return err
 						}
 						if value.(bool) {
-							return grpcstatus.Error(grpccodes.FailedPrecondition, "validation message 1")
+							return grpcstatus.Error(grpccodes.FailedPrecondition, "validation1 failed!")
 						}
 						return nil
 					}()
@@ -313,13 +409,88 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		// This section's codes are generated by the following proto definition.
 		/*
 		   def {
-		     name: "_def2"
+		     name: "_def3"
 		     validation {
 		       error {
 		         code: FAILED_PRECONDITION
-		         message: "validation message 2"
+		         if: "post.id != 'some-id'"
+		         message: "validation2 failed!"
+		       }
+		     }
+		   }
+		*/
+		{
+			if _, err, _ := sg.Do("_def3", func() (any, error) {
+				{
+					err := func() error {
+						valueMu.RLock()
+						value, err := grpcfed.EvalCEL(s.env, "post.id != 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
+						valueMu.RUnlock()
+						if err != nil {
+							return err
+						}
+						if value.(bool) {
+							return grpcstatus.Error(grpccodes.FailedPrecondition, "validation2 failed!")
+						}
+						return nil
+					}()
+					if err != nil {
+						if _, ok := grpcstatus.FromError(err); ok {
+							return nil, err
+						}
+						s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+						return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
+					}
+					return nil, nil
+				}
+			}); err != nil {
+				return nil, err
+			}
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "post"
+		     message {
+		       name: "Post"
+		     }
+		   }
+		*/
+		{
+			valueIface, err, _ := sg.Do("post", func() (any, error) {
+				valueMu.RLock()
+				args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
+					Client: s.client,
+				}
+				valueMu.RUnlock()
+				return s.resolve_Org_Federation_Post(ctx1, args)
+			})
+			if err != nil {
+				return nil, err
+			}
+			value := valueIface.(*Post)
+			valueMu.Lock()
+			valuePost = value
+			envOpts = append(envOpts, cel.Variable("post", cel.ObjectType("org.federation.Post")))
+			evalValues["post"] = valuePost
+			valueMu.Unlock()
+		}
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "_def4"
+		     validation {
+		       error {
+		         code: FAILED_PRECONDITION
+		         message: "validation3 failed!"
 		         details {
-		           if: "post.title != 'some-title'"
+		           if: "$.id != 'correct-id'"
 		           message: [
 		             {...},
 		             {...}
@@ -333,14 +504,14 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   }
 		*/
 		{
-			if _, err, _ := sg.Do("_def2", func() (any, error) {
+			if _, err, _ := sg.Do("_def4", func() (any, error) {
 				{
 					err := func() error {
 						success := true
 						var details []proto.Message
 						{
 							valueMu.RLock()
-							value, err := grpcfed.EvalCEL(s.env, "post.title != 'some-title'", envOpts, evalValues, reflect.TypeOf(false))
+							value, err := grpcfed.EvalCEL(s.env, "$.id != 'correct-id'", envOpts, evalValues, reflect.TypeOf(false))
 							valueMu.RUnlock()
 							if err != nil {
 								return err
@@ -355,7 +526,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											// This section's codes are generated by the following proto definition.
 											/*
 											   def {
-											     name: "_def2_err_detail0_msg0"
+											     name: "_def4_err_detail0_msg0"
 											     message {
 											       name: "CustomMessage"
 											       args { name: "message", string: "message1" }
@@ -363,7 +534,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											   }
 											*/
 											{
-												valueIface, err, _ := sg.Do("_def2_err_detail0_msg0", func() (any, error) {
+												valueIface, err, _ := sg.Do("_def4_err_detail0_msg0", func() (any, error) {
 													valueMu.RLock()
 													args := &Org_Federation_CustomMessageArgument[*FederationServiceDependentClientSet]{
 														Client:  s.client,
@@ -377,9 +548,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 												}
 												value := valueIface.(*CustomMessage)
 												valueMu.Lock()
-												value_Def2ErrDetail0Msg0 = value
-												envOpts = append(envOpts, cel.Variable("_def2_err_detail0_msg0", cel.ObjectType("org.federation.CustomMessage")))
-												evalValues["_def2_err_detail0_msg0"] = value_Def2ErrDetail0Msg0
+												value_Def4ErrDetail0Msg0 = value
+												envOpts = append(envOpts, cel.Variable("_def4_err_detail0_msg0", cel.ObjectType("org.federation.CustomMessage")))
+												evalValues["_def4_err_detail0_msg0"] = value_Def4ErrDetail0Msg0
 												valueMu.Unlock()
 											}
 											return nil, nil
@@ -389,7 +560,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											// This section's codes are generated by the following proto definition.
 											/*
 											   def {
-											     name: "_def2_err_detail0_msg1"
+											     name: "_def4_err_detail0_msg1"
 											     message {
 											       name: "CustomMessage"
 											       args { name: "message", string: "message2" }
@@ -397,7 +568,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											   }
 											*/
 											{
-												valueIface, err, _ := sg.Do("_def2_err_detail0_msg1", func() (any, error) {
+												valueIface, err, _ := sg.Do("_def4_err_detail0_msg1", func() (any, error) {
 													valueMu.RLock()
 													args := &Org_Federation_CustomMessageArgument[*FederationServiceDependentClientSet]{
 														Client:  s.client,
@@ -411,9 +582,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 												}
 												value := valueIface.(*CustomMessage)
 												valueMu.Lock()
-												value_Def2ErrDetail0Msg1 = value
-												envOpts = append(envOpts, cel.Variable("_def2_err_detail0_msg1", cel.ObjectType("org.federation.CustomMessage")))
-												evalValues["_def2_err_detail0_msg1"] = value_Def2ErrDetail0Msg1
+												value_Def4ErrDetail0Msg1 = value
+												envOpts = append(envOpts, cel.Variable("_def4_err_detail0_msg1", cel.ObjectType("org.federation.CustomMessage")))
+												evalValues["_def4_err_detail0_msg1"] = value_Def4ErrDetail0Msg1
 												valueMu.Unlock()
 											}
 											return nil, nil
@@ -428,7 +599,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										return
 									}
 									func() {
-										msg, err := grpcfed.EvalCEL(s.env, "_def2_err_detail0_msg0", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
+										msg, err := grpcfed.EvalCEL(s.env, "_def4_err_detail0_msg0", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
 										if err != nil {
 											s.logger.ErrorContext(ctx, "failed evaluating validation error detail message", slog.Int("index", 0), slog.String("error", err.Error()))
 											return
@@ -436,7 +607,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										details = append(details, msg.(proto.Message))
 									}()
 									func() {
-										msg, err := grpcfed.EvalCEL(s.env, "_def2_err_detail0_msg1", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
+										msg, err := grpcfed.EvalCEL(s.env, "_def4_err_detail0_msg1", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
 										if err != nil {
 											s.logger.ErrorContext(ctx, "failed evaluating validation error detail message", slog.Int("index", 1), slog.String("error", err.Error()))
 											return
@@ -449,21 +620,21 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									{
 										func() {
 											valueMu.RLock()
-											typ, err := grpcfed.EvalCEL(s.env, "'some-type'", envOpts, evalValues, reflect.TypeOf(""))
+											typ, err := grpcfed.EvalCEL(s.env, "'type1'", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", 0), slog.String("error", err.Error()))
 												return
 											}
 											valueMu.RLock()
-											subject, err := grpcfed.EvalCEL(s.env, "'some-subject'", envOpts, evalValues, reflect.TypeOf(""))
+											subject, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", 0), slog.String("error", err.Error()))
 												return
 											}
 											valueMu.RLock()
-											description, err := grpcfed.EvalCEL(s.env, "'some-description'", envOpts, evalValues, reflect.TypeOf(""))
+											description, err := grpcfed.EvalCEL(s.env, "'description1'", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", 0), slog.String("error", err.Error()))
@@ -485,14 +656,14 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									{
 										func() {
 											valueMu.RLock()
-											field, err := grpcfed.EvalCEL(s.env, "'some-field'", envOpts, evalValues, reflect.TypeOf(""))
+											field, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation field", slog.Int("index", 0), slog.String("error", err.Error()))
 												return
 											}
 											valueMu.RLock()
-											description, err := grpcfed.EvalCEL(s.env, "'some-description'", envOpts, evalValues, reflect.TypeOf(""))
+											description, err := grpcfed.EvalCEL(s.env, "'description2'", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation description", slog.Int("index", 0), slog.String("error", err.Error()))
@@ -511,7 +682,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 								{
 									func() {
 										valueMu.RLock()
-										message, err := grpcfed.EvalCEL(s.env, "'some-message'", envOpts, evalValues, reflect.TypeOf(""))
+										message, err := grpcfed.EvalCEL(s.env, "post.content", envOpts, evalValues, reflect.TypeOf(""))
 										valueMu.RUnlock()
 										if err != nil {
 											s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage message", slog.String("error", err.Error()))
@@ -526,7 +697,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 							}
 						}
 						if !success {
-							status := grpcstatus.New(grpccodes.FailedPrecondition, "validation message 2")
+							status := grpcstatus.New(grpccodes.FailedPrecondition, "validation3 failed!")
 							statusWithDetails, err := status.WithDetails(details...)
 							if err != nil {
 								s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -545,6 +716,34 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					}
 					return nil, nil
 				}
+			}); err != nil {
+				return nil, err
+			}
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "customHandler"
+		     message {
+		       name: "CustomHandlerMessage"
+		       args { name: "arg", string: "some-arg" }
+		     }
+		   }
+		*/
+		{
+			if _, err, _ := sg.Do("customHandler", func() (any, error) {
+				valueMu.RLock()
+				args := &Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]{
+					Client: s.client,
+					Arg:    "some-arg", // { name: "arg", string: "some-arg" }
+				}
+				valueMu.RUnlock()
+				return s.resolve_Org_Federation_CustomHandlerMessage(ctx1, args)
 			}); err != nil {
 				return nil, err
 			}
@@ -595,6 +794,22 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 
 	s.logger.DebugContext(ctx, "resolved org.federation.Post", slog.Any("org.federation.Post", s.logvalue_Org_Federation_Post(ret)))
 	return ret, nil
+}
+
+func (s *FederationService) logvalue_Org_Federation_CustomHandlerMessage(v *CustomHandlerMessage) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
+}
+
+func (s *FederationService) logvalue_Org_Federation_CustomHandlerMessageArgument(v *Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("arg", v.Arg),
+	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_CustomMessage(v *CustomMessage) slog.Value {

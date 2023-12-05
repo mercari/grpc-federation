@@ -696,6 +696,7 @@ func (b *VariableDefinitionBuilder) SetMessage(v *resolver.MessageExpr) *Variabl
 func (b *VariableDefinitionBuilder) SetValidation(v *resolver.ValidationExpr) *VariableDefinitionBuilder {
 	b.def.Expr = &resolver.VariableExpr{
 		Validation: v,
+		Type:       resolver.BoolType,
 	}
 	return b
 }
@@ -881,6 +882,11 @@ func NewValidationExprBuilder() *ValidationExprBuilder {
 
 func (b *ValidationExprBuilder) SetCode(v code.Code) *ValidationExprBuilder {
 	b.expr.Error.Code = v
+	return b
+}
+
+func (b *ValidationExprBuilder) SetMessage(v string) *ValidationExprBuilder {
+	b.expr.Error.Message = v
 	return b
 }
 

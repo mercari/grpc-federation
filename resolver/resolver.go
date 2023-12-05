@@ -1206,7 +1206,8 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 
 	vr := &ValidationExpr{
 		Error: &ValidationError{
-			Code: e.GetCode(),
+			Code:    e.GetCode(),
+			Message: e.GetMessage(),
 		},
 	}
 
@@ -2547,6 +2548,8 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		for detIdx, detail := range expr.Validation.Error.Details {
 			r.resolveMessageValidationErrorDetailCELValues(ctx, env, ctx.msg, ctx.defIndex(), detIdx, detail)
 		}
+		// This is a dummy type since the output from the validation is not supposed to be used (at least for now)
+		expr.Type = BoolType
 	}
 }
 

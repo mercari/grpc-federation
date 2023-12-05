@@ -3029,6 +3029,7 @@ func TestValidation(t *testing.T) {
 								SetValidation(
 									testutil.NewValidationExprBuilder().
 										SetCode(code.Code_FAILED_PRECONDITION).
+										SetMessage("validation message 1").
 										SetIf(testutil.NewCELValueBuilder("post.id != 'some-id'", resolver.BoolType).Build(t)).
 										Build(t),
 								).
@@ -3040,6 +3041,7 @@ func TestValidation(t *testing.T) {
 								SetValidation(
 									testutil.NewValidationExprBuilder().
 										SetCode(code.Code_FAILED_PRECONDITION).
+										SetMessage("validation message 2").
 										SetDetails([]*resolver.ValidationErrorDetail{
 											{
 												If: testutil.NewCELValueBuilder("post.title != 'some-title'", resolver.BoolType).Build(t),

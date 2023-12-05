@@ -26,6 +26,7 @@ message GetPostResponse {
         validation {
           error {
             code: FAILED_PRECONDITION
+            message: "validation message 1"
             if: "post.id != 'some-id'"
           }
         }
@@ -34,6 +35,7 @@ message GetPostResponse {
         validation {
           error {
             code: FAILED_PRECONDITION
+            message: "validation message 2"
             details {
               if: "post.title != 'some-title'"
               message: [

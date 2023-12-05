@@ -214,6 +214,7 @@ type ValidationRule struct {
 type ValidationError struct {
 	Code    code.Code
 	If      *CELValue
+	Message string
 	Details ValidationErrorDetails
 }
 
