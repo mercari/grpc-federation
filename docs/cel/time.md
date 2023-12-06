@@ -601,7 +601,7 @@ grpc.federation.time.toDuration(grpc.federation.time.HOUR + 2*grpc.federatino.ti
 
 ## Duration.truncate
 
-`truncate` returns the result of rounding d toward zero to a multiple of `m`. If `m` <= 0, Truncate returns `Duration` unchanged.
+`truncate` returns the result of rounding d toward zero to a multiple of `m`. If `m` <= 0, `truncate` returns `Duration` unchanged.
 
 FYI: https://pkg.go.dev/time#Duration.Truncate
 
