@@ -194,7 +194,7 @@ enum FooEnum {
 ## (grpc.federation.message).def
 
 `def` can define variables.  
-The defined variables can be referenced in subsequent CEL field.
+The defined variables can be referenced in subsequent [CEL](./cel.md) field.
 The `name` is a variable name and `autobind` can be used when the variable is `message` type.
 It can be used for automatic field binding.
 
@@ -205,13 +205,13 @@ If does not evaluated, a default value of the type obtained when evaluating is a
 | ----- | ---- | -------------------- |
 | [`name`](#grpcfederationmessagedefname) | string | optional |
 | [`autobind`](#grpcfederationmessagedefautobind) | bool | optional |
-| [`if`](#grpcfederationmessagedefif) | CEL | optional |
+| [`if`](#grpcfederationmessagedefif) | [CEL](./cel.md) | optional |
 
 The value to be assigned to a variable can be created with the following features.
 
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
-| [`by`](#grpcfederationmessagedefby) | CEL | optional |
+| [`by`](#grpcfederationmessagedefby) | [CEL](./cel.md) | optional |
 | [`call`](#grpcfederationmessagedefcall) | CallExpr | optional |
 | [`message`](#grpcfederationmessagedefmessage) | MessageExpr | optional |
 | [`map`](#grpcfederationmessagedefmap) | MapExpr | optional |
@@ -292,7 +292,7 @@ message MyMessage {
 
 ## (grpc.federation.message).def.by
 
-Binds the result of evaluating the [CEL](#cel) defined in `by` to the variable defined in name.
+Binds the result of evaluating the [CEL](./cel.md) defined in `by` to the variable defined in name.
 
 ### Example
 
@@ -422,7 +422,7 @@ message GetFooRequest {
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
 | [`field`](#grpcfederationmessagedefcallrequestfield) | string | required |
-| [`by`](#grpcfederationmessagedefcallrequestby) | CEL | optional |
+| [`by`](#grpcfederationmessagedefcallrequestby) | [CEL](./cel.md) | optional |
 | [`string`](#grpcfederationmessagedefcallrequeststring) | string | optional |
 
 In addition to `string`, you can write literals for any data type supported by proto, such as `int64` or `bool` .
@@ -433,7 +433,7 @@ The field name of the request message.
 
 ## (grpc.federation.message).def.call.request.by
 
-`by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](#cel).
+`by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](./cel.md).
 You need to use `$.` to refer to the message argument.
 
 ## (grpc.federation.message).def.call.request.string
@@ -726,8 +726,8 @@ message Foo {
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
 | [`name`](#grpcfederationmessagedefmessageargsname) | string | required |
-| [`by`](#grpcfederationmessagedefmessageargsby) | CEL | optional |
-| [`inline`](#grpcfederationmessagedefmessageargsinline) | CEL | optional |
+| [`by`](#grpcfederationmessagedefmessageargsby) | [CEL](./cel.md) | optional |
+| [`inline`](#grpcfederationmessagedefmessageargsinline) | [CEL](./cel.md) | optional |
 | [`string`](#grpcfederationmessagedefmessageargsstring) | string | optional |
 
 In addition to `string`, you can write literals for any data type supported by proto, such as `int64` or `bool` .
@@ -740,7 +740,7 @@ For example, if `foo` is specified as the name, it is referenced by `$.foo` in d
 
 ## (grpc.federation.message).def.message.args.by
 
-`by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](#cel).
+`by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](./cel.md).
 You need to use `$.` to refer to the message argument.
 
 ## (grpc.federation.message).def.message.args.inline
@@ -757,7 +757,7 @@ For this reason, the referenced value must always be of message type.
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
 | [`iterator`](#grpcfederationmessagedefmapiterator) | Iterator | required |
-| [`by`](#grpcfederationmessagedefmapby) | CEL | optional |
+| [`by`](#grpcfederationmessagedefmapby) | [CEL](./cel.md) | optional |
 | [`message`](#grpcfederationmessagedefmapmessage) | MessageExpr | optional |
 
 ## (grpc.federation.message).def.map.iterator
@@ -811,7 +811,7 @@ message Foo {
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
 | [`name`](#grpcfederationmessagedefmapiteratorname) | string | required |
-| [`src`](#grpcfederationmessagedefmapiteratorsrc) | CEL | required |
+| [`src`](#grpcfederationmessagedefmapiteratorsrc) | [CEL](./cel.md) | required |
 
 ## (grpc.federation.message).def.map.iterator.name
 
@@ -823,7 +823,7 @@ The variable of repeated type that form the basis of iterator.
 
 ## (grpc.federation.message).def.map.by
 
-Create map elements using [`CEL`](#cel) by referencing variables created with `iterator` section.
+Create map elements using [`CEL`](./cel.md) by referencing variables created with `iterator` section.
 
 ## (grpc.federation.message).def.map.message
 
@@ -851,7 +851,7 @@ A validation rule and validation error to be returned.
 |--------------------------------------------------------------|--------------------------------|----------------------|
 | [`code`](#grpcfederationmessagedefvalidationerrorcode)       | google.rpc.Code                | required             |
 | [`message`](#grpcfederationmessagedefvalidationerrormessage) | string                         | optional             |
-| [`if`](#grpcfederationmessagedefvalidationerrorif)           | CEL                            | optional             |
+| [`if`](#grpcfederationmessagedefvalidationerrorif)           | [CEL](./cel.md)                            | optional             |
 | [`details`](#grpcfederationmessagedefvalidationerrordetails) | repeated ValidationErrorDetail | optional             |
 
 ## (grpc.federation.message).def.validation.error.code
@@ -861,7 +861,7 @@ A gRPC status code to be returned in case of validation error. For the available
 A gRPC status message in case of validation error. If omitted, the message will be auto-generated from the configurations.
 
 ## (grpc.federation.message).def.validation.error.if
-A validation rule in CEL. If the condition is true, the validation returns the error.
+A validation rule in [CEL](./cel.md). If the condition is true, the validation returns the error.
 The return value must always be of type boolean. Either `if` or `details` must be specified.
 
 ### Example
@@ -891,7 +891,7 @@ Either `if` or `details` must be specified. The other error detail types will be
 
 | field                                                                                        | type                                    | required or optional |
 |----------------------------------------------------------------------------------------------|-----------------------------------------|----------------------|
-| [`if`](#grpcfederationmessagedefvalidationerrordetailsif)                                    | CEL                                     | required             |
+| [`if`](#grpcfederationmessagedefvalidationerrordetailsif)                                    | [CEL](./cel.md)                                     | required             |
 | [`message`](#grpcfederationmessagedefvalidationerrordetailsmessage)                          | repeated MessageExpr                    | optional             |
 | [`precondition_failure`](#grpcfederationmessagedefvalidationerrordetailspreconditionfailure) | repeated google.rpc.PreconditionFailure | optional             |
 | [`bad_request`](#grpcfederationmessagedefvalidationerrordetailsbadrequest)                   | repeated google.rpc.BadRequest          | optional             |
@@ -943,7 +943,7 @@ message MyMessage {
 
 ## (grpc.federation.message).def.validation.error.details.if
 
-`if` specifies validation rule in CEL. If the condition is true, the validation returns an error with the specified details.
+`if` specifies validation rule in [CEL](./cel.md). If the condition is true, the validation returns an error with the specified details.
 
 ## (grpc.federation.message).def.validation.error.details.message
 
@@ -1005,7 +1005,7 @@ If a message with this option has a field that is not present in the message spe
 
 ## (grpc.federation.field).by
 
-`by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](#cel).
+`by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](./cel.md).
 You need to use `$.` to refer to the message argument.
 
 ## (grpc.federation.field).oneof
@@ -1014,10 +1014,10 @@ You need to use `$.` to refer to the message argument.
 
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
-| [`if`](#grpcfederationfieldoneofif) | CEL | optional |
+| [`if`](#grpcfederationfieldoneofif) | [CEL](./cel.md) | optional |
 | [`default`](#grpcfederationfieldoneofdefault) | bool | optional |
 | [`def`](#grpcfederationfieldoneofdef) | repeated VariableDefinition | optional |
-| [`by`](#grpcfederationfieldoneofby) | CEL | optional |
+| [`by`](#grpcfederationfieldoneofby) | [CEL](./cel.md) | optional |
 
 ## (grpc.federation.field).oneof.if
 
@@ -1035,7 +1035,7 @@ Only one value can be defined per oneof.
 
 ## (grpc.federation.field).oneof.by
 
-`by` used to refer to a variable or message argument defined in a `grpc.federation.message` and `grpc.federation.field.oneof` by [CEL](#cel).
+`by` used to refer to a variable or message argument defined in a `grpc.federation.message` and `grpc.federation.field.oneof` by [CEL](./cel.md).
 You need to use `$.` to refer to the message argument.
 
 ## (grpc.federation.field).custom_resolver
@@ -1050,23 +1050,6 @@ and specifies the field name to be referenced among the messages specified in `a
 If the specified field has the same type or can be converted automatically, its value is assigned.
 
 ## (grpc.federation.field).string
-
-# CEL
-
-gRPC Federation supports [CEL(Common Expression Language)](https://github.com/google/cel-spec).  
-For more information on CEL, [please see here](https://github.com/google/cel-spec/blob/master/doc/langdef.md).
-
-[Here is a list of macros that CEL supports by default](https://github.com/google/cel-spec/blob/master/doc/langdef.md#macros).
-In addition, gRPC Federation's unique features are available in CEL.
-
-## Refer to the defined variable
-
-If you have defined variables using [`def`](#grpcfederationmessagedef) feature, you can use them in CEL.  
-Also, the message argument should be `$.` can be used to refer to them.
-
-## Pre-defined variables
-
-TODO...
 
 # Message Argument
 
