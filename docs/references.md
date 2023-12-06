@@ -851,7 +851,7 @@ A validation rule and validation error to be returned.
 |--------------------------------------------------------------|--------------------------------|----------------------|
 | [`code`](#grpcfederationmessagedefvalidationerrorcode)       | google.rpc.Code                | required             |
 | [`message`](#grpcfederationmessagedefvalidationerrormessage) | string                         | optional             |
-| [`if`](#grpcfederationmessagedefvalidationerrorif)           | CEL                            | optional             |
+| [`if`](#grpcfederationmessagedefvalidationerrorif)           | [CEL](./cel.md)                            | optional             |
 | [`details`](#grpcfederationmessagedefvalidationerrordetails) | repeated ValidationErrorDetail | optional             |
 
 ## (grpc.federation.message).def.validation.error.code
@@ -861,7 +861,7 @@ A gRPC status code to be returned in case of validation error. For the available
 A gRPC status message in case of validation error. If omitted, the message will be auto-generated from the configurations.
 
 ## (grpc.federation.message).def.validation.error.if
-A validation rule in CEL. If the condition is true, the validation returns the error.
+A validation rule in [CEL](./cel.md). If the condition is true, the validation returns the error.
 The return value must always be of type boolean. Either `if` or `details` must be specified.
 
 ### Example
@@ -891,7 +891,7 @@ Either `if` or `details` must be specified. The other error detail types will be
 
 | field                                                                                        | type                                    | required or optional |
 |----------------------------------------------------------------------------------------------|-----------------------------------------|----------------------|
-| [`if`](#grpcfederationmessagedefvalidationerrordetailsif)                                    | CEL                                     | required             |
+| [`if`](#grpcfederationmessagedefvalidationerrordetailsif)                                    | [CEL](./cel.md)                                     | required             |
 | [`message`](#grpcfederationmessagedefvalidationerrordetailsmessage)                          | repeated MessageExpr                    | optional             |
 | [`precondition_failure`](#grpcfederationmessagedefvalidationerrordetailspreconditionfailure) | repeated google.rpc.PreconditionFailure | optional             |
 | [`bad_request`](#grpcfederationmessagedefvalidationerrordetailsbadrequest)                   | repeated google.rpc.BadRequest          | optional             |
@@ -943,7 +943,7 @@ message MyMessage {
 
 ## (grpc.federation.message).def.validation.error.details.if
 
-`if` specifies validation rule in CEL. If the condition is true, the validation returns an error with the specified details.
+`if` specifies validation rule in [CEL](./cel.md). If the condition is true, the validation returns an error with the specified details.
 
 ## (grpc.federation.message).def.validation.error.details.message
 

@@ -212,6 +212,11 @@ grpc-federation-generator -w
 - [`Getting Started`](./docs/getting_started.md)
 - [`Examples`](./_examples/)
 
+# Documents
+
+- [Feature References](./docs/references.md)
+- [CEL API References](./docs/cel.md)
+
 # Contribution
 
 > [!IMPORTANT]
