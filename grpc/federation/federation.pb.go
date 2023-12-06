@@ -2967,7 +2967,7 @@ type ValidationError struct {
 	If *string `protobuf:"bytes,3,opt,name=if,proto3,oneof" json:"if,omitempty"`
 	// details is a list of validation rules and error details.
 	// If the validation fails, the corresponding error details are set.
-	// Either rule or details must be specified.
+	// Either if or details must be specified.
 	Details []*ValidationErrorDetail `protobuf:"bytes,4,rep,name=details,proto3" json:"details,omitempty"`
 }
 
@@ -3039,7 +3039,7 @@ type ValidationErrorDetail struct {
 
 	// if specifies validation rule in CEL. If the condition is true, the validation returns an error.
 	If string `protobuf:"bytes,1,opt,name=if,proto3" json:"if,omitempty"`
-	// message represents arbitrary messages to describe the detail of the error
+	// message represents arbitrary messages to describe the detail of the error.
 	Message []*MessageExpr `protobuf:"bytes,2,rep,name=message,proto3" json:"message,omitempty"`
 	// error_info describes the cause of the error with structured details.
 	ErrorInfo []*errdetails.ErrorInfo `protobuf:"bytes,3,rep,name=error_info,json=errorInfo,proto3" json:"error_info,omitempty"`
