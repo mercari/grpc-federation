@@ -360,8 +360,13 @@ func (m *Message) CustomResolvers() []*CustomResolver {
 
 func (m *Message) customResolvers(resolver *MessageResolver) []*CustomResolver {
 	var ret []*CustomResolver
-	if def := resolver.VariableDefinition; def != nil && def.Expr.Message != nil {
-		ret = append(ret, def.Expr.Message.Message.CustomResolvers()...)
+	if def := resolver.VariableDefinition; def != nil {
+		for _, expr := range def.MessageExprs() {
+			if expr.Message == nil {
+				continue
+			}
+			ret = append(ret, expr.Message.CustomResolvers()...)
+		}
 	}
 	return ret
 }
