@@ -83,6 +83,7 @@ message User {
       }
     }
     def { name: "user" by: "res.user" autobind: true }
+    custom_resolver: true
   };
   string id = 1;
   string name = 2;

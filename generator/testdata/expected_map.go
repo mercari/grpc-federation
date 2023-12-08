@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 
 	post "example/post"
 	user "example/user"
@@ -53,6 +55,9 @@ type FederationServiceConfig struct {
 	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
 	// If this interface is not provided, an error is returned during initialization.
 	Client FederationServiceClientFactory // required
+	// Resolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
+	// If this interface is not provided, an error is returned during initialization.
+	Resolver FederationServiceResolver // required
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -87,6 +92,8 @@ type FederationServiceDependentClientSet struct {
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
+	// Resolve_Org_Federation_User implements resolver for "org.federation.User".
+	Resolve_Org_Federation_User(context.Context, *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) (*User, error)
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -94,6 +101,13 @@ type FederationServiceResolver interface {
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
 // by embedding them in a resolver structure that you have created.
 type FederationServiceUnimplementedResolver struct{}
+
+// Resolve_Org_Federation_User resolve "org.federation.User".
+// This method always returns Unimplemented error.
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User(context.Context, *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) (ret *User, e error) {
+	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_User not implemented")
+	return
+}
 
 const (
 	FederationService_DependentMethod_Org_Post_PostService_GetPosts = "/org.post.PostService/GetPosts"
@@ -108,6 +122,7 @@ type FederationService struct {
 	errorHandler grpcfed.ErrorHandler
 	env          *cel.Env
 	tracer       trace.Tracer
+	resolver     FederationServiceResolver
 	client       *FederationServiceDependentClientSet
 }
 
@@ -115,6 +130,9 @@ type FederationService struct {
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if cfg.Client == nil {
 		return nil, fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
+	}
+	if cfg.Resolver == nil {
+		return nil, fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
 	}
 	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
 		Service: "org.post.PostService",
@@ -165,6 +183,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler: errorHandler,
 		env:          env,
 		tracer:       otel.Tracer("org.federation.FederationService"),
+		resolver:     cfg.Resolver,
 		client: &FederationServiceDependentClientSet{
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
@@ -705,11 +724,12 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	req.User = valueUser
 
 	// create a message value to be returned.
-	ret := &User{}
-
-	// field binding section.
-	ret.Id = valueUser.GetId()     // { name: "user", autobind: true }
-	ret.Name = valueUser.GetName() // { name: "user", autobind: true }
+	// `custom_resolver = true` in "grpc.federation.message" option.
+	ret, err := s.resolver.Resolve_Org_Federation_User(ctx, req)
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.User", slog.Any("org.federation.User", s.logvalue_Org_Federation_User(ret)))
 	return ret, nil

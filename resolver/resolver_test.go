@@ -3187,8 +3187,16 @@ func TestMap(t *testing.T) {
 		).
 		AddMessage(
 			testutil.NewMessageBuilder("User").
-				AddFieldWithAutoBind("id", resolver.StringType, ref.Field(t, "org.user", "User", "id")).
-				AddFieldWithAutoBind("name", resolver.StringType, ref.Field(t, "org.user", "User", "name")).
+				AddFieldWithRule(
+					"id",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(nil).SetMessageCustomResolver(true).Build(t),
+				).
+				AddFieldWithRule(
+					"name",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(nil).SetMessageCustomResolver(true).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
@@ -3219,6 +3227,7 @@ func TestMap(t *testing.T) {
 								SetBy(testutil.NewCELValueBuilder("res.user", ref.Type(t, "org.user", "User")).Build(t)).
 								Build(t),
 						).
+						SetCustomResolver(true).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
