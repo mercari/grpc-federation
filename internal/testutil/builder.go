@@ -1218,6 +1218,13 @@ func NewFieldRuleBuilder(value *resolver.Value) *FieldRuleBuilder {
 	return &FieldRuleBuilder{rule: &resolver.FieldRule{Value: value}}
 }
 
+func (b *FieldRuleBuilder) SetAutoBind(field *resolver.Field) *FieldRuleBuilder {
+	b.rule.AutoBindField = &resolver.AutoBindField{
+		Field: field,
+	}
+	return b
+}
+
 func (b *FieldRuleBuilder) SetCustomResolver(v bool) *FieldRuleBuilder {
 	b.rule.CustomResolver = v
 	return b
