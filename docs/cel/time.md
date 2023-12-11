@@ -31,8 +31,6 @@ The API for this package was created based on Go's [`time`](https://pkg.go.dev/t
 - [`SECOND`](#second)
 - [`MINUTE`](#minute)
 - [`HOUR`](#hour)
-- [`LOCAL`](#local)
-- [`UTC`](#utc)
 
 ## Duration
 
@@ -53,6 +51,8 @@ The API for this package was created based on Go's [`time`](https://pkg.go.dev/t
 
 ## Location
 
+- [`LOCAL`](#local)
+- [`UTC`](#utc)
 - [`fixedZone`](#fixedzone)
 - [`loadLocation`](#loadlocation)
 - [`loadLocationFromTZData`](#loadlocationfromtzdata)
@@ -371,26 +371,6 @@ FYI: https://pkg.go.dev/time#pkg-constants
 
 `60 * grpc.federation.time.MINUTE`
 
-## LOCAL
-
-### type
-
-`Location`
-
-### value
-
-`LOCAL` represents the system's local time zone. On Unix systems, `LOCAL` consults the TZ environment variable to find the time zone to use. No TZ means use the system default /etc/localtime. TZ="" means use UTC. TZ="foo" means use file foo in the system timezone directory.
-
-## UTC
-
-### type
-
-`Location`
-
-### value
-
-`UTC` represents Universal Coordinated Time (UTC).
-
 # Functions
 
 ## toDuration
@@ -617,6 +597,22 @@ FYI: https://pkg.go.dev/time#Duration.Truncate
 grpc.federation.time.parseDuration("1h15m30.918273645s").truncate(grpc.federation.time.MILLISECOND) //=> 1h15m30.918s
 ```
 
+## LOCAL
+
+`LOCAL` represents the system's local time zone. On Unix systems, `LOCAL` consults the TZ environment variable to find the time zone to use. No TZ means use the system default /etc/localtime. TZ="" means use UTC. TZ="foo" means use file foo in the system timezone directory.
+
+### Parameters
+
+`LOCAL() Location`
+
+## UTC
+
+`UTC` represents Universal Coordinated Time (UTC).
+
+### Parameters
+
+`UTC() Location`
+
 ## fixedZone
 
 `fixedZone` returns a `Location` that always uses the given zone name and offset (seconds east of `UTC`).
@@ -707,7 +703,7 @@ FYI: https://pkg.go.dev/time#Date
 ### Examples
 
 ```cel
-grpc.federation.time.date(2009, time.November, 10, 23, 0, 0, 0, grpc.federation.time.UTC) //=> 2009-11-10 23:00:00 +0000 UTC
+grpc.federation.time.date(2009, time.November, 10, 23, 0, 0, 0, grpc.federation.time.UTC()) //=> 2009-11-10 23:00:00 +0000 UTC
 ```
 
 ## now
@@ -838,7 +834,7 @@ FYI: https://pkg.go.dev/time#Time.After
 ### Examples
 
 ```cel
-grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC).after(grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC)) //=> true
+grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()).after(grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC())) //=> true
 ```
 
 ## Time.appendFormat
@@ -855,7 +851,7 @@ FYI: https://pkg.go.dev/time#Time.AppendFormat
 ### Examples
 
 ```cel
-grpc.federation.time.date(2017, 11, 4, 11, 0, 0, 0, grpc.federation.time.UTC).appendFormat("Time: ", grpc.federation.time.KITCHEN) //=> Time: 11:00AM
+grpc.federation.time.date(2017, 11, 4, 11, 0, 0, 0, grpc.federation.time.UTC()).appendFormat("Time: ", grpc.federation.time.KITCHEN) //=> Time: 11:00AM
 ```
 
 ## Time.before
@@ -873,7 +869,7 @@ FYI: https://pkg.go.dev/time#Time.Before
 ### Examples
 
 ```cel
-grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC).before(grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC)) //=> true
+grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()).before(grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC())) //=> true
 ```
 
 ## Time.compare
@@ -901,7 +897,7 @@ FYI: https://pkg.go.dev/time#Time.Day
 ### Examples
 
 ```cel
-grpc.federation.time.date(2000, 2, 1, 12, 30, 0, 0, grpc.federation.time.UTC).day() //=> 1
+grpc.federation.time.date(2000, 2, 1, 12, 30, 0, 0, grpc.federation.time.UTC()).day() //=> 1
 ```
 
 ## Time.equal
@@ -917,7 +913,7 @@ FYI: https://pkg.go.dev/time#Time.Equal
 ### Examples
 
 ```cel
-grpc.federation.time.date(2000, 2, 1, 12, 30, 0, 0, grpc.federation.time.UTC).equal(grpc.federation.time.date(2000, 2, 1, 20, 30, 0, 0, grpc.federation.time.fixedZone('Beijing Time', grpc.federation.time.toDuration(8 * grpc.federation.time.HOUR).seconds()))) //=> true
+grpc.federation.time.date(2000, 2, 1, 12, 30, 0, 0, grpc.federation.time.UTC()).equal(grpc.federation.time.date(2000, 2, 1, 20, 30, 0, 0, grpc.federation.time.fixedZone('Beijing Time', grpc.federation.time.toDuration(8 * grpc.federation.time.HOUR).seconds()))) //=> true
 ```
 
 ## Time.format
@@ -1039,7 +1035,7 @@ FYI: https://pkg.go.dev/time#Time.Round
 ### Examples
 
 ```cel
-grpc.federation.time.date(0, 0, 0, 12, 15, 30, 918273645, grpc.federation.time.UTC).round(grpc.federation.time.MILLISECOND).format("15:04:05.999999999") //=> 12:15:30.918
+grpc.federation.time.date(0, 0, 0, 12, 15, 30, 918273645, grpc.federation.time.UTC()).round(grpc.federation.time.MILLISECOND).format("15:04:05.999999999") //=> 12:15:30.918
 ```
 
 ## Time.second
@@ -1083,7 +1079,7 @@ FYI: https://pkg.go.dev/time#Time.Sub
 ### Examples
 
 ```cel
-grpc.federation.time.date(2000, 1, 1, 12, 0, 0, 0, grpc.federation.time.UTC).sub(grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC)) //=> 12h0m0s
+grpc.federation.time.date(2000, 1, 1, 12, 0, 0, 0, grpc.federation.time.UTC()).sub(grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC())) //=> 12h0m0s
 ```
 
 ## Time.truncate
