@@ -1,0 +1,10 @@
+{{- define "errorHandler" }}
+{{- if .Resolver.HasErrorHandler }}
+if err := s.errorHandler({{ .Ctx }}, {{ .Resolver.ServiceName }}_DependentMethod_{{ .Resolver.DependentMethodName }}, err); err != nil {
+	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
+	return nil, err
+}
+{{- else }}
+return nil, err
+{{- end }}
+{{- end }}

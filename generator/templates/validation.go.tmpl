@@ -1,0 +1,197 @@
+{{- define "messageValidation" }}
+{
+	err := func() error {
+		{{- if .Error.HasIf }}
+		valueMu.RLock()
+		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .Error.If }}", envOpts, evalValues, reflect.TypeOf(false))
+		valueMu.RUnlock()
+		if err != nil {
+			return err
+		}
+		if value.(bool) {
+			return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+		}
+		{{- else }}
+		success := true
+		var details []proto.Message
+		{{- range .Error.Details }}
+		{
+			valueMu.RLock()
+			value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .If }}", envOpts, evalValues, reflect.TypeOf(false))
+			valueMu.RUnlock()
+			if err != nil {
+				return err
+			}
+			if value.(bool) {
+				success = false
+				{{- template "detailMessages" . }}
+				{{- range .PreconditionFailures }}
+				{{- template "preconditionFailure" . }}
+				{{- end }}
+				{{- range .BadRequests }}
+				{{- template "badRequest" . }}
+				{{- end }}
+				{{- range .LocalizedMessages }}
+				{{- template "localizedMessage" . }}
+				{{- end }}
+			}
+		}
+		{{- end }}
+		if !success {
+			status := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+			statusWithDetails, err := status.WithDetails(details...)
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+				return status.Err()
+			}
+			return statusWithDetails.Err()
+		}
+		{{- end }}
+		return nil
+	}()
+	if err != nil {
+		if _, ok := grpcstatus.FromError(err); ok {
+			return nil, err
+		}
+		s.logger.ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+		return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
+	}
+	return nil, nil
+}
+{{- end }}
+
+{{- define "detailMessages" }}
+{{- $msgResolvers := .MessageResolvers }}
+{{- $msgResolversLen := len $msgResolvers }}
+{{- if gt $msgResolversLen 0 }}
+func(){
+	_, err := func() (any, error) {
+		{{- if eq $msgResolversLen 1 }}
+		{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $msgResolvers 0)) }}
+		{{- else }}
+		{{- if . }}
+		eg, ctx1 := errgroup.WithContext(ctx)
+		{{- end }}
+		{{- range $msgResolvers }}
+		grpcfed.GoWithRecover(eg, func() (any, error) {
+		{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+			return nil, nil
+		})
+		{{- end }}
+		{{- if $msgResolvers }}
+		if err := eg.Wait(); err != nil {
+			return nil, err
+		}
+		{{- end }}
+		{{- end }}
+		return nil, nil
+	}()
+	if err != nil {
+		s.logger.ErrorContext(ctx, "failed resolving messages", slog.String("error", err.Error()))
+		return
+	}
+	{{- range $i, $message := .Messages }}
+	func() {
+		msg, err := grpcfed.EvalCEL(ctx, s.env, "{{ $message.Name }}", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
+		if err != nil {
+			s.logger.ErrorContext(ctx, "failed evaluating validation error detail message", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+			return
+		}
+		details = append(details, msg.(proto.Message))
+	}()
+	{{- end }}
+}()
+{{- end }}
+{{- end }}
+
+{{- define "preconditionFailure" }}
+{
+	var violations []*errdetails.PreconditionFailure_Violation
+	{{- range $i, $violation := .Violations }}
+	{
+		func() {
+			valueMu.RLock()
+			typ, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			valueMu.RLock()
+			subject, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			valueMu.RLock()
+			description, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			violations = append(violations, &errdetails.PreconditionFailure_Violation{
+				Type: typ.(string),
+				Subject: subject.(string),
+				Description: description.(string),
+			})
+		}()
+	}
+	{{- end }}
+	details = append(details, &errdetails.PreconditionFailure{
+		Violations: violations,
+	})
+}
+{{- end }}
+
+{{- define "badRequest" }}
+{
+	var violations []*errdetails.BadRequest_FieldViolation
+	{{- range $i, $violation := .FieldViolations }}
+	{
+		func() {
+			valueMu.RLock()
+			field, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Field }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation field", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			valueMu.RLock()
+			description, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			valueMu.RUnlock()
+			if err != nil {
+				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
+				return
+			}
+			violations = append(violations, &errdetails.BadRequest_FieldViolation{
+				Field: field.(string),
+				Description: description.(string),
+			})
+		}()
+	}
+	{{- end }}
+	details = append(details, &errdetails.BadRequest{
+		FieldViolations: violations,
+	})
+}
+{{- end }}
+
+{{- define "localizedMessage" }}
+{
+	func() {
+		valueMu.RLock()
+		message, err := grpcfed.EvalCEL(ctx, s.env, "{{ .Message }}", envOpts, evalValues, reflect.TypeOf(""))
+		valueMu.RUnlock()
+		if err != nil {
+			s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage message", slog.String("error", err.Error()))
+			return
+		}
+		details = append(details, &errdetails.LocalizedMessage{
+			Locale: "{{ .Locale }}",
+			Message: message.(string),
+		})
+	}()
+}
+{{- end }}

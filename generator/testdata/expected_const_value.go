@@ -258,7 +258,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	// field binding section.
 	// (grpc.federation.field).alias = "by_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.by_field", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.by_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -267,7 +267,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "double_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.double_field", envOpts, evalValues, reflect.TypeOf(float64(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.double_field", envOpts, evalValues, reflect.TypeOf(float64(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -276,7 +276,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "doubles_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.doubles_field", envOpts, evalValues, reflect.TypeOf([]float64(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.doubles_field", envOpts, evalValues, reflect.TypeOf([]float64(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -285,7 +285,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "float_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.float_field", envOpts, evalValues, reflect.TypeOf(float32(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.float_field", envOpts, evalValues, reflect.TypeOf(float32(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -294,7 +294,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "floats_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.floats_field", envOpts, evalValues, reflect.TypeOf([]float32(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.floats_field", envOpts, evalValues, reflect.TypeOf([]float32(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -303,7 +303,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int32_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.int32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.int32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -312,7 +312,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int32s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.int32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.int32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -321,7 +321,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int64_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.int64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.int64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -330,7 +330,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "int64s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.int64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.int64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -339,7 +339,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint32_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.uint32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.uint32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -348,7 +348,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint32s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.uint32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.uint32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -357,7 +357,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint64_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.uint64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.uint64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -366,7 +366,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "uint64s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.uint64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.uint64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -375,7 +375,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint32_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sint32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sint32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -384,7 +384,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint32s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sint32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sint32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -393,7 +393,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint64_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -402,7 +402,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sint64s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sint64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sint64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -411,7 +411,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed32_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.fixed32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.fixed32_field", envOpts, evalValues, reflect.TypeOf(uint32(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -420,7 +420,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed32s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.fixed32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.fixed32s_field", envOpts, evalValues, reflect.TypeOf([]uint32(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -429,7 +429,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed64_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.fixed64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.fixed64_field", envOpts, evalValues, reflect.TypeOf(uint64(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -438,7 +438,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "fixed64s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.fixed64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.fixed64s_field", envOpts, evalValues, reflect.TypeOf([]uint64(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -447,7 +447,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed32_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sfixed32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sfixed32_field", envOpts, evalValues, reflect.TypeOf(int32(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -456,7 +456,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed32s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sfixed32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sfixed32s_field", envOpts, evalValues, reflect.TypeOf([]int32(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -465,7 +465,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed64_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sfixed64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sfixed64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -474,7 +474,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "sfixed64s_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.sfixed64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.sfixed64s_field", envOpts, evalValues, reflect.TypeOf([]int64(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -483,7 +483,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "bool_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.bool_field", envOpts, evalValues, reflect.TypeOf(false))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.bool_field", envOpts, evalValues, reflect.TypeOf(false))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -492,7 +492,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "bools_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.bools_field", envOpts, evalValues, reflect.TypeOf([]bool(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.bools_field", envOpts, evalValues, reflect.TypeOf([]bool(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -501,7 +501,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "string_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.string_field", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.string_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -510,7 +510,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "strings_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.strings_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.strings_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -519,7 +519,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "byte_string_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.byte_string_field", envOpts, evalValues, reflect.TypeOf([]byte(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.byte_string_field", envOpts, evalValues, reflect.TypeOf([]byte(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -528,7 +528,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "byte_strings_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.byte_strings_field", envOpts, evalValues, reflect.TypeOf([][]byte(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.byte_strings_field", envOpts, evalValues, reflect.TypeOf([][]byte(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -537,7 +537,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "enum_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.enum_field", envOpts, evalValues, reflect.TypeOf(ContentType(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.enum_field", envOpts, evalValues, reflect.TypeOf(ContentType(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -546,7 +546,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "enums_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.enums_field", envOpts, evalValues, reflect.TypeOf([]ContentType(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.enums_field", envOpts, evalValues, reflect.TypeOf([]ContentType(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -555,7 +555,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "env_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.env_field", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.env_field", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -564,7 +564,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "envs_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.envs_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.envs_field", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -573,7 +573,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "message_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.message_field", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.message_field", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -582,7 +582,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 	}
 	// (grpc.federation.field).alias = "messages_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.messages_field", envOpts, evalValues, reflect.TypeOf([]*Content(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.messages_field", envOpts, evalValues, reflect.TypeOf([]*Content(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -710,10 +710,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				// { field: "by_field", by: "$.id" }
 				{
-					value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+					value, err := grpcfed.EvalCEL(ctx1, s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.ByField = value.(string)
@@ -723,7 +723,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			})
 			if err != nil {
 				if err := s.errorHandler(ctx1, FederationService_DependentMethod_Content_ContentService_GetContent, err); err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
+					grpcfed.RecordErrorToSpan(ctx1, err)
 					return nil, err
 				}
 			}
@@ -747,7 +747,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				valueMu.RLock()
 				valueMu.RUnlock()
 				valueMu.RLock()
-				value, err := grpcfed.EvalCEL(s.env, "res.content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
+				value, err := grpcfed.EvalCEL(ctx1, s.env, "res.content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
 				valueMu.RUnlock()
 				return value, err
 			})
@@ -858,10 +858,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}
 				// { name: "by_field", by: "$.id" }
 				{
-					value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+					value, err := grpcfed.EvalCEL(ctx1, s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.ByField = value.(string)
@@ -898,7 +898,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "content"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "content", envOpts, evalValues, reflect.TypeOf((*content.Content)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -907,7 +907,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "content2"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "content2", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "content2", envOpts, evalValues, reflect.TypeOf((*Content)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -916,7 +916,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field", envOpts, evalValues, reflect.TypeOf(int64(0)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err

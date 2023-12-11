@@ -239,7 +239,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "sel.user"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "sel.user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "sel.user", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -280,7 +280,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			args := &user.GetUserRequest{}
 			// { field: "id", by: "$.user_id" }
 			{
-				value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+				value, err := grpcfed.EvalCEL(ctx, s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					valueMu.RUnlock()
 					grpcfed.RecordErrorToSpan(ctx, err)
@@ -304,7 +304,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	// field binding section.
 	// (grpc.federation.field).by = "$.user_id"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -337,12 +337,12 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 
 	// field binding section.
 
-	oneof_UserA, err := grpcfed.EvalCEL(s.env, "false", envOpts, evalValues, reflect.TypeOf(true))
+	oneof_UserA, err := grpcfed.EvalCEL(ctx, s.env, "false", envOpts, evalValues, reflect.TypeOf(true))
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	oneof_UserB, err := grpcfed.EvalCEL(s.env, "true", envOpts, evalValues, reflect.TypeOf(true))
+	oneof_UserB, err := grpcfed.EvalCEL(ctx, s.env, "true", envOpts, evalValues, reflect.TypeOf(true))
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -380,7 +380,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			evalValues["ua"] = valueUa
 			valueMu.Unlock()
 		}
-		value, err := grpcfed.EvalCEL(s.env, "ua", envOpts, evalValues, nil)
+		value, err := grpcfed.EvalCEL(ctx, s.env, "ua", envOpts, evalValues, nil)
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -418,7 +418,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			evalValues["ub"] = valueUb
 			valueMu.Unlock()
 		}
-		value, err := grpcfed.EvalCEL(s.env, "ub", envOpts, evalValues, nil)
+		value, err := grpcfed.EvalCEL(ctx, s.env, "ub", envOpts, evalValues, nil)
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -444,7 +444,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				}
 				// { name: "user_id", by: "$.value" }
 				{
-					value, err := grpcfed.EvalCEL(s.env, "$.value", envOpts, evalValues, reflect.TypeOf(""))
+					value, err := grpcfed.EvalCEL(ctx, s.env, "$.value", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
 						grpcfed.RecordErrorToSpan(ctx, err)
@@ -465,7 +465,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			evalValues["uc"] = valueUc
 			valueMu.Unlock()
 		}
-		value, err := grpcfed.EvalCEL(s.env, "uc", envOpts, evalValues, nil)
+		value, err := grpcfed.EvalCEL(ctx, s.env, "uc", envOpts, evalValues, nil)
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err

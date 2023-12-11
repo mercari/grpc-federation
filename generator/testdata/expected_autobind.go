@@ -213,7 +213,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			}
 			// { name: "id", by: "$.id" }
 			{
-				value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+				value, err := grpcfed.EvalCEL(ctx, s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					valueMu.RUnlock()
 					grpcfed.RecordErrorToSpan(ctx, err)
@@ -291,10 +291,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				args := &post.GetPostRequest{}
 				// { field: "id", by: "$.id" }
 				{
-					value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+					value, err := grpcfed.EvalCEL(ctx1, s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.Id = value.(string)
@@ -304,7 +304,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			})
 			if err != nil {
 				if err := s.errorHandler(ctx1, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
+					grpcfed.RecordErrorToSpan(ctx1, err)
 					return nil, err
 				}
 			}
@@ -329,7 +329,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				valueMu.RLock()
 				valueMu.RUnlock()
 				valueMu.RLock()
-				value, err := grpcfed.EvalCEL(s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
+				value, err := grpcfed.EvalCEL(ctx1, s.env, "res.post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
 				valueMu.RUnlock()
 				return value, err
 			})
@@ -420,7 +420,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	// field binding section.
 	// (grpc.federation.field).by = "$.user_id"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err

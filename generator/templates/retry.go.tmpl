@@ -1,0 +1,18 @@
+{{- define "retry" }}
+{{- if .Retry.Constant }}
+var b backoff.BackOff = backoff.NewConstantBackOff({{ .Retry.Constant.Interval.Nanoseconds }} /* {{ .Retry.Constant.Interval }} */)
+{{- else }}
+eb := backoff.NewExponentialBackOff()
+eb.InitialInterval = {{ .Retry.Exponential.InitialInterval.Nanoseconds }} /* {{ .Retry.Exponential.InitialInterval }} */
+eb.RandomizationFactor = {{ .Retry.Exponential.RandomizationFactor }}
+eb.Multiplier = {{ .Retry.Exponential.Multiplier }}
+eb.MaxInterval = {{ .Retry.Exponential.MaxInterval.Nanoseconds }} /* {{ .Retry.Exponential.MaxInterval }} */
+eb.MaxElapsedTime = {{ .Retry.Exponential.MaxElapsedTime.Nanoseconds }} /* {{ .Retry.Exponential.MaxElapsedTime }} */
+
+var b backoff.BackOff = eb
+{{- end }}
+{{- if .Retry.MaxRetries }}
+b = backoff.WithMaxRetries(b, {{ .Retry.MaxRetries }})
+{{- end }}
+b = backoff.WithContext(b, {{ .Ctx }})
+{{- end }}
