@@ -554,7 +554,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							value, err := grpcfed.EvalCEL(s.env, "a.name", envOpts, evalValues, reflect.TypeOf(""))
 							if err != nil {
 								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx, err)
+								grpcfed.RecordErrorToSpan(ctx3, err)
 								return nil, err
 							}
 							args.A = value.(string)
@@ -626,7 +626,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							value, err := grpcfed.EvalCEL(s.env, "b.name", envOpts, evalValues, reflect.TypeOf(""))
 							if err != nil {
 								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx, err)
+								grpcfed.RecordErrorToSpan(ctx3, err)
 								return nil, err
 							}
 							args.B = value.(string)
@@ -647,7 +647,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				return nil, nil
 			})
 			if err := eg.Wait(); err != nil {
-				grpcfed.RecordErrorToSpan(ctx, err)
+				grpcfed.RecordErrorToSpan(ctx3, err)
 				return nil, err
 			}
 
@@ -675,7 +675,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						value, err := grpcfed.EvalCEL(s.env, "c.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx, err)
+							grpcfed.RecordErrorToSpan(ctx2, err)
 							return nil, err
 						}
 						args.C = value.(string)
@@ -685,7 +685,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						value, err := grpcfed.EvalCEL(s.env, "d.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx, err)
+							grpcfed.RecordErrorToSpan(ctx2, err)
 							return nil, err
 						}
 						args.D = value.(string)
@@ -759,7 +759,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							value, err := grpcfed.EvalCEL(s.env, "a.name", envOpts, evalValues, reflect.TypeOf(""))
 							if err != nil {
 								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx, err)
+								grpcfed.RecordErrorToSpan(ctx3, err)
 								return nil, err
 							}
 							args.A = value.(string)
@@ -831,7 +831,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							value, err := grpcfed.EvalCEL(s.env, "b.name", envOpts, evalValues, reflect.TypeOf(""))
 							if err != nil {
 								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx, err)
+								grpcfed.RecordErrorToSpan(ctx3, err)
 								return nil, err
 							}
 							args.B = value.(string)
@@ -852,7 +852,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				return nil, nil
 			})
 			if err := eg.Wait(); err != nil {
-				grpcfed.RecordErrorToSpan(ctx, err)
+				grpcfed.RecordErrorToSpan(ctx3, err)
 				return nil, err
 			}
 
@@ -880,7 +880,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						value, err := grpcfed.EvalCEL(s.env, "c.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx, err)
+							grpcfed.RecordErrorToSpan(ctx2, err)
 							return nil, err
 						}
 						args.C = value.(string)
@@ -890,7 +890,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						value, err := grpcfed.EvalCEL(s.env, "d.name", envOpts, evalValues, reflect.TypeOf(""))
 						if err != nil {
 							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx, err)
+							grpcfed.RecordErrorToSpan(ctx2, err)
 							return nil, err
 						}
 						args.D = value.(string)
@@ -943,7 +943,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			return nil, nil
 		})
 		if err := eg.Wait(); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
+			grpcfed.RecordErrorToSpan(ctx2, err)
 			return nil, err
 		}
 
@@ -972,7 +972,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					value, err := grpcfed.EvalCEL(s.env, "e.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.E = value.(string)
@@ -982,7 +982,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					value, err := grpcfed.EvalCEL(s.env, "f.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.F = value.(string)
@@ -992,7 +992,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					value, err := grpcfed.EvalCEL(s.env, "g.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.G = value.(string)
@@ -1065,7 +1065,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					value, err := grpcfed.EvalCEL(s.env, "i.name", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.I = value.(string)

@@ -29,7 +29,7 @@ func NewCodeGenerator() *CodeGenerator {
 }
 
 func (g *CodeGenerator) Generate(file *resolver.File) ([]byte, error) {
-	tmpl, err := loadTemplate("templates/server.go.tmpl")
+	tmpl, err := loadTemplate()
 	if err != nil {
 		return nil, err
 	}
@@ -2499,20 +2499,16 @@ func (s *Service) CastFields() []*CastField {
 	return ret
 }
 
-func loadTemplate(path string) (*template.Template, error) {
-	tmplContent, err := templates.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read template: %w", err)
-	}
-	tmpl, err := template.New("").Funcs(
+func loadTemplate() (*template.Template, error) {
+	tmpl, err := template.New("server.go.tmpl").Funcs(
 		map[string]any{
 			"add":       Add,
 			"map":       CreateMap,
 			"parentCtx": ParentCtx,
 		},
-	).Parse(string(tmplContent))
+	).ParseFS(tmpls, "templates/*.tmpl")
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse template %s: %w", path, err)
+		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
 	return tmpl, nil
 }
@@ -2529,8 +2525,8 @@ func generateGoContent(tmpl *template.Template, params any) ([]byte, error) {
 	return buf, nil
 }
 
-//go:embed templates/*.tmpl
-var templates embed.FS
+//go:embed templates
+var tmpls embed.FS
 
 func toUserDefinedVariable(name string) string {
 	return util.ToPrivateGoVariable(fmt.Sprintf("value_%s", name))

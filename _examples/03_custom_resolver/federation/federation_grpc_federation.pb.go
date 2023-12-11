@@ -501,7 +501,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.Id = value.(string)
@@ -511,7 +511,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			})
 			if err != nil {
 				if err := s.errorHandler(ctx1, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
+					grpcfed.RecordErrorToSpan(ctx1, err)
 					return nil, err
 				}
 			}
@@ -572,7 +572,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					value, err := grpcfed.EvalCEL(s.env, "post", envOpts, evalValues, reflect.TypeOf((*post.Post)(nil)))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					inlineValue := value.(*post.Post)

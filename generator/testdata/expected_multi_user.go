@@ -291,7 +291,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					value, err := grpcfed.EvalCEL(s.env, "uid.value", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.UserId = value.(string)
@@ -364,7 +364,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					value, err := grpcfed.EvalCEL(s.env, "uid.value", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.UserId = value.(string)
@@ -518,7 +518,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 					value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 					if err != nil {
 						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx, err)
+						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
 					}
 					args.Id = value.(string)
@@ -528,7 +528,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			})
 			if err != nil {
 				if err := s.errorHandler(ctx1, FederationService_DependentMethod_Org_User_UserService_GetUser, err); err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
+					grpcfed.RecordErrorToSpan(ctx1, err)
 					return nil, err
 				}
 			}
