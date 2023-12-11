@@ -341,6 +341,7 @@ func TestSimpleAggregation(t *testing.T) {
 					).Build(t),
 				).
 				AddFieldWithRule("const", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
+				AddFieldWithRule("uuid", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewByValue("uuid.string()", resolver.StringType)).Build(t)).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
@@ -359,6 +360,13 @@ func TestSimpleAggregation(t *testing.T) {
 								).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("uuid").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("grpc.federation.uuid.newRandom()", resolver.NewCELStandardLibraryMessageType("uuid", "UUID")).Build(t)).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
@@ -366,6 +374,7 @@ func TestSimpleAggregation(t *testing.T) {
 								Build(t),
 						).
 						AddResolver(testutil.NewMessageResolverGroupByName("post")).
+						AddResolver(testutil.NewMessageResolverGroupByName("uuid")).
 						Build(t),
 				).
 				Build(t),

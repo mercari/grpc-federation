@@ -30,6 +30,10 @@ func TestProtoFormat(t *testing.T) {
         args { name: "id", by: "$.id" }
       }
     }
+    def {
+      name: "uuid"
+      by: "grpc.federation.uuid.newRandom()"
+    }
   }`,
 				"Post": `
   option (grpc.federation.message) = {

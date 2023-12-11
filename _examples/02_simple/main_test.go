@@ -241,7 +241,9 @@ func TestFederation(t *testing.T) {
 				},
 			},
 		},
-		Str: "hello",
+		Str:  "hello",
+		Uuid: "daa4728d-159f-4fc2-82cf-cae915d54e08",
+		Loc:  "Asia/Tokyo",
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},

@@ -18,7 +18,7 @@ type Location struct {
 }
 
 func (loc *Location) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	return loc.Location, nil
+	return loc, nil
 }
 
 func (loc *Location) ConvertToType(typeValue ref.Type) ref.Val {
@@ -37,7 +37,7 @@ func (loc *Location) Type() ref.Type {
 }
 
 func (loc *Location) Value() any {
-	return loc.Location
+	return loc
 }
 
 const TimePackageName = "time"
@@ -185,15 +185,21 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 			types.IntType,
 			types.Int(time.Hour),
 		),
-		cel.Constant(
+		cel.Function(
 			createTimeName("LOCAL"),
-			LocationType,
-			&Location{Location: time.Local},
+			cel.Overload(createTimeID("local_location"), []*cel.Type{}, LocationType,
+				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+					return &Location{Location: time.Local}
+				}),
+			),
 		),
-		cel.Constant(
+		cel.Function(
 			createTimeName("UTC"),
-			LocationType,
-			&Location{Location: time.UTC},
+			cel.Overload(createTimeID("utc_location"), []*cel.Type{}, LocationType,
+				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+					return &Location{Location: time.UTC}
+				}),
+			),
 		),
 
 		// Duration functions

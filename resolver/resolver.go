@@ -2862,6 +2862,16 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 		typ.Repeated = true
 		return typ, nil
 	case celtypes.StructKind:
+		if grpcfedcel.IsStandardLibraryType(typ.TypeName()) {
+			pkgAndName := strings.TrimPrefix(strings.TrimPrefix(typ.TypeName(), "."), "grpc.federation.")
+			names := strings.Split(pkgAndName, ".")
+			if len(names) <= 1 {
+				return nil, fmt.Errorf(`unexpected package name %q`, pkgAndName)
+			}
+			pkgName := names[0]
+			msgName := names[1]
+			return NewCELStandardLibraryMessageType(pkgName, msgName), nil
+		}
 		return r.resolveType(
 			ctx,
 			typ.TypeName(),

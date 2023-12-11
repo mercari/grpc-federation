@@ -21,7 +21,7 @@ type Source struct {
 }
 
 func (s *Source) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	return s.Source, nil
+	return s, nil
 }
 
 func (s *Source) ConvertToType(typeValue ref.Type) ref.Val {
@@ -40,7 +40,7 @@ func (s *Source) Type() ref.Type {
 }
 
 func (s *Source) Value() any {
-	return s.Source
+	return s
 }
 
 type Rand struct {
@@ -48,7 +48,7 @@ type Rand struct {
 }
 
 func (r *Rand) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	return r.Rand, nil
+	return r, nil
 }
 
 func (r *Rand) ConvertToType(typeValue ref.Type) ref.Val {
@@ -67,7 +67,7 @@ func (r *Rand) Type() ref.Type {
 }
 
 func (r *Rand) Value() any {
-	return r.Rand
+	return r
 }
 
 type RandLibrary struct {

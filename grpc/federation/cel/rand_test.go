@@ -23,7 +23,7 @@ func TestRand(t *testing.T) {
 		// Source functions
 		{
 			name: "newSource",
-			expr: "grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())",
+			expr: "grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())",
 			cmp: func(got any) error {
 				gotV, ok := got.(*cellib.Source)
 				if !ok {
@@ -38,7 +38,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "int63",
-			expr: "grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()).int63()",
+			expr: "grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()).int63()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -53,7 +53,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "seed",
-			expr: "grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()).seed(10)",
+			expr: "grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()).seed(10)",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Bool)
 				if !ok {
@@ -69,7 +69,7 @@ func TestRand(t *testing.T) {
 		// Rand functions
 		{
 			name: "new",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()))",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()))",
 			cmp: func(got any) error {
 				gotV, ok := got.(*cellib.Rand)
 				if !ok {
@@ -84,7 +84,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "expFloat64",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).expFloat64()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).expFloat64()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Double)
 				if !ok {
@@ -99,7 +99,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "float32",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).float32()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).float32()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Double)
 				if !ok {
@@ -114,7 +114,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "float64",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).float64()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).float64()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Double)
 				if !ok {
@@ -129,7 +129,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "int",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).int()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).int()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -144,7 +144,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "int31",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).int31()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).int31()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -159,7 +159,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "int31n",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).int31n(10)",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).int31n(10)",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -174,7 +174,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "rand_int63",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).int63()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).int63()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -189,7 +189,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "int63n",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).int63n(10)",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).int63n(10)",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -204,7 +204,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "intn",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).intn(10)",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).intn(10)",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -219,7 +219,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "normFloat64",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).normFloat64()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).normFloat64()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Double)
 				if !ok {
@@ -234,7 +234,7 @@ func TestRand(t *testing.T) {
 		},
 		{
 			name: "uint32",
-			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())).uint32()",
+			expr: "grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())).uint32()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Uint)
 				if !ok {

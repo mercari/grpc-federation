@@ -1,6 +1,10 @@
 package cel
 
-import "github.com/google/cel-go/cel"
+import (
+	"strings"
+
+	"github.com/google/cel-go/cel"
+)
 
 type Library struct {
 	subLibs []cel.SingletonLibrary
@@ -15,6 +19,10 @@ func NewLibrary() *Library {
 			new(UUIDLibrary),
 		},
 	}
+}
+
+func IsStandardLibraryType(typeName string) bool {
+	return strings.HasPrefix(strings.TrimPrefix(typeName, "."), "grpc.federation.")
 }
 
 func (lib *Library) LibraryName() string {

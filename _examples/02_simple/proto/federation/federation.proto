@@ -32,9 +32,16 @@ message GetPostResponse {
         args { name: "id", by: "$.id" }
       }
     }
+    def { name: "date" by: "grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())" }
+    def { name: "rand_source" by: "grpc.federation.rand.newSource(date.unix())" }
+    def { name: "fixed_rand" by: "grpc.federation.rand.new(rand_source)" }
+    def { name: "uuid" by: ".grpc.federation.uuid.newRandomFromRand(fixed_rand)" }
+    def { name: "loc" by: "grpc.federation.time.loadLocation('Asia/Tokyo')"}
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).string = "hello"];
+  string uuid = 3 [(grpc.federation.field).by = "uuid.string()"];
+  string loc = 4 [(grpc.federation.field).by = "loc.string()"];
 }
 
 message Post {

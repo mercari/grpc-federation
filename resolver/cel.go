@@ -121,3 +121,22 @@ func (r *CELRegistry) RegisterFiles(files ...*descriptorpb.FileDescriptorProto) 
 	}
 	return nil
 }
+
+func NewCELStandardLibraryMessageType(pkgName, msgName string) *Type {
+	return &Type{
+		Type: types.Message,
+		Ref: &Message{
+			File: &File{
+				Package: &Package{
+					Name: "grpc.federation." + pkgName,
+				},
+				GoPackage: &GoPackage{
+					Name:       "grpcfedcel",
+					ImportPath: "github.com/mercari/grpc-federation/grpc/federation/cel",
+					AliasName:  "grpcfedcel",
+				},
+			},
+			Name: msgName,
+		},
+	}
+}
