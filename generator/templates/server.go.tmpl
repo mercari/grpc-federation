@@ -358,7 +358,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- $defaultOneofField := .OneofDefaultField }}
 	{{- if .HasFieldOneofRule }}
 	{{- range $oneofFields }}
-	oneof_{{ .Name }}, err := grpcfed.EvalCEL(s.env, "{{ .Expr }}", envOpts, evalValues, reflect.TypeOf(true))
+	oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, s.env, "{{ .Expr }}", envOpts, evalValues, reflect.TypeOf(true))
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -390,7 +390,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- end }}
 		{{- end }}
 		{{- if .By }}
-		value, err := grpcfed.EvalCEL(s.env, "{{ .By }}", envOpts, evalValues, {{ .OutType }})
+		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .By }}", envOpts, evalValues, {{ .OutType }})
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -422,7 +422,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- end }}
 		{{- end }}
 		{{- if $defaultOneofField.By }}
-		value, err := grpcfed.EvalCEL(s.env, "{{ $defaultOneofField.By }}", envOpts, evalValues, {{ $defaultOneofField.OutType }})
+		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ $defaultOneofField.By }}", envOpts, evalValues, {{ $defaultOneofField.OutType }})
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -434,7 +434,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- else if .CEL }}
 	{{ .ProtoComment }}
 	{
-		value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err

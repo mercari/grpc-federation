@@ -1,6 +1,7 @@
 package federation
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sort"
@@ -173,7 +174,7 @@ func NewCELTypeHelper(structFieldMap map[string]map[string]*celtypes.FieldType) 
 	}
 }
 
-func EvalCEL(env *cel.Env, expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
+func EvalCEL(ctx context.Context, env *cel.Env, expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
 	env, err := env.Extend(vars...)
 	if err != nil {
 		return nil, err
@@ -187,7 +188,7 @@ func EvalCEL(env *cel.Env, expr string, vars []cel.EnvOption, args map[string]an
 	if err != nil {
 		return nil, err
 	}
-	out, _, err := program.Eval(args)
+	out, _, err := program.ContextEval(ctx, args)
 	if err != nil {
 		return nil, err
 	}

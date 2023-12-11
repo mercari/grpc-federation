@@ -1,7 +1,7 @@
 {{- define "callResolver" }}
 {{- if .Resolver.UseIf }}
 valueMu.RLock()
-ifValue, err := grpcfed.EvalCEL(s.env, "{{ .Resolver.If }}", envOpts, evalValues, reflect.TypeOf(false))
+ifValue, err := grpcfed.EvalCEL({{ .Ctx }}, s.env, "{{ .Resolver.If }}", envOpts, evalValues, reflect.TypeOf(false))
 valueMu.RUnlock()
 if err != nil {
 	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
@@ -30,7 +30,7 @@ args := &{{ .Resolver.RequestType }}{
 {{- if .CEL }}
 {{ .ProtoComment }}
 {
-	value, err := grpcfed.EvalCEL(s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
+	value, err := grpcfed.EvalCEL({{ $ctx }}, s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
 	if err != nil {
 		valueMu.RUnlock()
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
@@ -67,7 +67,7 @@ return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.Re
 {{- else if .Resolver.IsBy }}
 {{- $by := .Resolver.By }}
 valueMu.RLock()
-value, err := grpcfed.EvalCEL(s.env, "{{ $by.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .Resolver.ZeroValue }}))
+value, err := grpcfed.EvalCEL({{ .Ctx }}, s.env, "{{ $by.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .Resolver.ZeroValue }}))
 valueMu.RUnlock()
 return value, err
 {{- else if .Resolver.IsMap }}
@@ -89,7 +89,7 @@ for _, iter := range {{ $mapResolver.IteratorSource }} {
 
 	{{- if $mapResolver.IsBy }}
 	{{- $by := $mapResolver.MapExpr.Expr.By }}
-	resultValue, err := grpcfed.EvalCEL(env, "{{ $by.Expr }}", envOpts, iterValues, reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}))
+	resultValue, err := grpcfed.EvalCEL({{ .Ctx }}, env, "{{ $by.Expr }}", envOpts, iterValues, reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}))
 	if err != nil {
 		grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
 		return nil, err
@@ -109,7 +109,7 @@ for _, iter := range {{ $mapResolver.IteratorSource }} {
 	{{- if .CEL }}
 	{{ .ProtoComment }}
 	{
-		value, err := grpcfed.EvalCEL(env, "{{ .CEL.Expr }}", envOpts, iterValues, reflect.TypeOf({{ .ZeroValue }}))
+		value, err := grpcfed.EvalCEL({{ $ctx }}, env, "{{ .CEL.Expr }}", envOpts, iterValues, reflect.TypeOf({{ .ZeroValue }}))
 		if err != nil {
 			grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 			return nil, err

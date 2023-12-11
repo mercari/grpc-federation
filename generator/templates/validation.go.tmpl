@@ -3,7 +3,7 @@
 	err := func() error {
 		{{- if .Error.HasIf }}
 		valueMu.RLock()
-		value, err := grpcfed.EvalCEL(s.env, "{{ .Error.If }}", envOpts, evalValues, reflect.TypeOf(false))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .Error.If }}", envOpts, evalValues, reflect.TypeOf(false))
 		valueMu.RUnlock()
 		if err != nil {
 			return err
@@ -17,7 +17,7 @@
 		{{- range .Error.Details }}
 		{
 			valueMu.RLock()
-			value, err := grpcfed.EvalCEL(s.env, "{{ .If }}", envOpts, evalValues, reflect.TypeOf(false))
+			value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .If }}", envOpts, evalValues, reflect.TypeOf(false))
 			valueMu.RUnlock()
 			if err != nil {
 				return err
@@ -92,7 +92,7 @@ func(){
 	}
 	{{- range $i, $message := .Messages }}
 	func() {
-		msg, err := grpcfed.EvalCEL(s.env, "{{ $message.Name }}", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
+		msg, err := grpcfed.EvalCEL(ctx, s.env, "{{ $message.Name }}", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
 		if err != nil {
 			s.logger.ErrorContext(ctx, "failed evaluating validation error detail message", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 			return
@@ -111,21 +111,21 @@ func(){
 	{
 		func() {
 			valueMu.RLock()
-			typ, err := grpcfed.EvalCEL(s.env, "{{ $violation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
+			typ, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Type }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			subject, err := grpcfed.EvalCEL(s.env, "{{ $violation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
+			subject, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Subject }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			description, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
@@ -152,14 +152,14 @@ func(){
 	{
 		func() {
 			valueMu.RLock()
-			field, err := grpcfed.EvalCEL(s.env, "{{ $violation.Field }}", envOpts, evalValues, reflect.TypeOf(""))
+			field, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Field }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation field", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
 				return
 			}
 			valueMu.RLock()
-			description, err := grpcfed.EvalCEL(s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
+			description, err := grpcfed.EvalCEL(ctx, s.env, "{{ $violation.Description }}", envOpts, evalValues, reflect.TypeOf(""))
 			valueMu.RUnlock()
 			if err != nil {
 				s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation description", slog.Int("index", {{ $i }}), slog.String("error", err.Error()))
@@ -182,7 +182,7 @@ func(){
 {
 	func() {
 		valueMu.RLock()
-		message, err := grpcfed.EvalCEL(s.env, "{{ .Message }}", envOpts, evalValues, reflect.TypeOf(""))
+		message, err := grpcfed.EvalCEL(ctx, s.env, "{{ .Message }}", envOpts, evalValues, reflect.TypeOf(""))
 		valueMu.RUnlock()
 		if err != nil {
 			s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage message", slog.String("error", err.Error()))

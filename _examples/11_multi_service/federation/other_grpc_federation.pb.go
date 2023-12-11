@@ -288,7 +288,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 	ret.Content = "content" // (grpc.federation.field).string = "content"
 	// (grpc.federation.field).by = "u"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "u", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "u", envOpts, evalValues, reflect.TypeOf((*User)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -315,7 +315,7 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 	// field binding section.
 	// (grpc.federation.field).by = "$.id"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.id", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -324,7 +324,7 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 	}
 	// (grpc.federation.field).by = "$.name"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.name", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.name", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err

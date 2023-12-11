@@ -210,7 +210,7 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 			{
 				err := func() error {
 					valueMu.RLock()
-					value, err := grpcfed.EvalCEL(s.env, "$.arg == 'wrong'", envOpts, evalValues, reflect.TypeOf(false))
+					value, err := grpcfed.EvalCEL(ctx, s.env, "$.arg == 'wrong'", envOpts, evalValues, reflect.TypeOf(false))
 					valueMu.RUnlock()
 					if err != nil {
 						return err
@@ -261,7 +261,7 @@ func (s *FederationService) resolve_Org_Federation_CustomMessage(ctx context.Con
 	// field binding section.
 	// (grpc.federation.field).by = "$.message"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "$.message", envOpts, evalValues, reflect.TypeOf(""))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "$.message", envOpts, evalValues, reflect.TypeOf(""))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -349,7 +349,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				{
 					err := func() error {
 						valueMu.RLock()
-						value, err := grpcfed.EvalCEL(s.env, "post.id != 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
+						value, err := grpcfed.EvalCEL(ctx, s.env, "post.id != 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
 						valueMu.RUnlock()
 						if err != nil {
 							return err
@@ -424,7 +424,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				{
 					err := func() error {
 						valueMu.RLock()
-						value, err := grpcfed.EvalCEL(s.env, "post.id != 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
+						value, err := grpcfed.EvalCEL(ctx, s.env, "post.id != 'some-id'", envOpts, evalValues, reflect.TypeOf(false))
 						valueMu.RUnlock()
 						if err != nil {
 							return err
@@ -511,7 +511,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						var details []proto.Message
 						{
 							valueMu.RLock()
-							value, err := grpcfed.EvalCEL(s.env, "$.id != 'correct-id'", envOpts, evalValues, reflect.TypeOf(false))
+							value, err := grpcfed.EvalCEL(ctx, s.env, "$.id != 'correct-id'", envOpts, evalValues, reflect.TypeOf(false))
 							valueMu.RUnlock()
 							if err != nil {
 								return err
@@ -599,7 +599,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										return
 									}
 									func() {
-										msg, err := grpcfed.EvalCEL(s.env, "_def4_err_detail0_msg0", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
+										msg, err := grpcfed.EvalCEL(ctx, s.env, "_def4_err_detail0_msg0", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
 										if err != nil {
 											s.logger.ErrorContext(ctx, "failed evaluating validation error detail message", slog.Int("index", 0), slog.String("error", err.Error()))
 											return
@@ -607,7 +607,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										details = append(details, msg.(proto.Message))
 									}()
 									func() {
-										msg, err := grpcfed.EvalCEL(s.env, "_def4_err_detail0_msg1", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
+										msg, err := grpcfed.EvalCEL(ctx, s.env, "_def4_err_detail0_msg1", envOpts, evalValues, reflect.TypeOf((proto.Message)(nil)))
 										if err != nil {
 											s.logger.ErrorContext(ctx, "failed evaluating validation error detail message", slog.Int("index", 1), slog.String("error", err.Error()))
 											return
@@ -620,21 +620,21 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									{
 										func() {
 											valueMu.RLock()
-											typ, err := grpcfed.EvalCEL(s.env, "'type1'", envOpts, evalValues, reflect.TypeOf(""))
+											typ, err := grpcfed.EvalCEL(ctx, s.env, "'type1'", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation type", slog.Int("index", 0), slog.String("error", err.Error()))
 												return
 											}
 											valueMu.RLock()
-											subject, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
+											subject, err := grpcfed.EvalCEL(ctx, s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation subject", slog.Int("index", 0), slog.String("error", err.Error()))
 												return
 											}
 											valueMu.RLock()
-											description, err := grpcfed.EvalCEL(s.env, "'description1'", envOpts, evalValues, reflect.TypeOf(""))
+											description, err := grpcfed.EvalCEL(ctx, s.env, "'description1'", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating PreconditionFailure violation description", slog.Int("index", 0), slog.String("error", err.Error()))
@@ -656,14 +656,14 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									{
 										func() {
 											valueMu.RLock()
-											field, err := grpcfed.EvalCEL(s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
+											field, err := grpcfed.EvalCEL(ctx, s.env, "post.id", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation field", slog.Int("index", 0), slog.String("error", err.Error()))
 												return
 											}
 											valueMu.RLock()
-											description, err := grpcfed.EvalCEL(s.env, "'description2'", envOpts, evalValues, reflect.TypeOf(""))
+											description, err := grpcfed.EvalCEL(ctx, s.env, "'description2'", envOpts, evalValues, reflect.TypeOf(""))
 											valueMu.RUnlock()
 											if err != nil {
 												s.logger.ErrorContext(ctx, "failed evaluating BadRequest field violation description", slog.Int("index", 0), slog.String("error", err.Error()))
@@ -682,7 +682,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 								{
 									func() {
 										valueMu.RLock()
-										message, err := grpcfed.EvalCEL(s.env, "post.content", envOpts, evalValues, reflect.TypeOf(""))
+										message, err := grpcfed.EvalCEL(ctx, s.env, "post.content", envOpts, evalValues, reflect.TypeOf(""))
 										valueMu.RUnlock()
 										if err != nil {
 											s.logger.ErrorContext(ctx, "failed evaluating LocalizedMessage message", slog.String("error", err.Error()))
@@ -765,7 +765,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	// field binding section.
 	// (grpc.federation.field).by = "post"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "post", envOpts, evalValues, reflect.TypeOf((*Post)(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "post", envOpts, evalValues, reflect.TypeOf((*Post)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err

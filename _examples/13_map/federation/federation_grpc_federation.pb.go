@@ -228,7 +228,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 			}
 			// { name: "post_ids", by: "$.ids" }
 			{
-				value, err := grpcfed.EvalCEL(s.env, "$.ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+				value, err := grpcfed.EvalCEL(ctx, s.env, "$.ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 				if err != nil {
 					valueMu.RUnlock()
 					grpcfed.RecordErrorToSpan(ctx, err)
@@ -259,7 +259,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 	// field binding section.
 	// (grpc.federation.field).by = "posts"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "posts", envOpts, evalValues, reflect.TypeOf((*Posts)(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "posts", envOpts, evalValues, reflect.TypeOf((*Posts)(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -316,7 +316,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				args := &post.GetPostsRequest{}
 				// { field: "ids", by: "$.post_ids" }
 				{
-					value, err := grpcfed.EvalCEL(s.env, "$.post_ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+					value, err := grpcfed.EvalCEL(ctx1, s.env, "$.post_ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 					if err != nil {
 						valueMu.RUnlock()
 						grpcfed.RecordErrorToSpan(ctx1, err)
@@ -353,7 +353,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				valueMu.RLock()
 				valueMu.RUnlock()
 				valueMu.RLock()
-				value, err := grpcfed.EvalCEL(s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
+				value, err := grpcfed.EvalCEL(ctx1, s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
 				valueMu.RUnlock()
 				return value, err
 			})
@@ -399,7 +399,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 						iterValues[k] = v
 					}
 					iterValues["post"] = iter
-					resultValue, err := grpcfed.EvalCEL(env, "post.id", envOpts, iterValues, reflect.TypeOf(""))
+					resultValue, err := grpcfed.EvalCEL(ctx1, env, "post.id", envOpts, iterValues, reflect.TypeOf(""))
 					if err != nil {
 						grpcfed.RecordErrorToSpan(ctx1, err)
 						return nil, err
@@ -440,7 +440,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				args := &post.GetPostsRequest{}
 				// { field: "ids", by: "$.post_ids" }
 				{
-					value, err := grpcfed.EvalCEL(s.env, "$.post_ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+					value, err := grpcfed.EvalCEL(ctx1, s.env, "$.post_ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 					if err != nil {
 						valueMu.RUnlock()
 						grpcfed.RecordErrorToSpan(ctx1, err)
@@ -477,7 +477,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				valueMu.RLock()
 				valueMu.RUnlock()
 				valueMu.RLock()
-				value, err := grpcfed.EvalCEL(s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
+				value, err := grpcfed.EvalCEL(ctx1, s.env, "res.posts", envOpts, evalValues, reflect.TypeOf([]*post.Post(nil)))
 				valueMu.RUnlock()
 				return value, err
 			})
@@ -531,7 +531,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 					}
 					// { name: "user_id", by: "iter.user_id" }
 					{
-						value, err := grpcfed.EvalCEL(env, "iter.user_id", envOpts, iterValues, reflect.TypeOf(""))
+						value, err := grpcfed.EvalCEL(ctx1, env, "iter.user_id", envOpts, iterValues, reflect.TypeOf(""))
 						if err != nil {
 							grpcfed.RecordErrorToSpan(ctx1, err)
 							return nil, err
@@ -577,7 +577,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	// field binding section.
 	// (grpc.federation.field).by = "ids"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "ids", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -586,7 +586,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	}
 	// (grpc.federation.field).by = "posts.map(post, post.title)"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "posts.map(post, post.title)", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "posts.map(post, post.title)", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -595,7 +595,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	}
 	// (grpc.federation.field).by = "posts.map(post, post.content)"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "posts.map(post, post.content)", envOpts, evalValues, reflect.TypeOf([]string(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "posts.map(post, post.content)", envOpts, evalValues, reflect.TypeOf([]string(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -604,7 +604,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	}
 	// (grpc.federation.field).by = "users"
 	{
-		value, err := grpcfed.EvalCEL(s.env, "users", envOpts, evalValues, reflect.TypeOf([]*User(nil)))
+		value, err := grpcfed.EvalCEL(ctx, s.env, "users", envOpts, evalValues, reflect.TypeOf([]*User(nil)))
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -647,7 +647,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			args := &user.GetUserRequest{}
 			// { field: "id", by: "$.user_id" }
 			{
-				value, err := grpcfed.EvalCEL(s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
+				value, err := grpcfed.EvalCEL(ctx, s.env, "$.user_id", envOpts, evalValues, reflect.TypeOf(""))
 				if err != nil {
 					valueMu.RUnlock()
 					grpcfed.RecordErrorToSpan(ctx, err)
@@ -685,7 +685,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			valueMu.RLock()
 			valueMu.RUnlock()
 			valueMu.RLock()
-			value, err := grpcfed.EvalCEL(s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
+			value, err := grpcfed.EvalCEL(ctx, s.env, "res.user", envOpts, evalValues, reflect.TypeOf((*user.User)(nil)))
 			valueMu.RUnlock()
 			return value, err
 		})
