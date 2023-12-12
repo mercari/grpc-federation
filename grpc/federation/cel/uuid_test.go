@@ -52,7 +52,7 @@ func TestUUID(t *testing.T) {
 		},
 		{
 			name: "newRandomFromRand",
-			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix())))",
+			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix())))",
 			cmp: func(got any) error {
 				gotV, ok := got.(*cellib.UUID)
 				if !ok {
@@ -72,7 +72,7 @@ func TestUUID(t *testing.T) {
 		},
 		{
 			name: "domain",
-			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()))).domain()",
+			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()))).domain()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Uint)
 				if !ok {
@@ -92,7 +92,7 @@ func TestUUID(t *testing.T) {
 		},
 		{
 			name: "id",
-			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()))).id()",
+			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()))).id()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Uint)
 				if !ok {
@@ -112,7 +112,7 @@ func TestUUID(t *testing.T) {
 		},
 		{
 			name: "time",
-			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()))).time()",
+			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()))).time()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -132,7 +132,7 @@ func TestUUID(t *testing.T) {
 		},
 		{
 			name: "urn",
-			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()))).urn()",
+			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()))).urn()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.String)
 				if !ok {
@@ -152,7 +152,7 @@ func TestUUID(t *testing.T) {
 		},
 		{
 			name: "string",
-			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC).unix()))).string()",
+			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()))).string()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.String)
 				if !ok {

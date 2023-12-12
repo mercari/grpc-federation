@@ -34,9 +34,11 @@ message GetPostResponse {
         args { name: "id", by: "$.id" }
       }
     }
+    def { name: "uuid" by: "grpc.federation.uuid.newRandom()" }
   };
   org.federation.Post post = 1 [(grpc.federation.field).by = "post"];
   string const = 2 [(grpc.federation.field).string = "foo"];
+  string uuid = 3 [(grpc.federation.field).by = "uuid.string()"];
 }
 
 message Post {

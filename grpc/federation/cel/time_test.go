@@ -399,7 +399,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "constant_local",
-			expr: "grpc.federation.time.LOCAL",
+			expr: "grpc.federation.time.LOCAL()",
 			cmp: func(got any) error {
 				gotV, ok := got.(*cellib.Location)
 				if !ok {
@@ -414,7 +414,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "constant_utc",
-			expr: "grpc.federation.time.UTC",
+			expr: "grpc.federation.time.UTC()",
 			cmp: func(got any) error {
 				gotV, ok := got.(*cellib.Location)
 				if !ok {
@@ -722,7 +722,7 @@ func TestTime(t *testing.T) {
 		// time functions
 		{
 			name: "date",
-			expr: "grpc.federation.time.date(2009, 11, 10, 23, 0, 0, 0, grpc.federation.time.UTC)",
+			expr: "grpc.federation.time.date(2009, 11, 10, 23, 0, 0, 0, grpc.federation.time.UTC())",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Timestamp)
 				if !ok {
@@ -867,7 +867,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "after",
-			expr: "grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC).after(grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC))",
+			expr: "grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()).after(grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()))",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Bool)
 				if !ok {
@@ -882,7 +882,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "appendFormat",
-			expr: "grpc.federation.time.date(2017, 11, 4, 11, 0, 0, 0, grpc.federation.time.UTC).appendFormat('Time: ', grpc.federation.time.KITCHEN)",
+			expr: "grpc.federation.time.date(2017, 11, 4, 11, 0, 0, 0, grpc.federation.time.UTC()).appendFormat('Time: ', grpc.federation.time.KITCHEN)",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Bytes)
 				if !ok {
@@ -897,7 +897,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "before",
-			expr: "grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC).before(grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC))",
+			expr: "grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()).before(grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()))",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Bool)
 				if !ok {
@@ -912,7 +912,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "compare",
-			expr: "grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC).compare(grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC))",
+			expr: "grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()).compare(grpc.federation.time.date(3000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()))",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -942,7 +942,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "equal",
-			expr: "grpc.federation.time.date(2000, 2, 1, 12, 30, 0, 0, grpc.federation.time.UTC).equal(grpc.federation.time.date(2000, 2, 1, 20, 30, 0, 0, grpc.federation.time.fixedZone('Beijing Time', grpc.federation.time.toDuration(8 * grpc.federation.time.HOUR).seconds())))",
+			expr: "grpc.federation.time.date(2000, 2, 1, 12, 30, 0, 0, grpc.federation.time.UTC()).equal(grpc.federation.time.date(2000, 2, 1, 20, 30, 0, 0, grpc.federation.time.fixedZone('Beijing Time', grpc.federation.time.toDuration(8 * grpc.federation.time.HOUR).seconds())))",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Bool)
 				if !ok {
@@ -974,7 +974,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "withLocation",
-			expr: "grpc.federation.time.now().withLocation(grpc.federation.time.UTC)",
+			expr: "grpc.federation.time.now().withLocation(grpc.federation.time.UTC())",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Timestamp)
 				if !ok {
@@ -1093,7 +1093,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "round",
-			expr: "grpc.federation.time.date(0, 0, 0, 12, 15, 30, 918273645, grpc.federation.time.UTC).round(grpc.federation.time.MILLISECOND)",
+			expr: "grpc.federation.time.date(0, 0, 0, 12, 15, 30, 918273645, grpc.federation.time.UTC()).round(grpc.federation.time.MILLISECOND)",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Timestamp)
 				if !ok {
@@ -1108,7 +1108,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "second",
-			expr: "grpc.federation.time.date(0, 0, 0, 12, 15, 30, 10, grpc.federation.time.UTC).second()",
+			expr: "grpc.federation.time.date(0, 0, 0, 12, 15, 30, 10, grpc.federation.time.UTC()).second()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -1123,7 +1123,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "string",
-			expr: "grpc.federation.time.date(2000, 11, 12, 12, 15, 30, 10, grpc.federation.time.UTC).string()",
+			expr: "grpc.federation.time.date(2000, 11, 12, 12, 15, 30, 10, grpc.federation.time.UTC()).string()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.String)
 				if !ok {
@@ -1138,7 +1138,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "sub",
-			expr: "grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC).sub(grpc.federation.time.date(2000, 1, 1, 12, 0, 0, 0, grpc.federation.time.UTC))",
+			expr: "grpc.federation.time.date(2000, 1, 1, 0, 0, 0, 0, grpc.federation.time.UTC()).sub(grpc.federation.time.date(2000, 1, 1, 12, 0, 0, 0, grpc.federation.time.UTC()))",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Duration)
 				if !ok {
@@ -1153,7 +1153,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "truncate",
-			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 918273645, grpc.federation.time.UTC).truncate(grpc.federation.time.MILLISECOND)",
+			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 918273645, grpc.federation.time.UTC()).truncate(grpc.federation.time.MILLISECOND)",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Timestamp)
 				if !ok {
@@ -1183,7 +1183,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "time_unix",
-			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC).unix()",
+			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC()).unix()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -1198,7 +1198,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "time_unixMilli",
-			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC).unixMilli()",
+			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC()).unixMilli()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -1213,7 +1213,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "time_unixMicro",
-			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC).unixMicro()",
+			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC()).unixMicro()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {
@@ -1228,7 +1228,7 @@ func TestTime(t *testing.T) {
 		},
 		{
 			name: "time_unixNano",
-			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC).unixNano()",
+			expr: "grpc.federation.time.date(2012, 12, 7, 12, 15, 30, 0, grpc.federation.time.UTC()).unixNano()",
 			cmp: func(got any) error {
 				gotV, ok := got.(types.Int)
 				if !ok {

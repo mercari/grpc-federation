@@ -19,27 +19,27 @@ type UUID struct {
 	uuid.UUID
 }
 
-func (u UUID) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	return u.UUID, nil
+func (u *UUID) ConvertToNative(typeDesc reflect.Type) (any, error) {
+	return u, nil
 }
 
-func (u UUID) ConvertToType(typeValue ref.Type) ref.Val {
+func (u *UUID) ConvertToType(typeValue ref.Type) ref.Val {
 	return types.NewErr("grpc.federation.uuid: uuid type conversion does not support")
 }
 
-func (u UUID) Equal(other ref.Val) ref.Val {
-	if o, ok := other.(UUID); ok {
+func (u *UUID) Equal(other ref.Val) ref.Val {
+	if o, ok := other.(*UUID); ok {
 		return types.Bool(u.String() == o.String())
 	}
 	return types.False
 }
 
-func (u UUID) Type() ref.Type {
+func (u *UUID) Type() ref.Type {
 	return UUIDType
 }
 
-func (u UUID) Value() any {
-	return u.UUID
+func (u *UUID) Value() any {
+	return u
 }
 
 type UUIDLibrary struct {
