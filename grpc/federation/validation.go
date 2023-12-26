@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"reflect"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/protobuf/protoadapt"
 )
 
 type PreconditionFailureViolation struct {
@@ -118,10 +118,10 @@ func LocalizedMessage(ctx context.Context, value localValue, locale, msg string)
 	}
 }
 
-func CustomMessage(ctx context.Context, value localValue, expr string, idx int) proto.Message {
+func CustomMessage(ctx context.Context, value localValue, expr string, idx int) protoadapt.MessageV1 {
 	logger := Logger(ctx)
 
-	msg, err := EvalCEL(ctx, value, expr, reflect.TypeOf(proto.Message(nil)))
+	msg, err := EvalCEL(ctx, value, expr, reflect.TypeOf(protoadapt.MessageV1(nil)))
 	if err != nil {
 		logger.ErrorContext(
 			ctx,
@@ -131,5 +131,5 @@ func CustomMessage(ctx context.Context, value localValue, expr string, idx int) 
 		)
 		return nil
 	}
-	return msg.(proto.Message)
+	return msg.(protoadapt.MessageV1)
 }
