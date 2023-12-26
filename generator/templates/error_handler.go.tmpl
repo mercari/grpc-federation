@@ -5,6 +5,7 @@ if err := s.errorHandler({{ .Ctx }}, {{ .Resolver.ServiceName }}_DependentMethod
 	return nil, err
 }
 {{- else }}
+grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
 return nil, err
 {{- end }}
 {{- end }}

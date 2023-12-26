@@ -1,142 +1,113 @@
-{{- define "callResolver" }}
-{{- if .Resolver.UseIf }}
-valueMu.RLock()
-ifValue, err := grpcfed.EvalCEL({{ .Ctx }}, s.env, "{{ .Resolver.If }}", envOpts, evalValues, reflect.TypeOf(false))
-valueMu.RUnlock()
-if err != nil {
-	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
-	return nil, err
-}
-if !ifValue.(bool) {
-	return {{ .Resolver.ZeroValue }}, nil
-}
-{{- end }}
-{{- if .Resolver.IsValidation }}
-{{- template "messageValidation" .Resolver.MessageValidation }}
-{{- else }}
-valueMu.RLock()
-{{- $arguments := .Resolver.Arguments }}
-{{- if .Resolver.UseArgs }}
-args := &{{ .Resolver.RequestType }}{
-	{{- range $arguments }}
-	{{- if not .CEL }}
-	{{ .Name }}: {{ .Value }}, {{ .ProtoComment }}
+{{- define "callResolver" -}}
+{{- if .Resolver.IsMap -}}
+{{- $mapResolver := .Resolver.MapResolver -}}
+grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ .Resolver.Type }}, {{ $mapResolver.IteratorSourceType }}, *localValueType]{
+	{{- if .Resolver.UseIf }}
+	If: "{{ .Resolver.If }}",
 	{{- end }}
-	{{- end }}
-}
-{{- end }}
-{{- $ctx := .Ctx }}
-{{- range $arguments }}
-{{- if .CEL }}
-{{ .ProtoComment }}
-{
-	value, err := grpcfed.EvalCEL({{ $ctx }}, s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
-	if err != nil {
-		valueMu.RUnlock()
-		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, err
-	}
-	{{- if ne (len .InlineFields) 0 }}
-	inlineValue := {{ .Value }}
-	{{- range .InlineFields }}
-	args.{{ .Name }} = {{ .Value }}
-	{{- end }}
-	{{- else }}
-	args.{{ .Name }} = {{ .Value }}
-	{{- end }}
-}
-{{- end }}
-{{- end }}
-valueMu.RUnlock()
-{{- if .Resolver.UseTimeout }}
-return grpcfed.WithTimeout[{{ .Resolver.ReturnType }}]({{ .Ctx }}, "{{ .Resolver.MethodFQDN }}", {{ .Resolver.Timeout }}, func({{ .Ctx }} context.Context) (*{{ .Resolver.ReturnType }}, error) {
-	{{- if .Resolver.UseRetry }}
-	{{- template "retry" (map "Ctx" .Ctx "Retry" .Resolver.Retry) }}
-	return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.ReturnType }}, error) {
-		return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
-	})
-	{{- else }}
-	return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
-	{{- end }}
-})
-{{- else if .Resolver.UseRetry }}
-{{- template "retry" (map "Ctx" .Ctx "Retry" .Resolver.Retry) }}
-return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.ReturnType }}, error) {
-	return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
-})
-{{- else if .Resolver.IsBy }}
-{{- $by := .Resolver.By }}
-valueMu.RLock()
-value, err := grpcfed.EvalCEL({{ .Ctx }}, s.env, "{{ $by.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .Resolver.ZeroValue }}))
-valueMu.RUnlock()
-return value, err
-{{- else if .Resolver.IsMap }}
-{{- $mapResolver := .Resolver.MapResolver }}
-env, err := s.env.Extend(cel.Variable("{{ $mapResolver.IteratorName }}", {{ $mapResolver.IteratorCELType }}))
-if err != nil {
-	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
-	return nil, err
-}
-valueMu.RLock()
-defer valueMu.RUnlock()
-var value {{ $mapResolver.MapOutType }}
-for _, iter := range {{ $mapResolver.IteratorSource }} {
-	iterValues := make(map[string]any)
-	for k, v := range evalValues {
-		iterValues[k] = v
-	}
-	iterValues["{{ $mapResolver.IteratorName }}"] = iter
-
-	{{- if $mapResolver.IsBy }}
-	{{- $by := $mapResolver.MapExpr.Expr.By }}
-	resultValue, err := grpcfed.EvalCEL({{ .Ctx }}, env, "{{ $by.Expr }}", envOpts, iterValues, reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}))
-	if err != nil {
-		grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
-		return nil, err
-	}
-	iterValue := resultValue.({{ $mapResolver.IteratorType }})
-	{{- else if $mapResolver.IsMessage }}
-	{{- $arguments := $mapResolver.Arguments }}
-	args := &{{ $mapResolver.RequestType }}{
+	Name:   "{{ .Resolver.Key }}",
+	Type:   {{ .Resolver.CELType }},
+	Setter: func(value *localValueType, v {{ .Resolver.Type }}) { value.vars.{{ .Resolver.Key }} = v },
+	IteratorName: "{{ $mapResolver.IteratorName }}",
+	IteratorType: {{ $mapResolver.IteratorCELType }},
+	IteratorSource: {{ $mapResolver.IteratorSource }},
+	Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
+		{{- if $mapResolver.IsBy }}
+		{{- $by := $mapResolver.MapExpr.Expr.By }}
+		return grpcfed.EvalCEL(ctx, value, "{{ $by.Expr }}", reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}))
+		{{- else if $mapResolver.IsMessage }}
+		{{- $arguments := $mapResolver.Arguments }}
+		args := &{{ $mapResolver.RequestType }}{
+			{{- range $arguments }}
+			{{- if not .CEL }}
+			{{ .Name }}: {{ .Value }}, {{ .ProtoComment }}
+			{{- end }}
+			{{- end }}
+		}
 		{{- range $arguments }}
-		{{- if not .CEL }}
-		{{ .Name }}: {{ .Value }}, {{ .ProtoComment }}
-		{{- end }}
-		{{- end }}
-	}
-	{{- $ctx := .Ctx }}
-	{{- range $arguments }}
-	{{- if .CEL }}
-	{{ .ProtoComment }}
-	{
-		value, err := grpcfed.EvalCEL({{ $ctx }}, env, "{{ .CEL.Expr }}", envOpts, iterValues, reflect.TypeOf({{ .ZeroValue }}))
-		if err != nil {
-			grpcfed.RecordErrorToSpan({{ $ctx }}, err)
+		{{- if .CEL }}
+		{{ .ProtoComment }}
+		if err := grpcfed.SetCELValue(ctx, value, "{{ .CEL.Expr }}", func(v {{ .Type }}){
+			{{- if ne (len .InlineFields) 0 }}
+			{{- range .InlineFields }}
+			args.{{ .Name }} = {{ .Value }}
+			{{- end }}
+			{{- else }}
+			args.{{ .Name }} = {{ .Value }}
+			{{- end }}
+		}); err != nil {
 			return nil, err
 		}
-		{{- if ne (len .InlineFields) 0 }}
-		inlineValue := {{ .Value }}
-		{{- range .InlineFields }}
-		args.{{ .Name }} = {{ .Value }}
 		{{- end }}
+		{{- end }}
+		return s.{{ $mapResolver.Caller }}(ctx, args)
+		{{- end }}
+	},
+})
+{{- else -}}
+grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ .Resolver.Type }}, *localValueType]{
+	{{- if .Resolver.UseIf }}
+	If: "{{ .Resolver.If }}",
+	{{- end }}
+	Name:   "{{ .Resolver.Key }}",
+	Type:   {{ .Resolver.CELType }},
+	Setter: func(value *localValueType, v {{ .Resolver.Type }}) { value.vars.{{ .Resolver.Key }} = v },
+	{{- if .Resolver.IsBy }}
+	By:     "{{ .Resolver.By.Expr }}",
+	{{- else if .Resolver.IsValidation }}
+	Validation:  func(ctx context.Context, value *localValueType) error {
+		{{- template "messageValidation" .Resolver.MessageValidation }}
+	},
+	{{- else }}
+	Message: func(ctx context.Context, value *localValueType) (any, error) {
+		{{- $arguments := .Resolver.Arguments }}
+		{{- if .Resolver.UseArgs }}
+		args := &{{ .Resolver.RequestType }}{
+			{{- range $arguments }}
+			{{- if not .CEL }}
+			{{ .Name }}: {{ .Value }}, {{ .ProtoComment }}
+			{{- end }}
+			{{- end }}
+		}
+		{{- end }}
+		{{- range $arguments }}
+		{{- if .CEL }}
+		{{ .ProtoComment }}
+		if err := grpcfed.SetCELValue(ctx, value, "{{ .CEL.Expr }}", func(v {{ .Type }}){
+			{{- if ne (len .InlineFields) 0 }}
+			{{- range .InlineFields }}
+			args.{{ .Name }} = {{ .Value }}
+			{{- end }}
+			{{- else }}
+			args.{{ .Name }} = {{ .Value }}
+			{{- end }}
+		}); err != nil {
+			return nil, err
+		}
+		{{- end }}
+		{{- end }}
+		{{- if .Resolver.UseTimeout }}
+		return grpcfed.WithTimeout[{{ .Resolver.ReturnType }}](ctx, "{{ .Resolver.MethodFQDN }}", {{ .Resolver.Timeout }}, func(ctx context.Context) (*{{ .Resolver.ReturnType }}, error) {
+			{{- if .Resolver.UseRetry }}
+			{{- template "retry" (map "Retry" .Resolver.Retry) }}
+			return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.ReturnType }}, error) {
+				return s.{{ .Resolver.Caller }}(ctx, args)
+			})
+			{{- else }}
+			return s.{{ .Resolver.Caller }}(ctx, args)
+			{{- end }}
+		})
+		{{- else if .Resolver.UseRetry }}
+		{{- template "retry" (map "Retry" .Resolver.Retry) }}
+		return grpcfed.WithRetry[{{ .Resolver.ReturnType }}](b, func() (*{{ .Resolver.ReturnType }}, error) {
+			return s.{{ .Resolver.Caller }}(ctx, args)
+		})
 		{{- else }}
-		args.{{ .Name }} = {{ .Value }}
+		return s.{{ .Resolver.Caller }}(ctx, args)
 		{{- end }}
-	}
+	},
 	{{- end }}
-	{{- end }}
-	iterValue, err := s.{{ $mapResolver.Caller }}({{ .Ctx }}, args)
-	if err != nil {
-		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, err
-	}
-	{{- end }}
-	value = append(value, iterValue)
-}
-return value, nil
-{{- else }}
-return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
-{{- end }}
+})
 {{- end }}
 {{- end }}
 
@@ -145,40 +116,8 @@ return s.{{ .Resolver.Caller }}({{ .Ctx }}, args)
 /*
 {{ .Resolver.ProtoComment }}
 */
-{
-	{{- if .Resolver.UseResponseVariable }}
-	valueIface, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
-		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-	})
-	if err != nil {
-		{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-	}
-	value := valueIface.({{ .Resolver.Type }})
-	{{- else }}
-	if _, err, _ := sg.Do("{{- .Resolver.Key }}", func() (any, error) {
-		{{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-	}); err != nil {
-		{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
-	}
-	{{- end }}
-
-	{{- $responseVariable := .Resolver.ResponseVariable }}
-	{{- if $responseVariable }}
-	valueMu.Lock()
-	{{- end }}
-
-	{{- $hasCELValue := .Resolver.Message.HasCELValue }}
-	{{- if $responseVariable }}
-	{{ $responseVariable.Name }} = value
-	{{- if $hasCELValue }}
-	envOpts = append(envOpts, cel.Variable("{{ $responseVariable.CELExpr }}", {{ $responseVariable.CELType }}))
-	evalValues["{{ $responseVariable.CELExpr }}"] = {{ $responseVariable.Name }}
-	{{- end }}
-	{{- end }}
-
-	{{- if $responseVariable }}
-	valueMu.Unlock()
-	{{- end }}
+if err := {{- template "callResolver" (map "Ctx" .Ctx "Resolver" .Resolver) -}}; err != nil {
+	{{- template "errorHandler" (map "Ctx" .Ctx "Resolver" .Resolver) }}
 }
 {{- end }}
 
@@ -192,7 +131,6 @@ grpcfed.GoWithRecover(eg, func() (any, error) {
 })
 {{- end }}
 if err := eg.Wait(); err != nil {
-	grpcfed.RecordErrorToSpan({{ printf "ctx%d" .Level }}, err)
 	return nil, err
 }
 {{- if .Resolver.ExistsEnd }}

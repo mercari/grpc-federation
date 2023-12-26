@@ -26,7 +26,7 @@ func (e *RecoveredError) Error() string {
 	return fmt.Sprintf("recovered error: %s", e.Message)
 }
 
-func GoWithRecover(eg *errgroup.Group, fn func() (interface{}, error)) {
+func GoWithRecover(eg *errgroup.Group, fn func() (any, error)) {
 	eg.Go(func() (e error) {
 		defer func() {
 			if r := recover(); r != nil {

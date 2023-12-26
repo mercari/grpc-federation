@@ -3,6 +3,7 @@ package federation
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"sort"
 	"strings"
@@ -11,6 +12,9 @@ import (
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"golang.org/x/sync/singleflight"
+	grpccodes "google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
@@ -174,8 +178,305 @@ func NewCELTypeHelper(structFieldMap map[string]map[string]*celtypes.FieldType) 
 	}
 }
 
-func EvalCEL(ctx context.Context, env *cel.Env, expr string, vars []cel.EnvOption, args map[string]any, outType reflect.Type) (any, error) {
-	env, err := env.Extend(vars...)
+type LocalValue struct {
+	sg         singleflight.Group
+	mu         sync.RWMutex
+	env        *cel.Env
+	envOpts    []cel.EnvOption
+	evalValues map[string]any
+}
+
+func NewLocalValue(env *cel.Env, argName string, arg any) *LocalValue {
+	return &LocalValue{
+		env: env,
+		envOpts: []cel.EnvOption{
+			cel.Variable(
+				MessageArgumentVariableName,
+				cel.ObjectType(argName),
+			),
+		},
+		evalValues: map[string]any{
+			MessageArgumentVariableName: arg,
+		},
+	}
+}
+
+type localValue interface {
+	do(string, func() (any, error)) (any, error)
+	rlock()
+	runlock()
+	lock()
+	unlock()
+	getEnv() *cel.Env
+	getEnvOpts() []cel.EnvOption
+	getEvalValues() map[string]any
+	setEnvOptValue(string, *cel.Type)
+	setEvalValue(string, any)
+}
+
+func (v *LocalValue) do(name string, cb func() (any, error)) (any, error) {
+	ret, err, _ := v.sg.Do(name, cb)
+	return ret, err
+}
+
+func (v *LocalValue) rlock() {
+	v.mu.RLock()
+}
+
+func (v *LocalValue) runlock() {
+	v.mu.RUnlock()
+}
+
+func (v *LocalValue) lock() {
+	v.mu.Lock()
+}
+
+func (v *LocalValue) unlock() {
+	v.mu.Unlock()
+}
+
+func (v *LocalValue) getEnv() *cel.Env {
+	return v.env
+}
+
+func (v *LocalValue) getEnvOpts() []cel.EnvOption {
+	return v.envOpts
+}
+
+func (v *LocalValue) getEvalValues() map[string]any {
+	return v.evalValues
+}
+
+func (v *LocalValue) setEnvOptValue(name string, typ *cel.Type) {
+	v.envOpts = append(
+		v.envOpts,
+		cel.Variable(name, typ),
+	)
+}
+
+func (v *LocalValue) setEvalValue(name string, value any) {
+	v.evalValues[name] = value
+}
+
+type MapIteratorValue struct {
+	localValue localValue
+	envOpts    []cel.EnvOption
+	evalValues map[string]any
+}
+
+func (v *MapIteratorValue) do(name string, cb func() (any, error)) (any, error) {
+	return v.localValue.do(name, cb)
+}
+
+func (v *MapIteratorValue) rlock() {
+	v.localValue.rlock()
+}
+
+func (v *MapIteratorValue) runlock() {
+	v.localValue.runlock()
+}
+
+func (v *MapIteratorValue) lock() {
+	v.localValue.lock()
+}
+
+func (v *MapIteratorValue) unlock() {
+	v.localValue.unlock()
+}
+
+func (v *MapIteratorValue) getEnv() *cel.Env {
+	return v.localValue.getEnv()
+}
+
+func (v *MapIteratorValue) getEnvOpts() []cel.EnvOption {
+	return v.envOpts
+}
+
+func (v *MapIteratorValue) getEvalValues() map[string]any {
+	return v.evalValues
+}
+
+func (v *MapIteratorValue) setEnvOptValue(name string, typ *cel.Type) {
+	v.envOpts = append(
+		v.envOpts,
+		cel.Variable(name, typ),
+	)
+}
+
+func (v *MapIteratorValue) setEvalValue(name string, value any) {
+	v.evalValues[name] = value
+}
+
+type Def[T any, U localValue] struct {
+	If         string
+	Name       string
+	Type       *cel.Type
+	Setter     func(U, T)
+	By         string
+	Message    func(context.Context, U) (any, error)
+	Validation func(context.Context, U) error
+}
+
+type DefMap[T any, U any, V localValue] struct {
+	If             string
+	Name           string
+	Type           *cel.Type
+	Setter         func(V, T)
+	IteratorName   string
+	IteratorType   *cel.Type
+	IteratorSource []U
+	Iterator       func(context.Context, *MapIteratorValue) (any, error)
+	outType        T
+}
+
+func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) error {
+	var (
+		v    T
+		err  error
+		cond = true
+		name = def.Name
+	)
+	if def.If != "" {
+		c, err := EvalCEL(ctx, value, def.If, reflect.TypeOf(false))
+		if err != nil {
+			return err
+		}
+		if !c.(bool) {
+			cond = false
+		}
+	}
+
+	if cond {
+		ret, runErr := value.do(name, func() (any, error) {
+			switch {
+			case def.By != "":
+				return EvalCEL(ctx, value, def.By, reflect.TypeOf(v))
+			case def.Message != nil:
+				return def.Message(ctx, value)
+			case def.Validation != nil:
+				if err := def.Validation(ctx, value); err != nil {
+					if _, ok := grpcstatus.FromError(err); ok {
+						return nil, err
+					}
+					Logger(ctx).ErrorContext(ctx, "failed running validations", slog.String("error", err.Error()))
+					return nil, grpcstatus.Errorf(grpccodes.Internal, "failed running validations: %s", err)
+				}
+			}
+			return nil, nil
+		})
+		if ret != nil {
+			v = ret.(T)
+		}
+		err = runErr
+	}
+
+	value.lock()
+	def.Setter(value, v)
+	value.setEnvOptValue(name, def.Type)
+	value.setEvalValue(name, v)
+	value.unlock()
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func EvalDefMap[T any, U any, V localValue](ctx context.Context, value V, def DefMap[T, U, V]) error {
+	var (
+		v    T
+		err  error
+		cond = true
+		name = def.Name
+	)
+	if def.If != "" {
+		c, err := EvalCEL(ctx, value, def.If, reflect.TypeOf(false))
+		if err != nil {
+			return err
+		}
+		if !c.(bool) {
+			cond = false
+		}
+	}
+
+	if cond {
+		ret, runErr := value.do(name, func() (any, error) {
+			return evalMap(
+				ctx,
+				value,
+				def.IteratorName,
+				def.IteratorType,
+				def.IteratorSource,
+				reflect.TypeOf(def.outType),
+				def.Iterator,
+			)
+		})
+		if ret != nil {
+			v = ret.(T)
+		}
+		err = runErr
+	}
+
+	value.lock()
+	def.Setter(value, v)
+	value.setEnvOptValue(name, def.Type)
+	value.setEvalValue(name, v)
+	value.unlock()
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func evalMap[T localValue, U any](
+	ctx context.Context,
+	value T,
+	name string,
+	typ *cel.Type,
+	src []U,
+	iterOutType reflect.Type,
+	cb func(context.Context, *MapIteratorValue) (any, error)) (any, error) {
+	value.rlock()
+	iterValue := &MapIteratorValue{
+		localValue: value,
+		evalValues: make(map[string]any),
+	}
+	envOpts := value.getEnvOpts()
+	for k, v := range value.getEvalValues() {
+		iterValue.evalValues[k] = v
+	}
+	value.runlock()
+
+	ret := reflect.MakeSlice(iterOutType, 0, len(src))
+	for _, iter := range src {
+		iterValue.envOpts = append(append([]cel.EnvOption{}, envOpts...), cel.Variable(name, typ))
+		iterValue.evalValues[name] = iter
+		v, err := cb(ctx, iterValue)
+		if err != nil {
+			return nil, err
+		}
+		ret = reflect.Append(ret, reflect.ValueOf(v))
+	}
+	return ret.Interface(), nil
+}
+
+func If[T localValue](ctx context.Context, value T, expr string, cb func(T) error) error {
+	cond, err := EvalCEL(ctx, value, expr, reflect.TypeOf(false))
+	if err != nil {
+		return err
+	}
+	if cond.(bool) {
+		return cb(value)
+	}
+	return nil
+}
+
+func EvalCEL(ctx context.Context, value localValue, expr string, outType reflect.Type) (any, error) {
+	value.rlock()
+	defer value.runlock()
+
+	env, err := value.getEnv().Extend(value.getEnvOpts()...)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +489,7 @@ func EvalCEL(ctx context.Context, env *cel.Env, expr string, vars []cel.EnvOptio
 	if err != nil {
 		return nil, err
 	}
-	out, _, err := program.ContextEval(ctx, args)
+	out, _, err := program.ContextEval(ctx, value.getEvalValues())
 	if err != nil {
 		return nil, err
 	}
@@ -203,4 +504,17 @@ func EvalCEL(ctx context.Context, env *cel.Env, expr string, vars []cel.EnvOptio
 		return out.ConvertToNative(outType)
 	}
 	return out.Value(), nil
+}
+
+func SetCELValue[T any](ctx context.Context, value localValue, expr string, setter func(T)) error {
+	var typ T
+	out, err := EvalCEL(ctx, value, expr, reflect.TypeOf(typ))
+	if err != nil {
+		return err
+	}
+
+	value.lock()
+	setter(out.(T))
+	value.unlock()
+	return nil
 }

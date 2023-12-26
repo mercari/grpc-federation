@@ -5,9 +5,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"reflect"
 	"runtime/debug"
-	"sync"
 
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
@@ -16,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/singleflight"
 )
 
 // Org_Federation_AAArgument is argument for "org.federation.AA" message.
@@ -243,10 +240,14 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	defer span.End()
 
 	s.logger.DebugContext(ctx, "resolve org.federation.A", slog.Any("message_args", s.logvalue_Org_Federation_AArgument(req)))
-	var (
-		sg      singleflight.Group
-		valueMu sync.RWMutex
-	)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			aa *AA
+			ab *AB
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "grpc.federation.private.AArgument", req)}
 	// A tree view of message dependencies is shown below.
 	/*
 	   aa ─┐
@@ -265,17 +266,19 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 		     }
 		   }
 		*/
-		{
-			if _, err, _ := sg.Do("aa", func() (any, error) {
-				valueMu.RLock()
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*AA, *localValueType]{
+			Name:   "aa",
+			Type:   cel.ObjectType("org.federation.AA"),
+			Setter: func(value *localValueType, v *AA) { value.vars.aa = v },
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_AAArgument[*FederationServiceDependentClientSet]{
 					Client: s.client,
 				}
-				valueMu.RUnlock()
-				return s.resolve_Org_Federation_AA(ctx1, args)
-			}); err != nil {
-				return nil, err
-			}
+				return s.resolve_Org_Federation_AA(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
 		}
 		return nil, nil
 	})
@@ -291,23 +294,24 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 		     }
 		   }
 		*/
-		{
-			if _, err, _ := sg.Do("ab", func() (any, error) {
-				valueMu.RLock()
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*AB, *localValueType]{
+			Name:   "ab",
+			Type:   cel.ObjectType("org.federation.AB"),
+			Setter: func(value *localValueType, v *AB) { value.vars.ab = v },
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_ABArgument[*FederationServiceDependentClientSet]{
 					Client: s.client,
 				}
-				valueMu.RUnlock()
-				return s.resolve_Org_Federation_AB(ctx1, args)
-			}); err != nil {
-				return nil, err
-			}
+				return s.resolve_Org_Federation_AB(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
 		}
 		return nil, nil
 	})
 
 	if err := eg.Wait(); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 
@@ -463,22 +467,22 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	defer span.End()
 
 	s.logger.DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
-	var (
-		sg      singleflight.Group
-		valueA  *A
-		valueB  *B
-		valueC  *C
-		valueD  *D
-		valueE  *E
-		valueF  *F
-		valueG  *G
-		valueH  *H
-		valueI  *I
-		valueJ  *J
-		valueMu sync.RWMutex
-	)
-	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("grpc.federation.private.GetResponseArgument"))}
-	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			a *A
+			b *B
+			c *C
+			d *D
+			e *E
+			f *F
+			g *G
+			h *H
+			i *I
+			j *J
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "grpc.federation.private.GetResponseArgument", req)}
 	// A tree view of message dependencies is shown below.
 	/*
 	   a ─┐
@@ -513,24 +517,19 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("a", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*A, *localValueType]{
+					Name:   "a",
+					Type:   cel.ObjectType("org.federation.A"),
+					Setter: func(value *localValueType, v *A) { value.vars.a = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_AArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_A(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*A)
-					valueMu.Lock()
-					valueA = value
-					envOpts = append(envOpts, cel.Variable("a", cel.ObjectType("org.federation.A")))
-					evalValues["a"] = valueA
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_A(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 
 				// This section's codes are generated by the following proto definition.
@@ -543,34 +542,25 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("c", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*C, *localValueType]{
+					Name:   "c",
+					Type:   cel.ObjectType("org.federation.C"),
+					Setter: func(value *localValueType, v *C) { value.vars.c = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_CArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
 						// { name: "a", by: "a.name" }
-						{
-							value, err := grpcfed.EvalCEL(ctx3, s.env, "a.name", envOpts, evalValues, reflect.TypeOf(""))
-							if err != nil {
-								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx3, err)
-								return nil, err
-							}
-							args.A = value.(string)
+						if err := grpcfed.SetCELValue(ctx, value, "a.name", func(v string) {
+							args.A = v
+						}); err != nil {
+							return nil, err
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_C(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*C)
-					valueMu.Lock()
-					valueC = value
-					envOpts = append(envOpts, cel.Variable("c", cel.ObjectType("org.federation.C")))
-					evalValues["c"] = valueC
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_C(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 				return nil, nil
 			})
@@ -585,24 +575,19 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("b", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*B, *localValueType]{
+					Name:   "b",
+					Type:   cel.ObjectType("org.federation.B"),
+					Setter: func(value *localValueType, v *B) { value.vars.b = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_BArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_B(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*B)
-					valueMu.Lock()
-					valueB = value
-					envOpts = append(envOpts, cel.Variable("b", cel.ObjectType("org.federation.B")))
-					evalValues["b"] = valueB
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_B(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 
 				// This section's codes are generated by the following proto definition.
@@ -615,39 +600,29 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("d", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*D, *localValueType]{
+					Name:   "d",
+					Type:   cel.ObjectType("org.federation.D"),
+					Setter: func(value *localValueType, v *D) { value.vars.d = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_DArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
 						// { name: "b", by: "b.name" }
-						{
-							value, err := grpcfed.EvalCEL(ctx3, s.env, "b.name", envOpts, evalValues, reflect.TypeOf(""))
-							if err != nil {
-								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx3, err)
-								return nil, err
-							}
-							args.B = value.(string)
+						if err := grpcfed.SetCELValue(ctx, value, "b.name", func(v string) {
+							args.B = v
+						}); err != nil {
+							return nil, err
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_D(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*D)
-					valueMu.Lock()
-					valueD = value
-					envOpts = append(envOpts, cel.Variable("d", cel.ObjectType("org.federation.D")))
-					evalValues["d"] = valueD
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_D(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 				return nil, nil
 			})
 			if err := eg.Wait(); err != nil {
-				grpcfed.RecordErrorToSpan(ctx3, err)
 				return nil, err
 			}
 
@@ -664,44 +639,31 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			     }
 			   }
 			*/
-			{
-				valueIface, err, _ := sg.Do("e", func() (any, error) {
-					valueMu.RLock()
+			if err := grpcfed.EvalDef(ctx2, value, grpcfed.Def[*E, *localValueType]{
+				Name:   "e",
+				Type:   cel.ObjectType("org.federation.E"),
+				Setter: func(value *localValueType, v *E) { value.vars.e = v },
+				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_EArgument[*FederationServiceDependentClientSet]{
 						Client: s.client,
 					}
 					// { name: "c", by: "c.name" }
-					{
-						value, err := grpcfed.EvalCEL(ctx2, s.env, "c.name", envOpts, evalValues, reflect.TypeOf(""))
-						if err != nil {
-							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx2, err)
-							return nil, err
-						}
-						args.C = value.(string)
+					if err := grpcfed.SetCELValue(ctx, value, "c.name", func(v string) {
+						args.C = v
+					}); err != nil {
+						return nil, err
 					}
 					// { name: "d", by: "d.name" }
-					{
-						value, err := grpcfed.EvalCEL(ctx2, s.env, "d.name", envOpts, evalValues, reflect.TypeOf(""))
-						if err != nil {
-							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx2, err)
-							return nil, err
-						}
-						args.D = value.(string)
+					if err := grpcfed.SetCELValue(ctx, value, "d.name", func(v string) {
+						args.D = v
+					}); err != nil {
+						return nil, err
 					}
-					valueMu.RUnlock()
-					return s.resolve_Org_Federation_E(ctx2, args)
-				})
-				if err != nil {
-					return nil, err
-				}
-				value := valueIface.(*E)
-				valueMu.Lock()
-				valueE = value
-				envOpts = append(envOpts, cel.Variable("e", cel.ObjectType("org.federation.E")))
-				evalValues["e"] = valueE
-				valueMu.Unlock()
+					return s.resolve_Org_Federation_E(ctx, args)
+				},
+			}); err != nil {
+				grpcfed.RecordErrorToSpan(ctx2, err)
+				return nil, err
 			}
 			return nil, nil
 		})
@@ -718,24 +680,19 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("a", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*A, *localValueType]{
+					Name:   "a",
+					Type:   cel.ObjectType("org.federation.A"),
+					Setter: func(value *localValueType, v *A) { value.vars.a = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_AArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_A(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*A)
-					valueMu.Lock()
-					valueA = value
-					envOpts = append(envOpts, cel.Variable("a", cel.ObjectType("org.federation.A")))
-					evalValues["a"] = valueA
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_A(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 
 				// This section's codes are generated by the following proto definition.
@@ -748,34 +705,25 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("c", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*C, *localValueType]{
+					Name:   "c",
+					Type:   cel.ObjectType("org.federation.C"),
+					Setter: func(value *localValueType, v *C) { value.vars.c = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_CArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
 						// { name: "a", by: "a.name" }
-						{
-							value, err := grpcfed.EvalCEL(ctx3, s.env, "a.name", envOpts, evalValues, reflect.TypeOf(""))
-							if err != nil {
-								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx3, err)
-								return nil, err
-							}
-							args.A = value.(string)
+						if err := grpcfed.SetCELValue(ctx, value, "a.name", func(v string) {
+							args.A = v
+						}); err != nil {
+							return nil, err
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_C(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*C)
-					valueMu.Lock()
-					valueC = value
-					envOpts = append(envOpts, cel.Variable("c", cel.ObjectType("org.federation.C")))
-					evalValues["c"] = valueC
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_C(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 				return nil, nil
 			})
@@ -790,24 +738,19 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("b", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*B, *localValueType]{
+					Name:   "b",
+					Type:   cel.ObjectType("org.federation.B"),
+					Setter: func(value *localValueType, v *B) { value.vars.b = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_BArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_B(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*B)
-					valueMu.Lock()
-					valueB = value
-					envOpts = append(envOpts, cel.Variable("b", cel.ObjectType("org.federation.B")))
-					evalValues["b"] = valueB
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_B(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 
 				// This section's codes are generated by the following proto definition.
@@ -820,39 +763,29 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				     }
 				   }
 				*/
-				{
-					valueIface, err, _ := sg.Do("d", func() (any, error) {
-						valueMu.RLock()
+				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*D, *localValueType]{
+					Name:   "d",
+					Type:   cel.ObjectType("org.federation.D"),
+					Setter: func(value *localValueType, v *D) { value.vars.d = v },
+					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_DArgument[*FederationServiceDependentClientSet]{
 							Client: s.client,
 						}
 						// { name: "b", by: "b.name" }
-						{
-							value, err := grpcfed.EvalCEL(ctx3, s.env, "b.name", envOpts, evalValues, reflect.TypeOf(""))
-							if err != nil {
-								valueMu.RUnlock()
-								grpcfed.RecordErrorToSpan(ctx3, err)
-								return nil, err
-							}
-							args.B = value.(string)
+						if err := grpcfed.SetCELValue(ctx, value, "b.name", func(v string) {
+							args.B = v
+						}); err != nil {
+							return nil, err
 						}
-						valueMu.RUnlock()
-						return s.resolve_Org_Federation_D(ctx3, args)
-					})
-					if err != nil {
-						return nil, err
-					}
-					value := valueIface.(*D)
-					valueMu.Lock()
-					valueD = value
-					envOpts = append(envOpts, cel.Variable("d", cel.ObjectType("org.federation.D")))
-					evalValues["d"] = valueD
-					valueMu.Unlock()
+						return s.resolve_Org_Federation_D(ctx, args)
+					},
+				}); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
 				}
 				return nil, nil
 			})
 			if err := eg.Wait(); err != nil {
-				grpcfed.RecordErrorToSpan(ctx3, err)
 				return nil, err
 			}
 
@@ -869,44 +802,31 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			     }
 			   }
 			*/
-			{
-				valueIface, err, _ := sg.Do("f", func() (any, error) {
-					valueMu.RLock()
+			if err := grpcfed.EvalDef(ctx2, value, grpcfed.Def[*F, *localValueType]{
+				Name:   "f",
+				Type:   cel.ObjectType("org.federation.F"),
+				Setter: func(value *localValueType, v *F) { value.vars.f = v },
+				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_FArgument[*FederationServiceDependentClientSet]{
 						Client: s.client,
 					}
 					// { name: "c", by: "c.name" }
-					{
-						value, err := grpcfed.EvalCEL(ctx2, s.env, "c.name", envOpts, evalValues, reflect.TypeOf(""))
-						if err != nil {
-							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx2, err)
-							return nil, err
-						}
-						args.C = value.(string)
+					if err := grpcfed.SetCELValue(ctx, value, "c.name", func(v string) {
+						args.C = v
+					}); err != nil {
+						return nil, err
 					}
 					// { name: "d", by: "d.name" }
-					{
-						value, err := grpcfed.EvalCEL(ctx2, s.env, "d.name", envOpts, evalValues, reflect.TypeOf(""))
-						if err != nil {
-							valueMu.RUnlock()
-							grpcfed.RecordErrorToSpan(ctx2, err)
-							return nil, err
-						}
-						args.D = value.(string)
+					if err := grpcfed.SetCELValue(ctx, value, "d.name", func(v string) {
+						args.D = v
+					}); err != nil {
+						return nil, err
 					}
-					valueMu.RUnlock()
-					return s.resolve_Org_Federation_F(ctx2, args)
-				})
-				if err != nil {
-					return nil, err
-				}
-				value := valueIface.(*F)
-				valueMu.Lock()
-				valueF = value
-				envOpts = append(envOpts, cel.Variable("f", cel.ObjectType("org.federation.F")))
-				evalValues["f"] = valueF
-				valueMu.Unlock()
+					return s.resolve_Org_Federation_F(ctx, args)
+				},
+			}); err != nil {
+				grpcfed.RecordErrorToSpan(ctx2, err)
+				return nil, err
 			}
 			return nil, nil
 		})
@@ -921,29 +841,23 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			     }
 			   }
 			*/
-			{
-				valueIface, err, _ := sg.Do("g", func() (any, error) {
-					valueMu.RLock()
+			if err := grpcfed.EvalDef(ctx2, value, grpcfed.Def[*G, *localValueType]{
+				Name:   "g",
+				Type:   cel.ObjectType("org.federation.G"),
+				Setter: func(value *localValueType, v *G) { value.vars.g = v },
+				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_GArgument[*FederationServiceDependentClientSet]{
 						Client: s.client,
 					}
-					valueMu.RUnlock()
-					return s.resolve_Org_Federation_G(ctx2, args)
-				})
-				if err != nil {
-					return nil, err
-				}
-				value := valueIface.(*G)
-				valueMu.Lock()
-				valueG = value
-				envOpts = append(envOpts, cel.Variable("g", cel.ObjectType("org.federation.G")))
-				evalValues["g"] = valueG
-				valueMu.Unlock()
+					return s.resolve_Org_Federation_G(ctx, args)
+				},
+			}); err != nil {
+				grpcfed.RecordErrorToSpan(ctx2, err)
+				return nil, err
 			}
 			return nil, nil
 		})
 		if err := eg.Wait(); err != nil {
-			grpcfed.RecordErrorToSpan(ctx2, err)
 			return nil, err
 		}
 
@@ -961,54 +875,37 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		     }
 		   }
 		*/
-		{
-			valueIface, err, _ := sg.Do("h", func() (any, error) {
-				valueMu.RLock()
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*H, *localValueType]{
+			Name:   "h",
+			Type:   cel.ObjectType("org.federation.H"),
+			Setter: func(value *localValueType, v *H) { value.vars.h = v },
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_HArgument[*FederationServiceDependentClientSet]{
 					Client: s.client,
 				}
 				// { name: "e", by: "e.name" }
-				{
-					value, err := grpcfed.EvalCEL(ctx1, s.env, "e.name", envOpts, evalValues, reflect.TypeOf(""))
-					if err != nil {
-						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx1, err)
-						return nil, err
-					}
-					args.E = value.(string)
+				if err := grpcfed.SetCELValue(ctx, value, "e.name", func(v string) {
+					args.E = v
+				}); err != nil {
+					return nil, err
 				}
 				// { name: "f", by: "f.name" }
-				{
-					value, err := grpcfed.EvalCEL(ctx1, s.env, "f.name", envOpts, evalValues, reflect.TypeOf(""))
-					if err != nil {
-						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx1, err)
-						return nil, err
-					}
-					args.F = value.(string)
+				if err := grpcfed.SetCELValue(ctx, value, "f.name", func(v string) {
+					args.F = v
+				}); err != nil {
+					return nil, err
 				}
 				// { name: "g", by: "g.name" }
-				{
-					value, err := grpcfed.EvalCEL(ctx1, s.env, "g.name", envOpts, evalValues, reflect.TypeOf(""))
-					if err != nil {
-						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx1, err)
-						return nil, err
-					}
-					args.G = value.(string)
+				if err := grpcfed.SetCELValue(ctx, value, "g.name", func(v string) {
+					args.G = v
+				}); err != nil {
+					return nil, err
 				}
-				valueMu.RUnlock()
-				return s.resolve_Org_Federation_H(ctx1, args)
-			})
-			if err != nil {
-				return nil, err
-			}
-			value := valueIface.(*H)
-			valueMu.Lock()
-			valueH = value
-			envOpts = append(envOpts, cel.Variable("h", cel.ObjectType("org.federation.H")))
-			evalValues["h"] = valueH
-			valueMu.Unlock()
+				return s.resolve_Org_Federation_H(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
 		}
 		return nil, nil
 	})
@@ -1024,24 +921,19 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		     }
 		   }
 		*/
-		{
-			valueIface, err, _ := sg.Do("i", func() (any, error) {
-				valueMu.RLock()
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*I, *localValueType]{
+			Name:   "i",
+			Type:   cel.ObjectType("org.federation.I"),
+			Setter: func(value *localValueType, v *I) { value.vars.i = v },
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_IArgument[*FederationServiceDependentClientSet]{
 					Client: s.client,
 				}
-				valueMu.RUnlock()
-				return s.resolve_Org_Federation_I(ctx1, args)
-			})
-			if err != nil {
-				return nil, err
-			}
-			value := valueIface.(*I)
-			valueMu.Lock()
-			valueI = value
-			envOpts = append(envOpts, cel.Variable("i", cel.ObjectType("org.federation.I")))
-			evalValues["i"] = valueI
-			valueMu.Unlock()
+				return s.resolve_Org_Federation_I(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
 		}
 
 		// This section's codes are generated by the following proto definition.
@@ -1054,76 +946,58 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		     }
 		   }
 		*/
-		{
-			valueIface, err, _ := sg.Do("j", func() (any, error) {
-				valueMu.RLock()
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*J, *localValueType]{
+			Name:   "j",
+			Type:   cel.ObjectType("org.federation.J"),
+			Setter: func(value *localValueType, v *J) { value.vars.j = v },
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_JArgument[*FederationServiceDependentClientSet]{
 					Client: s.client,
 				}
 				// { name: "i", by: "i.name" }
-				{
-					value, err := grpcfed.EvalCEL(ctx1, s.env, "i.name", envOpts, evalValues, reflect.TypeOf(""))
-					if err != nil {
-						valueMu.RUnlock()
-						grpcfed.RecordErrorToSpan(ctx1, err)
-						return nil, err
-					}
-					args.I = value.(string)
+				if err := grpcfed.SetCELValue(ctx, value, "i.name", func(v string) {
+					args.I = v
+				}); err != nil {
+					return nil, err
 				}
-				valueMu.RUnlock()
-				return s.resolve_Org_Federation_J(ctx1, args)
-			})
-			if err != nil {
-				return nil, err
-			}
-			value := valueIface.(*J)
-			valueMu.Lock()
-			valueJ = value
-			envOpts = append(envOpts, cel.Variable("j", cel.ObjectType("org.federation.J")))
-			evalValues["j"] = valueJ
-			valueMu.Unlock()
+				return s.resolve_Org_Federation_J(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
 		}
 		return nil, nil
 	})
 
 	if err := eg.Wait(); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.A = valueA
-	req.B = valueB
-	req.C = valueC
-	req.D = valueD
-	req.E = valueE
-	req.F = valueF
-	req.G = valueG
-	req.H = valueH
-	req.I = valueI
-	req.J = valueJ
+	req.A = value.vars.a
+	req.B = value.vars.b
+	req.C = value.vars.c
+	req.D = value.vars.d
+	req.E = value.vars.e
+	req.F = value.vars.f
+	req.G = value.vars.g
+	req.H = value.vars.h
+	req.I = value.vars.i
+	req.J = value.vars.j
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
 
 	// field binding section.
 	// (grpc.federation.field).by = "h.name"
-	{
-		value, err := grpcfed.EvalCEL(ctx, s.env, "h.name", envOpts, evalValues, reflect.TypeOf(""))
-		if err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
-		}
-		ret.Hname = value.(string)
+	if err := grpcfed.SetCELValue(ctx, value, "h.name", func(v string) { ret.Hname = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
 	}
 	// (grpc.federation.field).by = "j.name"
-	{
-		value, err := grpcfed.EvalCEL(ctx, s.env, "j.name", envOpts, evalValues, reflect.TypeOf(""))
-		if err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
-		}
-		ret.Jname = value.(string)
+	if err := grpcfed.SetCELValue(ctx, value, "j.name", func(v string) { ret.Jname = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
 	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
