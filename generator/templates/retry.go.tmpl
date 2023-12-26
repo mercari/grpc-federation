@@ -14,5 +14,5 @@ var b backoff.BackOff = eb
 {{- if .Retry.MaxRetries }}
 b = backoff.WithMaxRetries(b, {{ .Retry.MaxRetries }})
 {{- end }}
-b = backoff.WithContext(b, {{ .Ctx }})
+b = backoff.WithContext(b, ctx)
 {{- end }}

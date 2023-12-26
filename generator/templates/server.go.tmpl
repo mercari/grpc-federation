@@ -268,17 +268,16 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	defer span.End()
 
 	s.logger.DebugContext(ctx, "resolve {{ .ProtoFQDN }}", slog.Any("message_args", s.logvalue_{{ .RequestType }}(req)))
-	{{- $declVariables := .DeclVariables }}
-	{{- if $declVariables }}
-	var (
-		{{- range $declVariables }}
-		{{ .Name }} {{ .Type }}
-		{{- end }}
-	)
-	{{- end }}
-	{{- if $hasCELValue }}
-	envOpts := []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.ObjectType("{{ .RequestProtoType }}"))}
-	evalValues := map[string]any{grpcfed.MessageArgumentVariableName: req}
+	{{- if .IsDeclVariables }}
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			{{- range .DeclVariables }}
+			{{ .Name }} {{ .Type }}
+			{{- end }}
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "{{ .RequestProtoType }}", req)}
 	{{- end }}
 	{{- $depGraph := .DependencyGraph }}
 	{{- if $depGraph }}
@@ -302,7 +301,6 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{ end }}
 	{{- if $msgResolvers }}
 	if err := eg.Wait(); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	{{- end }}
@@ -358,7 +356,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- $defaultOneofField := .OneofDefaultField }}
 	{{- if .HasFieldOneofRule }}
 	{{- range $oneofFields }}
-	oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, s.env, "{{ .Expr }}", envOpts, evalValues, reflect.TypeOf(true))
+	oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, value, "{{ .Expr }}", reflect.TypeOf(true))
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -384,19 +382,20 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{ end }}
 		{{- if $oneofMsgResolvers }}
 		if err := eg.Wait(); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		{{- end }}
 		{{- end }}
 		{{- if .By }}
-		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .By }}", envOpts, evalValues, {{ .OutType }})
-		if err != nil {
+		if err := grpcfed.SetCELValue(ctx, value, "{{ .By }}", func(v {{ .Type }}) {
+			ret.{{ $name }} = {{ .Value }}
+		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		{{- end }}
+		{{- else }}
 		ret.{{ $name }} = {{ .Value }}
+		{{- end }}
 	{{- end }}
 	{{- if $defaultOneofField }}
 	default:
@@ -416,30 +415,25 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{ end }}
 		{{- if $oneofMsgResolvers }}
 		if err := eg.Wait(); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		{{- end }}
 		{{- end }}
 		{{- if $defaultOneofField.By }}
-		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ $defaultOneofField.By }}", envOpts, evalValues, {{ $defaultOneofField.OutType }})
-		if err != nil {
+		if err := grpcfed.SetCELValue(ctx, value, "{{ $defaultOneofField.By }}", func(v {{ $defaultOneofField.Type }}) {
+			ret.{{ $name }} = {{ $defaultOneofField.Value }}
+		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
 		{{- end }}
-		ret.{{ $name }} = {{ $defaultOneofField.Value }}
 	{{- end }}
 	}
 	{{- else if .CEL }}
 	{{ .ProtoComment }}
-	{
-		value, err := grpcfed.EvalCEL(ctx, s.env, "{{ .CEL.Expr }}", envOpts, evalValues, reflect.TypeOf({{ .ZeroValue }}))
-		if err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
-		}
-		ret.{{ .Name }} = {{ .Value }}
+	if err := grpcfed.SetCELValue(ctx, value, "{{ .CEL.Expr }}", func(v {{ .Type }}){ ret.{{ .Name }} = {{ .Value }}}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
 	}
 	{{- else }}
 	ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
