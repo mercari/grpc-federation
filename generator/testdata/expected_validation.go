@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"runtime/debug"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
@@ -17,6 +16,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/protoadapt"
 )
 
 // Org_Federation_CustomMessageArgument is argument for "org.federation.CustomMessage" message.
@@ -311,7 +311,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Setter: func(value *localValueType, v bool) { value.vars._def2 = v },
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var (
-					details       []proto.Message
+					details       []protoadapt.MessageV1
 					validationErr bool
 				)
 				if err := grpcfed.If(ctx, value, "post.title != 'some-title'", func(value *localValueType) error {

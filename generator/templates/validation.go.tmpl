@@ -5,7 +5,7 @@ return grpcfed.If(ctx, value, "{{ .Error.If }}", func(value *localValueType) err
 })
 {{- else }}
 var (
-	details       []proto.Message
+	details       []protoadapt.MessageV1
 	validationErr bool
 )
 {{- range .Error.Details }}

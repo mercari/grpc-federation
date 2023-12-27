@@ -700,7 +700,7 @@ func (f *File) nodeInfoByMessage(node *ast.MessageNode, msg *Message) *ast.NodeI
 				}
 				return f.nodeInfoByField(n, msg.Field)
 			}
-		case *ast.OneOfNode:
+		case *ast.OneofNode:
 			if info := f.nodeInfoByOneof(n, msg); info != nil {
 				return info
 			}
@@ -715,7 +715,7 @@ func (f *File) nodeInfoByMessage(node *ast.MessageNode, msg *Message) *ast.NodeI
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByOneof(node *ast.OneOfNode, msg *Message) *ast.NodeInfo {
+func (f *File) nodeInfoByOneof(node *ast.OneofNode, msg *Message) *ast.NodeInfo {
 	for _, decl := range node.Decls {
 		switch n := decl.(type) {
 		case *ast.OptionNode:
