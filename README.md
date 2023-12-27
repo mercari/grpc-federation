@@ -2,12 +2,9 @@
 
 [![Test](https://github.com/mercari/grpc-federation/actions/workflows/test.yml/badge.svg)](https://github.com/mercari/grpc-federation/actions/workflows/test.yml)
 [![GoDoc](https://godoc.org/github.com/mercari/grpc-federation?status.svg)](https://pkg.go.dev/github.com/mercari/grpc-federation?tab=doc)
-
+[![Buf](https://img.shields.io/badge/Buf-docs-blue)](https://buf.build/mercari/grpc-federation)
 
 gRPC Federation is a mechanism to automatically generate a BFF (Backend for frontend) server that aggregates and returns the results of gRPC protocol based microservices by writing Protocol Buffer's option.
-
-> [!WARNING]
-> gRPC Federation is still in alpha version. Please do not use it in production, as the design may change significantly.
 
 # Motivation
 
@@ -68,23 +65,6 @@ These are just a few examples of how gRPC federation can make your work easier, 
 By using the gRPC Federation, it is possible to know which services the BFF depends on just by reading the proto file. In some cases, you can get a complete picture of which microservice methods a given method of the BFF depends on.  
 
 In addition, since the gRPC Federation provides the functionality to obtain dependencies as a library in Go, it is possible to automatically obtain service dependencies simply by statically analyzing proto file. This is very useful for various types of analysis and automation.
-
-# Philosophy
-
-## 1. gRPC method call exists to create a response message
-
-Normally, the response message of a gRPC method exists as a result of the processing of the gRPC method, so the implementer's concern is "processing content" first and "processing result" second.
-
-The gRPC Federation focuses on the "processing result" and considers that the gRPC method is called to create a response to the message.
-
-Therefore, what you must do with gRPC Federation is to write dedicated options in those messages to create response messages for each of the Federation Service methods.
-
-## 2. For every message, there is always a method that returns that message
-
-Every message defined in Protocol Buffers has a method to return it. Therefore, it is possible to link message and method.
-
-
-With these, we believe we can implemente the Federation Service by defining the message dependencies to create a response message and map them to the method definition.
 
 # Installation
 
@@ -218,9 +198,6 @@ grpc-federation-generator -w
 - [CEL API References](./docs/cel.md)
 
 # Contribution
-
-> [!IMPORTANT]
-> Currently, we do not accept pull requests from anyone other than the development team. Please report feature requests or bug fix requests via Issues.
 
 Please read the CLA carefully before submitting your contribution to Mercari. Under any circumstances, by submitting your contribution, you are deemed to accept and agree to be bound by the terms and conditions of the CLA.
 

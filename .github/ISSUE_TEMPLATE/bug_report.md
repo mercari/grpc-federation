@@ -14,6 +14,7 @@ A clear and concise description of what the bug is.
 - [ ] protoc-gen-grpc-federation
 - [ ] grpc-federation-linter
 - [ ] grpc-federation-language-server
+- [ ] grpc-federation-generator
 - [ ] others
 
 **To Reproduce**
