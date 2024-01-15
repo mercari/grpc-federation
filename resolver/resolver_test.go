@@ -11,7 +11,6 @@ import (
 	"github.com/mercari/grpc-federation/internal/testutil"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/source"
-	"github.com/mercari/grpc-federation/types"
 )
 
 func TestSimpleAggregation(t *testing.T) {
@@ -2414,9 +2413,9 @@ func TestConstValue(t *testing.T) {
 		content.Fields,
 		&resolver.Field{
 			Name: "message_field",
-			Type: &resolver.Type{Type: types.Message, Ref: content},
+			Type: resolver.NewMessageType(content, false),
 			Rule: testutil.NewFieldRuleBuilder(
-				testutil.NewMessageArgumentValueBuilder(&resolver.Type{Type: types.Message, Ref: content}, &resolver.Type{Type: types.Message, Ref: content}, "message_field").
+				testutil.NewMessageArgumentValueBuilder(resolver.NewMessageType(content, false), resolver.NewMessageType(content, false), "message_field").
 					Build(t),
 			).SetAlias(ref.Field(t, "content", "Content", "message_field")).Build(t),
 		},
@@ -2435,11 +2434,11 @@ func TestConstValue(t *testing.T) {
 		contentArg.Fields,
 		&resolver.Field{
 			Name: "message_field",
-			Type: &resolver.Type{Type: types.Message, Ref: content},
+			Type: resolver.NewMessageType(content, false),
 		},
 		&resolver.Field{
 			Name: "messages_field",
-			Type: &resolver.Type{Type: types.Message, Ref: content, Repeated: true},
+			Type: resolver.NewMessageType(content, true),
 		},
 	)
 

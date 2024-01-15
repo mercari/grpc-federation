@@ -382,10 +382,7 @@ func (r *CustomResolver) ReturnType() string {
 		return toTypeText(r.Service.File, ur.Field.Type)
 	}
 	// message resolver
-	return toTypeText(r.Service.File, &resolver.Type{
-		Type: types.Message,
-		Ref:  ur.Message,
-	})
+	return toTypeText(r.Service.File, resolver.NewMessageType(ur.Message, false))
 }
 
 func (s *Service) CustomResolvers() []*CustomResolver {
@@ -451,13 +448,13 @@ type Field struct {
 
 func toMakeZeroValue(file *resolver.File, t *resolver.Type) string {
 	text := toTypeText(file, t)
-	if t.Repeated || t.Type == types.Bytes {
+	if t.Repeated || t.Kind == types.Bytes {
 		return fmt.Sprintf("%s(nil)", text)
 	}
 	if t.IsNumber() {
 		return fmt.Sprintf("%s(0)", text)
 	}
-	switch t.Type {
+	switch t.Kind {
 	case types.Bool:
 		return `false`
 	case types.String:
@@ -472,7 +469,7 @@ func toCELTypeDeclare(t *resolver.Type) string {
 		cloned.Repeated = false
 		return fmt.Sprintf("celtypes.NewListType(%s)", toCELTypeDeclare(cloned))
 	}
-	switch t.Type {
+	switch t.Kind {
 	case types.Double, types.Float:
 		return "celtypes.DoubleType"
 	case types.Int32, types.Int64, types.Sint32, types.Sint64, types.Sfixed32, types.Sfixed64, types.Enum:
@@ -486,7 +483,7 @@ func toCELTypeDeclare(t *resolver.Type) string {
 	case types.Bytes:
 		return "celtypes.BytesType"
 	case types.Message:
-		return fmt.Sprintf(`celtypes.NewObjectType(%q)`, t.Ref.FQDN())
+		return fmt.Sprintf(`celtypes.NewObjectType(%q)`, t.Message.FQDN())
 	}
 	return ""
 }
@@ -496,7 +493,7 @@ func toTypeText(file *resolver.File, t *resolver.Type) string {
 		return "any"
 	}
 	var typ string
-	switch t.Type {
+	switch t.Kind {
 	case types.Double:
 		typ = "float64"
 	case types.Float:
@@ -533,10 +530,10 @@ func toTypeText(file *resolver.File, t *resolver.Type) string {
 		if t.OneofField != nil {
 			typ = oneofTypeToText(file, t.OneofField)
 		} else {
-			typ = messageTypeToText(file, t.Ref)
+			typ = messageTypeToText(file, t.Message)
 		}
 	default:
-		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Type)
+		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind)
 	}
 	if t.Repeated {
 		return "[]" + typ
@@ -607,14 +604,14 @@ func (v *LogValue) IsRepeated() bool {
 }
 
 func (v *LogValue) IsMessage() bool {
-	return v.Type.Type == types.Message
+	return v.Type.Kind == types.Message
 }
 
 func (v *LogValue) IsMap() bool {
 	if !v.IsMessage() {
 		return false
 	}
-	return v.Type.Ref.IsMapEntry
+	return v.Type.Message.IsMapEntry
 }
 
 type LogValueAttr struct {
@@ -649,7 +646,7 @@ func (s *Service) setLogValueByMessage(msg *resolver.Message) {
 	if _, exists := s.nameToLogValueMap[name]; exists {
 		return
 	}
-	msgType := &resolver.Type{Type: types.Message, Ref: msg}
+	msgType := resolver.NewMessageType(msg, false)
 	logValue := &LogValue{
 		Name:      name,
 		ValueType: toTypeText(s.Service.File, msgType),
@@ -679,7 +676,7 @@ func (s *Service) setLogValueByMapMessage(msg *resolver.Message) {
 		return
 	}
 	value := msg.Field("value")
-	msgType := &resolver.Type{Type: types.Message, Ref: msg}
+	msgType := resolver.NewMessageType(msg, false)
 	logValue := &LogValue{
 		Name:      name,
 		ValueType: toTypeText(s.Service.File, msgType),
@@ -691,9 +688,9 @@ func (s *Service) setLogValueByMapMessage(msg *resolver.Message) {
 }
 
 func (s *Service) setLogValueByType(typ *resolver.Type) {
-	isMap := typ.Ref != nil && typ.Ref.IsMapEntry
-	if typ.Ref != nil {
-		s.setLogValueByMessage(typ.Ref)
+	isMap := typ.Message != nil && typ.Message.IsMapEntry
+	if typ.Message != nil {
+		s.setLogValueByMessage(typ.Message)
 	}
 	if typ.Enum != nil {
 		s.setLogValueByEnum(typ.Enum)
@@ -744,7 +741,7 @@ func (s *Service) setLogValueByEnum(enum *resolver.Enum) {
 	if _, exists := s.nameToLogValueMap[name]; exists {
 		return
 	}
-	enumType := &resolver.Type{Type: types.Enum, Enum: enum}
+	enumType := &resolver.Type{Kind: types.Enum, Enum: enum}
 	logValue := &LogValue{
 		Name:      name,
 		ValueType: toTypeText(s.Service.File, enumType),
@@ -761,16 +758,16 @@ func (s *Service) setLogValueByEnum(enum *resolver.Enum) {
 }
 
 func (s *Service) setLogValueByRepeatedType(typ *resolver.Type) {
-	if typ.Type != types.Message && typ.Type != types.Enum {
+	if typ.Kind != types.Message && typ.Kind != types.Enum {
 		return
 	}
 	var (
 		name  string
 		value string
 	)
-	if typ.Type == types.Message {
-		name = s.repeatedMessageToLogValueName(typ.Ref)
-		value = s.messageToLogValueName(typ.Ref)
+	if typ.Kind == types.Message {
+		name = s.repeatedMessageToLogValueName(typ.Message)
+		value = s.messageToLogValueName(typ.Message)
 	} else {
 		name = s.repeatedEnumToLogValueName(typ.Enum)
 		value = s.enumToLogValueName(typ.Enum)
@@ -807,7 +804,7 @@ func (s *Service) logType(typ *resolver.Type) string {
 	if typ.Repeated {
 		return "Any"
 	}
-	switch typ.Type {
+	switch typ.Kind {
 	case types.Double, types.Float:
 		return "Float64"
 	case types.Int32, types.Int64, types.Sint32, types.Sint64, types.Sfixed32, types.Sfixed64:
@@ -823,16 +820,16 @@ func (s *Service) logType(typ *resolver.Type) string {
 	case types.Group, types.Message:
 		return "Any"
 	}
-	log.Fatalf("grpc-federation: specified unknown type value %s", typ.Type)
+	log.Fatalf("grpc-federation: specified unknown type value %s", typ.Kind)
 	return ""
 }
 
 func (s *Service) logValue(field *resolver.Field) string {
 	typ := field.Type
 	base := fmt.Sprintf("v.Get%s()", util.ToPublicGoVariable(field.Name))
-	if typ.Type == types.Message {
+	if typ.Kind == types.Message {
 		return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
-	} else if typ.Type == types.Enum {
+	} else if typ.Kind == types.Enum {
 		if typ.Repeated {
 			return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
 		}
@@ -841,7 +838,7 @@ func (s *Service) logValue(field *resolver.Field) string {
 	if field.Type.Repeated {
 		return base
 	}
-	switch field.Type.Type {
+	switch field.Type.Kind {
 	case types.Int32, types.Sint32, types.Sfixed32:
 		base = fmt.Sprintf("int64(%s)", base)
 	case types.Uint32, types.Fixed32:
@@ -856,14 +853,14 @@ func (s *Service) logValue(field *resolver.Field) string {
 
 func (s *Service) logMapValue(value *resolver.Field) string {
 	typ := value.Type
-	if typ.Type == types.Message {
+	if typ.Kind == types.Message {
 		return fmt.Sprintf("%s(value)", s.logValueFuncName(typ))
-	} else if typ.Type == types.Enum {
+	} else if typ.Kind == types.Enum {
 		if typ.Repeated {
 			return fmt.Sprintf("%s(value)", s.logValueFuncName(typ))
 		}
 		return fmt.Sprintf("slog.StringValue(%s(value).String())", s.logValueFuncName(typ))
-	} else if typ.Type == types.Bytes {
+	} else if typ.Kind == types.Bytes {
 		return "slog.StringValue(string(value))"
 	}
 	return "slog.AnyValue(value)"
@@ -872,9 +869,9 @@ func (s *Service) logMapValue(value *resolver.Field) string {
 func (s *Service) msgArgumentLogValue(field *resolver.Field) string {
 	typ := field.Type
 	base := fmt.Sprintf("v.%s", util.ToPublicGoVariable(field.Name))
-	if typ.Type == types.Message {
+	if typ.Kind == types.Message {
 		return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
-	} else if typ.Type == types.Enum {
+	} else if typ.Kind == types.Enum {
 		if typ.Repeated {
 			return fmt.Sprintf("%s(%s)", s.logValueFuncName(typ), base)
 		}
@@ -883,7 +880,7 @@ func (s *Service) msgArgumentLogValue(field *resolver.Field) string {
 	if field.Type.Repeated {
 		return base
 	}
-	switch field.Type.Type {
+	switch field.Type.Kind {
 	case types.Int32, types.Sint32, types.Sfixed32:
 		base = fmt.Sprintf("int64(%s)", base)
 	case types.Uint32, types.Fixed32:
@@ -897,14 +894,14 @@ func (s *Service) msgArgumentLogValue(field *resolver.Field) string {
 }
 
 func (s *Service) logValueFuncName(typ *resolver.Type) string {
-	if typ.Type == types.Message {
-		isMap := typ.Ref.IsMapEntry
+	if typ.Kind == types.Message {
+		isMap := typ.Message.IsMapEntry
 		if typ.Repeated && !isMap {
-			return fmt.Sprintf("s.%s", s.repeatedMessageToLogValueName(typ.Ref))
+			return fmt.Sprintf("s.%s", s.repeatedMessageToLogValueName(typ.Message))
 		}
-		return fmt.Sprintf("s.%s", s.messageToLogValueName(typ.Ref))
+		return fmt.Sprintf("s.%s", s.messageToLogValueName(typ.Message))
 	}
-	if typ.Type == types.Enum {
+	if typ.Kind == types.Enum {
 		if typ.Repeated {
 			return fmt.Sprintf("s.%s", s.repeatedEnumToLogValueName(typ.Enum))
 		}
@@ -1025,17 +1022,11 @@ func (m *Method) ArgumentName() string {
 }
 
 func (m *Method) RequestType() string {
-	return toTypeText(m.Service.File, &resolver.Type{
-		Type: types.Message,
-		Ref:  m.Request,
-	})
+	return toTypeText(m.Service.File, resolver.NewMessageType(m.Request, false))
 }
 
 func (m *Method) ReturnType() string {
-	return toTypeText(m.Service.File, &resolver.Type{
-		Type: types.Message,
-		Ref:  m.Response,
-	})
+	return toTypeText(m.Service.File, resolver.NewMessageType(m.Response, false))
 }
 
 func (m *Method) ReturnTypeWithoutPtr() string {
@@ -1251,11 +1242,11 @@ func (f *CastField) IsOneof() bool {
 }
 
 func (f *CastField) IsStruct() bool {
-	return f.fromType.Type == types.Message
+	return f.fromType.Kind == types.Message
 }
 
 func (f *CastField) IsEnum() bool {
-	return f.fromType.Type == types.Enum
+	return f.fromType.Kind == types.Enum
 }
 
 type CastEnum struct {
@@ -1361,8 +1352,8 @@ type CastStructField struct {
 }
 
 func (f *CastField) ToStruct() *CastStruct {
-	toMsg := f.toType.Ref
-	fromMsg := f.fromType.Ref
+	toMsg := f.toType.Message
+	fromMsg := f.fromType.Message
 
 	var castFields []*CastStructField
 	for _, toField := range toMsg.Fields {
@@ -1424,7 +1415,7 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 		fromType = fromField.Type
 		toType = toField.Type
 	}
-	if fromType.Type != toType.Type {
+	if fromType.Kind != toType.Kind {
 		return nil
 	}
 	requiredCast := requiredCast(fromType, toType)
@@ -1576,7 +1567,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		zeroValue        string
 		typ              string
 	)
-	switch fromType.Type {
+	switch fromType.Kind {
 	case types.Message:
 		zeroValue = toMakeZeroValue(m.Service.File, fromType)
 		typ = fromText
@@ -1655,7 +1646,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 				typ      string
 				argValue = "v"
 			)
-			switch fromType.Type {
+			switch fromType.Kind {
 			case types.Message:
 				typ = toTypeText(m.Service.File, fromType)
 				if requiredCast(fromType, toType) {
@@ -2113,7 +2104,7 @@ func toCELNativeType(t *resolver.Type) string {
 		cloned.Repeated = false
 		return fmt.Sprintf("cel.ListType(%s)", toCELNativeType(cloned))
 	}
-	switch t.Type {
+	switch t.Kind {
 	case types.Double, types.Float:
 		return "celtypes.DoubleType"
 	case types.Int32, types.Int64, types.Sint32, types.Sint64, types.Sfixed32, types.Sfixed64, types.Enum:
@@ -2127,9 +2118,9 @@ func toCELNativeType(t *resolver.Type) string {
 	case types.Bytes:
 		return "celtypes.BytesType"
 	case types.Message:
-		return fmt.Sprintf("cel.ObjectType(%q)", t.Ref.FQDN())
+		return fmt.Sprintf("cel.ObjectType(%q)", t.Message.FQDN())
 	default:
-		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Type)
+		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind)
 	}
 	return ""
 }
@@ -2357,7 +2348,7 @@ func argument(file *resolver.File, name string, typ *resolver.Type, value *resol
 	}
 	var inlineFields []*Argument
 	if value.Inline {
-		for _, field := range value.CEL.Out.Ref.Fields {
+		for _, field := range value.CEL.Out.Message.Fields {
 			inlineFields = append(inlineFields, &Argument{
 				Name:  util.ToPublicGoVariable(field.Name),
 				Value: fmt.Sprintf("v.Get%s()", util.ToPublicGoVariable(field.Name)),
@@ -2380,7 +2371,7 @@ func argument(file *resolver.File, name string, typ *resolver.Type, value *resol
 		zeroValue string
 		argType   string
 	)
-	switch fromType.Type {
+	switch fromType.Kind {
 	case types.Message:
 		zeroValue = toMakeZeroValue(file, fromType)
 		argType = fromText
@@ -2424,7 +2415,7 @@ func toGoConstValue(file *resolver.File, typ *resolver.Type, value any) string {
 		}
 		return fmt.Sprintf("%s{%s}", toTypeText(file, typ), strings.Join(values, ","))
 	}
-	switch typ.Type {
+	switch typ.Kind {
 	case types.Bool:
 		return fmt.Sprintf("%t", value)
 	case types.String:
@@ -2442,7 +2433,7 @@ func toGoConstValue(file *resolver.File, typ *resolver.Type, value any) string {
 	case types.Enum:
 		enumValue := value.(*resolver.EnumValue)
 		prefix := toEnumValuePrefix(file, &resolver.Type{
-			Type: types.Enum,
+			Kind: types.Enum,
 			Enum: enumValue.Enum,
 		})
 		return toEnumValueText(prefix, enumValue.Value)
@@ -2451,11 +2442,11 @@ func toGoConstValue(file *resolver.File, typ *resolver.Type, value any) string {
 		if !ok {
 			log.Fatalf("message const value must be map[string]*resolver.Value type. but %T", value)
 		}
-		if typ.Ref == nil {
+		if typ.Message == nil {
 			log.Fatal("message reference required")
 		}
 		var fields []string
-		for _, field := range typ.Ref.Fields {
+		for _, field := range typ.Message.Fields {
 			v, exists := mapV[field.Name]
 			if !exists {
 				continue
@@ -2469,10 +2460,10 @@ func toGoConstValue(file *resolver.File, typ *resolver.Type, value any) string {
 				),
 			)
 		}
-		if file.GoPackage.ImportPath == typ.Ref.GoPackage().ImportPath {
-			return fmt.Sprintf("&%s{%s}", typ.Ref.Name, strings.Join(fields, ","))
+		if file.GoPackage.ImportPath == typ.Message.GoPackage().ImportPath {
+			return fmt.Sprintf("&%s{%s}", typ.Message.Name, strings.Join(fields, ","))
 		}
-		return fmt.Sprintf("&%s.%s{%s}", typ.Ref.GoPackage().Name, typ.Ref.Name, strings.Join(fields, ","))
+		return fmt.Sprintf("&%s.%s{%s}", typ.Message.GoPackage().Name, typ.Message.Name, strings.Join(fields, ","))
 	default:
 		// number value
 		return fmt.Sprint(value)
@@ -2598,13 +2589,13 @@ func requiredCast(from, to *resolver.Type) bool {
 	if from == nil || to == nil {
 		return false
 	}
-	if from.Type == types.Message {
-		return from.Ref != to.Ref
+	if from.Kind == types.Message {
+		return from.Message != to.Message
 	}
-	if from.Type == types.Enum {
+	if from.Kind == types.Enum {
 		return from.Enum != to.Enum
 	}
-	return from.Type != to.Type
+	return from.Kind != to.Kind
 }
 
 func castFuncName(from, to *resolver.Type) string {
@@ -2619,12 +2610,12 @@ func castName(typ *resolver.Type) string {
 	switch {
 	case typ.OneofField != nil:
 		ret += fullOneofName(typ.OneofField)
-	case typ.Type == types.Message:
-		ret += fullMessageName(typ.Ref)
-	case typ.Type == types.Enum:
+	case typ.Kind == types.Message:
+		ret += fullMessageName(typ.Message)
+	case typ.Kind == types.Enum:
 		ret += fullEnumName(typ.Enum)
 	default:
-		ret += toTypeText(nil, &resolver.Type{Type: typ.Type})
+		ret += toTypeText(nil, &resolver.Type{Kind: typ.Kind})
 	}
 	return ret
 }

@@ -202,10 +202,11 @@ func (b *FileBuilder) RepeatedType(t *testing.T, name string) *resolver.Type {
 func (b *FileBuilder) addType(name string, typ *resolver.Type) {
 	b.typeMap[name] = typ
 	b.repeatedTypeMap[name] = &resolver.Type{
-		Type:     typ.Type,
-		Ref:      typ.Ref,
-		Enum:     typ.Enum,
-		Repeated: true,
+		Kind:       typ.Kind,
+		Message:    typ.Message,
+		Enum:       typ.Enum,
+		OneofField: typ.OneofField,
+		Repeated:   true,
 	}
 }
 
@@ -217,7 +218,7 @@ func (b *FileBuilder) AddService(svc *resolver.Service) *FileBuilder {
 
 func (b *FileBuilder) AddEnum(enum *resolver.Enum) *FileBuilder {
 	enum.File = b.file
-	typ := &resolver.Type{Type: types.Enum, Enum: enum}
+	typ := &resolver.Type{Kind: types.Enum, Enum: enum}
 	var enumName string
 	if enum.Message != nil {
 		enumName = strings.Join(
@@ -233,7 +234,7 @@ func (b *FileBuilder) AddEnum(enum *resolver.Enum) *FileBuilder {
 }
 
 func (b *FileBuilder) AddMessage(msg *resolver.Message) *FileBuilder {
-	typ := &resolver.Type{Type: types.Message, Ref: msg}
+	typ := resolver.NewMessageType(msg, false)
 	msgName := strings.Join(append(msg.ParentMessageNames(), msg.Name), ".")
 	b.addType(msgName, typ)
 	msg.File = b.file
@@ -299,16 +300,16 @@ func (b *MessageBuilder) AddEnum(enum *resolver.Enum) *MessageBuilder {
 func (b *MessageBuilder) getType(t *testing.T, name string) *resolver.Type {
 	t.Helper()
 	if b.msg.Name == name {
-		return &resolver.Type{Type: types.Message, Ref: b.msg}
+		return resolver.NewMessageType(b.msg, false)
 	}
 	for _, enum := range b.msg.Enums {
 		if enum.Name == name {
-			return &resolver.Type{Type: types.Enum, Enum: enum}
+			return &resolver.Type{Kind: types.Enum, Enum: enum}
 		}
 	}
 	for _, msg := range b.msg.NestedMessages {
 		if msg.Name == name {
-			return &resolver.Type{Type: types.Message, Ref: msg}
+			return resolver.NewMessageType(msg, false)
 		}
 	}
 	t.Fatalf("failed to find %s type in %s message", name, b.msg.Name)
@@ -321,7 +322,7 @@ func (b *MessageBuilder) AddField(name string, typ *resolver.Type) *MessageBuild
 }
 
 func (b *MessageBuilder) AddFieldWithSelfType(name string, isRepeated bool) *MessageBuilder {
-	typ := &resolver.Type{Type: types.Message, Ref: b.msg, Repeated: isRepeated}
+	typ := resolver.NewMessageType(b.msg, isRepeated)
 	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ})
 	return b
 }

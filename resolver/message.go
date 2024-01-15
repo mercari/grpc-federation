@@ -14,8 +14,8 @@ func NewMessage(name string, fields []*Field) *Message {
 
 func NewMessageType(msg *Message, repeated bool) *Type {
 	return &Type{
-		Type:     types.Message,
-		Ref:      msg,
+		Kind:     types.Message,
+		Message:  msg,
 		Repeated: repeated,
 	}
 }
@@ -380,10 +380,10 @@ func (m *Message) GoPackageDependencies() []*GoPackage {
 	}
 	seenMsgMap := make(map[*Message]struct{})
 	for _, field := range m.Fields {
-		if field.Type.Ref == nil {
+		if field.Type.Message == nil {
 			continue
 		}
-		for _, gopkg := range getGoPackageDependencies(gopkg, field.Type.Ref, seenMsgMap) {
+		for _, gopkg := range getGoPackageDependencies(gopkg, field.Type.Message, seenMsgMap) {
 			pkgMap[gopkg] = struct{}{}
 		}
 	}
@@ -401,13 +401,13 @@ func getGoPackageDependencies(base *GoPackage, msg *Message, seenMsgMap map[*Mes
 	}
 	seenMsgMap[msg] = struct{}{}
 	for _, field := range msg.Fields {
-		if field.Type.Ref == nil {
+		if field.Type.Message == nil {
 			continue
 		}
-		if _, exists := seenMsgMap[field.Type.Ref]; exists {
+		if _, exists := seenMsgMap[field.Type.Message]; exists {
 			continue
 		}
-		ret = append(ret, getGoPackageDependencies(base, field.Type.Ref, seenMsgMap)...)
+		ret = append(ret, getGoPackageDependencies(base, field.Type.Message, seenMsgMap)...)
 	}
 	for _, m := range msg.NestedMessages {
 		ret = append(ret, getGoPackageDependencies(base, m, seenMsgMap)...)

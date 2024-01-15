@@ -711,10 +711,10 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 		if typ == nil {
 			continue
 		}
-		if typ.Type != types.Message {
+		if typ.Kind != types.Message {
 			continue
 		}
-		for _, field := range typ.Ref.Fields {
+		for _, field := range typ.Message.Fields {
 			autobindFieldMap[field.Name] = append(autobindFieldMap[field.Name], &AutoBindField{
 				VariableDefinition: varDef,
 				Field:              field,
@@ -748,7 +748,7 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 		if autoBindField.Field.Type == nil || field.Type == nil {
 			continue
 		}
-		if autoBindField.Field.Type.Type != field.Type.Type {
+		if autoBindField.Field.Type.Kind != field.Type.Kind {
 			continue
 		}
 		if autoBindField.VariableDefinition != nil {
@@ -803,7 +803,7 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message) {
 			continue
 		}
 		fieldType := field.Type
-		if fieldType.Type != types.Message && fieldType.Type != types.Enum {
+		if fieldType.Kind != types.Message && fieldType.Kind != types.Enum {
 			continue
 		}
 		rule := field.Rule
@@ -824,16 +824,16 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 		return
 	}
 	toType := toField.Type
-	if fromType.Type == types.Message {
-		if fromType.Ref == nil || toType.Ref == nil {
+	if fromType.Kind == types.Message {
+		if fromType.Message == nil || toType.Message == nil {
 			return
 		}
-		if fromType.Ref.IsMapEntry {
+		if fromType.Message.IsMapEntry {
 			// If it is a map entry, ignore it.
 			return
 		}
-		fromMessageName := fromType.Ref.FQDN()
-		toMessage := toType.Ref
+		fromMessageName := fromType.Message.FQDN()
+		toMessage := toType.Message
 		toMessageName := toMessage.FQDN()
 		if fromMessageName == toMessageName {
 			// assignment of the same type is okay.
@@ -866,7 +866,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 		}
 		return
 	}
-	if fromType.Type == types.Enum {
+	if fromType.Kind == types.Enum {
 		if fromType.Enum == nil || toType.Enum == nil {
 			return
 		}
@@ -1479,13 +1479,13 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 	if field.Type == nil || aliasField.Type == nil {
 		return nil
 	}
-	if field.Type.Type != aliasField.Type.Type {
+	if field.Type.Kind != aliasField.Type.Kind {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
 					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
-					msg.FQDN(), field.Name, types.ToString(field.Type.Type),
-					msgAlias.FQDN(), types.ToString(aliasField.Type.Type),
+					msg.FQDN(), field.Name, types.ToString(field.Type.Kind),
+					msgAlias.FQDN(), types.ToString(aliasField.Type.Kind),
 				),
 				source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
 			),
@@ -1522,13 +1522,13 @@ func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, f
 	if field.Type == nil || aliasField.Type == nil {
 		return nil
 	}
-	if field.Type.Type != aliasField.Type.Type {
+	if field.Type.Kind != aliasField.Type.Kind {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
 					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
-					msg.FQDN(), field.Name, types.ToString(field.Type.Type),
-					msgAlias.FQDN(), types.ToString(aliasField.Type.Type),
+					msg.FQDN(), field.Name, types.ToString(field.Type.Kind),
+					msgAlias.FQDN(), types.ToString(aliasField.Type.Kind),
 				),
 				source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
 			),
@@ -1686,12 +1686,12 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 	return field
 }
 
-func (r *Resolver) resolveType(ctx *context, typeName string, typ types.Type, label descriptorpb.FieldDescriptorProto_Label) (*Type, error) {
+func (r *Resolver) resolveType(ctx *context, typeName string, kind types.Kind, label descriptorpb.FieldDescriptorProto_Label) (*Type, error) {
 	var (
-		ref  *Message
+		msg  *Message
 		enum *Enum
 	)
-	switch typ {
+	switch kind {
 	case types.Message:
 		var pkg *Package
 		if !strings.Contains(typeName, ".") {
@@ -1708,7 +1708,7 @@ func (r *Resolver) resolveType(ctx *context, typeName string, typ types.Type, la
 			pkg = p
 		}
 		name := r.trimPackage(pkg, typeName)
-		ref = r.resolveMessage(ctx, pkg, name)
+		msg = r.resolveMessage(ctx, pkg, name)
 	case types.Enum:
 		var pkg *Package
 		if !strings.Contains(typeName, ".") {
@@ -1728,9 +1728,9 @@ func (r *Resolver) resolveType(ctx *context, typeName string, typ types.Type, la
 		enum = r.resolveEnum(ctx, pkg, name)
 	}
 	return &Type{
-		Type:     typ,
+		Kind:     kind,
 		Repeated: label == descriptorpb.FieldDescriptorProto_LABEL_REPEATED,
-		Ref:      ref,
+		Message:  msg,
 		Enum:     enum,
 	}, nil
 }
@@ -1941,13 +1941,13 @@ func (r *Resolver) resolveMessageConstValue(ctx *context, val *federation.Messag
 	if err != nil {
 		return nil, nil, err
 	}
-	if t.Ref == nil {
+	if t.Message == nil {
 		return nil, nil, fmt.Errorf(`%q message does not exist`, msgName)
 	}
 	fieldMap := map[string]*Value{}
 	for _, field := range val.GetFields() {
 		fieldName := field.GetField()
-		if !t.Ref.HasField(fieldName) {
+		if !t.Message.HasField(fieldName) {
 			return nil, nil, fmt.Errorf(`%q field does not exist in %s message`, fieldName, msgName)
 		}
 		value, err := r.resolveValue(ctx, messageFieldValueToCommonValueDef(field))
@@ -2189,7 +2189,7 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, defs
 					continue
 				}
 				if arg.Value.CEL != nil && arg.Value.Inline {
-					if fieldType.Type != types.Message {
+					if fieldType.Kind != types.Message {
 						ctx.addError(
 							ErrWithLocation(
 								"inline value is not message type",
@@ -2203,7 +2203,7 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, defs
 						)
 						continue
 					}
-					fields = append(fields, fieldType.Ref.Fields...)
+					fields = append(fields, fieldType.Message.Fields...)
 				} else {
 					fields = append(fields, &Field{
 						Name: arg.Name,
@@ -2287,10 +2287,10 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				)
 			}
 			if varDef.If.Out != nil {
-				if varDef.If.Out.Type != types.Bool {
+				if varDef.If.Out.Kind != types.Bool {
 					ctx.addError(
 						ErrWithLocation(
-							fmt.Sprintf(`return value of "if" must be bool type but got %s type`, varDef.If.Out.Type),
+							fmt.Sprintf(`return value of "if" must be bool type but got %s type`, varDef.If.Out.Kind),
 							source.VariableDefinitionIfLocation(
 								msg.File.Name,
 								msg.Name,
@@ -2358,10 +2358,10 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 					)
 				}
 				if oneof.If.Out != nil {
-					if oneof.If.Out.Type != types.Bool {
+					if oneof.If.Out.Kind != types.Bool {
 						ctx.addError(
 							ErrWithLocation(
-								fmt.Sprintf(`return value of "if" must be bool type but got %s type`, oneof.If.Out.Type),
+								fmt.Sprintf(`return value of "if" must be bool type but got %s type`, oneof.If.Out.Kind),
 								source.MessageFieldOneofIfLocation(
 									msg.File.Name,
 									msg.Name,
@@ -2536,7 +2536,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 				)
 				return
 			}
-			if e.If.Out.Type != types.Bool {
+			if e.If.Out.Kind != types.Bool {
 				ctx.addError(
 					ErrWithLocation(
 						"if must always return a boolean value",
@@ -2615,7 +2615,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 			),
 		)
 	}
-	if detail.If.Out != nil && detail.If.Out.Type != types.Bool {
+	if detail.If.Out != nil && detail.If.Out.Kind != types.Bool {
 		ctx.addError(
 			ErrWithLocation(
 				"if must always return a boolean value",
@@ -2636,7 +2636,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if violation.Type.Out != nil && violation.Type.Out.Type != types.String {
+			if violation.Type.Out != nil && violation.Type.Out.Kind != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"type must always return a string value",
@@ -2652,7 +2652,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if violation.Subject.Out != nil && violation.Subject.Out.Type != types.String {
+			if violation.Subject.Out != nil && violation.Subject.Out.Kind != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"subject must always return a string value",
@@ -2668,7 +2668,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if violation.Description.Out != nil && violation.Description.Out.Type != types.String {
+			if violation.Description.Out != nil && violation.Description.Out.Kind != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"description must always return a string value",
@@ -2689,7 +2689,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if violation.Field.Out != nil && violation.Field.Out.Type != types.String {
+			if violation.Field.Out != nil && violation.Field.Out.Kind != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"field must always return a string value",
@@ -2705,7 +2705,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 					),
 				)
 			}
-			if violation.Description.Out != nil && violation.Description.Out.Type != types.String {
+			if violation.Description.Out != nil && violation.Description.Out.Kind != types.String {
 				ctx.addError(
 					ErrWithLocation(
 						"description must always return a string value",
@@ -2725,7 +2725,7 @@ func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, en
 				),
 			)
 		}
-		if message.Message.Out != nil && message.Message.Out.Type != types.String {
+		if message.Message.Out != nil && message.Message.Out.Kind != types.String {
 			ctx.addError(
 				ErrWithLocation(
 					"message must always return a string value",
@@ -2824,7 +2824,7 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 		return DoubleType, nil
 	case celtypes.IntKind:
 		if enum, found := r.celRegistry.LookupEnum(typ); found {
-			return &Type{Type: types.Enum, Enum: enum}, nil
+			return &Type{Kind: types.Enum, Enum: enum}, nil
 		}
 		return Int64Type, nil
 	case celtypes.UintKind:
@@ -2892,8 +2892,8 @@ func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.Fil
 	}
 	for idx, field := range arg.Fields {
 		var typeName string
-		if field.Type.Ref != nil {
-			typeName = field.Type.Ref.FQDN()
+		if field.Type.Message != nil {
+			typeName = field.Type.Message.FQDN()
 		}
 		if field.Type.Enum != nil {
 			typeName = field.Type.Enum.FQDN()
@@ -2902,11 +2902,11 @@ func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.Fil
 		if field.Type.Repeated {
 			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 		}
-		typ := field.Type.Type
+		kind := field.Type.Kind
 		msg.Field = append(msg.Field, &descriptorpb.FieldDescriptorProto{
 			Name:     proto.String(field.Name),
 			Number:   proto.Int32(int32(idx) + 1),
-			Type:     &typ,
+			Type:     &kind,
 			TypeName: proto.String(typeName),
 			Label:    &label,
 		})
@@ -3173,7 +3173,7 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 			}
 			if typ == nil {
 				typ = t
-			} else if typ.Ref != t.Ref {
+			} else if typ.Message != t.Message {
 				return nil, fmt.Errorf(`"messages" value unsupported multiple message type`)
 			}
 			vals = append(vals, val)

@@ -1,9 +1,5 @@
 package resolver
 
-import (
-	"github.com/mercari/grpc-federation/types"
-)
-
 var (
 	AnyType       *Type
 	TimestampType *Type
@@ -18,16 +14,16 @@ func init() {
 	}
 	for _, file := range files.FindByPackageName("google.protobuf") {
 		if msg := file.Message("Any"); msg != nil {
-			AnyType = &Type{Type: types.Message, Ref: msg}
+			AnyType = NewMessageType(msg, false)
 		}
 		if msg := file.Message("Timestamp"); msg != nil {
-			TimestampType = &Type{Type: types.Message, Ref: msg}
+			TimestampType = NewMessageType(msg, false)
 		}
 		if msg := file.Message("Duration"); msg != nil {
-			DurationType = &Type{Type: types.Message, Ref: msg}
+			DurationType = NewMessageType(msg, false)
 		}
 		if msg := file.Message("Empty"); msg != nil {
-			EmptyType = &Type{Type: types.Message, Ref: msg}
+			EmptyType = NewMessageType(msg, false)
 		}
 	}
 }

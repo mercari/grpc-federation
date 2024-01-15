@@ -43,8 +43,8 @@ func (c ValueCandidates) Filter(typ *Type) ValueCandidates {
 			ret = append(ret, cc)
 			continue
 		}
-		if cc.Type.Ref == nil && cc.Type.Enum == nil {
-			if cc.Type.Type == typ.Type {
+		if cc.Type.Message == nil && cc.Type.Enum == nil {
+			if cc.Type.Kind == typ.Kind {
 				ret = append(ret, cc)
 				continue
 			}
@@ -57,7 +57,7 @@ func (c ValueCandidates) Filter(typ *Type) ValueCandidates {
 			ret = append(ret, cc)
 			continue
 		}
-		if cc.Type.Ref != nil && typ.Ref != nil && cc.Type.Ref == typ.Ref {
+		if cc.Type.Message != nil && typ.Message != nil && cc.Type.Message == typ.Message {
 			ret = append(ret, cc)
 			continue
 		}

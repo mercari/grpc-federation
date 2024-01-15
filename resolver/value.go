@@ -678,7 +678,7 @@ func NewEnumValue(v *EnumValue) *Value {
 	return &Value{
 		Const: &ConstValue{
 			Type: &Type{
-				Type: types.Enum,
+				Kind: types.Enum,
 				Enum: enum,
 			},
 			Value: v,
@@ -694,7 +694,7 @@ func NewEnumsValue(v ...*EnumValue) *Value {
 	return &Value{
 		Const: &ConstValue{
 			Type: &Type{
-				Type:     types.Enum,
+				Kind:     types.Enum,
 				Enum:     enum,
 				Repeated: true,
 			},

@@ -30,7 +30,7 @@ func (r *CELRegistry) FindStructFieldType(structType, fieldName string) (*celtyp
 	fieldType, found := r.Registry.FindStructFieldType(structType, fieldName)
 	if msg := r.messageMap[structType]; msg != nil {
 		if field := msg.Field(fieldName); field != nil {
-			if field.Type.Type == types.Enum {
+			if field.Type.Kind == types.Enum {
 				// HACK: cel-go currently does not support enum types,s o it will always be an int type.
 				// Therefore, in case of enum type, copy the *Type of int type, and then map the created *Type to the enum type.
 				// Finally, at `fromCELType` phase, lookup enum type from *Type address.
@@ -71,7 +71,7 @@ func ToCELType(typ *Type) *cel.Type {
 }
 
 func toCELType(typ *Type) *cel.Type {
-	switch typ.Type {
+	switch typ.Kind {
 	case types.Double, types.Float:
 		return cel.DoubleType
 	case types.Int32, types.Int64, types.Sfixed32, types.Sfixed64, types.Sint32, types.Sint64:
@@ -83,10 +83,10 @@ func toCELType(typ *Type) *cel.Type {
 	case types.String:
 		return cel.StringType
 	case types.Group, types.Message:
-		if typ.Ref == nil {
+		if typ.Message == nil {
 			return cel.NullType
 		}
-		return cel.ObjectType(typ.Ref.FQDN())
+		return cel.ObjectType(typ.Message.FQDN())
 	case types.Bytes:
 		return cel.BytesType
 	case types.Enum:
@@ -124,8 +124,8 @@ func (r *CELRegistry) RegisterFiles(files ...*descriptorpb.FileDescriptorProto) 
 
 func NewCELStandardLibraryMessageType(pkgName, msgName string) *Type {
 	return &Type{
-		Type: types.Message,
-		Ref: &Message{
+		Kind: types.Message,
+		Message: &Message{
 			File: &File{
 				Package: &Package{
 					Name: "grpc.federation." + pkgName,
