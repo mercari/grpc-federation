@@ -371,7 +371,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Setter:         func(value *localValueType, v []string) { value.vars.ids = v },
 			IteratorName:   "post",
 			IteratorType:   cel.ObjectType("org.post.Post"),
-			IteratorSource: value.vars.posts,
+			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				return grpcfed.EvalCEL(ctx, value, "post.id", reflect.TypeOf(""))
 			},
@@ -454,7 +454,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Setter:         func(value *localValueType, v []*User) { value.vars.users = v },
 			IteratorName:   "iter",
 			IteratorType:   cel.ObjectType("org.post.Post"),
-			IteratorSource: value.vars.posts,
+			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
 					Client: s.client,
