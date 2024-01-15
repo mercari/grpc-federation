@@ -324,7 +324,7 @@ type DefMap[T any, U any, V localValue] struct {
 	Setter         func(V, T)
 	IteratorName   string
 	IteratorType   *cel.Type
-	IteratorSource []U
+	IteratorSource func(V) []U
 	Iterator       func(context.Context, *MapIteratorValue) (any, error)
 	outType        T
 }
@@ -406,7 +406,7 @@ func EvalDefMap[T any, U any, V localValue](ctx context.Context, value V, def De
 				value,
 				def.IteratorName,
 				def.IteratorType,
-				def.IteratorSource,
+				def.IteratorSource(value),
 				reflect.TypeOf(def.outType),
 				def.Iterator,
 			)
