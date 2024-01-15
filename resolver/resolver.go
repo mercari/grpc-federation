@@ -2938,7 +2938,7 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 		}
 		if graph := CreateMessageDependencyGraph(ctx, msg); graph != nil {
 			msg.Rule.DependencyGraph = graph
-			msg.Rule.Resolvers = graph.MessageResolverGroups(ctx)
+			msg.Rule.VariableDefinitionGroups = graph.VariableDefinitionGroups(ctx)
 		}
 		for defIdx, def := range msg.Rule.VariableDefinitions {
 			if def.Expr == nil {
@@ -2952,7 +2952,7 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 				ctx := ctx.withErrDetailIndex(detIdx)
 				if graph := CreateMessageDependencyGraphByValidationErrorDetailMessages(msg, detail.Messages); graph != nil {
 					detail.DependencyGraph = graph
-					detail.Resolvers = graph.MessageResolverGroups(ctx)
+					detail.VariableDefinitionGroups = graph.VariableDefinitionGroups(ctx)
 				}
 			}
 		}
@@ -2965,7 +2965,7 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 			}
 			if graph := CreateMessageDependencyGraphByFieldOneof(ctx, msg, field); graph != nil {
 				field.Rule.Oneof.DependencyGraph = graph
-				field.Rule.Oneof.Resolvers = graph.MessageResolverGroups(ctx)
+				field.Rule.Oneof.VariableDefinitionGroups = graph.VariableDefinitionGroups(ctx)
 			}
 		}
 	}

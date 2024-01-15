@@ -285,21 +285,21 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 /*
 {{ $depGraph }}*/
 	{{- end }}
-	{{- $msgResolvers := .MessageResolvers }}
-	{{- $msgResolversLen := len $msgResolvers }}
-	{{- if eq $msgResolversLen 1 }}
-	{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $msgResolvers 0)) }}
+	{{- $defGroups := .VariableDefinitionGroups }}
+	{{- $defGroupsLen := len $defGroups }}
+	{{- if eq $defGroupsLen 1 }}
+	{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $defGroups 0)) }}
 	{{- else }}
-	{{- if $msgResolvers }}
+	{{- if $defGroups }}
 	eg, ctx1 := errgroup.WithContext(ctx)
 	{{- end }}
-	{{ range $msgResolvers }}
+	{{ range $defGroups }}
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-		{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+		{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
 		return nil, nil
 	})
 	{{ end }}
-	{{- if $msgResolvers }}
+	{{- if $defGroups }}
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
@@ -366,21 +366,21 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	switch {
 	{{- range $oneofFields }}
 	case {{ .Condition }}:
-		{{- $oneofMsgResolvers := .MessageResolvers }}
-		{{- $oneofMsgResolversLen := len $oneofMsgResolvers }}
-		{{- if eq $oneofMsgResolversLen 1 }}
-		{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $oneofMsgResolvers 0)) }}
+		{{- $oneofDefGroups := .VariableDefinitionGroups }}
+		{{- $oneofDefGroupsLen := len $oneofDefGroups }}
+		{{- if eq $oneofDefGroupsLen 1 }}
+		{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $oneofDefGroups 0)) }}
 		{{- else }}
-		{{- if $oneofMsgResolvers }}
+		{{- if $oneofDefGroups }}
 		eg, ctx1 := errgroup.WithContext(ctx)
 		{{- end }}
-		{{ range $oneofMsgResolvers }}
+		{{ range $oneofDefGroups }}
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-			{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+			{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
 			return nil, nil
 		})
 		{{ end }}
-		{{- if $oneofMsgResolvers }}
+		{{- if $oneofDefGroups }}
 		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
@@ -399,21 +399,21 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- end }}
 	{{- if $defaultOneofField }}
 	default:
-		{{- $oneofMsgResolvers := $defaultOneofField.MessageResolvers }}
-		{{- $oneofMsgResolversLen := len $oneofMsgResolvers }}
-		{{- if eq $oneofMsgResolversLen 1 }}
-		{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $oneofMsgResolvers 0)) }}
+		{{- $oneofDefGroups := $defaultOneofField.VariableDefinitionGroups }}
+		{{- $oneofDefGroupsLen := len $oneofDefGroups }}
+		{{- if eq $oneofDefGroupsLen 1 }}
+		{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $oneofDefGroups 0)) }}
 		{{- else }}
-		{{- if $oneofMsgResolvers }}
+		{{- if $oneofDefGroups }}
 		eg, ctx1 := errgroup.WithContext(ctx)
 		{{- end }}
-		{{ range $oneofMsgResolvers }}
+		{{ range $oneofDefGroups }}
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-			{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+			{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
 			return nil, nil
 		})
 		{{ end }}
-		{{- if $oneofMsgResolvers }}
+		{{- if $oneofDefGroups }}
 		if err := eg.Wait(); err != nil {
 			return nil, err
 		}

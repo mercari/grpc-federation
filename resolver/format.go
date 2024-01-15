@@ -601,8 +601,8 @@ func (c *ConstValue) ProtoFormat(opt *ProtoFormatOption) string {
 	return ""
 }
 
-func DependencyGraphTreeFormat(groups []MessageResolverGroup) string {
-	ctx := newMessageResolverGroupTreeFormatContext()
+func DependencyGraphTreeFormat(groups []VariableDefinitionGroup) string {
+	ctx := newVariableDefinitionGroupTreeFormatContext()
 	for _, group := range groups {
 		group.setTextMaxLength(ctx.withNextDepth())
 	}
@@ -626,33 +626,33 @@ func DependencyGraphTreeFormat(groups []MessageResolverGroup) string {
 	return ret
 }
 
-func (g *SequentialMessageResolverGroup) treeFormat(ctx *messageResolverGroupTreeFormatContext) string {
+func (g *SequentialVariableDefinitionGroup) treeFormat(ctx *variableDefinitionGroupTreeFormatContext) string {
 	var (
 		ret string
 	)
 	if g.Start != nil {
-		ret += treeFormatByMessageResolverGroup(ctx, g.Start, true)
+		ret += treeFormatByVariableDefinitionGroup(ctx, g.Start, true)
 	}
 	if g.End != nil {
-		ret += treeFormatByMessageResolver(ctx, g.End)
+		ret += treeFormatByVariableDefinition(ctx, g.End)
 	}
 	return ret
 }
 
-func (g *ConcurrentMessageResolverGroup) treeFormat(ctx *messageResolverGroupTreeFormatContext) string {
+func (g *ConcurrentVariableDefinitionGroup) treeFormat(ctx *variableDefinitionGroupTreeFormatContext) string {
 	var (
 		ret string
 	)
 	for i := 0; i < len(g.Starts); i++ {
-		ret += treeFormatByMessageResolverGroup(ctx, g.Starts[i], i == 0)
+		ret += treeFormatByVariableDefinitionGroup(ctx, g.Starts[i], i == 0)
 	}
 	if g.End != nil {
-		ret += treeFormatByMessageResolver(ctx, g.End)
+		ret += treeFormatByVariableDefinition(ctx, g.End)
 	}
 	return ret
 }
 
-func treeFormatByMessageResolverGroup(ctx *messageResolverGroupTreeFormatContext, g MessageResolverGroup, isFirst bool) string {
+func treeFormatByVariableDefinitionGroup(ctx *variableDefinitionGroupTreeFormatContext, g VariableDefinitionGroup, isFirst bool) string {
 	if !isFirst {
 		ctx = ctx.withLineDepth()
 	}
@@ -677,13 +677,13 @@ func treeFormatByMessageResolverGroup(ctx *messageResolverGroupTreeFormatContext
 	return text
 }
 
-func treeFormatByMessageResolver(ctx *messageResolverGroupTreeFormatContext, r *MessageResolver) string {
+func treeFormatByVariableDefinition(ctx *variableDefinitionGroupTreeFormatContext, def *VariableDefinition) string {
 	format := fmt.Sprintf("%%%ds", ctx.currentMaxLength())
 	prefix := strings.Repeat(" ", ctx.currentIndent())
-	return prefix + fmt.Sprintf(format, r.Name)
+	return prefix + fmt.Sprintf(format, def.Name)
 }
 
-func (g *SequentialMessageResolverGroup) setTextMaxLength(ctx *messageResolverGroupTreeFormatContext) {
+func (g *SequentialVariableDefinitionGroup) setTextMaxLength(ctx *variableDefinitionGroupTreeFormatContext) {
 	if g.Start != nil {
 		g.Start.setTextMaxLength(ctx.withNextDepth())
 	}
@@ -696,7 +696,7 @@ func (g *SequentialMessageResolverGroup) setTextMaxLength(ctx *messageResolverGr
 	}
 }
 
-func (g *ConcurrentMessageResolverGroup) setTextMaxLength(ctx *messageResolverGroupTreeFormatContext) {
+func (g *ConcurrentVariableDefinitionGroup) setTextMaxLength(ctx *variableDefinitionGroupTreeFormatContext) {
 	for _, start := range g.Starts {
 		start.setTextMaxLength(ctx.withNextDepth())
 	}
@@ -709,8 +709,8 @@ func (g *ConcurrentMessageResolverGroup) setTextMaxLength(ctx *messageResolverGr
 	}
 }
 
-func newMessageResolverGroupTreeFormatContext() *messageResolverGroupTreeFormatContext {
-	return &messageResolverGroupTreeFormatContext{
+func newVariableDefinitionGroupTreeFormatContext() *variableDefinitionGroupTreeFormatContext {
+	return &variableDefinitionGroupTreeFormatContext{
 		depthToMaxLength: map[int]int{0: 0},
 		depthToIndent:    make(map[int]int),
 		lineDepth:        make(map[int]struct{}),
@@ -719,7 +719,7 @@ func newMessageResolverGroupTreeFormatContext() *messageResolverGroupTreeFormatC
 
 const lineSpace = 2
 
-func (c *messageResolverGroupTreeFormatContext) setupIndent() {
+func (c *variableDefinitionGroupTreeFormatContext) setupIndent() {
 	maxDepth := c.maxDepth()
 	for depth := range c.depthToMaxLength {
 		diff := maxDepth - depth
@@ -727,7 +727,7 @@ func (c *messageResolverGroupTreeFormatContext) setupIndent() {
 	}
 }
 
-func (c *messageResolverGroupTreeFormatContext) getTotalMaxLength(depth int) int {
+func (c *variableDefinitionGroupTreeFormatContext) getTotalMaxLength(depth int) int {
 	length, exists := c.depthToMaxLength[depth]
 	if !exists {
 		return 0
@@ -736,13 +736,13 @@ func (c *messageResolverGroupTreeFormatContext) getTotalMaxLength(depth int) int
 }
 
 // withLineDepth clone context after adding '│' character's depth position.
-func (c *messageResolverGroupTreeFormatContext) withLineDepth() *messageResolverGroupTreeFormatContext {
+func (c *variableDefinitionGroupTreeFormatContext) withLineDepth() *variableDefinitionGroupTreeFormatContext {
 	lineDepth := make(map[int]struct{})
 	for depth := range c.lineDepth {
 		lineDepth[depth] = struct{}{}
 	}
 	lineDepth[c.depth] = struct{}{}
-	return &messageResolverGroupTreeFormatContext{
+	return &variableDefinitionGroupTreeFormatContext{
 		depth:            c.depth,
 		depthToMaxLength: c.depthToMaxLength,
 		depthToIndent:    c.depthToIndent,
@@ -751,8 +751,8 @@ func (c *messageResolverGroupTreeFormatContext) withLineDepth() *messageResolver
 }
 
 // withNextDepth clone context after incrementing the depth.
-func (c *messageResolverGroupTreeFormatContext) withNextDepth() *messageResolverGroupTreeFormatContext {
-	return &messageResolverGroupTreeFormatContext{
+func (c *variableDefinitionGroupTreeFormatContext) withNextDepth() *variableDefinitionGroupTreeFormatContext {
+	return &variableDefinitionGroupTreeFormatContext{
 		depth:            c.depth + 1,
 		depthToMaxLength: c.depthToMaxLength,
 		depthToIndent:    c.depthToIndent,
@@ -761,7 +761,7 @@ func (c *messageResolverGroupTreeFormatContext) withNextDepth() *messageResolver
 }
 
 // maxDepth return max depth number for current tree.
-func (c *messageResolverGroupTreeFormatContext) maxDepth() int {
+func (c *variableDefinitionGroupTreeFormatContext) maxDepth() int {
 	var max int
 	for depth := range c.depthToMaxLength {
 		if max < depth {
@@ -772,7 +772,7 @@ func (c *messageResolverGroupTreeFormatContext) maxDepth() int {
 }
 
 // lineIndents returns all '│' character's indent position.
-func (c *messageResolverGroupTreeFormatContext) lineIndents() []int {
+func (c *variableDefinitionGroupTreeFormatContext) lineIndents() []int {
 	indents := []int{}
 	for depth := range c.lineDepth {
 		indents = append(indents, c.depthToIndent[depth])
@@ -782,11 +782,11 @@ func (c *messageResolverGroupTreeFormatContext) lineIndents() []int {
 }
 
 // currentIndent return indent at current depth.
-func (c *messageResolverGroupTreeFormatContext) currentIndent() int {
+func (c *variableDefinitionGroupTreeFormatContext) currentIndent() int {
 	return c.depthToIndent[c.depth]
 }
 
 // currentMaxLength return max name length at current depth.
-func (c *messageResolverGroupTreeFormatContext) currentMaxLength() int {
+func (c *variableDefinitionGroupTreeFormatContext) currentMaxLength() int {
 	return c.depthToMaxLength[c.depth]
 }

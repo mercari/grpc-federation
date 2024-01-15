@@ -216,10 +216,10 @@ type MessageDependencyGraph struct {
 	Roots          []*MessageDependencyGraphNode
 }
 
-func (g *MessageDependencyGraph) MessageResolverGroups(ctx *context) []MessageResolverGroup {
-	var groups []MessageResolverGroup
+func (g *MessageDependencyGraph) VariableDefinitionGroups(ctx *context) []VariableDefinitionGroup {
+	var groups []VariableDefinitionGroup
 	for _, child := range g.uniqueChildren() {
-		if group := g.createMessageResolverGroup(ctx, child); group != nil {
+		if group := g.createVariableDefinitionGroup(ctx, child); group != nil {
 			groups = append(groups, group)
 		}
 	}
@@ -254,38 +254,38 @@ func (g *MessageDependencyGraph) children(nodes []*MessageDependencyGraphNode) [
 	return children
 }
 
-func (g *MessageDependencyGraph) createMessageResolverGroup(ctx *context, node *MessageDependencyGraphNode) MessageResolverGroup {
+func (g *MessageDependencyGraph) createVariableDefinitionGroup(ctx *context, node *MessageDependencyGraphNode) VariableDefinitionGroup {
 	if node == nil {
 		return nil
 	}
 	if len(node.Parent) == 0 {
-		return &SequentialMessageResolverGroup{End: g.createMessageResolver(ctx, node)}
+		return &SequentialVariableDefinitionGroup{End: g.createVariableDefinition(ctx, node)}
 	}
 	if len(node.Parent) == 1 {
-		return &SequentialMessageResolverGroup{
-			Start: g.createMessageResolverGroup(ctx, node.Parent[0]),
-			End:   g.createMessageResolver(ctx, node),
+		return &SequentialVariableDefinitionGroup{
+			Start: g.createVariableDefinitionGroup(ctx, node.Parent[0]),
+			End:   g.createVariableDefinition(ctx, node),
 		}
 	}
-	rg := new(ConcurrentMessageResolverGroup)
+	rg := new(ConcurrentVariableDefinitionGroup)
 	sort.Slice(node.Parent, func(i, j int) bool {
 		return node.Parent[i].FQDN() < node.Parent[j].FQDN()
 	})
 	for _, parent := range node.Parent {
-		if group := g.createMessageResolverGroup(ctx, parent); group != nil {
+		if group := g.createVariableDefinitionGroup(ctx, parent); group != nil {
 			rg.Starts = append(rg.Starts, group)
 		}
 	}
-	rg.End = g.createMessageResolver(ctx, node)
+	rg.End = g.createVariableDefinition(ctx, node)
 	return rg
 }
 
-func (g *MessageDependencyGraph) createMessageResolver(ctx *context, node *MessageDependencyGraphNode) *MessageResolver {
+func (g *MessageDependencyGraph) createVariableDefinition(ctx *context, node *MessageDependencyGraphNode) *VariableDefinition {
 	if g.MessageRule != nil {
-		return g.createMessageResolverByNode(ctx, node)
+		return g.createVariableDefinitionByNode(ctx, node)
 	}
 	if g.FieldOneofRule != nil {
-		return g.createMessageResolverByFieldOneofRule(ctx, node, g.FieldOneofRule)
+		return g.createVariableDefinitionByFieldOneofRule(ctx, node, g.FieldOneofRule)
 	}
 	ctx.addError(
 		ErrWithLocation(
@@ -296,9 +296,9 @@ func (g *MessageDependencyGraph) createMessageResolver(ctx *context, node *Messa
 	return nil
 }
 
-func (g *MessageDependencyGraph) createMessageResolverByNode(ctx *context, node *MessageDependencyGraphNode) *MessageResolver {
+func (g *MessageDependencyGraph) createVariableDefinitionByNode(ctx *context, node *MessageDependencyGraphNode) *VariableDefinition {
 	if varDef := node.VariableDefinition; varDef != nil {
-		return &MessageResolver{Name: varDef.Name, VariableDefinition: varDef}
+		return varDef
 	}
 	ctx.addError(
 		ErrWithLocation(
@@ -309,9 +309,9 @@ func (g *MessageDependencyGraph) createMessageResolverByNode(ctx *context, node 
 	return nil
 }
 
-func (g *MessageDependencyGraph) createMessageResolverByFieldOneofRule(ctx *context, node *MessageDependencyGraphNode, rule *FieldOneofRule) *MessageResolver {
+func (g *MessageDependencyGraph) createVariableDefinitionByFieldOneofRule(ctx *context, node *MessageDependencyGraphNode, rule *FieldOneofRule) *VariableDefinition {
 	for _, def := range rule.VariableDefinitions {
-		return &MessageResolver{Name: def.Name, VariableDefinition: def}
+		return def
 	}
 	ctx.addError(
 		ErrWithLocation(

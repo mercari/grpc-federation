@@ -99,12 +99,12 @@ type EnumValueRule struct {
 }
 
 type MessageRule struct {
-	MessageArgument     *Message
-	DependencyGraph     *MessageDependencyGraph
-	Resolvers           []MessageResolverGroup
-	CustomResolver      bool
-	Alias               *Message
-	VariableDefinitions VariableDefinitions
+	MessageArgument          *Message
+	DependencyGraph          *MessageDependencyGraph
+	CustomResolver           bool
+	Alias                    *Message
+	VariableDefinitions      VariableDefinitions
+	VariableDefinitionGroups []VariableDefinitionGroup
 }
 
 type VariableDefinition struct {
@@ -117,7 +117,62 @@ type VariableDefinition struct {
 	Expr     *VariableExpr
 }
 
+type VariableDefinitionOwnerType int
+
+const (
+	VariableDefinitionOwnerUnknown                      VariableDefinitionOwnerType = 0
+	VariableDefinitionOwnerMessage                      VariableDefinitionOwnerType = 1
+	VariableDefinitionOwnerOneofField                   VariableDefinitionOwnerType = 2
+	VariableDefinitionOwnerValidationErrorDetailMessage VariableDefinitionOwnerType = 3
+)
+
+type VariableDefinitionOwner struct {
+	Type                   VariableDefinitionOwnerType
+	Message                *Message
+	Field                  *Field
+	ValidationErrorIndexes *ValidationErrorIndexes
+}
+
 type VariableDefinitions []*VariableDefinition
+
+type VariableDefinitionGroupType string
+
+const (
+	SequentialVariableDefinitionGroupType VariableDefinitionGroupType = "sequential"
+	ConcurrentVariableDefinitionGroupType VariableDefinitionGroupType = "concurrent"
+)
+
+type VariableDefinitionGroup interface {
+	Type() VariableDefinitionGroupType
+	VariableDefinitions() VariableDefinitions
+	treeFormat(*variableDefinitionGroupTreeFormatContext) string
+	setTextMaxLength(*variableDefinitionGroupTreeFormatContext)
+}
+
+type variableDefinitionGroupTreeFormatContext struct {
+	depth            int
+	depthToMaxLength map[int]int
+	depthToIndent    map[int]int
+	lineDepth        map[int]struct{}
+}
+
+type SequentialVariableDefinitionGroup struct {
+	Start VariableDefinitionGroup
+	End   *VariableDefinition
+}
+
+func (g *SequentialVariableDefinitionGroup) Type() VariableDefinitionGroupType {
+	return SequentialVariableDefinitionGroupType
+}
+
+type ConcurrentVariableDefinitionGroup struct {
+	Starts []VariableDefinitionGroup
+	End    *VariableDefinition
+}
+
+func (g *ConcurrentVariableDefinitionGroup) Type() VariableDefinitionGroupType {
+	return ConcurrentVariableDefinitionGroupType
+}
 
 type VariableExpr struct {
 	Type       *Type
@@ -160,50 +215,6 @@ type ValidationExpr struct {
 	Error *ValidationError
 }
 
-type MessageResolverGroupType string
-
-const (
-	SequentialMessageResolverGroupType MessageResolverGroupType = "sequential"
-	ConcurrentMessageResolverGroupType MessageResolverGroupType = "concurrent"
-)
-
-type MessageResolverGroup interface {
-	Type() MessageResolverGroupType
-	Resolvers() []*MessageResolver
-	treeFormat(*messageResolverGroupTreeFormatContext) string
-	setTextMaxLength(*messageResolverGroupTreeFormatContext)
-}
-
-type messageResolverGroupTreeFormatContext struct {
-	depth            int
-	depthToMaxLength map[int]int
-	depthToIndent    map[int]int
-	lineDepth        map[int]struct{}
-}
-
-type SequentialMessageResolverGroup struct {
-	Start MessageResolverGroup
-	End   *MessageResolver
-}
-
-func (g *SequentialMessageResolverGroup) Type() MessageResolverGroupType {
-	return SequentialMessageResolverGroupType
-}
-
-type ConcurrentMessageResolverGroup struct {
-	Starts []MessageResolverGroup
-	End    *MessageResolver
-}
-
-func (g *ConcurrentMessageResolverGroup) Type() MessageResolverGroupType {
-	return ConcurrentMessageResolverGroupType
-}
-
-type MessageResolver struct {
-	Name               string
-	VariableDefinition *VariableDefinition
-}
-
 type MessageValidations []*ValidationRule
 
 type ValidationRule struct {
@@ -221,13 +232,13 @@ type ValidationError struct {
 type ValidationErrorDetails []*ValidationErrorDetail
 
 type ValidationErrorDetail struct {
-	If                   *CELValue
-	Messages             VariableDefinitions
-	PreconditionFailures []*PreconditionFailure
-	BadRequests          []*BadRequest
-	LocalizedMessages    []*LocalizedMessage
-	DependencyGraph      *MessageDependencyGraph
-	Resolvers            []MessageResolverGroup
+	If                       *CELValue
+	Messages                 VariableDefinitions
+	PreconditionFailures     []*PreconditionFailure
+	BadRequests              []*BadRequest
+	LocalizedMessages        []*LocalizedMessage
+	DependencyGraph          *MessageDependencyGraph
+	VariableDefinitionGroups []VariableDefinitionGroup
 }
 
 type PreconditionFailure struct {
@@ -298,12 +309,12 @@ type FieldRule struct {
 
 // FieldOneofRule represents grpc.federation.field.oneof.
 type FieldOneofRule struct {
-	If                  *CELValue
-	Default             bool
-	VariableDefinitions VariableDefinitions
-	By                  *CELValue
-	DependencyGraph     *MessageDependencyGraph
-	Resolvers           []MessageResolverGroup
+	If                       *CELValue
+	Default                  bool
+	By                       *CELValue
+	DependencyGraph          *MessageDependencyGraph
+	VariableDefinitions      VariableDefinitions
+	VariableDefinitionGroups []VariableDefinitionGroup
 }
 
 type Type struct {
@@ -400,22 +411,6 @@ type RetryPolicyExponential struct {
 type Request struct {
 	Args []*Argument
 	Type *Message
-}
-
-type VariableDefinitionOwnerType int
-
-const (
-	VariableDefinitionOwnerUnknown                      VariableDefinitionOwnerType = 0
-	VariableDefinitionOwnerMessage                      VariableDefinitionOwnerType = 1
-	VariableDefinitionOwnerOneofField                   VariableDefinitionOwnerType = 2
-	VariableDefinitionOwnerValidationErrorDetailMessage VariableDefinitionOwnerType = 3
-)
-
-type VariableDefinitionOwner struct {
-	Type                   VariableDefinitionOwnerType
-	Message                *Message
-	Field                  *Field
-	ValidationErrorIndexes *ValidationErrorIndexes
 }
 
 type ValidationErrorIndexes struct {

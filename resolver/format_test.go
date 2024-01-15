@@ -585,7 +585,7 @@ ab ─┤
 					if !exists {
 						t.Fatalf("failed to find message from %s", msgName)
 					}
-					got := resolver.DependencyGraphTreeFormat(msg.Rule.Resolvers)
+					got := resolver.DependencyGraphTreeFormat(msg.Rule.VariableDefinitionGroups)
 					if diff := cmp.Diff(got, expected); diff != "" {
 						t.Errorf("(-got, +want)\n%s", diff)
 					}

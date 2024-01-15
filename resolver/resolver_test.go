@@ -191,10 +191,10 @@ func TestSimpleAggregation(t *testing.T) {
 							testutil.NewDependencyGraphBuilder().
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("res")).
-								SetEnd(testutil.NewMessageResolver("user")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("user")).
 								Build(t),
 						).
 						Build(t),
@@ -299,19 +299,19 @@ func TestSimpleAggregation(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("m")).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("m")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
 								AddStart(
-									testutil.NewMessageResolverGroupBuilder().
-										AddStart(testutil.NewMessageResolverGroupByName("res")).
-										SetEnd(testutil.NewMessageResolver("post")).
+									testutil.NewVariableDefinitionGroupBuilder().
+										AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+										SetEnd(testutil.NewVariableDefinition("post")).
 										Build(t),
 								).
-								SetEnd(testutil.NewMessageResolver("user")).
+								SetEnd(testutil.NewVariableDefinition("user")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("z")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("z")).
 						Build(t),
 				).
 				Build(t),
@@ -372,8 +372,8 @@ func TestSimpleAggregation(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("post")).
-						AddResolver(testutil.NewMessageResolverGroupByName("uuid")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("uuid")).
 						Build(t),
 				).
 				Build(t),
@@ -591,14 +591,14 @@ func TestCreatePost(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "CreatePost")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupBuilder().
-									AddStart(testutil.NewMessageResolverGroupByName("cp")).
-									SetEnd(testutil.NewMessageResolver("res")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupBuilder().
+									AddStart(testutil.NewVariableDefinitionGroupByName("cp")).
+									SetEnd(testutil.NewVariableDefinition("res")).
 									Build(t),
 								).
-								SetEnd(testutil.NewMessageResolver("p")).
+								SetEnd(testutil.NewVariableDefinition("p")).
 								Build(t),
 						).
 						Build(t),
@@ -794,10 +794,10 @@ func TestCustomResolver(t *testing.T) {
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("res")).
-								SetEnd(testutil.NewMessageResolver("u")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("u")).
 								Build(t),
 						).
 						Build(t),
@@ -862,14 +862,14 @@ func TestCustomResolver(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupBuilder().
-									AddStart(testutil.NewMessageResolverGroupByName("res")).
-									SetEnd(testutil.NewMessageResolver("post")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupBuilder().
+									AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+									SetEnd(testutil.NewVariableDefinition("post")).
 									Build(t),
 								).
-								SetEnd(testutil.NewMessageResolver("user")).
+								SetEnd(testutil.NewVariableDefinition("user")).
 								Build(t),
 						).
 						Build(t),
@@ -920,7 +920,7 @@ func TestCustomResolver(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("post")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
 						Build(t),
 				).
 				Build(t),
@@ -1053,8 +1053,8 @@ func TestAsync(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "AB")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("aa")).
-						AddResolver(testutil.NewMessageResolverGroupByName("ab")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("aa")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("ab")).
 						Build(t),
 				).
 				Build(t),
@@ -1317,50 +1317,50 @@ func TestAsync(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "I")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
 								AddStart(
-									testutil.NewMessageResolverGroupBuilder().
+									testutil.NewVariableDefinitionGroupBuilder().
 										AddStart(
-											testutil.NewMessageResolverGroupBuilder().
-												AddStart(testutil.NewMessageResolverGroupByName("a")).
-												SetEnd(testutil.NewMessageResolver("c")).
+											testutil.NewVariableDefinitionGroupBuilder().
+												AddStart(testutil.NewVariableDefinitionGroupByName("a")).
+												SetEnd(testutil.NewVariableDefinition("c")).
 												Build(t),
 										).
 										AddStart(
-											testutil.NewMessageResolverGroupBuilder().
-												AddStart(testutil.NewMessageResolverGroupByName("b")).
-												SetEnd(testutil.NewMessageResolver("d")).
+											testutil.NewVariableDefinitionGroupBuilder().
+												AddStart(testutil.NewVariableDefinitionGroupByName("b")).
+												SetEnd(testutil.NewVariableDefinition("d")).
 												Build(t),
 										).
-										SetEnd(testutil.NewMessageResolver("e")).
+										SetEnd(testutil.NewVariableDefinition("e")).
 										Build(t),
 								).
 								AddStart(
-									testutil.NewMessageResolverGroupBuilder().
+									testutil.NewVariableDefinitionGroupBuilder().
 										AddStart(
-											testutil.NewMessageResolverGroupBuilder().
-												AddStart(testutil.NewMessageResolverGroupByName("a")).
-												SetEnd(testutil.NewMessageResolver("c")).
+											testutil.NewVariableDefinitionGroupBuilder().
+												AddStart(testutil.NewVariableDefinitionGroupByName("a")).
+												SetEnd(testutil.NewVariableDefinition("c")).
 												Build(t),
 										).
 										AddStart(
-											testutil.NewMessageResolverGroupBuilder().
-												AddStart(testutil.NewMessageResolverGroupByName("b")).
-												SetEnd(testutil.NewMessageResolver("d")).
+											testutil.NewVariableDefinitionGroupBuilder().
+												AddStart(testutil.NewVariableDefinitionGroupByName("b")).
+												SetEnd(testutil.NewVariableDefinition("d")).
 												Build(t),
 										).
-										SetEnd(testutil.NewMessageResolver("f")).
+										SetEnd(testutil.NewVariableDefinition("f")).
 										Build(t),
 								).
-								AddStart(testutil.NewMessageResolverGroupByName("g")).
-								SetEnd(testutil.NewMessageResolver("h")).
+								AddStart(testutil.NewVariableDefinitionGroupByName("g")).
+								SetEnd(testutil.NewVariableDefinition("h")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("i")).
-								SetEnd(testutil.NewMessageResolver("j")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("i")).
+								SetEnd(testutil.NewVariableDefinition("j")).
 								Build(t),
 						).
 						Build(t),
@@ -1503,10 +1503,10 @@ func TestAlias(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostResponse")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("res")).
-								SetEnd(testutil.NewMessageResolver("post")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("post")).
 								Build(t),
 						).
 						Build(t),
@@ -1557,7 +1557,7 @@ func TestAlias(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("post")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
 						Build(t),
 				).
 				Build(t),
@@ -1683,13 +1683,13 @@ func TestAutobind(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostResponse")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("res")).
-								SetEnd(testutil.NewMessageResolver("_def1")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("_def1")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_def2")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("_def2")).
 						Build(t),
 				).
 				Build(t),
@@ -1734,7 +1734,7 @@ func TestAutobind(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_def0")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("_def0")).
 						Build(t),
 				).
 				Build(t),
@@ -2379,13 +2379,13 @@ func TestConstValue(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Content")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("res")).
-								SetEnd(testutil.NewMessageResolver("content")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("content")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("content2")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("content2")).
 						Build(t),
 				).
 				Build(t),
@@ -2491,7 +2491,7 @@ func TestMultiUser(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Sub")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_def0")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("_def0")).
 						Build(t),
 				).
 				Build(t),
@@ -2549,11 +2549,11 @@ func TestMultiUser(t *testing.T) {
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_def2")).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("res")).
-								SetEnd(testutil.NewMessageResolver("user")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("_def2")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("user")).
 								Build(t),
 						).
 						Build(t),
@@ -2637,16 +2637,16 @@ func TestMultiUser(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "UserID")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("uid")).
-								SetEnd(testutil.NewMessageResolver("user")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("uid")).
+								SetEnd(testutil.NewVariableDefinition("user")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("uid")).
-								SetEnd(testutil.NewMessageResolver("user2")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("uid")).
+								SetEnd(testutil.NewVariableDefinition("user2")).
 								Build(t),
 						).
 						Build(t),
@@ -2745,7 +2745,7 @@ func TestOneof(t *testing.T) {
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("_def0")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("_def0")).
 						Build(t),
 				).
 				Build(t),
@@ -2780,7 +2780,7 @@ func TestOneof(t *testing.T) {
 										Add(ref.Message(t, "org.federation", "User")).
 										Build(t),
 								).
-								AddResolver(testutil.NewMessageResolverGroupByName("ua")).
+								AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("ua")).
 								Build(t),
 						).
 						Build(t),
@@ -2813,7 +2813,7 @@ func TestOneof(t *testing.T) {
 										Add(ref.Message(t, "org.federation", "User")).
 										Build(t),
 								).
-								AddResolver(testutil.NewMessageResolverGroupByName("ub")).
+								AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("ub")).
 								Build(t),
 						).
 						Build(t),
@@ -2846,7 +2846,7 @@ func TestOneof(t *testing.T) {
 										Add(ref.Message(t, "org.federation", "User")).
 										Build(t),
 								).
-								AddResolver(testutil.NewMessageResolverGroupByName("uc")).
+								AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("uc")).
 								Build(t),
 						).
 						Build(t),
@@ -2871,7 +2871,7 @@ func TestOneof(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "M")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("m")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("m")).
 						Build(t),
 				).
 				Build(t),
@@ -2915,7 +2915,7 @@ func TestOneof(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "UserSelection")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("sel")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("sel")).
 						Build(t),
 				).
 				Build(t),
@@ -3137,16 +3137,16 @@ func TestValidation(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("post")).
-								SetEnd(testutil.NewMessageResolver("_def1")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("post")).
+								SetEnd(testutil.NewVariableDefinition("_def1")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("post")).
-								SetEnd(testutil.NewMessageResolver("_def2")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("post")).
+								SetEnd(testutil.NewVariableDefinition("_def2")).
 								Build(t),
 						).
 						Build(t),
@@ -3241,10 +3241,10 @@ func TestMap(t *testing.T) {
 							testutil.NewDependencyGraphBuilder().
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
-								AddStart(testutil.NewMessageResolverGroupByName("res")).
-								SetEnd(testutil.NewMessageResolver("user")).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("user")).
 								Build(t),
 						).
 						Build(t),
@@ -3359,26 +3359,26 @@ func TestMap(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostsResponse"), ref.Message(t, "org.federation", "User")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
 								AddStart(
-									testutil.NewMessageResolverGroupBuilder().
-										AddStart(testutil.NewMessageResolverGroupByName("res")).
-										SetEnd(testutil.NewMessageResolver("posts")).
+									testutil.NewVariableDefinitionGroupBuilder().
+										AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+										SetEnd(testutil.NewVariableDefinition("posts")).
 										Build(t),
 								).
-								SetEnd(testutil.NewMessageResolver("ids")).
+								SetEnd(testutil.NewVariableDefinition("ids")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
 								AddStart(
-									testutil.NewMessageResolverGroupBuilder().
-										AddStart(testutil.NewMessageResolverGroupByName("res")).
-										SetEnd(testutil.NewMessageResolver("posts")).
+									testutil.NewVariableDefinitionGroupBuilder().
+										AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+										SetEnd(testutil.NewVariableDefinition("posts")).
 										Build(t),
 								).
-								SetEnd(testutil.NewMessageResolver("users")).
+								SetEnd(testutil.NewVariableDefinition("users")).
 								Build(t),
 						).
 						Build(t),
@@ -3426,7 +3426,7 @@ func TestMap(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Posts")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("posts")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("posts")).
 						Build(t),
 				).
 				Build(t),
@@ -3617,36 +3617,36 @@ func TestCondition(t *testing.T) {
 								Add(ref.Message(t, "org.post", "GetPostResponse"), ref.Message(t, "org.federation", "User")).
 								Build(t),
 						).
-						AddResolver(
-							testutil.NewMessageResolverGroupBuilder().
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
 								AddStart(
-									testutil.NewMessageResolverGroupBuilder().
+									testutil.NewVariableDefinitionGroupBuilder().
 										AddStart(
-											testutil.NewMessageResolverGroupBuilder().
+											testutil.NewVariableDefinitionGroupBuilder().
 												AddStart(
-													testutil.NewMessageResolverGroupBuilder().
-														AddStart(testutil.NewMessageResolverGroupByName("res")).
-														SetEnd(testutil.NewMessageResolver("post")).
+													testutil.NewVariableDefinitionGroupBuilder().
+														AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+														SetEnd(testutil.NewVariableDefinition("post")).
 														Build(t),
 												).
-												SetEnd(testutil.NewMessageResolver("posts")).
+												SetEnd(testutil.NewVariableDefinition("posts")).
 												Build(t),
 										).
 										AddStart(
-											testutil.NewMessageResolverGroupBuilder().
+											testutil.NewVariableDefinitionGroupBuilder().
 												AddStart(
-													testutil.NewMessageResolverGroupBuilder().
-														AddStart(testutil.NewMessageResolverGroupByName("res")).
-														SetEnd(testutil.NewMessageResolver("post")).
+													testutil.NewVariableDefinitionGroupBuilder().
+														AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+														SetEnd(testutil.NewVariableDefinition("post")).
 														Build(t),
 												).
-												SetEnd(testutil.NewMessageResolver("user")).
+												SetEnd(testutil.NewVariableDefinition("user")).
 												Build(t),
 										).
-										SetEnd(testutil.NewMessageResolver("users")).
+										SetEnd(testutil.NewVariableDefinition("users")).
 										Build(t),
 								).
-								SetEnd(testutil.NewMessageResolver("_def5")).
+								SetEnd(testutil.NewVariableDefinition("_def5")).
 								Build(t),
 						).
 						Build(t),
@@ -3694,7 +3694,7 @@ func TestCondition(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
-						AddResolver(testutil.NewMessageResolverGroupByName("post")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
 						Build(t),
 				).
 				Build(t),
