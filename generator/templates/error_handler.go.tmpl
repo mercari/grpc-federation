@@ -1,6 +1,6 @@
 {{- define "errorHandler" }}
-{{- if .Resolver.HasErrorHandler }}
-if err := s.errorHandler({{ .Ctx }}, {{ .Resolver.ServiceName }}_DependentMethod_{{ .Resolver.DependentMethodName }}, err); err != nil {
+{{- if .Definition.HasErrorHandler }}
+if err := s.errorHandler({{ .Ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
 	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
 	return nil, err
 }

@@ -74,7 +74,7 @@ func (m *Message) HasResolvers() bool {
 	if m.Rule == nil {
 		return false
 	}
-	if len(m.Rule.Resolvers) != 0 {
+	if len(m.Rule.VariableDefinitionGroups) != 0 {
 		return true
 	}
 	if len(m.Rule.VariableDefinitions) != 0 {
@@ -87,19 +87,19 @@ func (m *Message) HasResolvers() bool {
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		if len(field.Rule.Oneof.Resolvers) != 0 {
+		if len(field.Rule.Oneof.VariableDefinitionGroups) != 0 {
 			return true
 		}
 	}
 	return false
 }
 
-func (m *Message) MessageResolvers() []MessageResolverGroup {
+func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 	if m.Rule == nil {
 		return nil
 	}
 
-	ret := m.Rule.Resolvers
+	ret := m.Rule.VariableDefinitionGroups
 	for _, def := range m.Rule.VariableDefinitions {
 		if def.Expr == nil {
 			continue
@@ -108,7 +108,7 @@ func (m *Message) MessageResolvers() []MessageResolverGroup {
 			continue
 		}
 		for _, detail := range def.Expr.Validation.Error.Details {
-			ret = append(ret, detail.Resolvers...)
+			ret = append(ret, detail.VariableDefinitionGroups...)
 		}
 	}
 	for _, field := range m.Fields {
@@ -118,7 +118,7 @@ func (m *Message) MessageResolvers() []MessageResolverGroup {
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		ret = append(ret, field.Rule.Oneof.Resolvers...)
+		ret = append(ret, field.Rule.Oneof.VariableDefinitionGroups...)
 	}
 	return ret
 }
@@ -304,7 +304,7 @@ func (m *Message) DependencyGraphTreeFormat() string {
 	if m.Rule == nil {
 		return ""
 	}
-	return DependencyGraphTreeFormat(m.Rule.Resolvers)
+	return DependencyGraphTreeFormat(m.Rule.VariableDefinitionGroups)
 }
 
 func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
@@ -350,17 +350,17 @@ func (m *Message) CustomResolvers() []*CustomResolver {
 			})
 		}
 	}
-	for _, group := range m.Rule.Resolvers {
-		for _, resolver := range group.Resolvers() {
-			ret = append(ret, m.customResolvers(resolver)...)
+	for _, group := range m.Rule.VariableDefinitionGroups {
+		for _, def := range group.VariableDefinitions() {
+			ret = append(ret, m.customResolvers(def)...)
 		}
 	}
 	return ret
 }
 
-func (m *Message) customResolvers(resolver *MessageResolver) []*CustomResolver {
+func (m *Message) customResolvers(def *VariableDefinition) []*CustomResolver {
 	var ret []*CustomResolver
-	if def := resolver.VariableDefinition; def != nil {
+	if def != nil {
 		for _, expr := range def.MessageExprs() {
 			if expr.Message == nil {
 				continue
@@ -420,15 +420,15 @@ func (m *Message) DependServices() []*Service {
 		return nil
 	}
 
-	return m.dependServices(make(map[*MessageResolver]struct{}))
+	return m.dependServices(make(map[*VariableDefinition]struct{}))
 }
 
-func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) []*Service {
+func (m *Message) dependServices(defMap map[*VariableDefinition]struct{}) []*Service {
 	var svcs []*Service
 	if m.Rule != nil {
-		for _, group := range m.Rule.Resolvers {
-			for _, resolver := range group.Resolvers() {
-				svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
+		for _, group := range m.Rule.VariableDefinitionGroups {
+			for _, def := range group.VariableDefinitions() {
+				svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
 			}
 		}
 		for _, def := range m.Rule.VariableDefinitions {
@@ -439,9 +439,9 @@ func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) [
 				continue
 			}
 			for _, detail := range def.Expr.Validation.Error.Details {
-				for _, group := range detail.Resolvers {
-					for _, resolver := range group.Resolvers() {
-						svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
+				for _, group := range detail.VariableDefinitionGroups {
+					for _, def := range group.VariableDefinitions() {
+						svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
 					}
 				}
 			}
@@ -454,27 +454,26 @@ func (m *Message) dependServices(msgResolverMap map[*MessageResolver]struct{}) [
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		for _, group := range field.Rule.Oneof.Resolvers {
-			for _, resolver := range group.Resolvers() {
-				svcs = append(svcs, dependServicesByResolver(resolver, msgResolverMap)...)
+		for _, group := range field.Rule.Oneof.VariableDefinitionGroups {
+			for _, def := range group.VariableDefinitions() {
+				svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
 			}
 		}
 	}
 	return svcs
 }
 
-func dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*MessageResolver]struct{}) []*Service {
-	if _, found := msgResolverMap[resolver]; found {
+func dependServicesByDefinition(def *VariableDefinition, defMap map[*VariableDefinition]struct{}) []*Service {
+	if _, found := defMap[def]; found {
 		return nil
 	}
-	msgResolverMap[resolver] = struct{}{}
+	defMap[def] = struct{}{}
 
-	varDef := resolver.VariableDefinition
-	if varDef == nil {
+	if def == nil {
 		return nil
 	}
 
-	expr := varDef.Expr
+	expr := def.Expr
 	if expr == nil {
 		return nil
 	}
@@ -482,9 +481,9 @@ func dependServicesByResolver(resolver *MessageResolver, msgResolverMap map[*Mes
 		return []*Service{expr.Call.Method.Service}
 	}
 	var ret []*Service
-	for _, msgExpr := range varDef.MessageExprs() {
+	for _, msgExpr := range def.MessageExprs() {
 		if msgExpr.Message != nil {
-			ret = append(ret, msgExpr.Message.dependServices(msgResolverMap)...)
+			ret = append(ret, msgExpr.Message.dependServices(defMap)...)
 		}
 	}
 	return ret

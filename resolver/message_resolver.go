@@ -1,19 +1,19 @@
 package resolver
 
-func (g *SequentialMessageResolverGroup) Resolvers() []*MessageResolver {
-	var resolvers []*MessageResolver
+func (g *SequentialVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
+	var defs VariableDefinitions
 	if g.Start != nil {
-		resolvers = append(resolvers, g.Start.Resolvers()...)
+		defs = append(defs, g.Start.VariableDefinitions()...)
 	}
-	resolvers = append(resolvers, g.End)
-	return resolvers
+	defs = append(defs, g.End)
+	return defs
 }
 
-func (g *ConcurrentMessageResolverGroup) Resolvers() []*MessageResolver {
-	var resolvers []*MessageResolver
+func (g *ConcurrentVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
+	var defs VariableDefinitions
 	for _, start := range g.Starts {
-		resolvers = append(resolvers, start.Resolvers()...)
+		defs = append(defs, start.VariableDefinitions()...)
 	}
-	resolvers = append(resolvers, g.End)
-	return resolvers
+	defs = append(defs, g.End)
+	return defs
 }

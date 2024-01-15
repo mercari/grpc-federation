@@ -40,24 +40,24 @@ return nil
 {{- end }}
 
 {{- define "detailMessages" }}
-{{- $msgResolvers := .MessageResolvers }}
-{{- $msgResolversLen := len $msgResolvers }}
-{{- if gt $msgResolversLen 0 }}
+{{- $defGroups := .VariableDefinitionGroups }}
+{{- $defGroupsLen := len $defGroups }}
+{{- if gt $defGroupsLen 0 }}
 func(){
 	_, err := func() (any, error) {
-		{{- if eq $msgResolversLen 1 }}
-		{{- template "resolverGroup" (map "Level" 1 "Resolver" (index $msgResolvers 0)) }}
+		{{- if eq $defGroupsLen 1 }}
+		{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $defGroups 0)) }}
 		{{- else }}
 		{{- if . }}
 		eg, ctx1 := errgroup.WithContext(ctx)
 		{{- end }}
-		{{- range $msgResolvers }}
+		{{- range $defGroups }}
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-		{{- template "resolverGroup" (map "Level" 2 "Resolver" .) }}
+		{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
 			return nil, nil
 		})
 		{{- end }}
-		{{- if $msgResolvers }}
+		{{- if $defGroups }}
 		if err := eg.Wait(); err != nil {
 			return nil, err
 		}

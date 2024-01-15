@@ -581,8 +581,8 @@ func (b *MessageRuleBuilder) SetDependencyGraph(graph *resolver.MessageDependenc
 	return b
 }
 
-func (b *MessageRuleBuilder) AddResolver(group resolver.MessageResolverGroup) *MessageRuleBuilder {
-	b.rule.Resolvers = append(b.rule.Resolvers, group)
+func (b *MessageRuleBuilder) AddVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *MessageRuleBuilder {
+	b.rule.VariableDefinitionGroups = append(b.rule.VariableDefinitionGroups, group)
 	return b
 }
 
@@ -615,6 +615,10 @@ func (b *MessageRuleBuilder) Build(t *testing.T) *resolver.MessageRule {
 		t.Fatal(errors.Join(b.errs...))
 	}
 	return b.rule
+}
+
+func NewVariableDefinition(name string) *resolver.VariableDefinition {
+	return &resolver.VariableDefinition{Name: name}
 }
 
 type VariableDefinitionBuilder struct {
@@ -906,48 +910,44 @@ func (b *ValidationExprBuilder) Build(t *testing.T) *resolver.ValidationExpr {
 	return b.expr
 }
 
-func NewMessageResolver(name string) *resolver.MessageResolver {
-	return &resolver.MessageResolver{Name: name}
+type VariableDefinitionGroupBuilder struct {
+	starts []resolver.VariableDefinitionGroup
+	end    *resolver.VariableDefinition
 }
 
-type MessageResolverGroupBuilder struct {
-	starts []resolver.MessageResolverGroup
-	end    *resolver.MessageResolver
-}
-
-func NewMessageResolverGroupByName(name string) *resolver.SequentialMessageResolverGroup {
-	return &resolver.SequentialMessageResolverGroup{
-		End: &resolver.MessageResolver{Name: name},
+func NewVariableDefinitionGroupByName(name string) *resolver.SequentialVariableDefinitionGroup {
+	return &resolver.SequentialVariableDefinitionGroup{
+		End: &resolver.VariableDefinition{Name: name},
 	}
 }
 
-func NewMessageResolverGroupBuilder() *MessageResolverGroupBuilder {
-	return &MessageResolverGroupBuilder{}
+func NewVariableDefinitionGroupBuilder() *VariableDefinitionGroupBuilder {
+	return &VariableDefinitionGroupBuilder{}
 }
 
-func (b *MessageResolverGroupBuilder) AddStart(start resolver.MessageResolverGroup) *MessageResolverGroupBuilder {
+func (b *VariableDefinitionGroupBuilder) AddStart(start resolver.VariableDefinitionGroup) *VariableDefinitionGroupBuilder {
 	b.starts = append(b.starts, start)
 	return b
 }
 
-func (b *MessageResolverGroupBuilder) SetEnd(end *resolver.MessageResolver) *MessageResolverGroupBuilder {
+func (b *VariableDefinitionGroupBuilder) SetEnd(end *resolver.VariableDefinition) *VariableDefinitionGroupBuilder {
 	b.end = end
 	return b
 }
 
-func (b *MessageResolverGroupBuilder) Build(t *testing.T) resolver.MessageResolverGroup {
+func (b *VariableDefinitionGroupBuilder) Build(t *testing.T) resolver.VariableDefinitionGroup {
 	t.Helper()
 	if len(b.starts) > 1 {
-		return &resolver.ConcurrentMessageResolverGroup{
+		return &resolver.ConcurrentVariableDefinitionGroup{
 			Starts: b.starts,
 			End:    b.end,
 		}
 	}
-	var start resolver.MessageResolverGroup
+	var start resolver.VariableDefinitionGroup
 	if len(b.starts) == 1 {
 		start = b.starts[0]
 	}
-	return &resolver.SequentialMessageResolverGroup{
+	return &resolver.SequentialVariableDefinitionGroup{
 		Start: start,
 		End:   b.end,
 	}
@@ -1391,8 +1391,8 @@ func (b *FieldOneofRuleBuilder) SetDependencyGraph(graph *resolver.MessageDepend
 	return b
 }
 
-func (b *FieldOneofRuleBuilder) AddResolver(group resolver.MessageResolverGroup) *FieldOneofRuleBuilder {
-	b.rule.Resolvers = append(b.rule.Resolvers, group)
+func (b *FieldOneofRuleBuilder) AddVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *FieldOneofRuleBuilder {
+	b.rule.VariableDefinitionGroups = append(b.rule.VariableDefinitionGroups, group)
 	return b
 }
 
