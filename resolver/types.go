@@ -307,24 +307,25 @@ type FieldOneofRule struct {
 }
 
 type Type struct {
-	Type       types.Type
+	Kind       types.Kind
 	Repeated   bool
-	Ref        *Message
+	Message    *Message
 	Enum       *Enum
 	OneofField *OneofField
 }
 
 func (t *Type) Clone() *Type {
 	return &Type{
-		Type:     t.Type,
-		Repeated: t.Repeated,
-		Ref:      t.Ref,
-		Enum:     t.Enum,
+		Kind:       t.Kind,
+		Repeated:   t.Repeated,
+		Message:    t.Message,
+		Enum:       t.Enum,
+		OneofField: t.OneofField,
 	}
 }
 
 func (t *Type) IsNumber() bool {
-	switch t.Type {
+	switch t.Kind {
 	case types.Double,
 		types.Float,
 		types.Int64,
@@ -351,13 +352,13 @@ func (t *Type) FQDN() string {
 	if t.OneofField != nil {
 		return repeated + t.OneofField.FQDN()
 	}
-	if t.Ref != nil {
-		return repeated + t.Ref.FQDN()
+	if t.Message != nil {
+		return repeated + t.Message.FQDN()
 	}
 	if t.Enum != nil {
 		return repeated + t.Enum.FQDN()
 	}
-	return repeated + types.ToString(t.Type)
+	return repeated + types.ToString(t.Kind)
 }
 
 type MethodCall struct {
@@ -448,38 +449,38 @@ type ConstValue struct {
 type EnvKey string
 
 var (
-	DoubleType           = &Type{Type: types.Double}
-	FloatType            = &Type{Type: types.Float}
-	Int32Type            = &Type{Type: types.Int32}
-	Int64Type            = &Type{Type: types.Int64}
-	Uint32Type           = &Type{Type: types.Uint32}
-	Uint64Type           = &Type{Type: types.Uint64}
-	Sint32Type           = &Type{Type: types.Sint32}
-	Sint64Type           = &Type{Type: types.Sint64}
-	Fixed32Type          = &Type{Type: types.Fixed32}
-	Fixed64Type          = &Type{Type: types.Fixed64}
-	Sfixed32Type         = &Type{Type: types.Sfixed32}
-	Sfixed64Type         = &Type{Type: types.Sfixed64}
-	BoolType             = &Type{Type: types.Bool}
-	StringType           = &Type{Type: types.String}
-	BytesType            = &Type{Type: types.Bytes}
-	EnumType             = &Type{Type: types.Enum}
-	EnvType              = &Type{Type: types.String}
-	DoubleRepeatedType   = &Type{Type: types.Double, Repeated: true}
-	FloatRepeatedType    = &Type{Type: types.Float, Repeated: true}
-	Int32RepeatedType    = &Type{Type: types.Int32, Repeated: true}
-	Int64RepeatedType    = &Type{Type: types.Int64, Repeated: true}
-	Uint32RepeatedType   = &Type{Type: types.Uint32, Repeated: true}
-	Uint64RepeatedType   = &Type{Type: types.Uint64, Repeated: true}
-	Sint32RepeatedType   = &Type{Type: types.Sint32, Repeated: true}
-	Sint64RepeatedType   = &Type{Type: types.Sint64, Repeated: true}
-	Fixed32RepeatedType  = &Type{Type: types.Fixed32, Repeated: true}
-	Fixed64RepeatedType  = &Type{Type: types.Fixed64, Repeated: true}
-	Sfixed32RepeatedType = &Type{Type: types.Sfixed32, Repeated: true}
-	Sfixed64RepeatedType = &Type{Type: types.Sfixed64, Repeated: true}
-	BoolRepeatedType     = &Type{Type: types.Bool, Repeated: true}
-	StringRepeatedType   = &Type{Type: types.String, Repeated: true}
-	BytesRepeatedType    = &Type{Type: types.Bytes, Repeated: true}
-	EnumRepeatedType     = &Type{Type: types.Enum, Repeated: true}
-	EnvRepeatedType      = &Type{Type: types.String, Repeated: true}
+	DoubleType           = &Type{Kind: types.Double}
+	FloatType            = &Type{Kind: types.Float}
+	Int32Type            = &Type{Kind: types.Int32}
+	Int64Type            = &Type{Kind: types.Int64}
+	Uint32Type           = &Type{Kind: types.Uint32}
+	Uint64Type           = &Type{Kind: types.Uint64}
+	Sint32Type           = &Type{Kind: types.Sint32}
+	Sint64Type           = &Type{Kind: types.Sint64}
+	Fixed32Type          = &Type{Kind: types.Fixed32}
+	Fixed64Type          = &Type{Kind: types.Fixed64}
+	Sfixed32Type         = &Type{Kind: types.Sfixed32}
+	Sfixed64Type         = &Type{Kind: types.Sfixed64}
+	BoolType             = &Type{Kind: types.Bool}
+	StringType           = &Type{Kind: types.String}
+	BytesType            = &Type{Kind: types.Bytes}
+	EnumType             = &Type{Kind: types.Enum}
+	EnvType              = &Type{Kind: types.String}
+	DoubleRepeatedType   = &Type{Kind: types.Double, Repeated: true}
+	FloatRepeatedType    = &Type{Kind: types.Float, Repeated: true}
+	Int32RepeatedType    = &Type{Kind: types.Int32, Repeated: true}
+	Int64RepeatedType    = &Type{Kind: types.Int64, Repeated: true}
+	Uint32RepeatedType   = &Type{Kind: types.Uint32, Repeated: true}
+	Uint64RepeatedType   = &Type{Kind: types.Uint64, Repeated: true}
+	Sint32RepeatedType   = &Type{Kind: types.Sint32, Repeated: true}
+	Sint64RepeatedType   = &Type{Kind: types.Sint64, Repeated: true}
+	Fixed32RepeatedType  = &Type{Kind: types.Fixed32, Repeated: true}
+	Fixed64RepeatedType  = &Type{Kind: types.Fixed64, Repeated: true}
+	Sfixed32RepeatedType = &Type{Kind: types.Sfixed32, Repeated: true}
+	Sfixed64RepeatedType = &Type{Kind: types.Sfixed64, Repeated: true}
+	BoolRepeatedType     = &Type{Kind: types.Bool, Repeated: true}
+	StringRepeatedType   = &Type{Kind: types.String, Repeated: true}
+	BytesRepeatedType    = &Type{Kind: types.Bytes, Repeated: true}
+	EnumRepeatedType     = &Type{Kind: types.Enum, Repeated: true}
+	EnvRepeatedType      = &Type{Kind: types.String, Repeated: true}
 )

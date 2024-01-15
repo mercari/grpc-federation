@@ -17,12 +17,12 @@ func (oneof *Oneof) IsSameType() bool {
 		if prevType == nil {
 			prevType = fieldType
 		}
-		if prevType.Type != fieldType.Type {
+		if prevType.Kind != fieldType.Kind {
 			return false
 		}
-		switch fieldType.Type {
+		switch fieldType.Kind {
 		case types.Message:
-			if prevType.Ref != fieldType.Ref {
+			if prevType.Message != fieldType.Message {
 				return false
 			}
 		case types.Enum:

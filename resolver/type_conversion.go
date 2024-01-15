@@ -14,7 +14,7 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 	if fromType == nil || toType == nil {
 		return nil
 	}
-	if fromType.Type != toType.Type {
+	if fromType.Kind != toType.Kind {
 		return nil
 	}
 	if !requiredTypeConversion(fromType, toType) {
@@ -26,10 +26,10 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 		return nil
 	}
 	convertedFQDNMap[fqdn] = struct{}{}
-	if fromType.Type == types.Message && fromType.Ref != nil && toType.Ref != nil && fromType.Ref.IsMapEntry {
+	if fromType.Kind == types.Message && fromType.Message != nil && toType.Message != nil && fromType.Message.IsMapEntry {
 		// map type
-		fromMap := fromType.Ref
-		toMap := toType.Ref
+		fromMap := fromType.Message
+		toMap := toType.Message
 		fromKey := fromMap.Field("key")
 		toKey := toMap.Field("key")
 		fromValue := fromMap.Field("value")
@@ -57,9 +57,9 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 		ft.OneofField = nil
 		tt.OneofField = nil
 		decls = append(decls, typeConversionDecls(ft, tt, convertedFQDNMap)...)
-	case fromType.Type == types.Message:
-		for _, field := range toType.Ref.Fields {
-			fromField := fromType.Ref.Field(field.Name)
+	case fromType.Kind == types.Message:
+		for _, field := range toType.Message.Fields {
+			fromField := fromType.Message.Field(field.Name)
 			if fromField == nil {
 				continue
 			}
@@ -92,21 +92,21 @@ func requiredTypeConversion(fromType, toType *Type) bool {
 	if fromType == nil || toType == nil {
 		return false
 	}
-	if fromType.Type == types.Message {
-		if fromType.Ref.IsMapEntry {
-			fromKey := fromType.Ref.Field("key")
-			fromValue := fromType.Ref.Field("value")
-			toKey := toType.Ref.Field("key")
-			toValue := toType.Ref.Field("value")
+	if fromType.Kind == types.Message {
+		if fromType.Message.IsMapEntry {
+			fromKey := fromType.Message.Field("key")
+			fromValue := fromType.Message.Field("value")
+			toKey := toType.Message.Field("key")
+			toValue := toType.Message.Field("value")
 			if fromKey == nil || fromValue == nil || toKey == nil || toValue == nil {
 				return false
 			}
 			return requiredTypeConversion(fromKey.Type, toKey.Type) || requiredTypeConversion(fromValue.Type, toValue.Type)
 		}
-		return fromType.Ref != toType.Ref
+		return fromType.Message != toType.Message
 	}
-	if fromType.Type == types.Enum {
+	if fromType.Kind == types.Enum {
 		return fromType.Enum != toType.Enum
 	}
-	return fromType.Type != toType.Type
+	return fromType.Kind != toType.Kind
 }

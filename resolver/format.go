@@ -567,7 +567,7 @@ func (c *ConstValue) ProtoFormat(opt *ProtoFormatOption) string {
 		return fmt.Sprintf(`envs: [%s]`, strings.Join(elems, ", "))
 	}
 
-	switch c.Type.Type {
+	switch c.Type.Kind {
 	case types.Enum:
 		if c.Type.Repeated {
 			var elems []string
@@ -578,7 +578,7 @@ func (c *ConstValue) ProtoFormat(opt *ProtoFormatOption) string {
 		}
 		return fmt.Sprintf("enum: %q", c.Value.(*EnumValue).FQDN())
 	case types.Message:
-		msg := c.Type.Ref
+		msg := c.Type.Message
 		if c.Type.Repeated {
 			var elems []string
 			for _, v := range c.Value.([]map[string]*Value) {

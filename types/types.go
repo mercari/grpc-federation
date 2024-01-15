@@ -2,7 +2,7 @@ package types
 
 import "google.golang.org/protobuf/types/descriptorpb"
 
-type Type = descriptorpb.FieldDescriptorProto_Type
+type Kind = descriptorpb.FieldDescriptorProto_Type
 
 var (
 	Double   = descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
@@ -25,8 +25,8 @@ var (
 	Sint64   = descriptorpb.FieldDescriptorProto_TYPE_SINT64
 )
 
-func ToString(t Type) string {
-	switch t {
+func ToString(kind Kind) string {
+	switch kind {
 	case Double:
 		return "double"
 	case Float:
