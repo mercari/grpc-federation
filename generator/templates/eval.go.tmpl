@@ -10,7 +10,7 @@ grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ .Definition.Type }}, {{ 
 	Setter: func(value *localValueType, v {{ .Definition.Type }}) { value.vars.{{ .Definition.Key }} = v },
 	IteratorName: "{{ $mapResolver.IteratorName }}",
 	IteratorType: {{ $mapResolver.IteratorCELType }},
-	IteratorSource: {{ $mapResolver.IteratorSource }},
+	IteratorSource: func(value *localValueType) []{{ $mapResolver.IteratorSourceType }}{ return {{ $mapResolver.IteratorSource }} },
 	Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 		{{- if $mapResolver.IsBy }}
 		{{- $by := $mapResolver.MapExpr.Expr.By }}

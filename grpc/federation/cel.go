@@ -324,7 +324,7 @@ type DefMap[T any, U any, V localValue] struct {
 	Setter         func(V, T)
 	IteratorName   string
 	IteratorType   *cel.Type
-	IteratorSource []U
+	IteratorSource func(V) []U
 	Iterator       func(context.Context, *MapIteratorValue) (any, error)
 	outType        T
 }
@@ -434,7 +434,7 @@ func evalMap[T localValue, U any](
 	value T,
 	name string,
 	typ *cel.Type,
-	src []U,
+	srcFunc func(T) []U,
 	iterOutType reflect.Type,
 	cb func(context.Context, *MapIteratorValue) (any, error)) (any, error) {
 	value.rlock()
@@ -446,6 +446,7 @@ func evalMap[T localValue, U any](
 	for k, v := range value.getEvalValues() {
 		iterValue.evalValues[k] = v
 	}
+	src := srcFunc(value)
 	value.runlock()
 
 	ret := reflect.MakeSlice(iterOutType, 0, len(src))
