@@ -1,6 +1,7 @@
 package cel
 
 import (
+	"context"
 	"strings"
 
 	"github.com/google/cel-go/cel"
@@ -17,6 +18,14 @@ func NewLibrary() *Library {
 			new(ListLibrary),
 			new(RandLibrary),
 			new(UUIDLibrary),
+		},
+	}
+}
+
+func NewContextualLibrary(ctx context.Context) *Library {
+	return &Library{
+		subLibs: []cel.SingletonLibrary{
+			NewMetadataLibrary(ctx),
 		},
 	}
 }
