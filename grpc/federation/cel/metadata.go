@@ -36,7 +36,7 @@ func createMetadataID(name string) string {
 func (lib *MetadataLibrary) CompileOptions() []cel.EnvOption {
 	opts := []cel.EnvOption{
 		cel.Function(
-			createMetadata("INCOMING"),
+			createMetadata("incoming"),
 			cel.Overload(createMetadataID("incoming_map_string_list_string"), []*cel.Type{}, types.NewMapType(types.StringType, types.NewListType(types.StringType)),
 				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
 					refMap := make(map[ref.Val]ref.Val)

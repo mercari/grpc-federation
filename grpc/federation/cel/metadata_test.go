@@ -30,7 +30,7 @@ func TestMetadata(t *testing.T) {
 				}
 				return metadata.NewIncomingContext(context.Background(), metadata.New(md))
 			},
-			expr: "grpc.federation.metadata.INCOMING()",
+			expr: "grpc.federation.metadata.incoming()",
 			cmp: func(got ref.Val) error {
 				gotV, ok := got.Value().(map[ref.Val]ref.Val)
 				if !ok {
@@ -52,7 +52,7 @@ func TestMetadata(t *testing.T) {
 		{
 			name: "incoming without incoming context",
 			ctx:  context.Background,
-			expr: "grpc.federation.metadata.INCOMING()",
+			expr: "grpc.federation.metadata.incoming()",
 			cmp: func(got ref.Val) error {
 				gotV, ok := got.Value().(map[ref.Val]ref.Val)
 				if !ok {
