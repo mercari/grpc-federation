@@ -179,6 +179,8 @@ message CallExpr {
   optional string timeout = 3;
   // retry specifies the retry policy if the method call fails.
   optional RetryPolicy retry = 4;
+  // header configures the response header metadata.
+  repeated HeaderConfig header = 5;
 }
 
 // RetryPolicy define the retry policy if the method call fails.
@@ -214,6 +216,16 @@ message RetryPolicyExponential {
   optional string max_interval = 4;
   // max retry count. ( default value is 5. If zero is specified, it never stops ).
   optional uint64 max_retries = 5;
+}
+
+// HeaderConfig define the response header metadata configuration.
+message HeaderConfig {
+  // condition to set the header. If true, the header is set. The condition is evaluated as CEL expression.
+  optional string if = 1;
+  // a kye for the metadata.
+  string key = 2;
+  // a value for the metadata. The value is evaluated as CEL expression.
+  repeated string value = 3;
 }
 
 // MethodRequest define parameters to be used for gRPC method request.
