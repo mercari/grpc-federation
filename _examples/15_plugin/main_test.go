@@ -21,14 +21,12 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"example/federation"
-	"example/post"
 )
 
 const bufSize = 1024
 
 var (
-	listener   *bufconn.Listener
-	postClient post.PostServiceClient
+	listener *bufconn.Listener
 )
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
