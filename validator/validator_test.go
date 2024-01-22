@@ -28,7 +28,7 @@ testdata/invalid_autobind.proto:23:3: "id" field in "org.federation.GetResponse"
        ^
 `},
 		{file: "invalid_condition_type.proto", expected: `
-testdata/invalid_condition_type.proto:36:13: return value of "if" must be bool type but got TYPE_STRING type
+testdata/invalid_condition_type.proto:36:13: return value of "if" must be bool type but got string type
 36:          if: "$.id"
                  ^
 `},
@@ -137,7 +137,7 @@ ERROR: <input>:1:4: undefined field 'user'
                                                    ^
 `},
 		{file: "invalid_oneof.proto", expected: `
-testdata/invalid_oneof.proto:39:13: return value of "if" must be bool type but got TYPE_INT64 type
+testdata/invalid_oneof.proto:39:13: return value of "if" must be bool type but got int64 type
 39:          if: "1"
                  ^
 testdata/invalid_oneof.proto:52:39: "if" or "default" must be specified in "grpc.federation.field.oneof"
