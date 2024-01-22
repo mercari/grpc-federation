@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "plugin/plugin.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc IsMatch(IsMatchRequest) returns (IsMatchResponse) {};
+}
+
+message IsMatchRequest {
+  string expr = 1;
+  string target = 2;
+}
+    
+message IsMatchResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "matched"
+      by: "example.regexp.compile($.expr).matchString($.target)"
+    }
+  };
+  bool result = 1 [(grpc.federation.field).by = "matched"];
+}

@@ -1,19 +1,23 @@
 package resolver
 
 type context struct {
-	errorBuilder *errorBuilder
-	allWarnings  *allWarnings
-	fileRef      *File
-	svc          *Service
-	mtd          *Method
-	msg          *Message
-	enum         *Enum
-	owner        *VariableDefinitionOwner
-	defIdx       int
-	depIdx       int
-	argIdx       int
-	errDetailIdx int
-	variableMap  map[string]*VariableDefinition
+	errorBuilder      *errorBuilder
+	allWarnings       *allWarnings
+	fileRef           *File
+	svc               *Service
+	mtd               *Method
+	msg               *Message
+	enum              *Enum
+	owner             *VariableDefinitionOwner
+	plugin            *CELPlugin
+	defIdx            int
+	depIdx            int
+	argIdx            int
+	errDetailIdx      int
+	pluginTypeIdx     int
+	pluginFunctionIdx int
+	isPluginMethod    bool
+	variableMap       map[string]*VariableDefinition
 }
 
 type allWarnings struct {
@@ -30,17 +34,22 @@ func newContext() *context {
 
 func (c *context) clone() *context {
 	return &context{
-		errorBuilder: c.errorBuilder,
-		allWarnings:  c.allWarnings,
-		fileRef:      c.fileRef,
-		svc:          c.svc,
-		mtd:          c.mtd,
-		msg:          c.msg,
-		enum:         c.enum,
-		owner:        c.owner,
-		defIdx:       c.defIdx,
-		depIdx:       c.depIdx,
-		argIdx:       c.argIdx,
+		errorBuilder:      c.errorBuilder,
+		allWarnings:       c.allWarnings,
+		fileRef:           c.fileRef,
+		svc:               c.svc,
+		mtd:               c.mtd,
+		msg:               c.msg,
+		enum:              c.enum,
+		owner:             c.owner,
+		plugin:            c.plugin,
+		defIdx:            c.defIdx,
+		depIdx:            c.depIdx,
+		argIdx:            c.argIdx,
+		pluginTypeIdx:     c.pluginTypeIdx,
+		pluginFunctionIdx: c.pluginFunctionIdx,
+		isPluginMethod:    c.isPluginMethod,
+
 		errDetailIdx: c.errDetailIdx,
 		variableMap:  c.variableMap,
 	}
@@ -100,6 +109,30 @@ func (c *context) withDefIndex(idx int) *context {
 	return ctx
 }
 
+func (c *context) withPlugin(plugin *CELPlugin) *context {
+	ctx := c.clone()
+	ctx.plugin = plugin
+	return ctx
+}
+
+func (c *context) withPluginTypeIndex(idx int) *context {
+	ctx := c.clone()
+	ctx.pluginTypeIdx = idx
+	return ctx
+}
+
+func (c *context) withPluginFunctionIndex(idx int) *context {
+	ctx := c.clone()
+	ctx.pluginFunctionIdx = idx
+	return ctx
+}
+
+func (c *context) withPluginIsMethod(v bool) *context {
+	ctx := c.clone()
+	ctx.isPluginMethod = v
+	return ctx
+}
+
 func (c *context) withErrDetailIndex(idx int) *context {
 	ctx := c.clone()
 	ctx.errDetailIdx = idx
@@ -121,6 +154,13 @@ func (c *context) variableDef(name string) *VariableDefinition {
 
 func (c *context) file() *File {
 	return c.fileRef
+}
+
+func (c *context) pluginName() string {
+	if c.plugin == nil {
+		return ""
+	}
+	return c.plugin.Name
 }
 
 func (c *context) fileName() string {
@@ -172,6 +212,18 @@ func (c *context) depIndex() int {
 
 func (c *context) argIndex() int {
 	return c.argIdx
+}
+
+func (c *context) pluginTypeIndex() int {
+	return c.pluginTypeIdx
+}
+
+func (c *context) pluginFunctionIndex() int {
+	return c.pluginFunctionIdx
+}
+
+func (c *context) pluginIsMethod() bool {
+	return c.isPluginMethod
 }
 
 func (c *context) errDetailIndex() int {

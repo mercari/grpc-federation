@@ -94,6 +94,11 @@ type FederationServiceResolver interface {
 	Resolve_Org_Federation_User(context.Context, *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) (*User, error)
 }
 
+type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
+
+type FederationServiceCELPluginConfig struct {
+}
+
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -165,13 +170,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			"user_id": grpcfed.NewCELFieldType(celtypes.StringType, "UserId"),
 		},
 	})
-	env, err := cel.NewCustomEnv(
+	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary()),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	)
+	}
+	env, err := cel.NewCustomEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}

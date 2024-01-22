@@ -1,0 +1,41 @@
+{{- define "plugin" }}
+{{- range . }}
+{{ $pluginName := .PluginName }}
+{{ $pluginFunctions := .PluginFunctions }}
+type {{ $pluginName }} interface {
+	{{- range $pluginFunctions }}
+	{{ .Name }}({{- range .Args }}{{ .Type }},{{- end }}) ({{- .Return.Type }}, error)
+	{{- end }}
+}
+
+var (
+	reg_{{ $pluginName }} {{ $pluginName }}
+	mu_{{ $pluginName }} sync.RWMutex
+)
+
+func Register{{ $pluginName }}(plug {{ $pluginName }}) {
+	mu_{{ $pluginName }}.Lock()
+	defer mu_{{ $pluginName }}.Unlock()
+	reg_{{ $pluginName }} = plug
+}
+
+{{ range $pluginFunctions }}
+//export {{ .ExportName }}
+func {{ .ExportName }}({{- range .WasmArgs }}{{ .Name }} {{ .Type }},{{- end }}) grpcfed.ReturnValue {
+	{{- range .WasmArgs }}
+	{{- if not .Skip }}
+	converted_{{ .Name }} := {{ .ConvertProcess }}
+	{{- end }}
+	{{- end }}
+
+	mu_{{ $pluginName }}.RLock()
+	ret, err := reg_{{ $pluginName }}.{{ .Name }}({{- range .WasmArgs }}{{- if not .Skip }}converted_{{ .Name }},{{- end }}{{- end }})
+	mu_{{ $pluginName }}.RUnlock()
+	if err != nil {
+		return grpcfed.ErrorToReturnValue(err)
+	}
+	return grpcfed.{{ .Return.FuncName }}ToReturnValue(ret)
+}
+{{ end }}
+{{- end }}
+{{- end }}

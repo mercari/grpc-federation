@@ -68,6 +68,11 @@ type OtherServiceResolver interface {
 	Resolve_Federation_GetResponse_Post(context.Context, *Federation_GetResponse_PostArgument[*OtherServiceDependentClientSet]) (*Post, error)
 }
 
+type OtherServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
+
+type OtherServiceCELPluginConfig struct {
+}
+
 // OtherServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -116,13 +121,14 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 			"name": grpcfed.NewCELFieldType(celtypes.StringType, "Name"),
 		},
 	})
-	env, err := cel.NewCustomEnv(
+	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary()),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	)
+	}
+	env, err := cel.NewCustomEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}

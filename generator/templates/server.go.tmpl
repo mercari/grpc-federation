@@ -9,6 +9,7 @@ import (
 	"time"
 	"runtime/debug"
 	"log/slog"
+	"unsafe"
 
 	{{- range .DefaultImports }}
 	{{- if .Alias }}
@@ -46,6 +47,7 @@ type {{ .Name }}[T any] struct {
 {{- $customResolvers := .CustomResolvers }}
 {{- $types := .Types }}
 {{- $oneofTypes := .OneofTypes }}
+{{- $celPlugins := .CELPlugins }}
 
 // {{ $serviceName }}Config configuration required to initialize the service that use GRPC Federation.
 type {{ $serviceName }}Config struct {
@@ -58,6 +60,12 @@ type {{ $serviceName }}Config struct {
 	// Resolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 	// If this interface is not provided, an error is returned during initialization.
 	Resolver {{ $serviceName }}Resolver // required
+	{{- end }}
+	{{- if $celPlugins }}
+	// CELPlugin If you use the plugin feature to extend the CEL API,
+	// you must write a plugin and output WebAssembly.
+	// In this field, configure to load wasm with the path to the WebAssembly file and the sha256 value.
+	CELPlugin *{{ $serviceName }}CELPluginConfig
 	{{- end }}
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
@@ -97,6 +105,14 @@ type {{ $serviceName }}Resolver interface {
 	{{- range $customResolvers }}
 	// {{ .Name }} implements resolver for "{{ .ProtoFQDN }}".
 	{{ .Name }}(context.Context, *{{ .RequestType }}[*{{ $serviceName }}DependentClientSet]) ({{ .ReturnType }}, error)
+	{{- end }}
+}
+
+type {{ $serviceName }}CELPluginWasmConfig = grpcfedcel.WasmConfig
+
+type {{ $serviceName }}CELPluginConfig struct {
+	{{- range $celPlugins }}
+	{{ .FieldName }} {{ $serviceName }}CELPluginWasmConfig
 	{{- end }}
 }
 
@@ -150,6 +166,11 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		return nil, fmt.Errorf("Resolver field in {{ $serviceName }}Config is not set. this field must be set")
 	}
 	{{- end }}
+	{{- if $celPlugins }}
+	if cfg.CELPlugin == nil {
+		return nil, fmt.Errorf("CELPlugin field in {{ $serviceName }}Config is not set. this field must be set")
+	}
+	{{- end }}
 	{{- range $serviceDependencies }}
 	{{ .ClientName }}, err := cfg.Client.{{ .ClientName }}({{ $serviceName }}ClientConfig{
 		Service: "{{ .ServiceName }}",
@@ -191,13 +212,41 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		},
 		{{- end }}
 	})
-	env, err := cel.NewCustomEnv(
+	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary()),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	)
+	}
+	{{- range $celPlugins }}
+	{
+		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
+			Name: "{{ .Name }}",
+			Wasm: cfg.CELPlugin.{{ .FieldName }},
+			Functions: []*grpcfedcel.CELFunction{
+				{{- range .Functions }}
+				{
+					Name: "{{ .CELFunction.Name }}",
+					ID: "{{ .ID }}",
+					Args: []*cel.Type{
+						{{- range .Args }}
+						{{ .CELType }},
+						{{- end }}
+					},
+					Return: {{ .Return.CELType }},
+					IsMethod: {{ .IsMethod }},
+				},
+				{{- end }}
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		envOpts = append(envOpts, cel.Lib(plugin))
+	}
+	{{- end }}
+	env, err := cel.NewCustomEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -509,3 +558,5 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 {{ end }}
 
 {{- end }}
+
+{{- template "plugin" .CELPlugins }}

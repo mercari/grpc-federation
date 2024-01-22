@@ -3,10 +3,41 @@ package source
 // Location represents semantic location information for grpc federation option.
 type Location struct {
 	FileName  string
+	Export    *Export
 	GoPackage bool
 	Service   *Service
 	Message   *Message
 	Enum      *Enum
+}
+
+type Export struct {
+	Name      string
+	Wasm      *Wasm
+	Types     *PluginType
+	Functions *PluginFunction
+}
+
+type Wasm struct {
+	URL    bool
+	Sha256 bool
+}
+
+type PluginType struct {
+	Idx     int
+	Name    bool
+	Methods *PluginFunction
+}
+
+type PluginFunction struct {
+	Idx        int
+	Name       bool
+	Args       *PluginFunctionArgument
+	ReturnType bool
+}
+
+type PluginFunctionArgument struct {
+	Idx  int
+	Type bool
 }
 
 // Service represents service location.
@@ -247,6 +278,88 @@ func GoPackageLocation(fileName string) *Location {
 	return &Location{
 		FileName:  fileName,
 		GoPackage: true,
+	}
+}
+
+// PluginTypeNameLocation creates location for export.types[*].name option.
+func PluginTypeNameLocation(fileName, pluginName string, idx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Export: &Export{
+			Name: pluginName,
+			Types: &PluginType{
+				Idx:  idx,
+				Name: true,
+			},
+		},
+	}
+}
+
+// PluginMethodArgumentTypeLocation creates location for export.types[*].methods[*].args[*].type option.
+func PluginMethodArgumentTypeLocation(fileName, pluginName string, typeIdx, methodIdx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Export: &Export{
+			Name: pluginName,
+			Types: &PluginType{
+				Idx: typeIdx,
+				Methods: &PluginFunction{
+					Idx: methodIdx,
+					Args: &PluginFunctionArgument{
+						Idx:  argIdx,
+						Type: true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// PluginFunctionArgumentTypeLocation creates location for export.functions[*].args[*].type option.
+func PluginFunctionArgumentTypeLocation(fileName, pluginName string, funcIdx, argIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Export: &Export{
+			Name: pluginName,
+			Functions: &PluginFunction{
+				Idx: funcIdx,
+				Args: &PluginFunctionArgument{
+					Idx:  argIdx,
+					Type: true,
+				},
+			},
+		},
+	}
+}
+
+// PluginMethodReturnTypeLocation creates location for export.types[*].methods[*].return.type option.
+func PluginMethodReturnTypeLocation(fileName, pluginName string, typeIdx, methodIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Export: &Export{
+			Name: pluginName,
+			Types: &PluginType{
+				Idx: typeIdx,
+				Methods: &PluginFunction{
+					Idx:        methodIdx,
+					ReturnType: true,
+				},
+			},
+		},
+	}
+}
+
+// PluginFunctionReturnTypeLocation creates location for export.functions[*].return.type option.
+func PluginFunctionReturnTypeLocation(fileName, pluginName string, funcIdx int) *Location {
+	return &Location{
+		FileName: fileName,
+		Export: &Export{
+			Name: pluginName,
+			Functions: &PluginFunction{
+				Idx:        funcIdx,
+				ReturnType: true,
+			},
+		},
 	}
 }
 

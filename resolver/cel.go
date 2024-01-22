@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -139,4 +140,41 @@ func NewCELStandardLibraryMessageType(pkgName, msgName string) *Type {
 			Name: msgName,
 		},
 	}
+}
+
+func (plugin *CELPlugin) LibraryName() string {
+	return plugin.Name
+}
+
+func (f *CELFunction) CELArgs() []*cel.Type {
+	ret := make([]*cel.Type, 0, len(f.Args))
+	for _, arg := range f.Args {
+		ret = append(ret, ToCELType(arg))
+	}
+	return ret
+}
+
+func (f *CELFunction) CELReturn() *cel.Type {
+	return ToCELType(f.Return)
+}
+
+func (plugin *CELPlugin) CompileOptions() []cel.EnvOption {
+	var opts []cel.EnvOption
+	for _, fn := range plugin.Functions {
+		var (
+			overload cel.FunctionOpt
+			bindFunc = cel.FunctionBinding(func(args ...ref.Val) ref.Val { return nil })
+		)
+		if fn.Receiver != nil {
+			overload = cel.MemberOverload(fn.ID, fn.CELArgs(), fn.CELReturn(), bindFunc)
+		} else {
+			overload = cel.Overload(fn.ID, fn.CELArgs(), fn.CELReturn(), bindFunc)
+		}
+		opts = append(opts, cel.Function(fn.Name, overload))
+	}
+	return opts
+}
+
+func (plugin *CELPlugin) ProgramOptions() []cel.ProgramOption {
+	return []cel.ProgramOption{}
 }
