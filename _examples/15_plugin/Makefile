@@ -39,4 +39,4 @@ jaeger/stop:
 	@docker stop $(shell docker ps -q  --filter ancestor=$(JAEGER_IMAGE))
 
 build/wasm:
-	tinygo build -o regexp.wasm -target wasi ./cmd/plugin
+	tinygo build -o regexp.wasm -target wasi -no-debug ./cmd/plugin
