@@ -1107,11 +1107,11 @@ type HeaderConfig struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// condition to set the header. If true, the header is set. It is evaluated as CEL expression.
+	// condition to set the header. If true, the header is set. The condition is evaluated as CEL expression.
 	If *string `protobuf:"bytes,1,opt,name=if,proto3,oneof" json:"if,omitempty"`
 	// a kye for the metadata.
 	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
-	// a value for the metadata. It is evaluated as CEL expression.
+	// a value for the metadata. The value is evaluated as CEL expression.
 	Value []string `protobuf:"bytes,3,rep,name=value,proto3" json:"value,omitempty"`
 }
 
