@@ -8,11 +8,13 @@ import (
 )
 
 type Library struct {
+	name    string
 	subLibs []cel.SingletonLibrary
 }
 
 func NewLibrary() *Library {
 	return &Library{
+		name: "grpc.federation.static",
 		subLibs: []cel.SingletonLibrary{
 			new(TimeLibrary),
 			new(ListLibrary),
@@ -24,6 +26,7 @@ func NewLibrary() *Library {
 
 func NewContextualLibrary(ctx context.Context) *Library {
 	return &Library{
+		name: "grpc.federation.contextual",
 		subLibs: []cel.SingletonLibrary{
 			NewMetadataLibrary(ctx),
 		},
@@ -35,7 +38,7 @@ func IsStandardLibraryType(typeName string) bool {
 }
 
 func (lib *Library) LibraryName() string {
-	return "grpc.federation"
+	return lib.name
 }
 
 func (lib *Library) CompileOptions() []cel.EnvOption {

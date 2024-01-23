@@ -37,11 +37,13 @@ message GetPostResponse {
     def { name: "fixed_rand" by: "grpc.federation.rand.new(rand_source)" }
     def { name: "uuid" by: ".grpc.federation.uuid.newRandomFromRand(fixed_rand)" }
     def { name: "loc" by: "grpc.federation.time.loadLocation('Asia/Tokyo')"}
+    def { name: "value1" by: "grpc.federation.metadata.incoming()['key1'][0]"}
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).string = "hello"];
   string uuid = 3 [(grpc.federation.field).by = "uuid.string()"];
   string loc = 4 [(grpc.federation.field).by = "loc.string()"];
+  string value1 = 5 [(grpc.federation.field).by = "value1"];
 }
 
 message Post {

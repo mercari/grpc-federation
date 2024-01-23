@@ -17,6 +17,8 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+
+	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 )
 
 // CELTypeHelper provides the cel.Registry needed to build a cel environment.
@@ -477,7 +479,11 @@ func EvalCEL(ctx context.Context, value localValue, expr string, outType reflect
 	value.rlock()
 	defer value.runlock()
 
-	env, err := value.getEnv().Extend(value.getEnvOpts()...)
+	var envOpts []cel.EnvOption
+	envOpts = append(envOpts, value.getEnvOpts()...)
+	envOpts = append(envOpts, cel.Lib(grpcfedcel.NewContextualLibrary(ctx)))
+
+	env, err := value.getEnv().Extend(envOpts...)
 	if err != nil {
 		return nil, err
 	}
