@@ -19,6 +19,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/anypb"
 
@@ -189,6 +190,7 @@ func TestFederation(t *testing.T) {
 	}()
 
 	client := federation.NewFederationServiceClient(conn)
+	ctx = metadata.AppendToOutgoingContext(ctx, "key1", "value1")
 	res, err := client.GetPost(ctx, &federation.GetPostRequest{
 		Id: "foo",
 	})
@@ -244,6 +246,7 @@ func TestFederation(t *testing.T) {
 		Str:  "hello",
 		Uuid: "daa4728d-159f-4fc2-82cf-cae915d54e08",
 		Loc:  "Asia/Tokyo",
+		Value1: "value1",
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
