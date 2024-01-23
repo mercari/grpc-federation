@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package grpc.federation;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
+
+extend google.protobuf.FileOptions {
+  PluginRule plugin = 70000;
+}
+
+message PluginRule {
+  Export export = 1;
+}
+
+message Export {
+  string name = 1;
+  string desc = 2;
+  repeated ReceiverType types = 3;
+  repeated CELFunction functions = 4;
+  repeated CELVariable variables = 5;
+}
+
+message CELFunction {
+  string name = 1;
+  string desc = 2;
+  repeated CELFunctionArgument args = 3;
+  CELType return = 4;
+}
+
+message ReceiverType {
+  string name = 1;
+  string desc = 2;
+  repeated CELFunction methods = 3;
+}
+
+message CELFunctionArgument {
+  string name = 1;
+  string desc = 2;
+  string type = 3;
+  bool repeated = 4;
+}
+
+message CELType {
+  string type = 1;
+  string desc = 2;
+  bool repeated = 3;
+}
+
+message CELVariable {
+  string name = 1;
+  string desc = 2;
+  string type = 3;  
+}

@@ -1,0 +1,13 @@
+{
+    "protoc": {
+        "options": [
+            "--proto_path=proto",
+        ]
+    },
+    "grpc-federation": {
+        "path": "bin/grpc-federation-language-server",
+        "import-paths": [
+            "proto",
+        ]
+    }
+}

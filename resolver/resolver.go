@@ -26,6 +26,7 @@ type Resolver struct {
 	defToFileMap               map[*descriptorpb.FileDescriptorProto]*File
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
+	celPluginMap               map[string]*CELPlugin
 
 	serviceToRuleMap   map[*Service]*federation.ServiceRule
 	methodToRuleMap    map[*Method]*federation.MethodRule
@@ -49,6 +50,7 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 		defToFileMap:               make(map[*descriptorpb.FileDescriptorProto]*File),
 		protoPackageNameToFileDefs: make(map[string][]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToPackage:  make(map[string]*Package),
+		celPluginMap:               make(map[string]*CELPlugin),
 
 		serviceToRuleMap:   make(map[*Service]*federation.ServiceRule),
 		methodToRuleMap:    make(map[*Method]*federation.MethodRule),
@@ -214,7 +216,7 @@ func (r *Resolver) validateServiceFromFiles(ctx *context, files []*File) {
 func (r *Resolver) resultFiles(allFiles []*File) []*File {
 	fileMap := make(map[*File]struct{})
 	ret := make([]*File, 0, len(allFiles))
-	for _, file := range r.hasServiceRuleFiles(allFiles) {
+	for _, file := range r.hasServiceOrPluginRuleFiles(allFiles) {
 		ret = append(ret, file)
 		fileMap[file] = struct{}{}
 
@@ -229,10 +231,13 @@ func (r *Resolver) resultFiles(allFiles []*File) []*File {
 	return ret
 }
 
-func (r *Resolver) hasServiceRuleFiles(files []*File) []*File {
+func (r *Resolver) hasServiceOrPluginRuleFiles(files []*File) []*File {
 	var ret []*File
 	for _, file := range files {
-		if file.HasServiceWithRule() {
+		switch {
+		case file.HasServiceWithRule():
+			ret = append(ret, file)
+		case len(file.CELPlugins) != 0:
 			ret = append(ret, file)
 		}
 	}
@@ -297,6 +302,21 @@ func (r *Resolver) validateMethodResponse(ctx *context, service *Service) {
 func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorProto) *File {
 	file := r.defToFileMap[def]
 	ctx = ctx.withFile(file)
+	pluginRuleDef, err := getExtensionRule[*federation.PluginRule](def.GetOptions(), federation.E_Plugin)
+	if err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				source.FileLocation(ctx.fileName()),
+			),
+		)
+	}
+	if pluginRuleDef != nil {
+		if plugin := r.resolveCELPlugin(ctx, def, pluginRuleDef.Export); plugin != nil {
+			file.CELPlugins = append(file.CELPlugins, plugin)
+		}
+	}
+
 	for _, serviceDef := range def.GetService() {
 		service := r.resolveService(ctx, file.Package, serviceDef.GetName())
 		if service == nil {
@@ -315,6 +335,168 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		file.Enums = append(file.Enums, r.resolveEnum(ctx, file.Package, enumDef.GetName()))
 	}
 	return file
+}
+
+func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDescriptorProto, def *federation.Export) *CELPlugin {
+	if def == nil {
+		return nil
+	}
+	pkgName := fileDef.GetPackage()
+	plugin := &CELPlugin{Name: def.GetName()}
+	ctx = ctx.withPlugin(plugin)
+	for idx, fn := range def.GetFunctions() {
+		pluginFunc := r.resolvePluginGlobalFunction(ctx.withPluginFunctionIndex(idx), pkgName, fn)
+		if pluginFunc == nil {
+			continue
+		}
+		plugin.Functions = append(plugin.Functions, pluginFunc)
+	}
+	for idx, msgType := range def.GetTypes() {
+		ctx := ctx.withPluginTypeIndex(idx)
+		msg, err := r.resolveMessageByName(ctx, msgType.GetName())
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.PluginTypeNameLocation(ctx.fileName(), plugin.Name, idx),
+				),
+			)
+			continue
+		}
+		for idx, fn := range msgType.GetMethods() {
+			pluginFunc := r.resolvePluginMethod(ctx.withPluginIsMethod(true).withPluginFunctionIndex(idx), msg, fn)
+			if pluginFunc == nil {
+				continue
+			}
+			plugin.Functions = append(plugin.Functions, pluginFunc)
+		}
+	}
+	r.celPluginMap[def.GetName()] = plugin
+	return plugin
+}
+
+func (r *Resolver) resolvePluginMethod(ctx *context, msg *Message, fn *federation.CELFunction) *CELFunction {
+	msgType := NewMessageType(msg, false)
+	pluginFunc := &CELFunction{
+		Name:     fn.GetName(),
+		Receiver: msg,
+		Args:     []*Type{msgType},
+	}
+	args, ret := r.resolvePluginFunctionArgumentsAndReturn(ctx, fn.GetArgs(), fn.GetReturn())
+	pluginFunc.Args = append(pluginFunc.Args, args...)
+	pluginFunc.Return = ret
+	pluginFunc.ID = r.toPluginFunctionID(fmt.Sprintf("%s_%s", msg.FQDN(), fn.GetName()), append(pluginFunc.Args, pluginFunc.Return))
+	return pluginFunc
+}
+
+func (r *Resolver) resolvePluginGlobalFunction(ctx *context, pkgName string, fn *federation.CELFunction) *CELFunction {
+	pluginFunc := &CELFunction{
+		Name: fmt.Sprintf("%s.%s", pkgName, fn.GetName()),
+	}
+	args, ret := r.resolvePluginFunctionArgumentsAndReturn(ctx, fn.GetArgs(), fn.GetReturn())
+	pluginFunc.Args = append(pluginFunc.Args, args...)
+	pluginFunc.Return = ret
+	pluginFunc.ID = r.toPluginFunctionID(fmt.Sprintf("%s_%s", pkgName, fn.GetName()), append(pluginFunc.Args, pluginFunc.Return))
+	return pluginFunc
+}
+
+func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []*federation.CELFunctionArgument, ret *federation.CELType) ([]*Type, *Type) {
+	argTypes := r.resolvePluginFunctionArguments(ctx, args)
+	if ret == nil {
+		return argTypes, nil
+	}
+	retType, err := r.resolvePluginFunctionType(ctx, ret.GetType(), ret.GetRepeated())
+	if err != nil {
+		if ctx.pluginIsMethod() {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.PluginMethodReturnTypeLocation(
+						ctx.fileName(),
+						ctx.pluginName(),
+						ctx.pluginTypeIndex(),
+						ctx.pluginFunctionIndex(),
+					),
+				),
+			)
+		} else {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.PluginFunctionReturnTypeLocation(
+						ctx.fileName(),
+						ctx.pluginName(),
+						ctx.pluginFunctionIndex(),
+					),
+				),
+			)
+		}
+	}
+	return argTypes, retType
+}
+
+func (r *Resolver) resolvePluginFunctionArguments(ctx *context, args []*federation.CELFunctionArgument) []*Type {
+	var ret []*Type
+	for argIdx, arg := range args {
+		typ, err := r.resolvePluginFunctionType(ctx, arg.GetType(), arg.GetRepeated())
+		if err != nil {
+			if ctx.pluginIsMethod() {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.PluginMethodArgumentTypeLocation(
+							ctx.fileName(),
+							ctx.pluginName(),
+							ctx.pluginTypeIndex(),
+							ctx.pluginFunctionIndex(),
+							argIdx,
+						),
+					),
+				)
+			} else {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.PluginFunctionArgumentTypeLocation(
+							ctx.fileName(),
+							ctx.pluginName(),
+							ctx.pluginFunctionIndex(),
+							argIdx,
+						),
+					),
+				)
+			}
+			continue
+		}
+		ret = append(ret, typ)
+	}
+	return ret
+}
+
+func (r *Resolver) resolvePluginFunctionType(ctx *context, typeName string, repeated bool) (*Type, error) {
+	var label descriptorpb.FieldDescriptorProto_Label
+	if repeated {
+		label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+	} else {
+		label = descriptorpb.FieldDescriptorProto_LABEL_REQUIRED
+	}
+	kind := types.ToKind(typeName)
+	if kind == types.Unknown {
+		// TODO: do not consider enums at first.
+		kind = types.Message
+	}
+	return r.resolveType(ctx, typeName, kind, label)
+}
+
+func (r *Resolver) toPluginFunctionID(prefix string, t []*Type) string {
+	var typeNames []string
+	for _, tt := range t {
+		if tt == nil {
+			continue
+		}
+		typeNames = append(typeNames, tt.FQDN())
+	}
+	return strings.ReplaceAll(strings.Join(append([]string{prefix}, typeNames...), "_"), ".", "_")
 }
 
 func (r *Resolver) resolveService(ctx *context, pkg *Package, name string) *Service {
@@ -343,10 +525,18 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string) *Serv
 		)
 		return nil
 	}
+	plugins := make([]*CELPlugin, 0, len(r.celPluginMap))
+	for _, plugin := range r.celPluginMap {
+		plugins = append(plugins, plugin)
+	}
+	sort.Slice(plugins, func(i, j int) bool {
+		return plugins[i].Name < plugins[j].Name
+	})
 	service := &Service{
-		File:    file,
-		Name:    name,
-		Methods: make([]*Method, 0, len(serviceDef.GetMethod())),
+		File:       file,
+		Name:       name,
+		Methods:    make([]*Method, 0, len(serviceDef.GetMethod())),
+		CELPlugins: plugins,
 	}
 	r.serviceToRuleMap[service] = ruleDef
 	ctx = ctx.withService(service)
@@ -1484,8 +1674,8 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 			ErrWithLocation(
 				fmt.Sprintf(
 					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
-					msg.FQDN(), field.Name, types.ToString(field.Type.Kind),
-					msgAlias.FQDN(), types.ToString(aliasField.Type.Kind),
+					msg.FQDN(), field.Name, field.Type.Kind.ToString(),
+					msgAlias.FQDN(), aliasField.Type.Kind.ToString(),
 				),
 				source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
 			),
@@ -1527,8 +1717,8 @@ func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, f
 			ErrWithLocation(
 				fmt.Sprintf(
 					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
-					msg.FQDN(), field.Name, types.ToString(field.Type.Kind),
-					msgAlias.FQDN(), types.ToString(aliasField.Type.Kind),
+					msg.FQDN(), field.Name, field.Type.Kind.ToString(),
+					msgAlias.FQDN(), aliasField.Type.Kind.ToString(),
 				),
 				source.MessageFieldLocation(ctx.fileName(), ctx.messageName(), field.Name),
 			),
@@ -1656,7 +1846,7 @@ func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDe
 }
 
 func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescriptorProto, oneofs []*Oneof) *Field {
-	typ, err := r.resolveType(ctx, fieldDef.GetTypeName(), fieldDef.GetType(), fieldDef.GetLabel())
+	typ, err := r.resolveType(ctx, fieldDef.GetTypeName(), types.Kind(fieldDef.GetType()), fieldDef.GetLabel())
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -2290,7 +2480,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				if varDef.If.Out.Kind != types.Bool {
 					ctx.addError(
 						ErrWithLocation(
-							fmt.Sprintf(`return value of "if" must be bool type but got %s type`, varDef.If.Out.Kind),
+							fmt.Sprintf(`return value of "if" must be bool type but got %s type`, varDef.If.Out.Kind.ToString()),
 							source.VariableDefinitionIfLocation(
 								msg.File.Name,
 								msg.Name,
@@ -2361,7 +2551,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 					if oneof.If.Out.Kind != types.Bool {
 						ctx.addError(
 							ErrWithLocation(
-								fmt.Sprintf(`return value of "if" must be bool type but got %s type`, oneof.If.Out.Kind),
+								fmt.Sprintf(`return value of "if" must be bool type but got %s type`, oneof.If.Out.Kind.ToString()),
 								source.MessageFieldOneofIfLocation(
 									msg.File.Name,
 									msg.Name,
@@ -2803,6 +2993,9 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
 	}
+	for _, plugin := range r.celPluginMap {
+		envOpts = append(envOpts, cel.Lib(plugin))
+	}
 
 	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
 		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
@@ -2902,7 +3095,7 @@ func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.Fil
 		if field.Type.Repeated {
 			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 		}
-		kind := field.Type.Kind
+		kind := descriptorpb.FieldDescriptorProto_Type(field.Type.Kind)
 		msg.Field = append(msg.Field, &descriptorpb.FieldDescriptorProto{
 			Name:     proto.String(field.Name),
 			Number:   proto.Int32(int32(idx) + 1),

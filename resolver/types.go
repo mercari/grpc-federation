@@ -15,14 +15,29 @@ type Package struct {
 	Files Files
 }
 
-type File struct {
-	Package   *Package
-	GoPackage *GoPackage
+type CELPlugin struct {
 	Name      string
-	Desc      *descriptorpb.FileDescriptorProto
-	Services  []*Service
-	Messages  []*Message
-	Enums     []*Enum
+	Desc      string
+	Functions []*CELFunction
+}
+
+type CELFunction struct {
+	Name     string
+	ID       string
+	Args     []*Type
+	Return   *Type
+	Receiver *Message
+}
+
+type File struct {
+	Package    *Package
+	GoPackage  *GoPackage
+	Name       string
+	Desc       *descriptorpb.FileDescriptorProto
+	Services   []*Service
+	Messages   []*Message
+	Enums      []*Enum
+	CELPlugins []*CELPlugin
 }
 
 type Files []*File
@@ -40,6 +55,7 @@ type Service struct {
 	Rule        *ServiceRule
 	Messages    []*Message
 	MessageArgs []*Message
+	CELPlugins  []*CELPlugin
 }
 
 type Method struct {
@@ -369,7 +385,7 @@ func (t *Type) FQDN() string {
 	if t.Enum != nil {
 		return repeated + t.Enum.FQDN()
 	}
-	return repeated + types.ToString(t.Kind)
+	return repeated + t.Kind.ToString()
 }
 
 type MethodCall struct {

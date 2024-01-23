@@ -53,6 +53,244 @@ func (f *File) Services() []*Service {
 	return ret
 }
 
+type CELPlugin struct {
+	file *resolver.File
+	*resolver.CELPlugin
+}
+
+func (p *CELPlugin) FieldName() string {
+	return util.ToPublicGoVariable(p.Name)
+}
+
+func (p *CELPlugin) PluginName() string {
+	return fmt.Sprintf("%sPlugin", util.ToPublicGoVariable(p.Name))
+}
+
+func (p *CELPlugin) Functions() []*CELFunction {
+	ret := make([]*CELFunction, 0, len(p.CELPlugin.Functions))
+	for _, fn := range p.CELPlugin.Functions {
+		ret = append(ret, &CELFunction{
+			file:        p.file,
+			CELFunction: fn,
+		})
+	}
+	return ret
+}
+
+type CELFunction struct {
+	file *resolver.File
+	*resolver.CELFunction
+}
+
+func (f *CELFunction) Name() string {
+	if f.Receiver != nil {
+		return protoFQDNToPublicGoName(fmt.Sprintf("%s.%s", f.Receiver.FQDN(), f.CELFunction.Name))
+	}
+	return protoFQDNToPublicGoName(f.CELFunction.Name)
+}
+
+func (f *CELFunction) IsMethod() bool {
+	return f.CELFunction.Receiver != nil
+}
+
+func (f *CELFunction) ExportName() string {
+	return f.ID
+}
+
+func (f *CELFunction) toInt32Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
+	return &CELFunctionArgument{
+		Name:   fmt.Sprintf("arg%d", idx),
+		Type:   "int32",
+		ArgIdx: idx,
+		arg:    arg,
+		file:   f.file,
+	}
+}
+
+func (f *CELFunction) toInt64Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
+	return &CELFunctionArgument{
+		Name:   fmt.Sprintf("arg%d", idx),
+		Type:   "int64",
+		ArgIdx: idx,
+		arg:    arg,
+		file:   f.file,
+	}
+}
+
+func (f *CELFunction) toUint32Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
+	return &CELFunctionArgument{
+		Name:   fmt.Sprintf("arg%d", idx),
+		Type:   "uint32",
+		ArgIdx: idx,
+		arg:    arg,
+		file:   f.file,
+	}
+}
+
+func (f *CELFunction) toUint64Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
+	return &CELFunctionArgument{
+		Name:   fmt.Sprintf("arg%d", idx),
+		Type:   "uint64",
+		ArgIdx: idx,
+		arg:    arg,
+		file:   f.file,
+	}
+}
+
+func (f *CELFunction) toStringArg(arg *resolver.Type, idx int) []*CELFunctionArgument {
+	return []*CELFunctionArgument{
+		{
+			Name:   fmt.Sprintf("arg%d", idx),
+			Type:   "uint32",
+			ArgIdx: idx,
+			arg:    arg,
+			file:   f.file,
+		},
+		{
+			Name:   fmt.Sprintf("arg%d", idx+1),
+			Type:   "uint32",
+			ArgIdx: idx + 1,
+			arg:    arg,
+			Skip:   true,
+			file:   f.file,
+		},
+	}
+}
+
+func (f *CELFunction) Args() []*CELFunctionArgument {
+	ret := make([]*CELFunctionArgument, 0, len(f.CELFunction.Args))
+	for _, arg := range f.CELFunction.Args {
+		ret = append(ret, &CELFunctionArgument{
+			Type: toTypeText(f.file, arg),
+			file: f.file,
+			arg:  arg,
+		})
+	}
+	return ret
+}
+
+func (f *CELFunction) Return() *CELFunctionReturn {
+	return &CELFunctionReturn{
+		Type: toTypeText(f.file, f.CELFunction.Return),
+		ret:  f.CELFunction.Return,
+	}
+}
+
+func (f *CELFunction) WasmArgs() []*CELFunctionArgument {
+	ret := make([]*CELFunctionArgument, 0, len(f.CELFunction.Args))
+	var idx int
+	for _, arg := range f.CELFunction.Args {
+		switch arg.Kind {
+		case types.Bool:
+			ret = append(ret, f.toInt32Arg(arg, idx))
+		case types.Int32:
+			ret = append(ret, f.toInt32Arg(arg, idx))
+		case types.Sint32:
+			ret = append(ret, f.toInt32Arg(arg, idx))
+		case types.Message:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Uint32:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Enum:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Sfixed32:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Sfixed64:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Float:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Fixed32:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Int64:
+			ret = append(ret, f.toUint32Arg(arg, idx))
+		case types.Sint64:
+			ret = append(ret, f.toInt64Arg(arg, idx))
+		case types.Double:
+			ret = append(ret, f.toUint64Arg(arg, idx))
+		case types.Uint64:
+			ret = append(ret, f.toUint64Arg(arg, idx))
+		case types.Fixed64:
+			ret = append(ret, f.toUint64Arg(arg, idx))
+		case types.String:
+			ret = append(ret, f.toStringArg(arg, idx)...)
+			idx++
+		case types.Bytes:
+			ret = append(ret, f.toStringArg(arg, idx)...)
+			idx++
+		default:
+		}
+		idx++
+	}
+	return ret
+}
+
+type CELFunctionArgument struct {
+	Name   string
+	Type   string
+	ArgIdx int
+	Skip   bool
+	arg    *resolver.Type
+	file   *resolver.File
+}
+
+type CELFunctionReturn struct {
+	Type string
+	ret  *resolver.Type
+}
+
+func (r *CELFunctionReturn) CELType() string {
+	return toCELTypeDeclare(r.ret)
+}
+
+func (r *CELFunctionReturn) FuncName() string {
+	return util.ToPublicGoVariable(r.ret.Kind.ToString())
+}
+
+func (f *CELFunctionArgument) CELType() string {
+	return toCELTypeDeclare(f.arg)
+}
+
+func (f *CELFunctionArgument) ConvertProcess() string {
+	switch f.arg.Kind {
+	case types.Double:
+		return fmt.Sprintf("grpcfed.ToFloat64(%s)", f.Name)
+	case types.Float:
+		return fmt.Sprintf("grpcfed.ToFloat32(%s)", f.Name)
+	case types.Bool:
+		return fmt.Sprintf("grpcfed.ToBool(%s)", f.Name)
+	case types.String:
+		return fmt.Sprintf("grpcfed.ToString(arg%d, arg%d)", f.ArgIdx, f.ArgIdx+1)
+	case types.Bytes:
+		return fmt.Sprintf("grpcfed.ToBytes(arg%d, arg%d)", f.ArgIdx, f.ArgIdx+1)
+	case types.Message:
+		msg := strings.TrimPrefix(toTypeText(f.file, f.arg), "*")
+		return fmt.Sprintf("grpcfed.ToMessage[%s](%s)", msg, f.Name)
+	}
+	return f.Name
+}
+
+func (p *CELPlugin) PluginFunctions() []*CELFunction {
+	ret := make([]*CELFunction, 0, len(p.CELPlugin.Functions))
+	for _, fn := range p.CELPlugin.Functions {
+		ret = append(ret, &CELFunction{
+			file:        p.file,
+			CELFunction: fn,
+		})
+	}
+	return ret
+}
+
+func (f *File) CELPlugins() []*CELPlugin {
+	ret := make([]*CELPlugin, 0, len(f.File.CELPlugins))
+	for _, plug := range f.File.CELPlugins {
+		ret = append(ret, &CELPlugin{
+			file:      f.File,
+			CELPlugin: plug,
+		})
+	}
+	return ret
+}
+
 type Service struct {
 	*resolver.Service
 	nameToLogValueMap map[string]*LogValue
@@ -251,6 +489,17 @@ type OneofType struct {
 	FieldZeroValues  []string
 	FieldGetterNames []string
 	ReturnZeroValue  string
+}
+
+func (s *Service) CELPlugins() []*CELPlugin {
+	ret := make([]*CELPlugin, 0, len(s.Service.CELPlugins))
+	for _, plugin := range s.Service.CELPlugins {
+		ret = append(ret, &CELPlugin{
+			CELPlugin: plugin,
+			file:      s.File,
+		})
+	}
+	return ret
 }
 
 func (s *Service) Types() Types {
@@ -537,7 +786,7 @@ func toTypeText(file *resolver.File, t *resolver.Type) string {
 			typ = messageTypeToText(file, t.Message)
 		}
 	default:
-		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind)
+		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind.ToString())
 	}
 	if t.Repeated {
 		return "[]" + typ
@@ -824,7 +1073,7 @@ func (s *Service) logType(typ *resolver.Type) string {
 	case types.Group, types.Message:
 		return "Any"
 	}
-	log.Fatalf("grpc-federation: specified unknown type value %s", typ.Kind)
+	log.Fatalf("grpc-federation: specified unknown type value %s", typ.Kind.ToString())
 	return ""
 }
 
@@ -2057,7 +2306,7 @@ func toCELNativeType(t *resolver.Type) string {
 	case types.Message:
 		return fmt.Sprintf("cel.ObjectType(%q)", t.Message.FQDN())
 	default:
-		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind)
+		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind.ToString())
 	}
 	return ""
 }

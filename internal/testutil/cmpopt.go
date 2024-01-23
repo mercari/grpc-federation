@@ -9,7 +9,8 @@ import (
 
 func ResolverCmpOpts() []cmp.Option {
 	return []cmp.Option{
-		cmpopts.IgnoreFields(resolver.File{}, "Messages", "Services", "Enums", "Desc"),
+		cmpopts.IgnoreFields(resolver.File{}, "Messages", "Services", "Enums", "Desc", "CELPlugins"),
+		cmpopts.IgnoreFields(resolver.Service{}, "CELPlugins"),
 		cmpopts.IgnoreFields(resolver.Package{}, "Files"),
 		cmpopts.IgnoreFields(resolver.Method{}, "Service"),
 		cmpopts.IgnoreFields(resolver.Message{}, "File", "ParentMessage"),
