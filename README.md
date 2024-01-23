@@ -25,14 +25,46 @@ Since the schema information for the BFF service is already defined using Protoc
 
 # Features
 
-gRPC Federation automatically generates a gRPC server by writing a custom option in Protocol Buffers.  
-To generate a gRPC server, you can use libraries for the Go language as well as the `protoc` plugin.  
-We also provide a linter to verify that option descriptions are correct, and a language server to assist with option descriptions.  
+## 1. Various tools are available to assist in code generation
+
+gRPC Federation automatically generates a gRPC server by writing a custom option in Protocol Buffers. So, it supports the `protoc-gen-grpc-federation` CLI available from `protoc`. Various other tools exist to assist in code generation.
 
 - `protoc-gen-grpc-federation`: protoc's plugin for gRPC Federation
 - `grpc-federation-linter`: linter for gRPC Federation
 - `grpc-federation-language-server`: language server program for gRPC Federation
-- `grpc-federation-generator`: monitors proto changes and interactively performs code generation
+- `grpc-federation-generator`: standalone code generation tool for monitoring proto changes and interactively performs code generation
+
+## 2. Supports CEL API to represent complex operations
+
+The gRPC Federation supports [CEL](https://github.com/google/cel-spec), allowing you to use the CEL API to represent complex operations you want to perform on your BFF.  
+
+[gRPC Federation CEL API References](./docs/cel.md)
+
+## 3. Extensible system with WebAssembly
+
+The gRPC Federation has three extension points.
+
+1. The code generation pipeline
+2. The complex processes that cannot be expressed by Protocol Buffers
+3. CEL API
+
+We plan to make these extension points extensible with WebAssembly. Currently, only the CEL API can be extended.
+
+### 3.1 The code generation pipeline
+
+If you want to run your own auto-generated process using the results of the gRPC Federation, this feature is available.
+
+### 3.2 The complex processes that cannot be expressed by Protocol Buffers
+
+The gRPC Federation uses a hybrid system in which logic that cannot be expressed in Protocol Buffers is developed in the Go language. Therefore, we plan to adopt WebAssembly in order to be able to extend it outside of the Go language in the future.
+
+[See here for features on extending with the Go language](./docs/references.md#grpcfederationmessagecustom_resolver)
+
+### 3.3 CEL API
+
+The gRPC Federation supports various CEL APIs by default. However, if you want to use internal domain logic as CEL API, you can use this functionality.
+
+[How to extend the CEL API](./docs/cel_plugin.md)
 
 # Why use this
 
