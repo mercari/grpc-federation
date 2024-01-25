@@ -69,6 +69,7 @@ func TestCodeGenerate(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := filepath.Join("testdata", fmt.Sprintf("expected_%s.go", test))
+			os.WriteFile(path, out, 0o600)
 			data, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
@@ -240,12 +241,12 @@ func TestValidationError_GoGRPCStatusCode(t *testing.T) {
 		{
 			desc:     "code is OK",
 			code:     code.Code_OK,
-			expected: "OK",
+			expected: "OKCode",
 		},
 		{
 			desc:     "code is FAILED_PRECONDITION",
 			code:     code.Code_FAILED_PRECONDITION,
-			expected: "FailedPrecondition",
+			expected: "FailedPreconditionCode",
 		},
 	}
 

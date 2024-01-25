@@ -96,3 +96,9 @@ func RecoverError(v interface{}, rawStack []byte) *RecoveredError {
 		Stack:   stack,
 	}
 }
+
+var (
+	ErrClientConfig    = errors.New("grpc-federation: Client field is not set. this field must be set")
+	ErrResolverConfig  = errors.New("grpc-federation: Resolver field is not set. this field must be set")
+	ErrCELPluginConfig = errors.New("grpc-federation: CELPlugin field is not set. this field must be set")
+)

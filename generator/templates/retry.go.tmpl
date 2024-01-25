@@ -1,18 +1,17 @@
 {{- define "retry" }}
 {{- if .Retry.Constant }}
-var b backoff.BackOff = backoff.NewConstantBackOff({{ .Retry.Constant.Interval.Nanoseconds }} /* {{ .Retry.Constant.Interval }} */)
+b := grpcfed.NewConstantBackOff({{ .Retry.Constant.Interval.Nanoseconds }}) /* {{ .Retry.Constant.Interval }} */
 {{- else }}
-eb := backoff.NewExponentialBackOff()
-eb.InitialInterval = {{ .Retry.Exponential.InitialInterval.Nanoseconds }} /* {{ .Retry.Exponential.InitialInterval }} */
-eb.RandomizationFactor = {{ .Retry.Exponential.RandomizationFactor }}
-eb.Multiplier = {{ .Retry.Exponential.Multiplier }}
-eb.MaxInterval = {{ .Retry.Exponential.MaxInterval.Nanoseconds }} /* {{ .Retry.Exponential.MaxInterval }} */
-eb.MaxElapsedTime = {{ .Retry.Exponential.MaxElapsedTime.Nanoseconds }} /* {{ .Retry.Exponential.MaxElapsedTime }} */
-
-var b backoff.BackOff = eb
+b := grpcfed.NewExponentialBackOff(&grpcfed.ExponentialBackOffConfig{
+	InitialInterval: {{ .Retry.Exponential.InitialInterval.Nanoseconds }}, /* {{ .Retry.Exponential.InitialInterval }} */
+	RandomizationFactor: {{ .Retry.Exponential.RandomizationFactor }},
+	Multiplier: {{ .Retry.Exponential.Multiplier }},
+	MaxInterval: {{ .Retry.Exponential.MaxInterval.Nanoseconds }}, /* {{ .Retry.Exponential.MaxInterval }} */
+	MaxElapsedTime: {{ .Retry.Exponential.MaxElapsedTime.Nanoseconds }}, /* {{ .Retry.Exponential.MaxElapsedTime }} */
+})
 {{- end }}
 {{- if .Retry.MaxRetries }}
-b = backoff.WithMaxRetries(b, {{ .Retry.MaxRetries }})
+b = grpcfed.BackOffWithMaxRetries(b, {{ .Retry.MaxRetries }})
 {{- end }}
-b = backoff.WithContext(b, ctx)
+b = grpcfed.BackOffWithContext(b, ctx)
 {{- end }}

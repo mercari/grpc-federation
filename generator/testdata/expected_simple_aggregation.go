@@ -3,25 +3,23 @@ package federation
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
 
-	"github.com/cenkalti/backoff/v4"
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sync/errgroup"
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	post "example/post"
 	user "example/user"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
@@ -122,8 +120,10 @@ type FederationServiceResolver interface {
 	Resolve_Org_Federation_Z(context.Context, *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (*Z, error)
 }
 
+// FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
 type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
+// FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
 }
 
@@ -136,14 +136,14 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Org_Federation_User_Age resolve "org.federation.User.age".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User_Age(context.Context, *Org_Federation_User_AgeArgument[*FederationServiceDependentClientSet]) (ret uint64, e error) {
-	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_User_Age not implemented")
+	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_User_Age not implemented")
 	return
 }
 
 // Resolve_Org_Federation_Z resolve "org.federation.Z".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_Z(context.Context, *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (ret *Z, e error) {
-	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_Z not implemented")
+	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_Z not implemented")
 	return
 }
 
@@ -158,7 +158,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
-	env          *cel.Env
+	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
 	resolver     FederationServiceResolver
 	client       *FederationServiceDependentClientSet
@@ -167,10 +167,10 @@ type FederationService struct {
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if cfg.Client == nil {
-		return nil, fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrClientConfig
 	}
 	if cfg.Resolver == nil {
-		return nil, fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrResolverConfig
 	}
 	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
 		Service: "org.post.PostService",
@@ -194,30 +194,24 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.GetPostResponseArgument": {
-			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 		"grpc.federation.private.MArgument": {},
 		"grpc.federation.private.PostArgument": {
-			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 		"grpc.federation.private.UserArgument": {
-			"id":      grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
-			"title":   grpcfed.NewCELFieldType(celtypes.StringType, "Title"),
-			"content": grpcfed.NewCELFieldType(celtypes.StringType, "Content"),
-			"user_id": grpcfed.NewCELFieldType(celtypes.StringType, "UserId"),
+			"id":      grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
+			"title":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Title"),
+			"content": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Content"),
+			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 		},
 		"grpc.federation.private.ZArgument": {},
 	})
-	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
-		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	}
-	env, err := cel.NewCustomEnv(envOpts...)
+	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +274,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	   post ─┐
 	   uuid ─┤
 	*/
-	eg, ctx1 := errgroup.WithContext(ctx)
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 
@@ -296,7 +290,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Post, *localValueType]{
 			Name:   "post",
-			Type:   cel.ObjectType("org.federation.Post"),
+			Type:   grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) { value.vars.post = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
@@ -328,7 +322,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*grpcfedcel.UUID, *localValueType]{
 			Name:   "uuid",
-			Type:   cel.ObjectType("grpc.federation.uuid.UUID"),
+			Type:   grpcfed.CELObjectType("grpc.federation.uuid.UUID"),
 			Setter: func(value *localValueType, v *grpcfedcel.UUID) { value.vars.uuid = v },
 			By:     "grpc.federation.uuid.newRandom()",
 		}); err != nil {
@@ -409,7 +403,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	              user ─┤
 	                 z ─┤
 	*/
-	eg, ctx1 := errgroup.WithContext(ctx)
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 
@@ -425,7 +419,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*M, *localValueType]{
 			Name:   "m",
-			Type:   cel.ObjectType("org.federation.M"),
+			Type:   grpcfed.CELObjectType("org.federation.M"),
 			Setter: func(value *localValueType, v *M) { value.vars.m = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_MArgument[*FederationServiceDependentClientSet]{
@@ -454,7 +448,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
 			Name:   "res",
-			Type:   cel.ObjectType("org.post.GetPostResponse"),
+			Type:   grpcfed.CELObjectType("org.post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) { value.vars.res = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &post.GetPostRequest{}
@@ -465,9 +459,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					return nil, err
 				}
 				return grpcfed.WithTimeout[post.GetPostResponse](ctx, "org.post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
-					var b backoff.BackOff = backoff.NewConstantBackOff(2000000000 /* 2s */)
-					b = backoff.WithMaxRetries(b, 3)
-					b = backoff.WithContext(b, ctx)
+					b := grpcfed.NewConstantBackOff(2000000000) /* 2s */
+					b = grpcfed.BackOffWithMaxRetries(b, 3)
+					b = grpcfed.BackOffWithContext(b, ctx)
 					return grpcfed.WithRetry[post.GetPostResponse](b, func() (*post.GetPostResponse, error) {
 						return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
 					})
@@ -490,7 +484,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.Post, *localValueType]{
 			Name:   "post",
-			Type:   cel.ObjectType("org.post.Post"),
+			Type:   grpcfed.CELObjectType("org.post.Post"),
 			Setter: func(value *localValueType, v *post.Post) { value.vars.post = v },
 			By:     "res.post",
 		}); err != nil {
@@ -510,7 +504,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
 			Name:   "user",
-			Type:   cel.ObjectType("org.federation.User"),
+			Type:   grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) { value.vars.user = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
@@ -547,7 +541,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Z, *localValueType]{
 			Name:   "z",
-			Type:   cel.ObjectType("org.federation.Z"),
+			Type:   grpcfed.CELObjectType("org.federation.Z"),
 			Setter: func(value *localValueType, v *Z) { value.vars.z = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_ZArgument[*FederationServiceDependentClientSet]{
@@ -618,7 +612,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.GetUserResponse, *localValueType]{
 		Name:   "res",
-		Type:   cel.ObjectType("org.user.GetUserResponse"),
+		Type:   grpcfed.CELObjectType("org.user.GetUserResponse"),
 		Setter: func(value *localValueType, v *user.GetUserResponse) { value.vars.res = v },
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &user.GetUserRequest{}
@@ -629,16 +623,15 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				return nil, err
 			}
 			return grpcfed.WithTimeout[user.GetUserResponse](ctx, "org.user.UserService/GetUser", 20000000000 /* 20s */, func(ctx context.Context) (*user.GetUserResponse, error) {
-				eb := backoff.NewExponentialBackOff()
-				eb.InitialInterval = 1000000000 /* 1s */
-				eb.RandomizationFactor = 0.7
-				eb.Multiplier = 1.7
-				eb.MaxInterval = 30000000000    /* 30s */
-				eb.MaxElapsedTime = 20000000000 /* 20s */
-
-				var b backoff.BackOff = eb
-				b = backoff.WithMaxRetries(b, 3)
-				b = backoff.WithContext(b, ctx)
+				b := grpcfed.NewExponentialBackOff(&grpcfed.ExponentialBackOffConfig{
+					InitialInterval:     1000000000, /* 1s */
+					RandomizationFactor: 0.7,
+					Multiplier:          1.7,
+					MaxInterval:         30000000000, /* 30s */
+					MaxElapsedTime:      20000000000, /* 20s */
+				})
+				b = grpcfed.BackOffWithMaxRetries(b, 3)
+				b = grpcfed.BackOffWithContext(b, ctx)
 				return grpcfed.WithRetry[user.GetUserResponse](b, func() (*user.GetUserResponse, error) {
 					return s.client.Org_User_UserServiceClient.GetUser(ctx, args)
 				})
@@ -661,7 +654,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.User, *localValueType]{
 		Name:   "user",
-		Type:   cel.ObjectType("org.user.User"),
+		Type:   grpcfed.CELObjectType("org.user.User"),
 		Setter: func(value *localValueType, v *user.User) { value.vars.user = v },
 		By:     "res.user",
 	}); err != nil {
@@ -974,7 +967,7 @@ func (s *FederationService) logvalue_Org_Federation_User_ProfileEntry(v map[stri
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{
-			Key:   fmt.Sprint(key),
+			Key:   grpcfed.ToLogAttrKey(key),
 			Value: s.logvalue_Google_Protobuf_Any(value),
 		})
 	}
@@ -1001,7 +994,7 @@ func (s *FederationService) logvalue_repeated_Org_Federation_Item(v []*Item) slo
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{
-			Key:   fmt.Sprint(idx),
+			Key:   grpcfed.ToLogAttrKey(idx),
 			Value: s.logvalue_Org_Federation_Item(vv),
 		})
 	}

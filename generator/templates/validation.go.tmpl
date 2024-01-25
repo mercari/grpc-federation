@@ -1,11 +1,11 @@
 {{- define "messageValidation" }}
 {{- if .Error.HasIf }}
 return grpcfed.If(ctx, value, "{{ .Error.If }}", func(value *localValueType) error {
-	return grpcstatus.Error(grpccodes.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+	return grpcfed.GRPCError(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
 })
 {{- else }}
 var (
-	details       []protoadapt.MessageV1
+	details       []grpcfed.ProtoMessage
 	validationErr bool
 )
 {{- range .Error.Details }}
@@ -27,7 +27,7 @@ if err := grpcfed.If(ctx, value, "{{ .If }}", func(value *localValueType) error 
 }
 {{- end }}
 if validationErr {
-	status := grpcstatus.New(grpccodes.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+	status := grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
 	statusWithDetails, err := status.WithDetails(details...)
 	if err != nil {
 		s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -49,7 +49,7 @@ func(){
 		{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $defGroups 0)) }}
 		{{- else }}
 		{{- if . }}
-		eg, ctx1 := errgroup.WithContext(ctx)
+		eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 		{{- end }}
 		{{- range $defGroups }}
 		grpcfed.GoWithRecover(eg, func() (any, error) {

@@ -4,6 +4,7 @@ package federation
 
 import (
 	"context"
+	"fmt"
 	"runtime/debug"
 	"time"
 
@@ -50,7 +51,37 @@ func WithTimeout[T any](ctx context.Context, method string, timeout time.Duratio
 	}
 }
 
-func WithRetry[T any](b backoff.BackOff, fn func() (*T, error)) (*T, error) {
+type BackOff struct {
+	backoff.BackOff
+}
+
+func NewConstantBackOff(d time.Duration) *BackOff {
+	return &BackOff{
+		BackOff: backoff.NewConstantBackOff(d),
+	}
+}
+
+type ExponentialBackOffConfig struct {
+	InitialInterval     time.Duration
+	RandomizationFactor float64
+	Multiplier          float64
+	MaxInterval         time.Duration
+	MaxElapsedTime      time.Duration
+}
+
+func NewExponentialBackOff(cfg *ExponentialBackOffConfig) *BackOff {
+	eb := backoff.NewExponentialBackOff()
+	eb.InitialInterval = cfg.InitialInterval
+	eb.RandomizationFactor = cfg.RandomizationFactor
+	eb.Multiplier = cfg.Multiplier
+	eb.MaxInterval = cfg.MaxInterval
+	eb.MaxElapsedTime = cfg.MaxElapsedTime
+	return &BackOff{
+		BackOff: eb,
+	}
+}
+
+func WithRetry[T any](b *BackOff, fn func() (*T, error)) (*T, error) {
 	var res *T
 	if err := backoff.Retry(func() (err error) {
 		result, err := fn()
@@ -63,4 +94,8 @@ func WithRetry[T any](b backoff.BackOff, fn func() (*T, error)) (*T, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+func ToLogAttrKey(v any) string {
+	return fmt.Sprint(v)
 }

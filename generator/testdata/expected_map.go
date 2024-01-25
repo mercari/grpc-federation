@@ -3,24 +3,22 @@ package federation
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"reflect"
 	"runtime/debug"
 
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sync/errgroup"
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
 
 	post "example/post"
 	user "example/user"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 // Org_Federation_GetPostsResponseArgument is argument for "org.federation.GetPostsResponse" message.
@@ -94,8 +92,10 @@ type FederationServiceResolver interface {
 	Resolve_Org_Federation_User(context.Context, *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) (*User, error)
 }
 
+// FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
 type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
+// FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
 }
 
@@ -108,7 +108,7 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Org_Federation_User resolve "org.federation.User".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User(context.Context, *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) (ret *User, e error) {
-	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_User not implemented")
+	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_User not implemented")
 	return
 }
 
@@ -123,7 +123,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
-	env          *cel.Env
+	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
 	resolver     FederationServiceResolver
 	client       *FederationServiceDependentClientSet
@@ -132,10 +132,10 @@ type FederationService struct {
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if cfg.Client == nil {
-		return nil, fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrClientConfig
 	}
 	if cfg.Resolver == nil {
-		return nil, fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrResolverConfig
 	}
 	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
 		Service: "org.post.PostService",
@@ -159,25 +159,19 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.GetPostsResponseArgument": {
-			"ids": grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.StringType), "Ids"),
+			"ids": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELStringType), "Ids"),
 		},
 		"grpc.federation.private.PostsArgument": {
-			"post_ids": grpcfed.NewCELFieldType(celtypes.NewListType(celtypes.StringType), "PostIds"),
+			"post_ids": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELStringType), "PostIds"),
 		},
 		"grpc.federation.private.UserArgument": {
-			"user_id": grpcfed.NewCELFieldType(celtypes.StringType, "UserId"),
+			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 		},
 	})
-	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
-		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	}
-	env, err := cel.NewCustomEnv(envOpts...)
+	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +239,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Posts, *localValueType]{
 		Name:   "posts",
-		Type:   cel.ObjectType("org.federation.Posts"),
+		Type:   grpcfed.CELObjectType("org.federation.Posts"),
 		Setter: func(value *localValueType, v *Posts) { value.vars.posts = v },
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Org_Federation_PostsArgument[*FederationServiceDependentClientSet]{
@@ -306,7 +300,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	        posts ─┐      │
 	               users ─┤
 	*/
-	eg, ctx1 := errgroup.WithContext(ctx)
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 
@@ -322,7 +316,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostsResponse, *localValueType]{
 			Name:   "res",
-			Type:   cel.ObjectType("org.post.GetPostsResponse"),
+			Type:   grpcfed.CELObjectType("org.post.GetPostsResponse"),
 			Setter: func(value *localValueType, v *post.GetPostsResponse) { value.vars.res = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &post.GetPostsRequest{}
@@ -350,7 +344,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[[]*post.Post, *localValueType]{
 			Name:   "posts",
-			Type:   cel.ListType(cel.ObjectType("org.post.Post")),
+			Type:   grpcfed.CELListType(grpcfed.CELObjectType("org.post.Post")),
 			Setter: func(value *localValueType, v []*post.Post) { value.vars.posts = v },
 			By:     "res.posts",
 		}); err != nil {
@@ -373,10 +367,10 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		*/
 		if err := grpcfed.EvalDefMap(ctx1, value, grpcfed.DefMap[[]string, *post.Post, *localValueType]{
 			Name:           "ids",
-			Type:           cel.ListType(celtypes.StringType),
+			Type:           grpcfed.CELListType(grpcfed.CELStringType),
 			Setter:         func(value *localValueType, v []string) { value.vars.ids = v },
 			IteratorName:   "post",
-			IteratorType:   cel.ObjectType("org.post.Post"),
+			IteratorType:   grpcfed.CELObjectType("org.post.Post"),
 			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				return grpcfed.EvalCEL(ctx, value, "post.id", reflect.TypeOf(""))
@@ -402,7 +396,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostsResponse, *localValueType]{
 			Name:   "res",
-			Type:   cel.ObjectType("org.post.GetPostsResponse"),
+			Type:   grpcfed.CELObjectType("org.post.GetPostsResponse"),
 			Setter: func(value *localValueType, v *post.GetPostsResponse) { value.vars.res = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &post.GetPostsRequest{}
@@ -430,7 +424,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[[]*post.Post, *localValueType]{
 			Name:   "posts",
-			Type:   cel.ListType(cel.ObjectType("org.post.Post")),
+			Type:   grpcfed.CELListType(grpcfed.CELObjectType("org.post.Post")),
 			Setter: func(value *localValueType, v []*post.Post) { value.vars.posts = v },
 			By:     "res.posts",
 		}); err != nil {
@@ -456,10 +450,10 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		*/
 		if err := grpcfed.EvalDefMap(ctx1, value, grpcfed.DefMap[[]*User, *post.Post, *localValueType]{
 			Name:           "users",
-			Type:           cel.ListType(cel.ObjectType("org.federation.User")),
+			Type:           grpcfed.CELListType(grpcfed.CELObjectType("org.federation.User")),
 			Setter:         func(value *localValueType, v []*User) { value.vars.users = v },
 			IteratorName:   "iter",
-			IteratorType:   cel.ObjectType("org.post.Post"),
+			IteratorType:   grpcfed.CELObjectType("org.post.Post"),
 			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
@@ -546,7 +540,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.GetUserResponse, *localValueType]{
 		Name:   "res",
-		Type:   cel.ObjectType("org.user.GetUserResponse"),
+		Type:   grpcfed.CELObjectType("org.user.GetUserResponse"),
 		Setter: func(value *localValueType, v *user.GetUserResponse) { value.vars.res = v },
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &user.GetUserRequest{}
@@ -575,7 +569,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.User, *localValueType]{
 		Name:   "user",
-		Type:   cel.ObjectType("org.user.User"),
+		Type:   grpcfed.CELObjectType("org.user.User"),
 		Setter: func(value *localValueType, v *user.User) { value.vars.user = v },
 		By:     "res.user",
 	}); err != nil {
@@ -661,7 +655,7 @@ func (s *FederationService) logvalue_repeated_Org_Federation_User(v []*User) slo
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{
-			Key:   fmt.Sprint(idx),
+			Key:   grpcfed.ToLogAttrKey(idx),
 			Value: s.logvalue_Org_Federation_User(vv),
 		})
 	}

@@ -182,6 +182,16 @@ func NewCELTypeHelper(structFieldMap map[string]map[string]*celtypes.FieldType) 
 	}
 }
 
+func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
+	return []cel.EnvOption{
+		cel.StdLib(),
+		cel.Lib(grpcfedcel.NewLibrary()),
+		cel.CrossTypeNumericComparisons(true),
+		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
+		cel.CustomTypeProvider(celHelper.TypeProvider()),
+	}
+}
+
 type LocalValue struct {
 	sg         singleflight.Group
 	mu         sync.RWMutex
