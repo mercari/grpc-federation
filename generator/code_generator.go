@@ -1451,13 +1451,13 @@ func (m *Message) DeclVariables() []*DeclVariable {
 }
 
 func (m *Message) DependencyGraph() string {
-	format := m.DependencyGraphTreeFormat()
-	if !strings.HasSuffix(format, "\n") {
+	tree := m.DependencyGraphTreeFormat()
+	if !strings.HasSuffix(tree, "\n") {
 		// If there is only one node, no newline code is added at the end.
 		// In this case, do not display graphs.
 		return ""
 	}
-	return format
+	return tree
 }
 
 type ReturnField struct {
@@ -2562,9 +2562,9 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 	}
 	for _, arg := range args {
 		for _, generatedArg := range argument(file, arg.Name, arg.Type, arg.Value) {
-			format := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
-			if format != "" {
-				generatedArg.ProtoComment = "// " + format
+			protofmt := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
+			if protofmt != "" {
+				generatedArg.ProtoComment = "// " + protofmt
 			}
 			generateArgs = append(generateArgs, generatedArg)
 		}
