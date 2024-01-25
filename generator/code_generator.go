@@ -306,12 +306,39 @@ type Import struct {
 	Used  bool
 }
 
+func (f *File) StandardImports() []*Import {
+	var existsServiceDef bool
+	if len(f.File.Services) != 0 {
+		existsServiceDef = true
+	}
+
+	pkgs := []*Import{
+		{Path: "context", Used: existsServiceDef},
+		{Path: "io", Used: existsServiceDef},
+		{Path: "log/slog", Used: existsServiceDef},
+		{Path: "reflect", Used: true},
+		{Path: "runtime/debug", Used: existsServiceDef},
+	}
+	usedPkgs := make([]*Import, 0, len(pkgs))
+	for _, pkg := range pkgs {
+		if !pkg.Used {
+			continue
+		}
+		usedPkgs = append(usedPkgs, pkg)
+	}
+	return usedPkgs
+}
+
 func (f *File) DefaultImports() []*Import {
+	var existsServiceDef bool
+	if len(f.File.Services) != 0 {
+		existsServiceDef = true
+	}
 	pkgs := []*Import{
 		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation", Used: true},
-		{Alias: "grpcfedcel", Path: "github.com/mercari/grpc-federation/grpc/federation/cel", Used: true},
-		{Path: "go.opentelemetry.io/otel", Used: true},
-		{Path: "go.opentelemetry.io/otel/trace", Used: true},
+		{Alias: "grpcfedcel", Path: "github.com/mercari/grpc-federation/grpc/federation/cel", Used: existsServiceDef},
+		{Path: "go.opentelemetry.io/otel", Used: existsServiceDef},
+		{Path: "go.opentelemetry.io/otel/trace", Used: existsServiceDef},
 
 		{Path: "google.golang.org/protobuf/types/descriptorpb"},
 		{Path: "google.golang.org/protobuf/types/known/dynamicpb"},

@@ -2,12 +2,9 @@
 package {{ .GoPackage.Name }}
 
 import (
-	"context"
-	"io"
-	"log/slog"
-	"reflect"
-	"runtime/debug"
-
+	{{- range .StandardImports }}
+	"{{ .Path }}"
+	{{- end }}
 	{{ range .DefaultImports }}
 	{{- if .Alias }}
 	{{ .Alias }} "{{ .Path }}"

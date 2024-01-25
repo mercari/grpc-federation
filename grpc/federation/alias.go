@@ -7,7 +7,6 @@ package federation
 import (
 	"context"
 	"os"
-	"sync"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/google/cel-go/cel"
@@ -24,7 +23,6 @@ type (
 	CELTypeDeclare = cel.Type
 	CELEnv         = cel.Env
 	CELFieldType   = types.FieldType
-	RWMutex        = sync.RWMutex
 	Code           = codes.Code
 )
 

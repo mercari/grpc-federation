@@ -2,9 +2,13 @@
 package pluginpb
 
 import (
-	"sync"
+	"reflect"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 type RegexpPlugin interface {
@@ -14,7 +18,7 @@ type RegexpPlugin interface {
 
 var (
 	reg_RegexpPlugin RegexpPlugin
-	mu_RegexpPlugin  sync.RWMutex
+	mu_RegexpPlugin  grpcfed.RWMutex
 )
 
 func RegisterRegexpPlugin(plug RegexpPlugin) {

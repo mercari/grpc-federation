@@ -69,7 +69,6 @@ func TestCodeGenerate(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := filepath.Join("testdata", fmt.Sprintf("expected_%s.go", test))
-			os.WriteFile(path, out, 0o600)
 			data, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)

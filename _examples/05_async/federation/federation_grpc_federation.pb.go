@@ -5,15 +5,17 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
 
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sync/errgroup"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 // Org_Federation_AAArgument is argument for "org.federation.AA" message.
@@ -133,8 +135,10 @@ type FederationServiceDependentClientSet struct {
 type FederationServiceResolver interface {
 }
 
+// FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
 type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
+// FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
 }
 
@@ -150,7 +154,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
-	env          *cel.Env
+	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
 	client       *FederationServiceDependentClientSet
 }
@@ -165,45 +169,39 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.AAArgument": {},
 		"grpc.federation.private.AArgument":  {},
 		"grpc.federation.private.ABArgument": {},
 		"grpc.federation.private.BArgument":  {},
 		"grpc.federation.private.CArgument": {
-			"a": grpcfed.NewCELFieldType(celtypes.StringType, "A"),
+			"a": grpcfed.NewCELFieldType(grpcfed.CELStringType, "A"),
 		},
 		"grpc.federation.private.DArgument": {
-			"b": grpcfed.NewCELFieldType(celtypes.StringType, "B"),
+			"b": grpcfed.NewCELFieldType(grpcfed.CELStringType, "B"),
 		},
 		"grpc.federation.private.EArgument": {
-			"c": grpcfed.NewCELFieldType(celtypes.StringType, "C"),
-			"d": grpcfed.NewCELFieldType(celtypes.StringType, "D"),
+			"c": grpcfed.NewCELFieldType(grpcfed.CELStringType, "C"),
+			"d": grpcfed.NewCELFieldType(grpcfed.CELStringType, "D"),
 		},
 		"grpc.federation.private.FArgument": {
-			"c": grpcfed.NewCELFieldType(celtypes.StringType, "C"),
-			"d": grpcfed.NewCELFieldType(celtypes.StringType, "D"),
+			"c": grpcfed.NewCELFieldType(grpcfed.CELStringType, "C"),
+			"d": grpcfed.NewCELFieldType(grpcfed.CELStringType, "D"),
 		},
 		"grpc.federation.private.GArgument":           {},
 		"grpc.federation.private.GetResponseArgument": {},
 		"grpc.federation.private.HArgument": {
-			"e": grpcfed.NewCELFieldType(celtypes.StringType, "E"),
-			"f": grpcfed.NewCELFieldType(celtypes.StringType, "F"),
-			"g": grpcfed.NewCELFieldType(celtypes.StringType, "G"),
+			"e": grpcfed.NewCELFieldType(grpcfed.CELStringType, "E"),
+			"f": grpcfed.NewCELFieldType(grpcfed.CELStringType, "F"),
+			"g": grpcfed.NewCELFieldType(grpcfed.CELStringType, "G"),
 		},
 		"grpc.federation.private.IArgument": {},
 		"grpc.federation.private.JArgument": {
-			"i": grpcfed.NewCELFieldType(celtypes.StringType, "I"),
+			"i": grpcfed.NewCELFieldType(grpcfed.CELStringType, "I"),
 		},
 	})
-	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
-		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	}
-	env, err := cel.NewCustomEnv(envOpts...)
+	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +257,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	   aa ─┐
 	   ab ─┤
 	*/
-	eg, ctx1 := errgroup.WithContext(ctx)
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 
@@ -274,7 +272,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*AA, *localValueType]{
 			Name:   "aa",
-			Type:   cel.ObjectType("org.federation.AA"),
+			Type:   grpcfed.CELObjectType("org.federation.AA"),
 			Setter: func(value *localValueType, v *AA) { value.vars.aa = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_AAArgument[*FederationServiceDependentClientSet]{
@@ -302,7 +300,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*AB, *localValueType]{
 			Name:   "ab",
-			Type:   cel.ObjectType("org.federation.AB"),
+			Type:   grpcfed.CELObjectType("org.federation.AB"),
 			Setter: func(value *localValueType, v *AB) { value.vars.ab = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_ABArgument[*FederationServiceDependentClientSet]{
@@ -506,12 +504,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	         i ─┐  │
 	            j ─┤
 	*/
-	eg, ctx1 := errgroup.WithContext(ctx)
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-		eg, ctx2 := errgroup.WithContext(ctx1)
+		eg, ctx2 := grpcfed.ErrorGroupWithContext(ctx1)
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-			eg, ctx3 := errgroup.WithContext(ctx2)
+			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
 			grpcfed.GoWithRecover(eg, func() (any, error) {
 
 				// This section's codes are generated by the following proto definition.
@@ -525,7 +523,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*A, *localValueType]{
 					Name:   "a",
-					Type:   cel.ObjectType("org.federation.A"),
+					Type:   grpcfed.CELObjectType("org.federation.A"),
 					Setter: func(value *localValueType, v *A) { value.vars.a = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_AArgument[*FederationServiceDependentClientSet]{
@@ -550,7 +548,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*C, *localValueType]{
 					Name:   "c",
-					Type:   cel.ObjectType("org.federation.C"),
+					Type:   grpcfed.CELObjectType("org.federation.C"),
 					Setter: func(value *localValueType, v *C) { value.vars.c = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_CArgument[*FederationServiceDependentClientSet]{
@@ -583,7 +581,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*B, *localValueType]{
 					Name:   "b",
-					Type:   cel.ObjectType("org.federation.B"),
+					Type:   grpcfed.CELObjectType("org.federation.B"),
 					Setter: func(value *localValueType, v *B) { value.vars.b = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_BArgument[*FederationServiceDependentClientSet]{
@@ -608,7 +606,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*D, *localValueType]{
 					Name:   "d",
-					Type:   cel.ObjectType("org.federation.D"),
+					Type:   grpcfed.CELObjectType("org.federation.D"),
 					Setter: func(value *localValueType, v *D) { value.vars.d = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_DArgument[*FederationServiceDependentClientSet]{
@@ -647,7 +645,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			*/
 			if err := grpcfed.EvalDef(ctx2, value, grpcfed.Def[*E, *localValueType]{
 				Name:   "e",
-				Type:   cel.ObjectType("org.federation.E"),
+				Type:   grpcfed.CELObjectType("org.federation.E"),
 				Setter: func(value *localValueType, v *E) { value.vars.e = v },
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_EArgument[*FederationServiceDependentClientSet]{
@@ -674,7 +672,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			return nil, nil
 		})
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-			eg, ctx3 := errgroup.WithContext(ctx2)
+			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
 			grpcfed.GoWithRecover(eg, func() (any, error) {
 
 				// This section's codes are generated by the following proto definition.
@@ -688,7 +686,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*A, *localValueType]{
 					Name:   "a",
-					Type:   cel.ObjectType("org.federation.A"),
+					Type:   grpcfed.CELObjectType("org.federation.A"),
 					Setter: func(value *localValueType, v *A) { value.vars.a = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_AArgument[*FederationServiceDependentClientSet]{
@@ -713,7 +711,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*C, *localValueType]{
 					Name:   "c",
-					Type:   cel.ObjectType("org.federation.C"),
+					Type:   grpcfed.CELObjectType("org.federation.C"),
 					Setter: func(value *localValueType, v *C) { value.vars.c = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_CArgument[*FederationServiceDependentClientSet]{
@@ -746,7 +744,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*B, *localValueType]{
 					Name:   "b",
-					Type:   cel.ObjectType("org.federation.B"),
+					Type:   grpcfed.CELObjectType("org.federation.B"),
 					Setter: func(value *localValueType, v *B) { value.vars.b = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_BArgument[*FederationServiceDependentClientSet]{
@@ -771,7 +769,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				*/
 				if err := grpcfed.EvalDef(ctx3, value, grpcfed.Def[*D, *localValueType]{
 					Name:   "d",
-					Type:   cel.ObjectType("org.federation.D"),
+					Type:   grpcfed.CELObjectType("org.federation.D"),
 					Setter: func(value *localValueType, v *D) { value.vars.d = v },
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_DArgument[*FederationServiceDependentClientSet]{
@@ -810,7 +808,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			*/
 			if err := grpcfed.EvalDef(ctx2, value, grpcfed.Def[*F, *localValueType]{
 				Name:   "f",
-				Type:   cel.ObjectType("org.federation.F"),
+				Type:   grpcfed.CELObjectType("org.federation.F"),
 				Setter: func(value *localValueType, v *F) { value.vars.f = v },
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_FArgument[*FederationServiceDependentClientSet]{
@@ -849,7 +847,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			*/
 			if err := grpcfed.EvalDef(ctx2, value, grpcfed.Def[*G, *localValueType]{
 				Name:   "g",
-				Type:   cel.ObjectType("org.federation.G"),
+				Type:   grpcfed.CELObjectType("org.federation.G"),
 				Setter: func(value *localValueType, v *G) { value.vars.g = v },
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_GArgument[*FederationServiceDependentClientSet]{
@@ -883,7 +881,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*H, *localValueType]{
 			Name:   "h",
-			Type:   cel.ObjectType("org.federation.H"),
+			Type:   grpcfed.CELObjectType("org.federation.H"),
 			Setter: func(value *localValueType, v *H) { value.vars.h = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_HArgument[*FederationServiceDependentClientSet]{
@@ -929,7 +927,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*I, *localValueType]{
 			Name:   "i",
-			Type:   cel.ObjectType("org.federation.I"),
+			Type:   grpcfed.CELObjectType("org.federation.I"),
 			Setter: func(value *localValueType, v *I) { value.vars.i = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_IArgument[*FederationServiceDependentClientSet]{
@@ -954,7 +952,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*J, *localValueType]{
 			Name:   "j",
-			Type:   cel.ObjectType("org.federation.J"),
+			Type:   grpcfed.CELObjectType("org.federation.J"),
 			Setter: func(value *localValueType, v *J) { value.vars.j = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_JArgument[*FederationServiceDependentClientSet]{
