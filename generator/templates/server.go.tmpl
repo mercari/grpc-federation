@@ -151,6 +151,9 @@ type {{ $serviceName }} struct {
 	{{- if $customResolvers }}
 	resolver {{ $serviceName }}Resolver
 	{{- end }}
+	{{- if $celPlugins }}
+	celPlugins []*grpcfedcel.CELPlugin
+	{{- end }}
 	client *{{ $serviceName }}DependentClientSet
 }
 
@@ -214,6 +217,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
 	{{- range $celPlugins }}
+	var celPlugins []*grpcfedcel.CELPlugin
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
 			Name: "{{ .Name }}",
@@ -237,7 +241,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		if err != nil {
 			return nil, err
 		}
-		envOpts = append(envOpts, grpcfed.CELLib(plugin))
+		celPlugins = append(celPlugins, plugin)
 	}
 	{{- end }}
 	env, err := grpcfed.NewCELEnv(envOpts...)
@@ -252,6 +256,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		tracer: otel.Tracer("{{ .FQDN }}"),
 		{{- if $customResolvers }}
 		resolver: cfg.Resolver,
+		{{- end }}
+		{{- if $celPlugins }}
+		celPlugins: celPlugins,
 		{{- end }}
 		client: &{{ $serviceName}}DependentClientSet{
 			{{- range $serviceDependencies }}
@@ -269,6 +276,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	defer span.End()
 
 	ctx = grpcfed.WithLogger(ctx, s.logger)
+	{{- if $celPlugins }}
+	ctx = grpcfed.WithCELPlugins(ctx, s.celPlugins)
+	{{- end }}
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

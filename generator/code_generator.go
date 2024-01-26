@@ -307,13 +307,20 @@ type Import struct {
 }
 
 func (f *File) StandardImports() []*Import {
-	var existsServiceDef bool
+	var (
+		existsServiceDef bool
+		existsPluginDef  bool
+	)
 	if len(f.File.Services) != 0 {
 		existsServiceDef = true
 	}
+	if len(f.File.CELPlugins) != 0 {
+		existsPluginDef = true
+	}
 
 	pkgs := []*Import{
-		{Path: "context", Used: existsServiceDef},
+		{Path: "context", Used: true},
+		{Path: "encoding/json", Used: existsPluginDef},
 		{Path: "io", Used: existsServiceDef},
 		{Path: "log/slog", Used: existsServiceDef},
 		{Path: "reflect", Used: true},
@@ -330,15 +337,22 @@ func (f *File) StandardImports() []*Import {
 }
 
 func (f *File) DefaultImports() []*Import {
-	var existsServiceDef bool
+	var (
+		existsServiceDef bool
+		existsPluginDef  bool
+	)
 	if len(f.File.Services) != 0 {
 		existsServiceDef = true
+	}
+	if len(f.File.CELPlugins) != 0 {
+		existsPluginDef = true
 	}
 	pkgs := []*Import{
 		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation", Used: true},
 		{Alias: "grpcfedcel", Path: "github.com/mercari/grpc-federation/grpc/federation/cel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel/trace", Used: existsServiceDef},
+		{Path: "google.golang.org/grpc/metadata", Used: existsPluginDef},
 
 		{Path: "google.golang.org/protobuf/types/descriptorpb"},
 		{Path: "google.golang.org/protobuf/types/known/dynamicpb"},

@@ -2,9 +2,12 @@
 package pluginpb
 
 import (
+	"context"
+	"encoding/json"
 	"reflect"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -12,8 +15,8 @@ var (
 )
 
 type RegexpPlugin interface {
-	Example_Regexp_Compile(string) (*Regexp, error)
-	Example_Regexp_Regexp_MatchString(*Regexp, string) (bool, error)
+	Example_Regexp_Compile(context.Context, string) (*Regexp, error)
+	Example_Regexp_Regexp_MatchString(context.Context, *Regexp, string) (bool, error)
 }
 
 var (
@@ -28,11 +31,16 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 }
 
 //export example_regexp_compile_string_example_regexp_Regexp
-func example_regexp_compile_string_example_regexp_Regexp(arg0 uint32, arg1 uint32) grpcfed.ReturnValue {
+func example_regexp_compile_string_example_regexp_Regexp(mdptr uint32, mdsize uint32, arg0 uint32, arg1 uint32) grpcfed.ReturnValue {
+	var md metadata.MD
+	if err := json.Unmarshal(grpcfed.ToBytes(mdptr, mdsize), &md); err != nil {
+		return grpcfed.ErrorToReturnValue(err)
+	}
+	ctx := metadata.NewIncomingContext(context.Background(), md)
 	converted_arg0 := grpcfed.ToString(arg0, arg1)
 
 	mu_RegexpPlugin.RLock()
-	ret, err := reg_RegexpPlugin.Example_Regexp_Compile(converted_arg0)
+	ret, err := reg_RegexpPlugin.Example_Regexp_Compile(ctx, converted_arg0)
 	mu_RegexpPlugin.RUnlock()
 	if err != nil {
 		return grpcfed.ErrorToReturnValue(err)
@@ -41,12 +49,17 @@ func example_regexp_compile_string_example_regexp_Regexp(arg0 uint32, arg1 uint3
 }
 
 //export example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool
-func example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool(arg0 uint32, arg1 uint32, arg2 uint32) grpcfed.ReturnValue {
+func example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool(mdptr uint32, mdsize uint32, arg0 uint32, arg1 uint32, arg2 uint32) grpcfed.ReturnValue {
+	var md metadata.MD
+	if err := json.Unmarshal(grpcfed.ToBytes(mdptr, mdsize), &md); err != nil {
+		return grpcfed.ErrorToReturnValue(err)
+	}
+	ctx := metadata.NewIncomingContext(context.Background(), md)
 	converted_arg0 := grpcfed.ToMessage[Regexp](arg0)
 	converted_arg1 := grpcfed.ToString(arg1, arg2)
 
 	mu_RegexpPlugin.RLock()
-	ret, err := reg_RegexpPlugin.Example_Regexp_Regexp_MatchString(converted_arg0, converted_arg1)
+	ret, err := reg_RegexpPlugin.Example_Regexp_Regexp_MatchString(ctx, converted_arg0, converted_arg1)
 	mu_RegexpPlugin.RUnlock()
 	if err != nil {
 		return grpcfed.ErrorToReturnValue(err)
