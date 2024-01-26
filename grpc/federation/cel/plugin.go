@@ -2,15 +2,18 @@ package cel
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types/ref"
+	"google.golang.org/grpc/metadata"
 )
 
 type CELPlugin struct {
 	Name      string
 	Functions []*CELFunction
 	wasm      *WasmPlugin
+	ctx       context.Context
 }
 
 type CELFunction struct {
@@ -44,16 +47,25 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}, nil
 }
 
+func (p *CELPlugin) SetContext(ctx context.Context) {
+	p.ctx = ctx
+}
+
 func (p *CELPlugin) LibraryName() string {
 	return p.Name
 }
 
 func (p *CELPlugin) CompileOptions() []cel.EnvOption {
+	md, ok := metadata.FromIncomingContext(p.ctx)
+	if !ok {
+		md = make(metadata.MD)
+	}
+	mdb, _ := json.Marshal(md)
 	var opts []cel.EnvOption
 	for _, fn := range p.Functions {
 		fn := fn
 		bindFunc := cel.FunctionBinding(func(args ...ref.Val) ref.Val {
-			return p.wasm.Call(fn, args...)
+			return p.wasm.Call(p.ctx, fn, mdb, args...)
 		})
 		var overload cel.FunctionOpt
 		if fn.IsMethod {

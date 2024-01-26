@@ -84,6 +84,7 @@ type FederationService struct {
 	errorHandler grpcfed.ErrorHandler
 	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
+	celPlugins   []*grpcfedcel.CELPlugin
 	client       *FederationServiceDependentClientSet
 }
 
@@ -107,6 +108,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		},
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	var celPlugins []*grpcfedcel.CELPlugin
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
 			Name: "regexp",
@@ -136,7 +138,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		if err != nil {
 			return nil, err
 		}
-		envOpts = append(envOpts, grpcfed.CELLib(plugin))
+		celPlugins = append(celPlugins, plugin)
 	}
 	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
@@ -148,6 +150,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler: errorHandler,
 		env:          env,
 		tracer:       otel.Tracer("org.federation.FederationService"),
+		celPlugins:   celPlugins,
 		client:       &FederationServiceDependentClientSet{},
 	}, nil
 }
@@ -158,6 +161,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 	defer span.End()
 
 	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELPlugins(ctx, s.celPlugins)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

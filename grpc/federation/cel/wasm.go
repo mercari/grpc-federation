@@ -70,14 +70,17 @@ func NewWasmPlugin(ctx context.Context, wasmCfg WasmConfig) (*WasmPlugin, error)
 	}, nil
 }
 
-func (p *WasmPlugin) Call(fn *CELFunction, args ...ref.Val) ref.Val {
-	ctx := context.Background()
+func (p *WasmPlugin) Call(ctx context.Context, fn *CELFunction, md []byte, args ...ref.Val) ref.Val {
 	f := p.mod.ExportedFunction(fn.ID)
 	if f == nil {
 		return types.NewErr(fmt.Sprintf("grpc-federation: failed to find exported function %s in %s", fn.Name, p.File))
 	}
 
-	var wasmArgs []uint64
+	ptr, size, err := p.stringToPtr(ctx, string(md))
+	if err != nil {
+		return types.NewErr(fmt.Sprintf("grpc-federation: failed to encode metadata: %s", err.Error()))
+	}
+	wasmArgs := []uint64{api.EncodeU32(ptr), api.EncodeU32(size)}
 	for idx, arg := range args {
 		wasmArg, err := p.refToWASMType(ctx, fn.Args[idx], arg)
 		if err != nil {

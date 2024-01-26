@@ -494,6 +494,10 @@ func EvalCEL(ctx context.Context, value localValue, expr string, outType reflect
 	var envOpts []cel.EnvOption
 	envOpts = append(envOpts, value.getEnvOpts()...)
 	envOpts = append(envOpts, cel.Lib(grpcfedcel.NewContextualLibrary(ctx)))
+	for _, plugin := range CELPlugins(ctx) {
+		plugin.SetContext(ctx)
+		envOpts = append(envOpts, cel.Lib(plugin))
+	}
 
 	env, err := value.getEnv().Extend(envOpts...)
 	if err != nil {

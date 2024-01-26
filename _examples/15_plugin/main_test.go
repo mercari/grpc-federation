@@ -77,7 +77,7 @@ func TestFederation(t *testing.T) {
 		CELPlugin: &federation.FederationServiceCELPluginConfig{
 			Regexp: federation.FederationServiceCELPluginWasmConfig{
 				Path:   "regexp.wasm",
-				Sha256: "4da3439e679aeb1012275cb9356a87eca39275e10fda6666c95420d77a2602d3",
+				Sha256: "0930ae259c7b742192327a7761fb207ea1d3b7f37f912ca4dc742b3f359af0f9",
 			},
 		},
 		Logger: logger,
