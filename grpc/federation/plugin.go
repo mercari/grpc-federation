@@ -5,6 +5,7 @@ package federation
 import (
 	"reflect"
 	"runtime"
+	"sync"
 	"unsafe"
 
 	"github.com/tetratelabs/wazero/api"
@@ -14,6 +15,8 @@ import (
 import "C"
 
 type ReturnValue uint64
+
+type RWMutex = sync.RWMutex
 
 func MessageToReturnValue[T any](v *T) ReturnValue {
 	return ReturnValue(uint64(uintptr(unsafe.Pointer(v))) << uint64(32))

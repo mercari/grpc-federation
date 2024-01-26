@@ -3,19 +3,19 @@ package federation
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
 
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 // Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
@@ -61,8 +61,10 @@ type FederationServiceResolver interface {
 	Resolve_Federation_GetPostResponse(context.Context, *Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error)
 }
 
+// FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
 type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
+// FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
 }
 
@@ -75,7 +77,7 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Federation_GetPostResponse resolve "federation.GetPostResponse".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Federation_GetPostResponse(context.Context, *Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (ret *GetPostResponse, e error) {
-	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Federation_GetPostResponse not implemented")
+	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_GetPostResponse not implemented")
 	return
 }
 
@@ -85,7 +87,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
-	env          *cel.Env
+	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
 	resolver     FederationServiceResolver
 	client       *FederationServiceDependentClientSet
@@ -94,7 +96,7 @@ type FederationService struct {
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if cfg.Resolver == nil {
-		return nil, fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrResolverConfig
 	}
 	logger := cfg.Logger
 	if logger == nil {
@@ -104,19 +106,13 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.GetPostResponseArgument": {
-			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 	})
-	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
-		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	}
-	env, err := cel.NewCustomEnv(envOpts...)
+	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}

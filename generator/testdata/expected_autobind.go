@@ -3,20 +3,21 @@ package federation
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
 
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sync/errgroup"
 
 	post "example/post"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
@@ -79,8 +80,10 @@ type FederationServiceDependentClientSet struct {
 type FederationServiceResolver interface {
 }
 
+// FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
 type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
+// FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
 }
 
@@ -100,7 +103,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
-	env          *cel.Env
+	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
 	client       *FederationServiceDependentClientSet
 }
@@ -108,7 +111,7 @@ type FederationService struct {
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if cfg.Client == nil {
-		return nil, fmt.Errorf("Client field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrClientConfig
 	}
 	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
 		Service: "org.post.PostService",
@@ -125,25 +128,19 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.GetPostResponseArgument": {
-			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 		"grpc.federation.private.PostArgument": {
-			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 		"grpc.federation.private.UserArgument": {
-			"user_id": grpcfed.NewCELFieldType(celtypes.StringType, "UserId"),
+			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 		},
 	})
-	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
-		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	}
-	env, err := cel.NewCustomEnv(envOpts...)
+	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +207,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
 		Name:   "_def0",
-		Type:   cel.ObjectType("org.federation.Post"),
+		Type:   grpcfed.CELObjectType("org.federation.Post"),
 		Setter: func(value *localValueType, v *Post) { value.vars._def0 = v },
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
@@ -265,7 +262,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	        _def1 ─┐
 	        _def2 ─┤
 	*/
-	eg, ctx1 := errgroup.WithContext(ctx)
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 
@@ -281,7 +278,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
 			Name:   "res",
-			Type:   cel.ObjectType("org.post.GetPostResponse"),
+			Type:   grpcfed.CELObjectType("org.post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) { value.vars.res = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &post.GetPostRequest{}
@@ -310,7 +307,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.Post, *localValueType]{
 			Name:   "_def1",
-			Type:   cel.ObjectType("org.post.Post"),
+			Type:   grpcfed.CELObjectType("org.post.Post"),
 			Setter: func(value *localValueType, v *post.Post) { value.vars._def1 = v },
 			By:     "res.post",
 		}); err != nil {
@@ -335,7 +332,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
 			Name:   "_def2",
-			Type:   cel.ObjectType("org.federation.User"),
+			Type:   grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) { value.vars._def2 = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{

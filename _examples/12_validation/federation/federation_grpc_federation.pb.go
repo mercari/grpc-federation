@@ -3,21 +3,19 @@ package federation
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
 
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/sync/errgroup"
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
-	"google.golang.org/protobuf/protoadapt"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 // Org_Federation_CustomHandlerMessageArgument is argument for "org.federation.CustomHandlerMessage" message.
@@ -81,8 +79,10 @@ type FederationServiceResolver interface {
 	Resolve_Org_Federation_CustomHandlerMessage(context.Context, *Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]) (*CustomHandlerMessage, error)
 }
 
+// FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
 type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
+// FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
 }
 
@@ -95,7 +95,7 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Org_Federation_CustomHandlerMessage resolve "org.federation.CustomHandlerMessage".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_CustomHandlerMessage(context.Context, *Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]) (ret *CustomHandlerMessage, e error) {
-	e = grpcstatus.Errorf(grpccodes.Unimplemented, "method Resolve_Org_Federation_CustomHandlerMessage not implemented")
+	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_CustomHandlerMessage not implemented")
 	return
 }
 
@@ -105,7 +105,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
-	env          *cel.Env
+	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
 	resolver     FederationServiceResolver
 	client       *FederationServiceDependentClientSet
@@ -114,7 +114,7 @@ type FederationService struct {
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if cfg.Resolver == nil {
-		return nil, fmt.Errorf("Resolver field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrResolverConfig
 	}
 	logger := cfg.Logger
 	if logger == nil {
@@ -124,26 +124,20 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.CustomHandlerMessageArgument": {
-			"arg": grpcfed.NewCELFieldType(celtypes.StringType, "Arg"),
+			"arg": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Arg"),
 		},
 		"grpc.federation.private.CustomMessageArgument": {
-			"message": grpcfed.NewCELFieldType(celtypes.StringType, "Message"),
+			"message": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Message"),
 		},
 		"grpc.federation.private.GetPostResponseArgument": {
-			"id": grpcfed.NewCELFieldType(celtypes.StringType, "Id"),
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 		"grpc.federation.private.PostArgument": {},
 	})
-	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
-		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	}
-	env, err := cel.NewCustomEnv(envOpts...)
+	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -210,11 +204,11 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
 		Name:   "_def0",
-		Type:   celtypes.BoolType,
+		Type:   grpcfed.CELBoolType,
 		Setter: func(value *localValueType, v bool) { value.vars._def0 = v },
 		Validation: func(ctx context.Context, value *localValueType) error {
 			return grpcfed.If(ctx, value, "$.arg == 'wrong'", func(value *localValueType) error {
-				return grpcstatus.Error(grpccodes.FailedPrecondition, "")
+				return grpcfed.GRPCError(grpcfed.FailedPreconditionCode, "")
 			})
 		},
 	}); err != nil {
@@ -290,7 +284,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	                 _def4 ─┤
 	         customHandler ─┤
 	*/
-	eg, ctx1 := errgroup.WithContext(ctx)
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 
@@ -305,7 +299,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Post, *localValueType]{
 			Name:   "post",
-			Type:   cel.ObjectType("org.federation.Post"),
+			Type:   grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) { value.vars.post = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
@@ -333,11 +327,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[bool, *localValueType]{
 			Name:   "_def2",
-			Type:   celtypes.BoolType,
+			Type:   grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) { value.vars._def2 = v },
 			Validation: func(ctx context.Context, value *localValueType) error {
 				return grpcfed.If(ctx, value, "post.id != 'some-id'", func(value *localValueType) error {
-					return grpcstatus.Error(grpccodes.FailedPrecondition, "validation1 failed!")
+					return grpcfed.GRPCError(grpcfed.FailedPreconditionCode, "validation1 failed!")
 				})
 			},
 		}); err != nil {
@@ -360,7 +354,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Post, *localValueType]{
 			Name:   "post",
-			Type:   cel.ObjectType("org.federation.Post"),
+			Type:   grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) { value.vars.post = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
@@ -388,11 +382,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[bool, *localValueType]{
 			Name:   "_def3",
-			Type:   celtypes.BoolType,
+			Type:   grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) { value.vars._def3 = v },
 			Validation: func(ctx context.Context, value *localValueType) error {
 				return grpcfed.If(ctx, value, "post.id != 'some-id'", func(value *localValueType) error {
-					return grpcstatus.Error(grpccodes.FailedPrecondition, "validation2 failed!")
+					return grpcfed.GRPCError(grpcfed.FailedPreconditionCode, "validation2 failed!")
 				})
 			},
 		}); err != nil {
@@ -415,7 +409,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Post, *localValueType]{
 			Name:   "post",
-			Type:   cel.ObjectType("org.federation.Post"),
+			Type:   grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) { value.vars.post = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
@@ -452,18 +446,18 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[bool, *localValueType]{
 			Name:   "_def4",
-			Type:   celtypes.BoolType,
+			Type:   grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) { value.vars._def4 = v },
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var (
-					details       []protoadapt.MessageV1
+					details       []grpcfed.ProtoMessage
 					validationErr bool
 				)
 				if err := grpcfed.If(ctx, value, "$.id != 'correct-id'", func(value *localValueType) error {
 					validationErr = true
 					func() {
 						_, err := func() (any, error) {
-							eg, ctx1 := errgroup.WithContext(ctx)
+							eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 							grpcfed.GoWithRecover(eg, func() (any, error) {
 
 								// This section's codes are generated by the following proto definition.
@@ -478,7 +472,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 								*/
 								if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*CustomMessage, *localValueType]{
 									Name:   "_def4_err_detail0_msg0",
-									Type:   cel.ObjectType("org.federation.CustomMessage"),
+									Type:   grpcfed.CELObjectType("org.federation.CustomMessage"),
 									Setter: func(value *localValueType, v *CustomMessage) { value.vars._def4_err_detail0_msg0 = v },
 									Message: func(ctx context.Context, value *localValueType) (any, error) {
 										args := &Org_Federation_CustomMessageArgument[*FederationServiceDependentClientSet]{
@@ -507,7 +501,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 								*/
 								if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*CustomMessage, *localValueType]{
 									Name:   "_def4_err_detail0_msg1",
-									Type:   cel.ObjectType("org.federation.CustomMessage"),
+									Type:   grpcfed.CELObjectType("org.federation.CustomMessage"),
 									Setter: func(value *localValueType, v *CustomMessage) { value.vars._def4_err_detail0_msg1 = v },
 									Message: func(ctx context.Context, value *localValueType) (any, error) {
 										args := &Org_Federation_CustomMessageArgument[*FederationServiceDependentClientSet]{
@@ -563,7 +557,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					return err
 				}
 				if validationErr {
-					status := grpcstatus.New(grpccodes.FailedPrecondition, "validation3 failed!")
+					status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation3 failed!")
 					statusWithDetails, err := status.WithDetails(details...)
 					if err != nil {
 						s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -594,7 +588,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*CustomHandlerMessage, *localValueType]{
 			Name:   "customHandler",
-			Type:   cel.ObjectType("org.federation.CustomHandlerMessage"),
+			Type:   grpcfed.CELObjectType("org.federation.CustomHandlerMessage"),
 			Setter: func(value *localValueType, v *CustomHandlerMessage) { value.vars.customHandler = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]{

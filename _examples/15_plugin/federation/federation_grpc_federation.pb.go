@@ -3,17 +3,19 @@ package federation
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime/debug"
 
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+)
+
+var (
+	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
 // Org_Federation_IsMatchResponseArgument is argument for "org.federation.IsMatchResponse" message.
@@ -60,8 +62,10 @@ type FederationServiceDependentClientSet struct {
 type FederationServiceResolver interface {
 }
 
+// FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
 type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
+// FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
 	Regexp FederationServiceCELPluginWasmConfig
 }
@@ -78,7 +82,7 @@ type FederationService struct {
 	cfg          FederationServiceConfig
 	logger       *slog.Logger
 	errorHandler grpcfed.ErrorHandler
-	env          *cel.Env
+	env          *grpcfed.CELEnv
 	tracer       trace.Tracer
 	client       *FederationServiceDependentClientSet
 }
@@ -86,7 +90,7 @@ type FederationService struct {
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
 	if cfg.CELPlugin == nil {
-		return nil, fmt.Errorf("CELPlugin field in FederationServiceConfig is not set. this field must be set")
+		return nil, grpcfed.ErrCELPluginConfig
 	}
 	logger := cfg.Logger
 	if logger == nil {
@@ -96,19 +100,13 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*celtypes.FieldType{
+	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.IsMatchResponseArgument": {
-			"expr":   grpcfed.NewCELFieldType(celtypes.StringType, "Expr"),
-			"target": grpcfed.NewCELFieldType(celtypes.StringType, "Target"),
+			"expr":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Expr"),
+			"target": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Target"),
 		},
 	})
-	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
-		cel.CustomTypeProvider(celHelper.TypeProvider()),
-	}
+	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
 			Name: "regexp",
@@ -117,20 +115,20 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 				{
 					Name: "example.regexp.compile",
 					ID:   "example_regexp_compile_string_example_regexp_Regexp",
-					Args: []*cel.Type{
-						celtypes.StringType,
+					Args: []*grpcfed.CELTypeDeclare{
+						grpcfed.CELStringType,
 					},
-					Return:   celtypes.NewObjectType("example.regexp.Regexp"),
+					Return:   grpcfed.NewCELObjectType("example.regexp.Regexp"),
 					IsMethod: false,
 				},
 				{
 					Name: "matchString",
 					ID:   "example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool",
-					Args: []*cel.Type{
-						celtypes.NewObjectType("example.regexp.Regexp"),
-						celtypes.StringType,
+					Args: []*grpcfed.CELTypeDeclare{
+						grpcfed.NewCELObjectType("example.regexp.Regexp"),
+						grpcfed.CELStringType,
 					},
-					Return:   celtypes.BoolType,
+					Return:   grpcfed.CELBoolType,
 					IsMethod: true,
 				},
 			},
@@ -138,9 +136,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		if err != nil {
 			return nil, err
 		}
-		envOpts = append(envOpts, cel.Lib(plugin))
+		envOpts = append(envOpts, grpcfed.CELLib(plugin))
 	}
-	env, err := cel.NewCustomEnv(envOpts...)
+	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +200,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
 		Name:   "matched",
-		Type:   celtypes.BoolType,
+		Type:   grpcfed.CELBoolType,
 		Setter: func(value *localValueType, v bool) { value.vars.matched = v },
 		By:     "example.regexp.compile($.expr).matchString($.target)",
 	}); err != nil {

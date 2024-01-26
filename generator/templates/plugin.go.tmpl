@@ -10,7 +10,7 @@ type {{ $pluginName }} interface {
 
 var (
 	reg_{{ $pluginName }} {{ $pluginName }}
-	mu_{{ $pluginName }} sync.RWMutex
+	mu_{{ $pluginName }} grpcfed.RWMutex
 )
 
 func Register{{ $pluginName }}(plug {{ $pluginName }}) {

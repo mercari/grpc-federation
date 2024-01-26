@@ -240,12 +240,12 @@ func TestValidationError_GoGRPCStatusCode(t *testing.T) {
 		{
 			desc:     "code is OK",
 			code:     code.Code_OK,
-			expected: "OK",
+			expected: "OKCode",
 		},
 		{
 			desc:     "code is FAILED_PRECONDITION",
 			code:     code.Code_FAILED_PRECONDITION,
-			expected: "FailedPrecondition",
+			expected: "FailedPreconditionCode",
 		},
 	}
 

@@ -123,7 +123,7 @@ if err := {{- template "evalDef" (map "Ctx" .Ctx "Definition" .Definition) -}}; 
 
 {{- define "evalDefGroup" }}
 {{- if .Definition.IsConcurrent }}
-eg, {{ printf "ctx%d" .Level }} := errgroup.WithContext({{ parentCtx .Level }})
+eg, {{ printf "ctx%d" .Level }} := grpcfed.ErrorGroupWithContext({{ parentCtx .Level }})
 {{- range .Definition.Starts }}
 grpcfed.GoWithRecover(eg, func() (any, error) {
 	{{- template "evalDefGroup" (map "Level" (add $.Level 1) "Definition" .) }}
