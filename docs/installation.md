@@ -192,7 +192,7 @@ If a proto file is specified, code generation is performed on that file.
 grpc-federation-generator ./path/to/my_federation.proto
 ```
 
-When invoked with the `-w` option, monitors changes to the proto file for directories specified in `grpc-federation.yaml` and performs interactive compilation and code generation.
+When invoked with the `-w` option, it monitors changes to the proto files within the directories specified in `grpc-federation.yaml` and automatically compiles and generates code.
 
 ```console
 grpc-federation-generator -w
