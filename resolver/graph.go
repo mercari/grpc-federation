@@ -52,7 +52,9 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 						ctx.addError(
 							ErrWithLocation(
 								`undefined message specified "grpc.federation.message" option`,
-								source.MapExprMessageNameLocation(fileName, msg.Name, idx),
+								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
+									WithMap().
+									WithMessage().WithName().Location(),
 							),
 						)
 						continue
@@ -62,7 +64,9 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 						ctx.addError(
 							ErrWithLocation(
 								fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-								source.MapExprMessageNameLocation(fileName, msg.Name, idx),
+								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
+									WithMap().
+									WithMessage().WithName().Location(),
 							),
 						)
 					}
@@ -85,7 +89,8 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 						ctx.addError(
 							ErrWithLocation(
 								`undefined message specified "grpc.federation.message" option`,
-								source.MessageExprNameLocation(fileName, msg.Name, idx),
+								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
+									WithMessage().WithName().Location(),
 							),
 						)
 						continue
@@ -95,7 +100,7 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 						ctx.addError(
 							ErrWithLocation(
 								fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-								source.MessageExprNameLocation(fileName, msg.Name, idx),
+								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).WithMessage().WithName().Location(),
 							),
 						)
 					}
@@ -120,7 +125,10 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 								ctx.addError(
 									ErrWithLocation(
 										`undefined message specified "grpc.federation.message" option`,
-										source.VariableDefinitionValidationDetailMessageLocation(fileName, msg.Name, idx, dIdx, mIdx),
+										source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
+											WithValidation().
+											WithDetail(dIdx).
+											WithMessage(mIdx).Location(),
 									),
 								)
 								continue
@@ -130,7 +138,11 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 								ctx.addError(
 									ErrWithLocation(
 										fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-										source.VariableDefinitionValidationDetailMessageNameLocation(fileName, msg.Name, idx, dIdx, mIdx),
+										source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
+											WithValidation().
+											WithDetail(dIdx).
+											WithMessage(mIdx).
+											WithMessage().WithName().Location(),
 									),
 								)
 							}
@@ -165,7 +177,13 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 							ctx.addError(
 								ErrWithLocation(
 									`undefined message specified in "grpc.federation.field.oneof" option`,
-									source.MessageFieldOneofDefMessageLocation(fileName, msg.Name, field.Name, idx),
+									source.NewLocationBuilder(fileName).
+										WithMessage(msg.Name).
+										WithField(field.Name).
+										WithOption().
+										WithOneOf().
+										WithVariableDefinitions(idx).
+										WithMessage().Location(),
 								),
 							)
 							continue
@@ -175,7 +193,13 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 							ctx.addError(
 								ErrWithLocation(
 									fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-									source.MessageFieldOneofDefMessageLocation(fileName, msg.Name, field.Name, idx),
+									source.NewLocationBuilder(fileName).
+										WithMessage(msg.Name).
+										WithField(field.Name).
+										WithOption().
+										WithOneOf().
+										WithVariableDefinitions(idx).
+										WithMessage().Location(),
 								),
 							)
 						}
@@ -290,7 +314,7 @@ func (g *MessageDependencyGraph) createVariableDefinition(ctx *context, node *Me
 	ctx.addError(
 		ErrWithLocation(
 			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
-			source.MessageLocation(ctx.fileName(), node.BaseMessage.Name),
+			source.NewLocationBuilder(ctx.fileName()).WithMessage(node.BaseMessage.Name).Location(),
 		),
 	)
 	return nil
@@ -303,7 +327,7 @@ func (g *MessageDependencyGraph) createVariableDefinitionByNode(ctx *context, no
 	ctx.addError(
 		ErrWithLocation(
 			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
-			source.MessageLocation(ctx.fileName(), node.BaseMessage.Name),
+			source.NewLocationBuilder(ctx.fileName()).WithMessage(node.BaseMessage.Name).Location(),
 		),
 	)
 	return nil
@@ -316,7 +340,7 @@ func (g *MessageDependencyGraph) createVariableDefinitionByFieldOneofRule(ctx *c
 	ctx.addError(
 		ErrWithLocation(
 			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
-			source.MessageLocation(ctx.fileName(), node.BaseMessage.Name),
+			source.NewLocationBuilder(ctx.fileName()).WithMessage(node.BaseMessage.Name).Location(),
 		),
 	)
 	return nil
@@ -570,13 +594,13 @@ func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, vis
 						target.Message.PackageName(), target.Message.Name,
 						msg.PackageName(), msg.Name, dependencyPath,
 					),
-					source.MessageExprLocation(msg.File.Name, msg.Name, idx),
+					source.NewMsgVarDefOptionBuilder(msg.File.Name, msg.Name, idx).WithMessage().Location(),
 				)
 			}
 		}
 		return ErrWithLocation(
 			fmt.Sprintf(`found cyclic dependency for "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
-			source.MessageLocation(target.Message.File.Name, target.Message.Name),
+			source.NewLocationBuilder(target.Message.File.Name).WithMessage(target.Message.Name).Location(),
 		)
 	}
 	visited[target] = struct{}{}
@@ -616,7 +640,7 @@ func validateAllMessageGraphNodeCyclicDependency(target *AllMessageDependencyGra
 
 		return ErrWithLocation(
 			fmt.Sprintf(`found cyclic dependency in "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
-			source.MessageLocation(target.Message.File.Name, target.Message.Name),
+			source.NewLocationBuilder(target.Message.File.Name).WithMessage(target.Message.Name).Location(),
 		)
 	}
 	visited[target] = struct{}{}
