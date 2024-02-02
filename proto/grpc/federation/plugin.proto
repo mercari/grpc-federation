@@ -7,7 +7,7 @@ import "google/protobuf/descriptor.proto";
 option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
 
 extend google.protobuf.FileOptions {
-  PluginRule plugin = 70000;
+  PluginRule plugin = 1187;
 }
 
 message PluginRule {

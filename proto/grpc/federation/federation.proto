@@ -9,31 +9,31 @@ import "google/rpc/error_details.proto";
 option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
 
 extend google.protobuf.ServiceOptions {
-  ServiceRule service = 70000;
+  ServiceRule service = 1187;
 }
 
 extend google.protobuf.MethodOptions {
-  MethodRule method = 70000;
+  MethodRule method = 1187;
 }
 
 extend google.protobuf.MessageOptions {
-  MessageRule message = 70000;
+  MessageRule message = 1187;
 }
 
 extend google.protobuf.FieldOptions {
-  FieldRule field = 70000;
+  FieldRule field = 1187;
 }
 
 extend google.protobuf.EnumOptions {
-  EnumRule enum = 70000;
+  EnumRule enum = 1187;
 }
 
 extend google.protobuf.EnumValueOptions {
-  EnumValueRule enum_value = 70000;
+  EnumValueRule enum_value = 1187;
 }
 
 extend google.protobuf.OneofOptions {
-  OneofRule oneof = 70000;
+  OneofRule oneof = 1187;
 }
 
 message EnumRule {
