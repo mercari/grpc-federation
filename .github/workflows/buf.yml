@@ -1,0 +1,16 @@
+name: buf
+on:
+  push:
+    branches:
+      - main
+jobs:
+  buf:
+    name: push Buf modules to BSR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+      - uses: bufbuild/buf-push-action@v1
+        with:
+          buf_token: ${{ secrets.BUF_TOKEN }}
+          input: proto
