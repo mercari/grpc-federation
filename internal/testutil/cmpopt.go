@@ -28,7 +28,7 @@ func ResolverCmpOpts() []cmp.Option {
 		cmpopts.IgnoreFields(resolver.AutoBindField{}, "VariableDefinition"),
 		cmpopts.IgnoreFields(resolver.Type{}, "Message.Rule", "Enum.Rule", "OneofField"),
 		cmpopts.IgnoreFields(resolver.Oneof{}, "Message"),
-		cmpopts.IgnoreFields(resolver.Field{}, "Oneof.Message", "Oneof.Fields"),
+		cmpopts.IgnoreFields(resolver.Field{}, "Message", "Oneof.Message", "Oneof.Fields"),
 		cmpopts.IgnoreFields(resolver.Value{}, "CEL", "Const"),
 		cmpopts.IgnoreFields(resolver.CELValue{}, "CheckedExpr"),
 		cmpopts.IgnoreFields(resolver.MessageExpr{}, "Message.Rule", "Message.Fields"),

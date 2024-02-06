@@ -262,8 +262,7 @@ type MessageBuilder struct {
 func NewMessageBuilder(name string) *MessageBuilder {
 	return &MessageBuilder{
 		msg: &resolver.Message{
-			Name:   name,
-			Fields: []*resolver.Field{},
+			Name: name,
 		},
 	}
 }
@@ -1284,9 +1283,7 @@ type ServiceRuleBuilder struct {
 
 func NewServiceRuleBuilder() *ServiceRuleBuilder {
 	return &ServiceRuleBuilder{
-		rule: &resolver.ServiceRule{
-			Dependencies: []*resolver.ServiceDependency{},
-		},
+		rule: &resolver.ServiceRule{},
 	}
 }
 

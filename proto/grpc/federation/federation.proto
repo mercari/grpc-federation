@@ -56,7 +56,7 @@ message EnumValueRule {
 
 message OneofRule {}
 
-// ServiceRule define GRPC Federation rules for the service.
+// ServiceRule define gRPC Federation rules for the service.
 message ServiceRule {
   // dependencies defines a unique name for all services on which federation service depends.
   // The name will be used when creating the gRPC client.
@@ -78,7 +78,7 @@ message MethodRule {
   optional string timeout = 1;
 }
 
-// MessageRule define GRPC Federation rules for the message.
+// MessageRule define gRPC Federation rules for the message.
 message MessageRule {
   // def specify variables to be used in field binding by `grpc.federation.field` option.
   repeated VariableDefinition def = 1;
@@ -398,7 +398,7 @@ message Argument {
   repeated string envs = 39;
 }
 
-// FieldRule define GRPC Federation rules for the field of message.
+// FieldRule define gRPC Federation rules for the field of message.
 message FieldRule {
   // If custom_resolver is true, the field binding process is to be implemented in Go.
   // If there are any values retrieved by grpc.federation.message option, they are passed as arguments for custom resolver.

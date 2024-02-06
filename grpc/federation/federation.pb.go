@@ -172,7 +172,7 @@ func (*OneofRule) Descriptor() ([]byte, []int) {
 	return file_grpc_federation_federation_proto_rawDescGZIP(), []int{2}
 }
 
-// ServiceRule define GRPC Federation rules for the service.
+// ServiceRule define gRPC Federation rules for the service.
 type ServiceRule struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -330,7 +330,7 @@ func (x *MethodRule) GetTimeout() string {
 	return ""
 }
 
-// MessageRule define GRPC Federation rules for the message.
+// MessageRule define gRPC Federation rules for the message.
 type MessageRule struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1942,7 +1942,7 @@ func (x *Argument) GetEnvs() []string {
 	return nil
 }
 
-// FieldRule define GRPC Federation rules for the field of message.
+// FieldRule define gRPC Federation rules for the field of message.
 type FieldRule struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

@@ -1,0 +1,594 @@
+syntax = "proto3";
+
+package grpc.federation.generator.plugin;
+
+import "google/api/expr/v1alpha1/checked.proto";
+import "google/protobuf/compiler/plugin.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/duration.proto";
+import "google/rpc/code.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation/generator/plugin;plugin";
+
+enum ActionType {
+  GENERATE_ACTION = 0;
+  KEEP_ACTION     = 1;
+  CREATE_ACTION   = 2;
+  DELETE_ACTION   = 3;
+  UPDATE_ACTION   = 4;
+}
+
+// CodeGeneratorRequest.
+message CodeGeneratorRequest {
+  ActionType type = 1;
+  string proto_path = 2;
+  string out_dir = 3;
+  repeated google.protobuf.compiler.CodeGeneratorResponse.File files = 4;
+  repeated string grpc_federation_file_ids = 5;
+  Reference reference = 6;
+}
+
+message Reference {
+  map<string,File> file_map = 1;
+  map<string,Service> service_map = 2;
+  map<string,Method> method_map = 3;
+  map<string,Message> message_map = 4;
+  map<string,Field> field_map = 5;
+  map<string,Enum> enum_map = 6;
+  map<string,EnumValue> enum_value_map = 7;
+  map<string,Oneof> oneof_map = 8;
+  map<string,CELPlugin> cel_plugin_map = 9;
+  map<string,MessageDependencyGraph> graph_map = 10;
+  map<string,VariableDefinition> variable_definition_map = 11;
+  map<string,VariableDefinitionGroup> variable_definition_group_map = 12;
+}
+
+message File {
+  string id = 1;
+  Package package = 2;
+  GoPackage go_package = 3;
+  string name = 4;
+  google.protobuf.FileDescriptorProto desc = 5;
+  repeated string service_ids = 6;
+  repeated string message_ids = 7;
+  repeated string enum_ids = 8;
+  repeated string cel_plugin_ids = 9;
+}
+  
+message Package {
+  string name = 1;
+  repeated string file_ids = 2;
+}
+  
+message GoPackage {
+  string name = 1;
+  string import_path = 2;
+  string alias_name = 3;
+}
+  
+message Service {
+  string id = 1;
+  string name = 2;
+  repeated string method_ids = 3;
+  string file_id = 4;
+  repeated string message_ids = 5;
+  repeated string message_arg_ids = 6;
+  repeated string cel_plugin_ids = 7;
+  ServiceRule rule = 8;
+}
+
+message ServiceRule {
+  repeated ServiceDependency dependencies = 1;
+}
+
+message ServiceDependency {
+  string name = 1;
+  string service_id = 2;
+}
+  
+message Method {
+  string id = 1;
+  string name = 2;
+  string request_id = 3;
+  string response_id = 4;
+  string service_id = 5;
+  MethodRule rule = 6;
+}
+
+message MethodRule {
+  google.protobuf.Duration timeout = 1; 
+}
+ 
+message Message {
+  string id = 1;
+  string name = 2;
+  bool is_map_entry = 3;
+  string file_id = 4;
+  string parent_message_id = 5;
+  repeated string nested_message_ids = 6;
+  repeated string enum_ids = 7;
+  repeated string field_ids = 8;
+  repeated string oneof_ids = 9;
+  MessageRule rule = 10;
+}
+
+message MessageRule {
+  string message_argument_id = 1;
+  string dependency_graph_id = 2;
+  bool custom_resolver = 3;
+  string alias_id = 4;
+  repeated string variable_definition_ids = 5;
+  repeated string variable_definition_group_ids = 6;
+}
+
+message VariableDefinition {
+  string id = 1;
+  int64 index = 2;
+  VariableDefinitionOwner owner = 3;
+  string name = 4;
+  CELValue if = 5;
+  bool auto_bind = 6;
+  bool used = 7;
+  VariableExpr expr = 8;
+}
+
+enum VariableDefinitionOwnerType {
+  UNKNOWN_OWNER      = 0;
+  MESSAGE_OWNER      = 1;
+  ONE_OF_FIELD_OWNER = 2;
+  VALIDATION_ERROR_DETAIL_MESSAGE_OWNER = 3;
+}
+
+message VariableDefinitionOwner {
+  VariableDefinitionOwnerType type = 1;
+  string message_id = 2;
+  string field_id = 3;
+  ValidationErrorIndexes validation_error_indexes = 4;  
+}
+
+message Field {
+  string id = 1;
+  string name = 2;
+  Type type = 3;
+  string oneof_id = 4;
+  FieldRule rule = 5;
+  string message_id = 6;
+}
+
+message FieldRule {
+  Value value = 1;
+  bool custom_resolver = 2;
+  bool message_custom_resolver = 3;
+  string alias_id = 4;
+  AutoBindField auto_bind_field = 5;
+  FieldOneofRule oneof_rule = 6;
+}
+
+message AutoBindField {
+  string variable_definition_id = 1;
+  string field_id = 2;
+}
+
+message FieldOneofRule {
+  CELValue if = 1;
+  bool default = 2;
+  CELValue by = 3;
+  string dependency_graph_id = 4;
+  repeated string variable_definition_ids = 5;
+  repeated string variable_definition_group_ids = 6;
+}
+
+message VariableDefinitionGroup {
+  string id = 1;
+  oneof group {
+    SequentialVariableDefinitionGroup sequential = 2;
+    ConcurrentVariableDefinitionGroup concurrent = 3;
+  };
+}
+
+message SequentialVariableDefinitionGroup {
+  string start = 1;
+  string end = 2;
+}
+
+message ConcurrentVariableDefinitionGroup {
+  repeated string starts = 1;
+  string end = 2;
+}
+
+message MessageDependencyGraph {
+  string id = 1;
+  oneof rule {
+    MessageRule message_rule = 2;
+    FieldOneofRule field_oneof_rule = 3;
+  };
+  repeated MessageDependencyGraphNode roots = 4;
+}
+
+message MessageDependencyGraphNode {
+  repeated MessageDependencyGraphNode children = 1;
+  string base_message_id = 2;
+  string variable_definition_id = 3;
+}
+
+message VariableExpr {
+  Type type = 1;
+  oneof expr {
+    CELValue by = 2;
+    MapExpr map = 3;
+    CallExpr call = 4;
+    MessageExpr message = 5;
+    ValidationExpr validation = 6;
+  };
+}
+
+enum TypeKind {
+  UNKNOWN_TYPE  = 0;
+  DOUBLE_TYPE   = 1;
+  FLOAT_TYPE    = 2;
+  INT64_TYPE    = 3;
+  UINT64_TYPE   = 4;
+  INT32_TYPE    = 5;
+  FIXED64_TYPE  = 6;
+  FIXED32_TYPE  = 7;
+  BOOL_TYPE     = 8;
+  STRING_TYPE   = 9;
+  GROUP_TYPE    = 10;
+  MESSAGE_TYPE  = 11;
+  BYTES_TYPE    = 12;
+  UINT32_TYPE   = 13;
+  ENUM_TYPE     = 14;
+  SFIXED32_TYPE = 15;
+  SFIXED64_TYPE = 16;
+  SINT32_TYPE   = 17;
+  SINT64_TYPE   = 18;
+}
+
+message Type {
+  TypeKind kind = 1;
+  bool repeated = 2;
+  oneof ref {
+    string message_id = 3;
+    string enum_id = 4;
+    string oneof_field_id = 5;
+  };
+}
+
+message CELValue {
+  string expr = 1;
+  Type out = 2;
+  google.api.expr.v1alpha1.CheckedExpr checked_expr = 3;
+}
+
+message MapExpr {
+  Iterator iterator = 1;
+  MapIteratorExpr expr = 2;
+}
+
+message Iterator {
+  string name = 1;
+  string source_id = 2;
+}
+
+message MapIteratorExpr {
+  Type type = 1;
+  oneof expr {
+    CELValue by = 2;
+    MessageExpr message = 3;
+  };
+}
+
+message CallExpr {
+  string method_id = 1;
+  Request request = 2;
+  google.protobuf.Duration timeout = 3;
+  RetryPolicy retry = 4;
+}
+
+message RetryPolicy {
+  oneof policy {
+    RetryPolicyConstant constant = 1;
+    RetryPolicyExponential exponential = 2;
+  };
+}
+
+message RetryPolicyConstant {
+  google.protobuf.Duration interval = 1;
+  uint64 max_retries = 2;
+}
+
+message RetryPolicyExponential {
+  google.protobuf.Duration initial_interval = 1;
+  double randomization_factor = 2;
+  double multiplier = 3;
+  google.protobuf.Duration max_interval = 4;
+  uint64 max_retries = 5;
+  google.protobuf.Duration max_elapsed_time = 6;
+}
+
+message Request {
+  repeated Argument args = 1;
+  string type_id = 2;
+}
+
+message MessageExpr {
+  string message_id = 1;
+  repeated Argument args = 2;
+}
+
+message Argument {
+  string name = 1;
+  Type type = 2;
+  Value value = 3;
+}
+
+message Value {
+  bool inline = 1;
+  oneof value {
+    CELValue cel = 2;
+    ConstValue const = 3;
+  };
+}
+
+message ConstValue {
+  Type type = 1;
+  optional double double = 4;
+  // repeated double literal values.
+  repeated double doubles = 5;
+  // float literal value.
+  optional float float = 6;
+  // repeated float literal values.
+  repeated float floats = 7;
+  // int32 literal value.
+  optional int32 int32 = 8;
+  // repeated int32 literal values.
+  repeated int32 int32s = 9;
+  // int64 literal value.
+  optional int64 int64 = 10;
+  // repeated int64 literal values.
+  repeated int64 int64s = 11;
+  // uint32 literal value.
+  optional uint32 uint32 = 12;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 13;
+  // uint64 literal value.
+  optional uint64 uint64 = 14;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 15;
+  // sint32 literal value.
+  optional sint32 sint32 = 16;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 17;
+  // sint64 literal value.
+  optional sint64 sint64 = 18;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 19;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 20;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 21;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 22;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 23;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 24;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 25;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 26;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 27;
+  // bool literal value.
+  optional bool bool = 28;
+  // repeated bool literal values.
+  repeated bool bools = 29;
+  // string literal value.
+  optional string string = 30;
+  // repeated string literal values.
+  repeated string strings = 31;
+  // bytes literal value.
+  optional bytes byte_string = 32;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 33;
+  // message literal value.
+  optional MessageValue message = 34;
+  // repeated message literal values.
+  repeated MessageValue messages = 35;
+  // enum literal value.
+  optional string enum = 36;
+  // repeated enum literal values.
+  repeated string enums = 37;
+  // env literal value.
+  optional string env = 38;
+  // repeated env literal values.
+  repeated string envs = 39;
+}
+
+// MessageValue represents message literal.
+message MessageValue {
+  // name specify the message name to be referred to by FQDN. format is `<package-name>.<message-name>`.
+  // <package-name> can be omitted when referring to messages in the same package.
+  string name = 1;
+  // fields represents message's fields.
+  repeated MessageFieldValue fields = 2;
+}
+  
+// MessageFieldValue represents message's field.
+message MessageFieldValue {
+  string field = 1;
+  // double literal value.
+  optional double double = 3;
+  // repeated double literal values.
+  repeated double doubles = 4;
+  // float literal value.
+  optional float float = 5;
+  // repeated float literal values.
+  repeated float floats = 6;
+  // int32 literal value.
+  optional int32 int32 = 7;
+  // repeated int32 literal values.
+  repeated int32 int32s = 8;
+  // int64 literal value.
+  optional int64 int64 = 9;
+  // repeated int64 literal values.
+  repeated int64 int64s = 10;
+  // uint32 literal value.
+  optional uint32 uint32 = 11;
+  // repeated uint32 literal values.
+  repeated uint32 uint32s = 12;
+  // uint64 literal value.
+  optional uint64 uint64 = 13;
+  // repeated uint64 literal values.
+  repeated uint64 uint64s = 14;
+  // sint32 literal value.
+  optional sint32 sint32 = 15;
+  // repeated sint32 literal values.
+  repeated sint32 sint32s = 16;
+  // sint64 literal value.
+  optional sint64 sint64 = 17;
+  // repeated sint64 literal values.
+  repeated sint64 sint64s = 18;
+  // fixed32 literal value.
+  optional fixed32 fixed32 = 19;
+  // repeated fixed32 literal values.
+  repeated fixed32 fixed32s = 20;
+  // fixed64 literal value.
+  optional fixed64 fixed64 = 21;
+  // repeated fixed64 literal values.
+  repeated fixed64 fixed64s = 22;
+  // sfixed32 literal value.
+  optional sfixed32 sfixed32 = 23;
+  // repeated sfixed32 literal values.
+  repeated sfixed32 sfixed32s = 24;
+  // sfixed64 literal value.
+  optional sfixed64 sfixed64 = 25;
+  // repeated sfixed64 literal values.
+  repeated sfixed64 sfixed64s = 26;
+  // bool literal value.
+  optional bool bool = 27;
+  // repeated bool literal values.
+  repeated bool bools = 28;
+  // string literal value.
+  optional string string = 29;
+  // repeated string literal values.
+  repeated string strings = 30;
+  // bytes literal value.
+  optional bytes byte_string = 31;
+  // repeated bytes literal values.
+  repeated bytes byte_strings = 32;
+  // message literal value.
+  optional MessageValue message = 33;
+  // repeated message literal values.
+  repeated MessageValue messages = 34;
+  // enum literal value.
+  optional string enum = 35;
+  // repeated enum literal values.
+  repeated string enums = 36;
+  // env literal value.
+  optional string env = 37;
+  // repeated env literal values.
+  repeated string envs = 38;
+}
+
+message ValidationErrorIndexes {
+  int64 def_index = 1;
+  int64 error_detail_index = 2;
+}
+
+message ValidationExpr {
+  ValidationError error = 1;
+}
+
+message ValidationRule {
+  string name = 1;
+  ValidationError error = 2;
+}
+
+message ValidationError {
+  google.rpc.Code code = 1;
+  CELValue if = 2;
+  string Message = 3;
+  repeated ValidationErrorDetail details = 4;
+}
+
+message ValidationErrorDetail {
+  CELValue if = 1;
+  repeated string message_ids = 2;
+  repeated PreconditionFailure precondition_failures = 3;
+  repeated BadRequest bad_requests = 4;
+  repeated LocalizedMessage localized_messages = 5;
+  string dependency_graph_id = 6;
+  repeated string variable_definition_group_ids = 7;
+}
+
+message PreconditionFailure {
+  repeated PreconditionFailureViolation violations = 1;
+}
+
+message PreconditionFailureViolation {
+  CELValue type = 1;
+  CELValue subject = 2;
+  CELValue description = 3;
+}
+
+message BadRequest {
+  repeated BadRequestFieldViolation field_violations = 1;
+}
+
+message BadRequestFieldViolation {
+  CELValue field = 1;
+  CELValue description = 2;
+}
+
+message LocalizedMessage {
+  string locale = 1;
+  CELValue message = 2;
+}
+
+message Oneof {
+  string id = 1;
+  string name = 2;
+  string message_id = 3;
+  repeated string field_ids = 4;
+}
+
+message Enum {
+  string id = 1;
+  string name = 2;
+  repeated string value_ids = 3;
+  string message_id = 4;
+  string file_id = 5;
+  EnumRule rule = 6;
+}
+
+message EnumValue {
+  string id = 1;
+  string value = 2;
+  string enum_id = 3;
+  EnumValueRule rule = 4;
+}
+
+message EnumRule {
+  string alias_id = 1;
+}
+
+message EnumValueRule {
+  bool default = 1;
+  repeated string alias_ids = 2;
+}
+ 
+message CELPlugin {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated CELFunction functions = 4;
+}
+
+message CELFunction {
+  string name = 1;
+  string id = 2;
+  repeated Type args = 3;
+  Type return = 4;
+  string receiver_id = 5;
+}

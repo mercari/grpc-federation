@@ -27,9 +27,8 @@ func newMessageArgument(msg *Message) *Message {
 		Files: Files{&file},
 	}
 	return &Message{
-		File:   &file,
-		Name:   fmt.Sprintf("%sArgument", msg.Name),
-		Fields: []*Field{},
+		File: &file,
+		Name: fmt.Sprintf("%sArgument", msg.Name),
 	}
 }
 

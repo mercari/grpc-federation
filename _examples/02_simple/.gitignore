@@ -1,2 +1,3 @@
 grpc/federation/federation.pb.go
+grpc/federation/generator.pb.go
 grpc/federation/plugin.pb.go

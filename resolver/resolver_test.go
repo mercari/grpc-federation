@@ -36,7 +36,6 @@ func TestSimpleAggregation(t *testing.T) {
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetAlias(ref.Message(t, "org.user", "Item")).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -63,7 +62,6 @@ func TestSimpleAggregation(t *testing.T) {
 					testutil.NewMessageRuleBuilder().
 						SetMessageArgument(ref.Message(t, "org.federation", "ZArgument")).
 						SetCustomResolver(true).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -119,7 +117,6 @@ func TestSimpleAggregation(t *testing.T) {
 						SetRule(
 							testutil.NewMessageRuleBuilder().
 								SetAlias(ref.Message(t, "org.user", "User.AttrA")).
-								SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 								Build(t),
 						).
 						Build(t),
@@ -130,7 +127,6 @@ func TestSimpleAggregation(t *testing.T) {
 						SetRule(
 							testutil.NewMessageRuleBuilder().
 								SetAlias(ref.Message(t, "org.user", "User.AttrB")).
-								SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 								Build(t),
 						).
 						Build(t),
@@ -189,6 +185,7 @@ func TestSimpleAggregation(t *testing.T) {
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
 						AddVariableDefinitionGroup(
@@ -462,7 +459,6 @@ func TestCreatePost(t *testing.T) {
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetAlias(ref.Message(t, "org.post", "Post")).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -699,7 +695,6 @@ func TestMinimum(t *testing.T) {
 					testutil.NewMessageRuleBuilder().
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetCustomResolver(true).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -1444,7 +1439,6 @@ func TestAlias(t *testing.T) {
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetAlias(ref.Message(t, "org.post", "PostContent")).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -1457,7 +1451,6 @@ func TestAlias(t *testing.T) {
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetAlias(ref.Message(t, "org.post", "PostData")).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -2112,7 +2105,6 @@ func TestConstValue(t *testing.T) {
 					testutil.NewMessageRuleBuilder().
 						SetAlias(ref.Message(t, "content", "Content")).
 						SetMessageArgument(ref.Message(t, "org.federation", "ContentArgument")).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -2465,7 +2457,6 @@ func TestMultiUser(t *testing.T) {
 					testutil.NewMessageRuleBuilder().
 						SetMessageArgument(ref.Message(t, "org.federation", "SubArgument")).
 						SetCustomResolver(true).
-						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
 						Build(t),
 				).
 				Build(t),
@@ -3237,14 +3228,15 @@ func TestMap(t *testing.T) {
 						).
 						SetCustomResolver(true).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
-						SetDependencyGraph(
-							testutil.NewDependencyGraphBuilder().
-								Build(t),
-						).
 						AddVariableDefinitionGroup(
 							testutil.NewVariableDefinitionGroupBuilder().
 								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
 								SetEnd(testutil.NewVariableDefinition("user")).
+								Build(t),
+						).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
 						Build(t),
