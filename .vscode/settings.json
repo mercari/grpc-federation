@@ -2,6 +2,7 @@
     "protoc": {
         "options": [
             "--proto_path=proto",
+            "--proto_path=proto_deps",
         ]
     },
     "grpc-federation": {

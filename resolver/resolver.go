@@ -315,8 +315,10 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		)
 	}
 	if pluginRuleDef != nil {
-		if plugin := r.resolveCELPlugin(ctx, def, pluginRuleDef.Export); plugin != nil {
-			file.CELPlugins = append(file.CELPlugins, plugin)
+		for _, export := range pluginRuleDef.Export {
+			if plugin := r.resolveCELPlugin(ctx, def, export); plugin != nil {
+				file.CELPlugins = append(file.CELPlugins, plugin)
+			}
 		}
 	}
 
@@ -523,13 +525,16 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string) *Serv
 		)
 		return nil
 	}
-	plugins := make([]*CELPlugin, 0, len(r.celPluginMap))
-	for _, plugin := range r.celPluginMap {
-		plugins = append(plugins, plugin)
+	var plugins []*CELPlugin
+	if len(r.celPluginMap) != 0 {
+		plugins = make([]*CELPlugin, 0, len(r.celPluginMap))
+		for _, plugin := range r.celPluginMap {
+			plugins = append(plugins, plugin)
+		}
+		sort.Slice(plugins, func(i, j int) bool {
+			return plugins[i].Name < plugins[j].Name
+		})
 	}
-	sort.Slice(plugins, func(i, j int) bool {
-		return plugins[i].Name < plugins[j].Name
-	})
 	service := &Service{
 		File:       file,
 		Name:       name,
@@ -1123,27 +1128,30 @@ func (r *Resolver) resolveServiceRule(ctx *context, def *federation.ServiceRule)
 	if def == nil {
 		return nil
 	}
-	deps := make([]*ServiceDependency, 0, len(def.GetDependencies()))
-	svcNameMap := map[string]struct{}{}
-	for idx, depDef := range def.GetDependencies() {
-		dep := r.resolveServiceDependency(ctx.withDepIndex(idx), depDef)
-		if dep.Service == nil {
-			continue
-		}
-		if dep.Name != "" {
-			if _, exists := svcNameMap[dep.Name]; exists {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(`%q name duplicated`, dep.Name),
-						source.NewLocationBuilder(ctx.fileName()).
-							WithService(ctx.serviceName()).
-							WithOption().WithDependencies(idx).WithName().Location(),
-					),
-				)
+	var deps []*ServiceDependency
+	if len(def.GetDependencies()) != 0 {
+		deps = make([]*ServiceDependency, 0, len(def.GetDependencies()))
+		svcNameMap := map[string]struct{}{}
+		for idx, depDef := range def.GetDependencies() {
+			dep := r.resolveServiceDependency(ctx.withDepIndex(idx), depDef)
+			if dep.Service == nil {
+				continue
 			}
-			svcNameMap[dep.Name] = struct{}{}
+			if dep.Name != "" {
+				if _, exists := svcNameMap[dep.Name]; exists {
+					ctx.addError(
+						ErrWithLocation(
+							fmt.Sprintf(`%q name duplicated`, dep.Name),
+							source.NewLocationBuilder(ctx.fileName()).
+								WithService(ctx.serviceName()).
+								WithOption().WithDependencies(idx).WithName().Location(),
+						),
+					)
+				}
+				svcNameMap[dep.Name] = struct{}{}
+			}
+			deps = append(deps, dep)
 		}
-		deps = append(deps, dep)
 	}
 	return &ServiceRule{Dependencies: deps}
 }
@@ -1185,7 +1193,6 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 		VariableDefinitions: r.resolveVariableDefinitions(ctx, ruleDef.GetDef()),
 		CustomResolver:      ruleDef.GetCustomResolver(),
 		Alias:               r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
-		DependencyGraph:     &MessageDependencyGraph{},
 	}
 }
 
@@ -1865,6 +1872,9 @@ func (r *Resolver) resolveEnumValueAlias(ctx *context, enum *Enum, enumValueName
 }
 
 func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDescriptorProto, oneofs []*Oneof) []*Field {
+	if len(fieldsDef) == 0 {
+		return nil
+	}
 	fields := make([]*Field, 0, len(fieldsDef))
 	for _, fieldDef := range fieldsDef {
 		field := r.resolveField(ctx, fieldDef, oneofs)
@@ -1887,7 +1897,7 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 		)
 		return nil
 	}
-	field := &Field{Name: fieldDef.GetName(), Type: typ}
+	field := &Field{Name: fieldDef.GetName(), Type: typ, Message: ctx.msg}
 	if fieldDef.OneofIndex != nil {
 		oneof := oneofs[fieldDef.GetOneofIndex()]
 		oneof.Fields = append(oneof.Fields, field)
@@ -2374,6 +2384,9 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 			r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
 			defs := msgToDefsMap[depMsg]
 			depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, msg, defs)...)
+		}
+		for _, field := range depMsgArg.Fields {
+			field.Message = depMsgArg
 		}
 		m := r.resolveMessageArgumentRecursive(ctx, child)
 		msgs = append(msgs, m...)

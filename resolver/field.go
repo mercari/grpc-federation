@@ -1,5 +1,11 @@
 package resolver
 
+import "fmt"
+
+func (f *Field) FQDN() string {
+	return fmt.Sprintf("%s.%s", f.Message.FQDN(), f.Name)
+}
+
 func (f *Field) HasRule() bool {
 	return f.Rule != nil
 }

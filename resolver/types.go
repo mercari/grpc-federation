@@ -293,10 +293,11 @@ type Oneof struct {
 }
 
 type Field struct {
-	Name  string
-	Type  *Type
-	Oneof *Oneof
-	Rule  *FieldRule
+	Name    string
+	Type    *Type
+	Oneof   *Oneof
+	Rule    *FieldRule
+	Message *Message
 }
 
 type OneofField struct {
