@@ -47,7 +47,7 @@ func TestFederation(t *testing.T) {
 			sdktrace.WithResource(
 				resource.NewWithAttributes(
 					semconv.SchemaURL,
-					semconv.ServiceNameKey.String("example15/condition"),
+					semconv.ServiceNameKey.String("example15/celplugin"),
 					semconv.ServiceVersionKey.String("1.0.0"),
 					attribute.String("environment", "dev"),
 				),
