@@ -3,14 +3,17 @@ package generator
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -20,6 +23,8 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 
 	"github.com/mercari/grpc-federation/compiler"
+	"github.com/mercari/grpc-federation/grpc/federation/generator"
+	"github.com/mercari/grpc-federation/grpc/federation/generator/plugin"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/validator"
@@ -32,14 +37,15 @@ const (
 )
 
 type Generator struct {
-	cfg                   *Config
-	watcher               *Watcher
-	compiler              *compiler.Compiler
-	validator             *validator.Validator
-	importPaths           []string
-	postProcessHandler    PostProcessHandler
-	buildCacheMap         BuildCacheMap
-	absPathToRelativePath map[string]string
+	cfg                       *Config
+	federationGeneratorOption *CodeGeneratorOption
+	watcher                   *Watcher
+	compiler                  *compiler.Compiler
+	validator                 *validator.Validator
+	importPaths               []string
+	postProcessHandler        PostProcessHandler
+	buildCacheMap             BuildCacheMap
+	absPathToRelativePath     map[string]string
 }
 
 type Option func(*Generator) error
@@ -70,6 +76,7 @@ const (
 	CreateAction ActionType = "create"
 	DeleteAction ActionType = "delete"
 	UpdateAction ActionType = "update"
+	ProtocAction ActionType = "protoc"
 )
 
 type PluginRequest struct {
@@ -174,6 +181,10 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 		}
 		results = append(results, result)
 	}
+	if err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
+		return err
+	}
+
 	if g.postProcessHandler != nil {
 		if err := g.postProcessHandler(ctx, path, results); err != nil {
 			return err
@@ -223,7 +234,8 @@ func (g *Generator) GenerateAll(ctx context.Context) (BuildCacheMap, error) {
 	return buildCacheMap, nil
 }
 
-func newPluginRequest(protoPath string, org *pluginpb.CodeGeneratorRequest, opt string) (*PluginRequest, error) {
+func newPluginRequest(protoPath string, org *pluginpb.CodeGeneratorRequest, pluginOpt *PluginOption) (*PluginRequest, error) {
+	opt := pluginOpt.String()
 	req := &pluginpb.CodeGeneratorRequest{
 		FileToGenerate:  org.FileToGenerate,
 		Parameter:       &opt,
@@ -329,6 +341,9 @@ func (g *Generator) setWatcher(w *Watcher) error {
 			results = append(results, result)
 		}
 		results = append(results, g.otherResults(path)...)
+		if err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
+			log.Printf("failed to run code generator plugin: %+v", err)
+		}
 		if g.postProcessHandler != nil {
 			if err := g.postProcessHandler(ctx, path, results); err != nil {
 				log.Printf("%+v", err)
@@ -486,13 +501,13 @@ func (g *Generator) compileProto(ctx context.Context, protoPath string) (*plugin
 }
 
 func (g *Generator) generateByProtogenGo(r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	cfg, err := parseOpt(r.req.GetParameter())
+	opt, err := parseOptString(r.req.GetParameter())
 	if err != nil {
 		return nil, err
 	}
-	cfg.ImportPaths = g.cfg.Imports
+	opt.Path.ImportPaths = g.cfg.Imports
 	relativePath := g.absPathToRelativePath[r.protoPath]
-	pathResolver := resolver.NewOutputFilePathResolver(cfg)
+	pathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 	var res pluginpb.CodeGeneratorResponse
 	for _, f := range r.genplugin.Files {
 		if !f.Generate {
@@ -523,13 +538,13 @@ func (g *Generator) generateByProtogenGo(r *PluginRequest) (*pluginpb.CodeGenera
 }
 
 func (g *Generator) generateByProtogenGoGRPC(r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	cfg, err := parseOpt(r.req.GetParameter())
+	opt, err := parseOptString(r.req.GetParameter())
 	if err != nil {
 		return nil, err
 	}
-	cfg.ImportPaths = g.cfg.Imports
+	opt.Path.ImportPaths = g.cfg.Imports
 	relativePath := g.absPathToRelativePath[r.protoPath]
-	pathResolver := resolver.NewOutputFilePathResolver(cfg)
+	pathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 
 	var res pluginpb.CodeGeneratorResponse
 	for _, f := range r.genplugin.Files {
@@ -561,13 +576,14 @@ func (g *Generator) generateByProtogenGoGRPC(r *PluginRequest) (*pluginpb.CodeGe
 }
 
 func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	cfg, err := parseOpt(r.req.GetParameter())
+	opt, err := parseOptString(r.req.GetParameter())
 	if err != nil {
 		return nil, err
 	}
-	cfg.ImportPaths = g.cfg.Imports
+	opt.Path.ImportPaths = g.cfg.Imports
+	g.federationGeneratorOption = opt
 	relativePath := g.absPathToRelativePath[r.protoPath]
-	pathResolver := resolver.NewOutputFilePathResolver(cfg)
+	pathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 
 	result, err := resolver.New(r.req.GetProtoFile()).Resolve()
 	if err != nil {
@@ -606,13 +622,32 @@ func (g *Generator) fileNameWithoutExt(name string) string {
 }
 
 func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	cfg, err := parseOpt(req.GetParameter())
+	opt, err := parseOptString(req.GetParameter())
 	if err != nil {
 		return nil, err
 	}
-	outputPathResolver := resolver.NewOutputFilePathResolver(cfg)
+	outputPathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 	result, err := resolver.New(req.GetProtoFile()).Resolve()
 	if err != nil {
+		return nil, err
+	}
+
+	var outDir string
+	if len(result.Files) != 0 {
+		outPath, err := outputPathResolver.OutputPath(result.Files[0])
+		if err != nil {
+			return nil, err
+		}
+		outDir = filepath.Dir(outPath)
+	}
+	if err := evalAllCodeGenerationPlugin(ctx, []*ProtoFileResult{
+		{
+			Type:            ProtocAction,
+			ProtoPath:       "",
+			Out:             outDir,
+			FederationFiles: result.Files,
+		},
+	}, opt); err != nil {
 		return nil, err
 	}
 
@@ -634,33 +669,236 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	return &resp, nil
 }
 
-var (
-	modulePrefixMatcher = regexp.MustCompile(`module=(.+)`)
-)
-
-func parseOpt(opt string) (resolver.OutputFilePathConfig, error) {
-	var cfg resolver.OutputFilePathConfig
-	switch {
-	case strings.Contains(opt, "module="):
-		cfg.Mode = resolver.ModulePrefixMode
-		matched := modulePrefixMatcher.FindAllStringSubmatch(opt, 1)
-		if len(matched) != 1 {
-			return cfg, fmt.Errorf(`grpc-federation: failed to find prefix name from module option`)
+func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult, opt *CodeGeneratorOption) error {
+	if len(results) == 0 {
+		return nil
+	}
+	if opt == nil || len(opt.Plugins) == 0 {
+		return nil
+	}
+	for _, result := range results {
+		pluginFiles := make([]*plugin.ProtoCodeGeneratorResponse_File, 0, len(result.Files))
+		for _, file := range result.Files {
+			fileBytes, err := proto.Marshal(file)
+			if err != nil {
+				return err
+			}
+			var pluginFile plugin.ProtoCodeGeneratorResponse_File
+			if err := proto.Unmarshal(fileBytes, &pluginFile); err != nil {
+				return err
+			}
+			pluginFiles = append(pluginFiles, &pluginFile)
 		}
-		if len(matched[0]) != 2 {
-			return cfg, fmt.Errorf(`grpc-federation: failed to find prefix name from module option`)
+		genReq := generator.CreateCodeGeneratorRequest(&generator.CodeGeneratorRequestConfig{
+			Type:                generator.ActionType(result.Type),
+			ProtoPath:           result.ProtoPath,
+			OutDir:              result.Out,
+			Files:               pluginFiles,
+			GRPCFederationFiles: result.FederationFiles,
+		})
+		encodedGenReq, err := proto.Marshal(genReq)
+		if err != nil {
+			return err
 		}
-		cfg.Prefix = matched[0][1]
-	case strings.Contains(opt, "paths=source_relative"):
-		cfg.Mode = resolver.SourceRelativeMode
-	case strings.Contains(opt, "paths=import"):
-		cfg.Mode = resolver.ImportMode
-	default:
-		if opt == "" {
-			cfg.Mode = resolver.ImportMode // default output mode
-		} else {
-			return cfg, fmt.Errorf(`grpc-federation: unexpected options found "%s"`, opt)
+		genReqReader := bytes.NewBuffer(encodedGenReq)
+		for _, plugin := range opt.Plugins {
+			wasmFile, err := os.ReadFile(plugin.Path)
+			if err != nil {
+				return fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", plugin.Path, err)
+			}
+			hash := sha256.Sum256(wasmFile)
+			gotHash := hex.EncodeToString(hash[:])
+			if plugin.Sha256 != gotHash {
+				return fmt.Errorf(
+					`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
+					plugin.Sha256,
+					gotHash,
+				)
+			}
+			if err := evalCodeGeneratorPlugin(ctx, wasmFile, genReqReader); err != nil {
+				return err
+			}
+			genReqReader.Reset()
 		}
 	}
-	return cfg, nil
+	return nil
+}
+
+type CodeGeneratorOption struct {
+	Path    resolver.OutputFilePathConfig
+	Plugins []*WasmPluginOption
+}
+
+type WasmPluginOption struct {
+	Path   string
+	Sha256 string
+}
+
+func parseOptString(opt string) (*CodeGeneratorOption, error) {
+	var ret CodeGeneratorOption
+	for _, part := range splitOpt(opt) {
+		if err := parseOpt(&ret, part); err != nil {
+			return nil, err
+		}
+	}
+	return &ret, nil
+}
+
+func parseOpt(opt *CodeGeneratorOption, pat string) error {
+	partOpt, err := splitOptPattern(pat)
+	if err != nil {
+		return err
+	}
+	switch partOpt.kind {
+	case "module":
+		if err := parseModuleOption(opt, partOpt.value); err != nil {
+			return err
+		}
+	case "paths":
+		if err := parsePathsOption(opt, partOpt.value); err != nil {
+			return err
+		}
+	case "plugins":
+		if err := parsePluginsOption(opt, partOpt.value); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("grpc-federation: unexpected option: %s", partOpt.kind)
+	}
+	return nil
+}
+
+func parseModuleOption(opt *CodeGeneratorOption, value string) error {
+	if value == "" {
+		return fmt.Errorf(`grpc-federation: failed to find prefix name for module option`)
+	}
+	opt.Path.Mode = resolver.ModulePrefixMode
+	opt.Path.Prefix = value
+	return nil
+}
+
+func parsePathsOption(opt *CodeGeneratorOption, value string) error {
+	switch value {
+	case "source_relative":
+		opt.Path.Mode = resolver.SourceRelativeMode
+	case "import":
+		opt.Path.Mode = resolver.ImportMode
+	default:
+		return fmt.Errorf("grpc-federation: unexpected paths option: %s", value)
+	}
+	return nil
+}
+
+var (
+	schemeToOptionParser = map[string]func(*CodeGeneratorOption, string) error{
+		"file://":  parseFileSchemeOption,
+		"http://":  parseHTTPSchemeOption,
+		"https://": parseHTTPSSchemeOption,
+	}
+)
+
+func parsePluginsOption(opt *CodeGeneratorOption, value string) error {
+	for scheme, parser := range schemeToOptionParser {
+		if strings.HasPrefix(value, scheme) {
+			if err := parser(opt, strings.TrimPrefix(value, scheme)); err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf(
+		`grpc-federation: location of the plugin file must be specified with the "file://" or "http(s)://" schemes but specified %s`,
+		value,
+	)
+}
+
+func parseFileSchemeOption(opt *CodeGeneratorOption, value string) error {
+	parts := strings.Split(value, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+	}
+	path := parts[0]
+	if !filepath.IsAbs(path) {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return fmt.Errorf("grpc-federation: failed to get absolute path by %s: %w", path, err)
+		}
+		path = abs
+	}
+	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
+		Path:   path,
+		Sha256: parts[1],
+	})
+	return nil
+}
+
+func parseHTTPSchemeOption(opt *CodeGeneratorOption, value string) error {
+	parts := strings.Split(value, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+	}
+	file, err := downloadFile("http://" + parts[0])
+	if err != nil {
+		return err
+	}
+	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
+		Path:   file.Name(),
+		Sha256: parts[1],
+	})
+	return nil
+}
+
+func parseHTTPSSchemeOption(opt *CodeGeneratorOption, value string) error {
+	parts := strings.Split(value, ":")
+	if len(parts) != 2 {
+		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+	}
+	file, err := downloadFile("https://" + parts[0])
+	if err != nil {
+		return err
+	}
+	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
+		Path:   file.Name(),
+		Sha256: parts[1],
+	})
+	return nil
+}
+
+func downloadFile(url string) (*os.File, error) {
+	resp, err := http.Get(url) //nolint:gosec
+	if err != nil {
+		return nil, fmt.Errorf("grpc-federation: failed to download %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	f, err := os.CreateTemp("", "grpc-federation-code-generation-plugin")
+	if err != nil {
+		return nil, fmt.Errorf("grpc-federation: failed to create temp file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		return nil, fmt.Errorf("grpc-federation: failed to copy downloaded content to temp file: %w", err)
+	}
+	return f, nil
+}
+
+func splitOpt(opt string) []string {
+	return strings.Split(opt, ",")
+}
+
+type partOption struct {
+	kind  string
+	value string
+}
+
+func splitOptPattern(opt string) (*partOption, error) {
+	parts := strings.Split(opt, "=")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("grpc-federation: unexpected option format: %s", opt)
+	}
+	return &partOption{
+		kind:  parts[0],
+		value: parts[1],
+	}, nil
 }

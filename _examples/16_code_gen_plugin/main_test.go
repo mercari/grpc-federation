@@ -33,6 +33,8 @@ func dialer(ctx context.Context, address string) (net.Conn, error) {
 	return listener.Dial()
 }
 
+type resolver struct{}
+
 func TestFederation(t *testing.T) {
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
@@ -47,7 +49,7 @@ func TestFederation(t *testing.T) {
 			sdktrace.WithResource(
 				resource.NewWithAttributes(
 					semconv.SchemaURL,
-					semconv.ServiceNameKey.String("example15/condition"),
+					semconv.ServiceNameKey.String("example16/codegenplugin"),
 					semconv.ServiceVersionKey.String("1.0.0"),
 					attribute.String("environment", "dev"),
 				),
@@ -74,13 +76,8 @@ func TestFederation(t *testing.T) {
 		Level: slog.LevelDebug,
 	}))
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
-		CELPlugin: &federation.FederationServiceCELPluginConfig{
-			Regexp: federation.FederationServiceCELPluginWasmConfig{
-				Path:   "regexp.wasm",
-				Sha256: "0930ae259c7b742192327a7761fb207ea1d3b7f37f912ca4dc742b3f359af0f9",
-			},
-		},
-		Logger: logger,
+		Logger:   logger,
+		Resolver: new(resolver),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -94,30 +91,17 @@ func TestFederation(t *testing.T) {
 	}()
 
 	client := federation.NewFederationServiceClient(conn)
-	t.Run("success", func(t *testing.T) {
-		res, err := client.IsMatch(ctx, &federation.IsMatchRequest{
-			Expr:   "hello world",
-			Target: "hello world world",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if diff := cmp.Diff(res, &federation.IsMatchResponse{
-			Result: true,
-		}, cmpopts.IgnoreUnexported(
-			federation.IsMatchResponse{},
-		)); diff != "" {
-			t.Errorf("(-got, +want)\n%s", diff)
-		}
+	res, err := client.Get(ctx, &federation.GetRequest{
+		Id: 10,
 	})
-	t.Run("failure", func(t *testing.T) {
-		_, err := client.IsMatch(ctx, &federation.IsMatchRequest{
-			Expr:   "[]",
-			Target: "hello world world",
-		})
-		if err == nil {
-			t.Fatal("expected error")
-		}
-		t.Logf("expected error is %s", err)
-	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(res, &federation.GetResponse{
+		Id: 10,
+	}, cmpopts.IgnoreUnexported(
+		federation.GetResponse{},
+	)); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
 }

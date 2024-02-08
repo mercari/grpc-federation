@@ -6,6 +6,7 @@ require (
 	github.com/bufbuild/buf v1.21.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
 	github.com/golangci/golangci-lint v1.54.2
+	github.com/planetscale/vtprotobuf v0.6.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0
 	google.golang.org/protobuf v1.31.0
 )

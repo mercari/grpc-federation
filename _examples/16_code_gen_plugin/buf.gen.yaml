@@ -1,0 +1,15 @@
+version: v1
+managed:
+  enabled: true
+plugins:
+  - plugin: go
+    out: .
+    opt: paths=source_relative
+  - plugin: go-grpc
+    out: .
+    opt: paths=source_relative
+  - plugin: grpc-federation
+    out: .
+    opt:
+      - paths=source_relative
+      - plugins=file://plugin.wasm:d010eb2cb5ad1c95d428bfea50dcce918619f4760230588e8c3df95635c992fe

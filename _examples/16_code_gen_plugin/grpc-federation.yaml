@@ -1,0 +1,14 @@
+imports:
+  - proto
+src:
+  - proto
+out: .
+plugins:
+  - plugin: go
+    opt: paths=source_relative
+  - plugin: go-grpc
+    opt: paths=source_relative
+  - plugin: grpc-federation
+    opt:
+      - paths=source_relative
+      - plugins=file://plugin.wasm:d010eb2cb5ad1c95d428bfea50dcce918619f4760230588e8c3df95635c992fe

@@ -34,15 +34,35 @@ func newEncoder() *encoder {
 	}
 }
 
-func ResolverFilesToCodeGeneratorRequest(files []*resolver.File) *plugin.CodeGeneratorRequest {
-	return newEncoder().toCodeGeneratorRequest(files)
+type ActionType string
+
+const (
+	KeepAction   ActionType = "keep"
+	CreateAction ActionType = "create"
+	DeleteAction ActionType = "delete"
+	UpdateAction ActionType = "update"
+	ProtocAction ActionType = "protoc"
+)
+
+type CodeGeneratorRequestConfig struct {
+	Type                ActionType
+	ProtoPath           string
+	OutDir              string
+	Files               []*plugin.ProtoCodeGeneratorResponse_File
+	GRPCFederationFiles []*resolver.File
 }
 
-func (e *encoder) toCodeGeneratorRequest(files []*resolver.File) *plugin.CodeGeneratorRequest {
+func CreateCodeGeneratorRequest(cfg *CodeGeneratorRequestConfig) *plugin.CodeGeneratorRequest {
+	return newEncoder().toCodeGeneratorRequest(cfg)
+}
+
+func (e *encoder) toCodeGeneratorRequest(cfg *CodeGeneratorRequestConfig) *plugin.CodeGeneratorRequest {
 	ret := &plugin.CodeGeneratorRequest{
+		ProtoPath: cfg.ProtoPath,
+		OutDir:    cfg.OutDir,
 		Reference: e.ref,
 	}
-	for _, file := range e.toFiles(files) {
+	for _, file := range e.toFiles(cfg.GRPCFederationFiles) {
 		ret.GrpcFederationFileIds = append(ret.GrpcFederationFileIds, file.GetId())
 	}
 	return ret
@@ -59,7 +79,6 @@ func (e *encoder) toFile(file *resolver.File) *plugin.File {
 	ret := &plugin.File{
 		Id:        id,
 		Name:      file.Name,
-		Desc:      file.Desc,
 		GoPackage: e.toGoPackage(file.GoPackage),
 	}
 	e.ref.FileMap[id] = ret
@@ -752,9 +771,8 @@ func (e *encoder) toCELValue(v *resolver.CELValue) *plugin.CELValue {
 		return nil
 	}
 	return &plugin.CELValue{
-		Expr:        v.Expr,
-		Out:         e.toType(v.Out),
-		CheckedExpr: v.CheckedExpr,
+		Expr: v.Expr,
+		Out:  e.toType(v.Out),
 	}
 }
 

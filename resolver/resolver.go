@@ -1,3 +1,5 @@
+//go:build !tinygo.wasm
+
 package resolver
 
 import (
@@ -3602,44 +3604,6 @@ func (r *Resolver) trimPackage(pkg *Package, name string) string {
 		return name
 	}
 	return strings.TrimPrefix(name, fmt.Sprintf("%s.", pkg.Name))
-}
-
-// ReferenceNames returns all the unique reference names in the error definition.
-func (v *ValidationError) ReferenceNames() []string {
-	nameSet := make(map[string]struct{})
-	register := func(names []string) {
-		for _, name := range names {
-			nameSet[name] = struct{}{}
-		}
-	}
-	register(v.If.ReferenceNames())
-	for _, detail := range v.Details {
-		register(detail.If.ReferenceNames())
-		for _, message := range detail.Messages {
-			register(message.ReferenceNames())
-		}
-		for _, failure := range detail.PreconditionFailures {
-			for _, violation := range failure.Violations {
-				register(violation.Type.ReferenceNames())
-				register(violation.Subject.ReferenceNames())
-				register(violation.Description.ReferenceNames())
-			}
-		}
-		for _, req := range detail.BadRequests {
-			for _, violation := range req.FieldViolations {
-				register(violation.Field.ReferenceNames())
-				register(violation.Description.ReferenceNames())
-			}
-		}
-		for _, msg := range detail.LocalizedMessages {
-			register(msg.Message.ReferenceNames())
-		}
-	}
-	names := make([]string, 0, len(nameSet))
-	for name := range nameSet {
-		names = append(names, name)
-	}
-	return names
 }
 
 func splitGoPackageName(goPackage string) (string, string, error) {

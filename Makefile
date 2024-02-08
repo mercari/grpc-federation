@@ -32,6 +32,7 @@ tools:
 		google.golang.org/protobuf/cmd/protoc-gen-go \
 		google.golang.org/grpc/cmd/protoc-gen-go-grpc \
 		github.com/envoyproxy/protoc-gen-validate/cmd/protoc-gen-validate-go \
+		github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto \
 		github.com/golangci/golangci-lint/cmd/golangci-lint
 
 .PHONY: lint
@@ -109,7 +110,8 @@ install/vscode-dependencies:
 
 .PHONY: test
 test: test/examples
-	go test -race -coverpkg=$(COVERPKG_OPT) -covermode=atomic -coverprofile=cover.out `go list ./... | grep -v github.com/mercari/grpc-federation/tools`
+	go test -race -coverpkg=$(COVERPKG_OPT) -covermode=atomic -coverprofile=cover.out.tmp `go list ./... | grep -v github.com/mercari/grpc-federation/tools`
+	cat cover.out.tmp |grep -v "pb.go" > cover.out && rm cover.out.tmp
 
 test/examples: $(foreach var,$(EXAMPLES),test/examples/$(var))
 

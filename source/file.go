@@ -9,7 +9,6 @@ import (
 	"github.com/bufbuild/protocompile/ast"
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"
-	"go.lsp.dev/protocol"
 )
 
 const (
@@ -1366,42 +1365,4 @@ func (f *File) nodeInfo(node ast.Node) *ast.NodeInfo {
 
 func (f *File) matchOption(target, opt string) bool {
 	return strings.HasPrefix(strings.TrimPrefix(target, "."), opt)
-}
-
-func (f *File) SemanticTokenTypeMap() map[ast.Token]protocol.SemanticTokenTypes {
-	tokenToSemanticTokenTypeMap := map[ast.Token]protocol.SemanticTokenTypes{}
-	_ = ast.Walk(f.fileNode, &ast.SimpleVisitor{
-		DoVisitMessageNode: func(msg *ast.MessageNode) error {
-			tokenToSemanticTokenTypeMap[msg.Name.Token()] = protocol.SemanticTokenType
-			return nil
-		},
-		DoVisitFieldNode: func(field *ast.FieldNode) error {
-			nameToken := field.Name.Token()
-			tokenToSemanticTokenTypeMap[nameToken-1] = protocol.SemanticTokenType
-			tokenToSemanticTokenTypeMap[nameToken] = protocol.SemanticTokenProperty
-			return nil
-		},
-		DoVisitServiceNode: func(svc *ast.ServiceNode) error {
-			tokenToSemanticTokenTypeMap[svc.Name.Token()] = protocol.SemanticTokenType
-			return nil
-		},
-		DoVisitRPCNode: func(rpc *ast.RPCNode) error {
-			tokenToSemanticTokenTypeMap[rpc.Name.Token()] = protocol.SemanticTokenMethod
-			tokenToSemanticTokenTypeMap[rpc.Input.OpenParen.Token()+1] = protocol.SemanticTokenType
-			tokenToSemanticTokenTypeMap[rpc.Output.OpenParen.Token()+1] = protocol.SemanticTokenType
-			return nil
-		},
-		DoVisitOptionNode: func(opt *ast.OptionNode) error {
-			for _, part := range opt.Name.Parts {
-				switch n := part.Name.(type) {
-				case *ast.CompoundIdentNode:
-					for _, comp := range n.Components {
-						tokenToSemanticTokenTypeMap[comp.Token()] = protocol.SemanticTokenNamespace
-					}
-				}
-			}
-			return nil
-		},
-	})
-	return tokenToSemanticTokenTypeMap
 }

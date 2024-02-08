@@ -31,8 +31,42 @@ type PluginConfig struct {
 	// If the name of the plugin is 'protoc-gen-go', write 'go'. ('protoc-gen-' prefix can be omitted).
 	Plugin string `yaml:"plugin"`
 	// Option specify options to be passed protoc plugin.
-	Opt           string `yaml:"opt"`
+	Opt           *PluginOption `yaml:"opt"`
 	installedPath string
+}
+
+type PluginOption struct {
+	Opts []string
+}
+
+func (o *PluginOption) String() string {
+	if o == nil {
+		return ""
+	}
+	return strings.Join(o.Opts, ",")
+}
+
+func (o *PluginOption) MarshalYAML() ([]byte, error) {
+	if o == nil {
+		return nil, nil
+	}
+	return []byte(o.String()), nil
+}
+
+func (o *PluginOption) UnmarshalYAML(b []byte) error {
+	{
+		var v []string
+		if err := yaml.Unmarshal(b, &v); err == nil {
+			o.Opts = append(o.Opts, v...)
+			return nil
+		}
+	}
+	var v string
+	if err := yaml.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	o.Opts = append(o.Opts, v)
+	return nil
 }
 
 func (c *Config) GetAutoProtocGenGo() bool {
@@ -127,7 +161,7 @@ func addStandardPlugin(cfg *Config, name string) {
 	path, _ := exec.LookPath(name)
 	cfg.Plugins = append(cfg.Plugins, &PluginConfig{
 		Plugin:        name,
-		Opt:           "paths=source_relative",
+		Opt:           &PluginOption{Opts: []string{"paths=source_relative"}},
 		installedPath: path,
 	})
 }

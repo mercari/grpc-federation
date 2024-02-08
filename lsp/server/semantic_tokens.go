@@ -23,7 +23,7 @@ func (h *Handler) semanticTokensFull(params *protocol.SemanticTokensParams) (*pr
 		col  = 1
 		data []uint32
 	)
-	tokenTypeMap := file.SemanticTokenTypeMap()
+	tokenTypeMap := semanticTokenTypeMap(file)
 	_ = ast.Walk(file.AST(), &ast.SimpleVisitor{
 		DoVisitTerminalNode: func(n ast.TerminalNode) error {
 			curToken := n.Token()
@@ -78,4 +78,42 @@ func (h *Handler) calcLineAndCol(pos ast.SourcePos, line, col int) (int, int) {
 		return 0, pos.Col - col
 	}
 	return pos.Line - line, pos.Col - 1
+}
+
+func semanticTokenTypeMap(f *source.File) map[ast.Token]protocol.SemanticTokenTypes {
+	tokenToSemanticTokenTypeMap := map[ast.Token]protocol.SemanticTokenTypes{}
+	_ = ast.Walk(f.AST(), &ast.SimpleVisitor{
+		DoVisitMessageNode: func(msg *ast.MessageNode) error {
+			tokenToSemanticTokenTypeMap[msg.Name.Token()] = protocol.SemanticTokenType
+			return nil
+		},
+		DoVisitFieldNode: func(field *ast.FieldNode) error {
+			nameToken := field.Name.Token()
+			tokenToSemanticTokenTypeMap[nameToken-1] = protocol.SemanticTokenType
+			tokenToSemanticTokenTypeMap[nameToken] = protocol.SemanticTokenProperty
+			return nil
+		},
+		DoVisitServiceNode: func(svc *ast.ServiceNode) error {
+			tokenToSemanticTokenTypeMap[svc.Name.Token()] = protocol.SemanticTokenType
+			return nil
+		},
+		DoVisitRPCNode: func(rpc *ast.RPCNode) error {
+			tokenToSemanticTokenTypeMap[rpc.Name.Token()] = protocol.SemanticTokenMethod
+			tokenToSemanticTokenTypeMap[rpc.Input.OpenParen.Token()+1] = protocol.SemanticTokenType
+			tokenToSemanticTokenTypeMap[rpc.Output.OpenParen.Token()+1] = protocol.SemanticTokenType
+			return nil
+		},
+		DoVisitOptionNode: func(opt *ast.OptionNode) error {
+			for _, part := range opt.Name.Parts {
+				switch n := part.Name.(type) {
+				case *ast.CompoundIdentNode:
+					for _, comp := range n.Components {
+						tokenToSemanticTokenTypeMap[comp.Token()] = protocol.SemanticTokenNamespace
+					}
+				}
+			}
+			return nil
+		},
+	})
+	return tokenToSemanticTokenTypeMap
 }

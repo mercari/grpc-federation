@@ -19,10 +19,6 @@ func (s *Service) Package() *Package {
 	return s.File.Package
 }
 
-func (s *Service) FQDN() string {
-	return fmt.Sprintf("%s.%s", s.PackageName(), s.Name)
-}
-
 func (s *Service) PackageName() string {
 	pkg := s.Package()
 	if pkg == nil {
