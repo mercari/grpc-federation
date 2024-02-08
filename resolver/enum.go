@@ -1,14 +1,5 @@
 package resolver
 
-import "fmt"
-
-func (e *Enum) FQDN() string {
-	if e.Message != nil {
-		return fmt.Sprintf("%s.%s", e.Message.FQDN(), e.Name)
-	}
-	return fmt.Sprintf("%s.%s", e.PackageName(), e.Name)
-}
-
 func (e *Enum) HasValue(name string) bool {
 	return e.Value(name) != nil
 }

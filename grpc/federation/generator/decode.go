@@ -2,10 +2,10 @@ package generator
 
 import (
 	"fmt"
+	"io"
 	"time"
 
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/pluginpb"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/mercari/grpc-federation/grpc/federation/generator/plugin"
 	"github.com/mercari/grpc-federation/resolver"
@@ -15,16 +15,20 @@ import (
 type CodeGeneratorRequest struct {
 	ProtoPath           string
 	OutDir              string
-	Files               []*pluginpb.CodeGeneratorResponse_File
+	Files               []*plugin.ProtoCodeGeneratorResponse_File
 	GRPCFederationFiles []*resolver.File
 }
 
-func ToCodeGeneratorRequest(b []byte) (*CodeGeneratorRequest, error) {
-	var v plugin.CodeGeneratorRequest
-	if err := proto.Unmarshal(b, &v); err != nil {
+func ToCodeGeneratorRequest(r io.Reader) (*CodeGeneratorRequest, error) {
+	b, err := io.ReadAll(r)
+	if err != nil {
 		return nil, err
 	}
-	return newDecoder(v.GetReference()).toCodeGeneratorRequest(&v)
+	v := new(plugin.CodeGeneratorRequest)
+	if err := v.UnmarshalVT(b); err != nil {
+		return nil, err
+	}
+	return newDecoder(v.GetReference()).toCodeGeneratorRequest(v)
 }
 
 type decoder struct {
@@ -124,7 +128,6 @@ func (d *decoder) toFile(id string) (*resolver.File, error) {
 		return nil, err
 	}
 	ret.Name = file.GetName()
-	ret.Desc = file.GetDesc()
 	ret.Package = pkg
 	ret.GoPackage = d.toGoPackage(file.GetGoPackage())
 	ret.Services = svcs
@@ -203,6 +206,7 @@ func (d *decoder) toService(id string) (*resolver.Service, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	msgArgs, err := d.toMessages(svc.GetMessageArgIds())
 	if err != nil {
 		return nil, err
@@ -367,7 +371,6 @@ func (d *decoder) toField(id string) (*resolver.Field, error) {
 	}
 	ret := &resolver.Field{Name: field.GetName()}
 	d.fieldMap[id] = ret
-
 	typ, err := d.toType(field.GetType())
 	if err != nil {
 		return nil, err
@@ -376,18 +379,18 @@ func (d *decoder) toField(id string) (*resolver.Field, error) {
 	if err != nil {
 		return nil, err
 	}
-	rule, err := d.toFieldRule(field.GetRule())
+	msg, err := d.toMessage(field.GetMessageId())
 	if err != nil {
 		return nil, err
 	}
-	msg, err := d.toMessage(field.GetMessageId())
+	rule, err := d.toFieldRule(field.GetRule())
 	if err != nil {
 		return nil, err
 	}
 	ret.Type = typ
 	ret.Oneof = oneof
-	ret.Rule = rule
 	ret.Message = msg
+	ret.Rule = rule
 	return ret, nil
 }
 
@@ -447,8 +450,7 @@ func (d *decoder) toCELValue(value *plugin.CELValue) (*resolver.CELValue, error)
 		return nil, nil
 	}
 	ret := &resolver.CELValue{
-		Expr:        value.GetExpr(),
-		CheckedExpr: value.GetCheckedExpr(),
+		Expr: value.GetExpr(),
 	}
 	out, err := d.toType(value.GetOut())
 	if err != nil {
@@ -1022,6 +1024,18 @@ func (d *decoder) toMapIteratorExpr(expr *plugin.MapIteratorExpr) (*resolver.Map
 	return ret, nil
 }
 
+// (*durationpb.Duration).AsDuration's origin implementation is here.
+// https://github.com/protocolbuffers/protobuf-go/blob/3068604084670a0d5cc410b3489db359c30afd33/types/known/durationpb/duration.pb.go#L171-L188
+// However, this cannot be compiled by tinygo, so use the one without the overflow logic.
+// Since this is used in decode process, it is assumed that overflow does not occur.
+func asDurationNoOverflow(v *durationpb.Duration) time.Duration {
+	secs := v.GetSeconds()
+	nanos := v.GetNanos()
+	d := time.Duration(secs) * time.Second
+	d += time.Duration(nanos) * time.Nanosecond
+	return d
+}
+
 func (d *decoder) toCallExpr(expr *plugin.CallExpr) (*resolver.CallExpr, error) {
 	if expr == nil {
 		return nil, nil
@@ -1036,19 +1050,16 @@ func (d *decoder) toCallExpr(expr *plugin.CallExpr) (*resolver.CallExpr, error) 
 	if err != nil {
 		return nil, err
 	}
-	var timeout *time.Duration
-	if expr.Timeout != nil {
-		duration := expr.GetTimeout().AsDuration()
-		timeout = &duration
-	}
 	retry, err := d.toRetryPolicy(expr.GetRetry())
 	if err != nil {
 		return nil, err
 	}
-
+	if expr.Timeout != nil {
+		timeout := asDurationNoOverflow(expr.GetTimeout())
+		ret.Timeout = &timeout
+	}
 	ret.Method = mtd
 	ret.Request = req
-	ret.Timeout = timeout
 	ret.Retry = retry
 	return ret, nil
 }
@@ -1120,20 +1131,24 @@ func (d *decoder) toRetryPolicy(retry *plugin.RetryPolicy) (*resolver.RetryPolic
 	switch {
 	case retry.GetConstant() != nil:
 		cons := retry.GetConstant()
+		interval := asDurationNoOverflow(cons.GetInterval())
 		ret.Constant = &resolver.RetryPolicyConstant{
-			Interval:   cons.GetInterval().AsDuration(),
+			Interval:   interval,
 			MaxRetries: cons.GetMaxRetries(),
 		}
 		return ret, nil
 	case retry.GetExponential() != nil:
 		exp := retry.GetExponential()
+		initialInterval := asDurationNoOverflow(exp.GetInitialInterval())
+		maxInterval := asDurationNoOverflow(exp.GetMaxInterval())
+		maxElapsedTime := asDurationNoOverflow(exp.GetMaxElapsedTime())
 		ret.Exponential = &resolver.RetryPolicyExponential{
-			InitialInterval:     exp.GetInitialInterval().AsDuration(),
+			InitialInterval:     initialInterval,
 			RandomizationFactor: exp.GetRandomizationFactor(),
 			Multiplier:          exp.GetMultiplier(),
-			MaxInterval:         exp.GetMaxInterval().AsDuration(),
+			MaxInterval:         maxInterval,
 			MaxRetries:          exp.GetMaxRetries(),
-			MaxElapsedTime:      exp.GetMaxElapsedTime().AsDuration(),
+			MaxElapsedTime:      maxElapsedTime,
 		}
 		return ret, nil
 	}
@@ -1488,14 +1503,12 @@ func (d *decoder) toMethodRule(rule *plugin.MethodRule) *resolver.MethodRule {
 	if rule == nil {
 		return nil
 	}
-	var timeout *time.Duration
+	ret := &resolver.MethodRule{}
 	if rule.Timeout != nil {
-		t := rule.GetTimeout().AsDuration()
-		timeout = &t
+		timeout := asDurationNoOverflow(rule.GetTimeout())
+		ret.Timeout = &timeout
 	}
-	return &resolver.MethodRule{
-		Timeout: timeout,
-	}
+	return ret
 }
 
 func (d *decoder) toEnums(ids []string) ([]*resolver.Enum, error) {

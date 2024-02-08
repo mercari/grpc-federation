@@ -1,6 +1,7 @@
 package generator_test
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -37,12 +38,14 @@ func TestRoundTrip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		file := generator.ResolverFilesToCodeGeneratorRequest(result.Files)
-		req, err := proto.Marshal(file)
+		genReq := generator.CreateCodeGeneratorRequest(&generator.CodeGeneratorRequestConfig{
+			GRPCFederationFiles: result.Files,
+		})
+		genReqBytes, err := proto.Marshal(genReq)
 		if err != nil {
 			t.Fatal(err)
 		}
-		decoded, err := generator.ToCodeGeneratorRequest(req)
+		decoded, err := generator.ToCodeGeneratorRequest(bytes.NewBuffer(genReqBytes))
 		if err != nil {
 			t.Fatal(err)
 		}

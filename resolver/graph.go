@@ -1,3 +1,5 @@
+//go:build !tinygo.wasm
+
 package resolver
 
 import (
@@ -7,16 +9,6 @@ import (
 
 	"github.com/mercari/grpc-federation/source"
 )
-
-type AllMessageDependencyGraph struct {
-	Roots []*AllMessageDependencyGraphNode
-}
-
-type AllMessageDependencyGraphNode struct {
-	Parent   []*AllMessageDependencyGraphNode
-	Children []*AllMessageDependencyGraphNode
-	Message  *Message
-}
 
 // CreateAllMessageDependencyGraph creates a dependency graph for all messages with  message options defined.
 func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageDependencyGraph {
@@ -234,12 +226,6 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 	return graph
 }
 
-type MessageDependencyGraph struct {
-	MessageRule    *MessageRule
-	FieldOneofRule *FieldOneofRule
-	Roots          []*MessageDependencyGraphNode
-}
-
 func (g *MessageDependencyGraph) VariableDefinitionGroups(ctx *context) []VariableDefinitionGroup {
 	var groups []VariableDefinitionGroup
 	for _, child := range g.uniqueChildren() {
@@ -344,16 +330,6 @@ func (g *MessageDependencyGraph) createVariableDefinitionByFieldOneofRule(ctx *c
 		),
 	)
 	return nil
-}
-
-type MessageDependencyGraphNode struct {
-	Parent             []*MessageDependencyGraphNode
-	Children           []*MessageDependencyGraphNode
-	ParentMap          map[*MessageDependencyGraphNode]struct{}
-	ChildrenMap        map[*MessageDependencyGraphNode]struct{}
-	BaseMessage        *Message
-	Message            *Message
-	VariableDefinition *VariableDefinition
 }
 
 func (n *MessageDependencyGraphNode) FQDN() string {

@@ -4,6 +4,24 @@ import (
 	"sort"
 )
 
+func (g *SequentialVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
+	var defs VariableDefinitions
+	if g.Start != nil {
+		defs = append(defs, g.Start.VariableDefinitions()...)
+	}
+	defs = append(defs, g.End)
+	return defs
+}
+
+func (g *ConcurrentVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
+	var defs VariableDefinitions
+	for _, start := range g.Starts {
+		defs = append(defs, start.VariableDefinitions()...)
+	}
+	defs = append(defs, g.End)
+	return defs
+}
+
 func (def *VariableDefinition) ReferenceNames() []string {
 	refNameMap := make(map[string]struct{})
 	if def.If != nil {
@@ -63,4 +81,114 @@ func (def *VariableDefinition) MessageExprs() []*MessageExpr {
 		return ret
 	}
 	return nil
+}
+
+// ReferenceNames returns all the unique reference names in the error definition.
+func (v *ValidationError) ReferenceNames() []string {
+	nameSet := make(map[string]struct{})
+	register := func(names []string) {
+		for _, name := range names {
+			nameSet[name] = struct{}{}
+		}
+	}
+	register(v.If.ReferenceNames())
+	for _, detail := range v.Details {
+		register(detail.If.ReferenceNames())
+		for _, message := range detail.Messages {
+			register(message.ReferenceNames())
+		}
+		for _, failure := range detail.PreconditionFailures {
+			for _, violation := range failure.Violations {
+				register(violation.Type.ReferenceNames())
+				register(violation.Subject.ReferenceNames())
+				register(violation.Description.ReferenceNames())
+			}
+		}
+		for _, req := range detail.BadRequests {
+			for _, violation := range req.FieldViolations {
+				register(violation.Field.ReferenceNames())
+				register(violation.Description.ReferenceNames())
+			}
+		}
+		for _, msg := range detail.LocalizedMessages {
+			register(msg.Message.ReferenceNames())
+		}
+	}
+	names := make([]string, 0, len(nameSet))
+	for name := range nameSet {
+		names = append(names, name)
+	}
+	return names
+}
+
+func (e *CallExpr) ReferenceNames() []string {
+	if e.Request == nil {
+		return nil
+	}
+
+	var refNames []string
+	for _, arg := range e.Request.Args {
+		refNames = append(refNames, arg.Value.ReferenceNames()...)
+	}
+	return refNames
+}
+
+func (e *MapExpr) ReferenceNames() []string {
+	if e == nil {
+		return nil
+	}
+
+	refNameMap := make(map[string]struct{})
+	if e.Iterator != nil {
+		if e.Iterator.Name != "" {
+			refNameMap[e.Iterator.Name] = struct{}{}
+		}
+		if e.Iterator.Source != nil && e.Iterator.Source.Name != "" {
+			refNameMap[e.Iterator.Source.Name] = struct{}{}
+		}
+	}
+
+	for _, name := range e.Expr.ReferenceNames() {
+		refNameMap[name] = struct{}{}
+	}
+
+	refNames := make([]string, 0, len(refNameMap))
+	for name := range refNameMap {
+		refNames = append(refNames, name)
+	}
+	sort.Strings(refNames)
+	return refNames
+}
+
+func (e *MapIteratorExpr) ReferenceNames() []string {
+	if e == nil {
+		return nil
+	}
+
+	refNameMap := make(map[string]struct{})
+	switch {
+	case e.By != nil:
+		for _, name := range e.By.ReferenceNames() {
+			refNameMap[name] = struct{}{}
+		}
+	case e.Message != nil:
+		for _, name := range e.Message.ReferenceNames() {
+			refNameMap[name] = struct{}{}
+		}
+	}
+
+	refNames := make([]string, 0, len(refNameMap))
+	for name := range refNameMap {
+		refNames = append(refNames, name)
+	}
+	sort.Strings(refNames)
+	return refNames
+}
+
+func (e *MapIteratorExpr) ToVariableExpr() *VariableExpr {
+	return &VariableExpr{
+		Type:    e.Type,
+		By:      e.By,
+		Message: e.Message,
+	}
 }

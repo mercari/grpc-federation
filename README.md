@@ -86,9 +86,11 @@ We plan to make these extension points extensible with WebAssembly. Currently, o
 
 If you want to run your own auto-generated process using the results of the gRPC Federation, this feature is available.
 
+[How to run your own code generation process](./docs/code_generation_plugin.md)
+
 ### 3.2 The complex processes that cannot be expressed by Protocol Buffers
 
-The gRPC Federation uses a hybrid system in which logic that cannot be expressed in Protocol Buffers is developed in the Go language. Therefore, we plan to adopt WebAssembly in order to be able to extend it outside of the Go language in the future.
+The gRPC Federation uses a hybrid system in which logic that cannot be expressed in Protocol Buffers is developed in the Go language. Also, we plan to support WebAssembly in order to extend dedicated logic in the future.
 
 [See here for features on extending with the Go language](./docs/references.md#grpcfederationmessagecustom_resolver)
 

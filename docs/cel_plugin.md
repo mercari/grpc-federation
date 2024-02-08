@@ -4,7 +4,7 @@ This document explains how you can add your own logic as a CEL API and make it a
 
 We call this mechanism the CEL Plugin.
 
-This document is based on [_examples/15_plugin](./../_examples/15_plugin/). If you would like to see a working sample, please refer to that document.
+This document is based on [_examples/15_cel_plugin](./../_examples/15_cel_plugin/). If you would like to see a working sample, please refer to that document.
 
 ## 1. Write API definitions in ProtocolBuffers
 

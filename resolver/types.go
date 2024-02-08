@@ -334,6 +334,32 @@ type FieldOneofRule struct {
 	VariableDefinitionGroups []VariableDefinitionGroup
 }
 
+type AllMessageDependencyGraph struct {
+	Roots []*AllMessageDependencyGraphNode
+}
+
+type AllMessageDependencyGraphNode struct {
+	Parent   []*AllMessageDependencyGraphNode
+	Children []*AllMessageDependencyGraphNode
+	Message  *Message
+}
+
+type MessageDependencyGraph struct {
+	MessageRule    *MessageRule
+	FieldOneofRule *FieldOneofRule
+	Roots          []*MessageDependencyGraphNode
+}
+
+type MessageDependencyGraphNode struct {
+	Parent             []*MessageDependencyGraphNode
+	Children           []*MessageDependencyGraphNode
+	ParentMap          map[*MessageDependencyGraphNode]struct{}
+	ChildrenMap        map[*MessageDependencyGraphNode]struct{}
+	BaseMessage        *Message
+	Message            *Message
+	VariableDefinition *VariableDefinition
+}
+
 type Type struct {
 	Kind       types.Kind
 	Repeated   bool
@@ -370,23 +396,6 @@ func (t *Type) IsNumber() bool {
 		return true
 	}
 	return false
-}
-
-func (t *Type) FQDN() string {
-	var repeated string
-	if t.Repeated {
-		repeated = "repeated "
-	}
-	if t.OneofField != nil {
-		return repeated + t.OneofField.FQDN()
-	}
-	if t.Message != nil {
-		return repeated + t.Message.FQDN()
-	}
-	if t.Enum != nil {
-		return repeated + t.Enum.FQDN()
-	}
-	return repeated + t.Kind.ToString()
 }
 
 type MethodCall struct {

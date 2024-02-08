@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {
+    option (grpc.federation.method).timeout = "10s";
+  };
+}
+
+message GetRequest {
+  int64 id = 1;
+}
+
+message GetResponse {
+  option (grpc.federation.message).custom_resolver = true;
+  int64 id = 1;
+}

@@ -98,9 +98,9 @@ func TestCodeGenerate(t *testing.T) {
 					Src:     srcFiles,
 					Out:     tmpDir,
 					Plugins: []*generator.PluginConfig{
-						{Plugin: "go", Opt: "paths=import"},
-						{Plugin: "go-grpc", Opt: "paths=import"},
-						{Plugin: "grpc-federation", Opt: "paths=import"},
+						{Plugin: "go", Opt: &generator.PluginOption{Opts: []string{"paths=import"}}},
+						{Plugin: "go-grpc", Opt: &generator.PluginOption{Opts: []string{"paths=import"}}},
+						{Plugin: "grpc-federation", Opt: &generator.PluginOption{Opts: []string{"paths=import"}}},
 					},
 				})
 				if err != nil {

@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/mercari/grpc-federation/types"
@@ -44,13 +43,6 @@ func (m *Message) Package() *Package {
 		return nil
 	}
 	return m.File.Package
-}
-
-func (m *Message) FQDN() string {
-	return strings.Join(
-		append(append([]string{m.PackageName()}, m.ParentMessageNames()...), m.Name),
-		".",
-	)
 }
 
 func (m *Message) HasRule() bool {

@@ -1,8 +1,6 @@
 package resolver
 
 import (
-	"fmt"
-
 	"github.com/mercari/grpc-federation/types"
 	"github.com/mercari/grpc-federation/util"
 )
@@ -49,8 +47,4 @@ func (f *OneofField) IsConflict() bool {
 		}
 	}
 	return false
-}
-
-func (f *OneofField) FQDN() string {
-	return fmt.Sprintf("%s.%s", f.Oneof.Message.FQDN(), f.Name)
 }
