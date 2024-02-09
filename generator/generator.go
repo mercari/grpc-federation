@@ -270,13 +270,21 @@ func (g *Generator) generateByPlugin(ctx context.Context, req *PluginRequest, cf
 		}
 		return nil, fmt.Errorf("failed to find installed path for %s", cfg.Plugin)
 	}
-	var stdout bytes.Buffer
+	var (
+		stdout, stderr bytes.Buffer
+	)
 	//nolint:gosec // only valid values are set to cfg.installedPath
 	cmd := exec.CommandContext(ctx, cfg.installedPath)
 	cmd.Stdin = req.content
 	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"grpc-federation: %s: %s: %w",
+			stdout.String(),
+			stderr.String(),
+			err,
+		)
 	}
 	var res pluginpb.CodeGeneratorResponse
 	if err := proto.Unmarshal(stdout.Bytes(), &res); err != nil {
@@ -745,6 +753,10 @@ func parseOptString(opt string) (*CodeGeneratorOption, error) {
 }
 
 func parseOpt(opt *CodeGeneratorOption, pat string) error {
+	if pat == "" {
+		// nothing option.
+		return nil
+	}
 	partOpt, err := splitOptPattern(pat)
 	if err != nil {
 		return err
