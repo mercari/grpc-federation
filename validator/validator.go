@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -53,9 +54,7 @@ func ManualImportOption() ValidatorOption {
 
 func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...ValidatorOption) []*ValidationOutput {
 	v.pathToFileMap = map[string]*source.File{}
-	copied := make([]string, len(v.importPaths))
-	copy(copied, v.importPaths)
-	v.importPaths = copied
+	v.importPaths = []string{}
 	for _, opt := range opts {
 		opt(v)
 	}
@@ -162,16 +161,19 @@ func (v *Validator) getFile(path string) *source.File {
 	if exists {
 		return file
 	}
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil
+	for _, importPath := range append([]string{""}, v.importPaths...) {
+		content, err := os.ReadFile(filepath.Join(importPath, path))
+		if err != nil {
+			continue
+		}
+		f, err := source.NewFile(path, content)
+		if err != nil {
+			continue
+		}
+		v.pathToFileMap[path] = f
+		return f
 	}
-	f, err := source.NewFile(path, content)
-	if err != nil {
-		return nil
-	}
-	v.pathToFileMap[path] = f
-	return f
+	return nil
 }
 
 func ExistsError(outs []*ValidationOutput) bool {

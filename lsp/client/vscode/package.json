@@ -3,7 +3,7 @@
 	"description": "grpc-federation language server",
 	"author": "Mercari, Inc",
 	"license": "MIT",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/mercari/grpc-federation"
@@ -15,7 +15,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.74.0"
+		"vscode": "^1.77.0"
 	},
 	"activationEvents": [
 		"onLanguage:grpc-federation"
@@ -24,13 +24,13 @@
 	"contributes": {
 		"languages": [
 			{
-			  "id": "grpc-federation",
-			  "extensions": [
-				".proto"
-			  ],
-			  "aliases": [
-				"Protocol Buffers ( GRPC Federation )"
-			  ]
+				"id": "grpc-federation",
+				"extensions": [
+					".proto"
+				],
+				"aliases": [
+					"Protocol Buffers ( gRPC Federation )"
+				]
 			}
 		],
 		"configuration": {
@@ -61,21 +61,27 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w"
+		"vscode:prepublish": "webpack --mode production",
+		"webpack": "webpack --mode development"
 	},
+	"extensionDependencies": [
+		"ms-vscode.wasm-wasi-core"
+	],
 	"dependencies": {
-		"vscode-languageclient": "^7.0.0"
+		"@vscode/wasm-wasi": "0.13.0-pre.1",
+		"vscode-languageclient": "9.0.1"
 	},
 	"devDependencies": {
 		"@types/mocha": "^9.1.0",
 		"@types/node": "^16.11.7",
+		"@types/vscode": "1.77.0",
 		"@typescript-eslint/eslint-plugin": "^5.42.0",
 		"@typescript-eslint/parser": "^5.42.0",
-		"@types/vscode": "^1.63.0",
 		"eslint": "^8.26.0",
 		"mocha": "^9.2.1",
-		"typescript": "^4.9.4"
+		"ts-loader": "^9.5.1",
+		"typescript": "^4.9.4",
+		"webpack": "^5.90.1",
+		"webpack-cli": "^5.1.4"
 	}
 }

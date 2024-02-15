@@ -12,7 +12,7 @@
 			"autoAttachChildProcesses": true,
 			"preLaunchTask": {
 				"type": "npm",
-				"script": "watch"
+				"script": "webpack"
 			}
 		}
 	]

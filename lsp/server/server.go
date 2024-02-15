@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"io"
 	"os"
@@ -16,6 +17,26 @@ type Server struct {
 	logFile *os.File
 	paths   []string
 	handler *Handler
+}
+
+type readerWrapper struct {
+	readCloser io.ReadCloser
+	reader     *bufio.Reader
+}
+
+func newReaderWrapper(readCloser io.ReadCloser) *readerWrapper {
+	return &readerWrapper{
+		readCloser: readCloser,
+		reader:     bufio.NewReaderSize(readCloser, 8192),
+	}
+}
+
+func (r *readerWrapper) Read(b []byte) (int, error) {
+	return r.reader.Read(b)
+}
+
+func (r *readerWrapper) Close() error {
+	return r.readCloser.Close()
 }
 
 type readWriteCloser struct {
@@ -53,7 +74,7 @@ func New(opts ...ServerOption) *Server {
 	conn := jsonrpc2.NewConn(
 		jsonrpc2.NewStream(
 			&readWriteCloser{
-				readCloser:  os.Stdin,
+				readCloser:  newReaderWrapper(os.Stdin),
 				writeCloser: os.Stdout,
 			},
 		),

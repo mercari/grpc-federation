@@ -95,13 +95,14 @@ build/grpc-federation-linter:
 	go build -o $(GOBIN)/grpc-federation-linter ./cmd/grpc-federation-linter
 
 build/grpc-federation-language-server:
+	GOOS=wasip1 GOARCH=wasm go build -o lsp/client/vscode/grpc-federation-language-server.wasm ./cmd/grpc-federation-language-server
 	go build -o $(GOBIN)/grpc-federation-language-server ./cmd/grpc-federation-language-server
 
 build/grpc-federation-generator:
 	go build -o $(GOBIN)/grpc-federation-generator ./cmd/grpc-federation-generator
 
 .PHONY: build/vscode-extension
-build/vscode-extension: install/vscode-dependencies
+build/vscode-extension: build/grpc-federation-language-server install/vscode-dependencies
 	cd lsp/client/vscode && npx vsce package -o grpc-federation-$(VERSION).vsix
 
 .PHONY: install/vscode-dependencies

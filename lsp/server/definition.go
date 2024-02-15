@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/bufbuild/protocompile/ast"
 	"go.lsp.dev/protocol"
@@ -214,9 +215,8 @@ func (h *Handler) methodAndFilePath(path string, protoFiles []*descriptorpb.File
 }
 
 func (h *Handler) currentPackageName(path string, protoFiles []*descriptorpb.FileDescriptorProto) (string, error) {
-	fileName := filepath.Base(path)
 	for _, protoFile := range protoFiles {
-		if protoFile.GetName() == fileName {
+		if strings.HasSuffix(path, protoFile.GetName()) {
 			return protoFile.GetPackage(), nil
 		}
 	}

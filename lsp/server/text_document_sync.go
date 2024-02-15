@@ -23,6 +23,6 @@ func (h *Handler) didChange(ctx context.Context, params *protocol.DidChangeTextD
 		h.fileToContentMap[path] = []byte(change.Text)
 	}
 	h.fileContentMu.Unlock()
-	go h.validateText(ctx, params.TextDocument.URI)
+	h.validateText(ctx, params.TextDocument.URI)
 	return nil
 }
