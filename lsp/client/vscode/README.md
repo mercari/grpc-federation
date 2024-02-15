@@ -1,4 +1,4 @@
-# GRPC Federation Language Server for VSCode
+# gRPC Federation Language Server for VSCode
 
 ## Features
 
