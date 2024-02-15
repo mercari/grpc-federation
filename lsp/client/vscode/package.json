@@ -1,6 +1,6 @@
 {
 	"name": "grpc-federation",
-	"description": "grpc-federation language server",
+	"description": "gRPC Federation Language Server",
 	"author": "Mercari, Inc",
 	"license": "MIT",
 	"version": "0.0.1",
@@ -24,18 +24,18 @@
 	"contributes": {
 		"languages": [
 			{
-			  "id": "grpc-federation",
-			  "extensions": [
-				".proto"
-			  ],
-			  "aliases": [
-				"Protocol Buffers ( GRPC Federation )"
-			  ]
+				"id": "grpc-federation",
+				"extensions": [
+					".proto"
+				],
+				"aliases": [
+					"Protocol Buffers ( gRPC Federation )"
+				]
 			}
 		],
 		"configuration": {
 			"type": "object",
-			"title": "grpc-federation configuration",
+			"title": "gRPC Federation Configuration",
 			"properties": {
 				"grpc-federation": {
 					"type": "object",

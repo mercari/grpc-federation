@@ -28,7 +28,7 @@ jobs:
       - name: extract version from tags
         id: meta
         run: |
-          echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+          echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/:1}
       - name: build extension
         run: |
           make build/vscode-extension
@@ -51,3 +51,9 @@ jobs:
             ./dist/grpc-federation_*_checksums.txt
             ./dist/grpc-federation_*_*_*.tar.gz
             ./dist/grpc-federation_*_*_*.zip
+      - name: publish to Visual Studio Marketplace
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          pat: ${{ secrets.AZURE_DEVOPS_ACCESS_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+          extensionFile: "./lsp/client/vscode/grpc-federation-${{ steps.meta.outputs.VERSION }}.vsix"

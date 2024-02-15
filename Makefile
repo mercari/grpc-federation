@@ -101,12 +101,16 @@ build/grpc-federation-generator:
 	go build -o $(GOBIN)/grpc-federation-generator ./cmd/grpc-federation-generator
 
 .PHONY: build/vscode-extension
-build/vscode-extension: install/vscode-dependencies
+build/vscode-extension: versioning/vscode-extension install/vscode-dependencies
 	cd lsp/client/vscode && npx vsce package -o grpc-federation-$(VERSION).vsix
 
 .PHONY: install/vscode-dependencies
 install/vscode-dependencies:
 	cd lsp/client/vscode && npm install
+
+.PHONY: versioning/vscode-extension
+versioning/vscode-extension:
+	cd lsp/client/vscode && npm version $(VERSION)
 
 .PHONY: test
 test: test/examples
