@@ -28,7 +28,7 @@ jobs:
       - name: extract version from tags
         id: meta
         run: |
-          echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/:1}
+          echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
       - name: build extension
         run: |
           make build/vscode-extension
