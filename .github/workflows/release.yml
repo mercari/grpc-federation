@@ -29,17 +29,17 @@ jobs:
         id: meta
         run: |
           echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/v}
-      - name: build extension
-        run: |
-          make build/vscode-extension
-        env:
-          VERSION: ${{ steps.meta.outputs.VERSION }}
       - name: run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
           args: release --skip-publish --clean
+      - name: build extension
+        run: |
+          make build/vscode-extension
+        env:
+          VERSION: ${{ steps.meta.outputs.VERSION }}
       - name: release
         uses: softprops/action-gh-release@v1
         with:
