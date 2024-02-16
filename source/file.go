@@ -3,6 +3,7 @@ package source
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
@@ -20,9 +21,12 @@ const (
 	enumValueOptionName = "grpc.federation.enum_value"
 )
 
+var _ io.ReadCloser = new(File)
+
 type File struct {
 	path     string
 	content  []byte
+	buf      *bytes.Buffer
 	fileNode *ast.FileNode
 }
 
@@ -54,8 +58,17 @@ func NewFile(path string, content []byte) (*File, error) {
 	return &File{
 		path:     path,
 		content:  content,
+		buf:      bytes.NewBuffer(content),
 		fileNode: fileNode,
 	}, nil
+}
+
+func (f *File) Read(b []byte) (int, error) {
+	return f.buf.Read(b)
+}
+
+func (f *File) Close() error {
+	return nil
 }
 
 func (f *File) AST() *ast.FileNode {

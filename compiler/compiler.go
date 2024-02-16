@@ -131,9 +131,7 @@ func RelativePathFromImportPaths(protoPath string, importPaths []string) (string
 
 // Compile compile the target Protocol Buffers file and produces all file descriptors.
 func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Option) ([]*descriptorpb.FileDescriptorProto, error) {
-	copied := make([]string, len(c.importPaths))
-	copy(copied, c.importPaths)
-	c.importPaths = copied
+	c.importPaths = []string{}
 
 	for _, opt := range opts {
 		opt(c)
@@ -150,6 +148,9 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 		Resolver: protocompile.WithStandardImports(&protocompile.SourceResolver{
 			ImportPaths: append(c.importPaths, filepath.Dir(relPath), ""),
 			Accessor: func(p string) (io.ReadCloser, error) {
+				if p == file.Path() {
+					return file, nil
+				}
 				f, err := os.Open(p)
 				if err != nil {
 					if !c.manualImport && strings.HasSuffix(p, grpcFederationFilePath) {

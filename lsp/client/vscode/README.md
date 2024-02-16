@@ -1,12 +1,46 @@
-# GRPC Federation Language Server for VSCode
+# gRPC Federation Language Server for VSCode
 
 ## Features
 
-## Running the Example
+- Syntax Highlighting
+- Jump to Definition
+- Diagnostics
+- Code Completion
 
-- Run `npm install` in this folder. This installs all necessary npm modules in both the client and server folder
-- Open VS Code on this folder.
-- Press Ctrl+Shift+B to start compiling the client and server in [watch mode](https://code.visualstudio.com/docs/editor/tasks#:~:text=The%20first%20entry%20executes,the%20HelloWorld.js%20file.).
-- Switch to the Run and Debug View in the Sidebar (Ctrl+Shift+D).
-- Select `Launch Client` from the drop down (if it is not already).
-- Press ▷ to run the launch config (F5).
+## Install
+
+To use this extension, `grpc-federation-language-server` is required.
+
+If already installed Go in your local environment, please run the following command.
+
+```console
+$ go install github.com/mercari/grpc-federation/cmd/grpc-federation-language-server@latest
+```
+
+## Settings
+
+The following options can be set in `.vscode/settings.json` .
+
+The example settings is here.
+
+```json
+{
+    "grpc-federation": {
+        "path": "/path/to/grpc-federation-language-server",
+        "import-paths": [
+          "./proto"
+        ]
+    }
+}
+```
+
+### path
+
+Specify the path to the location where `grpc-federation-language-server` is installed.
+If the installation location has already been added to your `PATH` environment variable, you do not need to specify this.
+
+### import-paths
+
+Specifies the path to search for proto files.
+
+
