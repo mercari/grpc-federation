@@ -5,10 +5,18 @@ import (
 )
 
 func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.InitializeResult, error) {
-	var tokenTypes []protocol.SemanticTokenTypes
-	for idx, tokenType := range params.Capabilities.TextDocument.SemanticTokens.TokenTypes {
+	var (
+		tokenTypes     []protocol.SemanticTokenTypes
+		tokenModifiers []protocol.SemanticTokenModifiers
+	)
+	semanticTokens := params.Capabilities.TextDocument.SemanticTokens
+	for idx, tokenType := range semanticTokens.TokenTypes {
 		tokenTypes = append(tokenTypes, protocol.SemanticTokenTypes(tokenType))
 		h.tokenTypeMap[tokenType] = uint32(idx)
+	}
+	for idx, modifier := range semanticTokens.TokenModifiers {
+		tokenModifiers = append(tokenModifiers, protocol.SemanticTokenModifiers(modifier))
+		h.tokenModifierMap[modifier] = 1 << uint32(idx)
 	}
 	return &protocol.InitializeResult{
 		Capabilities: protocol.ServerCapabilities{
@@ -19,7 +27,8 @@ func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.Initi
 			},
 			SemanticTokensProvider: map[string]interface{}{
 				"legend": protocol.SemanticTokensLegend{
-					TokenTypes: tokenTypes,
+					TokenTypes:     tokenTypes,
+					TokenModifiers: tokenModifiers,
 				},
 				"full": true,
 			},
