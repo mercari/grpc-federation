@@ -2,10 +2,16 @@
 
 ## Features
 
-- Syntax Highlighting
-- Jump to Definition
-- Diagnostics
-- Code Completion
+### Syntax Highlighting
+
+Semantic Highlighting allows for accurate recognition of gRPC Federation options.
+Syntax highlighting is available in quoted value. So, this is especially effective in CEL value.
+
+<img width="800px" src="./images/semantic_highlighting.png"/>
+
+### Jump to Definition
+### Diagnostics
+### Code Completion
 
 ## Install
 
