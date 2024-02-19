@@ -360,113 +360,121 @@ func (p *SemanticTokenProvider) setNameToken(ctx *SemanticTokenProviderContext, 
 	if ctx.message {
 		tokenType = string(protocol.SemanticTokenType)
 	}
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col) + 1,
-		Text: name,
-		Type: tokenType,
-		Modifiers: []string{
-			string(protocol.SemanticTokenModifierDefinition),
-			string(protocol.SemanticTokenModifierReadonly),
+	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
 		},
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + len(text) - 1),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col) + 1,
+			Text: name,
+			Type: tokenType,
+			Modifiers: []string{
+				string(protocol.SemanticTokenModifierDefinition),
+				string(protocol.SemanticTokenModifierReadonly),
+			},
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + len(text) - 1),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+	}...)
 	ctx.message = false
 }
 
-func (p *SemanticTokenProvider) setMethodToken(ctx *SemanticTokenProviderContext, val ast.ValueNode) {
+func (p *SemanticTokenProvider) setMethodToken(_ *SemanticTokenProviderContext, val ast.ValueNode) {
 	tk := val.Start()
 	info := p.tree.TokenInfo(tk)
 	pos := info.Start()
 	text := info.RawText()
 	name := strings.Trim(text, `"`)
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + 1),
-		Text: name,
-		Type: string(protocol.SemanticTokenMethod),
-		Modifiers: []string{
-			string(protocol.SemanticTokenModifierReadonly),
+	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
 		},
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + len(text) - 1),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + 1),
+			Text: name,
+			Type: string(protocol.SemanticTokenMethod),
+			Modifiers: []string{
+				string(protocol.SemanticTokenModifierReadonly),
+			},
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + len(text) - 1),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+	}...)
 }
 
-func (p *SemanticTokenProvider) setEnumToken(ctx *SemanticTokenProviderContext, val ast.ValueNode) {
+func (p *SemanticTokenProvider) setEnumToken(_ *SemanticTokenProviderContext, val ast.ValueNode) {
 	tk := val.Start()
 	info := p.tree.TokenInfo(tk)
 	pos := info.Start()
 	text := info.RawText()
 	name := strings.Trim(text, `"`)
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + 1),
-		Text: name,
-		Type: string(protocol.SemanticTokenEnumMember),
-		Modifiers: []string{
-			string(protocol.SemanticTokenModifierReadonly),
+	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
 		},
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + len(text) - 1),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + 1),
+			Text: name,
+			Type: string(protocol.SemanticTokenEnumMember),
+			Modifiers: []string{
+				string(protocol.SemanticTokenModifierReadonly),
+			},
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + len(text) - 1),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+	}...)
 }
 
-func (p *SemanticTokenProvider) setFieldToken(ctx *SemanticTokenProviderContext, val ast.ValueNode) {
+func (p *SemanticTokenProvider) setFieldToken(_ *SemanticTokenProviderContext, val ast.ValueNode) {
 	tk := val.Start()
 	info := p.tree.TokenInfo(tk)
 	pos := info.Start()
 	text := info.RawText()
 	name := strings.Trim(text, `"`)
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + 1),
-		Text: name,
-		Type: string(protocol.SemanticTokenVariable),
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + len(text) - 1),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
+	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + 1),
+			Text: name,
+			Type: string(protocol.SemanticTokenVariable),
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + len(text) - 1),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+	}...)
 }
 
 func (p *SemanticTokenProvider) setAliasToken(ctx *SemanticTokenProviderContext, val ast.ValueNode) {
@@ -486,27 +494,29 @@ func (p *SemanticTokenProvider) setAliasToken(ctx *SemanticTokenProviderContext,
 	pos := info.Start()
 	text := info.RawText()
 	name := strings.Trim(text, `"`)
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + 1),
-		Text: name,
-		Type: tokenType,
-		Modifiers: []string{
-			string(protocol.SemanticTokenModifierReadonly),
+	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
 		},
-	})
-	p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
-		Line: uint32(pos.Line),
-		Col:  uint32(pos.Col + len(text) - 1),
-		Text: `"`,
-		Type: string(protocol.SemanticTokenString),
-	})
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + 1),
+			Text: name,
+			Type: tokenType,
+			Modifiers: []string{
+				string(protocol.SemanticTokenModifierReadonly),
+			},
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + len(text) - 1),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+	}...)
 }
 
 func (p *SemanticTokenProvider) setCELSemanticTokens(value ast.ValueNode) error {
