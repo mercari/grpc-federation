@@ -1,6 +1,7 @@
 {
 	"name": "grpc-federation",
-	"description": "gRPC Federation Language Server",
+	"displayName": "gRPC Federation",
+	"description": "gRPC Federation Language Server Extension",
 	"author": "Mercari, Inc",
 	"license": "MIT",
 	"version": "0.0.1",
@@ -33,6 +34,11 @@
 				]
 			}
 		],
+		"configurationDefaults": {
+			"[grpc-federation]": {
+				"editor.semanticHighlighting.enabled": true
+			}
+		},	
 		"configuration": {
 			"type": "object",
 			"title": "gRPC Federation Configuration",

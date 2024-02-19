@@ -24,6 +24,7 @@ type Handler struct {
 	fileContentMu    sync.Mutex
 	fileToContentMap map[string][]byte
 	tokenTypeMap     map[string]uint32
+	tokenModifierMap map[string]uint32
 }
 
 func NewHandler(client protocol.Client, w io.Writer, importPaths []string) *Handler {
@@ -37,7 +38,8 @@ func NewHandler(client protocol.Client, w io.Writer, importPaths []string) *Hand
 		completer:        NewCompleter(c, logger),
 		validator:        validator.New(),
 		fileToContentMap: map[string][]byte{},
-		tokenTypeMap:     map[string]uint32{},
+		tokenTypeMap:     make(map[string]uint32),
+		tokenModifierMap: make(map[string]uint32),
 	}
 }
 
