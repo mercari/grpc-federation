@@ -226,10 +226,10 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 	return graph
 }
 
-func (g *MessageDependencyGraph) VariableDefinitionGroups(ctx *context) []VariableDefinitionGroup {
+func (g *MessageDependencyGraph) VariableDefinitionGroups() []VariableDefinitionGroup {
 	var groups []VariableDefinitionGroup
 	for _, child := range g.uniqueChildren() {
-		if group := g.createVariableDefinitionGroup(ctx, child); group != nil {
+		if group := g.createVariableDefinitionGroup(child); group != nil {
 			groups = append(groups, group)
 		}
 	}
@@ -264,7 +264,7 @@ func (g *MessageDependencyGraph) children(nodes []*MessageDependencyGraphNode) [
 	return children
 }
 
-func (g *MessageDependencyGraph) createVariableDefinitionGroup(ctx *context, node *MessageDependencyGraphNode) VariableDefinitionGroup {
+func (g *MessageDependencyGraph) createVariableDefinitionGroup(node *MessageDependencyGraphNode) VariableDefinitionGroup {
 	if node == nil {
 		return nil
 	}
@@ -273,7 +273,7 @@ func (g *MessageDependencyGraph) createVariableDefinitionGroup(ctx *context, nod
 	}
 	if len(node.Parent) == 1 {
 		return &SequentialVariableDefinitionGroup{
-			Start: g.createVariableDefinitionGroup(ctx, node.Parent[0]),
+			Start: g.createVariableDefinitionGroup(node.Parent[0]),
 			End:   node.VariableDefinition,
 		}
 	}
@@ -282,7 +282,7 @@ func (g *MessageDependencyGraph) createVariableDefinitionGroup(ctx *context, nod
 		return node.Parent[i].FQDN() < node.Parent[j].FQDN()
 	})
 	for _, parent := range node.Parent {
-		if group := g.createVariableDefinitionGroup(ctx, parent); group != nil {
+		if group := g.createVariableDefinitionGroup(parent); group != nil {
 			rg.Starts = append(rg.Starts, group)
 		}
 	}
@@ -366,7 +366,7 @@ func setupVariableDefinitionSet(ctx *context, baseMsg *Message, defSet *Variable
 		return
 	}
 	defSet.Graph = graph
-	defSet.Groups = graph.VariableDefinitionGroups(ctx)
+	defSet.Groups = graph.VariableDefinitionGroups()
 }
 
 func validateMessageGraph(graph *MessageDependencyGraph) *LocationError {

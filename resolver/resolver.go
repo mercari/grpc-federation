@@ -1459,7 +1459,7 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError) *GR
 		DefSet: &VariableDefinitionSet{
 			Defs: r.resolveVariableDefinitions(ctx, def.GetDef()),
 		},
-		If:      r.resolveGRPCErrorIf(ctx, def.GetIf()),
+		If:      r.resolveGRPCErrorIf(def.GetIf()),
 		Code:    def.GetCode(),
 		Message: def.GetMessage(),
 		Details: r.resolveGRPCErrorDetails(ctx, def.GetDetails()),
@@ -1467,7 +1467,7 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError) *GR
 	}
 }
 
-func (r *Resolver) resolveGRPCErrorIf(ctx *context, expr string) *CELValue {
+func (r *Resolver) resolveGRPCErrorIf(expr string) *CELValue {
 	if expr == "" {
 		return &CELValue{Expr: "true"}
 	}
