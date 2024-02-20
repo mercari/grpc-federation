@@ -233,10 +233,11 @@ type ValidationExpr struct {
 }
 
 type GRPCError struct {
-	Code    code.Code
 	If      *CELValue
+	Code    code.Code
 	Message string
 	Details GRPCErrorDetails
+	Ignore  bool
 }
 
 type GRPCErrorDetails []*GRPCErrorDetail
