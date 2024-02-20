@@ -136,17 +136,17 @@ type VariableDefinition struct {
 type VariableDefinitionOwnerType int
 
 const (
-	VariableDefinitionOwnerUnknown                      VariableDefinitionOwnerType = 0
-	VariableDefinitionOwnerMessage                      VariableDefinitionOwnerType = 1
-	VariableDefinitionOwnerOneofField                   VariableDefinitionOwnerType = 2
-	VariableDefinitionOwnerValidationErrorDetailMessage VariableDefinitionOwnerType = 3
+	VariableDefinitionOwnerUnknown                VariableDefinitionOwnerType = 0
+	VariableDefinitionOwnerMessage                VariableDefinitionOwnerType = 1
+	VariableDefinitionOwnerOneofField             VariableDefinitionOwnerType = 2
+	VariableDefinitionOwnerGRPCErrorDetailMessage VariableDefinitionOwnerType = 3
 )
 
 type VariableDefinitionOwner struct {
-	Type                   VariableDefinitionOwnerType
-	Message                *Message
-	Field                  *Field
-	ValidationErrorIndexes *ValidationErrorIndexes
+	Type             VariableDefinitionOwnerType
+	Message          *Message
+	Field            *Field
+	GRPCErrorIndexes *GRPCErrorIndexes
 }
 
 type VariableDefinitions []*VariableDefinition
@@ -228,26 +228,21 @@ type MessageExpr struct {
 }
 
 type ValidationExpr struct {
-	Error *ValidationError
-}
-
-type MessageValidations []*ValidationRule
-
-type ValidationRule struct {
 	Name  string
-	Error *ValidationError
+	Error *GRPCError
 }
 
-type ValidationError struct {
-	Code    code.Code
+type GRPCError struct {
 	If      *CELValue
+	Code    code.Code
 	Message string
-	Details ValidationErrorDetails
+	Details GRPCErrorDetails
+	Ignore  bool
 }
 
-type ValidationErrorDetails []*ValidationErrorDetail
+type GRPCErrorDetails []*GRPCErrorDetail
 
-type ValidationErrorDetail struct {
+type GRPCErrorDetail struct {
 	If                       *CELValue
 	Messages                 VariableDefinitions
 	PreconditionFailures     []*PreconditionFailure
@@ -439,7 +434,7 @@ type Request struct {
 	Type *Message
 }
 
-type ValidationErrorIndexes struct {
+type GRPCErrorIndexes struct {
 	DefIdx       int
 	ErrDetailIdx int
 }

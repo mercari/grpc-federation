@@ -248,7 +248,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Setter: func(value *localValueType, v bool) { value.vars._def1 = v },
 			Validation: func(ctx context.Context, value *localValueType) error {
 				return grpcfed.If(ctx, value, "post.id != 'some-id'", func(value *localValueType) error {
-					return grpcfed.GRPCError(grpcfed.FailedPreconditionCode, "validation message 1")
+					return grpcfed.GRPCErrorf(grpcfed.FailedPreconditionCode, "validation message 1")
 				})
 			},
 		}); err != nil {

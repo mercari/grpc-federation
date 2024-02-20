@@ -590,7 +590,7 @@ func (m *VariableDefinitionOwner) CloneVT() *VariableDefinitionOwner {
 	r.Type = m.Type
 	r.MessageId = m.MessageId
 	r.FieldId = m.FieldId
-	r.ValidationErrorIndexes = m.ValidationErrorIndexes.CloneVT()
+	r.GrpcErrorIndexes = m.GrpcErrorIndexes.CloneVT()
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -1643,11 +1643,11 @@ func (m *MessageFieldValue) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (m *ValidationErrorIndexes) CloneVT() *ValidationErrorIndexes {
+func (m *GRPCErrorIndexes) CloneVT() *GRPCErrorIndexes {
 	if m == nil {
-		return (*ValidationErrorIndexes)(nil)
+		return (*GRPCErrorIndexes)(nil)
 	}
-	r := new(ValidationErrorIndexes)
+	r := new(GRPCErrorIndexes)
 	r.DefIndex = m.DefIndex
 	r.ErrorDetailIndex = m.ErrorDetailIndex
 	if len(m.unknownFields) > 0 {
@@ -1657,7 +1657,7 @@ func (m *ValidationErrorIndexes) CloneVT() *ValidationErrorIndexes {
 	return r
 }
 
-func (m *ValidationErrorIndexes) CloneMessageVT() proto.Message {
+func (m *GRPCErrorIndexes) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
@@ -1666,6 +1666,7 @@ func (m *ValidationExpr) CloneVT() *ValidationExpr {
 		return (*ValidationExpr)(nil)
 	}
 	r := new(ValidationExpr)
+	r.Name = m.Name
 	r.Error = m.Error.CloneVT()
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
@@ -1678,34 +1679,22 @@ func (m *ValidationExpr) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (m *ValidationRule) CloneVT() *ValidationRule {
+func (m *GRPCError) CloneVT() *GRPCError {
 	if m == nil {
-		return (*ValidationRule)(nil)
+		return (*GRPCError)(nil)
 	}
-	r := new(ValidationRule)
-	r.Name = m.Name
-	r.Error = m.Error.CloneVT()
-	if len(m.unknownFields) > 0 {
-		r.unknownFields = make([]byte, len(m.unknownFields))
-		copy(r.unknownFields, m.unknownFields)
-	}
-	return r
-}
-
-func (m *ValidationRule) CloneMessageVT() proto.Message {
-	return m.CloneVT()
-}
-
-func (m *ValidationError) CloneVT() *ValidationError {
-	if m == nil {
-		return (*ValidationError)(nil)
-	}
-	r := new(ValidationError)
-	r.Code = m.Code
+	r := new(GRPCError)
 	r.If = m.If.CloneVT()
+	r.Code = m.Code
 	r.Message = m.Message
+	r.Ignore = m.Ignore
+	if rhs := m.VariableDefinitionIds; rhs != nil {
+		tmpContainer := make([]string, len(rhs))
+		copy(tmpContainer, rhs)
+		r.VariableDefinitionIds = tmpContainer
+	}
 	if rhs := m.Details; rhs != nil {
-		tmpContainer := make([]*ValidationErrorDetail, len(rhs))
+		tmpContainer := make([]*GRPCErrorDetail, len(rhs))
 		for k, v := range rhs {
 			tmpContainer[k] = v.CloneVT()
 		}
@@ -1718,15 +1707,15 @@ func (m *ValidationError) CloneVT() *ValidationError {
 	return r
 }
 
-func (m *ValidationError) CloneMessageVT() proto.Message {
+func (m *GRPCError) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
-func (m *ValidationErrorDetail) CloneVT() *ValidationErrorDetail {
+func (m *GRPCErrorDetail) CloneVT() *GRPCErrorDetail {
 	if m == nil {
-		return (*ValidationErrorDetail)(nil)
+		return (*GRPCErrorDetail)(nil)
 	}
-	r := new(ValidationErrorDetail)
+	r := new(GRPCErrorDetail)
 	r.If = m.If.CloneVT()
 	r.DependencyGraphId = m.DependencyGraphId
 	if rhs := m.MessageIds; rhs != nil {
@@ -1767,7 +1756,7 @@ func (m *ValidationErrorDetail) CloneVT() *ValidationErrorDetail {
 	return r
 }
 
-func (m *ValidationErrorDetail) CloneMessageVT() proto.Message {
+func (m *GRPCErrorDetail) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
@@ -2947,7 +2936,7 @@ func (this *VariableDefinitionOwner) EqualVT(that *VariableDefinitionOwner) bool
 	if this.FieldId != that.FieldId {
 		return false
 	}
-	if !this.ValidationErrorIndexes.EqualVT(that.ValidationErrorIndexes) {
+	if !this.GrpcErrorIndexes.EqualVT(that.GrpcErrorIndexes) {
 		return false
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -4610,7 +4599,7 @@ func (this *MessageFieldValue) EqualMessageVT(thatMsg proto.Message) bool {
 	}
 	return this.EqualVT(that)
 }
-func (this *ValidationErrorIndexes) EqualVT(that *ValidationErrorIndexes) bool {
+func (this *GRPCErrorIndexes) EqualVT(that *GRPCErrorIndexes) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
@@ -4625,8 +4614,8 @@ func (this *ValidationErrorIndexes) EqualVT(that *ValidationErrorIndexes) bool {
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *ValidationErrorIndexes) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*ValidationErrorIndexes)
+func (this *GRPCErrorIndexes) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*GRPCErrorIndexes)
 	if !ok {
 		return false
 	}
@@ -4636,6 +4625,9 @@ func (this *ValidationExpr) EqualVT(that *ValidationExpr) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
+		return false
+	}
+	if this.Name != that.Name {
 		return false
 	}
 	if !this.Error.EqualVT(that.Error) {
@@ -4651,38 +4643,25 @@ func (this *ValidationExpr) EqualMessageVT(thatMsg proto.Message) bool {
 	}
 	return this.EqualVT(that)
 }
-func (this *ValidationRule) EqualVT(that *ValidationRule) bool {
+func (this *GRPCError) EqualVT(that *GRPCError) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
 		return false
 	}
-	if this.Name != that.Name {
+	if len(this.VariableDefinitionIds) != len(that.VariableDefinitionIds) {
 		return false
 	}
-	if !this.Error.EqualVT(that.Error) {
-		return false
+	for i, vx := range this.VariableDefinitionIds {
+		vy := that.VariableDefinitionIds[i]
+		if vx != vy {
+			return false
+		}
 	}
-	return string(this.unknownFields) == string(that.unknownFields)
-}
-
-func (this *ValidationRule) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*ValidationRule)
-	if !ok {
-		return false
-	}
-	return this.EqualVT(that)
-}
-func (this *ValidationError) EqualVT(that *ValidationError) bool {
-	if this == that {
-		return true
-	} else if this == nil || that == nil {
+	if !this.If.EqualVT(that.If) {
 		return false
 	}
 	if this.Code != that.Code {
-		return false
-	}
-	if !this.If.EqualVT(that.If) {
 		return false
 	}
 	if this.Message != that.Message {
@@ -4695,27 +4674,30 @@ func (this *ValidationError) EqualVT(that *ValidationError) bool {
 		vy := that.Details[i]
 		if p, q := vx, vy; p != q {
 			if p == nil {
-				p = &ValidationErrorDetail{}
+				p = &GRPCErrorDetail{}
 			}
 			if q == nil {
-				q = &ValidationErrorDetail{}
+				q = &GRPCErrorDetail{}
 			}
 			if !p.EqualVT(q) {
 				return false
 			}
 		}
 	}
+	if this.Ignore != that.Ignore {
+		return false
+	}
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *ValidationError) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*ValidationError)
+func (this *GRPCError) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*GRPCError)
 	if !ok {
 		return false
 	}
 	return this.EqualVT(that)
 }
-func (this *ValidationErrorDetail) EqualVT(that *ValidationErrorDetail) bool {
+func (this *GRPCErrorDetail) EqualVT(that *GRPCErrorDetail) bool {
 	if this == that {
 		return true
 	} else if this == nil || that == nil {
@@ -4799,8 +4781,8 @@ func (this *ValidationErrorDetail) EqualVT(that *ValidationErrorDetail) bool {
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *ValidationErrorDetail) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*ValidationErrorDetail)
+func (this *GRPCErrorDetail) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*GRPCErrorDetail)
 	if !ok {
 		return false
 	}
@@ -6661,8 +6643,8 @@ func (m *VariableDefinitionOwner) MarshalToSizedBufferVT(dAtA []byte) (int, erro
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if m.ValidationErrorIndexes != nil {
-		size, err := m.ValidationErrorIndexes.MarshalToSizedBufferVT(dAtA[:i])
+	if m.GrpcErrorIndexes != nil {
+		size, err := m.GrpcErrorIndexes.MarshalToSizedBufferVT(dAtA[:i])
 		if err != nil {
 			return 0, err
 		}
@@ -9297,7 +9279,7 @@ func (m *MessageFieldValue) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ValidationErrorIndexes) MarshalVT() (dAtA []byte, err error) {
+func (m *GRPCErrorIndexes) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -9310,12 +9292,12 @@ func (m *ValidationErrorIndexes) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ValidationErrorIndexes) MarshalToVT(dAtA []byte) (int, error) {
+func (m *GRPCErrorIndexes) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *ValidationErrorIndexes) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *GRPCErrorIndexes) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -9378,49 +9360,6 @@ func (m *ValidationExpr) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= size
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ValidationRule) MarshalVT() (dAtA []byte, err error) {
-	if m == nil {
-		return nil, nil
-	}
-	size := m.SizeVT()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBufferVT(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ValidationRule) MarshalToVT(dAtA []byte) (int, error) {
-	size := m.SizeVT()
-	return m.MarshalToSizedBufferVT(dAtA[:size])
-}
-
-func (m *ValidationRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
-	if m == nil {
-		return 0, nil
-	}
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.unknownFields != nil {
-		i -= len(m.unknownFields)
-		copy(dAtA[i:], m.unknownFields)
-	}
-	if m.Error != nil {
-		size, err := m.Error.MarshalToSizedBufferVT(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
-		i--
 		dAtA[i] = 0x12
 	}
 	if len(m.Name) > 0 {
@@ -9433,7 +9372,7 @@ func (m *ValidationRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ValidationError) MarshalVT() (dAtA []byte, err error) {
+func (m *GRPCError) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -9446,12 +9385,12 @@ func (m *ValidationError) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ValidationError) MarshalToVT(dAtA []byte) (int, error) {
+func (m *GRPCError) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *ValidationError) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *GRPCError) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -9463,6 +9402,16 @@ func (m *ValidationError) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.Ignore {
+		i--
+		if m.Ignore {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x30
+	}
 	if len(m.Details) > 0 {
 		for iNdEx := len(m.Details) - 1; iNdEx >= 0; iNdEx-- {
 			size, err := m.Details[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
@@ -9472,7 +9421,7 @@ func (m *ValidationError) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x2a
 		}
 	}
 	if len(m.Message) > 0 {
@@ -9480,7 +9429,12 @@ func (m *ValidationError) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.Message)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Message)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
+	}
+	if m.Code != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Code))
+		i--
+		dAtA[i] = 0x18
 	}
 	if m.If != nil {
 		size, err := m.If.MarshalToSizedBufferVT(dAtA[:i])
@@ -9492,15 +9446,19 @@ func (m *ValidationError) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.Code != 0 {
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Code))
-		i--
-		dAtA[i] = 0x8
+	if len(m.VariableDefinitionIds) > 0 {
+		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.VariableDefinitionIds[iNdEx])
+			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *ValidationErrorDetail) MarshalVT() (dAtA []byte, err error) {
+func (m *GRPCErrorDetail) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -9513,12 +9471,12 @@ func (m *ValidationErrorDetail) MarshalVT() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ValidationErrorDetail) MarshalToVT(dAtA []byte) (int, error) {
+func (m *GRPCErrorDetail) MarshalToVT(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVT(dAtA[:size])
 }
 
-func (m *ValidationErrorDetail) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+func (m *GRPCErrorDetail) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -11785,8 +11743,8 @@ func (m *VariableDefinitionOwner) MarshalToSizedBufferVTStrict(dAtA []byte) (int
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if m.ValidationErrorIndexes != nil {
-		size, err := m.ValidationErrorIndexes.MarshalToSizedBufferVTStrict(dAtA[:i])
+	if m.GrpcErrorIndexes != nil {
+		size, err := m.GrpcErrorIndexes.MarshalToSizedBufferVTStrict(dAtA[:i])
 		if err != nil {
 			return 0, err
 		}
@@ -14484,7 +14442,7 @@ func (m *MessageFieldValue) MarshalToSizedBufferVTStrict(dAtA []byte) (int, erro
 	return len(dAtA) - i, nil
 }
 
-func (m *ValidationErrorIndexes) MarshalVTStrict() (dAtA []byte, err error) {
+func (m *GRPCErrorIndexes) MarshalVTStrict() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -14497,12 +14455,12 @@ func (m *ValidationErrorIndexes) MarshalVTStrict() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ValidationErrorIndexes) MarshalToVTStrict(dAtA []byte) (int, error) {
+func (m *GRPCErrorIndexes) MarshalToVTStrict(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
 }
 
-func (m *ValidationErrorIndexes) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
+func (m *GRPCErrorIndexes) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -14565,49 +14523,6 @@ func (m *ValidationExpr) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) 
 		i -= size
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *ValidationRule) MarshalVTStrict() (dAtA []byte, err error) {
-	if m == nil {
-		return nil, nil
-	}
-	size := m.SizeVT()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBufferVTStrict(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ValidationRule) MarshalToVTStrict(dAtA []byte) (int, error) {
-	size := m.SizeVT()
-	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
-}
-
-func (m *ValidationRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
-	if m == nil {
-		return 0, nil
-	}
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.unknownFields != nil {
-		i -= len(m.unknownFields)
-		copy(dAtA[i:], m.unknownFields)
-	}
-	if m.Error != nil {
-		size, err := m.Error.MarshalToSizedBufferVTStrict(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
-		i--
 		dAtA[i] = 0x12
 	}
 	if len(m.Name) > 0 {
@@ -14620,7 +14535,7 @@ func (m *ValidationRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) 
 	return len(dAtA) - i, nil
 }
 
-func (m *ValidationError) MarshalVTStrict() (dAtA []byte, err error) {
+func (m *GRPCError) MarshalVTStrict() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -14633,12 +14548,12 @@ func (m *ValidationError) MarshalVTStrict() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ValidationError) MarshalToVTStrict(dAtA []byte) (int, error) {
+func (m *GRPCError) MarshalToVTStrict(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
 }
 
-func (m *ValidationError) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
+func (m *GRPCError) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -14650,6 +14565,16 @@ func (m *ValidationError) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
+	if m.Ignore {
+		i--
+		if m.Ignore {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x30
+	}
 	if len(m.Details) > 0 {
 		for iNdEx := len(m.Details) - 1; iNdEx >= 0; iNdEx-- {
 			size, err := m.Details[iNdEx].MarshalToSizedBufferVTStrict(dAtA[:i])
@@ -14659,7 +14584,7 @@ func (m *ValidationError) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x2a
 		}
 	}
 	if len(m.Message) > 0 {
@@ -14667,7 +14592,12 @@ func (m *ValidationError) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 		copy(dAtA[i:], m.Message)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.Message)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
+	}
+	if m.Code != 0 {
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Code))
+		i--
+		dAtA[i] = 0x18
 	}
 	if m.If != nil {
 		size, err := m.If.MarshalToSizedBufferVTStrict(dAtA[:i])
@@ -14679,15 +14609,19 @@ func (m *ValidationError) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.Code != 0 {
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(m.Code))
-		i--
-		dAtA[i] = 0x8
+	if len(m.VariableDefinitionIds) > 0 {
+		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.VariableDefinitionIds[iNdEx])
+			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *ValidationErrorDetail) MarshalVTStrict() (dAtA []byte, err error) {
+func (m *GRPCErrorDetail) MarshalVTStrict() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -14700,12 +14634,12 @@ func (m *ValidationErrorDetail) MarshalVTStrict() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ValidationErrorDetail) MarshalToVTStrict(dAtA []byte) (int, error) {
+func (m *GRPCErrorDetail) MarshalToVTStrict(dAtA []byte) (int, error) {
 	size := m.SizeVT()
 	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
 }
 
-func (m *ValidationErrorDetail) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
+func (m *GRPCErrorDetail) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -16166,8 +16100,8 @@ func (m *VariableDefinitionOwner) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
-	if m.ValidationErrorIndexes != nil {
-		l = m.ValidationErrorIndexes.SizeVT()
+	if m.GrpcErrorIndexes != nil {
+		l = m.GrpcErrorIndexes.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	n += len(m.unknownFields)
@@ -17231,7 +17165,7 @@ func (m *MessageFieldValue) SizeVT() (n int) {
 	return n
 }
 
-func (m *ValidationErrorIndexes) SizeVT() (n int) {
+func (m *GRPCErrorIndexes) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -17253,20 +17187,6 @@ func (m *ValidationExpr) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Error != nil {
-		l = m.Error.SizeVT()
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
-	n += len(m.unknownFields)
-	return n
-}
-
-func (m *ValidationRule) SizeVT() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
 	l = len(m.Name)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
@@ -17279,18 +17199,24 @@ func (m *ValidationRule) SizeVT() (n int) {
 	return n
 }
 
-func (m *ValidationError) SizeVT() (n int) {
+func (m *GRPCError) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Code != 0 {
-		n += 1 + protohelpers.SizeOfVarint(uint64(m.Code))
+	if len(m.VariableDefinitionIds) > 0 {
+		for _, s := range m.VariableDefinitionIds {
+			l = len(s)
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
 	}
 	if m.If != nil {
 		l = m.If.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.Code != 0 {
+		n += 1 + protohelpers.SizeOfVarint(uint64(m.Code))
 	}
 	l = len(m.Message)
 	if l > 0 {
@@ -17302,11 +17228,14 @@ func (m *ValidationError) SizeVT() (n int) {
 			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 		}
 	}
+	if m.Ignore {
+		n += 2
+	}
 	n += len(m.unknownFields)
 	return n
 }
 
-func (m *ValidationErrorDetail) SizeVT() (n int) {
+func (m *GRPCErrorDetail) SizeVT() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -22543,7 +22472,7 @@ func (m *VariableDefinitionOwner) UnmarshalVT(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ValidationErrorIndexes", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field GrpcErrorIndexes", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -22570,10 +22499,10 @@ func (m *VariableDefinitionOwner) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.ValidationErrorIndexes == nil {
-				m.ValidationErrorIndexes = &ValidationErrorIndexes{}
+			if m.GrpcErrorIndexes == nil {
+				m.GrpcErrorIndexes = &GRPCErrorIndexes{}
 			}
-			if err := m.ValidationErrorIndexes.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.GrpcErrorIndexes.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -29419,7 +29348,7 @@ func (m *MessageFieldValue) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ValidationErrorIndexes) UnmarshalVT(dAtA []byte) error {
+func (m *GRPCErrorIndexes) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -29442,10 +29371,10 @@ func (m *ValidationErrorIndexes) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationErrorIndexes: wiretype end group for non-group")
+			return fmt.Errorf("proto: GRPCErrorIndexes: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationErrorIndexes: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GRPCErrorIndexes: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -29539,93 +29468,6 @@ func (m *ValidationExpr) UnmarshalVT(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Error == nil {
-				m.Error = &ValidationError{}
-			}
-			if err := m.Error.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ValidationRule) UnmarshalVT(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return protohelpers.ErrIntOverflow
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationRule: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationRule: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
 			}
 			var stringLen uint64
@@ -29686,7 +29528,7 @@ func (m *ValidationRule) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Error == nil {
-				m.Error = &ValidationError{}
+				m.Error = &GRPCError{}
 			}
 			if err := m.Error.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -29714,7 +29556,7 @@ func (m *ValidationRule) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ValidationError) UnmarshalVT(dAtA []byte) error {
+func (m *GRPCError) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -29737,17 +29579,17 @@ func (m *ValidationError) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationError: wiretype end group for non-group")
+			return fmt.Errorf("proto: GRPCError: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationError: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GRPCError: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
 			}
-			m.Code = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -29757,11 +29599,24 @@ func (m *ValidationError) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Code |= code.Code(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.VariableDefinitionIds = append(m.VariableDefinitionIds, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field If", wireType)
@@ -29799,6 +29654,25 @@ func (m *ValidationError) UnmarshalVT(dAtA []byte) error {
 			}
 			iNdEx = postIndex
 		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			}
+			m.Code = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Code |= code.Code(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
 			}
@@ -29830,7 +29704,7 @@ func (m *ValidationError) UnmarshalVT(dAtA []byte) error {
 			}
 			m.Message = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Details", wireType)
 			}
@@ -29859,11 +29733,31 @@ func (m *ValidationError) UnmarshalVT(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Details = append(m.Details, &ValidationErrorDetail{})
+			m.Details = append(m.Details, &GRPCErrorDetail{})
 			if err := m.Details[len(m.Details)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ignore", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Ignore = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
@@ -29886,7 +29780,7 @@ func (m *ValidationError) UnmarshalVT(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ValidationErrorDetail) UnmarshalVT(dAtA []byte) error {
+func (m *GRPCErrorDetail) UnmarshalVT(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -29909,10 +29803,10 @@ func (m *ValidationErrorDetail) UnmarshalVT(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationErrorDetail: wiretype end group for non-group")
+			return fmt.Errorf("proto: GRPCErrorDetail: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationErrorDetail: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GRPCErrorDetail: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -37099,7 +36993,7 @@ func (m *VariableDefinitionOwner) UnmarshalVTUnsafe(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ValidationErrorIndexes", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field GrpcErrorIndexes", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -37126,10 +37020,10 @@ func (m *VariableDefinitionOwner) UnmarshalVTUnsafe(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.ValidationErrorIndexes == nil {
-				m.ValidationErrorIndexes = &ValidationErrorIndexes{}
+			if m.GrpcErrorIndexes == nil {
+				m.GrpcErrorIndexes = &GRPCErrorIndexes{}
 			}
-			if err := m.ValidationErrorIndexes.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.GrpcErrorIndexes.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -44135,7 +44029,7 @@ func (m *MessageFieldValue) UnmarshalVTUnsafe(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ValidationErrorIndexes) UnmarshalVTUnsafe(dAtA []byte) error {
+func (m *GRPCErrorIndexes) UnmarshalVTUnsafe(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -44158,10 +44052,10 @@ func (m *ValidationErrorIndexes) UnmarshalVTUnsafe(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationErrorIndexes: wiretype end group for non-group")
+			return fmt.Errorf("proto: GRPCErrorIndexes: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationErrorIndexes: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GRPCErrorIndexes: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -44255,93 +44149,6 @@ func (m *ValidationExpr) UnmarshalVTUnsafe(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Error == nil {
-				m.Error = &ValidationError{}
-			}
-			if err := m.Error.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ValidationRule) UnmarshalVTUnsafe(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return protohelpers.ErrIntOverflow
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationRule: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationRule: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
 			}
 			var stringLen uint64
@@ -44406,7 +44213,7 @@ func (m *ValidationRule) UnmarshalVTUnsafe(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Error == nil {
-				m.Error = &ValidationError{}
+				m.Error = &GRPCError{}
 			}
 			if err := m.Error.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -44434,7 +44241,7 @@ func (m *ValidationRule) UnmarshalVTUnsafe(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ValidationError) UnmarshalVTUnsafe(dAtA []byte) error {
+func (m *GRPCError) UnmarshalVTUnsafe(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -44457,17 +44264,17 @@ func (m *ValidationError) UnmarshalVTUnsafe(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationError: wiretype end group for non-group")
+			return fmt.Errorf("proto: GRPCError: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationError: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GRPCError: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
 			}
-			m.Code = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -44477,11 +44284,28 @@ func (m *ValidationError) UnmarshalVTUnsafe(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Code |= code.Code(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			var stringValue string
+			if intStringLen > 0 {
+				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
+			}
+			m.VariableDefinitionIds = append(m.VariableDefinitionIds, stringValue)
+			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field If", wireType)
@@ -44519,6 +44343,25 @@ func (m *ValidationError) UnmarshalVTUnsafe(dAtA []byte) error {
 			}
 			iNdEx = postIndex
 		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+			}
+			m.Code = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Code |= code.Code(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
 			}
@@ -44554,7 +44397,7 @@ func (m *ValidationError) UnmarshalVTUnsafe(dAtA []byte) error {
 			}
 			m.Message = stringValue
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Details", wireType)
 			}
@@ -44583,11 +44426,31 @@ func (m *ValidationError) UnmarshalVTUnsafe(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Details = append(m.Details, &ValidationErrorDetail{})
+			m.Details = append(m.Details, &GRPCErrorDetail{})
 			if err := m.Details[len(m.Details)-1].UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ignore", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Ignore = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
@@ -44610,7 +44473,7 @@ func (m *ValidationError) UnmarshalVTUnsafe(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ValidationErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
+func (m *GRPCErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -44633,10 +44496,10 @@ func (m *ValidationErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ValidationErrorDetail: wiretype end group for non-group")
+			return fmt.Errorf("proto: GRPCErrorDetail: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ValidationErrorDetail: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GRPCErrorDetail: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

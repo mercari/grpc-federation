@@ -708,18 +708,18 @@ func (e *encoder) toVariableDefinitionOwner(owner *resolver.VariableDefinitionOw
 		return nil
 	}
 	return &plugin.VariableDefinitionOwner{
-		Type:                   plugin.VariableDefinitionOwnerType(owner.Type),
-		MessageId:              e.toMessage(owner.Message).GetId(),
-		FieldId:                e.toField(owner.Field).GetId(),
-		ValidationErrorIndexes: e.toValidationErrorIndexes(owner.ValidationErrorIndexes),
+		Type:             plugin.VariableDefinitionOwnerType(owner.Type),
+		MessageId:        e.toMessage(owner.Message).GetId(),
+		FieldId:          e.toField(owner.Field).GetId(),
+		GrpcErrorIndexes: e.toGRPCErrorIndexes(owner.GRPCErrorIndexes),
 	}
 }
 
-func (e *encoder) toValidationErrorIndexes(indexes *resolver.ValidationErrorIndexes) *plugin.ValidationErrorIndexes {
+func (e *encoder) toGRPCErrorIndexes(indexes *resolver.GRPCErrorIndexes) *plugin.GRPCErrorIndexes {
 	if indexes == nil {
 		return nil
 	}
-	return &plugin.ValidationErrorIndexes{
+	return &plugin.GRPCErrorIndexes{
 		DefIndex:         int64(indexes.DefIdx),
 		ErrorDetailIndex: int64(indexes.ErrDetailIdx),
 	}
@@ -1134,35 +1134,35 @@ func (e *encoder) toValidationExpr(expr *resolver.ValidationExpr) *plugin.Valida
 		return nil
 	}
 	return &plugin.ValidationExpr{
-		Error: e.toValidationError(expr.Error),
+		Error: e.toGRPCError(expr.Error),
 	}
 }
 
-func (e *encoder) toValidationError(err *resolver.ValidationError) *plugin.ValidationError {
+func (e *encoder) toGRPCError(err *resolver.GRPCError) *plugin.GRPCError {
 	if err == nil {
 		return nil
 	}
-	return &plugin.ValidationError{
+	return &plugin.GRPCError{
 		Code:    err.Code,
 		If:      e.toCELValue(err.If),
 		Message: err.Message,
-		Details: e.toValidationErrorDetails(err.Details),
+		Details: e.toGRPCErrorDetails(err.Details),
 	}
 }
 
-func (e *encoder) toValidationErrorDetails(details []*resolver.ValidationErrorDetail) []*plugin.ValidationErrorDetail {
-	ret := make([]*plugin.ValidationErrorDetail, 0, len(details))
+func (e *encoder) toGRPCErrorDetails(details []*resolver.GRPCErrorDetail) []*plugin.GRPCErrorDetail {
+	ret := make([]*plugin.GRPCErrorDetail, 0, len(details))
 	for _, detail := range details {
-		ret = append(ret, e.toValidationErrorDetail(detail))
+		ret = append(ret, e.toGRPCErrorDetail(detail))
 	}
 	return ret
 }
 
-func (e *encoder) toValidationErrorDetail(detail *resolver.ValidationErrorDetail) *plugin.ValidationErrorDetail {
+func (e *encoder) toGRPCErrorDetail(detail *resolver.GRPCErrorDetail) *plugin.GRPCErrorDetail {
 	if detail == nil {
 		return nil
 	}
-	ret := &plugin.ValidationErrorDetail{}
+	ret := &plugin.GRPCErrorDetail{}
 	ret.If = e.toCELValue(detail.If)
 	ret.PreconditionFailures = e.toPreconditionFailures(detail.PreconditionFailures)
 	ret.BadRequests = e.toBadRequests(detail.BadRequests)
@@ -1359,8 +1359,8 @@ func (e *encoder) toVariableDefinitionOwnerID(owner *resolver.VariableDefinition
 		id = e.toMessageID(owner.Message)
 	case owner.Field != nil:
 		id = e.toFieldID(owner.Field)
-	case owner.ValidationErrorIndexes != nil:
-		v := owner.ValidationErrorIndexes
+	case owner.GRPCErrorIndexes != nil:
+		v := owner.GRPCErrorIndexes
 		id = fmt.Sprintf("_validation_error_indexes_%d_%d", v.DefIdx, v.ErrDetailIdx)
 	}
 	return id

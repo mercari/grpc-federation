@@ -294,12 +294,12 @@ func TestProtoFormat(t *testing.T) {
 	}
 }
 
-func TestValidationRule_ProtoFormat(t *testing.T) {
-	rule := &resolver.ValidationRule{
+func TestValidationExpr_ProtoFormat(t *testing.T) {
+	expr := &resolver.ValidationExpr{
 		Name: "_validation0",
-		Error: &resolver.ValidationError{
+		Error: &resolver.GRPCError{
 			Code: code.Code_FAILED_PRECONDITION,
-			Details: resolver.ValidationErrorDetails{
+			Details: resolver.GRPCErrorDetails{
 				{
 					If: &resolver.CELValue{
 						Expr: "1 == 1",
@@ -315,8 +315,8 @@ func TestValidationRule_ProtoFormat(t *testing.T) {
 	}
 
 	opt := resolver.DefaultProtoFormatOption
-	got := rule.ProtoFormat(opt)
-	if diff := cmp.Diff(got, `{
+	got := expr.ProtoFormat(opt)
+	if diff := cmp.Diff(got, `validation {
   name: "_validation0"
   error {
     code: FAILED_PRECONDITION
@@ -334,15 +334,15 @@ func TestValidationRule_ProtoFormat(t *testing.T) {
 	}
 }
 
-func TestValidationError_ProtoFormat(t *testing.T) {
+func TestGRPCError_ProtoFormat(t *testing.T) {
 	tests := []struct {
-		desc          string
-		validationErr *resolver.ValidationError
-		expected      string
+		desc     string
+		err      *resolver.GRPCError
+		expected string
 	}{
 		{
 			desc: "Rule is set",
-			validationErr: &resolver.ValidationError{
+			err: &resolver.GRPCError{
 				Code: code.Code_FAILED_PRECONDITION,
 				If: &resolver.CELValue{
 					Expr: "1 == 1",
@@ -355,9 +355,9 @@ func TestValidationError_ProtoFormat(t *testing.T) {
 		},
 		{
 			desc: "Details are set",
-			validationErr: &resolver.ValidationError{
+			err: &resolver.GRPCError{
 				Code: code.Code_FAILED_PRECONDITION,
-				Details: resolver.ValidationErrorDetails{
+				Details: resolver.GRPCErrorDetails{
 					{
 						If: &resolver.CELValue{
 							Expr: "1 == 1",
@@ -387,7 +387,7 @@ func TestValidationError_ProtoFormat(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			opt := resolver.DefaultProtoFormatOption
-			got := tc.validationErr.ProtoFormat(opt)
+			got := tc.err.ProtoFormat(opt)
 			if diff := cmp.Diff(got, tc.expected); diff != "" {
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
@@ -395,15 +395,15 @@ func TestValidationError_ProtoFormat(t *testing.T) {
 	}
 }
 
-func TestValidationErrorDetails_ProtoFormat(t *testing.T) {
+func TestGRPCErrorDetails_ProtoFormat(t *testing.T) {
 	tests := []struct {
 		desc     string
-		details  resolver.ValidationErrorDetails
+		details  resolver.GRPCErrorDetails
 		expected string
 	}{
 		{
 			desc: "single detail",
-			details: resolver.ValidationErrorDetails{
+			details: resolver.GRPCErrorDetails{
 				{
 					If: &resolver.CELValue{
 						Expr: "1 == 1",
@@ -416,7 +416,7 @@ func TestValidationErrorDetails_ProtoFormat(t *testing.T) {
 		},
 		{
 			desc: "multiple details",
-			details: resolver.ValidationErrorDetails{
+			details: resolver.GRPCErrorDetails{
 				{
 					If: &resolver.CELValue{
 						Expr: "1 == 1",
@@ -450,15 +450,15 @@ func TestValidationErrorDetails_ProtoFormat(t *testing.T) {
 	}
 }
 
-func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
+func TestGRPCErrorDetail_ProtoFormat(t *testing.T) {
 	tests := []struct {
 		desc     string
-		detail   *resolver.ValidationErrorDetail
+		detail   *resolver.GRPCErrorDetail
 		expected string
 	}{
 		{
 			desc: "single detail",
-			detail: &resolver.ValidationErrorDetail{
+			detail: &resolver.GRPCErrorDetail{
 				If: &resolver.CELValue{
 					Expr: "1 == 1",
 				},
@@ -479,7 +479,7 @@ func TestValidationErrorDetail_ProtoFormat(t *testing.T) {
 		},
 		{
 			desc: "multiple detail",
-			detail: &resolver.ValidationErrorDetail{
+			detail: &resolver.GRPCErrorDetail{
 				If: &resolver.CELValue{
 					Expr: "2 == 2",
 				},

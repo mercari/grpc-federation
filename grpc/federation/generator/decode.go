@@ -909,18 +909,18 @@ func (d *decoder) toVariableDefinitionOwner(owner *plugin.VariableDefinitionOwne
 	if err != nil {
 		return nil, err
 	}
-	validationErrorIndexes := d.toValidationErrorIndexes(owner.GetValidationErrorIndexes())
+	grpcErrorIndexes := d.toGRPCErrorIndexes(owner.GetGrpcErrorIndexes())
 	ret.Message = msg
 	ret.Field = field
-	ret.ValidationErrorIndexes = validationErrorIndexes
+	ret.GRPCErrorIndexes = grpcErrorIndexes
 	return ret, nil
 }
 
-func (d *decoder) toValidationErrorIndexes(v *plugin.ValidationErrorIndexes) *resolver.ValidationErrorIndexes {
+func (d *decoder) toGRPCErrorIndexes(v *plugin.GRPCErrorIndexes) *resolver.GRPCErrorIndexes {
 	if v == nil {
 		return nil
 	}
-	return &resolver.ValidationErrorIndexes{
+	return &resolver.GRPCErrorIndexes{
 		DefIdx:       int(v.GetDefIndex()),
 		ErrDetailIdx: int(v.GetErrorDetailIndex()),
 	}
@@ -1181,28 +1181,28 @@ func (d *decoder) toValidationExpr(expr *plugin.ValidationExpr) (*resolver.Valid
 	}
 	ret := &resolver.ValidationExpr{}
 
-	validationErr, err := d.toValidationError(expr.GetError())
+	grpcErr, err := d.toGRPCError(expr.GetError())
 	if err != nil {
 		return nil, err
 	}
-	ret.Error = validationErr
+	ret.Error = grpcErr
 	return ret, nil
 }
 
-func (d *decoder) toValidationError(ve *plugin.ValidationError) (*resolver.ValidationError, error) {
-	if ve == nil {
+func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) {
+	if e == nil {
 		return nil, nil
 	}
-	ret := &resolver.ValidationError{
-		Code:    ve.GetCode(),
-		Message: ve.GetMessage(),
+	ret := &resolver.GRPCError{
+		Code:    e.GetCode(),
+		Message: e.GetMessage(),
 	}
 
-	ifValue, err := d.toCELValue(ve.GetIf())
+	ifValue, err := d.toCELValue(e.GetIf())
 	if err != nil {
 		return nil, err
 	}
-	details, err := d.toValidationErrorDetails(ve.GetDetails())
+	details, err := d.toGRPCErrorDetails(e.GetDetails())
 	if err != nil {
 		return nil, err
 	}
@@ -1211,13 +1211,13 @@ func (d *decoder) toValidationError(ve *plugin.ValidationError) (*resolver.Valid
 	return ret, nil
 }
 
-func (d *decoder) toValidationErrorDetails(details []*plugin.ValidationErrorDetail) ([]*resolver.ValidationErrorDetail, error) {
+func (d *decoder) toGRPCErrorDetails(details []*plugin.GRPCErrorDetail) ([]*resolver.GRPCErrorDetail, error) {
 	if details == nil {
 		return nil, nil
 	}
-	ret := make([]*resolver.ValidationErrorDetail, 0, len(details))
+	ret := make([]*resolver.GRPCErrorDetail, 0, len(details))
 	for _, detail := range details {
-		v, err := d.toValidationErrorDetail(detail)
+		v, err := d.toGRPCErrorDetail(detail)
 		if err != nil {
 			return nil, err
 		}
@@ -1229,8 +1229,8 @@ func (d *decoder) toValidationErrorDetails(details []*plugin.ValidationErrorDeta
 	return ret, nil
 }
 
-func (d *decoder) toValidationErrorDetail(detail *plugin.ValidationErrorDetail) (*resolver.ValidationErrorDetail, error) {
-	ret := &resolver.ValidationErrorDetail{}
+func (d *decoder) toGRPCErrorDetail(detail *plugin.GRPCErrorDetail) (*resolver.GRPCErrorDetail, error) {
+	ret := &resolver.GRPCErrorDetail{}
 
 	ifValue, err := d.toCELValue(detail.GetIf())
 	if err != nil {
