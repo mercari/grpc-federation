@@ -1254,7 +1254,7 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 		return nil
 	}
 	var ret []*DependentMethod
-	for _, varDef := range msg.Rule.VariableDefinitions {
+	for _, varDef := range msg.Rule.DefSet.Definitions() {
 		if varDef.Expr == nil {
 			continue
 		}
@@ -1282,7 +1282,7 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		for _, varDef := range field.Rule.Oneof.VariableDefinitions {
+		for _, varDef := range field.Rule.Oneof.DefSet.Definitions() {
 			if varDef.Expr == nil {
 				continue
 			}
@@ -1416,7 +1416,7 @@ func (m *Message) VariableDefinitionGroups() []*VariableDefinitionGroup {
 		return nil
 	}
 	var groups []*VariableDefinitionGroup
-	for _, group := range m.Rule.VariableDefinitionGroups {
+	for _, group := range m.Rule.DefSet.DefinitionGroups() {
 		groups = append(groups, &VariableDefinitionGroup{
 			Service:                 m.Service,
 			Message:                 m,
@@ -1427,7 +1427,7 @@ func (m *Message) VariableDefinitionGroups() []*VariableDefinitionGroup {
 }
 
 func (m *Message) IsDeclVariables() bool {
-	return m.HasCELValue() || m.Rule != nil && len(m.Rule.VariableDefinitionGroups) != 0
+	return m.HasCELValue() || m.Rule != nil && len(m.Rule.DefSet.DefinitionGroups()) != 0
 }
 
 type DeclVariable struct {
@@ -1519,7 +1519,7 @@ func (oneof *OneofField) VariableDefinitionGroups() []*VariableDefinitionGroup {
 		return nil
 	}
 	var groups []*VariableDefinitionGroup
-	for _, group := range oneof.FieldOneofRule.VariableDefinitionGroups {
+	for _, group := range oneof.FieldOneofRule.DefSet.DefinitionGroups() {
 		groups = append(groups, &VariableDefinitionGroup{
 			Service:                 oneof.Message.Service,
 			Message:                 oneof.Message,
@@ -2422,16 +2422,15 @@ type ValidationErrorDetail struct {
 	Service              *resolver.Service
 	Message              *Message
 	If                   string
-	Messages             resolver.VariableDefinitions
+	Messages             *resolver.VariableDefinitionSet
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest
 	LocalizedMessages    []*LocalizedMessage
-	DefinitionGroups     []resolver.VariableDefinitionGroup
 }
 
 func (d *ValidationErrorDetail) VariableDefinitionGroups() []*VariableDefinitionGroup {
 	var groups []*VariableDefinitionGroup
-	for _, group := range d.DefinitionGroups {
+	for _, group := range d.Messages.DefinitionGroups() {
 		groups = append(groups, &VariableDefinitionGroup{
 			Service:                 d.Service,
 			Message:                 d.Message,
@@ -2481,11 +2480,10 @@ func (d *VariableDefinition) MessageValidation() *ValidationRule {
 	}
 	for _, detail := range validationError.Details {
 		ved := &ValidationErrorDetail{
-			Service:          d.Service,
-			Message:          d.Message,
-			If:               detail.If.Expr,
-			Messages:         detail.Messages,
-			DefinitionGroups: detail.VariableDefinitionGroups,
+			Service:  d.Service,
+			Message:  d.Message,
+			If:       detail.If.Expr,
+			Messages: detail.Messages,
 		}
 		for _, failure := range detail.PreconditionFailures {
 			vs := make([]*PreconditionFailureViolation, 0, len(failure.Violations))

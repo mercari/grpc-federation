@@ -145,11 +145,15 @@ message Message {
 
 message MessageRule {
   string message_argument_id = 1;
-  string dependency_graph_id = 2;
-  bool custom_resolver = 3;
-  string alias_id = 4;
-  repeated string variable_definition_ids = 5;
-  repeated string variable_definition_group_ids = 6;
+  bool custom_resolver = 2;
+  string alias_id = 3;
+  VariableDefinitionSet def_set = 4;
+}
+
+message VariableDefinitionSet {
+  repeated string variable_definition_ids = 1;
+  repeated string variable_definition_group_ids = 2;
+  string dependency_graph_id = 3;
 }
 
 message VariableDefinition {
@@ -204,9 +208,7 @@ message FieldOneofRule {
   CELValue if = 1;
   bool default = 2;
   CELValue by = 3;
-  string dependency_graph_id = 4;
-  repeated string variable_definition_ids = 5;
-  repeated string variable_definition_group_ids = 6;
+  VariableDefinitionSet def_set = 4;
 }
 
 message VariableDefinitionGroup {
@@ -229,11 +231,7 @@ message ConcurrentVariableDefinitionGroup {
 
 message MessageDependencyGraph {
   string id = 1;
-  oneof rule {
-    MessageRule message_rule = 2;
-    FieldOneofRule field_oneof_rule = 3;
-  };
-  repeated MessageDependencyGraphNode roots = 4;
+  repeated MessageDependencyGraphNode roots = 2;
 }
 
 message MessageDependencyGraphNode {
@@ -313,6 +311,7 @@ message CallExpr {
   Request request = 2;
   google.protobuf.Duration timeout = 3;
   RetryPolicy retry = 4;
+  repeated GRPCError errors = 5;
 }
 
 message RetryPolicy {
@@ -532,7 +531,7 @@ message ValidationExpr {
 }
 
 message GRPCError {
-  repeated string variable_definition_ids = 1;
+  VariableDefinitionSet def_set = 1;
   CELValue if = 2;
   google.rpc.Code code = 3;
   string message = 4;
@@ -541,13 +540,12 @@ message GRPCError {
 }
 
 message GRPCErrorDetail {
-  CELValue if = 1;
-  repeated string message_ids = 2;
-  repeated PreconditionFailure precondition_failures = 3;
-  repeated BadRequest bad_requests = 4;
-  repeated LocalizedMessage localized_messages = 5;
-  string dependency_graph_id = 6;
-  repeated string variable_definition_group_ids = 7;
+  VariableDefinitionSet def_set = 1;
+  CELValue if = 2;
+  VariableDefinitionSet messages = 3;
+  repeated PreconditionFailure precondition_failures = 4;
+  repeated BadRequest bad_requests = 5;
+  repeated LocalizedMessage localized_messages = 6;
 }
 
 message PreconditionFailure {

@@ -575,6 +575,29 @@ func (d *decoder) toAutoBindField(field *plugin.AutoBindField) (*resolver.AutoBi
 	return ret, nil
 }
 
+func (d *decoder) toVariableDefinitionSet(set *plugin.VariableDefinitionSet) (*resolver.VariableDefinitionSet, error) {
+	if set == nil {
+		return nil, nil
+	}
+	defs, err := d.toVariableDefinitions(set.GetVariableDefinitionIds())
+	if err != nil {
+		return nil, err
+	}
+	groups, err := d.toVariableDefinitionGroups(set.GetVariableDefinitionGroupIds())
+	if err != nil {
+		return nil, err
+	}
+	graph, err := d.toMessageDependencyGraph(set.GetDependencyGraphId())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.VariableDefinitionSet{
+		Defs:   defs,
+		Groups: groups,
+		Graph:  graph,
+	}, nil
+}
+
 func (d *decoder) toFieldOneofRule(rule *plugin.FieldOneofRule) (*resolver.FieldOneofRule, error) {
 	if rule == nil {
 		return nil, nil
@@ -588,23 +611,13 @@ func (d *decoder) toFieldOneofRule(rule *plugin.FieldOneofRule) (*resolver.Field
 	if err != nil {
 		return nil, err
 	}
-	graph, err := d.toMessageDependencyGraph(rule.GetDependencyGraphId())
-	if err != nil {
-		return nil, err
-	}
-	defs, err := d.toVariableDefinitions(rule.GetVariableDefinitionIds())
-	if err != nil {
-		return nil, err
-	}
-	groups, err := d.toVariableDefinitionGroups(rule.GetVariableDefinitionGroupIds())
+	defSet, err := d.toVariableDefinitionSet(rule.GetDefSet())
 	if err != nil {
 		return nil, err
 	}
 	ret.If = ifValue
 	ret.By = by
-	ret.DependencyGraph = graph
-	ret.VariableDefinitions = defs
-	ret.VariableDefinitionGroups = groups
+	ret.DefSet = defSet
 	return ret, nil
 }
 
@@ -665,25 +678,15 @@ func (d *decoder) toMessageRule(rule *plugin.MessageRule) (*resolver.MessageRule
 	if err != nil {
 		return nil, err
 	}
-	graph, err := d.toMessageDependencyGraph(rule.GetDependencyGraphId())
-	if err != nil {
-		return nil, err
-	}
-	defs, err := d.toVariableDefinitions(rule.GetVariableDefinitionIds())
-	if err != nil {
-		return nil, err
-	}
-	groups, err := d.toVariableDefinitionGroups(rule.GetVariableDefinitionGroupIds())
+	defSet, err := d.toVariableDefinitionSet(rule.GetDefSet())
 	if err != nil {
 		return nil, err
 	}
 	return &resolver.MessageRule{
-		CustomResolver:           rule.GetCustomResolver(),
-		MessageArgument:          msgArg,
-		Alias:                    alias,
-		DependencyGraph:          graph,
-		VariableDefinitions:      defs,
-		VariableDefinitionGroups: groups,
+		CustomResolver:  rule.GetCustomResolver(),
+		MessageArgument: msgArg,
+		Alias:           alias,
+		DefSet:          defSet,
 	}, nil
 }
 
@@ -701,20 +704,10 @@ func (d *decoder) toMessageDependencyGraph(id string) (*resolver.MessageDependen
 	ret := &resolver.MessageDependencyGraph{}
 	d.graphMap[id] = ret
 
-	msgRule, err := d.toMessageRule(graph.GetMessageRule())
-	if err != nil {
-		return nil, err
-	}
-	fieldOneofRule, err := d.toFieldOneofRule(graph.GetFieldOneofRule())
-	if err != nil {
-		return nil, err
-	}
 	roots, err := d.toMessageDependencyGraphNodes(graph.GetRoots())
 	if err != nil {
 		return nil, err
 	}
-	ret.MessageRule = msgRule
-	ret.FieldOneofRule = fieldOneofRule
 	ret.Roots = roots
 	return ret, nil
 }
@@ -1232,11 +1225,15 @@ func (d *decoder) toGRPCErrorDetails(details []*plugin.GRPCErrorDetail) ([]*reso
 func (d *decoder) toGRPCErrorDetail(detail *plugin.GRPCErrorDetail) (*resolver.GRPCErrorDetail, error) {
 	ret := &resolver.GRPCErrorDetail{}
 
+	defSet, err := d.toVariableDefinitionSet(detail.GetDefSet())
+	if err != nil {
+		return nil, err
+	}
 	ifValue, err := d.toCELValue(detail.GetIf())
 	if err != nil {
 		return nil, err
 	}
-	msgs, err := d.toVariableDefinitions(detail.GetMessageIds())
+	msgs, err := d.toVariableDefinitionSet(detail.GetMessages())
 	if err != nil {
 		return nil, err
 	}
@@ -1252,22 +1249,12 @@ func (d *decoder) toGRPCErrorDetail(detail *plugin.GRPCErrorDetail) (*resolver.G
 	if err != nil {
 		return nil, err
 	}
-	graph, err := d.toMessageDependencyGraph(detail.GetDependencyGraphId())
-	if err != nil {
-		return nil, err
-	}
-	groups, err := d.toVariableDefinitionGroups(detail.GetVariableDefinitionGroupIds())
-	if err != nil {
-		return nil, err
-	}
-
+	ret.DefSet = defSet
 	ret.If = ifValue
 	ret.Messages = msgs
 	ret.PreconditionFailures = preconditionFailures
 	ret.BadRequests = badRequests
 	ret.LocalizedMessages = localizedMsgs
-	ret.DependencyGraph = graph
-	ret.VariableDefinitionGroups = groups
 	return ret, nil
 }
 

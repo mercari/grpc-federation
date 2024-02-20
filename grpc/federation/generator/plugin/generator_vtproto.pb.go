@@ -534,9 +534,26 @@ func (m *MessageRule) CloneVT() *MessageRule {
 	}
 	r := new(MessageRule)
 	r.MessageArgumentId = m.MessageArgumentId
-	r.DependencyGraphId = m.DependencyGraphId
 	r.CustomResolver = m.CustomResolver
 	r.AliasId = m.AliasId
+	r.DefSet = m.DefSet.CloneVT()
+	if len(m.unknownFields) > 0 {
+		r.unknownFields = make([]byte, len(m.unknownFields))
+		copy(r.unknownFields, m.unknownFields)
+	}
+	return r
+}
+
+func (m *MessageRule) CloneMessageVT() proto.Message {
+	return m.CloneVT()
+}
+
+func (m *VariableDefinitionSet) CloneVT() *VariableDefinitionSet {
+	if m == nil {
+		return (*VariableDefinitionSet)(nil)
+	}
+	r := new(VariableDefinitionSet)
+	r.DependencyGraphId = m.DependencyGraphId
 	if rhs := m.VariableDefinitionIds; rhs != nil {
 		tmpContainer := make([]string, len(rhs))
 		copy(tmpContainer, rhs)
@@ -554,7 +571,7 @@ func (m *MessageRule) CloneVT() *MessageRule {
 	return r
 }
 
-func (m *MessageRule) CloneMessageVT() proto.Message {
+func (m *VariableDefinitionSet) CloneMessageVT() proto.Message {
 	return m.CloneVT()
 }
 
@@ -672,17 +689,7 @@ func (m *FieldOneofRule) CloneVT() *FieldOneofRule {
 	r.If = m.If.CloneVT()
 	r.Default = m.Default
 	r.By = m.By.CloneVT()
-	r.DependencyGraphId = m.DependencyGraphId
-	if rhs := m.VariableDefinitionIds; rhs != nil {
-		tmpContainer := make([]string, len(rhs))
-		copy(tmpContainer, rhs)
-		r.VariableDefinitionIds = tmpContainer
-	}
-	if rhs := m.VariableDefinitionGroupIds; rhs != nil {
-		tmpContainer := make([]string, len(rhs))
-		copy(tmpContainer, rhs)
-		r.VariableDefinitionGroupIds = tmpContainer
-	}
+	r.DefSet = m.DefSet.CloneVT()
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -780,11 +787,6 @@ func (m *MessageDependencyGraph) CloneVT() *MessageDependencyGraph {
 	}
 	r := new(MessageDependencyGraph)
 	r.Id = m.Id
-	if m.Rule != nil {
-		r.Rule = m.Rule.(interface {
-			CloneVT() isMessageDependencyGraph_Rule
-		}).CloneVT()
-	}
 	if rhs := m.Roots; rhs != nil {
 		tmpContainer := make([]*MessageDependencyGraphNode, len(rhs))
 		for k, v := range rhs {
@@ -801,24 +803,6 @@ func (m *MessageDependencyGraph) CloneVT() *MessageDependencyGraph {
 
 func (m *MessageDependencyGraph) CloneMessageVT() proto.Message {
 	return m.CloneVT()
-}
-
-func (m *MessageDependencyGraph_MessageRule) CloneVT() isMessageDependencyGraph_Rule {
-	if m == nil {
-		return (*MessageDependencyGraph_MessageRule)(nil)
-	}
-	r := new(MessageDependencyGraph_MessageRule)
-	r.MessageRule = m.MessageRule.CloneVT()
-	return r
-}
-
-func (m *MessageDependencyGraph_FieldOneofRule) CloneVT() isMessageDependencyGraph_Rule {
-	if m == nil {
-		return (*MessageDependencyGraph_FieldOneofRule)(nil)
-	}
-	r := new(MessageDependencyGraph_FieldOneofRule)
-	r.FieldOneofRule = m.FieldOneofRule.CloneVT()
-	return r
 }
 
 func (m *MessageDependencyGraphNode) CloneVT() *MessageDependencyGraphNode {
@@ -1060,6 +1044,13 @@ func (m *CallExpr) CloneVT() *CallExpr {
 	r.Request = m.Request.CloneVT()
 	r.Timeout = (*durationpb.Duration)((*durationpb1.Duration)(m.Timeout).CloneVT())
 	r.Retry = m.Retry.CloneVT()
+	if rhs := m.Errors; rhs != nil {
+		tmpContainer := make([]*GRPCError, len(rhs))
+		for k, v := range rhs {
+			tmpContainer[k] = v.CloneVT()
+		}
+		r.Errors = tmpContainer
+	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -1684,15 +1675,11 @@ func (m *GRPCError) CloneVT() *GRPCError {
 		return (*GRPCError)(nil)
 	}
 	r := new(GRPCError)
+	r.DefSet = m.DefSet.CloneVT()
 	r.If = m.If.CloneVT()
 	r.Code = m.Code
 	r.Message = m.Message
 	r.Ignore = m.Ignore
-	if rhs := m.VariableDefinitionIds; rhs != nil {
-		tmpContainer := make([]string, len(rhs))
-		copy(tmpContainer, rhs)
-		r.VariableDefinitionIds = tmpContainer
-	}
 	if rhs := m.Details; rhs != nil {
 		tmpContainer := make([]*GRPCErrorDetail, len(rhs))
 		for k, v := range rhs {
@@ -1716,13 +1703,9 @@ func (m *GRPCErrorDetail) CloneVT() *GRPCErrorDetail {
 		return (*GRPCErrorDetail)(nil)
 	}
 	r := new(GRPCErrorDetail)
+	r.DefSet = m.DefSet.CloneVT()
 	r.If = m.If.CloneVT()
-	r.DependencyGraphId = m.DependencyGraphId
-	if rhs := m.MessageIds; rhs != nil {
-		tmpContainer := make([]string, len(rhs))
-		copy(tmpContainer, rhs)
-		r.MessageIds = tmpContainer
-	}
+	r.Messages = m.Messages.CloneVT()
 	if rhs := m.PreconditionFailures; rhs != nil {
 		tmpContainer := make([]*PreconditionFailure, len(rhs))
 		for k, v := range rhs {
@@ -1743,11 +1726,6 @@ func (m *GRPCErrorDetail) CloneVT() *GRPCErrorDetail {
 			tmpContainer[k] = v.CloneVT()
 		}
 		r.LocalizedMessages = tmpContainer
-	}
-	if rhs := m.VariableDefinitionGroupIds; rhs != nil {
-		tmpContainer := make([]string, len(rhs))
-		copy(tmpContainer, rhs)
-		r.VariableDefinitionGroupIds = tmpContainer
 	}
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
@@ -2844,13 +2822,29 @@ func (this *MessageRule) EqualVT(that *MessageRule) bool {
 	if this.MessageArgumentId != that.MessageArgumentId {
 		return false
 	}
-	if this.DependencyGraphId != that.DependencyGraphId {
-		return false
-	}
 	if this.CustomResolver != that.CustomResolver {
 		return false
 	}
 	if this.AliasId != that.AliasId {
+		return false
+	}
+	if !this.DefSet.EqualVT(that.DefSet) {
+		return false
+	}
+	return string(this.unknownFields) == string(that.unknownFields)
+}
+
+func (this *MessageRule) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*MessageRule)
+	if !ok {
+		return false
+	}
+	return this.EqualVT(that)
+}
+func (this *VariableDefinitionSet) EqualVT(that *VariableDefinitionSet) bool {
+	if this == that {
+		return true
+	} else if this == nil || that == nil {
 		return false
 	}
 	if len(this.VariableDefinitionIds) != len(that.VariableDefinitionIds) {
@@ -2871,11 +2865,14 @@ func (this *MessageRule) EqualVT(that *MessageRule) bool {
 			return false
 		}
 	}
+	if this.DependencyGraphId != that.DependencyGraphId {
+		return false
+	}
 	return string(this.unknownFields) == string(that.unknownFields)
 }
 
-func (this *MessageRule) EqualMessageVT(thatMsg proto.Message) bool {
-	that, ok := thatMsg.(*MessageRule)
+func (this *VariableDefinitionSet) EqualMessageVT(thatMsg proto.Message) bool {
+	that, ok := thatMsg.(*VariableDefinitionSet)
 	if !ok {
 		return false
 	}
@@ -3054,26 +3051,8 @@ func (this *FieldOneofRule) EqualVT(that *FieldOneofRule) bool {
 	if !this.By.EqualVT(that.By) {
 		return false
 	}
-	if this.DependencyGraphId != that.DependencyGraphId {
+	if !this.DefSet.EqualVT(that.DefSet) {
 		return false
-	}
-	if len(this.VariableDefinitionIds) != len(that.VariableDefinitionIds) {
-		return false
-	}
-	for i, vx := range this.VariableDefinitionIds {
-		vy := that.VariableDefinitionIds[i]
-		if vx != vy {
-			return false
-		}
-	}
-	if len(this.VariableDefinitionGroupIds) != len(that.VariableDefinitionGroupIds) {
-		return false
-	}
-	for i, vx := range this.VariableDefinitionGroupIds {
-		vy := that.VariableDefinitionGroupIds[i]
-		if vx != vy {
-			return false
-		}
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
 }
@@ -3222,18 +3201,6 @@ func (this *MessageDependencyGraph) EqualVT(that *MessageDependencyGraph) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
-	if this.Rule == nil && that.Rule != nil {
-		return false
-	} else if this.Rule != nil {
-		if that.Rule == nil {
-			return false
-		}
-		if !this.Rule.(interface {
-			EqualVT(isMessageDependencyGraph_Rule) bool
-		}).EqualVT(that.Rule) {
-			return false
-		}
-	}
 	if this.Id != that.Id {
 		return false
 	}
@@ -3264,56 +3231,6 @@ func (this *MessageDependencyGraph) EqualMessageVT(thatMsg proto.Message) bool {
 	}
 	return this.EqualVT(that)
 }
-func (this *MessageDependencyGraph_MessageRule) EqualVT(thatIface isMessageDependencyGraph_Rule) bool {
-	that, ok := thatIface.(*MessageDependencyGraph_MessageRule)
-	if !ok {
-		return false
-	}
-	if this == that {
-		return true
-	}
-	if this == nil && that != nil || this != nil && that == nil {
-		return false
-	}
-	if p, q := this.MessageRule, that.MessageRule; p != q {
-		if p == nil {
-			p = &MessageRule{}
-		}
-		if q == nil {
-			q = &MessageRule{}
-		}
-		if !p.EqualVT(q) {
-			return false
-		}
-	}
-	return true
-}
-
-func (this *MessageDependencyGraph_FieldOneofRule) EqualVT(thatIface isMessageDependencyGraph_Rule) bool {
-	that, ok := thatIface.(*MessageDependencyGraph_FieldOneofRule)
-	if !ok {
-		return false
-	}
-	if this == that {
-		return true
-	}
-	if this == nil && that != nil || this != nil && that == nil {
-		return false
-	}
-	if p, q := this.FieldOneofRule, that.FieldOneofRule; p != q {
-		if p == nil {
-			p = &FieldOneofRule{}
-		}
-		if q == nil {
-			q = &FieldOneofRule{}
-		}
-		if !p.EqualVT(q) {
-			return false
-		}
-	}
-	return true
-}
-
 func (this *MessageDependencyGraphNode) EqualVT(that *MessageDependencyGraphNode) bool {
 	if this == that {
 		return true
@@ -3756,6 +3673,23 @@ func (this *CallExpr) EqualVT(that *CallExpr) bool {
 	}
 	if !this.Retry.EqualVT(that.Retry) {
 		return false
+	}
+	if len(this.Errors) != len(that.Errors) {
+		return false
+	}
+	for i, vx := range this.Errors {
+		vy := that.Errors[i]
+		if p, q := vx, vy; p != q {
+			if p == nil {
+				p = &GRPCError{}
+			}
+			if q == nil {
+				q = &GRPCError{}
+			}
+			if !p.EqualVT(q) {
+				return false
+			}
+		}
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
 }
@@ -4649,14 +4583,8 @@ func (this *GRPCError) EqualVT(that *GRPCError) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
-	if len(this.VariableDefinitionIds) != len(that.VariableDefinitionIds) {
+	if !this.DefSet.EqualVT(that.DefSet) {
 		return false
-	}
-	for i, vx := range this.VariableDefinitionIds {
-		vy := that.VariableDefinitionIds[i]
-		if vx != vy {
-			return false
-		}
 	}
 	if !this.If.EqualVT(that.If) {
 		return false
@@ -4703,17 +4631,14 @@ func (this *GRPCErrorDetail) EqualVT(that *GRPCErrorDetail) bool {
 	} else if this == nil || that == nil {
 		return false
 	}
+	if !this.DefSet.EqualVT(that.DefSet) {
+		return false
+	}
 	if !this.If.EqualVT(that.If) {
 		return false
 	}
-	if len(this.MessageIds) != len(that.MessageIds) {
+	if !this.Messages.EqualVT(that.Messages) {
 		return false
-	}
-	for i, vx := range this.MessageIds {
-		vy := that.MessageIds[i]
-		if vx != vy {
-			return false
-		}
 	}
 	if len(this.PreconditionFailures) != len(that.PreconditionFailures) {
 		return false
@@ -4764,18 +4689,6 @@ func (this *GRPCErrorDetail) EqualVT(that *GRPCErrorDetail) bool {
 			if !p.EqualVT(q) {
 				return false
 			}
-		}
-	}
-	if this.DependencyGraphId != that.DependencyGraphId {
-		return false
-	}
-	if len(this.VariableDefinitionGroupIds) != len(that.VariableDefinitionGroupIds) {
-		return false
-	}
-	for i, vx := range this.VariableDefinitionGroupIds {
-		vy := that.VariableDefinitionGroupIds[i]
-		if vx != vy {
-			return false
 		}
 	}
 	return string(this.unknownFields) == string(that.unknownFields)
@@ -6459,30 +6372,22 @@ func (m *MessageRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionGroupIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
-			i--
-			dAtA[i] = 0x32
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
-	}
-	if len(m.VariableDefinitionIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
-			i--
-			dAtA[i] = 0x2a
-		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x22
 	}
 	if len(m.AliasId) > 0 {
 		i -= len(m.AliasId)
 		copy(dAtA[i:], m.AliasId)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.AliasId)))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x1a
 	}
 	if m.CustomResolver {
 		i--
@@ -6492,14 +6397,7 @@ func (m *MessageRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			dAtA[i] = 0
 		}
 		i--
-		dAtA[i] = 0x18
-	}
-	if len(m.DependencyGraphId) > 0 {
-		i -= len(m.DependencyGraphId)
-		copy(dAtA[i:], m.DependencyGraphId)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
-		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x10
 	}
 	if len(m.MessageArgumentId) > 0 {
 		i -= len(m.MessageArgumentId)
@@ -6507,6 +6405,64 @@ func (m *MessageRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.MessageArgumentId)))
 		i--
 		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VariableDefinitionSet) MarshalVT() (dAtA []byte, err error) {
+	if m == nil {
+		return nil, nil
+	}
+	size := m.SizeVT()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBufferVT(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VariableDefinitionSet) MarshalToVT(dAtA []byte) (int, error) {
+	size := m.SizeVT()
+	return m.MarshalToSizedBufferVT(dAtA[:size])
+}
+
+func (m *VariableDefinitionSet) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
+	if m == nil {
+		return 0, nil
+	}
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.unknownFields != nil {
+		i -= len(m.unknownFields)
+		copy(dAtA[i:], m.unknownFields)
+	}
+	if len(m.DependencyGraphId) > 0 {
+		i -= len(m.DependencyGraphId)
+		copy(dAtA[i:], m.DependencyGraphId)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.VariableDefinitionGroupIds) > 0 {
+		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.VariableDefinitionGroupIds[iNdEx])
+			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.VariableDefinitionIds) > 0 {
+		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.VariableDefinitionIds[iNdEx])
+			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -6923,28 +6879,13 @@ func (m *FieldOneofRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionGroupIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
-			i--
-			dAtA[i] = 0x32
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
-	}
-	if len(m.VariableDefinitionIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
-			i--
-			dAtA[i] = 0x2a
-		}
-	}
-	if len(m.DependencyGraphId) > 0 {
-		i -= len(m.DependencyGraphId)
-		copy(dAtA[i:], m.DependencyGraphId)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 		i--
 		dAtA[i] = 0x22
 	}
@@ -7194,15 +7135,6 @@ func (m *MessageDependencyGraph) MarshalToSizedBufferVT(dAtA []byte) (int, error
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if vtmsg, ok := m.Rule.(interface {
-		MarshalToSizedBufferVT([]byte) (int, error)
-	}); ok {
-		size, err := vtmsg.MarshalToSizedBufferVT(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-	}
 	if len(m.Roots) > 0 {
 		for iNdEx := len(m.Roots) - 1; iNdEx >= 0; iNdEx-- {
 			size, err := m.Roots[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
@@ -7212,7 +7144,7 @@ func (m *MessageDependencyGraph) MarshalToSizedBufferVT(dAtA []byte) (int, error
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x12
 		}
 	}
 	if len(m.Id) > 0 {
@@ -7225,44 +7157,6 @@ func (m *MessageDependencyGraph) MarshalToSizedBufferVT(dAtA []byte) (int, error
 	return len(dAtA) - i, nil
 }
 
-func (m *MessageDependencyGraph_MessageRule) MarshalToVT(dAtA []byte) (int, error) {
-	size := m.SizeVT()
-	return m.MarshalToSizedBufferVT(dAtA[:size])
-}
-
-func (m *MessageDependencyGraph_MessageRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.MessageRule != nil {
-		size, err := m.MessageRule.MarshalToSizedBufferVT(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
-func (m *MessageDependencyGraph_FieldOneofRule) MarshalToVT(dAtA []byte) (int, error) {
-	size := m.SizeVT()
-	return m.MarshalToSizedBufferVT(dAtA[:size])
-}
-
-func (m *MessageDependencyGraph_FieldOneofRule) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.FieldOneofRule != nil {
-		size, err := m.FieldOneofRule.MarshalToSizedBufferVT(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
-		i--
-		dAtA[i] = 0x1a
-	}
-	return len(dAtA) - i, nil
-}
 func (m *MessageDependencyGraphNode) MarshalVT() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
@@ -7837,6 +7731,18 @@ func (m *CallExpr) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if len(m.Errors) > 0 {
+		for iNdEx := len(m.Errors) - 1; iNdEx >= 0; iNdEx-- {
+			size, err := m.Errors[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+			i--
+			dAtA[i] = 0x2a
+		}
 	}
 	if m.Retry != nil {
 		size, err := m.Retry.MarshalToSizedBufferVT(dAtA[:i])
@@ -9446,14 +9352,15 @@ func (m *GRPCError) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.VariableDefinitionIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
-			i--
-			dAtA[i] = 0xa
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -9488,22 +9395,6 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionGroupIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
-			i--
-			dAtA[i] = 0x3a
-		}
-	}
-	if len(m.DependencyGraphId) > 0 {
-		i -= len(m.DependencyGraphId)
-		copy(dAtA[i:], m.DependencyGraphId)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
-		i--
-		dAtA[i] = 0x32
-	}
 	if len(m.LocalizedMessages) > 0 {
 		for iNdEx := len(m.LocalizedMessages) - 1; iNdEx >= 0; iNdEx-- {
 			size, err := m.LocalizedMessages[iNdEx].MarshalToSizedBufferVT(dAtA[:i])
@@ -9513,7 +9404,7 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x2a
+			dAtA[i] = 0x32
 		}
 	}
 	if len(m.BadRequests) > 0 {
@@ -9525,7 +9416,7 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x2a
 		}
 	}
 	if len(m.PreconditionFailures) > 0 {
@@ -9537,20 +9428,31 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x1a
+			dAtA[i] = 0x22
 		}
 	}
-	if len(m.MessageIds) > 0 {
-		for iNdEx := len(m.MessageIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.MessageIds[iNdEx])
-			copy(dAtA[i:], m.MessageIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.MessageIds[iNdEx])))
-			i--
-			dAtA[i] = 0x12
+	if m.Messages != nil {
+		size, err := m.Messages.MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if m.If != nil {
 		size, err := m.If.MarshalToSizedBufferVT(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVT(dAtA[:i])
 		if err != nil {
 			return 0, err
 		}
@@ -11559,30 +11461,22 @@ func (m *MessageRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionGroupIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
-			i--
-			dAtA[i] = 0x32
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVTStrict(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
-	}
-	if len(m.VariableDefinitionIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
-			i--
-			dAtA[i] = 0x2a
-		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x22
 	}
 	if len(m.AliasId) > 0 {
 		i -= len(m.AliasId)
 		copy(dAtA[i:], m.AliasId)
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.AliasId)))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x1a
 	}
 	if m.CustomResolver {
 		i--
@@ -11592,14 +11486,7 @@ func (m *MessageRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 			dAtA[i] = 0
 		}
 		i--
-		dAtA[i] = 0x18
-	}
-	if len(m.DependencyGraphId) > 0 {
-		i -= len(m.DependencyGraphId)
-		copy(dAtA[i:], m.DependencyGraphId)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
-		i--
-		dAtA[i] = 0x12
+		dAtA[i] = 0x10
 	}
 	if len(m.MessageArgumentId) > 0 {
 		i -= len(m.MessageArgumentId)
@@ -11607,6 +11494,64 @@ func (m *MessageRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.MessageArgumentId)))
 		i--
 		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *VariableDefinitionSet) MarshalVTStrict() (dAtA []byte, err error) {
+	if m == nil {
+		return nil, nil
+	}
+	size := m.SizeVT()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBufferVTStrict(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *VariableDefinitionSet) MarshalToVTStrict(dAtA []byte) (int, error) {
+	size := m.SizeVT()
+	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
+}
+
+func (m *VariableDefinitionSet) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
+	if m == nil {
+		return 0, nil
+	}
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.unknownFields != nil {
+		i -= len(m.unknownFields)
+		copy(dAtA[i:], m.unknownFields)
+	}
+	if len(m.DependencyGraphId) > 0 {
+		i -= len(m.DependencyGraphId)
+		copy(dAtA[i:], m.DependencyGraphId)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.VariableDefinitionGroupIds) > 0 {
+		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.VariableDefinitionGroupIds[iNdEx])
+			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.VariableDefinitionIds) > 0 {
+		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.VariableDefinitionIds[iNdEx])
+			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
 	}
 	return len(dAtA) - i, nil
 }
@@ -12023,28 +11968,13 @@ func (m *FieldOneofRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) 
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionGroupIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
-			i--
-			dAtA[i] = 0x32
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVTStrict(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
-	}
-	if len(m.VariableDefinitionIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
-			i--
-			dAtA[i] = 0x2a
-		}
-	}
-	if len(m.DependencyGraphId) > 0 {
-		i -= len(m.DependencyGraphId)
-		copy(dAtA[i:], m.DependencyGraphId)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 		i--
 		dAtA[i] = 0x22
 	}
@@ -12308,22 +12238,8 @@ func (m *MessageDependencyGraph) MarshalToSizedBufferVTStrict(dAtA []byte) (int,
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x12
 		}
-	}
-	if msg, ok := m.Rule.(*MessageDependencyGraph_FieldOneofRule); ok {
-		size, err := msg.MarshalToSizedBufferVTStrict(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-	}
-	if msg, ok := m.Rule.(*MessageDependencyGraph_MessageRule); ok {
-		size, err := msg.MarshalToSizedBufferVTStrict(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
 	}
 	if len(m.Id) > 0 {
 		i -= len(m.Id)
@@ -12335,44 +12251,6 @@ func (m *MessageDependencyGraph) MarshalToSizedBufferVTStrict(dAtA []byte) (int,
 	return len(dAtA) - i, nil
 }
 
-func (m *MessageDependencyGraph_MessageRule) MarshalToVTStrict(dAtA []byte) (int, error) {
-	size := m.SizeVT()
-	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
-}
-
-func (m *MessageDependencyGraph_MessageRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.MessageRule != nil {
-		size, err := m.MessageRule.MarshalToSizedBufferVTStrict(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
-func (m *MessageDependencyGraph_FieldOneofRule) MarshalToVTStrict(dAtA []byte) (int, error) {
-	size := m.SizeVT()
-	return m.MarshalToSizedBufferVTStrict(dAtA[:size])
-}
-
-func (m *MessageDependencyGraph_FieldOneofRule) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.FieldOneofRule != nil {
-		size, err := m.FieldOneofRule.MarshalToSizedBufferVTStrict(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
-		i--
-		dAtA[i] = 0x1a
-	}
-	return len(dAtA) - i, nil
-}
 func (m *MessageDependencyGraphNode) MarshalVTStrict() (dAtA []byte, err error) {
 	if m == nil {
 		return nil, nil
@@ -12990,6 +12868,18 @@ func (m *CallExpr) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if len(m.Errors) > 0 {
+		for iNdEx := len(m.Errors) - 1; iNdEx >= 0; iNdEx-- {
+			size, err := m.Errors[iNdEx].MarshalToSizedBufferVTStrict(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+			i--
+			dAtA[i] = 0x2a
+		}
 	}
 	if m.Retry != nil {
 		size, err := m.Retry.MarshalToSizedBufferVTStrict(dAtA[:i])
@@ -14609,14 +14499,15 @@ func (m *GRPCError) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.VariableDefinitionIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionIds[iNdEx])))
-			i--
-			dAtA[i] = 0xa
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVTStrict(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -14651,22 +14542,6 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
 	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for iNdEx := len(m.VariableDefinitionGroupIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.VariableDefinitionGroupIds[iNdEx])
-			copy(dAtA[i:], m.VariableDefinitionGroupIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VariableDefinitionGroupIds[iNdEx])))
-			i--
-			dAtA[i] = 0x3a
-		}
-	}
-	if len(m.DependencyGraphId) > 0 {
-		i -= len(m.DependencyGraphId)
-		copy(dAtA[i:], m.DependencyGraphId)
-		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.DependencyGraphId)))
-		i--
-		dAtA[i] = 0x32
-	}
 	if len(m.LocalizedMessages) > 0 {
 		for iNdEx := len(m.LocalizedMessages) - 1; iNdEx >= 0; iNdEx-- {
 			size, err := m.LocalizedMessages[iNdEx].MarshalToSizedBufferVTStrict(dAtA[:i])
@@ -14676,7 +14551,7 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x2a
+			dAtA[i] = 0x32
 		}
 	}
 	if len(m.BadRequests) > 0 {
@@ -14688,7 +14563,7 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x22
+			dAtA[i] = 0x2a
 		}
 	}
 	if len(m.PreconditionFailures) > 0 {
@@ -14700,20 +14575,31 @@ func (m *GRPCErrorDetail) MarshalToSizedBufferVTStrict(dAtA []byte) (int, error)
 			i -= size
 			i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
 			i--
-			dAtA[i] = 0x1a
+			dAtA[i] = 0x22
 		}
 	}
-	if len(m.MessageIds) > 0 {
-		for iNdEx := len(m.MessageIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.MessageIds[iNdEx])
-			copy(dAtA[i:], m.MessageIds[iNdEx])
-			i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.MessageIds[iNdEx])))
-			i--
-			dAtA[i] = 0x12
+	if m.Messages != nil {
+		size, err := m.Messages.MarshalToSizedBufferVTStrict(dAtA[:i])
+		if err != nil {
+			return 0, err
 		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if m.If != nil {
 		size, err := m.If.MarshalToSizedBufferVTStrict(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(size))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.DefSet != nil {
+		size, err := m.DefSet.MarshalToSizedBufferVTStrict(dAtA[:i])
 		if err != nil {
 			return 0, err
 		}
@@ -16017,10 +15903,6 @@ func (m *MessageRule) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
-	l = len(m.DependencyGraphId)
-	if l > 0 {
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
 	if m.CustomResolver {
 		n += 2
 	}
@@ -16028,6 +15910,20 @@ func (m *MessageRule) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
+	if m.DefSet != nil {
+		l = m.DefSet.SizeVT()
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	n += len(m.unknownFields)
+	return n
+}
+
+func (m *VariableDefinitionSet) SizeVT() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	if len(m.VariableDefinitionIds) > 0 {
 		for _, s := range m.VariableDefinitionIds {
 			l = len(s)
@@ -16039,6 +15935,10 @@ func (m *MessageRule) SizeVT() (n int) {
 			l = len(s)
 			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 		}
+	}
+	l = len(m.DependencyGraphId)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	n += len(m.unknownFields)
 	return n
@@ -16209,21 +16109,9 @@ func (m *FieldOneofRule) SizeVT() (n int) {
 		l = m.By.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
-	l = len(m.DependencyGraphId)
-	if l > 0 {
+	if m.DefSet != nil {
+		l = m.DefSet.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
-	if len(m.VariableDefinitionIds) > 0 {
-		for _, s := range m.VariableDefinitionIds {
-			l = len(s)
-			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-		}
-	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for _, s := range m.VariableDefinitionGroupIds {
-			l = len(s)
-			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-		}
 	}
 	n += len(m.unknownFields)
 	return n
@@ -16318,9 +16206,6 @@ func (m *MessageDependencyGraph) SizeVT() (n int) {
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
-	if vtmsg, ok := m.Rule.(interface{ SizeVT() int }); ok {
-		n += vtmsg.SizeVT()
-	}
 	if len(m.Roots) > 0 {
 		for _, e := range m.Roots {
 			l = e.SizeVT()
@@ -16331,30 +16216,6 @@ func (m *MessageDependencyGraph) SizeVT() (n int) {
 	return n
 }
 
-func (m *MessageDependencyGraph_MessageRule) SizeVT() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.MessageRule != nil {
-		l = m.MessageRule.SizeVT()
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
-	return n
-}
-func (m *MessageDependencyGraph_FieldOneofRule) SizeVT() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.FieldOneofRule != nil {
-		l = m.FieldOneofRule.SizeVT()
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
-	return n
-}
 func (m *MessageDependencyGraphNode) SizeVT() (n int) {
 	if m == nil {
 		return 0
@@ -16621,6 +16482,12 @@ func (m *CallExpr) SizeVT() (n int) {
 	if m.Retry != nil {
 		l = m.Retry.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if len(m.Errors) > 0 {
+		for _, e := range m.Errors {
+			l = e.SizeVT()
+			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+		}
 	}
 	n += len(m.unknownFields)
 	return n
@@ -17205,11 +17072,9 @@ func (m *GRPCError) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
-	if len(m.VariableDefinitionIds) > 0 {
-		for _, s := range m.VariableDefinitionIds {
-			l = len(s)
-			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-		}
+	if m.DefSet != nil {
+		l = m.DefSet.SizeVT()
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	if m.If != nil {
 		l = m.If.SizeVT()
@@ -17241,15 +17106,17 @@ func (m *GRPCErrorDetail) SizeVT() (n int) {
 	}
 	var l int
 	_ = l
+	if m.DefSet != nil {
+		l = m.DefSet.SizeVT()
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
 	if m.If != nil {
 		l = m.If.SizeVT()
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
-	if len(m.MessageIds) > 0 {
-		for _, s := range m.MessageIds {
-			l = len(s)
-			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-		}
+	if m.Messages != nil {
+		l = m.Messages.SizeVT()
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	if len(m.PreconditionFailures) > 0 {
 		for _, e := range m.PreconditionFailures {
@@ -17266,16 +17133,6 @@ func (m *GRPCErrorDetail) SizeVT() (n int) {
 	if len(m.LocalizedMessages) > 0 {
 		for _, e := range m.LocalizedMessages {
 			l = e.SizeVT()
-			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-		}
-	}
-	l = len(m.DependencyGraphId)
-	if l > 0 {
-		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
-	}
-	if len(m.VariableDefinitionGroupIds) > 0 {
-		for _, s := range m.VariableDefinitionGroupIds {
-			l = len(s)
 			n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 		}
 	}
@@ -21907,38 +21764,6 @@ func (m *MessageRule) UnmarshalVT(dAtA []byte) error {
 			m.MessageArgumentId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DependencyGraphId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CustomResolver", wireType)
 			}
@@ -21958,7 +21783,7 @@ func (m *MessageRule) UnmarshalVT(dAtA []byte) error {
 				}
 			}
 			m.CustomResolver = bool(v != 0)
-		case 4:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field AliasId", wireType)
 			}
@@ -21990,7 +21815,94 @@ func (m *MessageRule) UnmarshalVT(dAtA []byte) error {
 			}
 			m.AliasId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
+			}
+			if err := m.DefSet.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VariableDefinitionSet) UnmarshalVT(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return protohelpers.ErrIntOverflow
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VariableDefinitionSet: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VariableDefinitionSet: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
 			}
@@ -22022,7 +21934,7 @@ func (m *MessageRule) UnmarshalVT(dAtA []byte) error {
 			}
 			m.VariableDefinitionIds = append(m.VariableDefinitionIds, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
-		case 6:
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionGroupIds", wireType)
 			}
@@ -22053,6 +21965,38 @@ func (m *MessageRule) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.VariableDefinitionGroupIds = append(m.VariableDefinitionGroupIds, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.DependencyGraphId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -23248,9 +23192,9 @@ func (m *FieldOneofRule) UnmarshalVT(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -23260,87 +23204,27 @@ func (m *FieldOneofRule) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return protohelpers.ErrInvalidLength
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return protohelpers.ErrInvalidLength
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.DependencyGraphId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
 			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
+			if err := m.DefSet.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.VariableDefinitionIds = append(m.VariableDefinitionIds, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionGroupIds", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.VariableDefinitionGroupIds = append(m.VariableDefinitionGroupIds, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -23821,88 +23705,6 @@ func (m *MessageDependencyGraph) UnmarshalVT(dAtA []byte) error {
 			m.Id = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MessageRule", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if oneof, ok := m.Rule.(*MessageDependencyGraph_MessageRule); ok {
-				if err := oneof.MessageRule.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				v := &MessageRule{}
-				if err := v.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-				m.Rule = &MessageDependencyGraph_MessageRule{MessageRule: v}
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field FieldOneofRule", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if oneof, ok := m.Rule.(*MessageDependencyGraph_FieldOneofRule); ok {
-				if err := oneof.FieldOneofRule.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				v := &FieldOneofRule{}
-				if err := v.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-				m.Rule = &MessageDependencyGraph_FieldOneofRule{FieldOneofRule: v}
-			}
-			iNdEx = postIndex
-		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Roots", wireType)
 			}
@@ -25277,6 +25079,40 @@ func (m *CallExpr) UnmarshalVT(dAtA []byte) error {
 				m.Retry = &RetryPolicy{}
 			}
 			if err := m.Retry.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Errors", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Errors = append(m.Errors, &GRPCError{})
+			if err := m.Errors[len(m.Errors)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -29587,9 +29423,9 @@ func (m *GRPCError) UnmarshalVT(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -29599,23 +29435,27 @@ func (m *GRPCError) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return protohelpers.ErrInvalidLength
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return protohelpers.ErrInvalidLength
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.VariableDefinitionIds = append(m.VariableDefinitionIds, string(dAtA[iNdEx:postIndex]))
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
+			}
+			if err := m.DefSet.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -29811,6 +29651,42 @@ func (m *GRPCErrorDetail) UnmarshalVT(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
+			}
+			if err := m.DefSet.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field If", wireType)
 			}
 			var msglen int
@@ -29845,11 +29721,11 @@ func (m *GRPCErrorDetail) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MessageIds", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Messages", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -29859,25 +29735,29 @@ func (m *GRPCErrorDetail) UnmarshalVT(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return protohelpers.ErrInvalidLength
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return protohelpers.ErrInvalidLength
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.MessageIds = append(m.MessageIds, string(dAtA[iNdEx:postIndex]))
+			if m.Messages == nil {
+				m.Messages = &VariableDefinitionSet{}
+			}
+			if err := m.Messages.UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PreconditionFailures", wireType)
 			}
@@ -29911,7 +29791,7 @@ func (m *GRPCErrorDetail) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BadRequests", wireType)
 			}
@@ -29945,7 +29825,7 @@ func (m *GRPCErrorDetail) UnmarshalVT(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 5:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LocalizedMessages", wireType)
 			}
@@ -29978,70 +29858,6 @@ func (m *GRPCErrorDetail) UnmarshalVT(dAtA []byte) error {
 			if err := m.LocalizedMessages[len(m.LocalizedMessages)-1].UnmarshalVT(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.DependencyGraphId = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionGroupIds", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.VariableDefinitionGroupIds = append(m.VariableDefinitionGroupIds, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -36396,42 +36212,6 @@ func (m *MessageRule) UnmarshalVTUnsafe(dAtA []byte) error {
 			m.MessageArgumentId = stringValue
 			iNdEx = postIndex
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
-			}
-			m.DependencyGraphId = stringValue
-			iNdEx = postIndex
-		case 3:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CustomResolver", wireType)
 			}
@@ -36451,7 +36231,7 @@ func (m *MessageRule) UnmarshalVTUnsafe(dAtA []byte) error {
 				}
 			}
 			m.CustomResolver = bool(v != 0)
-		case 4:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field AliasId", wireType)
 			}
@@ -36487,7 +36267,94 @@ func (m *MessageRule) UnmarshalVTUnsafe(dAtA []byte) error {
 			}
 			m.AliasId = stringValue
 			iNdEx = postIndex
-		case 5:
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
+			}
+			if err := m.DefSet.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := protohelpers.Skip(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.unknownFields = append(m.unknownFields, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *VariableDefinitionSet) UnmarshalVTUnsafe(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return protohelpers.ErrIntOverflow
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: VariableDefinitionSet: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: VariableDefinitionSet: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
 			}
@@ -36523,7 +36390,7 @@ func (m *MessageRule) UnmarshalVTUnsafe(dAtA []byte) error {
 			}
 			m.VariableDefinitionIds = append(m.VariableDefinitionIds, stringValue)
 			iNdEx = postIndex
-		case 6:
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionGroupIds", wireType)
 			}
@@ -36558,6 +36425,42 @@ func (m *MessageRule) UnmarshalVTUnsafe(dAtA []byte) error {
 				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
 			}
 			m.VariableDefinitionGroupIds = append(m.VariableDefinitionGroupIds, stringValue)
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			var stringValue string
+			if intStringLen > 0 {
+				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
+			}
+			m.DependencyGraphId = stringValue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -37797,9 +37700,9 @@ func (m *FieldOneofRule) UnmarshalVTUnsafe(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -37809,99 +37712,27 @@ func (m *FieldOneofRule) UnmarshalVTUnsafe(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return protohelpers.ErrInvalidLength
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return protohelpers.ErrInvalidLength
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
 			}
-			m.DependencyGraphId = stringValue
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
+			if err := m.DefSet.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
-			}
-			m.VariableDefinitionIds = append(m.VariableDefinitionIds, stringValue)
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionGroupIds", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
-			}
-			m.VariableDefinitionGroupIds = append(m.VariableDefinitionGroupIds, stringValue)
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -38406,88 +38237,6 @@ func (m *MessageDependencyGraph) UnmarshalVTUnsafe(dAtA []byte) error {
 			m.Id = stringValue
 			iNdEx = postIndex
 		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MessageRule", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if oneof, ok := m.Rule.(*MessageDependencyGraph_MessageRule); ok {
-				if err := oneof.MessageRule.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				v := &MessageRule{}
-				if err := v.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-				m.Rule = &MessageDependencyGraph_MessageRule{MessageRule: v}
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field FieldOneofRule", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if oneof, ok := m.Rule.(*MessageDependencyGraph_FieldOneofRule); ok {
-				if err := oneof.FieldOneofRule.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-			} else {
-				v := &FieldOneofRule{}
-				if err := v.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
-					return err
-				}
-				m.Rule = &MessageDependencyGraph_FieldOneofRule{FieldOneofRule: v}
-			}
-			iNdEx = postIndex
-		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Roots", wireType)
 			}
@@ -39898,6 +39647,40 @@ func (m *CallExpr) UnmarshalVTUnsafe(dAtA []byte) error {
 				m.Retry = &RetryPolicy{}
 			}
 			if err := m.Retry.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Errors", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Errors = append(m.Errors, &GRPCError{})
+			if err := m.Errors[len(m.Errors)-1].UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -44272,9 +44055,9 @@ func (m *GRPCError) UnmarshalVTUnsafe(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionIds", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -44284,27 +44067,27 @@ func (m *GRPCError) UnmarshalVTUnsafe(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return protohelpers.ErrInvalidLength
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return protohelpers.ErrInvalidLength
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
 			}
-			m.VariableDefinitionIds = append(m.VariableDefinitionIds, stringValue)
+			if err := m.DefSet.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -44504,6 +44287,42 @@ func (m *GRPCErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DefSet", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.DefSet == nil {
+				m.DefSet = &VariableDefinitionSet{}
+			}
+			if err := m.DefSet.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field If", wireType)
 			}
 			var msglen int
@@ -44538,11 +44357,11 @@ func (m *GRPCErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MessageIds", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Messages", wireType)
 			}
-			var stringLen uint64
+			var msglen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return protohelpers.ErrIntOverflow
@@ -44552,29 +44371,29 @@ func (m *GRPCErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
+				msglen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
+			if msglen < 0 {
 				return protohelpers.ErrInvalidLength
 			}
-			postIndex := iNdEx + intStringLen
+			postIndex := iNdEx + msglen
 			if postIndex < 0 {
 				return protohelpers.ErrInvalidLength
 			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
+			if m.Messages == nil {
+				m.Messages = &VariableDefinitionSet{}
 			}
-			m.MessageIds = append(m.MessageIds, stringValue)
+			if err := m.Messages.UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PreconditionFailures", wireType)
 			}
@@ -44608,7 +44427,7 @@ func (m *GRPCErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BadRequests", wireType)
 			}
@@ -44642,7 +44461,7 @@ func (m *GRPCErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 5:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LocalizedMessages", wireType)
 			}
@@ -44675,78 +44494,6 @@ func (m *GRPCErrorDetail) UnmarshalVTUnsafe(dAtA []byte) error {
 			if err := m.LocalizedMessages[len(m.LocalizedMessages)-1].UnmarshalVTUnsafe(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field DependencyGraphId", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
-			}
-			m.DependencyGraphId = stringValue
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field VariableDefinitionGroupIds", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return protohelpers.ErrIntOverflow
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return protohelpers.ErrInvalidLength
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			var stringValue string
-			if intStringLen > 0 {
-				stringValue = unsafe.String(&dAtA[iNdEx], intStringLen)
-			}
-			m.VariableDefinitionGroupIds = append(m.VariableDefinitionGroupIds, stringValue)
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

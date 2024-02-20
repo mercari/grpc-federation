@@ -842,7 +842,7 @@ func (r *Resolver) resolveFieldRules(ctx *context, msg *Message) {
 	for _, field := range msg.Fields {
 		field.Rule = r.resolveFieldRule(ctx, msg, field, r.fieldToRuleMap[field])
 		if msg.Rule == nil && field.Rule != nil {
-			msg.Rule = &MessageRule{}
+			msg.Rule = &MessageRule{DefSet: &VariableDefinitionSet{}}
 		}
 	}
 	r.validateFieldsOneofRule(ctx, msg)
@@ -908,7 +908,7 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message) {
 	}
 	rule := msg.Rule
 	autobindFieldMap := make(map[string][]*AutoBindField)
-	for _, varDef := range rule.VariableDefinitions {
+	for _, varDef := range rule.DefSet.Definitions() {
 		if !varDef.AutoBind {
 			continue
 		}
@@ -1192,10 +1192,35 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 		Message: msg,
 	})
 	msg.Rule = &MessageRule{
-		VariableDefinitions: r.resolveVariableDefinitions(ctx, ruleDef.GetDef()),
-		CustomResolver:      ruleDef.GetCustomResolver(),
-		Alias:               r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
+		DefSet: &VariableDefinitionSet{
+			Defs: r.resolveVariableDefinitions(ctx, ruleDef.GetDef()),
+		},
+		CustomResolver: ruleDef.GetCustomResolver(),
+		Alias:          r.resolveMessageAlias(ctx, ruleDef.GetAlias()),
 	}
+}
+
+func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message {
+	if aliasName == "" {
+		return nil
+	}
+	if strings.Contains(aliasName, ".") {
+		pkg, err := r.lookupPackage(aliasName)
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.NewLocationBuilder(ctx.fileName()).
+						WithMessage(ctx.messageName()).
+						WithOption().WithAlias().Location(),
+				),
+			)
+			return nil
+		}
+		name := r.trimPackage(pkg, aliasName)
+		return r.resolveMessage(ctx, pkg, name)
+	}
+	return r.resolveMessage(ctx, ctx.file().Package, aliasName)
 }
 
 func (r *Resolver) resolveVariableDefinitions(ctx *context, varDefs []*federation.VariableDefinition) []*VariableDefinition {
@@ -1408,88 +1433,64 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr) *Call
 		}
 	}
 
+	var grpcErrs []*GRPCError
+	for _, grpcErr := range def.GetError() {
+		grpcErrs = append(grpcErrs, r.resolveGRPCError(ctx, grpcErr))
+	}
 	return &CallExpr{
 		Method:  method,
 		Request: r.resolveRequest(ctx, method, def.GetRequest()),
 		Timeout: timeout,
 		Retry:   r.resolveRetry(ctx, def.GetRetry(), timeout),
+		Errors:  grpcErrs,
 	}
 }
 
 func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.ValidationExpr) *ValidationExpr {
-	e := def.GetError()
-	if e.GetIf() != "" && len(e.GetDetails()) != 0 {
-		ctx.addError(
-			ErrWithLocation(
-				"cannot set both rule and details at the same time",
-				source.NewMsgVarDefOptionBuilder(ctx.fileName(), ctx.messageName(), ctx.defIndex()).
-					WithValidation().WithIf().Location(),
-			),
-		)
-		return nil
+	return &ValidationExpr{
+		Name:  def.GetName(),
+		Error: r.resolveGRPCError(ctx, def.GetError()),
 	}
-
-	vr := &ValidationExpr{
-		Error: &GRPCError{
-			Code:    e.GetCode(),
-			Message: e.GetMessage(),
-		},
-	}
-
-	if expr := e.GetIf(); expr != "" {
-		vr.Error.If = &CELValue{
-			Expr: expr,
-		}
-		return vr
-	}
-
-	if details := e.GetDetails(); len(details) != 0 {
-		vr.Error.Details = r.resolveGRPCErrorDetails(ctx, details)
-		return vr
-	}
-
-	ctx.addError(
-		ErrWithLocation(
-			"either rule or details should be specified",
-			source.NewMsgVarDefOptionBuilder(ctx.fileName(), ctx.messageName(), ctx.defIndex()).
-				WithValidation().WithIf().Location(),
-		),
-	)
-	return nil
 }
 
-func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message {
-	if aliasName == "" {
-		return nil
+func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError) *GRPCError {
+	ctx = ctx.withDefOwner(&VariableDefinitionOwner{})
+	return &GRPCError{
+		DefSet: &VariableDefinitionSet{
+			Defs: r.resolveVariableDefinitions(ctx, def.GetDef()),
+		},
+		If:      r.resolveGRPCErrorIf(ctx, def.GetIf()),
+		Code:    def.GetCode(),
+		Message: def.GetMessage(),
+		Details: r.resolveGRPCErrorDetails(ctx, def.GetDetails()),
+		Ignore:  def.GetIgnore(),
 	}
-	if strings.Contains(aliasName, ".") {
-		pkg, err := r.lookupPackage(aliasName)
-		if err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.NewLocationBuilder(ctx.fileName()).
-						WithMessage(ctx.messageName()).
-						WithOption().WithAlias().Location(),
-				),
-			)
-			return nil
-		}
-		name := r.trimPackage(pkg, aliasName)
-		return r.resolveMessage(ctx, pkg, name)
+}
+
+func (r *Resolver) resolveGRPCErrorIf(ctx *context, expr string) *CELValue {
+	if expr == "" {
+		return &CELValue{Expr: "true"}
 	}
-	return r.resolveMessage(ctx, ctx.file().Package, aliasName)
+	return &CELValue{Expr: expr}
 }
 
 func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.GRPCErrorDetail) []*GRPCErrorDetail {
+	if len(details) == 0 {
+		return nil
+	}
 	result := make([]*GRPCErrorDetail, 0, len(details))
 	for idx, detail := range details {
-		ctx := ctx.withErrDetailIndex(idx)
+		ctx := ctx.withErrDetailIndex(idx).withDefOwner(&VariableDefinitionOwner{})
 		result = append(result, &GRPCErrorDetail{
 			If: &CELValue{
 				Expr: detail.GetIf(),
 			},
-			Messages:             r.resolveGRPCDetailMessages(ctx, detail.GetMessage()),
+			DefSet: &VariableDefinitionSet{
+				Defs: r.resolveVariableDefinitions(ctx, detail.GetDef()),
+			},
+			Messages: &VariableDefinitionSet{
+				Defs: r.resolveGRPCDetailMessages(ctx, detail.GetMessage()),
+			},
 			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailure()),
 			BadRequests:          r.resolveBadRequests(detail.GetBadRequest()),
 			LocalizedMessages:    r.resolveLocalizedMessages(detail.GetLocalizedMessage()),
@@ -1676,10 +1677,12 @@ func (r *Resolver) resolveFieldOneofRule(ctx *context, msg *Message, field *Fiel
 		Field: field,
 	})
 	return &FieldOneofRule{
-		If:                  ifValue,
-		Default:             def.GetDefault(),
-		VariableDefinitions: r.resolveVariableDefinitions(ctx, def.GetDef()),
-		By:                  by,
+		If:      ifValue,
+		Default: def.GetDefault(),
+		DefSet: &VariableDefinitionSet{
+			Defs: r.resolveVariableDefinitions(ctx, def.GetDef()),
+		},
+		By: by,
 	}
 }
 
@@ -2352,7 +2355,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 
 	msgs := []*Message{msg}
 	msgToDefsMap := make(map[*Message][]*VariableDefinition)
-	for _, varDef := range msg.Rule.VariableDefinitions {
+	for _, varDef := range msg.Rule.DefSet.Definitions() {
 		for _, msgExpr := range varDef.MessageExprs() {
 			msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
 		}
@@ -2364,7 +2367,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		for _, varDef := range field.Rule.Oneof.VariableDefinitions {
+		for _, varDef := range field.Rule.Oneof.DefSet.Definitions() {
 			for _, msgExpr := range varDef.MessageExprs() {
 				msgToDefsMap[msgExpr.Message] = append(msgToDefsMap[msgExpr.Message], varDef)
 			}
@@ -2502,7 +2505,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 	if msg.Rule == nil {
 		return
 	}
-	for idx, varDef := range msg.Rule.VariableDefinitions {
+	for idx, varDef := range msg.Rule.DefSet.Definitions() {
 		ctx := ctx.withDefIndex(idx)
 		if varDef.If != nil {
 			if err := r.resolveCELValue(ctx, env, varDef.If); err != nil {
@@ -2590,7 +2593,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 					}
 				}
 			}
-			for idx, varDef := range oneof.VariableDefinitions {
+			for idx, varDef := range oneof.DefSet.Definitions() {
 				if varDef.Expr == nil {
 					continue
 				}
@@ -2822,8 +2825,8 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, m
 			),
 		)
 	}
-	for _, message := range detail.Messages {
-		r.resolveVariableExprCELValues(ctx, env, message.Expr)
+	for _, def := range detail.Messages.Definitions() {
+		r.resolveVariableExprCELValues(ctx, env, def.Expr)
 	}
 	for fIdx, failure := range detail.PreconditionFailures {
 		for fvIdx, violation := range failure.Violations {
@@ -2967,7 +2970,7 @@ func (r *Resolver) resolveUsedNameReference(msg *Message) {
 	for _, name := range msg.ReferenceNames() {
 		nameMap[name] = struct{}{}
 	}
-	for _, varDef := range msg.Rule.VariableDefinitions {
+	for _, varDef := range msg.Rule.DefSet.Definitions() {
 		if _, exists := nameMap[varDef.Name]; exists {
 			varDef.Used = true
 		}
@@ -2984,7 +2987,7 @@ func (r *Resolver) resolveUsedNameReference(msg *Message) {
 		for _, name := range oneof.By.ReferenceNames() {
 			oneofNameMap[name] = struct{}{}
 		}
-		for _, varDef := range oneof.VariableDefinitions {
+		for _, varDef := range oneof.DefSet.Definitions() {
 			if _, exists := oneofNameMap[varDef.Name]; exists {
 				varDef.Used = true
 			}
@@ -3163,24 +3166,20 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 		if msg.Rule == nil {
 			continue
 		}
-		if graph := CreateMessageDependencyGraph(ctx, msg); graph != nil {
-			msg.Rule.DependencyGraph = graph
-			msg.Rule.VariableDefinitionGroups = graph.VariableDefinitionGroups(ctx)
-		}
-		for defIdx, def := range msg.Rule.VariableDefinitions {
-			if def.Expr == nil {
-				continue
-			}
-			if def.Expr.Validation == nil || def.Expr.Validation.Error == nil {
-				continue
-			}
+		setupVariableDefinitionSet(ctx, msg, msg.Rule.DefSet)
+		for defIdx, def := range msg.Rule.DefSet.Definitions() {
 			ctx := ctx.withDefIndex(defIdx)
-			for detIdx, detail := range def.Expr.Validation.Error.Details {
-				ctx := ctx.withErrDetailIndex(detIdx)
-				if graph := CreateMessageDependencyGraphByGRPCErrorDetailMessages(msg, detail.Messages); graph != nil {
-					detail.DependencyGraph = graph
-					detail.VariableDefinitionGroups = graph.VariableDefinitionGroups(ctx)
+			expr := def.Expr
+			if expr == nil {
+				continue
+			}
+			switch {
+			case expr.Call != nil:
+				for _, grpcErr := range expr.Call.Errors {
+					r.resolveGRPCErrorMessageDependencies(ctx, msg, grpcErr)
 				}
+			case expr.Validation != nil:
+				r.resolveGRPCErrorMessageDependencies(ctx, msg, expr.Validation.Error)
 			}
 		}
 		for _, field := range msg.Fields {
@@ -3190,13 +3189,22 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 			if field.Rule.Oneof == nil {
 				continue
 			}
-			if graph := CreateMessageDependencyGraphByFieldOneof(ctx, msg, field); graph != nil {
-				field.Rule.Oneof.DependencyGraph = graph
-				field.Rule.Oneof.VariableDefinitionGroups = graph.VariableDefinitionGroups(ctx)
-			}
+			setupVariableDefinitionSet(ctx, msg, field.Rule.Oneof.DefSet)
 		}
 	}
 	r.validateMessages(ctx, msgs)
+}
+
+func (r *Resolver) resolveGRPCErrorMessageDependencies(ctx *context, msg *Message, grpcErr *GRPCError) {
+	if grpcErr == nil {
+		return
+	}
+	setupVariableDefinitionSet(ctx, msg, grpcErr.DefSet)
+	for detIdx, detail := range grpcErr.Details {
+		ctx := ctx.withErrDetailIndex(detIdx)
+		setupVariableDefinitionSet(ctx, msg, detail.DefSet)
+		setupVariableDefinitionSet(ctx, msg, detail.Messages)
+	}
 }
 
 func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, error) {

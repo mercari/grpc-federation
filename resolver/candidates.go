@@ -122,7 +122,7 @@ func (r *Resolver) candidatesFieldOption(msg *Message, field *source.Field) []st
 		if msg.Rule == nil {
 			return []string{}
 		}
-		defIdx := len(msg.Rule.VariableDefinitions) - 1
+		defIdx := len(msg.Rule.DefSet.Definitions()) - 1
 		return r.candidatesCELValue(msg, defIdx).Unique().Filter(f.Type).Names()
 	}
 	return []string{"by"}
@@ -209,11 +209,11 @@ func (r *Resolver) candidatesRequestField(msg *Message, defIdx int) []string {
 		return nil
 	}
 
-	if len(msg.Rule.VariableDefinitions) <= defIdx {
+	if len(msg.Rule.DefSet.Definitions()) <= defIdx {
 		return nil
 	}
 
-	def := msg.Rule.VariableDefinitions[defIdx]
+	def := msg.Rule.DefSet.Definitions()[defIdx]
 	if def.Expr == nil {
 		return nil
 	}
@@ -239,11 +239,11 @@ func (r *Resolver) requestFieldType(msg *Message, defIdx, reqIdx int) *Type {
 	if msg.Rule == nil {
 		return nil
 	}
-	if len(msg.Rule.VariableDefinitions) <= defIdx {
+	if len(msg.Rule.DefSet.Definitions()) <= defIdx {
 		return nil
 	}
 
-	def := msg.Rule.VariableDefinitions[defIdx]
+	def := msg.Rule.DefSet.Definitions()[defIdx]
 	if def.Expr == nil {
 		return nil
 	}
@@ -295,13 +295,13 @@ func (r *Resolver) candidatesVariableName(msg *Message, defIdx int) []*ValueCand
 	if msg.Rule == nil {
 		return nil
 	}
-	if len(msg.Rule.VariableDefinitions) <= defIdx {
+	if len(msg.Rule.DefSet.Definitions()) <= defIdx {
 		return nil
 	}
 
 	var ret []*ValueCandidate
 	for i := 0; i < defIdx+1; i++ {
-		def := msg.Rule.VariableDefinitions[defIdx]
+		def := msg.Rule.DefSet.Definitions()[defIdx]
 		name := def.Name
 		if name == "" || strings.HasPrefix(name, "_") {
 			continue

@@ -245,12 +245,18 @@ func (e *encoder) toMessageRule(rule *resolver.MessageRule) *plugin.MessageRule 
 		CustomResolver: rule.CustomResolver,
 	}
 	ret.MessageArgumentId = e.toMessage(rule.MessageArgument).GetId()
-	ret.DependencyGraphId = e.toMessageDependencyGraph(rule.DependencyGraph).GetId()
 	ret.AliasId = e.toMessage(rule.Alias).GetId()
-	for _, def := range e.toVariableDefinitions(rule.VariableDefinitions) {
+	ret.DefSet = e.toVariableDefinitionSet(rule.DefSet)
+	return ret
+}
+
+func (e *encoder) toVariableDefinitionSet(set *resolver.VariableDefinitionSet) *plugin.VariableDefinitionSet {
+	ret := &plugin.VariableDefinitionSet{}
+	ret.DependencyGraphId = e.toMessageDependencyGraph(set.DependencyGraph()).GetId()
+	for _, def := range e.toVariableDefinitions(set.Definitions()) {
 		ret.VariableDefinitionIds = append(ret.VariableDefinitionIds, def.GetId())
 	}
-	for _, group := range e.toVariableDefinitionGroups(rule.VariableDefinitionGroups) {
+	for _, group := range e.toVariableDefinitionGroups(set.DefinitionGroups()) {
 		ret.VariableDefinitionGroupIds = append(ret.VariableDefinitionGroupIds, group.GetId())
 	}
 	return ret
@@ -399,13 +405,7 @@ func (e *encoder) toFieldOneofRule(rule *resolver.FieldOneofRule) *plugin.FieldO
 	ret := &plugin.FieldOneofRule{Default: rule.Default}
 	ret.If = e.toCELValue(rule.If)
 	ret.By = e.toCELValue(rule.By)
-	ret.DependencyGraphId = e.toMessageDependencyGraph(rule.DependencyGraph).GetId()
-	for _, def := range e.toVariableDefinitions(rule.VariableDefinitions) {
-		ret.VariableDefinitionIds = append(ret.VariableDefinitionIds, def.GetId())
-	}
-	for _, group := range e.toVariableDefinitionGroups(rule.VariableDefinitionGroups) {
-		ret.VariableDefinitionGroupIds = append(ret.VariableDefinitionGroupIds, group.GetId())
-	}
+	ret.DefSet = e.toVariableDefinitionSet(rule.DefSet)
 	return ret
 }
 
@@ -624,16 +624,6 @@ func (e *encoder) toMessageDependencyGraph(graph *resolver.MessageDependencyGrap
 	e.ref.GraphMap[id] = ret
 
 	ret.Roots = e.toMessageDependencyGraphNodes(graph.Roots)
-	switch {
-	case graph.MessageRule != nil:
-		ret.Rule = &plugin.MessageDependencyGraph_MessageRule{
-			MessageRule: e.toMessageRule(graph.MessageRule),
-		}
-	case graph.FieldOneofRule != nil:
-		ret.Rule = &plugin.MessageDependencyGraph_FieldOneofRule{
-			FieldOneofRule: e.toFieldOneofRule(graph.FieldOneofRule),
-		}
-	}
 	return ret
 }
 
@@ -1163,17 +1153,12 @@ func (e *encoder) toGRPCErrorDetail(detail *resolver.GRPCErrorDetail) *plugin.GR
 		return nil
 	}
 	ret := &plugin.GRPCErrorDetail{}
+	ret.DefSet = e.toVariableDefinitionSet(detail.DefSet)
 	ret.If = e.toCELValue(detail.If)
 	ret.PreconditionFailures = e.toPreconditionFailures(detail.PreconditionFailures)
 	ret.BadRequests = e.toBadRequests(detail.BadRequests)
 	ret.LocalizedMessages = e.toLocalizedMessages(detail.LocalizedMessages)
-	ret.DependencyGraphId = e.toMessageDependencyGraph(detail.DependencyGraph).GetId()
-	for _, def := range e.toVariableDefinitions(detail.Messages) {
-		ret.MessageIds = append(ret.MessageIds, def.GetId())
-	}
-	for _, group := range e.toVariableDefinitionGroups(detail.VariableDefinitionGroups) {
-		ret.VariableDefinitionGroupIds = append(ret.VariableDefinitionGroupIds, group.GetId())
-	}
+	ret.Messages = e.toVariableDefinitionSet(detail.Messages)
 	return ret
 }
 
@@ -1333,13 +1318,11 @@ func (e *encoder) toDependencyGraphID(graph *resolver.MessageDependencyGraph) st
 	if graph == nil {
 		return ""
 	}
-	if graph.MessageRule == nil {
-		return ""
+	roots := make([]string, 0, len(graph.Roots))
+	for _, root := range graph.Roots {
+		roots = append(roots, root.FQDN())
 	}
-	if graph.MessageRule.MessageArgument == nil {
-		return ""
-	}
-	return graph.MessageRule.MessageArgument.FQDN()
+	return strings.Join(roots, ":")
 }
 
 func (e *encoder) toVariableDefinitionID(def *resolver.VariableDefinition) string {

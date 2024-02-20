@@ -115,12 +115,16 @@ type EnumValueRule struct {
 }
 
 type MessageRule struct {
-	MessageArgument          *Message
-	DependencyGraph          *MessageDependencyGraph
-	CustomResolver           bool
-	Alias                    *Message
-	VariableDefinitions      VariableDefinitions
-	VariableDefinitionGroups []VariableDefinitionGroup
+	MessageArgument *Message
+	CustomResolver  bool
+	Alias           *Message
+	DefSet          *VariableDefinitionSet
+}
+
+type VariableDefinitionSet struct {
+	Defs   VariableDefinitions
+	Groups []VariableDefinitionGroup
+	Graph  *MessageDependencyGraph
 }
 
 type VariableDefinition struct {
@@ -204,6 +208,7 @@ type CallExpr struct {
 	Request *Request
 	Timeout *time.Duration
 	Retry   *RetryPolicy
+	Errors  []*GRPCError
 }
 
 type MapExpr struct {
@@ -233,6 +238,7 @@ type ValidationExpr struct {
 }
 
 type GRPCError struct {
+	DefSet  *VariableDefinitionSet
 	If      *CELValue
 	Code    code.Code
 	Message string
@@ -243,13 +249,12 @@ type GRPCError struct {
 type GRPCErrorDetails []*GRPCErrorDetail
 
 type GRPCErrorDetail struct {
-	If                       *CELValue
-	Messages                 VariableDefinitions
-	PreconditionFailures     []*PreconditionFailure
-	BadRequests              []*BadRequest
-	LocalizedMessages        []*LocalizedMessage
-	DependencyGraph          *MessageDependencyGraph
-	VariableDefinitionGroups []VariableDefinitionGroup
+	If                   *CELValue
+	DefSet               *VariableDefinitionSet
+	Messages             *VariableDefinitionSet
+	PreconditionFailures []*PreconditionFailure
+	BadRequests          []*BadRequest
+	LocalizedMessages    []*LocalizedMessage
 }
 
 type PreconditionFailure struct {
@@ -321,12 +326,10 @@ type FieldRule struct {
 
 // FieldOneofRule represents grpc.federation.field.oneof.
 type FieldOneofRule struct {
-	If                       *CELValue
-	Default                  bool
-	By                       *CELValue
-	DependencyGraph          *MessageDependencyGraph
-	VariableDefinitions      VariableDefinitions
-	VariableDefinitionGroups []VariableDefinitionGroup
+	If      *CELValue
+	Default bool
+	By      *CELValue
+	DefSet  *VariableDefinitionSet
 }
 
 type AllMessageDependencyGraph struct {
@@ -340,9 +343,7 @@ type AllMessageDependencyGraphNode struct {
 }
 
 type MessageDependencyGraph struct {
-	MessageRule    *MessageRule
-	FieldOneofRule *FieldOneofRule
-	Roots          []*MessageDependencyGraphNode
+	Roots []*MessageDependencyGraphNode
 }
 
 type MessageDependencyGraphNode struct {
@@ -351,7 +352,6 @@ type MessageDependencyGraphNode struct {
 	ParentMap          map[*MessageDependencyGraphNode]struct{}
 	ChildrenMap        map[*MessageDependencyGraphNode]struct{}
 	BaseMessage        *Message
-	Message            *Message
 	VariableDefinition *VariableDefinition
 }
 

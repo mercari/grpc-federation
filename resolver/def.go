@@ -4,6 +4,27 @@ import (
 	"sort"
 )
 
+func (s *VariableDefinitionSet) Definitions() VariableDefinitions {
+	if s == nil {
+		return nil
+	}
+	return s.Defs
+}
+
+func (s *VariableDefinitionSet) DefinitionGroups() []VariableDefinitionGroup {
+	if s == nil {
+		return nil
+	}
+	return s.Groups
+}
+
+func (s *VariableDefinitionSet) DependencyGraph() *MessageDependencyGraph {
+	if s == nil {
+		return nil
+	}
+	return s.Graph
+}
+
 func (g *SequentialVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
 	var defs VariableDefinitions
 	if g.Start != nil {
@@ -74,8 +95,8 @@ func (def *VariableDefinition) MessageExprs() []*MessageExpr {
 	case expr.Validation != nil && expr.Validation.Error != nil:
 		var ret []*MessageExpr
 		for _, detail := range expr.Validation.Error.Details {
-			for _, msg := range detail.Messages {
-				ret = append(ret, msg.Expr.Message)
+			for _, def := range detail.Messages.Definitions() {
+				ret = append(ret, def.Expr.Message)
 			}
 		}
 		return ret
@@ -94,8 +115,8 @@ func (e *GRPCError) ReferenceNames() []string {
 	register(e.If.ReferenceNames())
 	for _, detail := range e.Details {
 		register(detail.If.ReferenceNames())
-		for _, message := range detail.Messages {
-			register(message.ReferenceNames())
+		for _, def := range detail.Messages.Definitions() {
+			register(def.ReferenceNames())
 		}
 		for _, failure := range detail.PreconditionFailures {
 			for _, violation := range failure.Violations {

@@ -70,19 +70,21 @@ func TestCandidates(t *testing.T) {
 							{Name: "x_arg1", Type: Int64Type},
 						},
 					},
-					VariableDefinitions: []*VariableDefinition{
-						{
-							Expr: &VariableExpr{
-								Call: &CallExpr{
-									Method: barMethod,
+					DefSet: &VariableDefinitionSet{
+						Defs: []*VariableDefinition{
+							{
+								Expr: &VariableExpr{
+									Call: &CallExpr{
+										Method: barMethod,
+									},
 								},
 							},
-						},
-						{
-							Name: "y",
-							Expr: &VariableExpr{
-								Message: &MessageExpr{
-									Message: msgY,
+							{
+								Name: "y",
+								Expr: &VariableExpr{
+									Message: &MessageExpr{
+										Message: msgY,
+									},
 								},
 							},
 						},

@@ -25,7 +25,7 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 		}
 		childMap := make(map[*AllMessageDependencyGraphNode]struct{})
 		node := msgToNode[msg]
-		for idx, varDef := range msg.Rule.VariableDefinitions {
+		for idx, varDef := range msg.Rule.DefSet.Definitions() {
 			expr := varDef.Expr
 			if expr == nil {
 				continue
@@ -105,8 +105,8 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 				childMap[depNode] = struct{}{}
 			case expr.Validation != nil && expr.Validation.Error != nil:
 				for dIdx, detail := range expr.Validation.Error.Details {
-					for mIdx, message := range detail.Messages {
-						depMsg := message.Expr.Message.Message
+					for mIdx, def := range detail.Messages.Definitions() {
+						depMsg := def.Expr.Message.Message
 						depNode, depNodeExists := msgToNode[depMsg]
 						if _, exists := childMap[depNode]; exists {
 							continue
@@ -156,7 +156,7 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 			if field.Rule.Oneof == nil {
 				continue
 			}
-			for idx, varDef := range field.Rule.Oneof.VariableDefinitions {
+			for idx, varDef := range field.Rule.Oneof.DefSet.Definitions() {
 				for _, msgExpr := range varDef.MessageExprs() {
 					depMsg := msgExpr.Message
 					depNode, depNodeExists := msgToNode[depMsg]
@@ -269,12 +269,12 @@ func (g *MessageDependencyGraph) createVariableDefinitionGroup(ctx *context, nod
 		return nil
 	}
 	if len(node.Parent) == 0 {
-		return &SequentialVariableDefinitionGroup{End: g.createVariableDefinition(ctx, node)}
+		return &SequentialVariableDefinitionGroup{End: node.VariableDefinition}
 	}
 	if len(node.Parent) == 1 {
 		return &SequentialVariableDefinitionGroup{
 			Start: g.createVariableDefinitionGroup(ctx, node.Parent[0]),
-			End:   g.createVariableDefinition(ctx, node),
+			End:   node.VariableDefinition,
 		}
 	}
 	rg := new(ConcurrentVariableDefinitionGroup)
@@ -286,60 +286,11 @@ func (g *MessageDependencyGraph) createVariableDefinitionGroup(ctx *context, nod
 			rg.Starts = append(rg.Starts, group)
 		}
 	}
-	rg.End = g.createVariableDefinition(ctx, node)
+	rg.End = node.VariableDefinition
 	return rg
 }
 
-func (g *MessageDependencyGraph) createVariableDefinition(ctx *context, node *MessageDependencyGraphNode) *VariableDefinition {
-	if g.MessageRule != nil {
-		return g.createVariableDefinitionByNode(ctx, node)
-	}
-	if g.FieldOneofRule != nil {
-		return g.createVariableDefinitionByFieldOneofRule(ctx, node, g.FieldOneofRule)
-	}
-	ctx.addError(
-		ErrWithLocation(
-			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
-			source.NewLocationBuilder(ctx.fileName()).WithMessage(node.BaseMessage.Name).Location(),
-		),
-	)
-	return nil
-}
-
-func (g *MessageDependencyGraph) createVariableDefinitionByNode(ctx *context, node *MessageDependencyGraphNode) *VariableDefinition {
-	if varDef := node.VariableDefinition; varDef != nil {
-		return varDef
-	}
-	ctx.addError(
-		ErrWithLocation(
-			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
-			source.NewLocationBuilder(ctx.fileName()).WithMessage(node.BaseMessage.Name).Location(),
-		),
-	)
-	return nil
-}
-
-func (g *MessageDependencyGraph) createVariableDefinitionByFieldOneofRule(ctx *context, node *MessageDependencyGraphNode, rule *FieldOneofRule) *VariableDefinition {
-	for _, def := range rule.VariableDefinitions {
-		return def
-	}
-	ctx.addError(
-		ErrWithLocation(
-			fmt.Sprintf(`%q message does not have resolver content`, node.BaseMessage.Name),
-			source.NewLocationBuilder(ctx.fileName()).WithMessage(node.BaseMessage.Name).Location(),
-		),
-	)
-	return nil
-}
-
-func (n *MessageDependencyGraphNode) FQDN() string {
-	if n.VariableDefinition != nil {
-		return fmt.Sprintf("%s_%s", n.BaseMessage.FQDN(), n.VariableDefinition.Name)
-	}
-	return n.Message.FQDN()
-}
-
-func newMessageDependencyGraphNodeByVariableDefinition(baseMsg *Message, def *VariableDefinition) *MessageDependencyGraphNode {
+func newMessageDependencyGraphNode(baseMsg *Message, def *VariableDefinition) *MessageDependencyGraphNode {
 	return &MessageDependencyGraphNode{
 		BaseMessage:        baseMsg,
 		VariableDefinition: def,
@@ -348,18 +299,16 @@ func newMessageDependencyGraphNodeByVariableDefinition(baseMsg *Message, def *Va
 	}
 }
 
-// CreateMessageDependencyGraph constructs a dependency graph from name references in the method calls,
-// the arguments, and the validations.
-// Name references in the arguments must be resolved first.
+// setupVariableDefinitionSet create a MessageDependencyGraph from VariableDefinitions of VariableDefinitionSet.
+// Also, it creates VariableDefinitionGroups value and set it to VariableDefinitionSet.
 // If a circular reference occurs, add an error to context.
-func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDependencyGraph {
+func setupVariableDefinitionSet(ctx *context, baseMsg *Message, defSet *VariableDefinitionSet) {
 	// Maps a variable name to the MessageDependencyGraphNode which returns the variable
 	nameToNode := make(map[string]*MessageDependencyGraphNode)
-	rule := baseMsg.Rule
 
 	var rootDefNodes []*MessageDependencyGraphNode
-	for _, varDef := range rule.VariableDefinitions {
-		varDefNode := newMessageDependencyGraphNodeByVariableDefinition(baseMsg, varDef)
+	for _, varDef := range defSet.Definitions() {
+		varDefNode := newMessageDependencyGraphNode(baseMsg, varDef)
 		if varDef.Name != "" {
 			nameToNode[varDef.Name] = varDefNode
 		}
@@ -380,11 +329,10 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 			if ref == iterName {
 				continue
 			}
+
 			node, exists := nameToNode[ref]
 			if !exists {
-				// It can be either a reference registered directly from a file descriptor such as an enum value
-				// or just an unknown reference name. cel-go detects the later case and returns an error, so we
-				// can safely ignore it here
+				// not found name in current scope.
 				continue
 			}
 			if _, exists := node.ChildrenMap[varDefNode]; !exists {
@@ -409,125 +357,16 @@ func CreateMessageDependencyGraph(ctx *context, baseMsg *Message) *MessageDepend
 		return roots[i].FQDN() < roots[j].FQDN()
 	})
 	if len(roots) == 0 {
-		return nil
+		return
 	}
 
-	graph := &MessageDependencyGraph{
-		MessageRule: rule,
-		Roots:       roots,
-	}
+	graph := &MessageDependencyGraph{Roots: roots}
 	if err := validateMessageGraph(graph); err != nil {
 		ctx.addError(err)
-		return nil
+		return
 	}
-	return graph
-}
-
-func CreateMessageDependencyGraphByFieldOneof(ctx *context, baseMsg *Message, field *Field) *MessageDependencyGraph {
-	nameToNode := make(map[string]*MessageDependencyGraphNode)
-
-	fieldOneof := field.Rule.Oneof
-	allRefMap := make(map[string]struct{})
-	for _, varDef := range baseMsg.Rule.VariableDefinitions {
-		for _, ref := range varDef.ReferenceNames() {
-			allRefMap[ref] = struct{}{}
-		}
-	}
-
-	var rootDefNodes []*MessageDependencyGraphNode
-	for _, varDef := range fieldOneof.VariableDefinitions {
-		varDefNode := newMessageDependencyGraphNodeByVariableDefinition(baseMsg, varDef)
-		if varDef.Name != "" {
-			nameToNode[varDef.Name] = varDefNode
-		}
-
-		refs := varDef.ReferenceNames()
-		if len(refs) == 0 {
-			rootDefNodes = append(rootDefNodes, varDefNode)
-			continue
-		}
-		var iterName string
-		if varDef.Expr.Map != nil && varDef.Expr.Map.Iterator != nil {
-			iterName = varDef.Expr.Map.Iterator.Name
-		}
-		for _, ref := range refs {
-			if ref == iterName {
-				continue
-			}
-			if _, exists := allRefMap[ref]; !exists {
-				// It can be either a reference registered directly from a file descriptor such as an enum value
-				// or just an unknown reference name. cel-go detects the later case and returns an error, so we
-				// can safely ignore it here
-				continue
-			}
-
-			node, exists := nameToNode[ref]
-			if !exists {
-				// not oneof field reference name
-				continue
-			}
-			if _, exists := node.ChildrenMap[varDefNode]; !exists {
-				node.Children = append(node.Children, varDefNode)
-				node.ChildrenMap[varDefNode] = struct{}{}
-			}
-			if _, exists := varDefNode.ParentMap[node]; !exists {
-				varDefNode.Parent = append(varDefNode.Parent, node)
-				varDefNode.ParentMap[node] = struct{}{}
-			}
-		}
-		for _, ref := range refs {
-			allRefMap[ref] = struct{}{}
-		}
-	}
-
-	var roots []*MessageDependencyGraphNode
-	for _, node := range nameToNode {
-		if len(node.Parent) == 0 {
-			roots = append(roots, node)
-		}
-	}
-	roots = append(roots, rootDefNodes...)
-
-	sort.Slice(roots, func(i, j int) bool {
-		return roots[i].FQDN() < roots[j].FQDN()
-	})
-	if len(roots) == 0 {
-		return nil
-	}
-
-	graph := &MessageDependencyGraph{
-		FieldOneofRule: fieldOneof,
-		Roots:          roots,
-	}
-	if err := validateMessageGraph(graph); err != nil {
-		ctx.addError(err)
-		return nil
-	}
-	return graph
-}
-
-func CreateMessageDependencyGraphByGRPCErrorDetailMessages(baseMsg *Message, messages VariableDefinitions) *MessageDependencyGraph {
-	// Each node won't depend on each other, so they all should be a root
-	var roots []*MessageDependencyGraphNode
-	for _, msg := range messages {
-		node := newMessageDependencyGraphNodeByVariableDefinition(baseMsg, msg)
-		roots = append(roots, node)
-	}
-
-	sort.Slice(roots, func(i, j int) bool {
-		return roots[i].FQDN() < roots[j].FQDN()
-	})
-	if len(roots) == 0 {
-		return nil
-	}
-
-	graph := &MessageDependencyGraph{
-		MessageRule: &MessageRule{
-			VariableDefinitions: messages,
-		},
-		Roots: roots,
-	}
-	return graph
+	defSet.Graph = graph
+	defSet.Groups = graph.VariableDefinitionGroups(ctx)
 }
 
 func validateMessageGraph(graph *MessageDependencyGraph) *LocationError {
@@ -551,23 +390,23 @@ func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, vis
 	if _, exists := visited[target]; exists {
 		var messages []string
 		for _, node := range path {
-			messages = append(messages, node.Message.Name)
+			messages = append(messages, node.BaseMessage.Name)
 		}
 		dependencyPath := strings.Join(messages, " => ")
 
 		msg := target.BaseMessage
-		for idx, varDef := range msg.Rule.VariableDefinitions {
+		for idx, varDef := range msg.Rule.DefSet.Definitions() {
 			if varDef.Expr == nil {
 				continue
 			}
 			if varDef.Expr.Message == nil {
 				continue
 			}
-			if varDef.Expr.Message.Message == target.Message {
+			if varDef.Expr.Message.Message == target.BaseMessage {
 				return ErrWithLocation(
 					fmt.Sprintf(
 						`found cyclic dependency for "%s.%s" message in "%s.%s. dependency path: %s"`,
-						target.Message.PackageName(), target.Message.Name,
+						target.BaseMessage.PackageName(), target.BaseMessage.Name,
 						msg.PackageName(), msg.Name, dependencyPath,
 					),
 					source.NewMsgVarDefOptionBuilder(msg.File.Name, msg.Name, idx).WithMessage().Location(),
@@ -575,8 +414,8 @@ func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, vis
 			}
 		}
 		return ErrWithLocation(
-			fmt.Sprintf(`found cyclic dependency for "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
-			source.NewLocationBuilder(target.Message.File.Name).WithMessage(target.Message.Name).Location(),
+			fmt.Sprintf(`found cyclic dependency for "%s.%s" message. dependency path: %s`, target.BaseMessage.PackageName(), target.BaseMessage.Name, dependencyPath),
+			source.NewLocationBuilder(target.BaseMessage.File.Name).WithMessage(target.BaseMessage.Name).Location(),
 		)
 	}
 	visited[target] = struct{}{}
