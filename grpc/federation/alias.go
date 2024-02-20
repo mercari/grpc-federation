@@ -30,7 +30,7 @@ type (
 
 var (
 	Getenv                = os.Getenv
-	GRPCError             = status.Errorf
+	GRPCErrorf            = status.Errorf
 	NewGRPCStatus         = status.New
 	ErrorGroupWithContext = errgroup.WithContext
 	NewCELEnv             = cel.NewCustomEnv

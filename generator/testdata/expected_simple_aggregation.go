@@ -136,14 +136,14 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Org_Federation_User_Age resolve "org.federation.User.age".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User_Age(context.Context, *Org_Federation_User_AgeArgument[*FederationServiceDependentClientSet]) (ret uint64, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_User_Age not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_User_Age not implemented")
 	return
 }
 
 // Resolve_Org_Federation_Z resolve "org.federation.Z".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_Z(context.Context, *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (ret *Z, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_Z not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_Z not implemented")
 	return
 }
 

@@ -3041,7 +3041,7 @@ func TestValidation(t *testing.T) {
 									testutil.NewValidationExprBuilder().
 										SetCode(code.Code_FAILED_PRECONDITION).
 										SetMessage("validation message 2").
-										SetDetails([]*resolver.ValidationErrorDetail{
+										SetDetails([]*resolver.GRPCErrorDetail{
 											{
 												If: testutil.NewCELValueBuilder("post.title != 'some-title'", resolver.BoolType).Build(t),
 												Messages: []*resolver.VariableDefinition{
@@ -3049,8 +3049,8 @@ func TestValidation(t *testing.T) {
 														SetName("_def2_err_detail0_msg0").
 														SetUsed(true).
 														SetOwner(&resolver.VariableDefinitionOwner{
-															Type: resolver.VariableDefinitionOwnerValidationErrorDetailMessage,
-															ValidationErrorIndexes: &resolver.ValidationErrorIndexes{
+															Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
+															GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
 																DefIdx:       2,
 																ErrDetailIdx: 0,
 															},
@@ -3071,8 +3071,8 @@ func TestValidation(t *testing.T) {
 														SetUsed(true).
 														SetIdx(1).
 														SetOwner(&resolver.VariableDefinitionOwner{
-															Type: resolver.VariableDefinitionOwnerValidationErrorDetailMessage,
-															ValidationErrorIndexes: &resolver.ValidationErrorIndexes{
+															Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
+															GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
 																DefIdx:       2,
 																ErrDetailIdx: 0,
 															},
@@ -4110,8 +4110,8 @@ func getContentProtoBuilder(t *testing.T) *testutil.FileBuilder {
 	return pb
 }
 
-func TestValidationError_ReferenceNames(t *testing.T) {
-	v := &resolver.ValidationError{
+func TestGRPCError_ReferenceNames(t *testing.T) {
+	v := &resolver.GRPCError{
 		If: &resolver.CELValue{
 			CheckedExpr: &exprv1.CheckedExpr{
 				ReferenceMap: map[int64]*exprv1.Reference{
@@ -4119,7 +4119,7 @@ func TestValidationError_ReferenceNames(t *testing.T) {
 				},
 			},
 		},
-		Details: []*resolver.ValidationErrorDetail{
+		Details: []*resolver.GRPCErrorDetail{
 			{
 				If: &resolver.CELValue{
 					CheckedExpr: &exprv1.CheckedExpr{

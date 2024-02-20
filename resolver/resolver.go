@@ -1430,7 +1430,7 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 	}
 
 	vr := &ValidationExpr{
-		Error: &ValidationError{
+		Error: &GRPCError{
 			Code:    e.GetCode(),
 			Message: e.GetMessage(),
 		},
@@ -1444,7 +1444,7 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 	}
 
 	if details := e.GetDetails(); len(details) != 0 {
-		vr.Error.Details = r.resolveMessageRuleValidationDetails(ctx, details)
+		vr.Error.Details = r.resolveGRPCErrorDetails(ctx, details)
 		return vr
 	}
 
@@ -1481,15 +1481,15 @@ func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string) *Message 
 	return r.resolveMessage(ctx, ctx.file().Package, aliasName)
 }
 
-func (r *Resolver) resolveMessageRuleValidationDetails(ctx *context, details []*federation.ValidationErrorDetail) []*ValidationErrorDetail {
-	result := make([]*ValidationErrorDetail, 0, len(details))
+func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.GRPCErrorDetail) []*GRPCErrorDetail {
+	result := make([]*GRPCErrorDetail, 0, len(details))
 	for idx, detail := range details {
 		ctx := ctx.withErrDetailIndex(idx)
-		result = append(result, &ValidationErrorDetail{
+		result = append(result, &GRPCErrorDetail{
 			If: &CELValue{
 				Expr: detail.GetIf(),
 			},
-			Messages:             r.resolveValidationDetailMessages(ctx, detail.GetMessage()),
+			Messages:             r.resolveGRPCDetailMessages(ctx, detail.GetMessage()),
 			PreconditionFailures: r.resolvePreconditionFailures(detail.GetPreconditionFailure()),
 			BadRequests:          r.resolveBadRequests(detail.GetBadRequest()),
 			LocalizedMessages:    r.resolveLocalizedMessages(detail.GetLocalizedMessage()),
@@ -1498,7 +1498,7 @@ func (r *Resolver) resolveMessageRuleValidationDetails(ctx *context, details []*
 	return result
 }
 
-func (r *Resolver) resolveValidationDetailMessages(ctx *context, messages []*federation.MessageExpr) VariableDefinitions {
+func (r *Resolver) resolveGRPCDetailMessages(ctx *context, messages []*federation.MessageExpr) VariableDefinitions {
 	if len(messages) == 0 {
 		return nil
 	}
@@ -1513,8 +1513,8 @@ func (r *Resolver) resolveValidationDetailMessages(ctx *context, messages []*fed
 		})
 	}
 	ctx = ctx.withDefOwner(&VariableDefinitionOwner{
-		Type: VariableDefinitionOwnerValidationErrorDetailMessage,
-		ValidationErrorIndexes: &ValidationErrorIndexes{
+		Type: VariableDefinitionOwnerGRPCErrorDetailMessage,
+		GRPCErrorIndexes: &GRPCErrorIndexes{
 			DefIdx:       ctx.defIndex(),
 			ErrDetailIdx: ctx.errDetailIndex(),
 		},
@@ -2480,10 +2480,10 @@ func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMa
 					WithVariableDefinitions(def.Idx).
 					WithMessage().
 					WithArgs(0).Location()
-			case VariableDefinitionOwnerValidationErrorDetailMessage:
-				errLoc = source.NewMsgVarDefOptionBuilder(msg.File.Name, msg.Name, def.Owner.ValidationErrorIndexes.DefIdx).
+			case VariableDefinitionOwnerGRPCErrorDetailMessage:
+				errLoc = source.NewMsgVarDefOptionBuilder(msg.File.Name, msg.Name, def.Owner.GRPCErrorIndexes.DefIdx).
 					WithValidation().
-					WithDetail(def.Owner.ValidationErrorIndexes.ErrDetailIdx).
+					WithDetail(def.Owner.GRPCErrorIndexes.ErrDetailIdx).
 					WithMessage(def.Idx).
 					WithMessage().
 					WithArgs(0).Location()
@@ -2748,7 +2748,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 			}
 		}
 		for detIdx, detail := range expr.Validation.Error.Details {
-			r.resolveMessageValidationErrorDetailCELValues(ctx, env, ctx.msg, ctx.defIndex(), detIdx, detail)
+			r.resolveGRPCErrorDetailCELValues(ctx, env, ctx.msg, ctx.defIndex(), detIdx, detail)
 		}
 		// This is a dummy type since the output from the validation is not supposed to be used (at least for now)
 		expr.Type = BoolType
@@ -2801,7 +2801,7 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 	}
 }
 
-func (r *Resolver) resolveMessageValidationErrorDetailCELValues(ctx *context, env *cel.Env, msg *Message, vIdx, dIdx int, detail *ValidationErrorDetail) {
+func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, msg *Message, vIdx, dIdx int, detail *GRPCErrorDetail) {
 	if err := r.resolveCELValue(ctx, env, detail.If); err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -3177,7 +3177,7 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 			ctx := ctx.withDefIndex(defIdx)
 			for detIdx, detail := range def.Expr.Validation.Error.Details {
 				ctx := ctx.withErrDetailIndex(detIdx)
-				if graph := CreateMessageDependencyGraphByValidationErrorDetailMessages(msg, detail.Messages); graph != nil {
+				if graph := CreateMessageDependencyGraphByGRPCErrorDetailMessages(msg, detail.Messages); graph != nil {
 					detail.DependencyGraph = graph
 					detail.VariableDefinitionGroups = graph.VariableDefinitionGroups(ctx)
 				}

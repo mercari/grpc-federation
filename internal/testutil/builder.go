@@ -879,7 +879,7 @@ type ValidationExprBuilder struct {
 func NewValidationExprBuilder() *ValidationExprBuilder {
 	return &ValidationExprBuilder{
 		expr: &resolver.ValidationExpr{
-			Error: &resolver.ValidationError{},
+			Error: &resolver.GRPCError{},
 		},
 	}
 }
@@ -899,7 +899,7 @@ func (b *ValidationExprBuilder) SetIf(v *resolver.CELValue) *ValidationExprBuild
 	return b
 }
 
-func (b *ValidationExprBuilder) SetDetails(v []*resolver.ValidationErrorDetail) *ValidationExprBuilder {
+func (b *ValidationExprBuilder) SetDetails(v []*resolver.GRPCErrorDetail) *ValidationExprBuilder {
 	b.expr.Error.Details = v
 	return b
 }

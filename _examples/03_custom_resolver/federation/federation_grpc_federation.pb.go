@@ -145,35 +145,35 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Federation_ForNameless resolve "federation.ForNameless".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Federation_ForNameless(context.Context, *Federation_ForNamelessArgument[*FederationServiceDependentClientSet]) (ret *ForNameless, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_ForNameless not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_ForNameless not implemented")
 	return
 }
 
 // Resolve_Federation_Post_User resolve "federation.Post.user".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Federation_Post_User(context.Context, *Federation_Post_UserArgument[*FederationServiceDependentClientSet]) (ret *User, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_Post_User not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_Post_User not implemented")
 	return
 }
 
 // Resolve_Federation_Unused resolve "federation.Unused".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Federation_Unused(context.Context, *Federation_UnusedArgument[*FederationServiceDependentClientSet]) (ret *Unused, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_Unused not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_Unused not implemented")
 	return
 }
 
 // Resolve_Federation_User resolve "federation.User".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Federation_User(context.Context, *Federation_UserArgument[*FederationServiceDependentClientSet]) (ret *User, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_User not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_User not implemented")
 	return
 }
 
 // Resolve_Federation_User_Name resolve "federation.User.name".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Federation_User_Name(context.Context, *Federation_User_NameArgument[*FederationServiceDependentClientSet]) (ret string, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_User_Name not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_User_Name not implemented")
 	return
 }
 

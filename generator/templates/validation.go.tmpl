@@ -1,7 +1,7 @@
 {{- define "messageValidation" }}
 {{- if .Error.HasIf }}
 return grpcfed.If(ctx, value, "{{ .Error.If }}", func(value *localValueType) error {
-	return grpcfed.GRPCError(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+	return grpcfed.GRPCErrorf(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
 })
 {{- else }}
 var (

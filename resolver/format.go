@@ -252,13 +252,6 @@ func (e *MessageExpr) protoFormatMessageArgs(opt *ProtoFormatOption) string {
 	return indent + fmt.Sprintf("args: [\n%s\n%s]", strings.Join(formattedArgs, ",\n"), indent)
 }
 
-func (e *ValidationExpr) ProtoFormat(opt *ProtoFormatOption) string {
-	var elems []string
-	elems = append(elems, e.Error.ProtoFormat(opt.toNextIndentLevel()))
-	indent := opt.indentFormat()
-	return indent + fmt.Sprintf("validation {\n%s\n%s}", strings.Join(elems, "\n"), indent)
-}
-
 func (m *Method) ProtoFormat(opt *ProtoFormatOption) string {
 	if m == nil {
 		return ""
@@ -301,91 +294,78 @@ func (f *AutoBindField) ProtoFormat(opt *ProtoFormatOption) string {
 	return ""
 }
 
-func (vs MessageValidations) ProtoFormat(opt *ProtoFormatOption) string {
-	if len(vs) == 0 {
-		return ""
-	}
-	indent := opt.indentFormat()
-	if len(vs) == 1 {
-		return indent + fmt.Sprintf("validations %s", strings.TrimLeft(vs[0].ProtoFormat(opt), " "))
-	}
-	validations := make([]string, 0, len(vs))
-	for _, validation := range vs {
-		if format := validation.ProtoFormat(opt.toNextIndentLevel()); format != "" {
-			validations = append(validations, format)
-		}
-	}
-	return indent + fmt.Sprintf("validations: [\n%s\n%s]", strings.Join(validations, ",\n"), indent)
-}
-
-func (v *ValidationRule) ProtoFormat(opt *ProtoFormatOption) string {
+func (v *ValidationExpr) ProtoFormat(opt *ProtoFormatOption) string {
 	if v == nil {
 		return ""
 	}
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	var elems []string
-	elems = append(
-		elems,
-		nextOpt.indentFormat()+fmt.Sprintf("name: %q", v.Name),
-		v.Error.ProtoFormat(nextOpt),
-	)
-	return indent + fmt.Sprintf("{\n%s\n%s}", strings.Join(elems, "\n"), indent)
+	if v.Name != "" {
+		elems = append(
+			elems,
+			nextOpt.indentFormat()+fmt.Sprintf("name: %q", v.Name),
+		)
+	}
+	if v.Error != nil {
+		elems = append(elems, v.Error.ProtoFormat(nextOpt))
+	}
+	return indent + fmt.Sprintf("validation {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
-func (v *ValidationError) ProtoFormat(opt *ProtoFormatOption) string {
+func (e *GRPCError) ProtoFormat(opt *ProtoFormatOption) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	elems := []string{
-		nextOpt.indentFormat() + fmt.Sprintf("code: %s", v.Code),
+		nextOpt.indentFormat() + fmt.Sprintf("code: %s", e.Code),
 	}
-	if val := v.If; val != nil {
+	if val := e.If; val != nil {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", val.Expr))
 	}
-	if m := v.Message; m != "" {
+	if m := e.Message; m != "" {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("message: %q", m))
 	}
-	if len(v.Details) != 0 {
-		elems = append(elems, v.Details.ProtoFormat(nextOpt))
+	if len(e.Details) != 0 {
+		elems = append(elems, e.Details.ProtoFormat(nextOpt))
 	}
 	return indent + fmt.Sprintf("error {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
-func (v ValidationErrorDetails) ProtoFormat(opt *ProtoFormatOption) string {
+func (d GRPCErrorDetails) ProtoFormat(opt *ProtoFormatOption) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
-	if len(v) == 1 {
-		return indent + fmt.Sprintf("details {\n%s\n%s}", v[0].ProtoFormat(opt), indent)
+	if len(d) == 1 {
+		return indent + fmt.Sprintf("details {\n%s\n%s}", d[0].ProtoFormat(opt), indent)
 	}
 	var elems []string
-	for _, detail := range v {
+	for _, detail := range d {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("{\n%s\n%s}", detail.ProtoFormat(nextOpt), nextOpt.indentFormat()))
 	}
 	return indent + fmt.Sprintf("details: [\n%s\n%s]", strings.Join(elems, ",\n"), indent)
 }
 
-func (v *ValidationErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
+func (e *GRPCErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
 	elems := []string{
-		nextOpt.indentFormat() + fmt.Sprintf("if: %q", v.If.Expr),
+		nextOpt.indentFormat() + fmt.Sprintf("if: %q", e.If.Expr),
 	}
-	if s := len(v.Messages); s != 0 {
-		elems = append(elems, v.protoFormatDetails(nextOpt, "message", s))
+	if s := len(e.Messages); s != 0 {
+		elems = append(elems, e.protoFormatDetails(nextOpt, "message", s))
 	}
-	if s := len(v.PreconditionFailures); s != 0 {
-		elems = append(elems, v.protoFormatDetails(nextOpt, "precondition_failure", s))
+	if s := len(e.PreconditionFailures); s != 0 {
+		elems = append(elems, e.protoFormatDetails(nextOpt, "precondition_failure", s))
 	}
-	if s := len(v.BadRequests); s != 0 {
-		elems = append(elems, v.protoFormatDetails(nextOpt, "bad_request", s))
+	if s := len(e.BadRequests); s != 0 {
+		elems = append(elems, e.protoFormatDetails(nextOpt, "bad_request", s))
 	}
-	if s := len(v.LocalizedMessages); s != 0 {
-		elems = append(elems, v.protoFormatDetails(nextOpt, "localized_message", s))
+	if s := len(e.LocalizedMessages); s != 0 {
+		elems = append(elems, e.protoFormatDetails(nextOpt, "localized_message", s))
 	}
 
 	return strings.Join(elems, "\n")
 }
 
-func (v *ValidationErrorDetail) protoFormatDetails(opt *ProtoFormatOption, name string, size int) string {
+func (e *GRPCErrorDetail) protoFormatDetails(opt *ProtoFormatOption, name string, size int) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	if size == 1 {

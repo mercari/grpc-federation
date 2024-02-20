@@ -77,7 +77,7 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Federation_GetPostResponse resolve "federation.GetPostResponse".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Federation_GetPostResponse(context.Context, *Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (ret *GetPostResponse, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_GetPostResponse not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_GetPostResponse not implemented")
 	return
 }
 

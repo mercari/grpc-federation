@@ -167,14 +167,14 @@ enum VariableDefinitionOwnerType {
   UNKNOWN_OWNER      = 0;
   MESSAGE_OWNER      = 1;
   ONE_OF_FIELD_OWNER = 2;
-  VALIDATION_ERROR_DETAIL_MESSAGE_OWNER = 3;
+  GRPC_ERROR_DETAIL_MESSAGE_OWNER = 3;
 }
 
 message VariableDefinitionOwner {
   VariableDefinitionOwnerType type = 1;
   string message_id = 2;
   string field_id = 3;
-  ValidationErrorIndexes validation_error_indexes = 4;  
+  GRPCErrorIndexes grpc_error_indexes = 4;  
 }
 
 message Field {
@@ -521,28 +521,26 @@ message MessageFieldValue {
   repeated string envs = 38;
 }
 
-message ValidationErrorIndexes {
+message GRPCErrorIndexes {
   int64 def_index = 1;
   int64 error_detail_index = 2;
 }
 
 message ValidationExpr {
-  ValidationError error = 1;
-}
-
-message ValidationRule {
   string name = 1;
-  ValidationError error = 2;
+  GRPCError error = 2;
 }
 
-message ValidationError {
-  google.rpc.Code code = 1;
+message GRPCError {
+  repeated string variable_definition_ids = 1;
   CELValue if = 2;
-  string Message = 3;
-  repeated ValidationErrorDetail details = 4;
+  google.rpc.Code code = 3;
+  string message = 4;
+  repeated GRPCErrorDetail details = 5;
+  bool ignore = 6;
 }
 
-message ValidationErrorDetail {
+message GRPCErrorDetail {
   CELValue if = 1;
   repeated string message_ids = 2;
   repeated PreconditionFailure precondition_failures = 3;

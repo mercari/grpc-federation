@@ -126,7 +126,7 @@ type {{ $serviceName }}UnimplementedResolver struct {}
 // {{ .Name }} resolve "{{ .ProtoFQDN }}".
 // This method always returns Unimplemented error.
 func ({{ $serviceName }}UnimplementedResolver) {{ .Name }}(context.Context, *{{ .RequestType }}[*{{ $serviceName }}DependentClientSet]) (ret {{ .ReturnType }}, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method {{ .Name }} not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method {{ .Name }} not implemented")
 	return
 }
 {{- end }}

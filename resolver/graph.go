@@ -506,7 +506,7 @@ func CreateMessageDependencyGraphByFieldOneof(ctx *context, baseMsg *Message, fi
 	return graph
 }
 
-func CreateMessageDependencyGraphByValidationErrorDetailMessages(baseMsg *Message, messages VariableDefinitions) *MessageDependencyGraph {
+func CreateMessageDependencyGraphByGRPCErrorDetailMessages(baseMsg *Message, messages VariableDefinitions) *MessageDependencyGraph {
 	// Each node won't depend on each other, so they all should be a root
 	var roots []*MessageDependencyGraphNode
 	for _, msg := range messages {

@@ -95,7 +95,7 @@ type FederationServiceUnimplementedResolver struct{}
 // Resolve_Org_Federation_CustomHandlerMessage resolve "org.federation.CustomHandlerMessage".
 // This method always returns Unimplemented error.
 func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_CustomHandlerMessage(context.Context, *Org_Federation_CustomHandlerMessageArgument[*FederationServiceDependentClientSet]) (ret *CustomHandlerMessage, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_CustomHandlerMessage not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_CustomHandlerMessage not implemented")
 	return
 }
 
@@ -208,7 +208,7 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 		Setter: func(value *localValueType, v bool) { value.vars._def0 = v },
 		Validation: func(ctx context.Context, value *localValueType) error {
 			return grpcfed.If(ctx, value, "$.arg == 'wrong'", func(value *localValueType) error {
-				return grpcfed.GRPCError(grpcfed.FailedPreconditionCode, "")
+				return grpcfed.GRPCErrorf(grpcfed.FailedPreconditionCode, "")
 			})
 		},
 	}); err != nil {
@@ -331,7 +331,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Setter: func(value *localValueType, v bool) { value.vars._def2 = v },
 			Validation: func(ctx context.Context, value *localValueType) error {
 				return grpcfed.If(ctx, value, "post.id != 'some-id'", func(value *localValueType) error {
-					return grpcfed.GRPCError(grpcfed.FailedPreconditionCode, "validation1 failed!")
+					return grpcfed.GRPCErrorf(grpcfed.FailedPreconditionCode, "validation1 failed!")
 				})
 			},
 		}); err != nil {
@@ -386,7 +386,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Setter: func(value *localValueType, v bool) { value.vars._def3 = v },
 			Validation: func(ctx context.Context, value *localValueType) error {
 				return grpcfed.If(ctx, value, "post.id != 'some-id'", func(value *localValueType) error {
-					return grpcfed.GRPCError(grpcfed.FailedPreconditionCode, "validation2 failed!")
+					return grpcfed.GRPCErrorf(grpcfed.FailedPreconditionCode, "validation2 failed!")
 				})
 			},
 		}); err != nil {

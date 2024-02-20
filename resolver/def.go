@@ -84,15 +84,15 @@ func (def *VariableDefinition) MessageExprs() []*MessageExpr {
 }
 
 // ReferenceNames returns all the unique reference names in the error definition.
-func (v *ValidationError) ReferenceNames() []string {
+func (e *GRPCError) ReferenceNames() []string {
 	nameSet := make(map[string]struct{})
 	register := func(names []string) {
 		for _, name := range names {
 			nameSet[name] = struct{}{}
 		}
 	}
-	register(v.If.ReferenceNames())
-	for _, detail := range v.Details {
+	register(e.If.ReferenceNames())
+	for _, detail := range e.Details {
 		register(detail.If.ReferenceNames())
 		for _, message := range detail.Messages {
 			register(message.ReferenceNames())

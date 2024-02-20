@@ -179,6 +179,69 @@ message CallExpr {
   optional string timeout = 3;
   // retry specifies the retry policy if the method call fails.
   optional RetryPolicy retry = 4;
+  // error evaluated when an error occurs during a method call.
+  // Multiple errors can be defined and are evaluated in the order in which they are described.
+  // If an error occurs while creating an gRPC status error, original error will be returned.
+  repeated GRPCError error = 5;
+}
+
+// GRPCError create gRPC status value.
+message GRPCError {
+  // def define variables in current scope.
+  repeated VariableDefinition def = 1;
+  // if specifies condition in CEL. If the condition is true, it returns defined error information.
+  // If this field is omitted, it is always treated as 'true' and returns defined error information.
+  // The return value must always be of type boolean.
+  optional string if = 2;
+  // code is a gRPC status code.
+  google.rpc.Code code = 3;
+  // message is a gRPC status message.
+  // If omitted, the message will be auto-generated from the configurations.
+  optional string message = 4;
+  // details is a list of error details.
+  // If returns error, the corresponding error details are set.
+  repeated GRPCErrorDetail details = 5;
+  // ignore ignore the error if the condition in the "if" field is true and "ignore" field is set to true.
+  optional bool ignore = 6;
+}
+
+message GRPCErrorDetail {
+ // if specifies condition rule in CEL. If the condition is true, gRPC error detail is added to the error.
+ string if = 1;
+ // def define variables in current scope.
+ repeated VariableDefinition def = 2;
+ // message represents arbitrary messages to describe the detail of the error.
+ repeated MessageExpr message = 3;
+ // error_info describes the cause of the error with structured details.
+ repeated google.rpc.ErrorInfo error_info = 4;
+ // retry_info describes when the clients can retry a failed request.
+ repeated google.rpc.RetryInfo retry_info = 5;
+ // debug_info describes additional debugging info.
+ repeated google.rpc.DebugInfo debug_info = 6;
+ // quota_failure describes how a quota check failed.
+ repeated google.rpc.QuotaFailure quota_failure = 7;
+ // precondition_failure describes what preconditions have failed.
+ repeated google.rpc.PreconditionFailure precondition_failure = 8;
+ // bad_request describes violations in a client request.
+ repeated google.rpc.BadRequest bad_request = 9;
+ // request_info contains metadata about the request that clients can attach.
+ repeated google.rpc.RequestInfo request_info = 10;
+ // resource_info describes the resource that is being accessed.
+ repeated google.rpc.ResourceInfo resource_info = 11;
+ // help provides links to documentation or for performing an out of band action.
+ repeated google.rpc.Help help = 12;
+ // localized_message provides a localized error message that is safe to return to the user.
+ repeated google.rpc.LocalizedMessage localized_message = 13;
+}
+
+// Validation represents a validation rule against variables defined within the current scope.
+message ValidationExpr {
+  // name is a unique name for the validation.
+  // If set, the validation error type will be <message-name><name>Error.
+  // If omitted, the validation error type will be ValidationError.
+  optional string name = 1;
+  // error defines the actual validation rules and an error to returned if the validation fails.
+  GRPCError error = 2;
 }
 
 // RetryPolicy define the retry policy if the method call fails.
@@ -596,60 +659,4 @@ message MessageFieldValue {
   optional string env = 37;
   // repeated env literal values.
   repeated string envs = 38;
-}
-
-// Validation represents a validation rule against variables defined within the current scope.
-message ValidationExpr {
-  // name is a unique name for the validation.
-  // If set, the validation error type will be <message-name><name>Error.
-  // If omitted, the validation error type will be ValidationError.
-  optional string name = 1;
-  // error defines the actual validation rules and an error to returned if the validation fails.
-  ValidationError error = 2;
-}
-
-// ValidationError represents a validation rule and validation error to be returned.
-message ValidationError {
-  // code is a gRPC status code for validation error.
-  google.rpc.Code code = 1;
-  // message is a gRPC status message for validation error.
-  // If omitted, the message will be auto-generated from the configurations.
-  optional string message = 2;
-  // if specifies validation rule in CEL.
-  // If the condition is true, the validation returns an error.
-  // The return value must always be of type boolean.
-  // Either if or details must be specified.
-  optional string if = 3;
-  // details is a list of validation rules and error details.
-  // If the validation fails, the corresponding error details are set.
-  // Either if or details must be specified.
-  repeated ValidationErrorDetail details = 4;
-}
-
-// ValidationErrorDetail represents a pair of validation rule and error details to be set.
-message ValidationErrorDetail {
-  // if specifies validation rule in CEL. If the condition is true, the validation returns an error.
-  string if = 1;
-  // message represents arbitrary messages to describe the detail of the error.
-  repeated MessageExpr message = 2;
-  // error_info describes the cause of the error with structured details.
-  repeated google.rpc.ErrorInfo error_info = 3;
-  // retry_info describes when the clients can retry a failed request.
-  repeated google.rpc.RetryInfo retry_info = 4;
-  // debug_info describes additional debugging info.
-  repeated google.rpc.DebugInfo debug_info = 5;
-  // quota_failure describes how a quota check failed.
-  repeated google.rpc.QuotaFailure quota_failure = 6;
-  // precondition_failure describes what preconditions have failed.
-  repeated google.rpc.PreconditionFailure precondition_failure = 7;
-  // bad_request describes violations in a client request.
-  repeated google.rpc.BadRequest bad_request = 8;
-  // request_info contains metadata about the request that clients can attach.
-  repeated google.rpc.RequestInfo request_info = 9;
-  // resource_info describes the resource that is being accessed.
-  repeated google.rpc.ResourceInfo resource_info = 10;
-  // help provides links to documentation or for performing an out of band action.
-  repeated google.rpc.Help help = 11;
-  // localized_message provides a localized error message that is safe to return to the user.
-  repeated google.rpc.LocalizedMessage localized_message = 12;
 }

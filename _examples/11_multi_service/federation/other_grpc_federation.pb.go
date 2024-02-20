@@ -84,7 +84,7 @@ type OtherServiceUnimplementedResolver struct{}
 // Resolve_Federation_GetResponse_Post resolve "federation.GetResponse.post".
 // This method always returns Unimplemented error.
 func (OtherServiceUnimplementedResolver) Resolve_Federation_GetResponse_Post(context.Context, *Federation_GetResponse_PostArgument[*OtherServiceDependentClientSet]) (ret *Post, e error) {
-	e = grpcfed.GRPCError(grpcfed.UnimplementedCode, "method Resolve_Federation_GetResponse_Post not implemented")
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_GetResponse_Post not implemented")
 	return
 }
 
