@@ -407,7 +407,7 @@ func (b *MessageBuilder) AddFieldWithTypeNameAndRule(t *testing.T, name, typeNam
 func (b *MessageBuilder) AddFieldWithRule(name string, typ *resolver.Type, rule *resolver.FieldRule) *MessageBuilder {
 	field := &resolver.Field{Name: name, Type: typ, Rule: rule}
 	if rule.Oneof != nil {
-		for _, def := range rule.Oneof.VariableDefinitions {
+		for _, def := range rule.Oneof.DefSet.Definitions() {
 			if def.Owner == nil {
 				continue
 			}
@@ -420,7 +420,7 @@ func (b *MessageBuilder) AddFieldWithRule(name string, typ *resolver.Type, rule 
 
 func (b *MessageBuilder) SetRule(rule *resolver.MessageRule) *MessageBuilder {
 	b.msg.Rule = rule
-	for _, def := range rule.VariableDefinitions {
+	for _, def := range rule.DefSet.Definitions() {
 		if def.Owner == nil {
 			continue
 		}
@@ -556,7 +556,9 @@ type MessageRuleBuilder struct {
 
 func NewMessageRuleBuilder() *MessageRuleBuilder {
 	return &MessageRuleBuilder{
-		rule: &resolver.MessageRule{},
+		rule: &resolver.MessageRule{
+			DefSet: &resolver.VariableDefinitionSet{},
+		},
 	}
 }
 
@@ -576,12 +578,12 @@ func (b *MessageRuleBuilder) SetMessageArgument(msg *resolver.Message) *MessageR
 }
 
 func (b *MessageRuleBuilder) SetDependencyGraph(graph *resolver.MessageDependencyGraph) *MessageRuleBuilder {
-	b.rule.DependencyGraph = graph
+	b.rule.DefSet.Graph = graph
 	return b
 }
 
 func (b *MessageRuleBuilder) AddVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *MessageRuleBuilder {
-	b.rule.VariableDefinitionGroups = append(b.rule.VariableDefinitionGroups, group)
+	b.rule.DefSet.Groups = append(b.rule.DefSet.Groups, group)
 	return b
 }
 
@@ -589,7 +591,7 @@ func (b *MessageRuleBuilder) AddVariableDefinition(def *resolver.VariableDefinit
 	if def.Expr != nil && def.Expr.Map != nil && def.Expr.Map.Iterator != nil {
 		name := def.Expr.Map.Iterator.Source.Name
 		var found bool
-		for _, varDef := range b.rule.VariableDefinitions {
+		for _, varDef := range b.rule.DefSet.Definitions() {
 			if varDef.Name == name {
 				def.Expr.Map.Iterator.Source = varDef
 				found = true
@@ -600,11 +602,11 @@ func (b *MessageRuleBuilder) AddVariableDefinition(def *resolver.VariableDefinit
 			b.errs = append(b.errs, fmt.Errorf("%s variable name is not found", name))
 		}
 	}
-	def.Idx = len(b.rule.VariableDefinitions)
+	def.Idx = len(b.rule.DefSet.Definitions())
 	def.Owner = &resolver.VariableDefinitionOwner{
 		Type: resolver.VariableDefinitionOwnerMessage,
 	}
-	b.rule.VariableDefinitions = append(b.rule.VariableDefinitions, def)
+	b.rule.DefSet.Defs = append(b.rule.DefSet.Defs, def)
 	return b
 }
 
@@ -879,7 +881,13 @@ type ValidationExprBuilder struct {
 func NewValidationExprBuilder() *ValidationExprBuilder {
 	return &ValidationExprBuilder{
 		expr: &resolver.ValidationExpr{
-			Error: &resolver.GRPCError{},
+			Error: &resolver.GRPCError{
+				DefSet: &resolver.VariableDefinitionSet{},
+				If: &resolver.CELValue{
+					Expr: "true",
+					Out:  resolver.BoolType,
+				},
+			},
 		},
 	}
 }
@@ -1263,11 +1271,11 @@ func NewDependencyGraphBuilder() *DependencyGraphBuilder {
 func (b *DependencyGraphBuilder) Add(parent *resolver.Message, children ...*resolver.Message) *DependencyGraphBuilder {
 	nodes := make([]*resolver.MessageDependencyGraphNode, 0, len(children))
 	for _, child := range children {
-		nodes = append(nodes, &resolver.MessageDependencyGraphNode{Message: child})
+		nodes = append(nodes, &resolver.MessageDependencyGraphNode{BaseMessage: child})
 	}
 	b.graph.Roots = append(b.graph.Roots, &resolver.MessageDependencyGraphNode{
-		Message:  parent,
-		Children: nodes,
+		BaseMessage: parent,
+		Children:    nodes,
 	})
 	return b
 }
@@ -1335,7 +1343,9 @@ type FieldOneofRuleBuilder struct {
 
 func NewFieldOneofRuleBuilder() *FieldOneofRuleBuilder {
 	return &FieldOneofRuleBuilder{
-		rule: &resolver.FieldOneofRule{},
+		rule: &resolver.FieldOneofRule{
+			DefSet: &resolver.VariableDefinitionSet{},
+		},
 	}
 }
 
@@ -1356,7 +1366,7 @@ func (b *FieldOneofRuleBuilder) AddVariableDefinition(def *resolver.VariableDefi
 	if def.Expr != nil && def.Expr.Map != nil && def.Expr.Map.Iterator != nil {
 		name := def.Expr.Map.Iterator.Source.Name
 		var found bool
-		for _, varDef := range b.rule.VariableDefinitions {
+		for _, varDef := range b.rule.DefSet.Definitions() {
 			if varDef.Name == name {
 				def.Expr.Map.Iterator.Source = varDef
 				found = true
@@ -1367,11 +1377,11 @@ func (b *FieldOneofRuleBuilder) AddVariableDefinition(def *resolver.VariableDefi
 			b.errs = append(b.errs, fmt.Errorf("%s variable name is not found", name))
 		}
 	}
-	def.Idx = len(b.rule.VariableDefinitions)
+	def.Idx = len(b.rule.DefSet.Definitions())
 	def.Owner = &resolver.VariableDefinitionOwner{
 		Type: resolver.VariableDefinitionOwnerOneofField,
 	}
-	b.rule.VariableDefinitions = append(b.rule.VariableDefinitions, def)
+	b.rule.DefSet.Defs = append(b.rule.DefSet.Defs, def)
 	return b
 }
 
@@ -1384,12 +1394,12 @@ func (b *FieldOneofRuleBuilder) SetBy(expr string, out *resolver.Type) *FieldOne
 }
 
 func (b *FieldOneofRuleBuilder) SetDependencyGraph(graph *resolver.MessageDependencyGraph) *FieldOneofRuleBuilder {
-	b.rule.DependencyGraph = graph
+	b.rule.DefSet.Graph = graph
 	return b
 }
 
 func (b *FieldOneofRuleBuilder) AddVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *FieldOneofRuleBuilder {
-	b.rule.VariableDefinitionGroups = append(b.rule.VariableDefinitionGroups, group)
+	b.rule.DefSet.Groups = append(b.rule.DefSet.Groups, group)
 	return b
 }
 

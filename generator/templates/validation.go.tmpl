@@ -1,5 +1,5 @@
 {{- define "messageValidation" }}
-{{- if .Error.HasIf }}
+{{- if not .Error.Details }}
 return grpcfed.If(ctx, value, "{{ .Error.If }}", func(value *localValueType) error {
 	return grpcfed.GRPCErrorf(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
 })
@@ -8,34 +8,36 @@ var (
 	details       []grpcfed.ProtoMessage
 	validationErr bool
 )
-{{- range .Error.Details }}
-if err := grpcfed.If(ctx, value, "{{ .If }}", func(value *localValueType) error {
-	validationErr = true
-	{{- template "detailMessages" . }}
-	{{- range .PreconditionFailures }}
-	{{- template "preconditionFailure" . }}
-	{{- end }}
-	{{- range .BadRequests }}
-	{{- template "badRequest" . }}
-	{{- end }}
-	{{- range .LocalizedMessages }}
-	{{- template "localizedMessage" . }}
-	{{- end }}
-	return nil
-}); err != nil {
-	return err
-}
-{{- end }}
-if validationErr {
-	status := grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
-	statusWithDetails, err := status.WithDetails(details...)
-	if err != nil {
-		s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-		return status.Err()
+return grpcfed.If(ctx, value, "{{ .Error.If }}", func(value *localValueType) error {
+	{{- range .Error.Details }}
+	if err := grpcfed.If(ctx, value, "{{ .If }}", func(value *localValueType) error {
+		validationErr = true
+		{{- template "detailMessages" . }}
+		{{- range .PreconditionFailures }}
+		{{- template "preconditionFailure" . }}
+		{{- end }}
+		{{- range .BadRequests }}
+		{{- template "badRequest" . }}
+		{{- end }}
+		{{- range .LocalizedMessages }}
+		{{- template "localizedMessage" . }}
+		{{- end }}
+		return nil
+	}); err != nil {
+		return err
 	}
-	return statusWithDetails.Err()
-}
-return nil
+	{{- end }}
+	if validationErr {
+		status := grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+		statusWithDetails, err := status.WithDetails(details...)
+		if err != nil {
+			s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+			return status.Err()
+		}
+		return statusWithDetails.Err()
+	}
+	return nil
+})
 {{- end }}
 {{- end }}
 
@@ -69,7 +71,7 @@ func(){
 		s.logger.ErrorContext(ctx, "failed resolving messages", slog.String("error", err.Error()))
 		return
 	}
-	{{- range $i, $message := .Messages }}
+	{{- range $i, $message := .Messages.Defs }}
 	if detail := grpcfed.CustomMessage(ctx, value, "{{ $message.Name }}", {{ $i }}); detail != nil {
 		details = append(details, detail)
 	}

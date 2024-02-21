@@ -58,3 +58,7 @@ func (t *Type) FQDN() string {
 	}
 	return repeated + t.Kind.ToString()
 }
+
+func (n *MessageDependencyGraphNode) FQDN() string {
+	return fmt.Sprintf("%s_%s", n.BaseMessage.FQDN(), n.VariableDefinition.Name)
+}

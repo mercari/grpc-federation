@@ -3043,51 +3043,54 @@ func TestValidation(t *testing.T) {
 										SetMessage("validation message 2").
 										SetDetails([]*resolver.GRPCErrorDetail{
 											{
-												If: testutil.NewCELValueBuilder("post.title != 'some-title'", resolver.BoolType).Build(t),
-												Messages: []*resolver.VariableDefinition{
-													testutil.NewVariableDefinitionBuilder().
-														SetName("_def2_err_detail0_msg0").
-														SetUsed(true).
-														SetOwner(&resolver.VariableDefinitionOwner{
-															Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
-															GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
-																DefIdx:       2,
-																ErrDetailIdx: 0,
-															},
-														}).
-														SetMessage(
-															testutil.NewMessageExprBuilder().
-																SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
-																SetArgs(
-																	testutil.NewMessageDependencyArgumentBuilder().
-																		Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
-																		Build(t),
-																).
-																Build(t),
-														).
-														Build(t),
-													testutil.NewVariableDefinitionBuilder().
-														SetName("_def2_err_detail0_msg1").
-														SetUsed(true).
-														SetIdx(1).
-														SetOwner(&resolver.VariableDefinitionOwner{
-															Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
-															GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
-																DefIdx:       2,
-																ErrDetailIdx: 0,
-															},
-														}).
-														SetMessage(
-															testutil.NewMessageExprBuilder().
-																SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
-																SetArgs(
-																	testutil.NewMessageDependencyArgumentBuilder().
-																		Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
-																		Build(t),
-																).
-																Build(t),
-														).
-														Build(t),
+												If:     testutil.NewCELValueBuilder("post.title != 'some-title'", resolver.BoolType).Build(t),
+												DefSet: &resolver.VariableDefinitionSet{},
+												Messages: &resolver.VariableDefinitionSet{
+													Defs: []*resolver.VariableDefinition{
+														testutil.NewVariableDefinitionBuilder().
+															SetName("_def2_err_detail0_msg0").
+															SetUsed(true).
+															SetOwner(&resolver.VariableDefinitionOwner{
+																Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
+																GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
+																	DefIdx:       2,
+																	ErrDetailIdx: 0,
+																},
+															}).
+															SetMessage(
+																testutil.NewMessageExprBuilder().
+																	SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
+																	SetArgs(
+																		testutil.NewMessageDependencyArgumentBuilder().
+																			Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
+																			Build(t),
+																	).
+																	Build(t),
+															).
+															Build(t),
+														testutil.NewVariableDefinitionBuilder().
+															SetName("_def2_err_detail0_msg1").
+															SetUsed(true).
+															SetIdx(1).
+															SetOwner(&resolver.VariableDefinitionOwner{
+																Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
+																GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
+																	DefIdx:       2,
+																	ErrDetailIdx: 0,
+																},
+															}).
+															SetMessage(
+																testutil.NewMessageExprBuilder().
+																	SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
+																	SetArgs(
+																		testutil.NewMessageDependencyArgumentBuilder().
+																			Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
+																			Build(t),
+																	).
+																	Build(t),
+															).
+															Build(t),
+													},
 												},
 												PreconditionFailures: []*resolver.PreconditionFailure{
 													{

@@ -62,7 +62,7 @@ func (r *MessageRule) ProtoFormat(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
 
 	var elems []string
-	varDefs := r.VariableDefinitions.ProtoFormat(nextOpt)
+	varDefs := r.DefSet.Definitions().ProtoFormat(nextOpt)
 	if varDefs != "" {
 		elems = append(elems, varDefs)
 	}
@@ -349,7 +349,7 @@ func (e *GRPCErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	elems := []string{
 		nextOpt.indentFormat() + fmt.Sprintf("if: %q", e.If.Expr),
 	}
-	if s := len(e.Messages); s != 0 {
+	if s := len(e.Messages.Definitions()); s != 0 {
 		elems = append(elems, e.protoFormatDetails(nextOpt, "message", s))
 	}
 	if s := len(e.PreconditionFailures); s != 0 {

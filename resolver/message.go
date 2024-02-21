@@ -65,10 +65,10 @@ func (m *Message) HasResolvers() bool {
 	if m.Rule == nil {
 		return false
 	}
-	if len(m.Rule.VariableDefinitionGroups) != 0 {
+	if len(m.Rule.DefSet.DefinitionGroups()) != 0 {
 		return true
 	}
-	if len(m.Rule.VariableDefinitions) != 0 {
+	if len(m.Rule.DefSet.Definitions()) != 0 {
 		return true
 	}
 	for _, field := range m.Fields {
@@ -78,7 +78,7 @@ func (m *Message) HasResolvers() bool {
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		if len(field.Rule.Oneof.VariableDefinitionGroups) != 0 {
+		if len(field.Rule.Oneof.DefSet.DefinitionGroups()) != 0 {
 			return true
 		}
 	}
@@ -90,8 +90,8 @@ func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 		return nil
 	}
 
-	ret := m.Rule.VariableDefinitionGroups
-	for _, def := range m.Rule.VariableDefinitions {
+	ret := m.Rule.DefSet.DefinitionGroups()
+	for _, def := range m.Rule.DefSet.Definitions() {
 		if def.Expr == nil {
 			continue
 		}
@@ -99,7 +99,7 @@ func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 			continue
 		}
 		for _, detail := range def.Expr.Validation.Error.Details {
-			ret = append(ret, detail.VariableDefinitionGroups...)
+			ret = append(ret, detail.Messages.DefinitionGroups()...)
 		}
 	}
 	for _, field := range m.Fields {
@@ -109,7 +109,7 @@ func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		ret = append(ret, field.Rule.Oneof.VariableDefinitionGroups...)
+		ret = append(ret, field.Rule.Oneof.DefSet.DefinitionGroups()...)
 	}
 	return ret
 }
@@ -118,7 +118,7 @@ func (m *Message) HasCELValue() bool {
 	if m.Rule == nil {
 		return false
 	}
-	for _, varDef := range m.Rule.VariableDefinitions {
+	for _, varDef := range m.Rule.DefSet.Definitions() {
 		if varDef.Expr == nil {
 			continue
 		}
@@ -183,7 +183,7 @@ func (m *Message) UseAllNameReference() {
 	if m.Rule == nil {
 		return
 	}
-	for _, varDef := range m.Rule.VariableDefinitions {
+	for _, varDef := range m.Rule.DefSet.Definitions() {
 		if varDef.Name == "" {
 			continue
 		}
@@ -210,7 +210,7 @@ func (m *Message) ReferenceNames() []string {
 
 	rule := m.Rule
 	var refNames []string
-	for _, varDef := range rule.VariableDefinitions {
+	for _, varDef := range rule.DefSet.Definitions() {
 		refNames = append(refNames, varDef.ReferenceNames()...)
 	}
 	for _, field := range m.Fields {
@@ -295,14 +295,14 @@ func (m *Message) DependencyGraphTreeFormat() string {
 	if m.Rule == nil {
 		return ""
 	}
-	return DependencyGraphTreeFormat(m.Rule.VariableDefinitionGroups)
+	return DependencyGraphTreeFormat(m.Rule.DefSet.DefinitionGroups())
 }
 
 func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 	convertedFQDNMap := make(map[string]struct{})
 	var decls []*TypeConversionDecl
-	if m.Rule != nil && len(m.Rule.VariableDefinitions) != 0 {
-		for _, varDef := range m.Rule.VariableDefinitions {
+	if m.Rule != nil && len(m.Rule.DefSet.Definitions()) != 0 {
+		for _, varDef := range m.Rule.DefSet.Definitions() {
 			if varDef.Expr == nil {
 				continue
 			}
@@ -341,7 +341,7 @@ func (m *Message) CustomResolvers() []*CustomResolver {
 			})
 		}
 	}
-	for _, group := range m.Rule.VariableDefinitionGroups {
+	for _, group := range m.Rule.DefSet.DefinitionGroups() {
 		for _, def := range group.VariableDefinitions() {
 			ret = append(ret, m.customResolvers(def)...)
 		}
@@ -417,12 +417,12 @@ func (m *Message) DependServices() []*Service {
 func (m *Message) dependServices(defMap map[*VariableDefinition]struct{}) []*Service {
 	var svcs []*Service
 	if m.Rule != nil {
-		for _, group := range m.Rule.VariableDefinitionGroups {
+		for _, group := range m.Rule.DefSet.DefinitionGroups() {
 			for _, def := range group.VariableDefinitions() {
 				svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
 			}
 		}
-		for _, def := range m.Rule.VariableDefinitions {
+		for _, def := range m.Rule.DefSet.Definitions() {
 			if def.Expr == nil {
 				continue
 			}
@@ -430,7 +430,7 @@ func (m *Message) dependServices(defMap map[*VariableDefinition]struct{}) []*Ser
 				continue
 			}
 			for _, detail := range def.Expr.Validation.Error.Details {
-				for _, group := range detail.VariableDefinitionGroups {
+				for _, group := range detail.DefSet.DefinitionGroups() {
 					for _, def := range group.VariableDefinitions() {
 						svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
 					}
@@ -445,7 +445,7 @@ func (m *Message) dependServices(defMap map[*VariableDefinition]struct{}) []*Ser
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		for _, group := range field.Rule.Oneof.VariableDefinitionGroups {
+		for _, group := range field.Rule.Oneof.DefSet.DefinitionGroups() {
 			for _, def := range group.VariableDefinitions() {
 				svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
 			}
