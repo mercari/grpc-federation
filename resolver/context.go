@@ -3,18 +3,15 @@
 package resolver
 
 type context struct {
-	errorBuilder   *errorBuilder
-	allWarnings    *allWarnings
-	fileRef        *File
-	svc            *Service
-	mtd            *Method
-	msg            *Message
-	enum           *Enum
-	plugin         *CELPlugin
-	defIdx         int
-	errDetailIdx   int
-	isPluginMethod bool
-	variableMap    map[string]*VariableDefinition
+	errorBuilder *errorBuilder
+	allWarnings  *allWarnings
+	fileRef      *File
+	msg          *Message
+	enum         *Enum
+	plugin       *CELPlugin
+	defIdx       int
+	errDetailIdx int
+	variableMap  map[string]*VariableDefinition
 }
 
 type allWarnings struct {
@@ -31,16 +28,13 @@ func newContext() *context {
 
 func (c *context) clone() *context {
 	return &context{
-		errorBuilder:   c.errorBuilder,
-		allWarnings:    c.allWarnings,
-		fileRef:        c.fileRef,
-		svc:            c.svc,
-		mtd:            c.mtd,
-		msg:            c.msg,
-		enum:           c.enum,
-		plugin:         c.plugin,
-		defIdx:         c.defIdx,
-		isPluginMethod: c.isPluginMethod,
+		errorBuilder: c.errorBuilder,
+		allWarnings:  c.allWarnings,
+		fileRef:      c.fileRef,
+		msg:          c.msg,
+		enum:         c.enum,
+		plugin:       c.plugin,
+		defIdx:       c.defIdx,
 
 		errDetailIdx: c.errDetailIdx,
 		variableMap:  c.variableMap,
@@ -50,18 +44,6 @@ func (c *context) clone() *context {
 func (c *context) withFile(file *File) *context {
 	ctx := c.clone()
 	ctx.fileRef = file
-	return ctx
-}
-
-func (c *context) withService(svc *Service) *context {
-	ctx := c.clone()
-	ctx.svc = svc
-	return ctx
-}
-
-func (c *context) withMethod(mtd *Method) *context {
-	ctx := c.clone()
-	ctx.mtd = mtd
 	return ctx
 }
 
@@ -89,12 +71,6 @@ func (c *context) withPlugin(plugin *CELPlugin) *context {
 	return ctx
 }
 
-func (c *context) withPluginIsMethod(v bool) *context {
-	ctx := c.clone()
-	ctx.isPluginMethod = v
-	return ctx
-}
-
 func (c *context) withErrDetailIndex(idx int) *context {
 	ctx := c.clone()
 	ctx.errDetailIdx = idx
@@ -118,32 +94,11 @@ func (c *context) file() *File {
 	return c.fileRef
 }
 
-func (c *context) pluginName() string {
-	if c.plugin == nil {
-		return ""
-	}
-	return c.plugin.Name
-}
-
 func (c *context) fileName() string {
 	if c.fileRef == nil {
 		return ""
 	}
 	return c.fileRef.Name
-}
-
-func (c *context) serviceName() string {
-	if c.svc == nil {
-		return ""
-	}
-	return c.svc.Name
-}
-
-func (c *context) methodName() string {
-	if c.mtd == nil {
-		return ""
-	}
-	return c.mtd.Name
 }
 
 func (c *context) messageName() string {
@@ -162,10 +117,6 @@ func (c *context) enumName() string {
 
 func (c *context) defIndex() int {
 	return c.defIdx
-}
-
-func (c *context) pluginIsMethod() bool {
-	return c.isPluginMethod
 }
 
 func (c *context) errDetailIndex() int {

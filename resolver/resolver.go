@@ -210,7 +210,6 @@ func (r *Resolver) validateServiceFromFiles(ctx *context, files []*File) {
 	for _, file := range files {
 		ctx := ctx.withFile(file)
 		for _, svc := range file.Services {
-			ctx := ctx.withService(svc)
 			r.validateService(ctx, svc, source.NewServiceBuilder(ctx.fileName(), svc.Name))
 		}
 	}
@@ -372,7 +371,7 @@ func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDesc
 			continue
 		}
 		for idx, fn := range msgType.GetMethods() {
-			pluginFunc := r.resolvePluginMethod(ctx.withPluginIsMethod(true), msg, fn, builder.WithMethods(idx))
+			pluginFunc := r.resolvePluginMethod(ctx, msg, fn, builder.WithMethods(idx))
 			if pluginFunc == nil {
 				continue
 			}
@@ -415,21 +414,12 @@ func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []
 	}
 	retType, err := r.resolvePluginFunctionType(ctx, ret.GetType(), ret.GetRepeated())
 	if err != nil {
-		if ctx.pluginIsMethod() {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					builder.WithReturnType().Location(),
-				),
-			)
-		} else {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					builder.WithReturnType().Location(),
-				),
-			)
-		}
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithReturnType().Location(),
+			),
+		)
 	}
 	return argTypes, retType
 }
@@ -439,21 +429,12 @@ func (r *Resolver) resolvePluginFunctionArguments(ctx *context, args []*federati
 	for argIdx, arg := range args {
 		typ, err := r.resolvePluginFunctionType(ctx, arg.GetType(), arg.GetRepeated())
 		if err != nil {
-			if ctx.pluginIsMethod() {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						builder.WithArgs(argIdx).Location(),
-					),
-				)
-			} else {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						builder.WithArgs(argIdx).Location(),
-					),
-				)
-			}
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithArgs(argIdx).Location(),
+				),
+			)
 			continue
 		}
 		ret = append(ret, typ)
@@ -530,7 +511,6 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string, build
 		CELPlugins: plugins,
 	}
 	r.serviceToRuleMap[service] = ruleDef
-	ctx = ctx.withService(service)
 	for _, methodDef := range serviceDef.GetMethod() {
 		method := r.resolveMethod(ctx, service, methodDef, builder.WithMethod(methodDef.GetName()))
 		if method == nil {
@@ -785,7 +765,6 @@ func (r *Resolver) resolveRule(ctx *context, files []*File) {
 
 func (r *Resolver) resolveServiceRules(ctx *context, svcs []*Service) {
 	for _, svc := range svcs {
-		ctx := ctx.withService(svc)
 		builder := source.NewServiceBuilder(ctx.fileName(), svc.Name)
 		svc.Rule = r.resolveServiceRule(ctx, r.serviceToRuleMap[svc], builder.WithOption())
 		r.resolveMethodRules(ctx, svc.Methods, builder)
@@ -794,7 +773,7 @@ func (r *Resolver) resolveServiceRules(ctx *context, svcs []*Service) {
 
 func (r *Resolver) resolveMethodRules(ctx *context, mtds []*Method, builder *source.ServiceBuilder) {
 	for _, mtd := range mtds {
-		mtd.Rule = r.resolveMethodRule(ctx.withMethod(mtd), r.methodToRuleMap[mtd], builder.WithMethod(mtd.Name))
+		mtd.Rule = r.resolveMethodRule(ctx, r.methodToRuleMap[mtd], builder.WithMethod(mtd.Name))
 	}
 }
 
@@ -1573,7 +1552,7 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 		}
 		return nil
 	}
-	oneof := r.resolveFieldOneofRule(ctx, msg, field, ruleDef.GetOneof(), builder)
+	oneof := r.resolveFieldOneofRule(ctx, field, ruleDef.GetOneof(), builder)
 	var value *Value
 	if oneof == nil {
 		v, err := r.resolveValue(ctx, fieldRuleToCommonValueDef(ruleDef))
@@ -1596,7 +1575,7 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 	}
 }
 
-func (r *Resolver) resolveFieldOneofRule(ctx *context, msg *Message, field *Field, def *federation.FieldOneof, builder *source.FieldBuilder) *FieldOneofRule {
+func (r *Resolver) resolveFieldOneofRule(ctx *context, field *Field, def *federation.FieldOneof, builder *source.FieldBuilder) *FieldOneofRule {
 	if def == nil {
 		return nil
 	}
@@ -2310,7 +2289,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		if _, exists := r.cachedMessageMap[depMsgArg.FQDN()]; !exists {
 			r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
 			defs := msgToDefsMap[depMsg]
-			depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, msg, defs)...)
+			depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, defs)...)
 		}
 		for _, field := range depMsgArg.Fields {
 			field.Message = depMsgArg
@@ -2321,7 +2300,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 	return msgs
 }
 
-func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, defs []*VariableDefinition) []*Field {
+func (r *Resolver) resolveMessageArgumentFields(ctx *context, defs []*VariableDefinition) []*Field {
 	argNameMap := make(map[string]struct{})
 	for _, varDef := range defs {
 		for _, msgExpr := range varDef.MessageExprs() {
@@ -2338,7 +2317,7 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, defs
 	var fields []*Field
 	for _, varDef := range defs {
 		for _, msgExpr := range varDef.MessageExprs() {
-			r.validateMessageDependencyArgumentName(ctx, argNameMap, msg, varDef)
+			r.validateMessageDependencyArgumentName(ctx, argNameMap, varDef)
 			for argIdx, arg := range msgExpr.Args {
 				if _, exists := evaluatedArgNameMap[arg.Name]; exists {
 					continue
@@ -2376,7 +2355,7 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, msg *Message, defs
 	return fields
 }
 
-func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMap map[string]struct{}, msg *Message, def *VariableDefinition) {
+func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMap map[string]struct{}, def *VariableDefinition) {
 	for _, msgExpr := range def.MessageExprs() {
 		curDepArgNameMap := make(map[string]struct{})
 		for _, arg := range msgExpr.Args {

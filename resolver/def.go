@@ -4,25 +4,25 @@ import (
 	"sort"
 )
 
-func (s *VariableDefinitionSet) Definitions() VariableDefinitions {
-	if s == nil {
+func (set *VariableDefinitionSet) Definitions() VariableDefinitions {
+	if set == nil {
 		return nil
 	}
-	return s.Defs
+	return set.Defs
 }
 
-func (s *VariableDefinitionSet) DefinitionGroups() []VariableDefinitionGroup {
-	if s == nil {
+func (set *VariableDefinitionSet) DefinitionGroups() []VariableDefinitionGroup {
+	if set == nil {
 		return nil
 	}
-	return s.Groups
+	return set.Groups
 }
 
-func (s *VariableDefinitionSet) DependencyGraph() *MessageDependencyGraph {
-	if s == nil {
+func (set *VariableDefinitionSet) DependencyGraph() *MessageDependencyGraph {
+	if set == nil {
 		return nil
 	}
-	return s.Graph
+	return set.Graph
 }
 
 func (g *SequentialVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
@@ -64,7 +64,7 @@ func (def *VariableDefinition) MessageToDefsMap() map[*Message]VariableDefinitio
 		if msgExpr.Message == nil {
 			return nil
 		}
-		return map[*Message]VariableDefinitions{msgExpr.Message: VariableDefinitions{def}}
+		return map[*Message]VariableDefinitions{msgExpr.Message: {def}}
 	case expr.Map != nil:
 		mapExpr := expr.Map
 		if mapExpr.Expr == nil {
@@ -74,7 +74,7 @@ func (def *VariableDefinition) MessageToDefsMap() map[*Message]VariableDefinitio
 			return nil
 		}
 		msgExpr := mapExpr.Expr.Message
-		return map[*Message]VariableDefinitions{msgExpr.Message: VariableDefinitions{def}}
+		return map[*Message]VariableDefinitions{msgExpr.Message: {def}}
 	case expr.Call != nil:
 		return expr.Call.MessageToDefsMap()
 	case expr.Validation != nil:
