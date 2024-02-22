@@ -127,7 +127,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Idx:  0,
 							Call: &source.CallExprOption{Method: true},
 						},
@@ -147,7 +147,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Idx: 0,
 							Call: &source.CallExprOption{
 								Request: &source.RequestOption{Field: true},
@@ -169,7 +169,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Idx: 0,
 							Call: &source.CallExprOption{
 								Request: &source.RequestOption{By: true},
@@ -209,7 +209,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Idx: 0,
 							Message: &source.MessageExprOption{
 								Name: true,
@@ -231,7 +231,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Idx: 0,
 							Message: &source.MessageExprOption{
 								Args: &source.ArgumentOption{Name: true},
@@ -253,7 +253,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Idx: 0,
 							Message: &source.MessageExprOption{
 								Args: &source.ArgumentOption{By: true},
@@ -275,7 +275,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Idx: 2,
 							Message: &source.MessageExprOption{
 								Args: &source.ArgumentOption{Inline: true},

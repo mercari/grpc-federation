@@ -132,7 +132,7 @@ func (f *File) buildLocation(ctx findContext) *Location {
 			loc.Message.Option = &MessageOption{}
 		}
 		if ctx.def != nil {
-			loc.Message.Option.VariableDefinitions = ctx.def
+			loc.Message.Option.Def = ctx.def
 		}
 	}
 	return loc
@@ -835,8 +835,8 @@ func (f *File) nodeInfoByMessageOption(node *ast.OptionNode, opt *MessageOption)
 		for _, elem := range n.Elements {
 			optName := elem.Name.Name.AsIdentifier()
 			switch {
-			case opt.VariableDefinitions != nil && optName == "def":
-				return f.nodeInfoByDef(f.getMessageListFromNode(elem.Val), opt.VariableDefinitions)
+			case opt.Def != nil && optName == "def":
+				return f.nodeInfoByDef(f.getMessageListFromNode(elem.Val), opt.Def)
 			case opt.Alias && optName == "alias":
 				return f.nodeInfo(elem.Val)
 			}
@@ -1039,13 +1039,13 @@ func (f *File) nodeInfoByValidationExpr(node *ast.MessageLiteralNode, opt *Valid
 			if !ok {
 				return nil
 			}
-			return f.nodeInfoByValidationError(value, opt)
+			return f.nodeInfoByGRPCError(value, opt.Error)
 		}
 	}
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByValidationError(node *ast.MessageLiteralNode, opt *ValidationExprOption) *ast.NodeInfo {
+func (f *File) nodeInfoByGRPCError(node *ast.MessageLiteralNode, opt *GRPCErrorOption) *ast.NodeInfo {
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
@@ -1056,13 +1056,13 @@ func (f *File) nodeInfoByValidationError(node *ast.MessageLiteralNode, opt *Vali
 			}
 			return f.nodeInfo(value)
 		case opt.Detail != nil && fieldName == "details":
-			return f.nodeInfoByValidationErrorDetail(f.getMessageListFromNode(elem.Val), opt.Detail)
+			return f.nodeInfoByGRPCErrorDetail(f.getMessageListFromNode(elem.Val), opt.Detail)
 		}
 	}
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, detail *ValidationDetailOption) *ast.NodeInfo {
+func (f *File) nodeInfoByGRPCErrorDetail(list []*ast.MessageLiteralNode, detail *GRPCErrorDetailOption) *ast.NodeInfo {
 	if detail.Idx >= len(list) {
 		return nil
 	}
@@ -1077,7 +1077,7 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 			}
 			return f.nodeInfo(value)
 		case detail.Message != nil && fieldName == "message":
-			return f.nodeInfoByDetailMessage(f.getMessageListFromNode(elem.Val), detail.Message)
+			return f.nodeInfoByDef(f.getMessageListFromNode(elem.Val), detail.Message)
 		case detail.PreconditionFailure != nil && fieldName == "precondition_failure":
 			return f.nodeInfoByPreconditionFailure(f.getMessageListFromNode(elem.Val), detail.PreconditionFailure)
 		case detail.BadRequest != nil && fieldName == "bad_request":
@@ -1089,14 +1089,7 @@ func (f *File) nodeInfoByValidationErrorDetail(list []*ast.MessageLiteralNode, d
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByDetailMessage(list []*ast.MessageLiteralNode, message *ValidationDetailMessageOption) *ast.NodeInfo {
-	if message.Idx >= len(list) {
-		return nil
-	}
-	return f.nodeInfoByMessageExpr(list[message.Idx], message.Message)
-}
-
-func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, failure *ValidationDetailPreconditionFailureOption) *ast.NodeInfo {
+func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, failure *GRPCErrorDetailPreconditionFailureOption) *ast.NodeInfo {
 	if failure.Idx >= len(list) {
 		return nil
 	}
@@ -1110,7 +1103,7 @@ func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, fai
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLiteralNode, violation ValidationDetailPreconditionFailureViolationOption) *ast.NodeInfo {
+func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLiteralNode, violation GRPCErrorDetailPreconditionFailureViolationOption) *ast.NodeInfo {
 	if violation.Idx >= len(list) {
 		return nil
 	}
@@ -1128,7 +1121,7 @@ func (f *File) nodeInfoByPreconditionFailureViolations(list []*ast.MessageLitera
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *ValidationDetailBadRequestOption) *ast.NodeInfo {
+func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *GRPCErrorDetailBadRequestOption) *ast.NodeInfo {
 	if req.Idx >= len(list) {
 		return nil
 	}
@@ -1142,7 +1135,7 @@ func (f *File) nodeInfoByBadRequest(list []*ast.MessageLiteralNode, req *Validat
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByLocalizedMessage(list []*ast.MessageLiteralNode, msg *ValidationDetailLocalizedMessageOption) *ast.NodeInfo {
+func (f *File) nodeInfoByLocalizedMessage(list []*ast.MessageLiteralNode, msg *GRPCErrorDetailLocalizedMessageOption) *ast.NodeInfo {
 	if msg.Idx >= len(list) {
 		return nil
 	}
@@ -1160,7 +1153,7 @@ func (f *File) nodeInfoByLocalizedMessage(list []*ast.MessageLiteralNode, msg *V
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByBadRequestFieldViolations(list []*ast.MessageLiteralNode, violation ValidationDetailBadRequestFieldViolationOption) *ast.NodeInfo {
+func (f *File) nodeInfoByBadRequestFieldViolations(list []*ast.MessageLiteralNode, violation GRPCErrorDetailBadRequestFieldViolationOption) *ast.NodeInfo {
 	if violation.Idx >= len(list) {
 		return nil
 	}
@@ -1259,8 +1252,8 @@ func (f *File) nodeInfoByFieldOneof(node *ast.MessageLiteralNode, opt *FieldOneo
 			return f.nodeInfo(value)
 		case opt.Default && fieldName == "default":
 			return f.nodeInfo(elem.Val)
-		case opt.VariableDefinitions != nil && fieldName == "def":
-			return f.nodeInfoByDef(f.getMessageListFromNode(elem.Val), opt.VariableDefinitions)
+		case opt.Def != nil && fieldName == "def":
+			return f.nodeInfoByDef(f.getMessageListFromNode(elem.Val), opt.Def)
 		case opt.By && fieldName == "by":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {

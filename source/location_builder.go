@@ -6,37 +6,76 @@ func NewLocationBuilder(fileName string) *LocationBuilder {
 	}
 }
 
+func NewServiceBuilder(fileName, svcName string) *ServiceBuilder {
+	return NewLocationBuilder(fileName).WithService(svcName)
+}
+
+func NewMessageBuilder(fileName, msgName string) *MessageBuilder {
+	return NewLocationBuilder(fileName).WithMessage(msgName)
+}
+
+func NewEnumBuilder(fileName, msgName, enumName string) *EnumBuilder {
+	builder := NewLocationBuilder(fileName)
+	if msgName == "" {
+		return builder.WithEnum(enumName)
+	}
+	return builder.WithMessage(msgName).WithEnum(enumName)
+}
+
 type LocationBuilder struct {
 	location *Location
 }
 
 func (b *LocationBuilder) WithGoPackage() *LocationBuilder {
-	b.location.GoPackage = true
-	return b
+	loc := b.location.Clone()
+	loc.GoPackage = true
+	return &LocationBuilder{
+		location: loc,
+	}
 }
 
 func (b *LocationBuilder) WithExport(name string) *ExportBuilder {
-	export := &Export{Name: name}
-	b.location.Export = export
-	return &ExportBuilder{root: b.location, export: export}
+	root := b.location.Clone()
+	root.Export = &Export{Name: name}
+	return &ExportBuilder{
+		root: root,
+		export: func(loc *Location) *Export {
+			return loc.Export
+		},
+	}
 }
 
 func (b *LocationBuilder) WithService(name string) *ServiceBuilder {
-	service := &Service{Name: name}
-	b.location.Service = service
-	return &ServiceBuilder{root: b.location, service: service}
+	root := b.location.Clone()
+	root.Service = &Service{Name: name}
+	return &ServiceBuilder{
+		root: root,
+		service: func(loc *Location) *Service {
+			return loc.Service
+		},
+	}
 }
 
 func (b *LocationBuilder) WithEnum(name string) *EnumBuilder {
-	enum := &Enum{Name: name}
-	b.location.Enum = enum
-	return &EnumBuilder{root: b.location, enum: enum}
+	root := b.location.Clone()
+	root.Enum = &Enum{Name: name}
+	return &EnumBuilder{
+		root: root,
+		enum: func(loc *Location) *Enum {
+			return loc.Enum
+		},
+	}
 }
 
 func (b *LocationBuilder) WithMessage(name string) *MessageBuilder {
-	message := &Message{Name: name}
-	b.location.Message = message
-	return &MessageBuilder{root: b.location, message: message}
+	root := b.location.Clone()
+	root.Message = &Message{Name: name}
+	return &MessageBuilder{
+		root: root,
+		message: func(loc *Location) *Message {
+			return loc.Message
+		},
+	}
 }
 
 func (b *LocationBuilder) Location() *Location {
@@ -45,25 +84,43 @@ func (b *LocationBuilder) Location() *Location {
 
 type ExportBuilder struct {
 	root   *Location
-	export *Export
+	export func(*Location) *Export
 }
 
 func (b *ExportBuilder) WithWasm() *WasmBuilder {
-	w := &Wasm{}
-	b.export.Wasm = w
-	return &WasmBuilder{root: b.root, wasm: w}
+	root := b.root.Clone()
+	export := b.export(root)
+	export.Wasm = &Wasm{}
+	return &WasmBuilder{
+		root: root,
+		wasm: func(loc *Location) *Wasm {
+			return b.export(loc).Wasm
+		},
+	}
 }
 
 func (b *ExportBuilder) WithTypes(idx int) *PluginTypeBuilder {
-	p := &PluginType{Idx: idx}
-	b.export.Types = p
-	return &PluginTypeBuilder{root: b.root, typ: p}
+	root := b.root.Clone()
+	export := b.export(root)
+	export.Types = &PluginType{Idx: idx}
+	return &PluginTypeBuilder{
+		root: root,
+		typ: func(loc *Location) *PluginType {
+			return b.export(loc).Types
+		},
+	}
 }
 
 func (b *ExportBuilder) WithFunctions(idx int) *PluginFunctionBuilder {
-	fn := &PluginFunction{Idx: idx}
-	b.export.Functions = fn
-	return &PluginFunctionBuilder{root: b.root, fn: fn}
+	root := b.root.Clone()
+	export := b.export(root)
+	export.Functions = &PluginFunction{Idx: idx}
+	return &PluginFunctionBuilder{
+		root: root,
+		fn: func(loc *Location) *PluginFunction {
+			return b.export(loc).Functions
+		},
+	}
 }
 
 func (b *ExportBuilder) Location() *Location {
@@ -72,17 +129,27 @@ func (b *ExportBuilder) Location() *Location {
 
 type WasmBuilder struct {
 	root *Location
-	wasm *Wasm
+	wasm func(*Location) *Wasm
 }
 
 func (b *WasmBuilder) WithURL() *WasmBuilder {
-	b.wasm.URL = true
-	return b
+	root := b.root.Clone()
+	wasm := b.wasm(root)
+	wasm.URL = true
+	return &WasmBuilder{
+		root: root,
+		wasm: b.wasm,
+	}
 }
 
 func (b *WasmBuilder) WithSha256() *WasmBuilder {
-	b.wasm.Sha256 = true
-	return b
+	root := b.root.Clone()
+	wasm := b.wasm(root)
+	wasm.Sha256 = true
+	return &WasmBuilder{
+		root: root,
+		wasm: b.wasm,
+	}
 }
 
 func (b *WasmBuilder) Location() *Location {
@@ -91,18 +158,29 @@ func (b *WasmBuilder) Location() *Location {
 
 type PluginTypeBuilder struct {
 	root *Location
-	typ  *PluginType
+	typ  func(*Location) *PluginType
 }
 
 func (b *PluginTypeBuilder) WithName() *PluginTypeBuilder {
-	b.typ.Name = true
-	return b
+	root := b.root.Clone()
+	typ := b.typ(root)
+	typ.Name = true
+	return &PluginTypeBuilder{
+		root: root,
+		typ:  b.typ,
+	}
 }
 
 func (b *PluginTypeBuilder) WithMethods(idx int) *PluginFunctionBuilder {
-	fn := &PluginFunction{Idx: idx}
-	b.typ.Methods = fn
-	return &PluginFunctionBuilder{root: b.root, fn: fn}
+	root := b.root.Clone()
+	typ := b.typ(root)
+	typ.Methods = &PluginFunction{Idx: idx}
+	return &PluginFunctionBuilder{
+		root: root,
+		fn: func(loc *Location) *PluginFunction {
+			return b.typ(loc).Methods
+		},
+	}
 }
 
 func (b *PluginTypeBuilder) Location() *Location {
@@ -111,23 +189,39 @@ func (b *PluginTypeBuilder) Location() *Location {
 
 type PluginFunctionBuilder struct {
 	root *Location
-	fn   *PluginFunction
+	fn   func(*Location) *PluginFunction
 }
 
 func (b *PluginFunctionBuilder) WithName() *PluginFunctionBuilder {
-	b.fn.Name = true
-	return b
+	root := b.root.Clone()
+	fn := b.fn(root)
+	fn.Name = true
+	return &PluginFunctionBuilder{
+		root: root,
+		fn:   b.fn,
+	}
 }
 
 func (b *PluginFunctionBuilder) WithReturnType() *PluginFunctionBuilder {
-	b.fn.ReturnType = true
-	return b
+	root := b.root.Clone()
+	fn := b.fn(root)
+	fn.ReturnType = true
+	return &PluginFunctionBuilder{
+		root: root,
+		fn:   b.fn,
+	}
 }
 
 func (b *PluginFunctionBuilder) WithArgs(idx int) *PluginFunctionArgumentBuilder {
-	arg := &PluginFunctionArgument{Idx: idx}
-	b.fn.Args = arg
-	return &PluginFunctionArgumentBuilder{root: b.root, arg: arg}
+	root := b.root.Clone()
+	fn := b.fn(root)
+	fn.Args = &PluginFunctionArgument{Idx: idx}
+	return &PluginFunctionArgumentBuilder{
+		root: root,
+		arg: func(loc *Location) *PluginFunctionArgument {
+			return b.fn(loc).Args
+		},
+	}
 }
 
 func (b *PluginFunctionBuilder) Location() *Location {
@@ -136,12 +230,17 @@ func (b *PluginFunctionBuilder) Location() *Location {
 
 type PluginFunctionArgumentBuilder struct {
 	root *Location
-	arg  *PluginFunctionArgument
+	arg  func(*Location) *PluginFunctionArgument
 }
 
 func (b *PluginFunctionArgumentBuilder) WithType() *PluginFunctionArgumentBuilder {
-	b.arg.Type = true
-	return b
+	root := b.root.Clone()
+	arg := b.arg(root)
+	arg.Type = true
+	return &PluginFunctionArgumentBuilder{
+		root: root,
+		arg:  b.arg,
+	}
 }
 
 func (b *PluginFunctionArgumentBuilder) Location() *Location {
@@ -150,19 +249,31 @@ func (b *PluginFunctionArgumentBuilder) Location() *Location {
 
 type ServiceBuilder struct {
 	root    *Location
-	service *Service
+	service func(*Location) *Service
 }
 
 func (b *ServiceBuilder) WithMethod(name string) *MethodBuilder {
-	m := &Method{Name: name}
-	b.service.Method = m
-	return &MethodBuilder{root: b.root, method: m}
+	root := b.root.Clone()
+	svc := b.service(root)
+	svc.Method = &Method{Name: name}
+	return &MethodBuilder{
+		root: root,
+		method: func(loc *Location) *Method {
+			return b.service(loc).Method
+		},
+	}
 }
 
 func (b *ServiceBuilder) WithOption() *ServiceOptionBuilder {
-	o := &ServiceOption{}
-	b.service.Option = o
-	return &ServiceOptionBuilder{root: b.root, option: o}
+	root := b.root.Clone()
+	svc := b.service(root)
+	svc.Option = &ServiceOption{}
+	return &ServiceOptionBuilder{
+		root: root,
+		option: func(loc *Location) *ServiceOption {
+			return b.service(loc).Option
+		},
+	}
 }
 
 func (b *ServiceBuilder) Location() *Location {
@@ -171,23 +282,39 @@ func (b *ServiceBuilder) Location() *Location {
 
 type MethodBuilder struct {
 	root   *Location
-	method *Method
+	method func(*Location) *Method
 }
 
 func (b *MethodBuilder) WithRequest() *MethodBuilder {
-	b.method.Request = true
-	return b
+	root := b.root.Clone()
+	method := b.method(root)
+	method.Request = true
+	return &MethodBuilder{
+		root:   root,
+		method: b.method,
+	}
 }
 
 func (b *MethodBuilder) WithResponse() *MethodBuilder {
-	b.method.Response = true
-	return b
+	root := b.root.Clone()
+	method := b.method(root)
+	method.Response = true
+	return &MethodBuilder{
+		root:   root,
+		method: b.method,
+	}
 }
 
 func (b *MethodBuilder) WithOption() *MethodOptionBuilder {
-	o := &MethodOption{}
-	b.method.Option = o
-	return &MethodOptionBuilder{root: b.root, option: o}
+	root := b.root.Clone()
+	method := b.method(root)
+	method.Option = &MethodOption{}
+	return &MethodOptionBuilder{
+		root: root,
+		option: func(loc *Location) *MethodOption {
+			return b.method(loc).Option
+		},
+	}
 }
 
 func (b *MethodBuilder) Location() *Location {
@@ -196,12 +323,17 @@ func (b *MethodBuilder) Location() *Location {
 
 type MethodOptionBuilder struct {
 	root   *Location
-	option *MethodOption
+	option func(*Location) *MethodOption
 }
 
 func (b *MethodOptionBuilder) WithTimeout() *MethodOptionBuilder {
-	b.option.Timeout = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Timeout = true
+	return &MethodOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *MethodOptionBuilder) Location() *Location {
@@ -210,56 +342,75 @@ func (b *MethodOptionBuilder) Location() *Location {
 
 type ServiceOptionBuilder struct {
 	root   *Location
-	option *ServiceOption
+	option func(*Location) *ServiceOption
 }
 
 func (b *ServiceOptionBuilder) WithDependencies(idx int) *ServiceDependencyOptionBuilder {
-	o := &ServiceDependencyOption{Idx: idx}
-	b.option.Dependencies = o
-	return &ServiceDependencyOptionBuilder{root: b.root, option: o}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Dependencies = &ServiceDependencyOption{Idx: idx}
+	return &ServiceDependencyOptionBuilder{
+		root: root,
+		option: func(loc *Location) *ServiceDependencyOption {
+			return b.option(loc).Dependencies
+		},
+	}
 }
 
 type ServiceDependencyOptionBuilder struct {
 	root   *Location
-	option *ServiceDependencyOption
+	option func(*Location) *ServiceDependencyOption
 }
 
 func (b *ServiceDependencyOptionBuilder) WithName() *ServiceDependencyOptionBuilder {
-	b.option.Name = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Name = true
+	return &ServiceDependencyOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *ServiceDependencyOptionBuilder) WithService() *ServiceDependencyOptionBuilder {
-	b.option.Service = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Service = true
+	return &ServiceDependencyOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *ServiceDependencyOptionBuilder) Location() *Location {
 	return b.root
 }
 
-func NewEnumBuilder(fileName, msgName, enumName string) *EnumBuilder {
-	builder := NewLocationBuilder(fileName)
-	if msgName != "" {
-		return builder.WithMessage(msgName).WithEnum(enumName)
-	}
-	return builder.WithEnum(enumName)
-}
-
 type EnumBuilder struct {
 	root *Location
-	enum *Enum
+	enum func(*Location) *Enum
 }
 
 func (b *EnumBuilder) WithOption() *EnumBuilder {
-	b.enum.Option = &EnumOption{Alias: true}
-	return b
+	root := b.root.Clone()
+	enum := b.enum(root)
+	enum.Option = &EnumOption{Alias: true}
+	return &EnumBuilder{
+		root: root,
+		enum: b.enum,
+	}
 }
 
 func (b *EnumBuilder) WithValue(value string) *EnumValueBuilder {
-	v := &EnumValue{Value: value}
-	b.enum.Value = v
-	return &EnumValueBuilder{root: b.root, value: v}
+	root := b.root.Clone()
+	enum := b.enum(root)
+	enum.Value = &EnumValue{Value: value}
+	return &EnumValueBuilder{
+		root: root,
+		value: func(loc *Location) *EnumValue {
+			return b.enum(loc).Value
+		},
+	}
 }
 
 func (b *EnumBuilder) Location() *Location {
@@ -268,13 +419,19 @@ func (b *EnumBuilder) Location() *Location {
 
 type EnumValueBuilder struct {
 	root  *Location
-	value *EnumValue
+	value func(*Location) *EnumValue
 }
 
 func (b *EnumValueBuilder) WithOption() *EnumValueOptionBuilder {
-	option := &EnumValueOption{}
-	b.value.Option = option
-	return &EnumValueOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	value := b.value(root)
+	value.Option = &EnumValueOption{}
+	return &EnumValueOptionBuilder{
+		root: root,
+		option: func(loc *Location) *EnumValueOption {
+			return b.value(loc).Option
+		},
+	}
 }
 
 func (b *EnumValueBuilder) Location() *Location {
@@ -283,17 +440,27 @@ func (b *EnumValueBuilder) Location() *Location {
 
 type EnumValueOptionBuilder struct {
 	root   *Location
-	option *EnumValueOption
+	option func(*Location) *EnumValueOption
 }
 
 func (b *EnumValueOptionBuilder) WithAlias() *EnumValueOptionBuilder {
-	b.option.Alias = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Alias = true
+	return &EnumValueOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *EnumValueOptionBuilder) WithDefault() *EnumValueOptionBuilder {
-	b.option.Default = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Default = true
+	return &EnumValueOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *EnumValueOptionBuilder) Location() *Location {
@@ -302,31 +469,67 @@ func (b *EnumValueOptionBuilder) Location() *Location {
 
 type MessageBuilder struct {
 	root    *Location
-	message *Message
+	message func(*Location) *Message
+}
+
+func (b *MessageBuilder) WithMessage(name string) *MessageBuilder {
+	root := b.root.Clone()
+	message := b.message(root)
+	message.NestedMessage = &Message{Name: name}
+	return &MessageBuilder{
+		root: root,
+		message: func(loc *Location) *Message {
+			return b.message(loc).NestedMessage
+		},
+	}
 }
 
 func (b *MessageBuilder) WithEnum(name string) *EnumBuilder {
-	enum := &Enum{Name: name}
-	b.message.Enum = enum
-	return &EnumBuilder{root: b.root, enum: enum}
+	root := b.root.Clone()
+	message := b.message(root)
+	message.Enum = &Enum{Name: name}
+	return &EnumBuilder{
+		root: root,
+		enum: func(loc *Location) *Enum {
+			return b.message(loc).Enum
+		},
+	}
 }
 
 func (b *MessageBuilder) WithField(name string) *FieldBuilder {
-	field := &Field{Name: name}
-	b.message.Field = field
-	return &FieldBuilder{root: b.root, field: field}
+	root := b.root.Clone()
+	message := b.message(root)
+	message.Field = &Field{Name: name}
+	return &FieldBuilder{
+		root: root,
+		field: func(loc *Location) *Field {
+			return b.message(loc).Field
+		},
+	}
 }
 
 func (b *MessageBuilder) WithOption() *MessageOptionBuilder {
-	option := &MessageOption{}
-	b.message.Option = option
-	return &MessageOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	message := b.message(root)
+	message.Option = &MessageOption{}
+	return &MessageOptionBuilder{
+		root: root,
+		option: func(loc *Location) *MessageOption {
+			return b.message(loc).Option
+		},
+	}
 }
 
 func (b *MessageBuilder) WithOneof(name string) *OneofBuilder {
-	oneof := &Oneof{Name: name}
-	b.message.Oneof = oneof
-	return &OneofBuilder{root: b.root, oneof: oneof}
+	root := b.root.Clone()
+	message := b.message(root)
+	message.Oneof = &Oneof{Name: name}
+	return &OneofBuilder{
+		root: root,
+		oneof: func(loc *Location) *Oneof {
+			return b.message(loc).Oneof
+		},
+	}
 }
 
 func (b *MessageBuilder) Location() *Location {
@@ -335,7 +538,7 @@ func (b *MessageBuilder) Location() *Location {
 
 type FieldBuilder struct {
 	root  *Location
-	field *Field
+	field func(*Location) *Field
 }
 
 func (b *FieldBuilder) Location() *Location {
@@ -343,30 +546,52 @@ func (b *FieldBuilder) Location() *Location {
 }
 
 func (b *FieldBuilder) WithOption() *FieldOptionBuilder {
-	option := &FieldOption{}
-	b.field.Option = option
-	return &FieldOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	field := b.field(root)
+	field.Option = &FieldOption{}
+	return &FieldOptionBuilder{
+		root: root,
+		option: func(loc *Location) *FieldOption {
+			return b.field(loc).Option
+		},
+	}
 }
 
 type FieldOptionBuilder struct {
 	root   *Location
-	option *FieldOption
+	option func(*Location) *FieldOption
 }
 
 func (b *FieldOptionBuilder) WithBy() *FieldOptionBuilder {
-	b.option.By = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &FieldOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *FieldOptionBuilder) WithAlias() *FieldOptionBuilder {
-	b.option.Alias = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Alias = true
+	return &FieldOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *FieldOptionBuilder) WithOneOf() *FieldOneofBuilder {
-	oneof := &FieldOneof{}
-	b.option.Oneof = oneof
-	return &FieldOneofBuilder{root: b.root, oneof: oneof}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Oneof = &FieldOneof{}
+	return &FieldOneofBuilder{
+		root: root,
+		oneof: func(loc *Location) *FieldOneof {
+			return b.option(loc).Oneof
+		},
+	}
 }
 
 func (b *FieldOptionBuilder) Location() *Location {
@@ -375,80 +600,136 @@ func (b *FieldOptionBuilder) Location() *Location {
 
 type FieldOneofBuilder struct {
 	root  *Location
-	oneof *FieldOneof
+	oneof func(*Location) *FieldOneof
 }
 
 func (b *FieldOneofBuilder) WithIf() *FieldOneofBuilder {
-	b.oneof.If = true
-	return b
+	root := b.root.Clone()
+	oneof := b.oneof(root)
+	oneof.If = true
+	return &FieldOneofBuilder{
+		root:  root,
+		oneof: b.oneof,
+	}
 }
 
 func (b *FieldOneofBuilder) WithDefault() *FieldOneofBuilder {
-	b.oneof.Default = true
-	return b
+	root := b.root.Clone()
+	oneof := b.oneof(root)
+	oneof.Default = true
+	return &FieldOneofBuilder{
+		root:  root,
+		oneof: b.oneof,
+	}
 }
 
 func (b *FieldOneofBuilder) WithBy() *FieldOneofBuilder {
-	b.oneof.By = true
-	return b
+	root := b.root.Clone()
+	oneof := b.oneof(root)
+	oneof.By = true
+	return &FieldOneofBuilder{
+		root:  root,
+		oneof: b.oneof,
+	}
 }
 
-func (b *FieldOneofBuilder) WithVariableDefinitions(idx int) *VariableDefinitionOptionBuilder {
-	option := &VariableDefinitionOption{Idx: idx}
-	b.oneof.VariableDefinitions = option
-	return &VariableDefinitionOptionBuilder{root: b.root, option: option}
+func (b *FieldOneofBuilder) WithDef(idx int) *VariableDefinitionOptionBuilder {
+	root := b.root.Clone()
+	oneof := b.oneof(root)
+	oneof.Def = &VariableDefinitionOption{Idx: idx}
+	return &VariableDefinitionOptionBuilder{
+		root: root,
+		option: func(loc *Location) *VariableDefinitionOption {
+			return b.oneof(loc).Def
+		},
+	}
 }
 
 func (b *FieldOneofBuilder) Location() *Location {
 	return b.root
 }
 
-func NewMsgVarDefOptionBuilder(fileName, msgName string, idx int) *VariableDefinitionOptionBuilder {
-	return NewLocationBuilder(fileName).WithMessage(msgName).WithOption().WithVariableDefinitions(idx)
-}
-
 type VariableDefinitionOptionBuilder struct {
 	root   *Location
-	option *VariableDefinitionOption
+	option func(*Location) *VariableDefinitionOption
 }
 
 func (b *VariableDefinitionOptionBuilder) WithName() *VariableDefinitionOptionBuilder {
-	b.option.Name = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Name = true
+	return &VariableDefinitionOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *VariableDefinitionOptionBuilder) WithIf() *VariableDefinitionOptionBuilder {
-	b.option.If = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.If = true
+	return &VariableDefinitionOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *VariableDefinitionOptionBuilder) WithBy() *VariableDefinitionOptionBuilder {
-	b.option.By = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &VariableDefinitionOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *VariableDefinitionOptionBuilder) WithMessage() *MessageExprOptionBuilder {
-	option := &MessageExprOption{}
-	b.option.Message = option
-	return &MessageExprOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Message = &MessageExprOption{}
+	return &MessageExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *MessageExprOption {
+			return b.option(loc).Message
+		},
+	}
 }
 
 func (b *VariableDefinitionOptionBuilder) WithCall() *CallExprOptionBuilder {
-	option := &CallExprOption{}
-	b.option.Call = option
-	return &CallExprOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Call = &CallExprOption{}
+	return &CallExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *CallExprOption {
+			return b.option(loc).Call
+		},
+	}
 }
 
 func (b *VariableDefinitionOptionBuilder) WithValidation() *ValidationExprOptionBuilder {
-	option := &ValidationExprOption{}
-	b.option.Validation = option
-	return &ValidationExprOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Validation = &ValidationExprOption{}
+	return &ValidationExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *ValidationExprOption {
+			return b.option(loc).Validation
+		},
+	}
 }
 
 func (b *VariableDefinitionOptionBuilder) WithMap() *MapExprOptionBuilder {
-	option := &MapExprOption{}
-	b.option.Map = option
-	return &MapExprOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Map = &MapExprOption{}
+	return &MapExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *MapExprOption {
+			return b.option(loc).Map
+		},
+	}
 }
 
 func (b *VariableDefinitionOptionBuilder) Location() *Location {
@@ -457,18 +738,29 @@ func (b *VariableDefinitionOptionBuilder) Location() *Location {
 
 type MessageExprOptionBuilder struct {
 	root   *Location
-	option *MessageExprOption
+	option func(*Location) *MessageExprOption
 }
 
 func (b *MessageExprOptionBuilder) WithName() *MessageExprOptionBuilder {
-	b.option.Name = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Name = true
+	return &MessageExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *MessageExprOptionBuilder) WithArgs(idx int) *ArgumentOptionBuilder {
-	option := &ArgumentOption{Idx: idx}
-	b.option.Args = option
-	return &ArgumentOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Args = &ArgumentOption{Idx: idx}
+	return &ArgumentOptionBuilder{
+		root: root,
+		option: func(loc *Location) *ArgumentOption {
+			return b.option(loc).Args
+		},
+	}
 }
 
 func (b *MessageExprOptionBuilder) Location() *Location {
@@ -477,22 +769,37 @@ func (b *MessageExprOptionBuilder) Location() *Location {
 
 type ArgumentOptionBuilder struct {
 	root   *Location
-	option *ArgumentOption
+	option func(*Location) *ArgumentOption
 }
 
 func (b *ArgumentOptionBuilder) WithName() *ArgumentOptionBuilder {
-	b.option.Name = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Name = true
+	return &ArgumentOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *ArgumentOptionBuilder) WithBy() *ArgumentOptionBuilder {
-	b.option.By = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &ArgumentOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *ArgumentOptionBuilder) WithInline() *ArgumentOptionBuilder {
-	b.option.Inline = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Inline = true
+	return &ArgumentOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *ArgumentOptionBuilder) Location() *Location {
@@ -501,18 +808,29 @@ func (b *ArgumentOptionBuilder) Location() *Location {
 
 type MessageOptionBuilder struct {
 	root   *Location
-	option *MessageOption
+	option func(*Location) *MessageOption
 }
 
 func (b *MessageOptionBuilder) WithAlias() *MessageOptionBuilder {
-	b.option.Alias = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Alias = true
+	return &MessageOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
-func (b *MessageOptionBuilder) WithVariableDefinitions(idx int) *VariableDefinitionOptionBuilder {
-	option := &VariableDefinitionOption{Idx: idx}
-	b.option.VariableDefinitions = option
-	return &VariableDefinitionOptionBuilder{root: b.root, option: option}
+func (b *MessageOptionBuilder) WithDef(idx int) *VariableDefinitionOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Def = &VariableDefinitionOption{Idx: idx}
+	return &VariableDefinitionOptionBuilder{
+		root: root,
+		option: func(loc *Location) *VariableDefinitionOption {
+			return b.option(loc).Def
+		},
+	}
 }
 
 func (b *MessageOptionBuilder) Location() *Location {
@@ -521,7 +839,7 @@ func (b *MessageOptionBuilder) Location() *Location {
 
 type OneofBuilder struct {
 	root  *Location
-	oneof *Oneof
+	oneof func(*Location) *Oneof
 }
 
 func (b *OneofBuilder) Location() *Location {
@@ -530,29 +848,63 @@ func (b *OneofBuilder) Location() *Location {
 
 type CallExprOptionBuilder struct {
 	root   *Location
-	option *CallExprOption
+	option func(*Location) *CallExprOption
 }
 
 func (b *CallExprOptionBuilder) WithMethod() *CallExprOptionBuilder {
-	b.option.Method = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Method = true
+	return &CallExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *CallExprOptionBuilder) WithTimeout() *CallExprOptionBuilder {
-	b.option.Timeout = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Timeout = true
+	return &CallExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *CallExprOptionBuilder) WithRetry() *RetryOptionBuilder {
-	option := &RetryOption{}
-	b.option.Retry = option
-	return &RetryOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Retry = &RetryOption{}
+	return &RetryOptionBuilder{
+		root: root,
+		option: func(loc *Location) *RetryOption {
+			return b.option(loc).Retry
+		},
+	}
 }
 
 func (b *CallExprOptionBuilder) WithRequest(idx int) *RequestOptionBuilder {
-	option := &RequestOption{Idx: idx}
-	b.option.Request = option
-	return &RequestOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Request = &RequestOption{Idx: idx}
+	return &RequestOptionBuilder{
+		root: root,
+		option: func(loc *Location) *RequestOption {
+			return b.option(loc).Request
+		},
+	}
+}
+
+func (b *CallExprOptionBuilder) WithError(idx int) *GRPCErrorOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Error = &GRPCErrorOption{Idx: idx}
+	return &GRPCErrorOptionBuilder{
+		root: root,
+		option: func(loc *Location) *GRPCErrorOption {
+			return b.option(loc).Error
+		},
+	}
 }
 
 func (b *CallExprOptionBuilder) Location() *Location {
@@ -561,22 +913,37 @@ func (b *CallExprOptionBuilder) Location() *Location {
 
 type RetryOptionBuilder struct {
 	root   *Location
-	option *RetryOption
+	option func(*Location) *RetryOption
 }
 
 func (b *RetryOptionBuilder) WithConstantInterval() *RetryOptionBuilder {
-	b.option.Constant = &RetryConstantOption{Interval: true}
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Constant = &RetryConstantOption{Interval: true}
+	return &RetryOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *RetryOptionBuilder) WithExponentialInitialInterval() *RetryOptionBuilder {
-	b.option.Exponential = &RetryExponentialOption{InitialInterval: true}
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Exponential = &RetryExponentialOption{InitialInterval: true}
+	return &RetryOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *RetryOptionBuilder) WithExponentialMaxInterval() *RetryOptionBuilder {
-	b.option.Exponential = &RetryExponentialOption{MaxInterval: true}
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Exponential = &RetryExponentialOption{MaxInterval: true}
+	return &RetryOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *RetryOptionBuilder) Location() *Location {
@@ -585,17 +952,27 @@ func (b *RetryOptionBuilder) Location() *Location {
 
 type RequestOptionBuilder struct {
 	root   *Location
-	option *RequestOption
+	option func(*Location) *RequestOption
 }
 
 func (b *RequestOptionBuilder) WithField() *RequestOptionBuilder {
-	b.option.Field = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Field = true
+	return &RequestOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *RequestOptionBuilder) WithBy() *RequestOptionBuilder {
-	b.option.By = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &RequestOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *RequestOptionBuilder) Location() *Location {
@@ -604,118 +981,237 @@ func (b *RequestOptionBuilder) Location() *Location {
 
 type ValidationExprOptionBuilder struct {
 	root   *Location
-	option *ValidationExprOption
+	option func(*Location) *ValidationExprOption
 }
 
 func (b *ValidationExprOptionBuilder) WithName() *ValidationExprOptionBuilder {
-	b.option.Name = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Name = true
+	return &ValidationExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
-func (b *ValidationExprOptionBuilder) WithIf() *ValidationExprOptionBuilder {
-	b.option.If = true
-	return b
+func (b *ValidationExprOptionBuilder) WithError() *GRPCErrorOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Error = &GRPCErrorOption{Idx: -1} // not used idx field.
+	return &GRPCErrorOptionBuilder{
+		root: root,
+		option: func(loc *Location) *GRPCErrorOption {
+			return b.option(loc).Error
+		},
+	}
 }
 
-func (b *ValidationExprOptionBuilder) WithDetail(idx int) *ValidationDetailOptionBuilder {
-	option := &ValidationDetailOption{Idx: idx}
-	b.option.Detail = option
-	return &ValidationDetailOptionBuilder{root: b.root, option: option}
+type GRPCErrorOptionBuilder struct {
+	root   *Location
+	option func(*Location) *GRPCErrorOption
 }
 
-func (b *ValidationExprOptionBuilder) Location() *Location {
+func (b *GRPCErrorOptionBuilder) WithDef(idx int) *VariableDefinitionOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Def = &VariableDefinitionOption{Idx: idx}
+	return &VariableDefinitionOptionBuilder{
+		root: root,
+		option: func(loc *Location) *VariableDefinitionOption {
+			return b.option(loc).Def
+		},
+	}
+}
+
+func (b *GRPCErrorOptionBuilder) WithIf() *GRPCErrorOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.If = true
+	return &GRPCErrorOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCErrorOptionBuilder) WithCode() *GRPCErrorOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Code = true
+	return &GRPCErrorOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCErrorOptionBuilder) WithMessage() *GRPCErrorOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Message = true
+	return &GRPCErrorOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCErrorOptionBuilder) WithIgnore() *GRPCErrorOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Ignore = true
+	return &GRPCErrorOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCErrorOptionBuilder) WithDetail(idx int) *GRPCErrorDetailOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Detail = &GRPCErrorDetailOption{Idx: idx}
+	return &GRPCErrorDetailOptionBuilder{
+		root: root,
+		option: func(loc *Location) *GRPCErrorDetailOption {
+			return b.option(loc).Detail
+		},
+	}
+}
+
+func (b *GRPCErrorOptionBuilder) Location() *Location {
 	return b.root
 }
 
-type ValidationDetailOptionBuilder struct {
+type GRPCErrorDetailOptionBuilder struct {
 	root   *Location
-	option *ValidationDetailOption
+	option func(*Location) *GRPCErrorDetailOption
 }
 
-func (b *ValidationDetailOptionBuilder) WithIf() *ValidationDetailOptionBuilder {
-	b.option.If = true
-	return b
+func (b *GRPCErrorDetailOptionBuilder) WithDef(idx int) *VariableDefinitionOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Def = &VariableDefinitionOption{Idx: idx}
+	return &VariableDefinitionOptionBuilder{
+		root: root,
+		option: func(loc *Location) *VariableDefinitionOption {
+			return b.option(loc).Def
+		},
+	}
 }
 
-func (b *ValidationDetailOptionBuilder) WithPreconditionFailure(i1, i2 int, fieldName string) *ValidationDetailOptionBuilder {
-	b.option.PreconditionFailure = &ValidationDetailPreconditionFailureOption{
+func (b *GRPCErrorDetailOptionBuilder) WithMessage(idx int) *VariableDefinitionOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Message = &VariableDefinitionOption{Idx: idx}
+	return &VariableDefinitionOptionBuilder{
+		root: root,
+		option: func(loc *Location) *VariableDefinitionOption {
+			return b.option(loc).Message
+		},
+	}
+}
+
+func (b *GRPCErrorDetailOptionBuilder) WithIf() *GRPCErrorDetailOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.If = true
+	return &GRPCErrorDetailOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCErrorDetailOptionBuilder) WithPreconditionFailure(i1, i2 int, fieldName string) *GRPCErrorDetailOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.PreconditionFailure = &GRPCErrorDetailPreconditionFailureOption{
 		Idx: i1,
-		Violation: ValidationDetailPreconditionFailureViolationOption{
+		Violation: GRPCErrorDetailPreconditionFailureViolationOption{
 			Idx:       i2,
 			FieldName: fieldName,
 		},
 	}
-	return b
+	return &GRPCErrorDetailOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
-func (b *ValidationDetailOptionBuilder) WithBadRequest(i1, i2 int, fieldName string) *ValidationDetailOptionBuilder {
-	b.option.BadRequest = &ValidationDetailBadRequestOption{
+func (b *GRPCErrorDetailOptionBuilder) WithBadRequest(i1, i2 int, fieldName string) *GRPCErrorDetailOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.BadRequest = &GRPCErrorDetailBadRequestOption{
 		Idx: i1,
-		FieldViolation: ValidationDetailBadRequestFieldViolationOption{
+		FieldViolation: GRPCErrorDetailBadRequestFieldViolationOption{
 			Idx:       i2,
 			FieldName: fieldName,
 		},
 	}
-	return b
+	return &GRPCErrorDetailOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
-func (b *ValidationDetailOptionBuilder) WithLocalizedMessage(idx int, fieldName string) *ValidationDetailOptionBuilder {
-	b.option.LocalizedMessage = &ValidationDetailLocalizedMessageOption{
+func (b *GRPCErrorDetailOptionBuilder) WithLocalizedMessage(idx int, fieldName string) *GRPCErrorDetailOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.LocalizedMessage = &GRPCErrorDetailLocalizedMessageOption{
 		Idx:       idx,
 		FieldName: fieldName,
 	}
-	return b
+	return &GRPCErrorDetailOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
-func (b *ValidationDetailOptionBuilder) WithMessage(idx int) *ValidationDetailMessageOptionBuilder {
-	option := &ValidationDetailMessageOption{Idx: idx}
-	b.option.Message = option
-	return &ValidationDetailMessageOptionBuilder{root: b.root, option: option}
-}
-
-func (b *ValidationDetailOptionBuilder) Location() *Location {
-	return b.root
-}
-
-type ValidationDetailMessageOptionBuilder struct {
-	root   *Location
-	option *ValidationDetailMessageOption
-}
-
-func (b *ValidationDetailMessageOptionBuilder) WithMessage() *MessageExprOptionBuilder {
-	option := &MessageExprOption{}
-	b.option.Message = option
-	return &MessageExprOptionBuilder{root: b.root, option: option}
-}
-
-func (b *ValidationDetailMessageOptionBuilder) Location() *Location {
+func (b *GRPCErrorDetailOptionBuilder) Location() *Location {
 	return b.root
 }
 
 type MapExprOptionBuilder struct {
 	root   *Location
-	option *MapExprOption
+	option func(*Location) *MapExprOption
 }
 
 func (b *MapExprOptionBuilder) WithBy() *MapExprOptionBuilder {
-	b.option.By = true
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &MapExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *MapExprOptionBuilder) WithIteratorName() *MapExprOptionBuilder {
-	b.option.Iterator = &IteratorOption{Name: true}
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Iterator = &IteratorOption{Name: true}
+	return &MapExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *MapExprOptionBuilder) WithIteratorSource() *MapExprOptionBuilder {
-	b.option.Iterator = &IteratorOption{Source: true}
-	return b
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Iterator = &IteratorOption{Source: true}
+	return &MapExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
 }
 
 func (b *MapExprOptionBuilder) WithMessage() *MessageExprOptionBuilder {
-	option := &MessageExprOption{}
-	b.option.Message = option
-	return &MessageExprOptionBuilder{root: b.root, option: option}
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Message = &MessageExprOption{}
+	return &MessageExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *MessageExprOption {
+			return b.option(loc).Message
+		},
+	}
 }
 
 func (b *MapExprOptionBuilder) Location() *Location {

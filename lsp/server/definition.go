@@ -251,13 +251,13 @@ func isMessageNameDefinition(loc *source.Location) bool {
 	if loc.Message.Option == nil {
 		return false
 	}
-	if loc.Message.Option.VariableDefinitions == nil {
+	if loc.Message.Option.Def == nil {
 		return false
 	}
-	if loc.Message.Option.VariableDefinitions.Message == nil {
+	if loc.Message.Option.Def.Message == nil {
 		return false
 	}
-	return loc.Message.Option.VariableDefinitions.Message.Name
+	return loc.Message.Option.Def.Message.Name
 }
 
 func isMethodNameDefinition(loc *source.Location) bool {
@@ -267,11 +267,11 @@ func isMethodNameDefinition(loc *source.Location) bool {
 	if loc.Message.Option == nil {
 		return false
 	}
-	if loc.Message.Option.VariableDefinitions == nil {
+	if loc.Message.Option.Def == nil {
 		return false
 	}
-	if loc.Message.Option.VariableDefinitions.Call == nil {
+	if loc.Message.Option.Def.Call == nil {
 		return false
 	}
-	return loc.Message.Option.VariableDefinitions.Call.Method
+	return loc.Message.Option.Def.Call.Method
 }

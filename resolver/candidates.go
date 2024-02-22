@@ -98,8 +98,8 @@ func (r *Resolver) candidatesMessage(msg *Message, loc *source.Message) []string
 
 func (r *Resolver) candidatesMessageOption(msg *Message, opt *source.MessageOption) []string {
 	switch {
-	case opt.VariableDefinitions != nil:
-		return r.candidatesVariableDefinitions(msg, opt.VariableDefinitions)
+	case opt.Def != nil:
+		return r.candidatesVariableDefinitions(msg, opt.Def)
 	}
 	return []string{"def", "custom_resolver", "alias"}
 }

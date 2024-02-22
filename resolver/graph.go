@@ -19,192 +19,13 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 		}
 		msgToNode[msg] = &AllMessageDependencyGraphNode{Message: msg}
 	}
+
 	for _, msg := range msgs {
 		if msg.Rule == nil {
 			continue
 		}
-		childMap := make(map[*AllMessageDependencyGraphNode]struct{})
-		node := msgToNode[msg]
-		for idx, varDef := range msg.Rule.DefSet.Definitions() {
-			expr := varDef.Expr
-			if expr == nil {
-				continue
-			}
-			switch {
-			case expr.Map != nil && expr.Map.Expr != nil && expr.Map.Expr.Message != nil:
-				msgExpr := expr.Map.Expr.Message
-				depMsg := msgExpr.Message
-				depNode, depNodeExists := msgToNode[depMsg]
-				if _, exists := childMap[depNode]; exists {
-					continue
-				}
-				if !depNodeExists {
-					if depMsg == nil {
-						fileName := msg.File.Name
-						ctx.addError(
-							ErrWithLocation(
-								`undefined message specified "grpc.federation.message" option`,
-								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
-									WithMap().
-									WithMessage().WithName().Location(),
-							),
-						)
-						continue
-					}
-					fileName := msg.File.Name
-					if !depMsg.HasRuleEveryFields() {
-						ctx.addError(
-							ErrWithLocation(
-								fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
-									WithMap().
-									WithMessage().WithName().Location(),
-							),
-						)
-					}
-					depNode = &AllMessageDependencyGraphNode{Message: depMsg}
-				}
-				if node != nil {
-					node.Children = append(node.Children, depNode)
-					depNode.Parent = append(depNode.Parent, node)
-				}
-				childMap[depNode] = struct{}{}
-			case expr.Message != nil:
-				depMsg := expr.Message.Message
-				depNode, depNodeExists := msgToNode[depMsg]
-				if _, exists := childMap[depNode]; exists {
-					continue
-				}
-				if !depNodeExists {
-					if depMsg == nil {
-						fileName := msg.File.Name
-						ctx.addError(
-							ErrWithLocation(
-								`undefined message specified "grpc.federation.message" option`,
-								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
-									WithMessage().WithName().Location(),
-							),
-						)
-						continue
-					}
-					fileName := msg.File.Name
-					if !depMsg.HasRuleEveryFields() {
-						ctx.addError(
-							ErrWithLocation(
-								fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-								source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).WithMessage().WithName().Location(),
-							),
-						)
-					}
-					depNode = &AllMessageDependencyGraphNode{Message: depMsg}
-				}
-				if node != nil {
-					node.Children = append(node.Children, depNode)
-					depNode.Parent = append(depNode.Parent, node)
-				}
-				childMap[depNode] = struct{}{}
-			case expr.Validation != nil && expr.Validation.Error != nil:
-				for dIdx, detail := range expr.Validation.Error.Details {
-					for mIdx, def := range detail.Messages.Definitions() {
-						depMsg := def.Expr.Message.Message
-						depNode, depNodeExists := msgToNode[depMsg]
-						if _, exists := childMap[depNode]; exists {
-							continue
-						}
-						if !depNodeExists {
-							if depMsg == nil {
-								fileName := msg.File.Name
-								ctx.addError(
-									ErrWithLocation(
-										`undefined message specified "grpc.federation.message" option`,
-										source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
-											WithValidation().
-											WithDetail(dIdx).
-											WithMessage(mIdx).Location(),
-									),
-								)
-								continue
-							}
-							fileName := msg.File.Name
-							if !depMsg.HasRuleEveryFields() {
-								ctx.addError(
-									ErrWithLocation(
-										fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-										source.NewMsgVarDefOptionBuilder(fileName, msg.Name, idx).
-											WithValidation().
-											WithDetail(dIdx).
-											WithMessage(mIdx).
-											WithMessage().WithName().Location(),
-									),
-								)
-							}
-							depNode = &AllMessageDependencyGraphNode{Message: depMsg}
-						}
-						if node != nil {
-							node.Children = append(node.Children, depNode)
-							depNode.Parent = append(depNode.Parent, node)
-						}
-						childMap[depNode] = struct{}{}
-					}
-				}
-			}
-		}
-		for _, field := range msg.Fields {
-			if field.Rule == nil {
-				continue
-			}
-			if field.Rule.Oneof == nil {
-				continue
-			}
-			for idx, varDef := range field.Rule.Oneof.DefSet.Definitions() {
-				for _, msgExpr := range varDef.MessageExprs() {
-					depMsg := msgExpr.Message
-					depNode, depNodeExists := msgToNode[depMsg]
-					if _, exists := childMap[depNode]; exists {
-						continue
-					}
-					if !depNodeExists {
-						if depMsg == nil {
-							fileName := msg.File.Name
-							ctx.addError(
-								ErrWithLocation(
-									`undefined message specified in "grpc.federation.field.oneof" option`,
-									source.NewLocationBuilder(fileName).
-										WithMessage(msg.Name).
-										WithField(field.Name).
-										WithOption().
-										WithOneOf().
-										WithVariableDefinitions(idx).
-										WithMessage().Location(),
-								),
-							)
-							continue
-						}
-						fileName := msg.File.Name
-						if !depMsg.HasRuleEveryFields() {
-							ctx.addError(
-								ErrWithLocation(
-									fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
-									source.NewLocationBuilder(fileName).
-										WithMessage(msg.Name).
-										WithField(field.Name).
-										WithOption().
-										WithOneOf().
-										WithVariableDefinitions(idx).
-										WithMessage().Location(),
-								),
-							)
-						}
-						depNode = &AllMessageDependencyGraphNode{Message: depMsg}
-					}
-					if node != nil {
-						node.Children = append(node.Children, depNode)
-						depNode.Parent = append(depNode.Parent, node)
-					}
-					childMap[depNode] = struct{}{}
-				}
-			}
-		}
+
+		newAllMessageDependencyGraphNodeReferenceBuilder(msgToNode, msg).Build(ctx)
 	}
 	var roots []*AllMessageDependencyGraphNode
 	for _, node := range msgToNode {
@@ -224,6 +45,171 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 		return nil
 	}
 	return graph
+}
+
+type AllMessageDependencyGraphNodeReferenceBuilder struct {
+	msgToNode map[*Message]*AllMessageDependencyGraphNode
+	childMap  map[*AllMessageDependencyGraphNode]struct{}
+	msg       *Message
+	node      *AllMessageDependencyGraphNode
+}
+
+func newAllMessageDependencyGraphNodeReferenceBuilder(msgToNode map[*Message]*AllMessageDependencyGraphNode, msg *Message) *AllMessageDependencyGraphNodeReferenceBuilder {
+	return &AllMessageDependencyGraphNodeReferenceBuilder{
+		msgToNode: msgToNode,
+		childMap:  make(map[*AllMessageDependencyGraphNode]struct{}),
+		msg:       msg,
+		node:      msgToNode[msg],
+	}
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) Build(ctx *context) {
+	msg := b.msg
+	fileName := msg.File.Name
+	for _, varDef := range msg.Rule.DefSet.Definitions() {
+		b.buildVariableDefinition(ctx, varDef, varDef.builder)
+	}
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		for idx, varDef := range field.Rule.Oneof.DefSet.Definitions() {
+			builder := source.NewLocationBuilder(fileName).
+				WithMessage(b.msg.Name).
+				WithField(field.Name).
+				WithOption().
+				WithOneOf().
+				WithDef(idx)
+			b.buildVariableDefinition(ctx, varDef, builder)
+		}
+	}
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) buildVariableDefinition(ctx *context, def *VariableDefinition, builder *source.VariableDefinitionOptionBuilder) {
+	expr := def.Expr
+	if expr == nil {
+		return
+	}
+	switch {
+	case expr.Call != nil:
+		b.buildCall(ctx, expr.Call, builder.WithCall())
+	case expr.Message != nil:
+		b.buildMessage(ctx, expr.Message, builder.WithMessage())
+	case expr.Map != nil:
+		b.buildMap(ctx, expr.Map, builder.WithMap())
+	case expr.Validation != nil:
+		b.buildValidation(ctx, expr.Validation, builder.WithValidation())
+	}
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) buildCall(ctx *context, expr *CallExpr, builder *source.CallExprOptionBuilder) {
+	for idx, grpcErr := range expr.Errors {
+		b.buildGRPCError(ctx, grpcErr, builder.WithError(idx))
+	}
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) buildMessage(ctx *context, expr *MessageExpr, builder *source.MessageExprOptionBuilder) {
+	depMsg := expr.Message
+	depNode, depNodeExists := b.msgToNode[depMsg]
+	if _, exists := b.childMap[depNode]; exists {
+		return
+	}
+	if !depNodeExists {
+		if depMsg == nil {
+			ctx.addError(
+				ErrWithLocation(
+					`undefined message specified`,
+					builder.WithName().Location(),
+				),
+			)
+			return
+		}
+		if !depMsg.HasRuleEveryFields() {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
+					builder.WithName().Location(),
+				),
+			)
+		}
+		depNode = &AllMessageDependencyGraphNode{Message: depMsg}
+	}
+	if b.node != nil {
+		b.node.Children = append(b.node.Children, depNode)
+		depNode.Parent = append(depNode.Parent, b.node)
+	}
+	b.childMap[depNode] = struct{}{}
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) buildMap(ctx *context, expr *MapExpr, builder *source.MapExprOptionBuilder) {
+	if expr.Expr == nil {
+		return
+	}
+	if expr.Expr.Message == nil {
+		return
+	}
+	msgExpr := expr.Expr.Message
+	depMsg := msgExpr.Message
+	depNode, depNodeExists := b.msgToNode[depMsg]
+	if _, exists := b.childMap[depNode]; exists {
+		return
+	}
+	if !depNodeExists {
+		if depMsg == nil {
+			ctx.addError(
+				ErrWithLocation(
+					`undefined message`,
+					builder.WithMessage().WithName().Location(),
+				),
+			)
+			return
+		}
+		if !depMsg.HasRuleEveryFields() {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(`"%s.%s" message does not specify "grpc.federation.message" option`, depMsg.Package().Name, depMsg.Name),
+					builder.WithMessage().WithName().Location(),
+				),
+			)
+		}
+		depNode = &AllMessageDependencyGraphNode{Message: depMsg}
+	}
+	if b.node != nil {
+		b.node.Children = append(b.node.Children, depNode)
+		depNode.Parent = append(depNode.Parent, b.node)
+	}
+	b.childMap[depNode] = struct{}{}
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) buildValidation(ctx *context, expr *ValidationExpr, builder *source.ValidationExprOptionBuilder) {
+	b.buildGRPCError(ctx, expr.Error, builder.WithError())
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) buildGRPCError(ctx *context, grpcErr *GRPCError, builder *source.GRPCErrorOptionBuilder) {
+	if grpcErr == nil {
+		return
+	}
+	for idx, def := range grpcErr.DefSet.Definitions() {
+		b.buildVariableDefinition(ctx, def, builder.WithDef(idx))
+	}
+	for idx, detail := range grpcErr.Details {
+		b.buildGRPCErrorDetail(ctx, detail, builder.WithDetail(idx))
+	}
+}
+
+func (b *AllMessageDependencyGraphNodeReferenceBuilder) buildGRPCErrorDetail(ctx *context, detail *GRPCErrorDetail, builder *source.GRPCErrorDetailOptionBuilder) {
+	if detail == nil {
+		return
+	}
+	for idx, def := range detail.DefSet.Definitions() {
+		b.buildVariableDefinition(ctx, def, builder.WithDef(idx))
+	}
+	for idx, def := range detail.Messages.Definitions() {
+		b.buildVariableDefinition(ctx, def, builder.WithDef(idx))
+	}
 }
 
 func (g *MessageDependencyGraph) VariableDefinitionGroups() []VariableDefinitionGroup {
@@ -395,7 +381,7 @@ func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, vis
 		dependencyPath := strings.Join(messages, " => ")
 
 		msg := target.BaseMessage
-		for idx, varDef := range msg.Rule.DefSet.Definitions() {
+		for _, varDef := range msg.Rule.DefSet.Definitions() {
 			if varDef.Expr == nil {
 				continue
 			}
@@ -409,13 +395,13 @@ func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, vis
 						target.BaseMessage.PackageName(), target.BaseMessage.Name,
 						msg.PackageName(), msg.Name, dependencyPath,
 					),
-					source.NewMsgVarDefOptionBuilder(msg.File.Name, msg.Name, idx).WithMessage().Location(),
+					varDef.builder.WithMessage().Location(),
 				)
 			}
 		}
 		return ErrWithLocation(
 			fmt.Sprintf(`found cyclic dependency for "%s.%s" message. dependency path: %s`, target.BaseMessage.PackageName(), target.BaseMessage.Name, dependencyPath),
-			source.NewLocationBuilder(target.BaseMessage.File.Name).WithMessage(target.BaseMessage.Name).Location(),
+			source.NewMessageBuilder(target.BaseMessage.File.Name, target.BaseMessage.Name).Location(),
 		)
 	}
 	visited[target] = struct{}{}
@@ -455,7 +441,7 @@ func validateAllMessageGraphNodeCyclicDependency(target *AllMessageDependencyGra
 
 		return ErrWithLocation(
 			fmt.Sprintf(`found cyclic dependency in "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
-			source.NewLocationBuilder(target.Message.File.Name).WithMessage(target.Message.Name).Location(),
+			source.NewMessageBuilder(target.Message.File.Name, target.Message.Name).Location(),
 		)
 	}
 	visited[target] = struct{}{}

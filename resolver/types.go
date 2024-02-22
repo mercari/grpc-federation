@@ -7,6 +7,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/types"
 )
 
@@ -129,28 +130,12 @@ type VariableDefinitionSet struct {
 
 type VariableDefinition struct {
 	Idx      int
-	Owner    *VariableDefinitionOwner
 	Name     string
 	If       *CELValue
 	AutoBind bool
 	Used     bool
 	Expr     *VariableExpr
-}
-
-type VariableDefinitionOwnerType int
-
-const (
-	VariableDefinitionOwnerUnknown                VariableDefinitionOwnerType = 0
-	VariableDefinitionOwnerMessage                VariableDefinitionOwnerType = 1
-	VariableDefinitionOwnerOneofField             VariableDefinitionOwnerType = 2
-	VariableDefinitionOwnerGRPCErrorDetailMessage VariableDefinitionOwnerType = 3
-)
-
-type VariableDefinitionOwner struct {
-	Type             VariableDefinitionOwnerType
-	Message          *Message
-	Field            *Field
-	GRPCErrorIndexes *GRPCErrorIndexes
+	builder  *source.VariableDefinitionOptionBuilder
 }
 
 type VariableDefinitions []*VariableDefinition

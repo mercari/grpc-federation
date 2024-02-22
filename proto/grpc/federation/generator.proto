@@ -159,26 +159,11 @@ message VariableDefinitionSet {
 message VariableDefinition {
   string id = 1;
   int64 index = 2;
-  VariableDefinitionOwner owner = 3;
-  string name = 4;
-  CELValue if = 5;
-  bool auto_bind = 6;
-  bool used = 7;
-  VariableExpr expr = 8;
-}
-
-enum VariableDefinitionOwnerType {
-  UNKNOWN_OWNER      = 0;
-  MESSAGE_OWNER      = 1;
-  ONE_OF_FIELD_OWNER = 2;
-  GRPC_ERROR_DETAIL_MESSAGE_OWNER = 3;
-}
-
-message VariableDefinitionOwner {
-  VariableDefinitionOwnerType type = 1;
-  string message_id = 2;
-  string field_id = 3;
-  GRPCErrorIndexes grpc_error_indexes = 4;  
+  string name = 3;
+  CELValue if = 4;
+  bool auto_bind = 5;
+  bool used = 6;
+  VariableExpr expr = 7;
 }
 
 message Field {
@@ -518,11 +503,6 @@ message MessageFieldValue {
   optional string env = 37;
   // repeated env literal values.
   repeated string envs = 38;
-}
-
-message GRPCErrorIndexes {
-  int64 def_index = 1;
-  int64 error_detail_index = 2;
 }
 
 message ValidationExpr {

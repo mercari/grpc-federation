@@ -687,32 +687,9 @@ func (e *encoder) toVariableDefinition(def *resolver.VariableDefinition) *plugin
 	}
 	e.ref.VariableDefinitionMap[id] = ret
 
-	ret.Owner = e.toVariableDefinitionOwner(def.Owner)
 	ret.If = e.toCELValue(def.If)
 	ret.Expr = e.toVariableExpr(def.Expr)
 	return ret
-}
-
-func (e *encoder) toVariableDefinitionOwner(owner *resolver.VariableDefinitionOwner) *plugin.VariableDefinitionOwner {
-	if owner == nil {
-		return nil
-	}
-	return &plugin.VariableDefinitionOwner{
-		Type:             plugin.VariableDefinitionOwnerType(owner.Type),
-		MessageId:        e.toMessage(owner.Message).GetId(),
-		FieldId:          e.toField(owner.Field).GetId(),
-		GrpcErrorIndexes: e.toGRPCErrorIndexes(owner.GRPCErrorIndexes),
-	}
-}
-
-func (e *encoder) toGRPCErrorIndexes(indexes *resolver.GRPCErrorIndexes) *plugin.GRPCErrorIndexes {
-	if indexes == nil {
-		return nil
-	}
-	return &plugin.GRPCErrorIndexes{
-		DefIndex:         int64(indexes.DefIdx),
-		ErrorDetailIndex: int64(indexes.ErrDetailIdx),
-	}
 }
 
 func (e *encoder) toVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *plugin.VariableDefinitionGroup {
@@ -1329,24 +1306,7 @@ func (e *encoder) toVariableDefinitionID(def *resolver.VariableDefinition) strin
 	if def == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s/%s", e.toVariableDefinitionOwnerID(def.Owner), def.Name)
-}
-
-func (e *encoder) toVariableDefinitionOwnerID(owner *resolver.VariableDefinitionOwner) string {
-	if owner == nil {
-		return ""
-	}
-	var id string
-	switch {
-	case owner.Message != nil:
-		id = e.toMessageID(owner.Message)
-	case owner.Field != nil:
-		id = e.toFieldID(owner.Field)
-	case owner.GRPCErrorIndexes != nil:
-		v := owner.GRPCErrorIndexes
-		id = fmt.Sprintf("_validation_error_indexes_%d_%d", v.DefIdx, v.ErrDetailIdx)
-	}
-	return id
+	return def.Name
 }
 
 func (e *encoder) toVariableDefinitionGroupID(group resolver.VariableDefinitionGroup) string {
