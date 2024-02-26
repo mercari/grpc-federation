@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    dependencies: [
+      { service: "org.post.PostService" }
+    ]
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
+    }
+  };
+  org.federation.Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    def [
+      {
+        name: "res"
+        call {
+          method: "org.post.PostService/GetPost"
+          request { field: "id" by: "$.id" }
+          error {
+            def { name: "id" by: "$.id" }
+            if: "id == ''"
+            code: FAILED_PRECONDITION
+            message: "'id must be not empty'"
+            details {
+              def { name: "localized_msg" message { name: "LocalizedMessage" args { name: "value" by: "id" } } }
+              message { name: "CustomMessage" args { name: "msg" by: "id" } }
+              precondition_failure {
+                violations {
+                  type: "'some-type'"
+                  subject: "'some-subject'"
+                  description: "'some-description'"
+                }
+              }
+              localized_message {
+                locale: "en-US"
+                message: "localized_msg.value"
+              }
+            }
+          }
+        }
+      },
+      { name: "post" by: "res.post" autobind: true }
+    ]
+  };
+  string id = 1;
+  string title = 2;
+}
+
+message LocalizedMessage {
+  string value = 1 [(grpc.federation.field).by = "'localized value:' + $.value"];
+}
+
+message CustomMessage {
+  string msg = 1 [(grpc.federation.field).by = "'custom error message:' + $.msg"];
+}

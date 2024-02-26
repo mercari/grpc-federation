@@ -406,26 +406,12 @@ func (b *MessageBuilder) AddFieldWithTypeNameAndRule(t *testing.T, name, typeNam
 
 func (b *MessageBuilder) AddFieldWithRule(name string, typ *resolver.Type, rule *resolver.FieldRule) *MessageBuilder {
 	field := &resolver.Field{Name: name, Type: typ, Rule: rule}
-	if rule.Oneof != nil {
-		for _, def := range rule.Oneof.DefSet.Definitions() {
-			if def.Owner == nil {
-				continue
-			}
-			def.Owner.Field = field
-		}
-	}
 	b.msg.Fields = append(b.msg.Fields, field)
 	return b
 }
 
 func (b *MessageBuilder) SetRule(rule *resolver.MessageRule) *MessageBuilder {
 	b.msg.Rule = rule
-	for _, def := range rule.DefSet.Definitions() {
-		if def.Owner == nil {
-			continue
-		}
-		def.Owner.Message = b.msg
-	}
 	return b
 }
 
@@ -603,9 +589,6 @@ func (b *MessageRuleBuilder) AddVariableDefinition(def *resolver.VariableDefinit
 		}
 	}
 	def.Idx = len(b.rule.DefSet.Definitions())
-	def.Owner = &resolver.VariableDefinitionOwner{
-		Type: resolver.VariableDefinitionOwnerMessage,
-	}
 	b.rule.DefSet.Defs = append(b.rule.DefSet.Defs, def)
 	return b
 }
@@ -634,11 +617,6 @@ func NewVariableDefinitionBuilder() *VariableDefinitionBuilder {
 
 func (b *VariableDefinitionBuilder) SetIdx(idx int) *VariableDefinitionBuilder {
 	b.def.Idx = idx
-	return b
-}
-
-func (b *VariableDefinitionBuilder) SetOwner(owner *resolver.VariableDefinitionOwner) *VariableDefinitionBuilder {
-	b.def.Owner = owner
 	return b
 }
 
@@ -832,6 +810,11 @@ func (b *CallExprBuilder) SetRetryPolicyExponential(exp *resolver.RetryPolicyExp
 	return b
 }
 
+func (b *CallExprBuilder) AddError(err *resolver.GRPCError) *CallExprBuilder {
+	b.expr.Errors = append(b.expr.Errors, err)
+	return b
+}
+
 func (b *CallExprBuilder) Build(t *testing.T) *resolver.CallExpr {
 	t.Helper()
 	if b.timeout != "" {
@@ -880,41 +863,132 @@ type ValidationExprBuilder struct {
 
 func NewValidationExprBuilder() *ValidationExprBuilder {
 	return &ValidationExprBuilder{
-		expr: &resolver.ValidationExpr{
-			Error: &resolver.GRPCError{
-				DefSet: &resolver.VariableDefinitionSet{},
-				If: &resolver.CELValue{
-					Expr: "true",
-					Out:  resolver.BoolType,
-				},
-			},
-		},
+		expr: &resolver.ValidationExpr{},
 	}
 }
 
-func (b *ValidationExprBuilder) SetCode(v code.Code) *ValidationExprBuilder {
-	b.expr.Error.Code = v
-	return b
-}
-
-func (b *ValidationExprBuilder) SetMessage(v string) *ValidationExprBuilder {
-	b.expr.Error.Message = v
-	return b
-}
-
-func (b *ValidationExprBuilder) SetIf(v *resolver.CELValue) *ValidationExprBuilder {
-	b.expr.Error.If = v
-	return b
-}
-
-func (b *ValidationExprBuilder) SetDetails(v []*resolver.GRPCErrorDetail) *ValidationExprBuilder {
-	b.expr.Error.Details = v
+func (b *ValidationExprBuilder) SetError(err *resolver.GRPCError) *ValidationExprBuilder {
+	b.expr.Error = err
 	return b
 }
 
 func (b *ValidationExprBuilder) Build(t *testing.T) *resolver.ValidationExpr {
 	t.Helper()
 	return b.expr
+}
+
+type GRPCErrorBuilder struct {
+	err *resolver.GRPCError
+}
+
+func NewGRPCErrorBuilder() *GRPCErrorBuilder {
+	return &GRPCErrorBuilder{
+		err: &resolver.GRPCError{
+			DefSet: &resolver.VariableDefinitionSet{},
+			If: &resolver.CELValue{
+				Expr: "true",
+				Out:  resolver.BoolType,
+			},
+		},
+	}
+}
+
+func (b *GRPCErrorBuilder) AddVariableDefinition(def *resolver.VariableDefinition) *GRPCErrorBuilder {
+	b.err.DefSet.Defs = append(b.err.DefSet.Defs, def)
+	return b
+}
+
+func (b *GRPCErrorBuilder) SetDependencyGraph(graph *resolver.MessageDependencyGraph) *GRPCErrorBuilder {
+	b.err.DefSet.Graph = graph
+	return b
+}
+
+func (b *GRPCErrorBuilder) AddVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *GRPCErrorBuilder {
+	b.err.DefSet.Groups = append(b.err.DefSet.Groups, group)
+	return b
+}
+
+func (b *GRPCErrorBuilder) SetIf(expr string) *GRPCErrorBuilder {
+	b.err.If = &resolver.CELValue{
+		Expr: expr,
+		Out:  resolver.BoolType,
+	}
+	return b
+}
+
+func (b *GRPCErrorBuilder) SetCode(v code.Code) *GRPCErrorBuilder {
+	b.err.Code = v
+	return b
+}
+
+func (b *GRPCErrorBuilder) SetMessage(v string) *GRPCErrorBuilder {
+	b.err.Message = v
+	return b
+}
+
+func (b *GRPCErrorBuilder) AddDetail(v *resolver.GRPCErrorDetail) *GRPCErrorBuilder {
+	b.err.Details = append(b.err.Details, v)
+	return b
+}
+
+func (b *GRPCErrorBuilder) Build(t *testing.T) *resolver.GRPCError {
+	t.Helper()
+	return b.err
+}
+
+type GRPCErrorDetailBuilder struct {
+	detail *resolver.GRPCErrorDetail
+}
+
+func NewGRPCErrorDetailBuilder() *GRPCErrorDetailBuilder {
+	return &GRPCErrorDetailBuilder{
+		detail: &resolver.GRPCErrorDetail{
+			If: &resolver.CELValue{
+				Expr: "true",
+				Out:  resolver.BoolType,
+			},
+			DefSet:   &resolver.VariableDefinitionSet{},
+			Messages: &resolver.VariableDefinitionSet{},
+		},
+	}
+}
+
+func (b *GRPCErrorDetailBuilder) SetIf(expr string) *GRPCErrorDetailBuilder {
+	b.detail.If = &resolver.CELValue{
+		Expr: expr,
+		Out:  resolver.BoolType,
+	}
+	return b
+}
+
+func (b *GRPCErrorDetailBuilder) AddDef(v *resolver.VariableDefinition) *GRPCErrorDetailBuilder {
+	b.detail.DefSet.Defs = append(b.detail.DefSet.Defs, v)
+	return b
+}
+
+func (b *GRPCErrorDetailBuilder) AddMessage(v *resolver.VariableDefinition) *GRPCErrorDetailBuilder {
+	b.detail.Messages.Defs = append(b.detail.Messages.Defs, v)
+	return b
+}
+
+func (b *GRPCErrorDetailBuilder) AddPreconditionFailure(v *resolver.PreconditionFailure) *GRPCErrorDetailBuilder {
+	b.detail.PreconditionFailures = append(b.detail.PreconditionFailures, v)
+	return b
+}
+
+func (b *GRPCErrorDetailBuilder) AddBadRequest(v *resolver.BadRequest) *GRPCErrorDetailBuilder {
+	b.detail.BadRequests = append(b.detail.BadRequests, v)
+	return b
+}
+
+func (b *GRPCErrorDetailBuilder) AddLocalizedMessage(v *resolver.LocalizedMessage) *GRPCErrorDetailBuilder {
+	b.detail.LocalizedMessages = append(b.detail.LocalizedMessages, v)
+	return b
+}
+
+func (b *GRPCErrorDetailBuilder) Build(t *testing.T) *resolver.GRPCErrorDetail {
+	t.Helper()
+	return b.detail
 }
 
 type VariableDefinitionGroupBuilder struct {
@@ -1378,9 +1452,6 @@ func (b *FieldOneofRuleBuilder) AddVariableDefinition(def *resolver.VariableDefi
 		}
 	}
 	def.Idx = len(b.rule.DefSet.Definitions())
-	def.Owner = &resolver.VariableDefinitionOwner{
-		Type: resolver.VariableDefinitionOwnerOneofField,
-	}
 	b.rule.DefSet.Defs = append(b.rule.DefSet.Defs, def)
 	return b
 }

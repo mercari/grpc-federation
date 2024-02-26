@@ -421,7 +421,7 @@ func TestSimpleAggregation(t *testing.T) {
 			Message: &source.Message{
 				Name: "Post",
 				Option: &source.MessageOption{
-					VariableDefinitions: &source.VariableDefinitionOption{
+					Def: &source.VariableDefinitionOption{
 						Call: &source.CallExprOption{
 							Method: true,
 						},
@@ -3027,9 +3027,13 @@ func TestValidation(t *testing.T) {
 								SetName("_def1").
 								SetValidation(
 									testutil.NewValidationExprBuilder().
-										SetCode(code.Code_FAILED_PRECONDITION).
-										SetMessage("validation message 1").
-										SetIf(testutil.NewCELValueBuilder("post.id != 'some-id'", resolver.BoolType).Build(t)).
+										SetError(
+											testutil.NewGRPCErrorBuilder().
+												SetCode(code.Code_FAILED_PRECONDITION).
+												SetMessage("validation message 1").
+												SetIf("post.id != 'some-id'").
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),
@@ -3039,88 +3043,71 @@ func TestValidation(t *testing.T) {
 								SetName("_def2").
 								SetValidation(
 									testutil.NewValidationExprBuilder().
-										SetCode(code.Code_FAILED_PRECONDITION).
-										SetMessage("validation message 2").
-										SetDetails([]*resolver.GRPCErrorDetail{
-											{
-												If:     testutil.NewCELValueBuilder("post.title != 'some-title'", resolver.BoolType).Build(t),
-												DefSet: &resolver.VariableDefinitionSet{},
-												Messages: &resolver.VariableDefinitionSet{
-													Defs: []*resolver.VariableDefinition{
-														testutil.NewVariableDefinitionBuilder().
-															SetName("_def2_err_detail0_msg0").
-															SetUsed(true).
-															SetOwner(&resolver.VariableDefinitionOwner{
-																Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
-																GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
-																	DefIdx:       2,
-																	ErrDetailIdx: 0,
+										SetError(
+											testutil.NewGRPCErrorBuilder().
+												SetCode(code.Code_FAILED_PRECONDITION).
+												SetMessage("validation message 2").
+												AddDetail(
+													testutil.NewGRPCErrorDetailBuilder().
+														SetIf("post.title != 'some-title'").
+														AddMessage(
+															testutil.NewVariableDefinitionBuilder().
+																SetName("_def2_err_detail0_msg0").
+																SetUsed(true).
+																SetMessage(
+																	testutil.NewMessageExprBuilder().
+																		SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
+																		SetArgs(
+																			testutil.NewMessageDependencyArgumentBuilder().
+																				Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
+																				Build(t),
+																		).
+																		Build(t),
+																).
+																Build(t),
+														).
+														AddMessage(
+															testutil.NewVariableDefinitionBuilder().
+																SetName("_def2_err_detail0_msg1").
+																SetUsed(true).
+																SetIdx(1).
+																SetMessage(
+																	testutil.NewMessageExprBuilder().
+																		SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
+																		SetArgs(
+																			testutil.NewMessageDependencyArgumentBuilder().
+																				Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
+																				Build(t),
+																		).
+																		Build(t),
+																).
+																Build(t),
+														).
+														AddPreconditionFailure(&resolver.PreconditionFailure{
+															Violations: []*resolver.PreconditionFailureViolation{
+																{
+																	Type:        testutil.NewCELValueBuilder("'some-type'", resolver.StringType).Build(t),
+																	Subject:     testutil.NewCELValueBuilder("'some-subject'", resolver.StringType).Build(t),
+																	Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
 																},
-															}).
-															SetMessage(
-																testutil.NewMessageExprBuilder().
-																	SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
-																	SetArgs(
-																		testutil.NewMessageDependencyArgumentBuilder().
-																			Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
-																			Build(t),
-																	).
-																	Build(t),
-															).
-															Build(t),
-														testutil.NewVariableDefinitionBuilder().
-															SetName("_def2_err_detail0_msg1").
-															SetUsed(true).
-															SetIdx(1).
-															SetOwner(&resolver.VariableDefinitionOwner{
-																Type: resolver.VariableDefinitionOwnerGRPCErrorDetailMessage,
-																GRPCErrorIndexes: &resolver.GRPCErrorIndexes{
-																	DefIdx:       2,
-																	ErrDetailIdx: 0,
+															},
+														}).
+														AddBadRequest(&resolver.BadRequest{
+															FieldViolations: []*resolver.BadRequestFieldViolation{
+																{
+																	Field:       testutil.NewCELValueBuilder("'some-field'", resolver.StringType).Build(t),
+																	Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
 																},
-															}).
-															SetMessage(
-																testutil.NewMessageExprBuilder().
-																	SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
-																	SetArgs(
-																		testutil.NewMessageDependencyArgumentBuilder().
-																			Add("message", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "message").Build(t)).
-																			Build(t),
-																	).
-																	Build(t),
-															).
-															Build(t),
-													},
-												},
-												PreconditionFailures: []*resolver.PreconditionFailure{
-													{
-														Violations: []*resolver.PreconditionFailureViolation{
-															{
-																Type:        testutil.NewCELValueBuilder("'some-type'", resolver.StringType).Build(t),
-																Subject:     testutil.NewCELValueBuilder("'some-subject'", resolver.StringType).Build(t),
-																Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
 															},
-														},
-													},
-												},
-												BadRequests: []*resolver.BadRequest{
-													{
-														FieldViolations: []*resolver.BadRequestFieldViolation{
-															{
-																Field:       testutil.NewCELValueBuilder("'some-field'", resolver.StringType).Build(t),
-																Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
-															},
-														},
-													},
-												},
-												LocalizedMessages: []*resolver.LocalizedMessage{
-													{
-														Locale:  "en-US",
-														Message: testutil.NewCELValueBuilder("'some-message'", resolver.StringType).Build(t),
-													},
-												},
-											},
-										}).
+														}).
+														AddLocalizedMessage(&resolver.LocalizedMessage{
+															Locale:  "en-US",
+															Message: testutil.NewCELValueBuilder("'some-message'", resolver.StringType).Build(t),
+														}).
+														Build(t),
+												).
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),
@@ -3600,8 +3587,12 @@ func TestCondition(t *testing.T) {
 								SetName("_def5").
 								SetValidation(
 									testutil.NewValidationExprBuilder().
-										SetCode(code.Code_INVALID_ARGUMENT).
-										SetIf(testutil.NewCELValueBuilder("users[0].id == ''", resolver.BoolType).Build(t)).
+										SetError(
+											testutil.NewGRPCErrorBuilder().
+												SetCode(code.Code_INVALID_ARGUMENT).
+												SetIf("users[0].id == ''").
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),
@@ -3706,6 +3697,242 @@ func TestCondition(t *testing.T) {
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
 				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
+				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+	federationService := federationFile.Services[0]
+
+	r := resolver.New(testutil.Compile(t, fileName))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+	}
+	if len(result.Files[0].Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+	}
+	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
+func TestErrorHandler(t *testing.T) {
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "error_handler.proto")
+	fb := testutil.NewFileBuilder(fileName)
+	ref := testutil.NewBuilderReferenceManager(getPostProtoBuilder(t), fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("CustomMessageArgument").
+				AddField("msg", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("CustomMessage").
+				AddFieldWithRule("msg", resolver.StringType, testutil.NewFieldRuleBuilder(&resolver.Value{CEL: testutil.NewCELValueBuilder("'custom error message:' + $.msg", resolver.StringType).Build(t)}).Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().SetMessageArgument(ref.Message(t, "org.federation", "CustomMessageArgument")).Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("LocalizedMessageArgument").
+				AddField("value", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("LocalizedMessage").
+				AddFieldWithRule("value", resolver.StringType, testutil.NewFieldRuleBuilder(&resolver.Value{CEL: testutil.NewCELValueBuilder("'localized value:' + $.value", resolver.StringType).Build(t)}).Build(t)).
+				SetRule(
+					testutil.NewMessageRuleBuilder().SetMessageArgument(ref.Message(t, "org.federation", "LocalizedMessageArgument")).Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("PostArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("Post").
+				AddFieldWithAutoBind("id", resolver.StringType, ref.Field(t, "org.post", "Post", "id")).
+				AddFieldWithAutoBind("title", resolver.StringType, ref.Field(t, "org.post", "Post", "title")).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("res").
+								SetUsed(true).
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "GetPost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField(
+													"id",
+													resolver.StringType,
+													resolver.NewByValue("$.id", resolver.StringType),
+												).
+												Build(t),
+										).
+										AddError(
+											testutil.NewGRPCErrorBuilder().
+												AddVariableDefinition(
+													testutil.NewVariableDefinitionBuilder().
+														SetName("id").
+														SetUsed(true).
+														SetBy(testutil.NewCELValueBuilder("$.id", resolver.StringType).Build(t)).
+														Build(t),
+												).
+												SetIf("id == ''").
+												SetCode(code.Code_FAILED_PRECONDITION).
+												SetMessage("'id must be not empty'").
+												AddDetail(
+													testutil.NewGRPCErrorDetailBuilder().
+														AddDef(
+															testutil.NewVariableDefinitionBuilder().
+																SetName("localized_msg").
+																SetUsed(true).
+																SetMessage(
+																	testutil.NewMessageExprBuilder().
+																		SetMessage(ref.Message(t, "org.federation", "LocalizedMessage")).
+																		SetArgs(
+																			testutil.NewMessageDependencyArgumentBuilder().
+																				Add("value", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+																				Build(t),
+																		).
+																		Build(t),
+																).
+																Build(t),
+														).
+														AddMessage(
+															testutil.NewVariableDefinitionBuilder().
+																SetName("_def0_err_detail0_msg0").
+																SetUsed(true).
+																SetMessage(
+																	testutil.NewMessageExprBuilder().
+																		SetMessage(ref.Message(t, "org.federation", "CustomMessage")).
+																		SetArgs(
+																			testutil.NewMessageDependencyArgumentBuilder().
+																				Add("msg", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+																				Build(t),
+																		).
+																		Build(t),
+																).
+																Build(t),
+														).
+														AddPreconditionFailure(&resolver.PreconditionFailure{
+															Violations: []*resolver.PreconditionFailureViolation{
+																{
+																	Type:        testutil.NewCELValueBuilder("'some-type'", resolver.StringType).Build(t),
+																	Subject:     testutil.NewCELValueBuilder("'some-subject'", resolver.StringType).Build(t),
+																	Description: testutil.NewCELValueBuilder("'some-description'", resolver.StringType).Build(t),
+																},
+															},
+														}).
+														AddLocalizedMessage(&resolver.LocalizedMessage{
+															Locale:  "en-US",
+															Message: testutil.NewCELValueBuilder("localized_msg.value", resolver.StringType).Build(t),
+														}).
+														Build(t),
+												).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetAutoBind(true).
+								SetBy(testutil.NewCELValueBuilder("res.post", ref.Type(t, "org.post", "Post")).Build(t)).
+								Build(t),
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "PostArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.post", "GetPostResponse")).
+								Build(t),
+						).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+								SetEnd(testutil.NewVariableDefinition("post")).
+								Build(t),
+						).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponse").
+				AddFieldWithRule(
+					"post",
+					ref.Type(t, "org.federation", "Post"),
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("post", ref.Type(t, "org.federation", "Post"))).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("post").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Post")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("id", resolver.NewByValue("$.id", resolver.StringType)).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "Post")).
+								Build(t),
+						).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod(
+					"GetPost",
+					ref.Message(t, "org.federation", "GetPostRequest"),
+					ref.Message(t, "org.federation", "GetPostResponse"),
+					nil,
+				).
+				SetRule(
+					testutil.NewServiceRuleBuilder().
+						AddDependency("", ref.Service(t, "org.post", "PostService")).
+						Build(t),
+				).
+				AddMessage(ref.Message(t, "org.federation", "CustomMessage"), ref.Message(t, "org.federation", "CustomMessageArgument")).
+				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "LocalizedMessage"), ref.Message(t, "org.federation", "LocalizedMessageArgument")).
+				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
 				Build(t),
 		)
 

@@ -798,11 +798,6 @@ func (d *decoder) toVariableDefinition(id string) (*resolver.VariableDefinition,
 	}
 	d.varDefMap[id] = ret
 
-	owner, err := d.toVariableDefinitionOwner(def.GetOwner())
-	if err != nil {
-		return nil, err
-	}
-
 	ifValue, err := d.toCELValue(def.GetIf())
 	if err != nil {
 		return nil, err
@@ -813,7 +808,6 @@ func (d *decoder) toVariableDefinition(id string) (*resolver.VariableDefinition,
 		return nil, err
 	}
 
-	ret.Owner = owner
 	ret.If = ifValue
 	ret.Expr = expr
 	return ret, nil
@@ -885,38 +879,6 @@ func (d *decoder) toVariableDefinitionGroup(id string) (resolver.VariableDefinit
 		return ret, nil
 	}
 	return nil, fmt.Errorf("unexpected variable definition group type")
-}
-
-func (d *decoder) toVariableDefinitionOwner(owner *plugin.VariableDefinitionOwner) (*resolver.VariableDefinitionOwner, error) {
-	if owner == nil {
-		return nil, nil
-	}
-	ret := &resolver.VariableDefinitionOwner{
-		Type: resolver.VariableDefinitionOwnerType(owner.GetType()),
-	}
-	msg, err := d.toMessage(owner.GetMessageId())
-	if err != nil {
-		return nil, err
-	}
-	field, err := d.toField(owner.GetFieldId())
-	if err != nil {
-		return nil, err
-	}
-	grpcErrorIndexes := d.toGRPCErrorIndexes(owner.GetGrpcErrorIndexes())
-	ret.Message = msg
-	ret.Field = field
-	ret.GRPCErrorIndexes = grpcErrorIndexes
-	return ret, nil
-}
-
-func (d *decoder) toGRPCErrorIndexes(v *plugin.GRPCErrorIndexes) *resolver.GRPCErrorIndexes {
-	if v == nil {
-		return nil
-	}
-	return &resolver.GRPCErrorIndexes{
-		DefIdx:       int(v.GetDefIndex()),
-		ErrDetailIdx: int(v.GetErrorDetailIndex()),
-	}
 }
 
 func (d *decoder) toVariableExpr(expr *plugin.VariableExpr) (*resolver.VariableExpr, error) {

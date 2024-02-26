@@ -125,7 +125,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Call: &source.CallExprOption{},
 						},
 					},
@@ -140,7 +140,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Call: &source.CallExprOption{
 								Method: true,
 							},
@@ -157,7 +157,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Call: &source.CallExprOption{
 								Request: &source.RequestOption{},
 							},
@@ -174,7 +174,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Call: &source.CallExprOption{
 								Request: &source.RequestOption{
 									Field: true,
@@ -193,7 +193,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Call: &source.CallExprOption{
 								Request: &source.RequestOption{
 									By: true,
@@ -212,7 +212,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Message: &source.MessageExprOption{},
 						},
 					},
@@ -227,7 +227,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Message: &source.MessageExprOption{
 								Name: true,
 							},
@@ -244,7 +244,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Message: &source.MessageExprOption{
 								Args: &source.ArgumentOption{},
 							},
@@ -261,7 +261,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Message: &source.MessageExprOption{
 								Args: &source.ArgumentOption{Name: true},
 							},
@@ -278,7 +278,7 @@ func TestCandidates(t *testing.T) {
 				Message: &source.Message{
 					Name: "x",
 					Option: &source.MessageOption{
-						VariableDefinitions: &source.VariableDefinitionOption{
+						Def: &source.VariableDefinitionOption{
 							Message: &source.MessageExprOption{
 								Args: &source.ArgumentOption{By: true},
 							},

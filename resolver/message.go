@@ -209,10 +209,7 @@ func (m *Message) ReferenceNames() []string {
 	}
 
 	rule := m.Rule
-	var refNames []string
-	for _, varDef := range rule.DefSet.Definitions() {
-		refNames = append(refNames, varDef.ReferenceNames()...)
-	}
+	refNames := rule.DefSet.ReferenceNames()
 	for _, field := range m.Fields {
 		if !field.HasRule() {
 			continue

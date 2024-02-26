@@ -23,7 +23,7 @@ func TestFile(t *testing.T) {
 		Message: &source.Message{
 			Name: "GetPostResponse",
 			Option: &source.MessageOption{
-				VariableDefinitions: &source.VariableDefinitionOption{
+				Def: &source.VariableDefinitionOption{
 					Idx: 0,
 					Message: &source.MessageExprOption{
 						Name: true,

@@ -294,21 +294,21 @@ func (f *AutoBindField) ProtoFormat(opt *ProtoFormatOption) string {
 	return ""
 }
 
-func (v *ValidationExpr) ProtoFormat(opt *ProtoFormatOption) string {
-	if v == nil {
+func (e *ValidationExpr) ProtoFormat(opt *ProtoFormatOption) string {
+	if e == nil {
 		return ""
 	}
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	var elems []string
-	if v.Name != "" {
+	if e.Name != "" {
 		elems = append(
 			elems,
-			nextOpt.indentFormat()+fmt.Sprintf("name: %q", v.Name),
+			nextOpt.indentFormat()+fmt.Sprintf("name: %q", e.Name),
 		)
 	}
-	if v.Error != nil {
-		elems = append(elems, v.Error.ProtoFormat(nextOpt))
+	if e.Error != nil {
+		elems = append(elems, e.Error.ProtoFormat(nextOpt))
 	}
 	return indent + fmt.Sprintf("validation {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
@@ -344,28 +344,28 @@ func (d GRPCErrorDetails) ProtoFormat(opt *ProtoFormatOption) string {
 	return indent + fmt.Sprintf("details: [\n%s\n%s]", strings.Join(elems, ",\n"), indent)
 }
 
-func (e *GRPCErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
+func (detail *GRPCErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
 	elems := []string{
-		nextOpt.indentFormat() + fmt.Sprintf("if: %q", e.If.Expr),
+		nextOpt.indentFormat() + fmt.Sprintf("if: %q", detail.If.Expr),
 	}
-	if s := len(e.Messages.Definitions()); s != 0 {
-		elems = append(elems, e.protoFormatDetails(nextOpt, "message", s))
+	if s := len(detail.Messages.Definitions()); s != 0 {
+		elems = append(elems, detail.protoFormatDetails(nextOpt, "message", s))
 	}
-	if s := len(e.PreconditionFailures); s != 0 {
-		elems = append(elems, e.protoFormatDetails(nextOpt, "precondition_failure", s))
+	if s := len(detail.PreconditionFailures); s != 0 {
+		elems = append(elems, detail.protoFormatDetails(nextOpt, "precondition_failure", s))
 	}
-	if s := len(e.BadRequests); s != 0 {
-		elems = append(elems, e.protoFormatDetails(nextOpt, "bad_request", s))
+	if s := len(detail.BadRequests); s != 0 {
+		elems = append(elems, detail.protoFormatDetails(nextOpt, "bad_request", s))
 	}
-	if s := len(e.LocalizedMessages); s != 0 {
-		elems = append(elems, e.protoFormatDetails(nextOpt, "localized_message", s))
+	if s := len(detail.LocalizedMessages); s != 0 {
+		elems = append(elems, detail.protoFormatDetails(nextOpt, "localized_message", s))
 	}
 
 	return strings.Join(elems, "\n")
 }
 
-func (e *GRPCErrorDetail) protoFormatDetails(opt *ProtoFormatOption, name string, size int) string {
+func (detail *GRPCErrorDetail) protoFormatDetails(opt *ProtoFormatOption, name string, size int) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	if size == 1 {

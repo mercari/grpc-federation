@@ -9,6 +9,7 @@ import (
 
 func ResolverCmpOpts() []cmp.Option {
 	return []cmp.Option{
+		cmpopts.IgnoreUnexported(resolver.VariableDefinition{}),
 		cmpopts.IgnoreFields(resolver.File{}, "Messages", "Services", "Enums", "Desc", "CELPlugins"),
 		cmpopts.IgnoreFields(resolver.Service{}, "CELPlugins"),
 		cmpopts.IgnoreFields(resolver.Package{}, "Files"),
@@ -19,12 +20,13 @@ func ResolverCmpOpts() []cmp.Option {
 		cmpopts.IgnoreFields(resolver.EnumRule{}, "Alias.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageRule{}, "Alias.Rule"),
 		cmpopts.IgnoreFields(resolver.MessageDependencyGraph{}, "Roots"),
-		cmpopts.IgnoreFields(resolver.SequentialVariableDefinitionGroup{}, "End.Idx", "End.Owner", "End.If", "End.AutoBind", "End.Used", "End.Expr"),
-		cmpopts.IgnoreFields(resolver.ConcurrentVariableDefinitionGroup{}, "End.Idx", "End.Owner", "End.If", "End.AutoBind", "End.Used", "End.Expr"),
+		cmpopts.IgnoreFields(resolver.SequentialVariableDefinitionGroup{}, "End.Idx", "End.If", "End.AutoBind", "End.Used", "End.Expr"),
+		cmpopts.IgnoreFields(resolver.ConcurrentVariableDefinitionGroup{}, "End.Idx", "End.If", "End.AutoBind", "End.Used", "End.Expr"),
 		cmpopts.IgnoreFields(resolver.MessageDependencyGraphNode{}, "BaseMessage", "VariableDefinition", "Parent", "ParentMap", "Children", "ChildrenMap"),
 		cmpopts.IgnoreFields(resolver.AllMessageDependencyGraph{}),
 		cmpopts.IgnoreFields(resolver.AllMessageDependencyGraphNode{}, "Parent", "Children", "Message.Rule"),
-		cmpopts.IgnoreFields(resolver.GRPCErrorDetail{}, "Messages.Graph", "Messages.Groups"),
+		cmpopts.IgnoreFields(resolver.GRPCError{}, "DefSet.Graph", "DefSet.Groups"),
+		cmpopts.IgnoreFields(resolver.GRPCErrorDetail{}, "DefSet.Graph", "DefSet.Groups", "Messages.Graph", "Messages.Groups"),
 		cmpopts.IgnoreFields(resolver.AutoBindField{}, "VariableDefinition"),
 		cmpopts.IgnoreFields(resolver.Type{}, "Message.Rule", "Enum.Rule", "OneofField"),
 		cmpopts.IgnoreFields(resolver.Oneof{}, "Message"),

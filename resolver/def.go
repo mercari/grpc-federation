@@ -4,25 +4,25 @@ import (
 	"sort"
 )
 
-func (s *VariableDefinitionSet) Definitions() VariableDefinitions {
-	if s == nil {
+func (set *VariableDefinitionSet) Definitions() VariableDefinitions {
+	if set == nil {
 		return nil
 	}
-	return s.Defs
+	return set.Defs
 }
 
-func (s *VariableDefinitionSet) DefinitionGroups() []VariableDefinitionGroup {
-	if s == nil {
+func (set *VariableDefinitionSet) DefinitionGroups() []VariableDefinitionGroup {
+	if set == nil {
 		return nil
 	}
-	return s.Groups
+	return set.Groups
 }
 
-func (s *VariableDefinitionSet) DependencyGraph() *MessageDependencyGraph {
-	if s == nil {
+func (set *VariableDefinitionSet) DependencyGraph() *MessageDependencyGraph {
+	if set == nil {
 		return nil
 	}
-	return s.Graph
+	return set.Graph
 }
 
 func (g *SequentialVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
@@ -43,22 +43,153 @@ func (g *ConcurrentVariableDefinitionGroup) VariableDefinitions() VariableDefini
 	return defs
 }
 
-func (def *VariableDefinition) ReferenceNames() []string {
-	refNameMap := make(map[string]struct{})
-	if def.If != nil {
-		for _, refName := range def.If.ReferenceNames() {
-			refNameMap[refName] = struct{}{}
+func (set *VariableDefinitionSet) MessageToDefsMap() map[*Message]VariableDefinitions {
+	ret := make(map[*Message]VariableDefinitions)
+	for _, varDef := range set.Definitions() {
+		for k, v := range varDef.MessageToDefsMap() {
+			ret[k] = append(ret[k], v...)
 		}
 	}
-	for _, refName := range def.Expr.ReferenceNames() {
-		refNameMap[refName] = struct{}{}
+	return ret
+}
+
+func (def *VariableDefinition) MessageToDefsMap() map[*Message]VariableDefinitions {
+	if def.Expr == nil {
+		return nil
 	}
-	refNames := make([]string, 0, len(refNameMap))
-	for refName := range refNameMap {
-		refNames = append(refNames, refName)
+	expr := def.Expr
+	switch {
+	case expr.Message != nil:
+		msgExpr := expr.Message
+		if msgExpr.Message == nil {
+			return nil
+		}
+		return map[*Message]VariableDefinitions{msgExpr.Message: {def}}
+	case expr.Map != nil:
+		mapExpr := expr.Map
+		if mapExpr.Expr == nil {
+			return nil
+		}
+		if mapExpr.Expr.Message == nil {
+			return nil
+		}
+		msgExpr := mapExpr.Expr.Message
+		return map[*Message]VariableDefinitions{msgExpr.Message: {def}}
+	case expr.Call != nil:
+		return expr.Call.MessageToDefsMap()
+	case expr.Validation != nil:
+		return expr.Validation.MessageToDefsMap()
 	}
-	sort.Strings(refNames)
-	return refNames
+	return nil
+}
+
+func (e *CallExpr) MessageToDefsMap() map[*Message]VariableDefinitions {
+	ret := make(map[*Message]VariableDefinitions)
+	for _, grpcErr := range e.Errors {
+		for k, v := range grpcErr.MessageToDefsMap() {
+			ret[k] = append(ret[k], v...)
+		}
+	}
+	return ret
+}
+
+func (e *ValidationExpr) MessageToDefsMap() map[*Message]VariableDefinitions {
+	return e.Error.MessageToDefsMap()
+}
+
+func (e *GRPCError) MessageToDefsMap() map[*Message]VariableDefinitions {
+	ret := e.DefSet.MessageToDefsMap()
+	for _, detail := range e.Details {
+		for k, v := range detail.MessageToDefsMap() {
+			ret[k] = append(ret[k], v...)
+		}
+	}
+	return ret
+}
+
+func (detail *GRPCErrorDetail) MessageToDefsMap() map[*Message]VariableDefinitions {
+	ret := detail.DefSet.MessageToDefsMap()
+	for k, v := range detail.Messages.MessageToDefsMap() {
+		ret[k] = append(ret[k], v...)
+	}
+	return ret
+}
+
+func (set *VariableDefinitionSet) MessageExprs() []*MessageExpr {
+	var ret []*MessageExpr
+	for _, varDef := range set.Definitions() {
+		ret = append(ret, varDef.MessageExprs()...)
+	}
+	return ret
+}
+
+func (def *VariableDefinition) MessageExprs() []*MessageExpr {
+	if def.Expr == nil {
+		return nil
+	}
+	expr := def.Expr
+	switch {
+	case expr.Call != nil:
+		return expr.Call.MessageExprs()
+	case expr.Map != nil:
+		return expr.Map.MessageExprs()
+	case expr.Message != nil:
+		return []*MessageExpr{expr.Message}
+	case expr.Validation != nil:
+		return expr.Validation.MessageExprs()
+	}
+	return nil
+}
+
+func (e *CallExpr) MessageExprs() []*MessageExpr {
+	var ret []*MessageExpr
+	for _, grpcErr := range e.Errors {
+		ret = append(ret, grpcErr.MessageExprs()...)
+	}
+	return ret
+}
+
+func (e *MapExpr) MessageExprs() []*MessageExpr {
+	if e.Expr == nil {
+		return nil
+	}
+	if e.Expr.Message == nil {
+		return nil
+	}
+	return []*MessageExpr{e.Expr.Message}
+}
+
+func (e *ValidationExpr) MessageExprs() []*MessageExpr {
+	return e.Error.MessageExprs()
+}
+
+func (e *GRPCError) MessageExprs() []*MessageExpr {
+	ret := e.DefSet.MessageExprs()
+	for _, detail := range e.Details {
+		ret = append(ret, detail.MessageExprs()...)
+	}
+	return ret
+}
+
+func (detail *GRPCErrorDetail) MessageExprs() []*MessageExpr {
+	return append(detail.DefSet.MessageExprs(), detail.Messages.MessageExprs()...)
+}
+
+func (set *VariableDefinitionSet) ReferenceNames() []string {
+	var names []string
+	for _, def := range set.Definitions() {
+		names = append(names, def.ReferenceNames()...)
+	}
+	return toUniqueReferenceNames(names)
+}
+
+func (def *VariableDefinition) ReferenceNames() []string {
+	var names []string
+	if def.If != nil {
+		names = append(names, def.If.ReferenceNames()...)
+	}
+	names = append(names, def.Expr.ReferenceNames()...)
+	return toUniqueReferenceNames(names)
 }
 
 func (e *VariableExpr) ReferenceNames() []string {
@@ -80,78 +211,57 @@ func (e *VariableExpr) ReferenceNames() []string {
 	return nil
 }
 
-func (def *VariableDefinition) MessageExprs() []*MessageExpr {
-	if def.Expr == nil {
-		return nil
-	}
-	expr := def.Expr
-	switch {
-	case expr.Map != nil:
-		if expr.Map.Expr != nil && expr.Map.Expr.Message != nil {
-			return []*MessageExpr{expr.Map.Expr.Message}
-		}
-	case expr.Message != nil:
-		return []*MessageExpr{expr.Message}
-	case expr.Validation != nil && expr.Validation.Error != nil:
-		var ret []*MessageExpr
-		for _, detail := range expr.Validation.Error.Details {
-			for _, def := range detail.Messages.Definitions() {
-				ret = append(ret, def.Expr.Message)
-			}
-		}
-		return ret
-	}
-	return nil
-}
-
 // ReferenceNames returns all the unique reference names in the error definition.
 func (e *GRPCError) ReferenceNames() []string {
-	nameSet := make(map[string]struct{})
-	register := func(names []string) {
-		for _, name := range names {
-			nameSet[name] = struct{}{}
-		}
+	names := e.If.ReferenceNames()
+	for _, def := range e.DefSet.Definitions() {
+		names = append(names, def.ReferenceNames()...)
 	}
-	register(e.If.ReferenceNames())
 	for _, detail := range e.Details {
-		register(detail.If.ReferenceNames())
-		for _, def := range detail.Messages.Definitions() {
-			register(def.ReferenceNames())
-		}
-		for _, failure := range detail.PreconditionFailures {
-			for _, violation := range failure.Violations {
-				register(violation.Type.ReferenceNames())
-				register(violation.Subject.ReferenceNames())
-				register(violation.Description.ReferenceNames())
-			}
-		}
-		for _, req := range detail.BadRequests {
-			for _, violation := range req.FieldViolations {
-				register(violation.Field.ReferenceNames())
-				register(violation.Description.ReferenceNames())
-			}
-		}
-		for _, msg := range detail.LocalizedMessages {
-			register(msg.Message.ReferenceNames())
+		names = append(names, detail.ReferenceNames()...)
+	}
+	return toUniqueReferenceNames(names)
+}
+
+func (detail *GRPCErrorDetail) ReferenceNames() []string {
+	names := detail.If.ReferenceNames()
+	for _, def := range detail.DefSet.Definitions() {
+		names = append(names, def.ReferenceNames()...)
+	}
+	for _, def := range detail.Messages.Definitions() {
+		names = append(names, def.ReferenceNames()...)
+	}
+	for _, failure := range detail.PreconditionFailures {
+		for _, violation := range failure.Violations {
+			names = append(names, violation.Type.ReferenceNames()...)
+			names = append(names, violation.Subject.ReferenceNames()...)
+			names = append(names, violation.Description.ReferenceNames()...)
 		}
 	}
-	names := make([]string, 0, len(nameSet))
-	for name := range nameSet {
-		names = append(names, name)
+	for _, req := range detail.BadRequests {
+		for _, violation := range req.FieldViolations {
+			names = append(names, violation.Field.ReferenceNames()...)
+			names = append(names, violation.Description.ReferenceNames()...)
+		}
 	}
-	return names
+	for _, msg := range detail.LocalizedMessages {
+		names = append(names, msg.Message.ReferenceNames()...)
+	}
+	return toUniqueReferenceNames(names)
 }
 
 func (e *CallExpr) ReferenceNames() []string {
-	if e.Request == nil {
+	if e == nil {
 		return nil
 	}
-
-	var refNames []string
+	var names []string
 	for _, arg := range e.Request.Args {
-		refNames = append(refNames, arg.Value.ReferenceNames()...)
+		names = append(names, arg.Value.ReferenceNames()...)
 	}
-	return refNames
+	for _, grpcErr := range e.Errors {
+		names = append(names, grpcErr.ReferenceNames()...)
+	}
+	return toUniqueReferenceNames(names)
 }
 
 func (e *MapExpr) ReferenceNames() []string {
@@ -159,26 +269,17 @@ func (e *MapExpr) ReferenceNames() []string {
 		return nil
 	}
 
-	refNameMap := make(map[string]struct{})
+	var names []string
 	if e.Iterator != nil {
 		if e.Iterator.Name != "" {
-			refNameMap[e.Iterator.Name] = struct{}{}
+			names = append(names, e.Iterator.Name)
 		}
 		if e.Iterator.Source != nil && e.Iterator.Source.Name != "" {
-			refNameMap[e.Iterator.Source.Name] = struct{}{}
+			names = append(names, e.Iterator.Source.Name)
 		}
 	}
-
-	for _, name := range e.Expr.ReferenceNames() {
-		refNameMap[name] = struct{}{}
-	}
-
-	refNames := make([]string, 0, len(refNameMap))
-	for name := range refNameMap {
-		refNames = append(refNames, name)
-	}
-	sort.Strings(refNames)
-	return refNames
+	names = append(names, e.Expr.ReferenceNames()...)
+	return toUniqueReferenceNames(names)
 }
 
 func (e *MapIteratorExpr) ReferenceNames() []string {
@@ -186,24 +287,62 @@ func (e *MapIteratorExpr) ReferenceNames() []string {
 		return nil
 	}
 
-	refNameMap := make(map[string]struct{})
+	var names []string
 	switch {
 	case e.By != nil:
-		for _, name := range e.By.ReferenceNames() {
-			refNameMap[name] = struct{}{}
-		}
+		names = append(names, e.By.ReferenceNames()...)
 	case e.Message != nil:
-		for _, name := range e.Message.ReferenceNames() {
-			refNameMap[name] = struct{}{}
-		}
+		names = append(names, e.Message.ReferenceNames()...)
 	}
+	return toUniqueReferenceNames(names)
+}
 
-	refNames := make([]string, 0, len(refNameMap))
-	for name := range refNameMap {
-		refNames = append(refNames, name)
+func (set *VariableDefinitionSet) MarkUsed(nameRefMap map[string]struct{}) {
+	for _, varDef := range set.Definitions() {
+		varDef.MarkUsed(nameRefMap)
 	}
-	sort.Strings(refNames)
-	return refNames
+}
+
+func (def *VariableDefinition) MarkUsed(nameRefMap map[string]struct{}) {
+	if _, exists := nameRefMap[def.Name]; exists {
+		def.Used = true
+	}
+	if def.Expr == nil {
+		return
+	}
+	expr := def.Expr
+	switch {
+	case expr.Call != nil:
+		expr.Call.MarkUsed(nameRefMap)
+	case expr.Map != nil:
+		expr.Map.MarkUsed(nameRefMap)
+	case expr.Validation != nil:
+		expr.Validation.MarkUsed(nameRefMap)
+	}
+}
+
+func (e *CallExpr) MarkUsed(nameRefMap map[string]struct{}) {
+	for _, grpcErr := range e.Errors {
+		grpcErr.MarkUsed(nameRefMap)
+	}
+}
+
+func (e *MapExpr) MarkUsed(_ map[string]struct{}) {}
+
+func (e *ValidationExpr) MarkUsed(nameRefMap map[string]struct{}) {
+	e.Error.MarkUsed(nameRefMap)
+}
+
+func (e *GRPCError) MarkUsed(nameRefMap map[string]struct{}) {
+	e.DefSet.MarkUsed(nameRefMap)
+	for _, detail := range e.Details {
+		detail.MarkUsed(nameRefMap)
+	}
+}
+
+func (detail *GRPCErrorDetail) MarkUsed(nameRefMap map[string]struct{}) {
+	detail.DefSet.MarkUsed(nameRefMap)
+	detail.Messages.MarkUsed(nameRefMap)
 }
 
 func (e *MapIteratorExpr) ToVariableExpr() *VariableExpr {
@@ -212,4 +351,17 @@ func (e *MapIteratorExpr) ToVariableExpr() *VariableExpr {
 		By:      e.By,
 		Message: e.Message,
 	}
+}
+
+func toUniqueReferenceNames(names []string) []string {
+	nameMap := make(map[string]struct{})
+	for _, name := range names {
+		nameMap[name] = struct{}{}
+	}
+	ret := make([]string, 0, len(nameMap))
+	for name := range nameMap {
+		ret = append(ret, name)
+	}
+	sort.Strings(ret)
+	return ret
 }

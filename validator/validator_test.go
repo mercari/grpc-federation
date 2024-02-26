@@ -333,7 +333,7 @@ testdata/invalid_message_name.proto: "federation.Invalid" message does not exist
 testdata/invalid_message_name.proto:15:7: [WARN] "user.UserService" defined in "dependencies" of "grpc.federation.service" but it is not used
 15:        { name: "user_service", service: "user.UserService" }
            ^
-testdata/invalid_message_name.proto:52:17: undefined message specified "grpc.federation.message" option
+testdata/invalid_message_name.proto:52:17: undefined message specified
 52:            name: "Invalid"
                      ^
 testdata/invalid_message_name.proto:61:47: unknown type is required

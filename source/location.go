@@ -98,11 +98,12 @@ type EnumValueOption struct {
 
 // Message represents message location.
 type Message struct {
-	Name   string
-	Option *MessageOption
-	Field  *Field
-	Enum   *Enum
-	Oneof  *Oneof
+	Name          string
+	Option        *MessageOption
+	Field         *Field
+	Enum          *Enum
+	Oneof         *Oneof
+	NestedMessage *Message
 }
 
 // Field represents message field location.
@@ -120,10 +121,10 @@ type FieldOption struct {
 
 // FieldOneof represents grpc.federation.field.oneof location.
 type FieldOneof struct {
-	If                  bool
-	Default             bool
-	VariableDefinitions *VariableDefinitionOption
-	By                  bool
+	If      bool
+	Default bool
+	Def     *VariableDefinitionOption
+	By      bool
 }
 
 type Oneof struct {
@@ -136,8 +137,8 @@ type OneofOption struct {
 
 // MessageOption represents grpc.federation.message option location.
 type MessageOption struct {
-	VariableDefinitions *VariableDefinitionOption
-	Alias               bool
+	Def   *VariableDefinitionOption
+	Alias bool
 }
 
 // VariableDefinitionOption represents def location of grpc.federation.message option.
@@ -171,6 +172,7 @@ type CallExprOption struct {
 	Request *RequestOption
 	Timeout bool
 	Retry   *RetryOption
+	Error   *GRPCErrorOption
 }
 
 // MessageExprOption represents def.message location of grpc.federation.message option.
@@ -216,46 +218,51 @@ type ArgumentOption struct {
 }
 
 type ValidationExprOption struct {
-	Name   bool
-	If     bool
-	Detail *ValidationDetailOption
+	Name  bool
+	Error *GRPCErrorOption
 }
 
-type ValidationDetailOption struct {
-	Idx                 int
-	If                  bool
-	Message             *ValidationDetailMessageOption
-	PreconditionFailure *ValidationDetailPreconditionFailureOption
-	BadRequest          *ValidationDetailBadRequestOption
-	LocalizedMessage    *ValidationDetailLocalizedMessageOption
-}
-
-type ValidationDetailMessageOption struct {
+type GRPCErrorOption struct {
 	Idx     int
-	Message *MessageExprOption
+	Def     *VariableDefinitionOption
+	If      bool
+	Code    bool
+	Message bool
+	Ignore  bool
+	Detail  *GRPCErrorDetailOption
 }
 
-type ValidationDetailPreconditionFailureOption struct {
+type GRPCErrorDetailOption struct {
+	Idx                 int
+	Def                 *VariableDefinitionOption
+	If                  bool
+	Message             *VariableDefinitionOption
+	PreconditionFailure *GRPCErrorDetailPreconditionFailureOption
+	BadRequest          *GRPCErrorDetailBadRequestOption
+	LocalizedMessage    *GRPCErrorDetailLocalizedMessageOption
+}
+
+type GRPCErrorDetailPreconditionFailureOption struct {
 	Idx       int
-	Violation ValidationDetailPreconditionFailureViolationOption
+	Violation GRPCErrorDetailPreconditionFailureViolationOption
 }
 
-type ValidationDetailPreconditionFailureViolationOption struct {
+type GRPCErrorDetailPreconditionFailureViolationOption struct {
 	Idx       int
 	FieldName string
 }
 
-type ValidationDetailBadRequestOption struct {
+type GRPCErrorDetailBadRequestOption struct {
 	Idx            int
-	FieldViolation ValidationDetailBadRequestFieldViolationOption
+	FieldViolation GRPCErrorDetailBadRequestFieldViolationOption
 }
 
-type ValidationDetailBadRequestFieldViolationOption struct {
+type GRPCErrorDetailBadRequestFieldViolationOption struct {
 	Idx       int
 	FieldName string
 }
 
-type ValidationDetailLocalizedMessageOption struct {
+type GRPCErrorDetailLocalizedMessageOption struct {
 	Idx       int
 	FieldName string
 }
