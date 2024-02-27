@@ -3847,6 +3847,12 @@ func TestErrorHandler(t *testing.T) {
 												).
 												Build(t),
 										).
+										AddError(
+											testutil.NewGRPCErrorBuilder().
+												SetIf("true").
+												SetIgnore(true).
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),

@@ -1,16 +1,24 @@
 {{- define "errorHandler" }}
 {{- $ctx := .Ctx }}
 {{- if .Definition.HasErrorHandler }}
-{{- if .Definition.GRPCErrors }}
+{{- $grpcErrors := .Definition.GRPCErrors }}
+{{- if $grpcErrors }}
 stat, handleErr := func() (*grpcfed.Status, error) {
 	var stat *grpcfed.Status
-	{{- range .Definition.GRPCErrors }}
+	{{- range $grpcErrors }}
 	{{- if .VariableDefinitionSet }}
 	{{- template "evalDefSet" .VariableDefinitionSet }}
 	{{- end }}
 	if err := grpcfed.If({{ $ctx }}, value, "{{ .If.Expr }}", func(value *localValueType) error {
+		{{- if .Ignore }}
+		stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+		return nil
+		{{- else }}
+
+		{{- $details := .Details }}
+		{{- if $details }}
 		var details       []grpcfed.ProtoMessage
-		{{- range .Details }}
+		{{- range $details }}
 		{{- if .VariableDefinitionSet }}
 		if _, err := func() (any, error){
 			{{- template "evalDefSet" .VariableDefinitionSet }}
@@ -47,6 +55,9 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			return err
 		}
 		{{- end }}
+		{{- end }}
+
+		{{- if $details }}
 		status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, "{{ .Message }}")
 		statusWithDetails, err := status.WithDetails(details...)
 		if err != nil {
@@ -55,7 +66,11 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 		} else {
 			stat = statusWithDetails
 		}
+		{{- else }}
+		stat = grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, "{{ .Message }}")
+		{{- end }}
 		return nil
+		{{- end }}
 	}); err != nil {
 		return nil, err
 	}
@@ -77,12 +92,18 @@ if handleErr != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 		return nil, err
 	}
+} else {
+	if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
+		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
+		return nil, err
+	}
 }
-{{- end }}
+{{- else }}
 if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
 	grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 	return nil, err
 }
+{{- end }}
 {{- else }}
 grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 return nil, err

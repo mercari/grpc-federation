@@ -475,6 +475,15 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			if stat != nil {
 				return stat, nil
 			}
+			if err := grpcfed.If(ctx, value, "true", func(value *localValueType) error {
+				stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+				return nil
+			}); err != nil {
+				return nil, err
+			}
+			if stat != nil {
+				return stat, nil
+			}
 			return nil, nil
 		}()
 		if handleErr != nil {
@@ -489,10 +498,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
-		}
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+		} else {
+			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
+				grpcfed.RecordErrorToSpan(ctx, err)
+				return nil, err
+			}
 		}
 	}
 

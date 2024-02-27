@@ -5,8 +5,10 @@ var stat *grpcfed.Status
 {{- template "evalDefSet" .Error.VariableDefinitionSet }}
 {{- end }}
 if err := grpcfed.If({{ $ctx }}, value, "{{ .Error.If.Expr }}", func(value *localValueType) error {
+	{{- $details := .Error.Details }}
+	{{- if $details }}
 	var details       []grpcfed.ProtoMessage
-	{{- range .Error.Details }}
+	{{- range $details }}
 	{{- if .VariableDefinitionSet }}
 	if _, err := func() (any, error){
 		{{- template "evalDefSet" .VariableDefinitionSet }}
@@ -43,6 +45,8 @@ if err := grpcfed.If({{ $ctx }}, value, "{{ .Error.If.Expr }}", func(value *loca
 		return err
 	}
 	{{- end }}
+	{{- end }}
+	{{- if $details }}
 	status := grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
 	statusWithDetails, err := status.WithDetails(details...)
 	if err != nil {
@@ -51,6 +55,9 @@ if err := grpcfed.If({{ $ctx }}, value, "{{ .Error.If.Expr }}", func(value *loca
 	} else {
 		stat = statusWithDetails
 	}
+	{{- else }}
+	stat = grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+	{{- end }}
 	return nil
 }); err != nil {
 	return err

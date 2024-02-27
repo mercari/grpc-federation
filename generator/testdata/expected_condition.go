@@ -491,15 +491,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		Validation: func(ctx context.Context, value *localValueType) error {
 			var stat *grpcfed.Status
 			if err := grpcfed.If(ctx, value, "users[0].id == ''", func(value *localValueType) error {
-				var details []grpcfed.ProtoMessage
-				status := grpcfed.NewGRPCStatus(grpcfed.InvalidArgumentCode, "")
-				statusWithDetails, err := status.WithDetails(details...)
-				if err != nil {
-					s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-					stat = status
-				} else {
-					stat = statusWithDetails
-				}
+				stat = grpcfed.NewGRPCStatus(grpcfed.InvalidArgumentCode, "")
 				return nil
 			}); err != nil {
 				return err

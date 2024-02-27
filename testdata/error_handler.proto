@@ -62,6 +62,9 @@ message Post {
               }
             }
           }
+          error {
+            ignore: true
+          }
         }
       },
       { name: "post" by: "res.post" autobind: true }
