@@ -38,6 +38,7 @@ func TestCodeGenerate(t *testing.T) {
 		"validation",
 		"map",
 		"condition",
+		"error_handler",
 	}
 	for _, test := range tests {
 		t.Run(test, func(t *testing.T) {
@@ -201,36 +202,6 @@ func TestCodeGenerate(t *testing.T) {
 	}
 }
 
-func TestValidationError_HasIf(t *testing.T) {
-	tests := []struct {
-		desc     string
-		rule     string
-		expected bool
-	}{
-		{
-			desc:     "if exists",
-			rule:     "some rule",
-			expected: true,
-		},
-		{
-			desc:     "if does not exist",
-			rule:     "",
-			expected: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.desc, func(t *testing.T) {
-			validation := generator.ValidationError{
-				If: tc.rule,
-			}
-			if got := validation.HasIf(); got != tc.expected {
-				t.Fatalf("received unexpected result: got: %v, expected: %v", got, tc.expected)
-			}
-		})
-	}
-}
-
 func TestValidationError_GoGRPCStatusCode(t *testing.T) {
 	tests := []struct {
 		desc     string
@@ -251,8 +222,10 @@ func TestValidationError_GoGRPCStatusCode(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			validation := generator.ValidationError{
-				Code: tc.code,
+			validation := generator.GRPCError{
+				GRPCError: &resolver.GRPCError{
+					Code: tc.code,
+				},
 			}
 			if got := validation.GoGRPCStatusCode(); got != tc.expected {
 				t.Fatalf("received unexpected gRPC status code: got: %s, expected: %s", got, tc.expected)

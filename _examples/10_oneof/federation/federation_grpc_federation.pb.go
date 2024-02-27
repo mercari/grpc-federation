@@ -39,6 +39,9 @@ type Org_Federation_UserArgument[T any] struct {
 
 // Org_Federation_UserSelectionArgument is argument for "org.federation.UserSelection" message.
 type Org_Federation_UserSelectionArgument[T any] struct {
+	Ua     *User
+	Ub     *User
+	Uc     *User
 	Value  string
 	Client T
 }
@@ -317,6 +320,11 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "grpc.federation.private.UserSelectionArgument", req)}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Ua = value.vars.ua
+	req.Ub = value.vars.ub
+	req.Uc = value.vars.uc
 
 	// create a message value to be returned.
 	ret := &UserSelection{}

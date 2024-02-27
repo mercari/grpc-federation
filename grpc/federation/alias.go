@@ -26,6 +26,7 @@ type (
 	CELFieldType   = types.FieldType
 	Code           = codes.Code
 	RWMutex        = sync.RWMutex
+	Status         = status.Status
 )
 
 var (

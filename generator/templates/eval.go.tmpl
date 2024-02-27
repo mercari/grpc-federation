@@ -56,7 +56,7 @@ grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ .Definition.Type }}, *localVal
 	By:     "{{ .Definition.By.Expr }}",
 	{{- else if .Definition.IsValidation }}
 	Validation:  func(ctx context.Context, value *localValueType) error {
-		{{- template "messageValidation" .Definition.MessageValidation }}
+		{{- template "messageValidation" (map "Ctx" .Ctx "Error" .Definition.ValidationError) }}
 	},
 	{{- else }}
 	Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -148,4 +148,35 @@ if err := eg.Wait(); err != nil {
 {{- end }}
 
 {{- end }}
+{{- end }}
+
+{{- define "evalDefSet" -}}
+
+{{- $depGraph := .DependencyGraph }}
+{{- if $depGraph }}
+// A tree view of message dependencies is shown below.
+/*
+{{ $depGraph }}*/
+{{- end }}
+{{- $defGroups := .VariableDefinitionGroups }}
+{{- $defGroupsLen := len $defGroups }}
+{{- if eq $defGroupsLen 1 }}
+{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $defGroups 0)) }}
+{{- else }}
+{{- if $defGroups }}
+eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+{{- end }}
+{{ range $defGroups }}
+grpcfed.GoWithRecover(eg, func() (any, error) {
+	{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
+	return nil, nil
+})
+{{ end }}
+{{- if $defGroups }}
+if err := eg.Wait(); err != nil {
+	return nil, err
+}
+{{- end }}
+{{- end }}
+
 {{- end }}

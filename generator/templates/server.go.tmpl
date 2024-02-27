@@ -332,32 +332,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "{{ .RequestProtoType }}", req)}
 	{{- end }}
-	{{- $depGraph := .DependencyGraph }}
-	{{- if $depGraph }}
-// A tree view of message dependencies is shown below.
-/*
-{{ $depGraph }}*/
-	{{- end }}
-	{{- $defGroups := .VariableDefinitionGroups }}
-	{{- $defGroupsLen := len $defGroups }}
-	{{- if eq $defGroupsLen 1 }}
-	{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $defGroups 0)) }}
-	{{- else }}
-	{{- if $defGroups }}
-	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
-	{{- end }}
-	{{ range $defGroups }}
-	grpcfed.GoWithRecover(eg, func() (any, error) {
-		{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
-		return nil, nil
-	})
-	{{ end }}
-	{{- if $defGroups }}
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-	{{- end }}
-	{{- end }}
+    {{- template "evalDefSet" .VariableDefinitionSet }}
 
 	{{- $customResolverArguments := .CustomResolverArguments }}
 	{{- if $customResolverArguments }}
@@ -419,26 +394,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	switch {
 	{{- range $oneofFields }}
 	case {{ .Condition }}:
-		{{- $oneofDefGroups := .VariableDefinitionGroups }}
-		{{- $oneofDefGroupsLen := len $oneofDefGroups }}
-		{{- if eq $oneofDefGroupsLen 1 }}
-		{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $oneofDefGroups 0)) }}
-		{{- else }}
-		{{- if $oneofDefGroups }}
-		eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
-		{{- end }}
-		{{ range $oneofDefGroups }}
-		grpcfed.GoWithRecover(eg, func() (any, error) {
-			{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
-			return nil, nil
-		})
-		{{ end }}
-		{{- if $oneofDefGroups }}
-		if err := eg.Wait(); err != nil {
-			return nil, err
-		}
-		{{- end }}
-		{{- end }}
+		{{- template "evalDefSet" .VariableDefinitionSet }}
 		{{- if .By }}
 		if err := grpcfed.SetCELValue(ctx, value, "{{ .By }}", func(v {{ .Type }}) {
 			ret.{{ $name }} = {{ .Value }}
@@ -452,26 +408,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- end }}
 	{{- if $defaultOneofField }}
 	default:
-		{{- $oneofDefGroups := $defaultOneofField.VariableDefinitionGroups }}
-		{{- $oneofDefGroupsLen := len $oneofDefGroups }}
-		{{- if eq $oneofDefGroupsLen 1 }}
-		{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $oneofDefGroups 0)) }}
-		{{- else }}
-		{{- if $oneofDefGroups }}
-		eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
-		{{- end }}
-		{{ range $oneofDefGroups }}
-		grpcfed.GoWithRecover(eg, func() (any, error) {
-			{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
-			return nil, nil
-		})
-		{{ end }}
-		{{- if $oneofDefGroups }}
-		if err := eg.Wait(); err != nil {
-			return nil, err
-		}
-		{{- end }}
-		{{- end }}
+		{{- template "evalDefSet" $defaultOneofField.VariableDefinitionSet }}
 		{{- if $defaultOneofField.By }}
 		if err := grpcfed.SetCELValue(ctx, value, "{{ $defaultOneofField.By }}", func(v {{ $defaultOneofField.Type }}) {
 			ret.{{ $name }} = {{ $defaultOneofField.Value }}

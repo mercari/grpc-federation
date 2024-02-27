@@ -1,11 +1,162 @@
 {{- define "errorHandler" }}
+{{- $ctx := .Ctx }}
 {{- if .Definition.HasErrorHandler }}
-if err := s.errorHandler({{ .Ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
-	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
+{{- if .Definition.GRPCErrors }}
+stat, handleErr := func() (*grpcfed.Status, error) {
+	var stat *grpcfed.Status
+	{{- range .Definition.GRPCErrors }}
+	{{- if .VariableDefinitionSet }}
+	{{- template "evalDefSet" .VariableDefinitionSet }}
+	{{- end }}
+	if err := grpcfed.If({{ $ctx }}, value, "{{ .If.Expr }}", func(value *localValueType) error {
+		var details       []grpcfed.ProtoMessage
+		{{- range .Details }}
+		{{- if .VariableDefinitionSet }}
+		if _, err := func() (any, error){
+			{{- template "evalDefSet" .VariableDefinitionSet }}
+			return nil, nil
+		}(); err != nil {
+			return err
+		}
+		{{- end }}
+		if err := grpcfed.If({{ $ctx }}, value, "{{ .If.Expr }}", func(value *localValueType) error {
+			{{- if .MessageSet }}
+			if _, err := func() (any, error){
+				{{- template "evalDefSet" .MessageSet }}
+				return nil, nil
+			}(); err != nil {
+				return err
+			}
+			{{- end }}
+			{{- range $idx, $def := .MessageSet.Definitions }}
+			if detail := grpcfed.CustomMessage({{ $ctx }}, value, "{{ $def.Name }}", {{ $idx }}); detail != nil {
+				details = append(details, detail)
+			}
+			{{- end }}
+			{{- range .PreconditionFailures }}
+			{{- template "preconditionFailure" . }}
+			{{- end }}
+			{{- range .BadRequests }}
+			{{- template "badRequest" . }}
+			{{- end }}
+			{{- range .LocalizedMessages }}
+			{{- template "localizedMessage" . }}
+			{{- end }}
+			return nil
+		}); err != nil {
+			return err
+		}
+		{{- end }}
+		status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, "{{ .Message }}")
+		statusWithDetails, err := status.WithDetails(details...)
+		if err != nil {
+			s.logger.ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
+			stat = status
+		} else {
+			stat = statusWithDetails
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if stat != nil {
+		return stat, nil
+	}
+	{{- end }}
+	return nil, nil
+}()
+if handleErr != nil {
+	s.logger.ErrorContext({{ $ctx }}, "failed to handle error", slog.String("error", handleErr.Error()))
+	// If it fails during error handling, return the original error.
+	if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
+		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
+		return nil, err
+	}
+} else if stat != nil {
+	if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, stat.Err()); err != nil {
+		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
+		return nil, err
+	}
+}
+{{- end }}
+if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
+	grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 	return nil, err
 }
 {{- else }}
-grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
+grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 return nil, err
 {{- end }}
+{{- end }}
+
+{{- define "detailMessages" }}
+{{- $defGroups := .VariableDefinitionGroups }}
+{{- $defGroupsLen := len $defGroups }}
+{{- if gt $defGroupsLen 0 }}
+func(){
+	_, err := func() (any, error) {
+		{{- if eq $defGroupsLen 1 }}
+		{{- template "evalDefGroup" (map "Level" 1 "Definition" (index $defGroups 0)) }}
+		{{- else }}
+		{{- if . }}
+		eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+		{{- end }}
+		{{- range $defGroups }}
+		grpcfed.GoWithRecover(eg, func() (any, error) {
+		{{- template "evalDefGroup" (map "Level" 2 "Definition" .) }}
+			return nil, nil
+		})
+		{{- end }}
+		{{- if $defGroups }}
+		if err := eg.Wait(); err != nil {
+			return nil, err
+		}
+		{{- end }}
+		{{- end }}
+		return nil, nil
+	}()
+	if err != nil {
+		s.logger.ErrorContext(ctx, "failed resolving messages", slog.String("error", err.Error()))
+		return
+	}
+	{{- range $i, $message := .Messages.Defs }}
+	if detail := grpcfed.CustomMessage(ctx, value, "{{ $message.Name }}", {{ $i }}); detail != nil {
+		details = append(details, detail)
+	}
+	{{- end }}
+}()
+{{- end }}
+{{- end }}
+
+{{- define "preconditionFailure" }}
+if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFailureViolation{
+	{{- range .Violations }}
+	{
+		Type:    "{{ .Type.Expr }}",
+		Subject: "{{ .Subject.Expr }}",
+		Desc:    "{{ .Description.Expr }}",
+	},
+	{{- end }}
+}); detail != nil {
+	details = append(details, detail)
+}
+{{- end }}
+
+{{- define "badRequest" }}
+if detail := grpcfed.BadRequest(ctx, value, []*grpcfed.BadRequestFieldViolation{
+	{{- range .FieldViolations }}
+	{
+		Field: "{{ .Field.Expr }}",
+		Desc:  "{{ .Description.Expr }}",
+	},
+	{{- end }}
+}); detail != nil {
+	details = append(details, detail)
+}
+{{- end }}
+
+{{- define "localizedMessage" }}
+if detail := grpcfed.LocalizedMessage(ctx, value, "{{ .Locale }}", "{{ .Message.Expr }}"); detail != nil {
+	details = append(details, detail)
+}
 {{- end }}

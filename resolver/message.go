@@ -95,11 +95,15 @@ func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 		if def.Expr == nil {
 			continue
 		}
-		if def.Expr.Validation == nil || def.Expr.Validation.Error == nil {
-			continue
-		}
-		for _, detail := range def.Expr.Validation.Error.Details {
-			ret = append(ret, detail.Messages.DefinitionGroups()...)
+		switch {
+		case def.Expr.Call != nil:
+			for _, err := range def.Expr.Call.Errors {
+				ret = append(ret, err.DefinitionGroups()...)
+			}
+		case def.Expr.Validation != nil:
+			if def.Expr.Validation.Error != nil {
+				ret = append(ret, def.Expr.Validation.Error.DefinitionGroups()...)
+			}
 		}
 	}
 	for _, field := range m.Fields {
