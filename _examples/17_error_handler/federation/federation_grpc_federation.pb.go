@@ -63,8 +63,8 @@ type FederationServiceConfig struct {
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
 type FederationServiceClientFactory interface {
-	// Org_Post_PostServiceClient create a gRPC Client to be used to call methods in org.post.PostService.
-	Org_Post_PostServiceClient(FederationServiceClientConfig) (post.PostServiceClient, error)
+	// Post_PostServiceClient create a gRPC Client to be used to call methods in post.PostService.
+	Post_PostServiceClient(FederationServiceClientConfig) (post.PostServiceClient, error)
 }
 
 // FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
@@ -80,7 +80,7 @@ type FederationServiceClientConfig struct {
 // FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
 // This is provided as an argument when implementing the custom resolver.
 type FederationServiceDependentClientSet struct {
-	Org_Post_PostServiceClient post.PostServiceClient
+	Post_PostServiceClient post.PostServiceClient
 }
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
@@ -101,7 +101,7 @@ type FederationServiceCELPluginConfig struct {
 type FederationServiceUnimplementedResolver struct{}
 
 const (
-	FederationService_DependentMethod_Org_Post_PostService_GetPost = "/org.post.PostService/GetPost"
+	FederationService_DependentMethod_Post_PostService_GetPost = "/post.PostService/GetPost"
 )
 
 // FederationService represents Federation Service.
@@ -120,8 +120,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if cfg.Client == nil {
 		return nil, grpcfed.ErrClientConfig
 	}
-	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
-		Service: "org.post.PostService",
+	Post_PostServiceClient, err := cfg.Client.Post_PostServiceClient(FederationServiceClientConfig{
+		Service: "post.PostService",
 		Name:    "",
 	})
 	if err != nil {
@@ -161,7 +161,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		env:          env,
 		tracer:       otel.Tracer("org.federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
-			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
+			Post_PostServiceClient: Post_PostServiceClient,
 		},
 	}, nil
 }
@@ -329,14 +329,14 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	   def {
 	     name: "res"
 	     call {
-	       method: "org.post.PostService/GetPost"
+	       method: "post.PostService/GetPost"
 	       request { field: "id", by: "$.id" }
 	     }
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
 		Name:   "res",
-		Type:   grpcfed.CELObjectType("org.post.GetPostResponse"),
+		Type:   grpcfed.CELObjectType("post.GetPostResponse"),
 		Setter: func(value *localValueType, v *post.GetPostResponse) { value.vars.res = v },
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &post.GetPostRequest{}
@@ -346,7 +346,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			}); err != nil {
 				return nil, err
 			}
-			return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
+			return s.client.Post_PostServiceClient.GetPost(ctx, args)
 		},
 	}); err != nil {
 		stat, handleErr := func() (*grpcfed.Status, error) {
@@ -491,17 +491,17 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		if handleErr != nil {
 			s.logger.ErrorContext(ctx, "failed to handle error", slog.String("error", handleErr.Error()))
 			// If it fails during error handling, return the original error.
-			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
+			if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 		} else if stat != nil {
-			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, stat.Err()); err != nil {
+			if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, stat.Err()); err != nil {
 				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
 		} else {
-			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
+			if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
@@ -518,7 +518,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.Post, *localValueType]{
 		Name:   "post",
-		Type:   grpcfed.CELObjectType("org.post.Post"),
+		Type:   grpcfed.CELObjectType("post.Post"),
 		Setter: func(value *localValueType, v *post.Post) { value.vars.post = v },
 		By:     "res.post",
 	}); err != nil {

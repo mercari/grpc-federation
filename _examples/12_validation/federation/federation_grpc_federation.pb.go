@@ -211,15 +211,7 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 		Validation: func(ctx context.Context, value *localValueType) error {
 			var stat *grpcfed.Status
 			if err := grpcfed.If(ctx, value, "$.arg == 'wrong'", func(value *localValueType) error {
-				var details []grpcfed.ProtoMessage
-				status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "")
-				statusWithDetails, err := status.WithDetails(details...)
-				if err != nil {
-					s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-					stat = status
-				} else {
-					stat = statusWithDetails
-				}
+				stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "")
 				return nil
 			}); err != nil {
 				return err
@@ -347,15 +339,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var stat *grpcfed.Status
 				if err := grpcfed.If(ctx1, value, "post.id != 'some-id'", func(value *localValueType) error {
-					var details []grpcfed.ProtoMessage
-					status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation1 failed!")
-					statusWithDetails, err := status.WithDetails(details...)
-					if err != nil {
-						s.logger.ErrorContext(ctx1, "failed setting error details", slog.String("error", err.Error()))
-						stat = status
-					} else {
-						stat = statusWithDetails
-					}
+					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation1 failed!")
 					return nil
 				}); err != nil {
 					return err
@@ -415,15 +399,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var stat *grpcfed.Status
 				if err := grpcfed.If(ctx1, value, "post.id != 'some-id'", func(value *localValueType) error {
-					var details []grpcfed.ProtoMessage
-					status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation2 failed!")
-					statusWithDetails, err := status.WithDetails(details...)
-					if err != nil {
-						s.logger.ErrorContext(ctx1, "failed setting error details", slog.String("error", err.Error()))
-						stat = status
-					} else {
-						stat = statusWithDetails
-					}
+					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation2 failed!")
 					return nil
 				}); err != nil {
 					return err

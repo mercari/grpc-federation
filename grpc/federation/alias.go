@@ -49,7 +49,7 @@ var (
 )
 
 const (
-	OKCode                 Code = codes.Unimplemented
+	OKCode                 Code = codes.OK
 	CanceledCode           Code = codes.Canceled
 	UnknownCode            Code = codes.Unknown
 	InvalidArgumentCode    Code = codes.InvalidArgument

@@ -475,6 +475,7 @@ func newTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 			}
 		}
 		for _, field := range arg.Fields {
+			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
 			fieldName := util.ToPublicGoVariable(field.Name)
 			if _, exists := fieldNameMap[fieldName]; exists {
 				continue
@@ -484,7 +485,6 @@ func newTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 				Type: file.toTypeText(field.Type),
 			})
 			fieldNameMap[fieldName] = struct{}{}
-			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
 		}
 		sort.Slice(typ.Fields, func(i, j int) bool {
 			return typ.Fields[i].Name < typ.Fields[j].Name

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package post;
+
+option go_package = "example/post;post";
+
+service PostService {
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  Post post = 1;
+}
+
+message Post {
+  string id = 1;
+  string title = 2;
+  string content = 3;
+  string user_id = 4;
+}
