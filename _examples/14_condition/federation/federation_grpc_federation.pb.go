@@ -489,9 +489,14 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		Type:   grpcfed.CELBoolType,
 		Setter: func(value *localValueType, v bool) { value.vars._def5 = v },
 		Validation: func(ctx context.Context, value *localValueType) error {
-			return grpcfed.If(ctx, value, "users[0].id == ''", func(value *localValueType) error {
-				return grpcfed.GRPCErrorf(grpcfed.InvalidArgumentCode, "")
-			})
+			var stat *grpcfed.Status
+			if err := grpcfed.If(ctx, value, "users[0].id == ''", func(value *localValueType) error {
+				stat = grpcfed.NewGRPCStatus(grpcfed.InvalidArgumentCode, "")
+				return nil
+			}); err != nil {
+				return err
+			}
+			return stat.Err()
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)

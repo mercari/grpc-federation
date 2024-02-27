@@ -3,14 +3,14 @@ syntax = "proto3";
 package org.federation;
 
 import "grpc/federation/federation.proto";
-import "post.proto";
+import "post/post.proto";
 
 option go_package = "example/federation;federation";
 
 service FederationService {
   option (grpc.federation.service) = {
     dependencies: [
-      { service: "org.post.PostService" }
+      { service: "post.PostService" }
     ]
   };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
@@ -39,7 +39,7 @@ message Post {
       {
         name: "res"
         call {
-          method: "org.post.PostService/GetPost"
+          method: "post.PostService/GetPost"
           request { field: "id" by: "$.id" }
           error {
             def { name: "id" by: "$.id" }

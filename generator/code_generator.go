@@ -14,7 +14,6 @@ import (
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"google.golang.org/genproto/googleapis/rpc/code"
 
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
@@ -452,6 +451,7 @@ func newTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 		}
 
 		genMsg := &Message{Message: msg, file: file}
+		fieldNameMap := make(map[string]struct{})
 		for _, group := range genMsg.VariableDefinitionGroups() {
 			for _, def := range group.VariableDefinitions() {
 				if def == nil {
@@ -460,52 +460,31 @@ func newTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 				if !def.Used {
 					continue
 				}
-				switch {
-				case def.Expr.By != nil:
-					fieldName := util.ToPublicGoVariable(def.Name)
-					if typ.HasField(fieldName) {
-						continue
-					}
-					typ.Fields = append(typ.Fields, &Field{
-						Name: fieldName,
-						Type: file.toTypeText(def.Expr.Type),
-					})
-				case def.Expr.Call != nil:
-					fieldName := util.ToPublicGoVariable(def.Name)
-					if typ.HasField(fieldName) {
-						continue
-					}
-					typ.Fields = append(typ.Fields, &Field{
-						Name: fieldName,
-						Type: file.toTypeText(def.Expr.Type),
-					})
-				case def.Expr.Message != nil:
-					fieldName := util.ToPublicGoVariable(def.Name)
-					if typ.HasField(fieldName) {
-						continue
-					}
-					typ.Fields = append(typ.Fields, &Field{
-						Name: fieldName,
-						Type: file.toTypeText(def.Expr.Type),
-					})
-				case def.Expr.Map != nil:
-					fieldName := util.ToPublicGoVariable(def.Name)
-					if typ.HasField(fieldName) {
-						continue
-					}
-					typ.Fields = append(typ.Fields, &Field{
-						Name: fieldName,
-						Type: file.toTypeText(def.Expr.Type),
-					})
+				fieldName := util.ToPublicGoVariable(def.Name)
+				if typ.HasField(fieldName) {
+					continue
 				}
+				if _, exists := fieldNameMap[fieldName]; exists {
+					continue
+				}
+				typ.Fields = append(typ.Fields, &Field{
+					Name: fieldName,
+					Type: file.toTypeText(def.Expr.Type),
+				})
+				fieldNameMap[fieldName] = struct{}{}
 			}
 		}
 		for _, field := range arg.Fields {
+			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
+			fieldName := util.ToPublicGoVariable(field.Name)
+			if _, exists := fieldNameMap[fieldName]; exists {
+				continue
+			}
 			typ.Fields = append(typ.Fields, &Field{
-				Name: util.ToPublicGoVariable(field.Name),
+				Name: fieldName,
 				Type: file.toTypeText(field.Type),
 			})
-			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
+			fieldNameMap[fieldName] = struct{}{}
 		}
 		sort.Slice(typ.Fields, func(i, j int) bool {
 			return typ.Fields[i].Name < typ.Fields[j].Name
@@ -1411,15 +1390,49 @@ func (m *Message) LogValueReturnType() string {
 	return fullMessageName(m.Message)
 }
 
-func (m *Message) VariableDefinitionGroups() []*VariableDefinitionGroup {
+func (m *Message) VariableDefinitionSet() *VariableDefinitionSet {
 	if m.Rule == nil {
 		return nil
 	}
+	if m.Rule.DefSet == nil {
+		return nil
+	}
+	if len(m.Rule.DefSet.Defs) == 0 {
+		return nil
+	}
+	return &VariableDefinitionSet{
+		VariableDefinitionSet: m.Rule.DefSet,
+		msg:                   m,
+	}
+}
+
+type VariableDefinitionSet struct {
+	msg *Message
+	*resolver.VariableDefinitionSet
+}
+
+func (set *VariableDefinitionSet) DependencyGraph() string {
+	if set == nil {
+		return ""
+	}
+	tree := resolver.DependencyGraphTreeFormat(set.DefinitionGroups())
+	if !strings.HasSuffix(tree, "\n") {
+		// If there is only one node, no newline code is added at the end.
+		// In this case, do not display graphs.
+		return ""
+	}
+	return tree
+}
+
+func (set *VariableDefinitionSet) VariableDefinitionGroups() []*VariableDefinitionGroup {
+	if set == nil {
+		return nil
+	}
 	var groups []*VariableDefinitionGroup
-	for _, group := range m.Rule.DefSet.DefinitionGroups() {
+	for _, group := range set.DefinitionGroups() {
 		groups = append(groups, &VariableDefinitionGroup{
-			Service:                 m.Service,
-			Message:                 m,
+			Service:                 set.msg.Service,
+			Message:                 set.msg,
 			VariableDefinitionGroup: group,
 		})
 	}
@@ -1464,16 +1477,6 @@ func (m *Message) DeclVariables() []*DeclVariable {
 	return values
 }
 
-func (m *Message) DependencyGraph() string {
-	tree := m.DependencyGraphTreeFormat()
-	if !strings.HasSuffix(tree, "\n") {
-		// If there is only one node, no newline code is added at the end.
-		// In this case, do not display graphs.
-		return ""
-	}
-	return tree
-}
-
 type ReturnField struct {
 	Name                  string
 	Value                 string
@@ -1514,19 +1517,20 @@ type OneofField struct {
 	FieldOneofRule *resolver.FieldOneofRule
 }
 
-func (oneof *OneofField) VariableDefinitionGroups() []*VariableDefinitionGroup {
+func (oneof *OneofField) VariableDefinitionSet() *VariableDefinitionSet {
 	if oneof.FieldOneofRule == nil {
 		return nil
 	}
-	var groups []*VariableDefinitionGroup
-	for _, group := range oneof.FieldOneofRule.DefSet.DefinitionGroups() {
-		groups = append(groups, &VariableDefinitionGroup{
-			Service:                 oneof.Message.Service,
-			Message:                 oneof.Message,
-			VariableDefinitionGroup: group,
-		})
+	if oneof.FieldOneofRule.DefSet == nil {
+		return nil
 	}
-	return groups
+	if len(oneof.FieldOneofRule.DefSet.Defs) == 0 {
+		return nil
+	}
+	return &VariableDefinitionSet{
+		VariableDefinitionSet: oneof.FieldOneofRule.DefSet,
+		msg:                   oneof.Message,
+	}
 }
 
 type CastField struct {
@@ -2175,6 +2179,104 @@ func (d *VariableDefinition) HasErrorHandler() bool {
 	return d.VariableDefinition.Expr.Call != nil
 }
 
+func (d *VariableDefinition) GRPCErrors() []*GRPCError {
+	callExpr := d.VariableDefinition.Expr.Call
+	if callExpr == nil {
+		return nil
+	}
+	ret := make([]*GRPCError, 0, len(callExpr.Errors))
+	for _, grpcErr := range callExpr.Errors {
+		ret = append(ret, &GRPCError{
+			GRPCError: grpcErr,
+			msg:       d.Message,
+		})
+	}
+	return ret
+}
+
+type GRPCError struct {
+	*resolver.GRPCError
+	msg *Message
+}
+
+// GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
+// e.g. FAILED_PRECONDITION -> FailedPrecondition.
+func (e *GRPCError) GoGRPCStatusCode() string {
+	strCode := e.Code.String()
+	if strCode == "OK" {
+		// The only exception that the second character is in capital case as well
+		return "OKCode"
+	}
+
+	parts := strings.Split(strCode, "_")
+	titles := make([]string, 0, len(parts))
+	for _, part := range parts {
+		titles = append(titles, cases.Title(language.Und).String(part))
+	}
+	return strings.Join(titles, "") + "Code"
+}
+
+func (e *GRPCError) VariableDefinitionSet() *VariableDefinitionSet {
+	if e.DefSet == nil {
+		return nil
+	}
+	if len(e.DefSet.Defs) == 0 {
+		return nil
+	}
+	return &VariableDefinitionSet{
+		VariableDefinitionSet: e.DefSet,
+		msg:                   e.msg,
+	}
+}
+
+func (e *GRPCError) Details() []*GRPCErrorDetail {
+	ret := make([]*GRPCErrorDetail, 0, len(e.GRPCError.Details))
+	for _, detail := range e.GRPCError.Details {
+		ret = append(ret, &GRPCErrorDetail{
+			GRPCErrorDetail: detail,
+			msg:             e.msg,
+		})
+	}
+	return ret
+}
+
+type GRPCErrorDetail struct {
+	*resolver.GRPCErrorDetail
+	msg *Message
+}
+
+func (detail *GRPCErrorDetail) VariableDefinitionSet() *VariableDefinitionSet {
+	if detail == nil {
+		return nil
+	}
+	if detail.DefSet == nil {
+		return nil
+	}
+	if len(detail.DefSet.Defs) == 0 {
+		return nil
+	}
+	return &VariableDefinitionSet{
+		VariableDefinitionSet: detail.DefSet,
+		msg:                   detail.msg,
+	}
+}
+
+func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
+	if detail == nil {
+		return nil
+	}
+	if detail.Messages == nil {
+		return nil
+	}
+	if len(detail.Messages.Defs) == 0 {
+		return nil
+	}
+	return &VariableDefinitionSet{
+		VariableDefinitionSet: detail.Messages,
+		msg:                   detail.msg,
+	}
+}
+
 func (d *VariableDefinition) ServiceName() string {
 	return d.Service.Name
 }
@@ -2384,141 +2486,20 @@ func toCELNativeType(t *resolver.Type) string {
 	return ""
 }
 
-type ValidationRule struct {
-	Name  string
-	Error *ValidationError
-}
-
-type ValidationError struct {
-	Code    code.Code
-	If      string
-	Message string
-	Details []*ValidationErrorDetail
-}
-
-// HasIf checks if it has rule or not.
-func (v *ValidationError) HasIf() bool {
-	return v.If != ""
-}
-
-// GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
-// e.g. FAILED_PRECONDITION -> FailedPrecondition.
-func (v *ValidationError) GoGRPCStatusCode() string {
-	strCode := v.Code.String()
-	if strCode == "OK" {
-		// The only exception that the second character is in capital case as well
-		return "OKCode"
+func (d *VariableDefinition) ValidationError() *GRPCError {
+	if d.Expr == nil {
+		return nil
 	}
-
-	parts := strings.Split(strCode, "_")
-	titles := make([]string, 0, len(parts))
-	for _, part := range parts {
-		titles = append(titles, cases.Title(language.Und).String(part))
+	if d.Expr.Validation == nil {
+		return nil
 	}
-	return strings.Join(titles, "") + "Code"
-}
-
-type ValidationErrorDetail struct {
-	Service              *resolver.Service
-	Message              *Message
-	If                   string
-	Messages             *resolver.VariableDefinitionSet
-	PreconditionFailures []*PreconditionFailure
-	BadRequests          []*BadRequest
-	LocalizedMessages    []*LocalizedMessage
-}
-
-func (d *ValidationErrorDetail) VariableDefinitionGroups() []*VariableDefinitionGroup {
-	var groups []*VariableDefinitionGroup
-	for _, group := range d.Messages.DefinitionGroups() {
-		groups = append(groups, &VariableDefinitionGroup{
-			Service:                 d.Service,
-			Message:                 d.Message,
-			VariableDefinitionGroup: group,
-		})
+	if d.Expr.Validation.Error == nil {
+		return nil
 	}
-	return groups
-}
-
-type PreconditionFailure struct {
-	Violations []*PreconditionFailureViolation
-}
-
-type PreconditionFailureViolation struct {
-	Type        string
-	Subject     string
-	Description string
-}
-
-type BadRequest struct {
-	FieldViolations []*BadRequestFieldViolation
-}
-
-type BadRequestFieldViolation struct {
-	Field       string
-	Description string
-}
-
-type LocalizedMessage struct {
-	Locale  string
-	Message string
-}
-
-func (d *VariableDefinition) MessageValidation() *ValidationRule {
-	validationName := d.Name
-	validationError := d.Expr.Validation.Error
-	vr := &ValidationRule{
-		Name: validationName,
-		Error: &ValidationError{
-			Code:    validationError.Code,
-			Message: validationError.Message,
-			Details: make([]*ValidationErrorDetail, 0, len(validationError.Details)),
-		},
+	return &GRPCError{
+		GRPCError: d.Expr.Validation.Error,
+		msg:       d.Message,
 	}
-	if cond := validationError.If; cond != nil {
-		vr.Error.If = cond.Expr
-	}
-	for _, detail := range validationError.Details {
-		ved := &ValidationErrorDetail{
-			Service:  d.Service,
-			Message:  d.Message,
-			If:       detail.If.Expr,
-			Messages: detail.Messages,
-		}
-		for _, failure := range detail.PreconditionFailures {
-			vs := make([]*PreconditionFailureViolation, 0, len(failure.Violations))
-			for _, v := range failure.Violations {
-				vs = append(vs, &PreconditionFailureViolation{
-					Type:        v.Type.Expr,
-					Subject:     v.Subject.Expr,
-					Description: v.Description.Expr,
-				})
-			}
-			ved.PreconditionFailures = append(ved.PreconditionFailures, &PreconditionFailure{
-				Violations: vs,
-			})
-		}
-		for _, req := range detail.BadRequests {
-			vs := make([]*BadRequestFieldViolation, 0, len(req.FieldViolations))
-			for _, v := range req.FieldViolations {
-				vs = append(vs, &BadRequestFieldViolation{
-					Field:       v.Field.Expr,
-					Description: v.Description.Expr,
-				})
-			}
-			ved.BadRequests = append(ved.BadRequests, &BadRequest{
-				FieldViolations: vs,
-			})
-		}
-		for _, msg := range detail.LocalizedMessages {
-			ved.LocalizedMessages = append(ved.LocalizedMessages, &LocalizedMessage{
-				Locale:  msg.Locale,
-				Message: msg.Message.Expr,
-			})
-		}
-		vr.Error.Details = append(vr.Error.Details, ved)
-	}
-	return vr
 }
 
 type Argument struct {

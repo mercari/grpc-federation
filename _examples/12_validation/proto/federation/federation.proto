@@ -52,8 +52,8 @@ message GetPostResponse {
           error: {
             code: FAILED_PRECONDITION,
             message: "validation3 failed!",
+            if: "$.id != 'correct-id'"
             details: {
-              if: "$.id != 'correct-id'",
               message: [
                 {
                   name: "CustomMessage",

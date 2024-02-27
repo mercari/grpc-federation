@@ -26,6 +26,7 @@ type (
 	CELFieldType   = types.FieldType
 	Code           = codes.Code
 	RWMutex        = sync.RWMutex
+	Status         = status.Status
 )
 
 var (
@@ -48,7 +49,7 @@ var (
 )
 
 const (
-	OKCode                 Code = codes.Unimplemented
+	OKCode                 Code = codes.OK
 	CanceledCode           Code = codes.Canceled
 	UnknownCode            Code = codes.Unknown
 	InvalidArgumentCode    Code = codes.InvalidArgument

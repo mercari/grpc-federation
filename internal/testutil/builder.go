@@ -926,6 +926,11 @@ func (b *GRPCErrorBuilder) SetMessage(v string) *GRPCErrorBuilder {
 	return b
 }
 
+func (b *GRPCErrorBuilder) SetIgnore(v bool) *GRPCErrorBuilder {
+	b.err.Ignore = v
+	return b
+}
+
 func (b *GRPCErrorBuilder) AddDetail(v *resolver.GRPCErrorDetail) *GRPCErrorBuilder {
 	b.err.Details = append(b.err.Details, v)
 	return b
