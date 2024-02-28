@@ -2,7 +2,6 @@ package validator_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -517,7 +516,6 @@ testdata/invalid_validation_localized_message.proto:54:26: message must always r
 			}
 
 			if diff := cmp.Diff("\n"+got, test.expected); diff != "" {
-				fmt.Println(got)
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
 		})
