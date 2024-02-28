@@ -173,6 +173,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		},
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("federation.Item.ItemType", Item_ItemType_value, Item_ItemType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("federation.Item.Location.LocationType", Item_Location_LocationType_value, Item_Location_LocationType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
@@ -429,6 +432,36 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "value1"
 	if err := grpcfed.SetCELValue(ctx, value, "value1", func(v string) { ret.Value1 = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "federation.Item.ItemType.name(federation.Item.ItemType.ITEM_TYPE_1)"
+	if err := grpcfed.SetCELValue(ctx, value, "federation.Item.ItemType.name(federation.Item.ItemType.ITEM_TYPE_1)", func(v string) { ret.ItemTypeName = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "federation.Item.Location.LocationType.name(federation.Item.Location.LocationType.LOCATION_TYPE_1)"
+	if err := grpcfed.SetCELValue(ctx, value, "federation.Item.Location.LocationType.name(federation.Item.Location.LocationType.LOCATION_TYPE_1)", func(v string) { ret.LocationTypeName = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)"
+	if err := grpcfed.SetCELValue(ctx, value, "user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)", func(v string) { ret.UserItemTypeName = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "federation.Item.ItemType.value('ITEM_TYPE_1')"
+	if err := grpcfed.SetCELValue(ctx, value, "federation.Item.ItemType.value('ITEM_TYPE_1')", func(v int32) { ret.ItemTypeValue = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')"
+	if err := grpcfed.SetCELValue(ctx, value, "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')", func(v int32) { ret.LocationTypeValue = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_2')"
+	if err := grpcfed.SetCELValue(ctx, value, "user.Item.ItemType.value('ITEM_TYPE_2')", func(v int32) { ret.UserItemTypeValue = v }); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
@@ -821,6 +854,12 @@ func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostRespon
 		slog.String("uuid", v.GetUuid()),
 		slog.String("loc", v.GetLoc()),
 		slog.String("value1", v.GetValue1()),
+		slog.String("item_type_name", v.GetItemTypeName()),
+		slog.String("location_type_name", v.GetLocationTypeName()),
+		slog.String("user_item_type_name", v.GetUserItemTypeName()),
+		slog.Int64("item_type_value", int64(v.GetItemTypeValue())),
+		slog.Int64("location_type_value", int64(v.GetLocationTypeValue())),
+		slog.Int64("user_item_type_value", int64(v.GetUserItemTypeValue())),
 	)
 }
 
@@ -887,6 +926,16 @@ func (s *FederationService) logvalue_Federation_Item_Location_AddrB(v *Item_Loca
 	return slog.GroupValue(
 		slog.Int64("bar", v.GetBar()),
 	)
+}
+
+func (s *FederationService) logvalue_Federation_Item_Location_LocationType(v Item_Location_LocationType) slog.Value {
+	switch v {
+	case Item_Location_LOCATION_TYPE_0:
+		return slog.StringValue("LOCATION_TYPE_0")
+	case Item_Location_LOCATION_TYPE_1:
+		return slog.StringValue("LOCATION_TYPE_1")
+	}
+	return slog.StringValue("")
 }
 
 func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {

@@ -202,6 +202,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		},
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("content.ContentType", content.ContentType_value, content.ContentType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.ContentType", ContentType_value, ContentType_name)...)
 	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err

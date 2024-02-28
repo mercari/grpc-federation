@@ -44,6 +44,12 @@ message GetPostResponse {
   string uuid = 3 [(grpc.federation.field).by = "uuid.string()"];
   string loc = 4 [(grpc.federation.field).by = "loc.string()"];
   string value1 = 5 [(grpc.federation.field).by = "value1"];
+  string item_type_name = 6 [(grpc.federation.field).by = "federation.Item.ItemType.name(federation.Item.ItemType.ITEM_TYPE_1)"];
+  string location_type_name = 7 [(grpc.federation.field).by = "federation.Item.Location.LocationType.name(federation.Item.Location.LocationType.LOCATION_TYPE_1)"];
+  string user_item_type_name = 8 [(grpc.federation.field).by = "user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)"];
+  int32 item_type_value = 9 [(grpc.federation.field).by = "federation.Item.ItemType.value('ITEM_TYPE_1')"];
+  int32 location_type_value = 10 [(grpc.federation.field).by = "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')"];
+  int32 user_item_type_value = 11 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_2')"];
 }
 
 message Post {
@@ -147,6 +153,11 @@ message Item {
     message AddrB {
       option (grpc.federation.message).alias = "user.Item.Location.AddrB";
       int64 bar = 1;
+    }
+
+    enum LocationType {
+      LOCATION_TYPE_0 = 0;
+      LOCATION_TYPE_1 = 1;
     }
   }
   string name = 1;

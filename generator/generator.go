@@ -600,7 +600,7 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 
 	var resp pluginpb.CodeGeneratorResponse
 	for _, file := range result.Files {
-		out, err := NewCodeGenerator().Generate(file)
+		out, err := NewCodeGenerator().Generate(file, result.Enums)
 		if err != nil {
 			return nil, err
 		}
@@ -661,7 +661,7 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 
 	var resp pluginpb.CodeGeneratorResponse
 	for _, file := range result.Files {
-		out, err := NewCodeGenerator().Generate(file)
+		out, err := NewCodeGenerator().Generate(file, result.Enums)
 		if err != nil {
 			return nil, err
 		}

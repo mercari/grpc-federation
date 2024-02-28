@@ -211,6 +211,10 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		"grpc.federation.private.ZArgument": {},
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.Item.ItemType", Item_ItemType_value, Item_ItemType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.UserType", UserType_value, UserType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.user.UserType", user.UserType_value, user.UserType_name)...)
 	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
@@ -352,6 +356,16 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	ret.Const = "foo" // (grpc.federation.field).string = "foo"
 	// (grpc.federation.field).by = "uuid.string()"
 	if err := grpcfed.SetCELValue(ctx, value, "uuid.string()", func(v string) { ret.Uuid = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)"
+	if err := grpcfed.SetCELValue(ctx, value, "org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)", func(v string) { ret.EnumName = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "org.federation.Item.ItemType.value('ITEM_TYPE_1')"
+	if err := grpcfed.SetCELValue(ctx, value, "org.federation.Item.ItemType.value('ITEM_TYPE_1')", func(v int32) { ret.EnumValue = v }); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
@@ -830,6 +844,8 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
 		slog.String("const", v.GetConst()),
 		slog.String("uuid", v.GetUuid()),
+		slog.String("enum_name", v.GetEnumName()),
+		slog.Int64("enum_value", int64(v.GetEnumValue())),
 	)
 }
 

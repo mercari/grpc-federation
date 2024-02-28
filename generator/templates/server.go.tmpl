@@ -38,6 +38,8 @@ type {{ .Name }}[T any] struct {
 
 {{- end }}
 
+{{- $enums := .Enums }}
+
 {{- range .Services }}
 
 {{- $serviceName := .ServiceName }}
@@ -216,6 +218,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		{{- end }}
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	{{- range $enums }}
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("{{ .ProtoName }}", {{ .GoName }}_value, {{ .GoName }}_name)...)
+	{{- end }}
 	{{- range $celPlugins }}
 	var celPlugins []*grpcfedcel.CELPlugin
 	{
