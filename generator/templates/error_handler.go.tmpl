@@ -3,6 +3,7 @@
 {{- if .Definition.HasErrorHandler }}
 {{- $grpcErrors := .Definition.GRPCErrors }}
 {{- if $grpcErrors }}
+grpcfed.SetGRPCError({{ $ctx }}, value, err)
 stat, handleErr := func() (*grpcfed.Status, error) {
 	var stat *grpcfed.Status
 	{{- range $grpcErrors }}
@@ -14,6 +15,11 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 		stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
 		return nil
 		{{- else }}
+
+		errorMessage, err := grpcfed.EvalCEL(ctx, value, "{{ .Message }}", reflect.TypeOf(""))
+		if err != nil {
+			return err
+		}
 
 		{{- $details := .Details }}
 		{{- if $details }}
@@ -58,7 +64,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 		{{- end }}
 
 		{{- if $details }}
-		status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, "{{ .Message }}")
+		status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage.(string))
 		statusWithDetails, err := status.WithDetails(details...)
 		if err != nil {
 			s.logger.ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
@@ -67,7 +73,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			stat = statusWithDetails
 		}
 		{{- else }}
-		stat = grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, "{{ .Message }}")
+		stat = grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage.(string))
 		{{- end }}
 		return nil
 		{{- end }}

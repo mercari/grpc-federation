@@ -5,6 +5,10 @@ var stat *grpcfed.Status
 {{- template "evalDefSet" .Error.VariableDefinitionSet }}
 {{- end }}
 if err := grpcfed.If({{ $ctx }}, value, "{{ .Error.If.Expr }}", func(value *localValueType) error {
+	errorMessage, err := grpcfed.EvalCEL(ctx, value, "{{ .Error.Message }}", reflect.TypeOf(""))
+	if err != nil {
+		return err
+	}
 	{{- $details := .Error.Details }}
 	{{- if $details }}
 	var details       []grpcfed.ProtoMessage
@@ -47,7 +51,7 @@ if err := grpcfed.If({{ $ctx }}, value, "{{ .Error.If.Expr }}", func(value *loca
 	{{- end }}
 	{{- end }}
 	{{- if $details }}
-	status := grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+	status := grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, errorMessage.(string))
 	statusWithDetails, err := status.WithDetails(details...)
 	if err != nil {
 		s.logger.ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
@@ -56,7 +60,7 @@ if err := grpcfed.If({{ $ctx }}, value, "{{ .Error.If.Expr }}", func(value *loca
 		stat = statusWithDetails
 	}
 	{{- else }}
-	stat = grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, "{{ .Error.Message }}")
+	stat = grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, errorMessage.(string))
 	{{- end }}
 	return nil
 }); err != nil {

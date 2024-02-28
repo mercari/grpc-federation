@@ -340,6 +340,7 @@ message MyMessage {
 | [`request`](#grpcfederationmessagedefcallrequest) | repeated MethodRequest | optional |
 | [`timeout`](#grpcfederationmessagedefcalltimeout) | string | optional |
 | [`retry`](#grpcfederationmessagedefcallretry) | RetryPolicy | optional |
+| [`error`](#grpcfederationmessagedefcallerror) | repeated GRPCError | optional |
 
 ## (grpc.federation.message).def.call.method
 
@@ -649,6 +650,78 @@ message MyMessage {
   };
 }
 ```
+
+## (grpc.federation.message).def.call.error
+
+### Example
+
+```proto
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "foopkg.FooService/GetFoo"
+
+        // If an error is returned when the gRPC method is called, the error block is evaluated.
+        // If there are multiple error blocks, they are processed in order from the top.
+        // The first error matching the condition is returned.
+        // If none of the conditions match, the original error is returned.
+        error {
+          // The variables can be defined for use in error blocks
+          def { name: "a" by: "1" }
+
+          if: "a == 1" // if true, returns the error.
+          code: FAILED_PRECONDITION // gRPC error code. this field is required.
+          message: "'this is error message'" // gRPC error message. this field is required.
+
+          // If you want to add the more information to the gRPC error, you can specify it in the details block.
+          details {
+            // The variables can be defined for use in details block.
+            def { name: "b" by: "2" }
+
+            if: "b == 2" // if true, add to the error details.
+
+            // You can specify the value defined in `google/rpc/error_details.proto`.
+            // FYI: https://github.com/googleapis/googleapis/blob/master/google/rpc/error_details.proto
+            precondition_failure {
+              violations {
+                type: "'type value'"
+                subject: "'subject value'"
+                description: "'desc value'"
+              }
+            }
+
+            // If you want to add your own message, you can add it using the message name and arguments as follows.
+            message {
+              name: "CustomMessage"
+              args { name: "msg" by: "id" }
+            }
+          }
+        }
+
+        // This error block is evaluated if the above condition is false.
+        error {
+          // If `ignore: true` is specified, the error is ignored.
+          ignore: true
+        }
+      }
+    }
+  };
+}
+```
+
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`def`](#grpcfederationmessagedef) | repeated VariableDefinition | optional |
+| `if`      | [CEL](./cel.md) | optional |
+| `code`    | google.rpc.Code | required |
+| `message` | [CEL](./cel.md) | required |
+| `details` | repeated GRPCErrorDetail | optional |
+| `ignore`  | bool | optional |
+
+> [!NOTE]
+> Within the error block, the `error` variable can be used as a special variable when evaluating CEL.
+> [A detailed description of this variable is here](./cel.md#error)
 
 ## (grpc.federation.message).def.message
 

@@ -15,10 +15,13 @@ import (
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"golang.org/x/sync/singleflight"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 )
@@ -189,6 +192,7 @@ func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
+		cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
 	}
 }
 
@@ -527,6 +531,65 @@ func EvalCEL(ctx context.Context, value localValue, expr string, outType reflect
 		return out.ConvertToNative(outType)
 	}
 	return out.Value(), nil
+}
+
+func SetGRPCError(ctx context.Context, value localValue, err error) {
+	stat, ok := grpcstatus.FromError(err)
+	if !ok {
+		return
+	}
+	grpcErr := &Error{
+		Code:    int32(stat.Code()),
+		Message: stat.Message(),
+	}
+	for _, detail := range stat.Details() {
+		protoMsg, ok := detail.(proto.Message)
+		if !ok {
+			Logger(ctx).ErrorContext(
+				ctx,
+				"failed to convert error detail to proto message",
+				slog.String("detail", fmt.Sprintf("%T", detail)),
+			)
+			continue
+		}
+		anyValue, err := anypb.New(protoMsg)
+		if err != nil {
+			Logger(ctx).ErrorContext(
+				ctx,
+				"failed to create proto.Any instance from proto message",
+				slog.String("proto", fmt.Sprintf("%T", protoMsg)),
+			)
+			continue
+		}
+		grpcErr.Details = append(grpcErr.Details, anyValue)
+		switch m := protoMsg.(type) {
+		case *errdetails.ErrorInfo:
+			grpcErr.ErrorInfo = append(grpcErr.ErrorInfo, m)
+		case *errdetails.RetryInfo:
+			grpcErr.RetryInfo = append(grpcErr.RetryInfo, m)
+		case *errdetails.DebugInfo:
+			grpcErr.DebugInfo = append(grpcErr.DebugInfo, m)
+		case *errdetails.QuotaFailure:
+			grpcErr.QuotaFailures = append(grpcErr.QuotaFailures, m)
+		case *errdetails.PreconditionFailure:
+			grpcErr.PreconditionFailures = append(grpcErr.PreconditionFailures, m)
+		case *errdetails.BadRequest:
+			grpcErr.BadRequests = append(grpcErr.BadRequests, m)
+		case *errdetails.RequestInfo:
+			grpcErr.RequestInfo = append(grpcErr.RequestInfo, m)
+		case *errdetails.ResourceInfo:
+			grpcErr.ResourceInfo = append(grpcErr.ResourceInfo, m)
+		case *errdetails.Help:
+			grpcErr.Helps = append(grpcErr.Helps, m)
+		case *errdetails.LocalizedMessage:
+			grpcErr.LocalizedMessages = append(grpcErr.LocalizedMessages, m)
+		default:
+			grpcErr.CustomMessages = append(grpcErr.CustomMessages, anyValue)
+		}
+	}
+	value.lock()
+	value.setEvalValue("error", grpcErr)
+	value.unlock()
 }
 
 func SetCELValue[T any](ctx context.Context, value localValue, expr string, setter func(T)) error {

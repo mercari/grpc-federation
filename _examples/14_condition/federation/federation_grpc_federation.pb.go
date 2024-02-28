@@ -491,7 +491,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		Validation: func(ctx context.Context, value *localValueType) error {
 			var stat *grpcfed.Status
 			if err := grpcfed.If(ctx, value, "users[0].id == ''", func(value *localValueType) error {
-				stat = grpcfed.NewGRPCStatus(grpcfed.InvalidArgumentCode, "")
+				errorMessage, err := grpcfed.EvalCEL(ctx, value, "", reflect.TypeOf(""))
+				if err != nil {
+					return err
+				}
+				stat = grpcfed.NewGRPCStatus(grpcfed.InvalidArgumentCode, errorMessage.(string))
 				return nil
 			}); err != nil {
 				return err

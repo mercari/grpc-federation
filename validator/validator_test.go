@@ -52,6 +52,21 @@ testdata/invalid_enum_alias_target.proto:71:43: required specify alias = "org.po
 71:      option (grpc.federation.enum).alias = "org.post.FakePostContent.FakeCategory";
                                                ^
 `},
+		{file: "invalid_error_variable.proto", expected: `
+testdata/invalid_error_variable.proto:20:17: "error" is the reserved keyword. this name is not available
+20:      def { name: "error" by: "'foo'" }
+                     ^
+testdata/invalid_error_variable.proto:21:25: ERROR: <input>:1:1: undeclared reference to 'error' (in container '')
+ | error
+ | ^
+21:      def { name: "e" by: "error" }
+                             ^
+testdata/invalid_error_variable.proto:25:15: ERROR: <input>:1:1: undeclared reference to 'error' (in container '')
+ | error.code == 0
+ | ^
+25:            if: "error.code == 0"
+                   ^
+`},
 		{file: "invalid_map_iterator_src_type.proto", expected: `
 testdata/invalid_map_iterator_src_type.proto:40:13: map iterator's src value type must be repeated type
 40:          map {
@@ -336,7 +351,7 @@ testdata/invalid_message_name.proto:15:7: [WARN] "user.UserService" defined in "
 testdata/invalid_message_name.proto:52:17: undefined message specified
 52:            name: "Invalid"
                      ^
-testdata/invalid_message_name.proto:61:47: unknown type is required
+testdata/invalid_message_name.proto:61:47: unknown type null_type is required
 61:    User user = 4 [(grpc.federation.field).by = "user"];
                                                    ^
 testdata/invalid_message_name.proto:70:36: ERROR: <input>:1:8: undefined field 'user_id'

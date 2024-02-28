@@ -914,7 +914,12 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message, builder *so
 
 const namePattern = `^[a-zA-Z][a-zA-Z0-9_]*$`
 
-var nameRe = regexp.MustCompile(namePattern)
+var (
+	nameRe             = regexp.MustCompile(namePattern)
+	reservedKeywordMap = map[string]struct{}{
+		"error": {},
+	}
+)
 
 func (r *Resolver) validateName(name string) error {
 	if name == "" {
@@ -922,6 +927,9 @@ func (r *Resolver) validateName(name string) error {
 	}
 	if !nameRe.MatchString(name) {
 		return fmt.Errorf(`%q is invalid name. name should be in the following pattern: %s`, name, namePattern)
+	}
+	if _, exists := reservedKeywordMap[name]; exists {
+		return fmt.Errorf(`%q is the reserved keyword. this name is not available`, name)
 	}
 	return nil
 }
@@ -1182,7 +1190,7 @@ func (r *Resolver) resolveVariableDefinition(ctx *context, varDef *federation.Va
 	}
 	return &VariableDefinition{
 		Idx:      ctx.defIndex(),
-		Name:     r.resolveVariableName(ctx, varDef.GetName()),
+		Name:     r.resolveVariableName(ctx, varDef.GetName(), builder),
 		If:       ifValue,
 		AutoBind: varDef.GetAutobind(),
 		Expr:     r.resolveVariableExpr(ctx, varDef, builder),
@@ -1190,7 +1198,16 @@ func (r *Resolver) resolveVariableDefinition(ctx *context, varDef *federation.Va
 	}
 }
 
-func (r *Resolver) resolveVariableName(ctx *context, name string) string {
+func (r *Resolver) resolveVariableName(ctx *context, name string, builder *source.VariableDefinitionOptionBuilder) string {
+	if !ctx.ignoreNameValidation {
+		if err := r.validateName(name); err != nil {
+			ctx.addError(ErrWithLocation(
+				err.Error(),
+				builder.WithName().Location(),
+			))
+			return ""
+		}
+	}
 	if name != "" {
 		return name
 	}
@@ -1446,6 +1463,7 @@ func (r *Resolver) resolveGRPCDetailMessages(ctx *context, messages []*federatio
 			},
 		})
 	}
+	ctx = ctx.withIgnoreNameValidation()
 	defs := make([]*VariableDefinition, 0, len(msgs))
 	for _, def := range r.resolveVariableDefinitions(ctx, msgs, builderFn) {
 		def.Used = true
@@ -2545,8 +2563,11 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 				}
 			}
 		}
+		grpcErrEnv, _ := env.Extend(
+			cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
+		)
 		for idx, grpcErr := range expr.Call.Errors {
-			r.resolveGRPCErrorCELValues(ctx, env, grpcErr, callBuilder.WithError(idx))
+			r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, callBuilder.WithError(idx))
 		}
 		expr.Type = NewMessageType(expr.Call.Method.Response, false)
 	case expr.Message != nil:
@@ -2846,7 +2867,6 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 	for _, plugin := range r.celPluginMap {
 		envOpts = append(envOpts, cel.Lib(plugin))
 	}
-
 	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
 		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
 	}
@@ -2925,7 +2945,7 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 		return r.fromCELType(ctx, typ.Parameters()[0])
 	}
 
-	return nil, errors.New("unknown type is required")
+	return nil, fmt.Errorf("unknown type %s is required", typ.TypeName())
 }
 
 func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {

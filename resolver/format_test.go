@@ -233,7 +233,7 @@ func TestProtoFormat(t *testing.T) {
         error {
           code: FAILED_PRECONDITION
           if: "post.id != 'some-id'"
-          message: "validation message 1"
+          message: "'validation message 1'"
         }
       }
     }
@@ -243,7 +243,7 @@ func TestProtoFormat(t *testing.T) {
         error {
           code: FAILED_PRECONDITION
           if: "true"
-          message: "validation message 2"
+          message: "'validation message 2'"
           details {
             if: "post.title != 'some-title'"
             message: [

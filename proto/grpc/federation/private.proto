@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package grpc.federation.private;
+
+import "google/rpc/error_details.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
+
+// Error type information of the error variable used when evaluating CEL.
+message Error {
+    int32 code = 1;
+    string message = 2;
+    repeated google.protobuf.Any details = 3;
+    repeated google.protobuf.Any custom_messages = 4;
+    repeated google.rpc.ErrorInfo error_info = 5;
+    repeated google.rpc.RetryInfo retry_info = 6;
+    repeated google.rpc.DebugInfo debug_info = 7;
+    repeated google.rpc.QuotaFailure quota_failures = 8;
+    repeated google.rpc.PreconditionFailure  precondition_failures = 9;
+    repeated google.rpc.BadRequest bad_requests = 10;
+    repeated google.rpc.RequestInfo request_info = 11;
+    repeated google.rpc.ResourceInfo resource_info = 12;
+    repeated google.rpc.Help helps = 13;
+    repeated google.rpc.LocalizedMessage localized_messages = 14;
+  }

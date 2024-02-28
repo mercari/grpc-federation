@@ -2,7 +2,6 @@ package main_test
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net"
 	"os"
@@ -17,10 +16,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/protoadapt"
 
 	"example/federation"
 	"example/post"
@@ -44,7 +46,24 @@ type PostServer struct {
 }
 
 func (s *PostServer) GetPost(ctx context.Context, req *post.GetPostRequest) (*post.GetPostResponse, error) {
-	return nil, errors.New("error!!!")
+	st := status.New(codes.FailedPrecondition, "failed to create post message")
+	var details []protoadapt.MessageV1
+	details = append(details, &errdetails.PreconditionFailure{
+		Violations: []*errdetails.PreconditionFailure_Violation{
+			{
+				Type:        "foo",
+				Subject:     "bar",
+				Description: "baz",
+			},
+		},
+	})
+	details = append(details, &errdetails.LocalizedMessage{
+		Locale:  "en-US",
+		Message: "hello",
+	})
+	details = append(details, &post.Post{Id: req.GetId()})
+	stWithDetails, _ := st.WithDetails(details...)
+	return nil, stWithDetails.Err()
 }
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
@@ -111,7 +130,7 @@ func TestFederation(t *testing.T) {
 
 	client := federation.NewFederationServiceClient(conn)
 	t.Run("custom error", func(t *testing.T) {
-		_, err := client.GetPost(ctx, &federation.GetPostRequest{Id: ""})
+		_, err := client.GetPost(ctx, &federation.GetPostRequest{Id: "x"})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -119,12 +138,12 @@ func TestFederation(t *testing.T) {
 		if !ok {
 			t.Fatalf("failed to extract gRPC Status from the error: %v", err)
 		}
-		if s.Message() != `'id must be not empty'` {
+		if s.Message() != `this is custom error message` {
 			t.Fatalf("got unexpected error: %v", err)
 		}
 	})
 	t.Run("ignore error", func(t *testing.T) {
-		res, err := client.GetPost(ctx, &federation.GetPostRequest{Id: "x"})
+		res, err := client.GetPost(ctx, &federation.GetPostRequest{Id: ""})
 		if err != nil {
 			t.Fatal(err)
 		}

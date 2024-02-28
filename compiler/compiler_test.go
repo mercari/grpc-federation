@@ -28,7 +28,7 @@ func TestCompiler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const expectedProtoNum = 8 // service.proto, post.proto, user.proto, federation.proto, google/protobuf/descriptor.proto, google/protobuf/duration.proto, google/rpc/error_details.proto, google/rpc/code.proto
+	const expectedProtoNum = 10 // service.proto, post.proto, user.proto, federation.proto, private.proto, google/protobuf/descriptor.proto, google/protobuf/duration.proto, google/rpc/error_details.proto, google/rpc/code.proto
 	if len(protos) != expectedProtoNum {
 		t.Fatalf("failed to get protos. expected %d but got %d", expectedProtoNum, len(protos))
 	}

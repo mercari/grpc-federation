@@ -86,6 +86,7 @@ func (e *CompilerError) Error() string {
 
 const (
 	grpcFederationFilePath        = "grpc/federation/federation.proto"
+	grpcFederationPrivateFilePath = "grpc/federation/private.proto"
 	googleRPCCodeFilePath         = "google/rpc/code.proto"
 	googleRPCErrorDetailsFilePath = "google/rpc/error_details.proto"
 )
@@ -155,6 +156,9 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 				if err != nil {
 					if !c.manualImport && strings.HasSuffix(p, grpcFederationFilePath) {
 						return io.NopCloser(bytes.NewBuffer(federation.ProtoFile)), nil
+					}
+					if !c.manualImport && strings.HasSuffix(p, grpcFederationPrivateFilePath) {
+						return io.NopCloser(bytes.NewBuffer(federation.PrivateProtoFile)), nil
 					}
 					if !c.manualImport && strings.HasSuffix(p, googleRPCCodeFilePath) {
 						return io.NopCloser(bytes.NewBuffer(rpc.GoogleRPCCodeProtoFile)), nil
