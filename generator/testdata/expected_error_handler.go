@@ -349,6 +349,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
 		},
 	}); err != nil {
+		grpcfed.SetGRPCError(ctx, value, err)
 		stat, handleErr := func() (*grpcfed.Status, error) {
 			var stat *grpcfed.Status
 
@@ -368,7 +369,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				grpcfed.RecordErrorToSpan(ctx, err)
 				return nil, err
 			}
-			if err := grpcfed.If(ctx, value, "id == ''", func(value *localValueType) error {
+			if err := grpcfed.If(ctx, value, "error.precondition_failures.map(f, f.violations[0]).first(v, v.subject == '').?subject == optional.of('')", func(value *localValueType) error {
+
+				errorMessage, err := grpcfed.EvalCEL(ctx, value, "'id must be not empty'", reflect.TypeOf(""))
+				if err != nil {
+					return err
+				}
 				var details []grpcfed.ProtoMessage
 				if _, err := func() (any, error) {
 
@@ -462,7 +468,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				}); err != nil {
 					return err
 				}
-				status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "'id must be not empty'")
+				status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage.(string))
 				statusWithDetails, err := status.WithDetails(details...)
 				if err != nil {
 					s.logger.ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))

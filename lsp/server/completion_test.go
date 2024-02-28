@@ -111,6 +111,7 @@ func TestCompletion(t *testing.T) {
 			"User",
 
 			// google messages
+			"google.protobuf.Any",
 			"google.protobuf.DescriptorProto",
 			"google.protobuf.DescriptorProto.ExtensionRange",
 			"google.protobuf.DescriptorProto.ReservedRange",

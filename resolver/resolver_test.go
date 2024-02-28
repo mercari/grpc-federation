@@ -3030,7 +3030,7 @@ func TestValidation(t *testing.T) {
 										SetError(
 											testutil.NewGRPCErrorBuilder().
 												SetCode(code.Code_FAILED_PRECONDITION).
-												SetMessage("validation message 1").
+												SetMessage("'validation message 1'").
 												SetIf("post.id != 'some-id'").
 												Build(t),
 										).
@@ -3046,7 +3046,7 @@ func TestValidation(t *testing.T) {
 										SetError(
 											testutil.NewGRPCErrorBuilder().
 												SetCode(code.Code_FAILED_PRECONDITION).
-												SetMessage("validation message 2").
+												SetMessage("'validation message 2'").
 												AddDetail(
 													testutil.NewGRPCErrorDetailBuilder().
 														SetIf("post.title != 'some-title'").
@@ -3793,7 +3793,7 @@ func TestErrorHandler(t *testing.T) {
 														SetBy(testutil.NewCELValueBuilder("$.id", resolver.StringType).Build(t)).
 														Build(t),
 												).
-												SetIf("id == ''").
+												SetIf("error.precondition_failures.map(f, f.violations[0]).first(v, v.subject == '').?subject == optional.of('')").
 												SetCode(code.Code_FAILED_PRECONDITION).
 												SetMessage("'id must be not empty'").
 												AddDetail(

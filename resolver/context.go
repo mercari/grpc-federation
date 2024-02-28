@@ -3,15 +3,16 @@
 package resolver
 
 type context struct {
-	errorBuilder *errorBuilder
-	allWarnings  *allWarnings
-	fileRef      *File
-	msg          *Message
-	enum         *Enum
-	plugin       *CELPlugin
-	defIdx       int
-	errDetailIdx int
-	variableMap  map[string]*VariableDefinition
+	errorBuilder         *errorBuilder
+	allWarnings          *allWarnings
+	fileRef              *File
+	msg                  *Message
+	enum                 *Enum
+	plugin               *CELPlugin
+	defIdx               int
+	errDetailIdx         int
+	ignoreNameValidation bool
+	variableMap          map[string]*VariableDefinition
 }
 
 type allWarnings struct {
@@ -28,13 +29,14 @@ func newContext() *context {
 
 func (c *context) clone() *context {
 	return &context{
-		errorBuilder: c.errorBuilder,
-		allWarnings:  c.allWarnings,
-		fileRef:      c.fileRef,
-		msg:          c.msg,
-		enum:         c.enum,
-		plugin:       c.plugin,
-		defIdx:       c.defIdx,
+		errorBuilder:         c.errorBuilder,
+		allWarnings:          c.allWarnings,
+		fileRef:              c.fileRef,
+		msg:                  c.msg,
+		enum:                 c.enum,
+		plugin:               c.plugin,
+		defIdx:               c.defIdx,
+		ignoreNameValidation: c.ignoreNameValidation,
 
 		errDetailIdx: c.errDetailIdx,
 		variableMap:  c.variableMap,
@@ -74,6 +76,12 @@ func (c *context) withPlugin(plugin *CELPlugin) *context {
 func (c *context) withErrDetailIndex(idx int) *context {
 	ctx := c.clone()
 	ctx.errDetailIdx = idx
+	return ctx
+}
+
+func (c *context) withIgnoreNameValidation() *context {
+	ctx := c.clone()
+	ctx.ignoreNameValidation = true
 	return ctx
 }
 

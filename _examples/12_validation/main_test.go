@@ -18,7 +18,7 @@ import (
 	"example/federation"
 )
 
-type Resolver struct {}
+type Resolver struct{}
 
 func (r *Resolver) Resolve_Org_Federation_CustomHandlerMessage(context.Context, *federation.Org_Federation_CustomHandlerMessageArgument[*federation.FederationServiceDependentClientSet]) (*federation.CustomHandlerMessage, error) {
 	return &federation.CustomHandlerMessage{}, nil
@@ -26,7 +26,7 @@ func (r *Resolver) Resolve_Org_Federation_CustomHandlerMessage(context.Context, 
 
 const bufSize = 1024
 
-var listener   *bufconn.Listener
+var listener *bufconn.Listener
 
 func dialer(_ context.Context, _ string) (net.Conn, error) {
 	return listener.Dial()
@@ -49,7 +49,7 @@ func TestFederation(t *testing.T) {
 	}))
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
 		Resolver: &Resolver{},
-		Logger: logger,
+		Logger:   logger,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -65,16 +65,16 @@ func TestFederation(t *testing.T) {
 	client := federation.NewFederationServiceClient(conn)
 
 	type errStatus struct {
-		code codes.Code
+		code    codes.Code
 		message string
 		details []any
 	}
-	for _, tc := range []struct{
-		desc string
-		request *federation.GetPostRequest
-		expected *federation.GetPostResponse
+	for _, tc := range []struct {
+		desc        string
+		request     *federation.GetPostRequest
+		expected    *federation.GetPostResponse
 		expectedErr *errStatus
-	} {
+	}{
 		{
 			desc: "success",
 			request: &federation.GetPostRequest{
@@ -82,8 +82,8 @@ func TestFederation(t *testing.T) {
 			},
 			expected: &federation.GetPostResponse{
 				Post: &federation.Post{
-					Id: "some-id",
-					Title: "some-title",
+					Id:      "some-id",
+					Title:   "some-title",
 					Content: "some-content",
 				},
 			},
@@ -94,7 +94,7 @@ func TestFederation(t *testing.T) {
 				Id: "wrong-id",
 			},
 			expectedErr: &errStatus{
-				code: codes.FailedPrecondition,
+				code:    codes.FailedPrecondition,
 				message: "validation3 failed!",
 				details: []any{
 					&federation.CustomMessage{
@@ -106,8 +106,8 @@ func TestFederation(t *testing.T) {
 					&errdetails.PreconditionFailure{
 						Violations: []*errdetails.PreconditionFailure_Violation{
 							{
-								Type: "type1",
-								Subject: "some-id",
+								Type:        "type1",
+								Subject:     "some-id",
 								Description: "description1",
 							},
 						},
@@ -115,13 +115,13 @@ func TestFederation(t *testing.T) {
 					&errdetails.BadRequest{
 						FieldViolations: []*errdetails.BadRequest_FieldViolation{
 							{
-								Field: "some-id",
+								Field:       "some-id",
 								Description: "description2",
 							},
 						},
 					},
 					&errdetails.LocalizedMessage{
-						Locale: "en-US",
+						Locale:  "en-US",
 						Message: "some-content",
 					},
 				},
@@ -141,11 +141,11 @@ func TestFederation(t *testing.T) {
 				}
 
 				if got := s.Code(); got != tc.expectedErr.code {
-					t.Errorf("invalida gRPC status code: got: %v, expected: %v", got, tc.expectedErr.code)
+					t.Errorf("invalid a gRPC status code: got: %v, expected: %v", got, tc.expectedErr.code)
 				}
 
 				if got := s.Message(); got != tc.expectedErr.message {
-					t.Errorf("invalida gRPC status message: got: %v, expected: %v", got, tc.expectedErr.message)
+					t.Errorf("invalid a gRPC status message: got: %v, expected: %v", got, tc.expectedErr.message)
 				}
 				if diff := cmp.Diff(s.Details(), tc.expectedErr.details, cmpopts.IgnoreUnexported(
 					federation.CustomMessage{},

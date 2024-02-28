@@ -43,9 +43,9 @@ message Post {
           request { field: "id" by: "$.id" }
           error {
             def { name: "id" by: "$.id" }
-            if: "id == ''"
+            if: "error.precondition_failures[0].violations[0].subject == 'bar' && error.localized_messages[0].message == 'hello' && error.custom_messages[0].id == 'x'"
             code: FAILED_PRECONDITION
-            message: "'id must be not empty'"
+            message: "'this is custom error message'"
             details {
               def { name: "localized_msg" message { name: "LocalizedMessage" args { name: "value" by: "id" } } }
               message { name: "CustomMessage" args { name: "msg" by: "id" } }

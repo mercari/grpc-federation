@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def { name: "error" by: "'foo'" }
+    def { name: "e" by: "error" }
+    def {
+      validation {
+        error {
+          if: "error.code == 0"
+        }
+      }
+    }
+  };
+  string id = 1 [(grpc.federation.field).string = "foo"];
+}

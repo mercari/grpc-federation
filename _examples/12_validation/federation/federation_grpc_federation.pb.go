@@ -211,7 +211,11 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 		Validation: func(ctx context.Context, value *localValueType) error {
 			var stat *grpcfed.Status
 			if err := grpcfed.If(ctx, value, "$.arg == 'wrong'", func(value *localValueType) error {
-				stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "")
+				errorMessage, err := grpcfed.EvalCEL(ctx, value, "", reflect.TypeOf(""))
+				if err != nil {
+					return err
+				}
+				stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage.(string))
 				return nil
 			}); err != nil {
 				return err
@@ -327,7 +331,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       error {
 		         code: FAILED_PRECONDITION
 		         if: "post.id != 'some-id'"
-		         message: "validation1 failed!"
+		         message: "'validation1 failed!'"
 		       }
 		     }
 		   }
@@ -339,7 +343,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var stat *grpcfed.Status
 				if err := grpcfed.If(ctx1, value, "post.id != 'some-id'", func(value *localValueType) error {
-					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation1 failed!")
+					errorMessage, err := grpcfed.EvalCEL(ctx, value, "'validation1 failed!'", reflect.TypeOf(""))
+					if err != nil {
+						return err
+					}
+					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage.(string))
 					return nil
 				}); err != nil {
 					return err
@@ -387,7 +395,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       error {
 		         code: FAILED_PRECONDITION
 		         if: "post.id != 'some-id'"
-		         message: "validation2 failed!"
+		         message: "'validation2 failed!'"
 		       }
 		     }
 		   }
@@ -399,7 +407,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var stat *grpcfed.Status
 				if err := grpcfed.If(ctx1, value, "post.id != 'some-id'", func(value *localValueType) error {
-					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation2 failed!")
+					errorMessage, err := grpcfed.EvalCEL(ctx, value, "'validation2 failed!'", reflect.TypeOf(""))
+					if err != nil {
+						return err
+					}
+					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage.(string))
 					return nil
 				}); err != nil {
 					return err
@@ -447,7 +459,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       error {
 		         code: FAILED_PRECONDITION
 		         if: "$.id != 'correct-id'"
-		         message: "validation3 failed!"
+		         message: "'validation3 failed!'"
 		         details {
 		           if: "true"
 		           message: [
@@ -469,6 +481,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var stat *grpcfed.Status
 				if err := grpcfed.If(ctx1, value, "$.id != 'correct-id'", func(value *localValueType) error {
+					errorMessage, err := grpcfed.EvalCEL(ctx, value, "'validation3 failed!'", reflect.TypeOf(""))
+					if err != nil {
+						return err
+					}
 					var details []grpcfed.ProtoMessage
 					if err := grpcfed.If(ctx1, value, "true", func(value *localValueType) error {
 						if _, err := func() (any, error) {
@@ -576,7 +592,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					}); err != nil {
 						return err
 					}
-					status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation3 failed!")
+					status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage.(string))
 					statusWithDetails, err := status.WithDetails(details...)
 					if err != nil {
 						s.logger.ErrorContext(ctx1, "failed setting error details", slog.String("error", err.Error()))

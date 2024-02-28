@@ -33,7 +33,7 @@ message GetPostResponse {
         validation {
           error {
             code: FAILED_PRECONDITION
-            message: "validation1 failed!",
+            message: "'validation1 failed!'",
             if: "post.id != 'some-id'"
           }
         }
@@ -42,7 +42,7 @@ message GetPostResponse {
         validation {
           error {
             code: FAILED_PRECONDITION
-            message: "validation2 failed!",
+            message: "'validation2 failed!'",
             if: "post.id != 'some-id'"
           }
         }
@@ -51,7 +51,7 @@ message GetPostResponse {
         validation {
           error: {
             code: FAILED_PRECONDITION,
-            message: "validation3 failed!",
+            message: "'validation3 failed!'",
             if: "$.id != 'correct-id'"
             details: {
               message: [

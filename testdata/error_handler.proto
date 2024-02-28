@@ -43,7 +43,7 @@ message Post {
           request { field: "id" by: "$.id" }
           error {
             def { name: "id" by: "$.id" }
-            if: "id == ''"
+            if: "error.precondition_failures.map(f, f.violations[0]).first(v, v.subject == '').?subject == optional.of('')"
             code: FAILED_PRECONDITION
             message: "'id must be not empty'"
             details {

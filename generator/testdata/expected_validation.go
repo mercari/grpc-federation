@@ -239,7 +239,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       error {
 		         code: FAILED_PRECONDITION
 		         if: "post.id != 'some-id'"
-		         message: "validation message 1"
+		         message: "'validation message 1'"
 		       }
 		     }
 		   }
@@ -251,7 +251,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var stat *grpcfed.Status
 				if err := grpcfed.If(ctx1, value, "post.id != 'some-id'", func(value *localValueType) error {
-					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation message 1")
+					errorMessage, err := grpcfed.EvalCEL(ctx, value, "'validation message 1'", reflect.TypeOf(""))
+					if err != nil {
+						return err
+					}
+					stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage.(string))
 					return nil
 				}); err != nil {
 					return err
@@ -299,7 +303,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		       error {
 		         code: FAILED_PRECONDITION
 		         if: "true"
-		         message: "validation message 2"
+		         message: "'validation message 2'"
 		         details {
 		           if: "post.title != 'some-title'"
 		           message: [
@@ -321,6 +325,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Validation: func(ctx context.Context, value *localValueType) error {
 				var stat *grpcfed.Status
 				if err := grpcfed.If(ctx1, value, "true", func(value *localValueType) error {
+					errorMessage, err := grpcfed.EvalCEL(ctx, value, "'validation message 2'", reflect.TypeOf(""))
+					if err != nil {
+						return err
+					}
 					var details []grpcfed.ProtoMessage
 					if err := grpcfed.If(ctx1, value, "post.title != 'some-title'", func(value *localValueType) error {
 						if _, err := func() (any, error) {
@@ -428,7 +436,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					}); err != nil {
 						return err
 					}
-					status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, "validation message 2")
+					status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage.(string))
 					statusWithDetails, err := status.WithDetails(details...)
 					if err != nil {
 						s.logger.ErrorContext(ctx1, "failed setting error details", slog.String("error", err.Error()))
