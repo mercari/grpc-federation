@@ -49,6 +49,7 @@ func TestHandler_Initialize(t *testing.T) {
 				},
 				"full": true,
 			},
+			SelectionRangeProvider: true,
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name:    "grpc-federation",
@@ -254,7 +255,7 @@ func TestHandler_Definition(t *testing.T) {
 					},
 				},
 			},
-			expected: nil,
+			expected: []protocol.Location{},
 		},
 	}
 

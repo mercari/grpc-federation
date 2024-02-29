@@ -63,10 +63,7 @@ func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.Defin
 			return nil, err
 		}
 		h.logger.Info("found import", slog.String("file", foundImportFile))
-		locs, err := h.findImportFileDefinition(ctx, path, protoFiles, foundImportFile)
-		if err != nil {
-			return nil, err
-		}
+		locs := h.findImportFileDefinition(path, protoFiles, foundImportFile)
 		return h.toLocationLinks(nodeInfo, locs, true), nil
 	case isMessageNameDefinition(loc):
 		foundMsgName, err := strconv.Unquote(nodeInfo.RawText())
@@ -74,7 +71,7 @@ func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.Defin
 			return nil, err
 		}
 		h.logger.Info("found message", slog.String("name", foundMsgName))
-		locs, err := h.findTypeDefinition(ctx, path, protoFiles, foundMsgName)
+		locs, err := h.findTypeDefinition(path, protoFiles, foundMsgName)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +89,7 @@ func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.Defin
 		firstPriorTypeName := strings.Join(append(prefix, foundTypeName), ".")
 		for _, typeName := range []string{firstPriorTypeName, foundTypeName} {
 			h.logger.Info("found message", slog.String("name", typeName))
-			locs, err := h.findTypeDefinition(ctx, path, protoFiles, typeName)
+			locs, err := h.findTypeDefinition(path, protoFiles, typeName)
 			if err != nil {
 				continue
 			}
@@ -107,7 +104,7 @@ func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.Defin
 			return nil, err
 		}
 		h.logger.Info("found type", slog.String("name", typeName))
-		locs, err := h.findTypeDefinition(ctx, path, protoFiles, typeName)
+		locs, err := h.findTypeDefinition(path, protoFiles, typeName)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +115,7 @@ func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.Defin
 			return nil, err
 		}
 		h.logger.Info("found method", slog.String("name", foundMethodName))
-		locs, err := h.findMethodDefinition(ctx, path, protoFiles, foundMethodName)
+		locs, err := h.findMethodDefinition(path, protoFiles, foundMethodName)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +124,7 @@ func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.Defin
 	return nil, nil
 }
 
-func (h *Handler) findImportFileDefinition(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, fileName string) ([]protocol.Location, error) {
+func (h *Handler) findImportFileDefinition(path string, protoFiles []*descriptorpb.FileDescriptorProto, fileName string) []protocol.Location {
 	for _, protoFile := range protoFiles {
 		filePath, err := h.filePathFromFileDescriptorProto(path, protoFile)
 		if err != nil {
@@ -143,14 +140,13 @@ func (h *Handler) findImportFileDefinition(ctx context.Context, path string, pro
 						End:   protocol.Position{Line: 0, Character: 0},
 					},
 				},
-			}, nil
+			}
 		}
 	}
-	// ignore error
-	return nil, nil
+	return nil
 }
 
-func (h *Handler) findTypeDefinition(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, defTypeName string) ([]protocol.Location, error) {
+func (h *Handler) findTypeDefinition(path string, protoFiles []*descriptorpb.FileDescriptorProto, defTypeName string) ([]protocol.Location, error) {
 	typeName, filePath, err := h.typeAndFilePath(path, protoFiles, defTypeName)
 	if filePath == "" {
 		return nil, err
@@ -190,7 +186,7 @@ func (h *Handler) findTypeDefinition(ctx context.Context, path string, protoFile
 	return h.toLocation(defFile, foundNode), nil
 }
 
-func (h *Handler) findMethodDefinition(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, defMethodName string) ([]protocol.Location, error) {
+func (h *Handler) findMethodDefinition(path string, protoFiles []*descriptorpb.FileDescriptorProto, defMethodName string) ([]protocol.Location, error) {
 	methodName, filePath, err := h.methodAndFilePath(path, protoFiles, defMethodName)
 	if filePath == "" {
 		return nil, err
@@ -308,11 +304,11 @@ func getDeclaredTypeNames(msg *descriptorpb.DescriptorProto) []string {
 	ret := []string{name}
 	for _, msg := range msg.GetNestedType() {
 		for _, nested := range getDeclaredTypeNames(msg) {
-			ret = append(ret, strings.Join([]string{name, nested}, "."))
+			ret = append(ret, name+"."+nested)
 		}
 	}
 	for _, enum := range msg.GetEnumType() {
-		ret = append(ret, strings.Join([]string{name, enum.GetName()}, "."))
+		ret = append(ret, name+"."+enum.GetName())
 	}
 	return ret
 }
