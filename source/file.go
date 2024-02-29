@@ -98,16 +98,45 @@ func (f *File) Imports() []string {
 type findContext struct {
 	fileName         string
 	message          *Message
+	nestedMessage    *Message
+	enum             *Enum
+	enumValue        *EnumValue
 	service          *Service
 	method           *Method
 	field            *Field
 	fieldOption      *FieldOption
 	serviceDepOption *ServiceDependencyOption
 	messageOption    *MessageOption
+	enumOption       *EnumOption
+	enumValueOption  *EnumValueOption
 	def              *VariableDefinitionOption
 }
 
-func (f *File) buildLocation(ctx findContext) *Location {
+func (c *findContext) child() *findContext {
+	msg := c.message.Clone()
+	var nestedMsg *Message
+	if c.nestedMessage != nil {
+		nestedMsg = msg.LastNestedMessage()
+	}
+	return &findContext{
+		fileName:         c.fileName,
+		message:          msg,
+		nestedMessage:    nestedMsg,
+		enum:             c.enum.Clone(),
+		enumValue:        c.enumValue.Clone(),
+		service:          c.service.Clone(),
+		method:           c.method.Clone(),
+		field:            c.field.Clone(),
+		fieldOption:      c.fieldOption.Clone(),
+		serviceDepOption: c.serviceDepOption.Clone(),
+		messageOption:    c.messageOption.Clone(),
+		enumOption:       c.enumOption.Clone(),
+		enumValueOption:  c.enumValueOption.Clone(),
+		def:              c.def.Clone(),
+	}
+}
+
+func (f *File) buildLocation(ctx *findContext) *Location {
 	loc := &Location{FileName: ctx.fileName}
 	if ctx.service != nil {
 		loc.Service = ctx.service
@@ -120,19 +149,41 @@ func (f *File) buildLocation(ctx findContext) *Location {
 			loc.Service.Method = ctx.method
 		}
 	}
+	var msg *Message
 	if ctx.message != nil {
 		loc.Message = ctx.message
+		msg = ctx.message
+		if ctx.nestedMessage != nil {
+			msg = ctx.nestedMessage
+		}
 		if ctx.field != nil {
-			loc.Message.Field = ctx.field
+			msg.Field = ctx.field
 			if ctx.fieldOption != nil {
-				loc.Message.Field.Option = ctx.fieldOption
+				msg.Field.Option = ctx.fieldOption
 			}
 		}
 		if ctx.messageOption != nil {
-			loc.Message.Option = &MessageOption{}
+			msg.Option = ctx.messageOption
 		}
 		if ctx.def != nil {
-			loc.Message.Option.Def = ctx.def
+			msg.Option.Def = ctx.def
+		}
+	}
+	if ctx.enum != nil {
+		enum := ctx.enum
+		if msg != nil {
+			msg.Enum = enum
+		} else {
+			loc.Enum = enum
+		}
+		if ctx.enumOption != nil {
+			enum.Option = ctx.enumOption
+		}
+		if ctx.enumValue != nil {
+			enum.Value = ctx.enumValue
+		}
+		if ctx.enumValueOption != nil {
+			enum.Value.Option = ctx.enumValueOption
 		}
 	}
 	return loc
@@ -140,11 +191,16 @@ func (f *File) buildLocation(ctx findContext) *Location {
 
 // FindLocationByPos returns the corresponding location information from the position in the source code.
 func (f *File) FindLocationByPos(pos Position) *Location {
-	ctx := findContext{fileName: f.fileNode.Name()}
+	ctx := &findContext{fileName: f.fileNode.Name()}
 	for _, decl := range f.fileNode.Decls {
+		ctx := ctx.child()
 		switch n := decl.(type) {
+		case *ast.ImportNode:
+			if found := f.findImportByPos(ctx, pos, n); found != nil {
+				return found
+			}
 		case *ast.MessageNode:
-			if found := f.findMessageByPos(ctx, pos, n); found != nil {
+			if found := f.findMessageByPos(ctx, pos, n, false); found != nil {
 				return found
 			}
 		case *ast.ServiceNode:
@@ -156,17 +212,189 @@ func (f *File) FindLocationByPos(pos Position) *Location {
 	return nil
 }
 
-func (f *File) findMessageByPos(ctx findContext, pos Position, node *ast.MessageNode) *Location {
-	ctx.message = &Message{Name: string(node.Name.AsIdentifier())}
+func (f *File) findImportByPos(ctx *findContext, pos Position, node *ast.ImportNode) *Location {
+	if f.containsPos(node.Name, pos) {
+		return &Location{
+			FileName:   ctx.fileName,
+			ImportName: node.Name.AsString(),
+		}
+	}
+	return nil
+}
+
+func (f *File) findMessageByPos(ctx *findContext, pos Position, node *ast.MessageNode, isNested bool) (loc *Location) {
+	msg := &Message{Name: string(node.Name.AsIdentifier())}
+	if isNested {
+		if ctx.nestedMessage == nil {
+			ctx.message.NestedMessage = msg
+		} else {
+			ctx.nestedMessage.NestedMessage = msg
+		}
+		ctx.nestedMessage = msg
+	} else {
+		ctx.message = msg
+	}
 	for _, decl := range node.MessageBody.Decls {
 		switch n := decl.(type) {
 		case *ast.OptionNode:
 			if !f.matchOption(f.optionName(n), msgOptionName) {
 				continue
 			}
-			if found := f.findMessageOptionByPos(ctx, pos, n); found != nil {
+			if found := f.findMessageOptionByPos(ctx.child(), pos, n); found != nil {
 				return found
 			}
+		case *ast.FieldNode:
+			if found := f.findFieldByPos(ctx, pos, n); found != nil {
+				return found
+			}
+		case *ast.MessageNode:
+			if found := f.findMessageByPos(ctx.child(), pos, n, true); found != nil {
+				return found
+			}
+		case *ast.EnumNode:
+			if found := f.findEnumByPos(ctx.child(), pos, n); found != nil {
+				return found
+			}
+		case *ast.OneofNode:
+			if found := f.findOneofByPos(ctx, pos, n); found != nil {
+				return found
+			}
+		case *ast.MapFieldNode:
+		}
+	}
+	return nil
+}
+
+func (f *File) findEnumByPos(ctx *findContext, pos Position, node *ast.EnumNode) *Location {
+	ctx.enum = &Enum{Name: string(node.Name.AsIdentifier())}
+	for _, decl := range node.Decls {
+		switch n := decl.(type) {
+		case *ast.OptionNode:
+			if !f.matchOption(f.optionName(n), enumOptionName) {
+				continue
+			}
+			if found := f.findEnumOptionByPos(ctx.child(), pos, n); found != nil {
+				return found
+			}
+		case *ast.EnumValueNode:
+			if found := f.findEnumValueByPos(ctx, pos, n); found != nil {
+				return found
+			}
+		}
+	}
+	return nil
+}
+
+func (f *File) findEnumOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
+	switch n := node.Val.(type) {
+	case *ast.MessageLiteralNode:
+		for _, elem := range n.Elements {
+			optName := elem.Name.Name.AsIdentifier()
+			switch optName {
+			case "alias":
+				value, ok := elem.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.enumOption = &EnumOption{
+						Alias: true,
+					}
+					return f.buildLocation(ctx)
+				}
+			}
+		}
+	case *ast.StringLiteralNode:
+		if strings.HasSuffix(f.optionName(node), "alias") {
+			if f.containsPos(n, pos) {
+				ctx.enumOption = &EnumOption{Alias: true}
+				return f.buildLocation(ctx)
+			}
+		}
+	}
+	return nil
+}
+
+func (f *File) findEnumValueByPos(ctx *findContext, pos Position, node *ast.EnumValueNode) *Location {
+	ctx.enumValue = &EnumValue{Value: string(node.Name.AsIdentifier())}
+	if node.Options != nil {
+		for _, opt := range node.Options.Options {
+			if !f.matchOption(f.optionName(opt), enumValueOptionName) {
+				continue
+			}
+			if found := f.findEnumValueOptionByPos(ctx.child(), pos, opt); found != nil {
+				return found
+			}
+		}
+	}
+	return nil
+}
+
+func (f *File) findEnumValueOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
+	switch n := node.Val.(type) {
+	case *ast.MessageLiteralNode:
+		for _, elem := range n.Elements {
+			optName := elem.Name.Name.AsIdentifier()
+			switch optName {
+			case "alias":
+				switch value := elem.Val.(type) {
+				case *ast.StringLiteralNode:
+					if f.containsPos(value, pos) {
+						ctx.enumValueOption = &EnumValueOption{
+							Alias: true,
+						}
+						return f.buildLocation(ctx)
+					}
+				case *ast.ArrayLiteralNode:
+					for _, elem := range value.Elements {
+						str, ok := elem.(*ast.StringLiteralNode)
+						if !ok {
+							continue
+						}
+						if f.containsPos(str, pos) {
+							ctx.enumValueOption = &EnumValueOption{
+								Alias: true,
+							}
+							return f.buildLocation(ctx)
+						}
+					}
+				}
+			case "default":
+				value, ok := elem.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.enumValueOption = &EnumValueOption{
+						Default: true,
+					}
+					return f.buildLocation(ctx)
+				}
+			}
+		}
+	case *ast.StringLiteralNode:
+		if strings.HasSuffix(f.optionName(node), "alias") {
+			if f.containsPos(n, pos) {
+				ctx.enumValueOption = &EnumValueOption{Alias: true}
+				return f.buildLocation(ctx)
+			}
+		}
+		if strings.HasSuffix(f.optionName(node), "default") {
+			if f.containsPos(n, pos) {
+				ctx.enumValueOption = &EnumValueOption{Default: true}
+				return f.buildLocation(ctx)
+			}
+		}
+	}
+	return nil
+}
+
+func (f *File) findOneofByPos(ctx *findContext, pos Position, node *ast.OneofNode) *Location {
+	if node == nil {
+		return nil
+	}
+	for _, elem := range node.Decls {
+		switch n := elem.(type) {
 		case *ast.FieldNode:
 			if found := f.findFieldByPos(ctx, pos, n); found != nil {
 				return found
@@ -176,7 +404,7 @@ func (f *File) findMessageByPos(ctx findContext, pos Position, node *ast.Message
 	return nil
 }
 
-func (f *File) findFieldByPos(ctx findContext, pos Position, node *ast.FieldNode) *Location {
+func (f *File) findFieldByPos(ctx *findContext, pos Position, node *ast.FieldNode) *Location {
 	opts := node.GetOptions()
 	fieldName := string(node.Name.AsIdentifier())
 	ctx.field = &Field{Name: fieldName}
@@ -190,10 +418,14 @@ func (f *File) findFieldByPos(ctx findContext, pos Position, node *ast.FieldNode
 			}
 		}
 	}
+	if f.containsPos(node.FldType, pos) {
+		ctx.field.Type = true
+		return f.buildLocation(ctx)
+	}
 	return nil
 }
 
-func (f *File) findFieldOptionByPos(ctx findContext, pos Position, node *ast.OptionNode) *Location {
+func (f *File) findFieldOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
 	switch n := node.Val.(type) {
 	case *ast.StringLiteralNode:
 		if strings.HasSuffix(f.optionName(node), "by") {
@@ -221,22 +453,33 @@ func (f *File) findFieldOptionByPos(ctx findContext, pos Position, node *ast.Opt
 	return nil
 }
 
-func (f *File) findMessageOptionByPos(ctx findContext, pos Position, node *ast.OptionNode) *Location {
-	literal, ok := node.Val.(*ast.MessageLiteralNode)
-	if !ok {
-		return nil
-	}
-	ctx.messageOption = &MessageOption{}
-	for _, elem := range literal.Elements {
-		optName := elem.Name.Name.AsIdentifier()
-		switch optName {
-		case "def":
-			if found := f.findDefByPos(ctx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
-				return found
+func (f *File) findMessageOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
+	switch n := node.Val.(type) {
+	case *ast.MessageLiteralNode:
+		ctx.messageOption = &MessageOption{}
+		for _, elem := range n.Elements {
+			optName := elem.Name.Name.AsIdentifier()
+			switch optName {
+			case "alias":
+				if f.containsPos(elem.Val, pos) {
+					ctx.messageOption.Alias = true
+					return f.buildLocation(ctx)
+				}
+			case "def":
+				if found := f.findDefByPos(ctx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
+					return found
+				}
+			}
+		}
+	case *ast.StringLiteralNode:
+		if strings.HasSuffix(f.optionName(node), "alias") {
+			if f.containsPos(n, pos) {
+				ctx.messageOption = &MessageOption{Alias: true}
+				return f.buildLocation(ctx)
 			}
 		}
 	}
-	if f.containsPos(literal, pos) {
+	if f.containsPos(node.Val, pos) {
 		return f.buildLocation(ctx)
 	}
 	return nil
@@ -260,7 +503,7 @@ func (f *File) getMessageListFromNode(node ast.Node) []*ast.MessageLiteralNode {
 	return nil
 }
 
-func (f *File) findDefByPos(ctx findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
+func (f *File) findDefByPos(ctx *findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
 	for idx, node := range list {
 		for _, elem := range node.Elements {
 			fieldName := elem.Name.Name.AsIdentifier()
@@ -329,7 +572,7 @@ func (f *File) findDefByPos(ctx findContext, pos Position, list []*ast.MessageLi
 	return nil
 }
 
-func (f *File) findMessageExprByPos(ctx findContext, defIdx int, pos Position, node *ast.MessageLiteralNode) *Location {
+func (f *File) findMessageExprByPos(ctx *findContext, defIdx int, pos Position, node *ast.MessageLiteralNode) *Location {
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch fieldName {
@@ -357,7 +600,7 @@ func (f *File) findMessageExprByPos(ctx findContext, defIdx int, pos Position, n
 	return nil
 }
 
-func (f *File) findMessageArgumentByPos(ctx findContext, defIdx int, pos Position, list []*ast.MessageLiteralNode) *Location {
+func (f *File) findMessageArgumentByPos(ctx *findContext, defIdx int, pos Position, list []*ast.MessageLiteralNode) *Location {
 	for argIdx, literal := range list {
 		for _, arg := range literal.Elements {
 			fieldName := arg.Name.Name.AsIdentifier()
@@ -419,7 +662,7 @@ func (f *File) findMessageArgumentByPos(ctx findContext, defIdx int, pos Positio
 	return nil
 }
 
-func (f *File) findCallExprByPos(ctx findContext, defIdx int, pos Position, node *ast.MessageLiteralNode) *Location {
+func (f *File) findCallExprByPos(ctx *findContext, defIdx int, pos Position, node *ast.MessageLiteralNode) *Location {
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch fieldName {
@@ -451,7 +694,7 @@ func (f *File) findCallExprByPos(ctx findContext, defIdx int, pos Position, node
 	return nil
 }
 
-func (f *File) findMethodRequestByPos(ctx findContext, defIdx int, pos Position, list []*ast.MessageLiteralNode) *Location {
+func (f *File) findMethodRequestByPos(ctx *findContext, defIdx int, pos Position, list []*ast.MessageLiteralNode) *Location {
 	for idx, literal := range list {
 		for _, field := range literal.Elements {
 			fieldName := field.Name.Name.AsIdentifier()
@@ -507,7 +750,7 @@ func (f *File) findMethodRequestByPos(ctx findContext, defIdx int, pos Position,
 	return nil
 }
 
-func (f *File) findServiceByPos(ctx findContext, pos Position, node *ast.ServiceNode) *Location {
+func (f *File) findServiceByPos(ctx *findContext, pos Position, node *ast.ServiceNode) *Location {
 	ctx.service = &Service{Name: string(node.Name.AsIdentifier())}
 	for _, decl := range node.Decls {
 		switch n := decl.(type) {
@@ -527,7 +770,7 @@ func (f *File) findServiceByPos(ctx findContext, pos Position, node *ast.Service
 	return nil
 }
 
-func (f *File) findServiceOptionByPos(ctx findContext, pos Position, node *ast.OptionNode) *Location {
+func (f *File) findServiceOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
 	literal, ok := node.Val.(*ast.MessageLiteralNode)
 	if !ok {
 		return nil
@@ -544,7 +787,7 @@ func (f *File) findServiceOptionByPos(ctx findContext, pos Position, node *ast.O
 	return nil
 }
 
-func (f *File) findServiceDependencyByPos(ctx findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
+func (f *File) findServiceDependencyByPos(ctx *findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
 	for idx, literal := range list {
 		for _, dep := range literal.Elements {
 			fieldName := dep.Name.Name.AsIdentifier()
@@ -583,7 +826,7 @@ func (f *File) findServiceDependencyByPos(ctx findContext, pos Position, list []
 	return nil
 }
 
-func (f *File) findMethodByPos(ctx findContext, pos Position, node *ast.RPCNode) *Location {
+func (f *File) findMethodByPos(ctx *findContext, pos Position, node *ast.RPCNode) *Location {
 	ctx.method = &Method{Name: string(node.Name.AsIdentifier())}
 	for _, decl := range node.Decls {
 		switch n := decl.(type) {
@@ -599,7 +842,7 @@ func (f *File) findMethodByPos(ctx findContext, pos Position, node *ast.RPCNode)
 	return nil
 }
 
-func (f *File) findMethodOptionByPos(ctx findContext, pos Position, node *ast.OptionNode) *Location {
+func (f *File) findMethodOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
 	switch n := node.Val.(type) {
 	case *ast.StringLiteralNode:
 		if strings.HasSuffix(f.optionName(node), "timeout") {
@@ -668,6 +911,10 @@ func (f *File) NodeInfoByLocation(loc *Location) *ast.NodeInfo {
 	}
 	for _, decl := range f.fileNode.Decls {
 		switch n := decl.(type) {
+		case *ast.ImportNode:
+			if loc.ImportName == n.Name.AsString() {
+				return f.nodeInfo(n.Name)
+			}
 		case *ast.OptionNode:
 			if f.matchOption(f.optionName(n), "go_package") && loc.GoPackage {
 				return f.nodeInfo(n.Val)
@@ -696,6 +943,9 @@ func (f *File) NodeInfoByLocation(loc *Location) *ast.NodeInfo {
 }
 
 func (f *File) nodeInfoByMessage(node *ast.MessageNode, msg *Message) *ast.NodeInfo {
+	if string(node.Name.AsIdentifier()) != msg.Name {
+		return nil
+	}
 	for _, decl := range node.MessageBody.Decls {
 		switch n := decl.(type) {
 		case *ast.OptionNode:
@@ -715,6 +965,12 @@ func (f *File) nodeInfoByMessage(node *ast.MessageNode, msg *Message) *ast.NodeI
 		case *ast.OneofNode:
 			if info := f.nodeInfoByOneof(n, msg); info != nil {
 				return info
+			}
+		case *ast.MessageNode:
+			if msg.NestedMessage != nil {
+				if info := f.nodeInfoByMessage(n, msg.NestedMessage); info != nil {
+					return info
+				}
 			}
 		case *ast.EnumNode:
 			if msg.Enum != nil {
@@ -1248,6 +1504,9 @@ func (f *File) nodeInfoByField(node *ast.FieldNode, field *Field) *ast.NodeInfo 
 			}
 			return f.nodeInfoByFieldOption(opt, field.Option)
 		}
+	}
+	if field.Type && node.FldType != nil {
+		return f.nodeInfo(node.FldType)
 	}
 	return f.nodeInfo(node)
 }

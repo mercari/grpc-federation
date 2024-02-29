@@ -9,14 +9,21 @@ func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.Initi
 		tokenTypes     []protocol.SemanticTokenTypes
 		tokenModifiers []protocol.SemanticTokenModifiers
 	)
-	semanticTokens := params.Capabilities.TextDocument.SemanticTokens
-	for idx, tokenType := range semanticTokens.TokenTypes {
-		tokenTypes = append(tokenTypes, protocol.SemanticTokenTypes(tokenType))
-		h.tokenTypeMap[tokenType] = uint32(idx)
-	}
-	for idx, modifier := range semanticTokens.TokenModifiers {
-		tokenModifiers = append(tokenModifiers, protocol.SemanticTokenModifiers(modifier))
-		h.tokenModifierMap[modifier] = 1 << uint32(idx)
+	capabilities := params.Capabilities
+	if textDocument := capabilities.TextDocument; textDocument != nil {
+		if semanticTokens := textDocument.SemanticTokens; semanticTokens != nil {
+			for idx, tokenType := range semanticTokens.TokenTypes {
+				tokenTypes = append(tokenTypes, protocol.SemanticTokenTypes(tokenType))
+				h.tokenTypeMap[tokenType] = uint32(idx)
+			}
+			for idx, modifier := range semanticTokens.TokenModifiers {
+				tokenModifiers = append(tokenModifiers, protocol.SemanticTokenModifiers(modifier))
+				h.tokenModifierMap[modifier] = 1 << uint32(idx)
+			}
+		}
+		if definition := textDocument.Definition; definition != nil {
+			h.supportedDefinitionLinkClient = definition.LinkSupport
+		}
 	}
 	return &protocol.InitializeResult{
 		Capabilities: protocol.ServerCapabilities{
@@ -32,6 +39,7 @@ func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.Initi
 				},
 				"full": true,
 			},
+			SelectionRangeProvider: true,
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name:    "grpc-federation",

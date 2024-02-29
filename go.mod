@@ -14,6 +14,7 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.0
 	github.com/tetratelabs/wazero v1.6.0
 	go.lsp.dev/jsonrpc2 v0.10.0
+	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2
 	go.lsp.dev/protocol v0.12.0
 	go.lsp.dev/uri v0.3.0
 	go.opentelemetry.io/otel v1.21.0
@@ -40,7 +41,6 @@ require (
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.3.4 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
-	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect

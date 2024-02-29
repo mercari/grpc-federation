@@ -9,7 +9,21 @@ Syntax highlighting is available in quoted value. So, this is especially effecti
 
 <img width="800px" src="https://github.com/mercari/grpc-federation/blob/main/images/semantic_highlighting.png?raw=true"/>
 
-### Jump to Definition
+### Goto Definition
+
+It supports jumps to the following definition sources.
+
+- Imported file name
+  - e.g.) import "<u>path/to/foo.proto</u>"
+
+- Type of field definition
+  - e.g.) <u>Foo</u> foo = 1
+
+- gRPC method name
+  - e.g.) def { call { method: "<u>foopkg.FooService/BarMethod</u>" } }
+
+- Alias name
+  - e.g.) option (grpc.federation.message).alias = "<u>foopkg.Bar</u>"
 
 ### Diagnostics
 
