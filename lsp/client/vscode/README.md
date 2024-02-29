@@ -9,7 +9,7 @@ Syntax highlighting is available in quoted value. So, this is especially effecti
 
 <img width="800px" src="https://github.com/mercari/grpc-federation/blob/main/images/semantic_highlighting.png?raw=true"/>
 
-### Jump to Definition
+### Goto Definition
 ### Diagnostics
 ### Code Completion
 

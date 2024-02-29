@@ -18,6 +18,7 @@ func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.Initi
 		tokenModifiers = append(tokenModifiers, protocol.SemanticTokenModifiers(modifier))
 		h.tokenModifierMap[modifier] = 1 << uint32(idx)
 	}
+	h.supportedDefinitionLinkClient = params.Capabilities.TextDocument.Definition.LinkSupport
 	return &protocol.InitializeResult{
 		Capabilities: protocol.ServerCapabilities{
 			TextDocumentSync:   protocol.TextDocumentSyncKindFull,
@@ -32,6 +33,7 @@ func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.Initi
 				},
 				"full": true,
 			},
+			SelectionRangeProvider: true,
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name:    "grpc-federation",

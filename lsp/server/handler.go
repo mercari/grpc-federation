@@ -15,16 +15,17 @@ import (
 var _ protocol.Server = &Handler{}
 
 type Handler struct {
-	logger           *slog.Logger
-	importPaths      []string
-	client           protocol.Client
-	compiler         *compiler.Compiler
-	validator        *validator.Validator
-	completer        *Completer
-	fileContentMu    sync.Mutex
-	fileToContentMap map[string][]byte
-	tokenTypeMap     map[string]uint32
-	tokenModifierMap map[string]uint32
+	logger                        *slog.Logger
+	importPaths                   []string
+	client                        protocol.Client
+	compiler                      *compiler.Compiler
+	validator                     *validator.Validator
+	completer                     *Completer
+	fileContentMu                 sync.Mutex
+	fileToContentMap              map[string][]byte
+	tokenTypeMap                  map[string]uint32
+	tokenModifierMap              map[string]uint32
+	supportedDefinitionLinkClient bool
 }
 
 func NewHandler(client protocol.Client, w io.Writer, importPaths []string) *Handler {
@@ -100,11 +101,6 @@ func (h *Handler) ColorPresentation(ctx context.Context, params *protocol.ColorP
 
 func (h *Handler) Completion(ctx context.Context, params *protocol.CompletionParams) (*protocol.CompletionList, error) {
 	h.logger.Info("Completion", slog.Any("params", params))
-	defer func() {
-		if err := recover(); err != nil {
-			h.logger.Error("recovered", slog.Any("error", err))
-		}
-	}()
 	return h.completion(ctx, params)
 }
 
@@ -120,21 +116,16 @@ func (h *Handler) Declaration(ctx context.Context, params *protocol.DeclarationP
 
 func (h *Handler) Definition(ctx context.Context, params *protocol.DefinitionParams) ([]protocol.Location, error) {
 	h.logger.Info("Definition", slog.Any("params", params))
-	defer func() {
-		if err := recover(); err != nil {
-			h.logger.Error("recovered", slog.Any("error", err))
-		}
-	}()
 	return h.definition(ctx, params)
+}
+
+func (h *Handler) DefinitionWithLink(ctx context.Context, params *protocol.DefinitionParams) ([]protocol.LocationLink, error) {
+	h.logger.Info("Definition", slog.Any("params", params))
+	return h.definitionWithLink(ctx, params)
 }
 
 func (h *Handler) DidChange(ctx context.Context, params *protocol.DidChangeTextDocumentParams) error {
 	h.logger.Info("DidChange", slog.Any("params", params))
-	defer func() {
-		if err := recover(); err != nil {
-			h.logger.Error("recovered", slog.Any("error", err))
-		}
-	}()
 	return h.didChange(ctx, params)
 }
 
@@ -325,11 +316,6 @@ func (h *Handler) OutgoingCalls(ctx context.Context, params *protocol.CallHierar
 
 func (h *Handler) SemanticTokensFull(ctx context.Context, params *protocol.SemanticTokensParams) (*protocol.SemanticTokens, error) {
 	h.logger.Info("SemanticTokensFull", slog.Any("params", params))
-	defer func() {
-		if err := recover(); err != nil {
-			h.logger.Error("recovered", slog.Any("error", err))
-		}
-	}()
 	return h.semanticTokensFull(params)
 }
 

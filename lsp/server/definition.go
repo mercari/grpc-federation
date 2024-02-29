@@ -15,9 +15,25 @@ import (
 
 	"github.com/mercari/grpc-federation/compiler"
 	"github.com/mercari/grpc-federation/source"
+	"github.com/mercari/grpc-federation/types"
 )
 
 func (h *Handler) definition(ctx context.Context, params *protocol.DefinitionParams) ([]protocol.Location, error) {
+	locs, err := h.definitionWithLink(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	ret := make([]protocol.Location, 0, len(locs))
+	for _, loc := range locs {
+		ret = append(ret, protocol.Location{
+			URI:   loc.TargetURI,
+			Range: loc.TargetRange,
+		})
+	}
+	return ret, nil
+}
+
+func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.DefinitionParams) ([]protocol.LocationLink, error) {
 	path, content, err := h.getFile(params.TextDocument.URI)
 	if err != nil {
 		return nil, err
@@ -27,7 +43,6 @@ func (h *Handler) definition(ctx context.Context, params *protocol.DefinitionPar
 		return nil, err
 	}
 	pos := source.Position{Line: int(params.Position.Line) + 1, Col: int(params.Position.Character) + 1}
-	h.logger.Info("created file", slog.String("path", file.Path()), slog.Any("ast", file.AST()))
 	loc := file.FindLocationByPos(pos)
 	if loc == nil {
 		return nil, nil
@@ -36,39 +51,107 @@ func (h *Handler) definition(ctx context.Context, params *protocol.DefinitionPar
 	if nodeInfo == nil {
 		return nil, nil
 	}
+	h.logger.Info("node", slog.String("text", nodeInfo.RawText()))
+	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...))
+	if err != nil {
+		return nil, err
+	}
 	switch {
+	case isImportNameDefinition(loc):
+		foundImportFile, err := strconv.Unquote(nodeInfo.RawText())
+		if err != nil {
+			return nil, err
+		}
+		h.logger.Info("found import", slog.String("file", foundImportFile))
+		locs, err := h.findImportFileDefinition(ctx, path, protoFiles, foundImportFile)
+		if err != nil {
+			return nil, err
+		}
+		return h.toLocationLinks(nodeInfo, locs, true), nil
 	case isMessageNameDefinition(loc):
 		foundMsgName, err := strconv.Unquote(nodeInfo.RawText())
 		if err != nil {
 			return nil, err
 		}
 		h.logger.Info("found message", slog.String("name", foundMsgName))
-		locs, err := h.findMessageDefinition(ctx, path, file, foundMsgName)
+		locs, err := h.findTypeDefinition(ctx, path, protoFiles, foundMsgName)
 		if err != nil {
 			return nil, err
 		}
-		return locs, nil
+		return h.toLocationLinks(nodeInfo, locs, true), nil
+	case isFieldType(loc.Message):
+		var prefix []string
+		if loc.Message != nil {
+			prefix = loc.Message.MessageNames()
+		}
+		foundTypeName := nodeInfo.RawText()
+		if types.ToKind(foundTypeName) != types.Unknown {
+			// buildtin types
+			return nil, nil
+		}
+		firstPriorTypeName := strings.Join(append(prefix, foundTypeName), ".")
+		for _, typeName := range []string{firstPriorTypeName, foundTypeName} {
+			h.logger.Info("found message", slog.String("name", typeName))
+			locs, err := h.findTypeDefinition(ctx, path, protoFiles, typeName)
+			if err != nil {
+				continue
+			}
+			if len(locs) == 0 {
+				continue
+			}
+			return h.toLocationLinks(nodeInfo, locs, false), nil
+		}
+	case isTypeAlias(loc):
+		typeName, err := strconv.Unquote(nodeInfo.RawText())
+		if err != nil {
+			return nil, err
+		}
+		h.logger.Info("found type", slog.String("name", typeName))
+		locs, err := h.findTypeDefinition(ctx, path, protoFiles, typeName)
+		if err != nil {
+			return nil, err
+		}
+		return h.toLocationLinks(nodeInfo, locs, true), nil
 	case isMethodNameDefinition(loc):
 		foundMethodName, err := strconv.Unquote(nodeInfo.RawText())
 		if err != nil {
 			return nil, err
 		}
 		h.logger.Info("found method", slog.String("name", foundMethodName))
-		locs, err := h.findMethodDefinition(ctx, path, file, foundMethodName)
+		locs, err := h.findMethodDefinition(ctx, path, protoFiles, foundMethodName)
 		if err != nil {
 			return nil, err
 		}
-		return locs, nil
+		return h.toLocationLinks(nodeInfo, locs, true), nil
 	}
 	return nil, nil
 }
 
-func (h *Handler) findMessageDefinition(ctx context.Context, path string, file *source.File, defMsgName string) ([]protocol.Location, error) {
-	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...))
-	if err != nil {
-		return nil, err
+func (h *Handler) findImportFileDefinition(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, fileName string) ([]protocol.Location, error) {
+	for _, protoFile := range protoFiles {
+		filePath, err := h.filePathFromFileDescriptorProto(path, protoFile)
+		if err != nil {
+			h.logger.Warn("failed to find a path from a proto", slog.String("error", err.Error()))
+			continue
+		}
+		if strings.HasSuffix(filePath, fileName) {
+			return []protocol.Location{
+				{
+					URI: protocol.DocumentURI(fmt.Sprintf("file://%s", filePath)),
+					Range: protocol.Range{
+						Start: protocol.Position{Line: 0, Character: 0},
+						End:   protocol.Position{Line: 0, Character: 0},
+					},
+				},
+			}, nil
+		}
 	}
-	msgName, filePath, err := h.messageAndFilePath(path, protoFiles, defMsgName)
+	// ignore error
+	return nil, nil
+}
+
+func (h *Handler) findTypeDefinition(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, defTypeName string) ([]protocol.Location, error) {
+	typeName, filePath, err := h.typeAndFilePath(path, protoFiles, defTypeName)
 	if filePath == "" {
 		return nil, err
 	}
@@ -81,10 +164,19 @@ func (h *Handler) findMessageDefinition(ctx context.Context, path string, file *
 		return nil, err
 	}
 
+	parts := strings.Split(typeName, ".")
+	lastPart := parts[len(parts)-1]
+
 	var foundNode ast.Node
 	_ = ast.Walk(defFile.AST(), &ast.SimpleVisitor{
 		DoVisitMessageNode: func(n *ast.MessageNode) error {
-			if string(n.Name.AsIdentifier()) == msgName {
+			if string(n.Name.AsIdentifier()) == lastPart {
+				foundNode = n.Name
+			}
+			return nil
+		},
+		DoVisitEnumNode: func(n *ast.EnumNode) error {
+			if string(n.Name.AsIdentifier()) == lastPart {
 				foundNode = n.Name
 			}
 			return nil
@@ -92,17 +184,13 @@ func (h *Handler) findMessageDefinition(ctx context.Context, path string, file *
 	})
 
 	if foundNode == nil {
-		return nil, fmt.Errorf("failed to find %s message from ast.Node in %s file", msgName, filePath)
+		return nil, fmt.Errorf("failed to find %s type from ast.Node in %s file", typeName, filePath)
 	}
 
 	return h.toLocation(defFile, foundNode), nil
 }
 
-func (h *Handler) findMethodDefinition(ctx context.Context, path string, file *source.File, defMethodName string) ([]protocol.Location, error) {
-	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...))
-	if err != nil {
-		return nil, err
-	}
+func (h *Handler) findMethodDefinition(ctx context.Context, path string, protoFiles []*descriptorpb.FileDescriptorProto, defMethodName string) ([]protocol.Location, error) {
 	methodName, filePath, err := h.methodAndFilePath(path, protoFiles, defMethodName)
 	if filePath == "" {
 		return nil, err
@@ -133,6 +221,36 @@ func (h *Handler) findMethodDefinition(ctx context.Context, path string, file *s
 	return h.toLocation(defFile, foundNode), nil
 }
 
+func (h *Handler) toLocationLinks(nodeInfo *ast.NodeInfo, locs []protocol.Location, isQuoted bool) []protocol.LocationLink {
+	ret := make([]protocol.LocationLink, 0, len(locs))
+	startPos := nodeInfo.Start()
+	endPos := nodeInfo.End()
+	for _, loc := range locs {
+		startCol := uint32(startPos.Col - 1)
+		endCol := uint32(endPos.Col - 1)
+		if isQuoted {
+			startCol += 1
+			endCol -= 1
+		}
+		ret = append(ret, protocol.LocationLink{
+			OriginSelectionRange: &protocol.Range{
+				Start: protocol.Position{
+					Line:      uint32(startPos.Line) - 1,
+					Character: startCol,
+				},
+				End: protocol.Position{
+					Line:      uint32(endPos.Line) - 1,
+					Character: endCol,
+				},
+			},
+			TargetURI:            loc.URI,
+			TargetRange:          loc.Range,
+			TargetSelectionRange: loc.Range,
+		})
+	}
+	return ret
+}
+
 func (h *Handler) toLocation(file *source.File, node ast.Node) []protocol.Location {
 	info := file.AST().NodeInfo(node)
 	startPos := info.Start()
@@ -155,7 +273,7 @@ func (h *Handler) toLocation(file *source.File, node ast.Node) []protocol.Locati
 	}
 }
 
-func (h *Handler) messageAndFilePath(path string, protoFiles []*descriptorpb.FileDescriptorProto, defMsgName string) (string, string, error) {
+func (h *Handler) typeAndFilePath(path string, protoFiles []*descriptorpb.FileDescriptorProto, defTypeName string) (string, string, error) {
 	currentPkgName, err := h.currentPackageName(path, protoFiles)
 	if err != nil {
 		return "", "", err
@@ -169,18 +287,34 @@ func (h *Handler) messageAndFilePath(path string, protoFiles []*descriptorpb.Fil
 		}
 		pkg := protoFile.GetPackage()
 		for _, msg := range protoFile.GetMessageType() {
-			var msgName string
-			if pkg == currentPkgName {
-				msgName = msg.GetName()
-			} else {
-				msgName = fmt.Sprintf("%s.%s", pkg, msg.GetName())
-			}
-			if defMsgName == msgName {
-				return msg.GetName(), filePath, nil
+			for _, name := range getDeclaredTypeNames(msg) {
+				var typeName string
+				if pkg == currentPkgName {
+					typeName = name
+				} else {
+					typeName = fmt.Sprintf("%s.%s", pkg, name)
+				}
+				if defTypeName == typeName {
+					return typeName, filePath, nil
+				}
 			}
 		}
 	}
-	return "", "", fmt.Errorf("failed to find %s message from all proto files", defMsgName)
+	return "", "", fmt.Errorf("failed to find %s type from all proto files", defTypeName)
+}
+
+func getDeclaredTypeNames(msg *descriptorpb.DescriptorProto) []string {
+	name := msg.GetName()
+	ret := []string{name}
+	for _, msg := range msg.GetNestedType() {
+		for _, nested := range getDeclaredTypeNames(msg) {
+			ret = append(ret, strings.Join([]string{name, nested}, "."))
+		}
+	}
+	for _, enum := range msg.GetEnumType() {
+		ret = append(ret, strings.Join([]string{name, enum.GetName()}, "."))
+	}
+	return ret
 }
 
 func (h *Handler) methodAndFilePath(path string, protoFiles []*descriptorpb.FileDescriptorProto, defMethodName string) (string, string, error) {
@@ -244,6 +378,10 @@ func (h *Handler) filePathFromFileDescriptorProto(path string, protoFile *descri
 	return "", fmt.Errorf("failed to find absolute path from %s", fileName)
 }
 
+func isImportNameDefinition(loc *source.Location) bool {
+	return loc.ImportName != ""
+}
+
 func isMessageNameDefinition(loc *source.Location) bool {
 	if loc.Message == nil {
 		return false
@@ -258,6 +396,67 @@ func isMessageNameDefinition(loc *source.Location) bool {
 		return false
 	}
 	return loc.Message.Option.Def.Message.Name
+}
+
+func isTypeAlias(loc *source.Location) bool {
+	if isTypeAliasByMessage(loc.Message) {
+		return true
+	}
+	if isTypeAliasByEnum(loc.Enum) {
+		return true
+	}
+	return false
+}
+
+func isTypeAliasByMessage(msg *source.Message) bool {
+	if msg == nil {
+		return false
+	}
+	if msg.Option != nil && msg.Option.Alias {
+		return true
+	}
+	if msg.Field != nil {
+		if msg.Field.Option != nil && msg.Field.Option.Alias {
+			return true
+		}
+	}
+	if msg.NestedMessage != nil {
+		return isTypeAliasByMessage(msg.NestedMessage)
+	}
+	if msg.Enum != nil {
+		return isTypeAliasByEnum(msg.Enum)
+	}
+	return false
+}
+
+func isTypeAliasByEnum(enum *source.Enum) bool {
+	if enum == nil {
+		return false
+	}
+	if enum.Option != nil && enum.Option.Alias {
+		return true
+	}
+	if enum.Value != nil {
+		if enum.Value.Option != nil && enum.Value.Option.Alias {
+			return true
+		}
+	}
+	return false
+}
+
+func isFieldType(msg *source.Message) bool {
+	if msg == nil {
+		return false
+	}
+	if msg.NestedMessage != nil {
+		if isFieldType(msg.NestedMessage) {
+			return true
+		}
+	}
+	if msg.Field == nil {
+		return false
+	}
+	return msg.Field.Type
 }
 
 func isMethodNameDefinition(loc *source.Location) bool {

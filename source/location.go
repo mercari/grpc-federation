@@ -2,12 +2,13 @@ package source
 
 // Location represents semantic location information for grpc federation option.
 type Location struct {
-	FileName  string
-	Export    *Export
-	GoPackage bool
-	Service   *Service
-	Message   *Message
-	Enum      *Enum
+	FileName   string
+	ImportName string
+	Export     *Export
+	GoPackage  bool
+	Service    *Service
+	Message    *Message
+	Enum       *Enum
 }
 
 type Export struct {
@@ -106,8 +107,24 @@ type Message struct {
 	NestedMessage *Message
 }
 
+func (m *Message) MessageNames() []string {
+	ret := []string{m.Name}
+	if m.NestedMessage != nil {
+		ret = append(ret, m.NestedMessage.MessageNames()...)
+	}
+	return ret
+}
+
+func (m *Message) LastNestedMessage() *Message {
+	if m.NestedMessage != nil {
+		return m.NestedMessage.LastNestedMessage()
+	}
+	return m
+}
+
 // Field represents message field location.
 type Field struct {
+	Type   bool
 	Name   string
 	Option *FieldOption
 }
