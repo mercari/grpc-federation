@@ -27,19 +27,21 @@ func NewCodeGenerator() *CodeGenerator {
 	return &CodeGenerator{}
 }
 
-func (g *CodeGenerator) Generate(file *resolver.File) ([]byte, error) {
+func (g *CodeGenerator) Generate(file *resolver.File, enums []*resolver.Enum) ([]byte, error) {
 	tmpl, err := loadTemplate()
 	if err != nil {
 		return nil, err
 	}
 	return generateGoContent(tmpl, &File{
 		File:   file,
+		enums:  enums,
 		pkgMap: make(map[*resolver.GoPackage]struct{}),
 	})
 }
 
 type File struct {
 	*resolver.File
+	enums  []*resolver.Enum
 	pkgMap map[*resolver.GoPackage]struct{}
 }
 
@@ -421,6 +423,27 @@ func (f *File) Imports() []*Import {
 		return imprts[i].Path < imprts[j].Path
 	})
 	return imprts
+}
+
+type Enum struct {
+	ProtoName string
+	GoName    string
+}
+
+func (f *File) Enums() []*Enum {
+	ret := make([]*Enum, 0, len(f.enums))
+	for _, enum := range f.enums {
+		protoName := enum.FQDN()
+		// ignore standard library's enum.
+		if strings.HasPrefix(protoName, "google.") {
+			continue
+		}
+		ret = append(ret, &Enum{
+			ProtoName: protoName,
+			GoName:    f.toTypeText(&resolver.Type{Kind: types.Enum, Enum: enum}),
+		})
+	}
+	return ret
 }
 
 func (f *File) Types() Types {
@@ -874,7 +897,7 @@ func (f *File) messageTypeToText(msg *resolver.Message) string {
 func (f *File) enumTypeToText(enum *resolver.Enum) string {
 	var name string
 	if enum.Message != nil {
-		name = fmt.Sprintf("%s_%s", enum.Message.Name, enum.Name)
+		name = strings.Join(append(enum.Message.ParentMessageNames(), enum.Message.Name, enum.Name), "_")
 	} else {
 		name = enum.Name
 	}

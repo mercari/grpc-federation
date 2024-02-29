@@ -155,6 +155,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		},
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err

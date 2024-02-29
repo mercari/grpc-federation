@@ -185,6 +185,27 @@ func NewCELTypeHelper(structFieldMap map[string]map[string]*celtypes.FieldType) 
 	}
 }
 
+func EnumAccessorOptions(enumName string, nameToValue map[string]int32, valueToName map[int32]string) []cel.EnvOption {
+	return []cel.EnvOption{
+		cel.Function(
+			fmt.Sprintf("%s.name", enumName),
+			cel.Overload(fmt.Sprintf("%s_name_int_string", enumName), []*cel.Type{cel.IntType}, cel.StringType,
+				cel.UnaryBinding(func(self ref.Val) ref.Val {
+					return celtypes.String(valueToName[int32(self.(celtypes.Int))])
+				}),
+			),
+		),
+		cel.Function(
+			fmt.Sprintf("%s.value", enumName),
+			cel.Overload(fmt.Sprintf("%s_value_string_int", enumName), []*cel.Type{cel.StringType}, cel.IntType,
+				cel.UnaryBinding(func(self ref.Val) ref.Val {
+					return celtypes.Int(nameToValue[string(self.(celtypes.String))])
+				}),
+			),
+		),
+	}
+}
+
 func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 	return []cel.EnvOption{
 		cel.StdLib(),

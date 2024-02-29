@@ -34,7 +34,7 @@ func (r *CELRegistry) FindStructFieldType(structType, fieldName string) (*celtyp
 	if msg := r.messageMap[structType]; msg != nil {
 		if field := msg.Field(fieldName); field != nil {
 			if field.Type.Kind == types.Enum {
-				// HACK: cel-go currently does not support enum types,s o it will always be an int type.
+				// HACK: cel-go currently does not support enum types, so it will always be an int type.
 				// Therefore, in case of enum type, copy the *Type of int type, and then map the created *Type to the enum type.
 				// Finally, at `fromCELType` phase, lookup enum type from *Type address.
 				copiedType := *fieldType.Type

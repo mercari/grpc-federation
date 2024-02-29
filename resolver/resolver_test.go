@@ -338,6 +338,20 @@ func TestSimpleAggregation(t *testing.T) {
 				).
 				AddFieldWithRule("const", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewStringValue("foo")).Build(t)).
 				AddFieldWithRule("uuid", resolver.StringType, testutil.NewFieldRuleBuilder(resolver.NewByValue("uuid.string()", resolver.StringType)).Build(t)).
+				AddFieldWithRule(
+					"enum_name",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(
+						resolver.NewByValue("org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)", resolver.StringType),
+					).Build(t),
+				).
+				AddFieldWithRule(
+					"enum_value",
+					resolver.Int32Type,
+					testutil.NewFieldRuleBuilder(
+						resolver.NewByValue("org.federation.Item.ItemType.value('ITEM_TYPE_1')", resolver.Int32Type),
+					).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(

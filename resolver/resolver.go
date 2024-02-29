@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/ref"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -74,6 +75,8 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 type Result struct {
 	// Files list of files with services with the grpc.federation.service option.
 	Files []*File
+	// Enums list of all enum definition.
+	Enums []*Enum
 	// Warnings all warnings occurred during the resolve process.
 	Warnings []*Warning
 }
@@ -125,6 +128,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 
 	return &Result{
 		Files:    r.resultFiles(files),
+		Enums:    r.allEnums(),
 		Warnings: ctx.warnings(),
 	}, ctx.error()
 }
@@ -230,6 +234,17 @@ func (r *Resolver) resultFiles(allFiles []*File) []*File {
 			fileMap[samePkgFile] = struct{}{}
 		}
 	}
+	return ret
+}
+
+func (r *Resolver) allEnums() []*Enum {
+	ret := make([]*Enum, 0, len(r.cachedEnumMap))
+	for _, enum := range r.cachedEnumMap {
+		ret = append(ret, enum)
+	}
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].FQDN() < ret[j].FQDN()
+	})
 	return ret
 }
 
@@ -2864,6 +2879,7 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
 	}
+	envOpts = append(envOpts, r.enumAccessors()...)
 	for _, plugin := range r.celPluginMap {
 		envOpts = append(envOpts, cel.Lib(plugin))
 	}
@@ -2875,6 +2891,27 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		return nil, err
 	}
 	return env, nil
+}
+
+func (r *Resolver) enumAccessors() []cel.EnvOption {
+	var ret []cel.EnvOption
+	for _, enum := range r.cachedEnumMap {
+		ret = append(ret,
+			cel.Function(
+				fmt.Sprintf("%s.name", enum.FQDN()),
+				cel.Overload(fmt.Sprintf("%s_name_int_string", enum.FQDN()), []*cel.Type{cel.IntType}, cel.StringType,
+					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
+				),
+			),
+			cel.Function(
+				fmt.Sprintf("%s.value", enum.FQDN()),
+				cel.Overload(fmt.Sprintf("%s_value_string_int", enum.FQDN()), []*cel.Type{cel.StringType}, cel.IntType,
+					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
+				),
+			),
+		)
+	}
+	return ret
 }
 
 func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
