@@ -127,6 +127,10 @@ func (d *decoder) toFile(id string) (*resolver.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	importFiles, err := d.toFiles(file.GetImportFileIds())
+	if err != nil {
+		return nil, err
+	}
 	ret.Name = file.GetName()
 	ret.Package = pkg
 	ret.GoPackage = d.toGoPackage(file.GetGoPackage())
@@ -134,6 +138,7 @@ func (d *decoder) toFile(id string) (*resolver.File, error) {
 	ret.Messages = msgs
 	ret.Enums = enums
 	ret.CELPlugins = celPlugins
+	ret.ImportFiles = importFiles
 	return ret, nil
 }
 

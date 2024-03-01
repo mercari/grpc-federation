@@ -84,6 +84,7 @@ message File {
   repeated string message_ids = 6;
   repeated string enum_ids = 7;
   repeated string cel_plugin_ids = 8;
+  repeated string import_file_ids = 9;
 }
   
 message Package {
