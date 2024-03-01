@@ -150,7 +150,7 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 			ImportPaths: append(c.importPaths, filepath.Dir(relPath), ""),
 			Accessor: func(p string) (io.ReadCloser, error) {
 				if p == file.Path() {
-					return file, nil
+					return io.NopCloser(bytes.NewBuffer(file.Content())), nil
 				}
 				f, err := os.Open(p)
 				if err != nil {

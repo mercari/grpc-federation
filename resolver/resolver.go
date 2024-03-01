@@ -28,6 +28,7 @@ type Resolver struct {
 	files                      []*descriptorpb.FileDescriptorProto
 	celRegistry                *CELRegistry
 	defToFileMap               map[*descriptorpb.FileDescriptorProto]*File
+	fileNameToDefMap           map[string]*descriptorpb.FileDescriptorProto
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
 	celPluginMap               map[string]*CELPlugin
@@ -52,6 +53,7 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 		files:                      files,
 		celRegistry:                newCELRegistry(msgMap),
 		defToFileMap:               make(map[*descriptorpb.FileDescriptorProto]*File),
+		fileNameToDefMap:           make(map[string]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToFileDefs: make(map[string][]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToPackage:  make(map[string]*Package),
 		celPluginMap:               make(map[string]*CELPlugin),
@@ -126,9 +128,10 @@ func (r *Resolver) Resolve() (*Result, error) {
 
 	r.validateServiceFromFiles(ctx, files)
 
+	resultFiles := r.resultFiles(files)
 	return &Result{
-		Files:    r.resultFiles(files),
-		Enums:    r.allEnums(),
+		Files:    resultFiles,
+		Enums:    r.allEnums(resultFiles),
 		Warnings: ctx.warnings(),
 	}, ctx.error()
 }
@@ -159,6 +162,7 @@ func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descrip
 		pkg.Files = append(pkg.Files, file)
 
 		r.defToFileMap[fileDef] = file
+		r.fileNameToDefMap[fileDef.GetName()] = fileDef
 		r.protoPackageNameToFileDefs[protoPackageName] = append(
 			r.protoPackageNameToFileDefs[protoPackageName],
 			fileDef,
@@ -237,15 +241,18 @@ func (r *Resolver) resultFiles(allFiles []*File) []*File {
 	return ret
 }
 
-func (r *Resolver) allEnums() []*Enum {
-	ret := make([]*Enum, 0, len(r.cachedEnumMap))
-	for _, enum := range r.cachedEnumMap {
-		ret = append(ret, enum)
+func (r *Resolver) allEnums(files []*File) []*Enum {
+	var enums []*Enum
+	for _, file := range files {
+		enums = append(enums, file.AllEnums()...)
+		for _, importFile := range file.ImportFiles {
+			enums = append(enums, importFile.AllEnums()...)
+		}
 	}
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].FQDN() < ret[j].FQDN()
+	sort.Slice(enums, func(i, j int) bool {
+		return enums[i].FQDN() < enums[j].FQDN()
 	})
-	return ret
+	return enums
 }
 
 func (r *Resolver) hasServiceOrPluginRuleFiles(files []*File) []*File {
@@ -336,6 +343,13 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		}
 	}
 
+	for _, depFileName := range def.GetDependency() {
+		depDef, exists := r.fileNameToDefMap[depFileName]
+		if !exists {
+			continue
+		}
+		file.ImportFiles = append(file.ImportFiles, r.defToFileMap[depDef])
+	}
 	for _, serviceDef := range def.GetService() {
 		name := serviceDef.GetName()
 		service := r.resolveService(ctx, file.Package, name, builder.WithService(name))

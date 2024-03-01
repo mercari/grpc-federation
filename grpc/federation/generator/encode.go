@@ -96,6 +96,9 @@ func (e *encoder) toFile(file *resolver.File) *plugin.File {
 	for _, p := range e.toCELPlugins(file.CELPlugins) {
 		ret.CelPluginIds = append(ret.CelPluginIds, p.GetId())
 	}
+	for _, file := range e.toFiles(file.ImportFiles) {
+		ret.ImportFileIds = append(ret.ImportFileIds, file.GetId())
+	}
 	return ret
 }
 
@@ -1232,7 +1235,7 @@ func (e *encoder) toFileID(file *resolver.File) string {
 	if file == nil {
 		return ""
 	}
-	return file.Package.Name + file.Name
+	return file.Package.Name + ":" + file.Name
 }
 
 func (e *encoder) toServiceID(svc *resolver.Service) string {

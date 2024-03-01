@@ -31,6 +31,14 @@ func (f *File) Message(name string) *Message {
 	return nil
 }
 
+func (f *File) AllEnums() []*Enum {
+	enums := f.Enums
+	for _, msg := range f.Messages {
+		enums = append(enums, msg.AllEnums()...)
+	}
+	return enums
+}
+
 func (f Files) FindByPackageName(pkg string) Files {
 	var ret Files
 	for _, file := range f {

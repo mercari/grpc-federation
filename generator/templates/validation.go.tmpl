@@ -29,12 +29,13 @@ if err := grpcfed.If({{ $ctx }}, value, "{{ .Error.If.Expr }}", func(value *loca
 		}(); err != nil {
 			return err
 		}
-		{{- end }}
 		{{- range $idx, $def := .MessageSet.Definitions }}
 		if detail := grpcfed.CustomMessage({{ $ctx }}, value, "{{ $def.Name }}", {{ $idx }}); detail != nil {
 			details = append(details, detail)
 		}
 		{{- end }}
+		{{- end }}
+
 		{{- range .PreconditionFailures }}
 		{{- template "preconditionFailure" . }}
 		{{- end }}
