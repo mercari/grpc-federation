@@ -283,6 +283,14 @@ func (m *Message) Oneof(name string) *Oneof {
 	return nil
 }
 
+func (m *Message) AllEnums() []*Enum {
+	enums := m.Enums
+	for _, msg := range m.NestedMessages {
+		enums = append(enums, msg.AllEnums()...)
+	}
+	return enums
+}
+
 func (m *Message) HasFieldRule() bool {
 	for _, field := range m.Fields {
 		if field.HasRule() {

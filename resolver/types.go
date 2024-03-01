@@ -31,14 +31,15 @@ type CELFunction struct {
 }
 
 type File struct {
-	Package    *Package
-	GoPackage  *GoPackage
-	Name       string
-	Desc       *descriptorpb.FileDescriptorProto
-	Services   []*Service
-	Messages   []*Message
-	Enums      []*Enum
-	CELPlugins []*CELPlugin
+	Package     *Package
+	GoPackage   *GoPackage
+	Name        string
+	Desc        *descriptorpb.FileDescriptorProto
+	ImportFiles []*File
+	Services    []*Service
+	Messages    []*Message
+	Enums       []*Enum
+	CELPlugins  []*CELPlugin
 }
 
 type Files []*File
