@@ -344,11 +344,11 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 	}
 
 	for _, depFileName := range def.GetDependency() {
-		def, exists := r.fileNameToDefMap[depFileName]
+		depDef, exists := r.fileNameToDefMap[depFileName]
 		if !exists {
 			continue
 		}
-		file.ImportFiles = append(file.ImportFiles, r.defToFileMap[def])
+		file.ImportFiles = append(file.ImportFiles, r.defToFileMap[depDef])
 	}
 	for _, serviceDef := range def.GetService() {
 		name := serviceDef.GetName()
