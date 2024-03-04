@@ -12,7 +12,7 @@ Imagine a system with a backend of multiple microservices. Instead of the client
 
 With GraphQL Federation, each microservice has its own GraphQL server, and the BFF focuses on aggregating resources. However, integrating a new GraphQL server into a large system is challenging, especially in systems developed with the gRPC protocol.
 
-To streamline, we're exploring the idea of automatically generating a BFF using the gRPC protocol with simple custom options. By leveraging existing Protocol Buffers schema for the BFF, we aim to maintain gRPC while drastically reducing maintenance costs.
+To streamline, we're exploring the idea of automatically generating a BFF using the gRPC protocol with simple custom options. By leveraging existing Protocol Buffers schema for the BFF, we aim to keep using gRPC while drastically reducing maintenance costs.
 
 # Why Choose gRPC Federation?
 
@@ -20,27 +20,27 @@ To streamline, we're exploring the idea of automatically generating a BFF using 
 
 ### 1.1. Automate Type Conversions for the Same Message Across Different Packages
 
-Consider defining a BFF using a proto, assuming the BFF acts as a proxy calling multiple microservices and consolidating results. In this scenario, it's necessary to redefine the same messages to handle microservices responses on the BFF. Without defining these messages on the BFF, the BFF client must be aware of different packages, which is not ideal.
+Consider defining a BFF using a proto, assuming the BFF acts as a proxy calling multiple microservices and aggregating results. In this scenario, it's necessary to redefine the same messages to handle microservices responses on the BFF. Without defining these messages on the BFF, the BFF client must be aware of different packages, which is not ideal.
 
 Redefining messages on the BFF results in a considerable number of type conversions for the same messages across different packages.
 
-Using gRPC Federation eliminates the need for tedious type conversions. Just define custom options in the proto, and it will automatically handle these conversions.
+Using gRPC Federation removes the need for tedious type conversions. Just define custom options in the proto, and gRPC Federation will automatically handle these conversions.
 
 ### 1.2. Optimize gRPC Method Calls
 
 When making multiple gRPC method calls, it is crucial to enhance performance by analyzing dependencies between method calls and processing requests in parallel whenever possible. However, identifying dependencies becomes more challenging as the number of method calls increases.
 
-gRPC Federation simplifies this process by automatically analyzing dependencies and generating code that optimizes requests, eliminating the need for manual consideration.
+gRPC Federation simplifies this process by automatically analyzing dependencies and generating code to optimize request flows. It removes the need for manual consideration.
 
 ### 1.3. Simplify Retries and Timeouts on gRPC Method Calls
 
-Setting timeouts or retry counts for gRPC method calls in dependent services can be intricate. However, gRPC Federation allows for a declarative approach to implementing retries and timeouts, streamlining the process.
+Setting timeouts or retry counts for gRPC method calls in dependent services can be complicated. However, gRPC Federation allows for a declarative approach to implementing retries and timeouts.
 
 These are just a few examples of how gRPC Federation simplifies work. By creating a BFF with minimal proto definitions, you can significantly reduce the development cost of BFFs.
 
 ## 2. Explicitly Declare Dependencies on Services
 
-Using gRPC Federation enables a clear understanding of the services the BFF depends on by reading the proto file. It reveals a relationship between of each microservice and BFF.
+Using gRPC Federation enables a clear understanding of the services the BFF depends on by reading the proto file. It uncovers a relationship between each microservice and BFF.
 
 Furthermore, gRPC Federation offers functionality to extract dependencies as a Go library, enabling the extraction of service dependencies through static analysis of the proto file. This capability proves valuable for various types of analysis and automation.
 
@@ -48,7 +48,7 @@ Furthermore, gRPC Federation offers functionality to extract dependencies as a G
 
 ## 1. Code Generation Assistance Tools
 
-gRPC Federation automatically generates a gRPC server by implementing a custom option in Protocol Buffers. It supports the `protoc-gen-grpc-federation` CLI, accessible through `protoc`. Various other tools are available to assist in code generation:
+gRPC Federation automatically generates a gRPC server by adding custom options to Protocol Buffers. It supports the `protoc-gen-grpc-federation` CLI, accessible through `protoc`. Various other tools are available to assist in code generation:
 
 - `protoc-gen-grpc-federation`: protoc's plugin for gRPC Federation
 - `grpc-federation-linter`: Linter for gRPC Federation
@@ -57,7 +57,7 @@ gRPC Federation automatically generates a gRPC server by implementing a custom o
 
 ## 2. CEL Support for Complex Operations
 
-gRPC Federation supports [CEL](https://github.com/google/cel-spec), allowing the utilization of the CEL API to support more advanced operations on BFFs.  
+gRPC Federation integrates [CEL](https://github.com/google/cel-spec) to enable support for more advanced operations on BFFs.  
 
 [gRPC Federation CEL API References](./docs/cel.md)
 
@@ -69,22 +69,23 @@ gRPC Federation features three extension points:
 2. Complex processes not expressible by Protocol Buffers
 3. CEL API
 
-Future plans include making all three extension points extensible through WebAssembly, currently applicable only to the CEL API.
+We plan to make all three extension points available through WebAssembly in the future. Currently, the code generation pipeline and the CEL API are extensible.
 
 ### 3.1 Code Generation Pipeline
 
-This feature enables running a custom auto-generated process using the results of gRPC Federation.
+This feature allows you to run a custom auto-generated process using the results from gRPC Federation.
 
 [How to Run Your Own Code Generation Process](./docs/code_generation_plugin.md)
 
 ### 3.2 Complex Processes Not Expressible by Protocol Buffers
-gRPC Federation employs a hybrid system where logic in Go handles operations not expressible in Protocol Buffers. Future support for WebAssembly is planned.
+
+gRPC Federation uses a hybrid system, with logic in Go managing operations that can't be expressed in Protocol Buffers. We plan to add support for WebAssembly in the future.
 
 [How to Extend the API with the Go](./docs/references.md#grpcfederationmessagecustom_resolver)
 
 ### 3.3 CEL API
 
-While gRPC Federation inherently supports various CEL APIs, users can employ this functionality to use internal domain logic as a CEL API.
+While gRPC Federation inherently supports various CEL APIs, users can use this functionality to use internal domain logic as a CEL API.
 
 [How to Extend the CEL API](./docs/cel_plugin.md)
 
@@ -96,7 +97,7 @@ Currently, there are three ways to use gRPC Federation:
 2. Use `protoc-gen-grpc-federation`
 3. Use `grpc-federation-generator`
 
-For detailed information on each method, please refer to [installation documentation](./docs/installation.md).
+For detailed information on each method, please refer to [Installation Documentation](./docs/installation.md).
 
 # Usage
 
