@@ -107,6 +107,9 @@ func (s *Service) ServiceDependencies() []*ServiceDependency {
 			deps = append(deps, &ServiceDependency{Service: svc})
 		}
 	}
+	sort.Slice(deps, func(i, j int) bool {
+		return deps[i].Service.FQDN() < deps[j].Service.FQDN()
+	})
 	return deps
 }
 
