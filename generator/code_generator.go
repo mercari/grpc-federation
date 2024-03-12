@@ -320,7 +320,7 @@ func (f *File) StandardImports() []*Import {
 	}
 
 	pkgs := []*Import{
-		{Path: "context", Used: true},
+		{Path: "context", Used: existsServiceDef || existsPluginDef},
 		{Path: "encoding/json", Used: existsPluginDef},
 		{Path: "io", Used: existsServiceDef},
 		{Path: "log/slog", Used: existsServiceDef},
@@ -349,7 +349,7 @@ func (f *File) DefaultImports() []*Import {
 		existsPluginDef = true
 	}
 	pkgs := []*Import{
-		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation", Used: true},
+		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation", Used: existsServiceDef || existsPluginDef},
 		{Alias: "grpcfedcel", Path: "github.com/mercari/grpc-federation/grpc/federation/cel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel/trace", Used: existsServiceDef},

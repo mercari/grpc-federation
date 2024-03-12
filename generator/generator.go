@@ -560,6 +560,9 @@ func (g *Generator) generateByProtogenGoGRPC(r *PluginRequest) (*pluginpb.CodeGe
 			continue
 		}
 		generatedFile := runProtogenGoGRPC(r.genplugin, f, true)
+		if generatedFile == nil {
+			continue
+		}
 		content, err := generatedFile.Content()
 		if err != nil {
 			return nil, err
