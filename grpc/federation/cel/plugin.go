@@ -31,8 +31,9 @@ type CELPluginConfig struct {
 }
 
 type WasmConfig struct {
-	Path   string
-	Sha256 string
+	Path         string
+	Sha256       string
+	DebugLogging bool
 }
 
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {

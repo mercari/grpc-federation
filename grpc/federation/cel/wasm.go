@@ -51,8 +51,14 @@ func NewWasmPlugin(ctx context.Context, wasmCfg WasmConfig) (*WasmPlugin, error)
 	cfg := wazero.NewRuntimeConfig()
 	r := wazero.NewRuntimeWithConfig(ctx, cfg)
 
+	var wasmLogger interface{}
+	if wasmCfg.DebugLogging {
+		wasmLogger = wasmDebugLog
+	} else {
+		wasmLogger = wasmDebugLogNoop
+	}
 	if _, err := r.NewHostModuleBuilder("env").
-		NewFunctionBuilder().WithFunc(wasmDebugLog).Export("grpc_federation_log").
+		NewFunctionBuilder().WithFunc(wasmLogger).Export("grpc_federation_log").
 		Instantiate(ctx); err != nil {
 		return nil, err
 	}
@@ -273,3 +279,5 @@ func wasmDebugLog(_ context.Context, m api.Module, offset, byteCount uint32) {
 	}
 	fmt.Fprintln(os.Stdout, string(buf))
 }
+
+func wasmDebugLogNoop(_ context.Context, m api.Module, offset, byteCount uint32) {}

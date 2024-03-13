@@ -122,6 +122,9 @@ test/examples: $(foreach var,$(EXAMPLES),test/examples/$(var))
 test/examples/%:
 	$(MAKE) -C $* test
 
+bench:
+	$(MAKE) -C _examples/15_cel_plugin bench
+
 .PHONY: cover-html
 cover-html: test
 	go tool cover -html=cover.out

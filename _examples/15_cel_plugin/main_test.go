@@ -69,15 +69,59 @@ func TestFederation(t *testing.T) {
 	}
 	defer conn.Close()
 
-	grpcServer := grpc.NewServer()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
+	setupServer(t, logger, true)
+
+	client := federation.NewFederationServiceClient(conn)
+	t.Run("success", func(t *testing.T) {
+		testRegexSuccess(t, ctx, client)
+	})
+	t.Run("success complex", func(t *testing.T) {
+		testRegexComplexSuccess(t, ctx, client)
+	})
+	t.Run("failure", func(t *testing.T) {
+		testRegexFailure(t, client, ctx)
+	})
+}
+
+func BenchmarkFederation(b *testing.B) {
+	ctx := context.Background()
+	listener = bufconn.Listen(bufSize)
+
+	conn, err := grpc.DialContext(
+		ctx, "",
+		grpc.WithContextDialer(dialer),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer conn.Close()
+
+	setupServer(b, nil, false)
+
+	client := federation.NewFederationServiceClient(conn)
+	b.Run("success", func(t *testing.B) {
+		testRegexSuccess(t, ctx, client)
+	})
+	b.Run("success complex", func(t *testing.B) {
+		testRegexComplexSuccess(t, ctx, client)
+	})
+	b.Run("failure", func(t *testing.B) {
+		testRegexFailure(t, client, ctx)
+	})
+}
+
+func setupServer(t testing.TB, logger *slog.Logger, wasmDebugLogging bool) {
+	grpcServer := grpc.NewServer()
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
 		CELPlugin: &federation.FederationServiceCELPluginConfig{
 			Regexp: federation.FederationServiceCELPluginWasmConfig{
-				Path:   "regexp.wasm",
-				Sha256: "0930ae259c7b742192327a7761fb207ea1d3b7f37f912ca4dc742b3f359af0f9",
+				Path:         "regexp.wasm",
+				Sha256:       "0930ae259c7b742192327a7761fb207ea1d3b7f37f912ca4dc742b3f359af0f9",
+				DebugLogging: wasmDebugLogging,
 			},
 		},
 		Logger: logger,
@@ -92,32 +136,52 @@ func TestFederation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+}
 
-	client := federation.NewFederationServiceClient(conn)
-	t.Run("success", func(t *testing.T) {
-		res, err := client.IsMatch(ctx, &federation.IsMatchRequest{
-			Expr:   "hello world",
-			Target: "hello world world",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if diff := cmp.Diff(res, &federation.IsMatchResponse{
-			Result: true,
-		}, cmpopts.IgnoreUnexported(
-			federation.IsMatchResponse{},
-		)); diff != "" {
-			t.Errorf("(-got, +want)\n%s", diff)
-		}
+func testRegexSuccess(t testing.TB, ctx context.Context, client federation.FederationServiceClient) {
+	res, err := client.IsMatch(ctx, &federation.IsMatchRequest{
+		Expr:   "hello world",
+		Target: "hello world world",
 	})
-	t.Run("failure", func(t *testing.T) {
-		_, err := client.IsMatch(ctx, &federation.IsMatchRequest{
-			Expr:   "[]",
-			Target: "hello world world",
-		})
-		if err == nil {
-			t.Fatal("expected error")
-		}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(res, &federation.IsMatchResponse{
+		Result: true,
+	}, cmpopts.IgnoreUnexported(
+		federation.IsMatchResponse{},
+	)); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
+func testRegexComplexSuccess(t testing.TB, ctx context.Context, client federation.FederationServiceClient) {
+	res, err := client.IsMatch(ctx, &federation.IsMatchRequest{
+		Expr:   `[helo]+\s+(w+\s*)+`,
+		Target: "hellooleole world world",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(res, &federation.IsMatchResponse{
+		Result: true,
+	}, cmpopts.IgnoreUnexported(
+		federation.IsMatchResponse{},
+	)); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
+func testRegexFailure(t testing.TB, client federation.FederationServiceClient, ctx context.Context) {
+	_, err := client.IsMatch(ctx, &federation.IsMatchRequest{
+		Expr:   "[]",
+		Target: "hello world world",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	// If testing, produce logging, otherwise do not interfere with the benchmark.
+	if _, ok := t.(*testing.T); ok {
 		t.Logf("expected error is %s", err)
-	})
+	}
 }
