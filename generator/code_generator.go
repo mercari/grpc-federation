@@ -412,20 +412,24 @@ func (f *File) Imports() []*Import {
 			depMap[dep.ImportPath] = dep
 		}
 	}
-	for _, enum := range f.enums {
-		protoName := enum.FQDN()
-		// ignore standard library's enum.
-		if strings.HasPrefix(protoName, "google.") {
-			continue
+	// f.enums contain all the enums defined in the package
+	// Currently Enums are used only from a File contains Services
+	if len(f.File.Services) != 0 {
+		for _, enum := range f.enums {
+			protoName := enum.FQDN()
+			// ignore standard library's enum.
+			if strings.HasPrefix(protoName, "google.") {
+				continue
+			}
+			dep := enum.GoPackage()
+			if dep.ImportPath == curImportPath {
+				continue
+			}
+			if _, exists := defaultImportMap[dep.ImportPath]; exists {
+				continue
+			}
+			depMap[dep.ImportPath] = dep
 		}
-		dep := enum.GoPackage()
-		if dep.ImportPath == curImportPath {
-			continue
-		}
-		if _, exists := defaultImportMap[dep.ImportPath]; exists {
-			continue
-		}
-		depMap[dep.ImportPath] = dep
 	}
 	imprts := make([]*Import, 0, len(depMap))
 	for _, dep := range depMap {
