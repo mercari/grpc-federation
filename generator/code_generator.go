@@ -412,7 +412,7 @@ func (f *File) Imports() []*Import {
 			depMap[dep.ImportPath] = dep
 		}
 	}
-	for _, enum := range f.enums {
+	for _, enum := range f.File.Enums {
 		protoName := enum.FQDN()
 		// ignore standard library's enum.
 		if strings.HasPrefix(protoName, "google.") {
