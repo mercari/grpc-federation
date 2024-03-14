@@ -3,6 +3,7 @@ syntax = "proto3";
 package federation;
 
 import "grpc/federation/federation.proto";
+import "comment/comment.proto";
 
 option go_package = "example/federation;federation";
 
