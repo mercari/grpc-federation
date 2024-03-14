@@ -65,6 +65,9 @@ message Post {
           error {
             ignore: true
           }
+          error {
+            code: CANCELLED
+          }
         }
       },
       { name: "post" by: "res.post" autobind: true }

@@ -492,6 +492,20 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			if stat != nil {
 				return stat, nil
 			}
+			if err := grpcfed.If(ctx, value, "true", func(value *localValueType) error {
+
+				errorMessage, err := grpcfed.EvalCEL(ctx, value, "", reflect.TypeOf(""))
+				if err != nil {
+					return err
+				}
+				stat = grpcfed.NewGRPCStatus(grpcfed.CancelledCode, errorMessage.(string))
+				return nil
+			}); err != nil {
+				return nil, err
+			}
+			if stat != nil {
+				return stat, nil
+			}
 			return nil, nil
 		}()
 		if handleErr != nil {
