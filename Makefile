@@ -75,7 +75,7 @@ fmt/buf:
 	buf format --write
 
 .PHONY: generate
-generate: generate/buf generate/examples
+generate: build generate/buf generate/examples
 
 generate/buf:
 	buf generate

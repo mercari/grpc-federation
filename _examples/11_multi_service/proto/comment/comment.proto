@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package comment;
+
+option go_package = "example/comment;comment";
+
+enum CommentType {
+  UNKNOWN = 0;
+  TYPE1 = 1;
+  TYPE2 = 2;
+}
