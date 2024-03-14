@@ -57,6 +57,7 @@ const (
 	// So if the name is different, it will not work. Therefore, the names should be the same as the names on the proto side.
 	// - Proto: https://github.com/googleapis/googleapis/blob/65277ddce9caa1cfd1a0eb7ab67980fc73d20b50/google/rpc/code.proto#L41
 	// - Go: https://github.com/grpc/grpc-go/blob/9952aa83979822b5915c3fcb2bb0f60afe55aa7d/codes/codes.go#L45
+	//nolint:misspell
 	CancelledCode Code = codes.Canceled
 
 	UnknownCode            Code = codes.Unknown
