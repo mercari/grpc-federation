@@ -114,7 +114,8 @@ func TestProtoFormat(t *testing.T) {
         args: [
           { name: "title", by: "$.title" },
           { name: "content", by: "$.content" },
-          { name: "user_id", by: "$.user_id" }
+          { name: "user_id", by: "$.user_id" },
+          { name: "type", by: "$.type" }
         ]
       }
     }

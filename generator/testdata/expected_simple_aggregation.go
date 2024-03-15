@@ -213,6 +213,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
 	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.Item.ItemType", Item_ItemType_value, Item_ItemType_name)...)
 	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.UserType", UserType_value, UserType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.post.PostType", post.PostType_value, post.PostType_name)...)
 	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.user.UserType", user.UserType_value, user.UserType_name)...)
 	env, err := grpcfed.NewCELEnv(envOpts...)

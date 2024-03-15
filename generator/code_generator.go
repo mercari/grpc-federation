@@ -1633,9 +1633,13 @@ type CastEnumValue struct {
 func (f *CastField) ToEnum() *CastEnum {
 	toEnum := f.toType.Enum
 	if toEnum.Rule != nil && toEnum.Rule.Alias != nil {
-		return f.toEnumByAlias()
+		return f.toEnumByAlias(toEnum)
 	}
 	fromEnum := f.fromType.Enum
+	if fromEnum.Rule != nil && fromEnum.Rule.Alias != nil {
+		// the type conversion is performed at the time of gRPC method call.
+		return f.toEnumByAlias(fromEnum)
+	}
 	toEnumName := toEnumValuePrefix(f.file, f.toType)
 	fromEnumName := toEnumValuePrefix(f.file, f.fromType)
 	var enumValues []*CastEnumValue
@@ -1658,26 +1662,25 @@ func (f *CastField) ToEnum() *CastEnum {
 	}
 }
 
-func (f *CastField) toEnumByAlias() *CastEnum {
-	toEnum := f.toType.Enum
+func (f *CastField) toEnumByAlias(enum *resolver.Enum) *CastEnum {
 	toEnumName := toEnumValuePrefix(f.file, f.toType)
 	fromEnumName := toEnumValuePrefix(f.file, f.fromType)
 	var (
 		enumValues   []*CastEnumValue
 		defaultValue = "0"
 	)
-	for _, toValue := range toEnum.Values {
-		if toValue.Rule == nil {
+	for _, value := range enum.Values {
+		if value.Rule == nil {
 			continue
 		}
-		for _, alias := range toValue.Rule.Aliases {
+		for _, alias := range value.Rule.Aliases {
 			enumValues = append(enumValues, &CastEnumValue{
 				FromValue: toEnumValueText(fromEnumName, alias.Value),
-				ToValue:   toEnumValueText(toEnumName, toValue.Value),
+				ToValue:   toEnumValueText(toEnumName, value.Value),
 			})
 		}
-		if toValue.Rule.Default {
-			defaultValue = toEnumValueText(toEnumName, toValue.Value)
+		if value.Rule.Default {
+			defaultValue = toEnumValueText(toEnumName, value.Value)
 		}
 	}
 	return &CastEnum{
