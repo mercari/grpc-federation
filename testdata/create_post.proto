@@ -16,10 +16,19 @@ service FederationService {
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {};
 }
 
+enum PostType {
+  option (grpc.federation.enum).alias = "org.post.PostType";
+
+  POST_TYPE_UNKNOWN = 0;
+  POST_TYPE_A = 1;
+  POST_TYPE_B = 2;
+}
+
 message CreatePostRequest {
   string title = 1;
   string content = 2;
   string user_id = 3;
+  PostType type = 4;
 }
 
 message CreatePostResponse {
@@ -32,7 +41,8 @@ message CreatePostResponse {
           args: [
             { name: "title", by: "$.title" },
             { name: "content", by: "$.content" },
-            { name: "user_id", by: "$.user_id" }
+            { name: "user_id", by: "$.user_id" },
+            { name: "type" by: "$.type" }
           ]
         }
       },
@@ -53,6 +63,7 @@ message CreatePost {
   string title = 1 [(grpc.federation.field).by = "$.title"];
   string content = 2 [(grpc.federation.field).by = "$.content"];
   string user_id = 3 [(grpc.federation.field).by = "$.user_id"];
+  PostType type = 4 [(grpc.federation.field).by = "$.type"];
 }
 
 message Post {

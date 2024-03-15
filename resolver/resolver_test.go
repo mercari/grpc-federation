@@ -464,6 +464,23 @@ func TestCreatePost(t *testing.T) {
 
 	fb.SetPackage("org.federation").
 		SetGoPackage("example/federation", "federation").
+		AddEnum(
+			testutil.NewEnumBuilder("PostType").
+				WithAlias(ref.Enum(t, "org.post", "PostType")).
+				AddValueWithAlias(
+					"POST_TYPE_UNKNOWN",
+					ref.EnumValue(t, "org.post", "PostType", "POST_TYPE_UNKNOWN"),
+				).
+				AddValueWithAlias(
+					"POST_TYPE_A",
+					ref.EnumValue(t, "org.post", "PostType", "POST_TYPE_A"),
+				).
+				AddValueWithAlias(
+					"POST_TYPE_B",
+					ref.EnumValue(t, "org.post", "PostType", "POST_TYPE_B"),
+				).
+				Build(t),
+		).
 		AddMessage(
 			testutil.NewMessageBuilder("Post").
 				AddFieldWithAlias("id", resolver.StringType, ref.Field(t, "org.post", "Post", "id")).
@@ -482,6 +499,7 @@ func TestCreatePost(t *testing.T) {
 				AddField("title", resolver.StringType).
 				AddField("content", resolver.StringType).
 				AddField("user_id", resolver.StringType).
+				AddField("type", ref.Type(t, "org.federation", "PostType")).
 				Build(t),
 		).
 		AddMessage(
@@ -507,6 +525,13 @@ func TestCreatePost(t *testing.T) {
 						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t),
 					).Build(t),
 				).
+				AddFieldWithRule(
+					"type",
+					ref.Type(t, "org.federation", "PostType"),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewMessageArgumentValueBuilder(ref.Type(t, "org.federation", "PostType"), ref.Type(t, "org.federation", "PostType"), "type").Build(t),
+					).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetMessageArgument(ref.Message(t, "org.federation", "CreatePostArgument")).
@@ -519,6 +544,7 @@ func TestCreatePost(t *testing.T) {
 				AddField("title", resolver.StringType).
 				AddField("content", resolver.StringType).
 				AddField("user_id", resolver.StringType).
+				AddField("type", ref.Type(t, "org.federation", "PostType")).
 				Build(t),
 		).
 		AddMessage(
@@ -526,6 +552,7 @@ func TestCreatePost(t *testing.T) {
 				AddField("title", resolver.StringType).
 				AddField("content", resolver.StringType).
 				AddField("user_id", resolver.StringType).
+				AddField("type", ref.Type(t, "org.federation", "PostType")).
 				Build(t),
 		).
 		AddMessage(
@@ -558,6 +585,7 @@ func TestCreatePost(t *testing.T) {
 												Add("title", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "title").Build(t)).
 												Add("content", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "content").Build(t)).
 												Add("user_id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+												Add("type", testutil.NewMessageArgumentValueBuilder(resolver.StringType, ref.Type(t, "org.federation", "PostType"), "type").Build(t)).
 												Build(t),
 										).
 										Build(t),
@@ -4077,6 +4105,13 @@ func getPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 
 	pb.SetPackage("org.post").
 		SetGoPackage("example/post", "post").
+		AddEnum(
+			testutil.NewEnumBuilder("PostType").
+				AddValue("POST_TYPE_UNKNOWN").
+				AddValue("POST_TYPE_A").
+				AddValue("POST_TYPE_B").
+				Build(t),
+		).
 		AddMessage(
 			testutil.NewMessageBuilder("Post").
 				AddField("id", resolver.StringType).
@@ -4110,6 +4145,7 @@ func getPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddField("title", resolver.StringType).
 				AddField("content", resolver.StringType).
 				AddField("user_id", resolver.StringType).
+				AddField("type", ref.Type(t, "org.post", "PostType")).
 				Build(t),
 		).
 		AddMessage(

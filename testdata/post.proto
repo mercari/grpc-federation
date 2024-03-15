@@ -34,10 +34,17 @@ message CreatePostResponse {
   Post post = 1;
 }
 
+enum PostType {
+  POST_TYPE_UNKNOWN = 0;
+  POST_TYPE_A = 1;
+  POST_TYPE_B = 2;
+}
+
 message CreatePost {
   string title = 1;
   string content = 2;
   string user_id = 3;
+  PostType type = 4;
 }
 
 message Post {

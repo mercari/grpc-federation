@@ -24,6 +24,7 @@ var (
 type Org_Federation_CreatePostArgument[T any] struct {
 	Content string
 	Title   string
+	Type    PostType
 	UserId  string
 	Client  T
 }
@@ -35,6 +36,7 @@ type Org_Federation_CreatePostResponseArgument[T any] struct {
 	P       *post.Post
 	Res     *post.CreatePostResponse
 	Title   string
+	Type    PostType
 	UserId  string
 	Client  T
 }
@@ -135,14 +137,18 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			"title":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Title"),
 			"content": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Content"),
 			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
+			"type":    grpcfed.NewCELFieldType(grpcfed.CELIntType, "Type"),
 		},
 		"grpc.federation.private.CreatePostResponseArgument": {
 			"title":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Title"),
 			"content": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Content"),
 			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
+			"type":    grpcfed.NewCELFieldType(grpcfed.CELIntType, "Type"),
 		},
 	})
 	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.post.PostType", post.PostType_value, post.PostType_name)...)
 	env, err := grpcfed.NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, err
@@ -176,6 +182,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 		Title:   req.Title,
 		Content: req.Content,
 		UserId:  req.UserId,
+		Type:    req.Type,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -217,6 +224,11 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	// (grpc.federation.field).by = "$.type"
+	if err := grpcfed.SetCELValue(ctx, value, "$.type", func(v PostType) { ret.Type = v }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	s.logger.DebugContext(ctx, "resolved org.federation.CreatePost", slog.Any("org.federation.CreatePost", s.logvalue_Org_Federation_CreatePost(ret)))
 	return ret, nil
@@ -247,7 +259,8 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	       args: [
 	         { name: "title", by: "$.title" },
 	         { name: "content", by: "$.content" },
-	         { name: "user_id", by: "$.user_id" }
+	         { name: "user_id", by: "$.user_id" },
+	         { name: "type", by: "$.type" }
 	       ]
 	     }
 	   }
@@ -275,6 +288,12 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 			// { name: "user_id", by: "$.user_id" }
 			if err := grpcfed.SetCELValue(ctx, value, "$.user_id", func(v string) {
 				args.UserId = v
+			}); err != nil {
+				return nil, err
+			}
+			// { name: "type", by: "$.type" }
+			if err := grpcfed.SetCELValue(ctx, value, "$.type", func(v PostType) {
+				args.Type = v
 			}); err != nil {
 				return nil, err
 			}
@@ -362,6 +381,21 @@ func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreateP
 		Title:   from.GetTitle(),
 		Content: from.GetContent(),
 		UserId:  from.GetUserId(),
+		Type:    s.cast_Org_Federation_PostType__to__Org_Post_PostType(from.GetType()),
+	}
+}
+
+// cast_Org_Federation_PostType__to__Org_Post_PostType cast from "org.federation.PostType" to "org.post.PostType".
+func (s *FederationService) cast_Org_Federation_PostType__to__Org_Post_PostType(from PostType) post.PostType {
+	switch from {
+	case PostType_POST_TYPE_UNKNOWN:
+		return post.PostType_POST_TYPE_UNKNOWN
+	case PostType_POST_TYPE_A:
+		return post.PostType_POST_TYPE_A
+	case PostType_POST_TYPE_B:
+		return post.PostType_POST_TYPE_B
+	default:
+		return 0
 	}
 }
 
@@ -387,6 +421,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) sl
 		slog.String("title", v.GetTitle()),
 		slog.String("content", v.GetContent()),
 		slog.String("user_id", v.GetUserId()),
+		slog.String("type", s.logvalue_Org_Federation_PostType(v.GetType()).String()),
 	)
 }
 
@@ -398,6 +433,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *Org_Fe
 		slog.String("title", v.Title),
 		slog.String("content", v.Content),
 		slog.String("user_id", v.UserId),
+		slog.String("type", s.logvalue_Org_Federation_PostType(v.Type).String()),
 	)
 }
 
@@ -418,6 +454,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v
 		slog.String("title", v.Title),
 		slog.String("content", v.Content),
 		slog.String("user_id", v.UserId),
+		slog.String("type", s.logvalue_Org_Federation_PostType(v.Type).String()),
 	)
 }
 
@@ -431,4 +468,16 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 		slog.String("content", v.GetContent()),
 		slog.String("user_id", v.GetUserId()),
 	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Value {
+	switch v {
+	case PostType_POST_TYPE_UNKNOWN:
+		return slog.StringValue("POST_TYPE_UNKNOWN")
+	case PostType_POST_TYPE_A:
+		return slog.StringValue("POST_TYPE_A")
+	case PostType_POST_TYPE_B:
+		return slog.StringValue("POST_TYPE_B")
+	}
+	return slog.StringValue("")
 }
