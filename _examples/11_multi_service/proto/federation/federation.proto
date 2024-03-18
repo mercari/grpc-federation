@@ -4,6 +4,7 @@ package federation;
 
 import "grpc/federation/federation.proto";
 import "comment/comment.proto";
+import "federation/reaction.proto";
 
 option go_package = "example/federation;federation";
 
@@ -38,10 +39,17 @@ message Post {
       args { name: "name", string: "bar" }
     }
   };
+  option (grpc.federation.message).def = {
+    name: "reaction"
+    message {
+      name: "Reaction"
+    }
+  };
   string id = 1 [(grpc.federation.field).string = "post-id"];
   string title = 2 [(grpc.federation.field).string = "title"];
   string content = 3 [(grpc.federation.field).string = "content"];
   User user = 4 [(grpc.federation.field).by = "u"];
+  Reaction reaction = 5 [(grpc.federation.field).by = "reaction"];
 }
 
 message User {

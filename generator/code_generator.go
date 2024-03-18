@@ -103,8 +103,10 @@ func (f *CELFunction) ExportName() string {
 
 func (f *CELFunction) toInt32Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
 	return &CELFunctionArgument{
-		Name:   fmt.Sprintf("arg%d", idx),
-		Type:   "int32",
+		Name: fmt.Sprintf("arg%d", idx),
+		typeFunc: func() string {
+			return "int32"
+		},
 		ArgIdx: idx,
 		arg:    arg,
 		file:   f.file,
@@ -113,8 +115,10 @@ func (f *CELFunction) toInt32Arg(arg *resolver.Type, idx int) *CELFunctionArgume
 
 func (f *CELFunction) toInt64Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
 	return &CELFunctionArgument{
-		Name:   fmt.Sprintf("arg%d", idx),
-		Type:   "int64",
+		Name: fmt.Sprintf("arg%d", idx),
+		typeFunc: func() string {
+			return "int64"
+		},
 		ArgIdx: idx,
 		arg:    arg,
 		file:   f.file,
@@ -123,8 +127,10 @@ func (f *CELFunction) toInt64Arg(arg *resolver.Type, idx int) *CELFunctionArgume
 
 func (f *CELFunction) toUint32Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
 	return &CELFunctionArgument{
-		Name:   fmt.Sprintf("arg%d", idx),
-		Type:   "uint32",
+		Name: fmt.Sprintf("arg%d", idx),
+		typeFunc: func() string {
+			return "uint32"
+		},
 		ArgIdx: idx,
 		arg:    arg,
 		file:   f.file,
@@ -133,8 +139,10 @@ func (f *CELFunction) toUint32Arg(arg *resolver.Type, idx int) *CELFunctionArgum
 
 func (f *CELFunction) toUint64Arg(arg *resolver.Type, idx int) *CELFunctionArgument {
 	return &CELFunctionArgument{
-		Name:   fmt.Sprintf("arg%d", idx),
-		Type:   "uint64",
+		Name: fmt.Sprintf("arg%d", idx),
+		typeFunc: func() string {
+			return "uint64"
+		},
 		ArgIdx: idx,
 		arg:    arg,
 		file:   f.file,
@@ -144,15 +152,19 @@ func (f *CELFunction) toUint64Arg(arg *resolver.Type, idx int) *CELFunctionArgum
 func (f *CELFunction) toStringArg(arg *resolver.Type, idx int) []*CELFunctionArgument {
 	return []*CELFunctionArgument{
 		{
-			Name:   fmt.Sprintf("arg%d", idx),
-			Type:   "uint32",
+			Name: fmt.Sprintf("arg%d", idx),
+			typeFunc: func() string {
+				return "uint32"
+			},
 			ArgIdx: idx,
 			arg:    arg,
 			file:   f.file,
 		},
 		{
-			Name:   fmt.Sprintf("arg%d", idx+1),
-			Type:   "uint32",
+			Name: fmt.Sprintf("arg%d", idx+1),
+			typeFunc: func() string {
+				return "uint32"
+			},
 			ArgIdx: idx + 1,
 			arg:    arg,
 			Skip:   true,
@@ -164,8 +176,11 @@ func (f *CELFunction) toStringArg(arg *resolver.Type, idx int) []*CELFunctionArg
 func (f *CELFunction) Args() []*CELFunctionArgument {
 	ret := make([]*CELFunctionArgument, 0, len(f.CELFunction.Args))
 	for _, arg := range f.CELFunction.Args {
+		arg := arg
 		ret = append(ret, &CELFunctionArgument{
-			Type: f.file.toTypeText(arg),
+			typeFunc: func() string {
+				return f.file.toTypeText(arg)
+			},
 			file: f.file,
 			arg:  arg,
 		})
@@ -175,8 +190,10 @@ func (f *CELFunction) Args() []*CELFunctionArgument {
 
 func (f *CELFunction) Return() *CELFunctionReturn {
 	return &CELFunctionReturn{
-		Type: f.file.toTypeText(f.CELFunction.Return),
-		ret:  f.CELFunction.Return,
+		typeFunc: func() string {
+			return f.file.toTypeText(f.CELFunction.Return)
+		},
+		ret: f.CELFunction.Return,
 	}
 }
 
@@ -229,25 +246,16 @@ func (f *CELFunction) WasmArgs() []*CELFunctionArgument {
 }
 
 type CELFunctionArgument struct {
-	Name   string
-	Type   string
-	ArgIdx int
-	Skip   bool
-	arg    *resolver.Type
-	file   *File
+	Name     string
+	ArgIdx   int
+	Skip     bool
+	typeFunc func() string
+	arg      *resolver.Type
+	file     *File
 }
 
-type CELFunctionReturn struct {
-	Type string
-	ret  *resolver.Type
-}
-
-func (r *CELFunctionReturn) CELType() string {
-	return toCELTypeDeclare(r.ret)
-}
-
-func (r *CELFunctionReturn) FuncName() string {
-	return util.ToPublicGoVariable(r.ret.Kind.ToString())
+func (f *CELFunctionArgument) Type() string {
+	return f.typeFunc()
 }
 
 func (f *CELFunctionArgument) CELType() string {
@@ -271,6 +279,23 @@ func (f *CELFunctionArgument) ConvertProcess() string {
 		return fmt.Sprintf("grpcfed.ToMessage[%s](%s)", msg, f.Name)
 	}
 	return f.Name
+}
+
+type CELFunctionReturn struct {
+	typeFunc func() string
+	ret      *resolver.Type
+}
+
+func (r *CELFunctionReturn) Type() string {
+	return r.typeFunc()
+}
+
+func (r *CELFunctionReturn) CELType() string {
+	return toCELTypeDeclare(r.ret)
+}
+
+func (r *CELFunctionReturn) FuncName() string {
+	return util.ToPublicGoVariable(r.ret.Kind.ToString())
 }
 
 func (p *CELPlugin) PluginFunctions() []*CELFunction {
@@ -384,64 +409,41 @@ func (f *File) DefaultImports() []*Import {
 
 func (f *File) Imports() []*Import {
 	defaultImportMap := make(map[string]struct{})
-	for _, imprts := range f.DefaultImports() {
-		defaultImportMap[imprts.Path] = struct{}{}
+	for _, imprt := range f.DefaultImports() {
+		defaultImportMap[imprt.Path] = struct{}{}
 	}
 	curImportPath := f.GoPackage.ImportPath
 
-	depMap := make(map[string]*resolver.GoPackage)
-	for _, svc := range f.File.Services {
-		for _, dep := range svc.GoPackageDependencies() {
-			if dep.ImportPath == curImportPath {
-				continue
-			}
-			if _, exists := defaultImportMap[dep.ImportPath]; exists {
-				continue
-			}
-			depMap[dep.ImportPath] = dep
+	imports := make([]*Import, 0, len(f.pkgMap))
+	addImport := func(pkg *resolver.GoPackage) {
+		// ignore standard library's enum.
+		if strings.HasPrefix(pkg.Name, "google.") {
+			return
 		}
-	}
-	for _, msg := range f.File.Messages {
-		for _, dep := range msg.GoPackageDependencies() {
-			if dep.ImportPath == curImportPath {
-				continue
-			}
-			if _, exists := defaultImportMap[dep.ImportPath]; exists {
-				continue
-			}
-			depMap[dep.ImportPath] = dep
+		if pkg.ImportPath == curImportPath {
+			return
 		}
-	}
-	// f.enums contain all the enums defined in the package
-	// Currently Enums are used only from a File contains Services
-	if len(f.File.Services) != 0 {
-		for _, enum := range f.enums {
-			protoName := enum.FQDN()
-			// ignore standard library's enum.
-			if strings.HasPrefix(protoName, "google.") {
-				continue
-			}
-			dep := enum.GoPackage()
-			if dep.ImportPath == curImportPath {
-				continue
-			}
-			if _, exists := defaultImportMap[dep.ImportPath]; exists {
-				continue
-			}
-			depMap[dep.ImportPath] = dep
+		if _, exists := defaultImportMap[pkg.ImportPath]; exists {
+			return
 		}
-	}
-	imprts := make([]*Import, 0, len(depMap))
-	for _, dep := range depMap {
-		imprts = append(imprts, &Import{
-			Path:  dep.ImportPath,
-			Alias: dep.Name,
+		imports = append(imports, &Import{
+			Path:  pkg.ImportPath,
+			Alias: pkg.Name,
+			Used:  true,
 		})
 	}
-	sort.Slice(imprts, func(i, j int) bool {
-		return imprts[i].Path < imprts[j].Path
+	for pkg := range f.pkgMap {
+		addImport(pkg)
+	}
+	for _, s := range f.File.Services {
+		for _, dep := range s.Rule.Dependencies {
+			addImport(dep.Service.GoPackage())
+		}
+	}
+	sort.Slice(imports, func(i, j int) bool {
+		return imports[i].Path < imports[j].Path
 	})
-	return imprts
+	return imports
 }
 
 type Enum struct {
@@ -914,6 +916,11 @@ func (f *File) messageTypeToText(msg *resolver.Message) string {
 }
 
 func (f *File) enumTypeToText(enum *resolver.Enum) string {
+	// f.enums contain all the enums defined in the package
+	// Currently Enums are used only from a File contains Services
+	if len(f.File.Services) != 0 {
+		f.pkgMap[enum.GoPackage()] = struct{}{}
+	}
 	var name string
 	if enum.Message != nil {
 		name = strings.Join(append(enum.Message.ParentMessageNames(), enum.Message.Name, enum.Name), "_")

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package federation;
+
+import "grpc/federation/federation.proto";
+import "favorite/favorite.proto";
+
+option go_package = "example/federation;federation";
+
+message Reaction {
+  favorite.FavoriteType favorite_type = 1 [(grpc.federation.field).by = "favorite.FavoriteType.TYPE1"];
+}

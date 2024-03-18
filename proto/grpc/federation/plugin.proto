@@ -88,7 +88,7 @@ message CELVariable {
   // This description is used as documentation at code generation.
   string desc = 2;
   // type is the argument type.
-  // The value must be one that can be referenced on the Protocol Buffers.  
+  // The value must be one that can be referenced on the Protocol Buffers.
   string type = 3;
   // repeated is whether repeated type or not.
   bool repeated = 4;
