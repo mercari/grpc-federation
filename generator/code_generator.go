@@ -466,100 +466,120 @@ func (f *File) Enums() []*Enum {
 }
 
 func (f *File) Types() Types {
-	return newTypeDeclares(f, f.Messages)
+	return newFileTypeDeclares(f, f.Messages)
 }
 
-func newTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
-	declTypes := make(Types, 0, len(msgs))
-	typeNameMap := make(map[string]struct{})
+func newFileTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
+	var ret []*Type
 	for _, msg := range msgs {
-		if !msg.HasRule() {
-			continue
-		}
-		arg := msg.Rule.MessageArgument
-		if arg == nil {
-			continue
-		}
-		msgName := fullMessageName(msg)
-		argName := fmt.Sprintf("%sArgument", msgName)
-		if _, exists := typeNameMap[argName]; exists {
-			continue
-		}
-		msgFQDN := fmt.Sprintf(`%s.%s`, msg.PackageName(), msg.Name)
-		typ := &Type{
-			Name:      argName,
-			Desc:      fmt.Sprintf(`%s is argument for %q message`, argName, msgFQDN),
-			ProtoFQDN: arg.FQDN(),
-		}
+		ret = append(ret, newTypeDeclares(file, msg)...)
+	}
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].Name < ret[j].Name
+	})
+	return ret
+}
 
-		genMsg := &Message{Message: msg, file: file}
-		fieldNameMap := make(map[string]struct{})
-		for _, group := range genMsg.VariableDefinitionGroups() {
-			for _, def := range group.VariableDefinitions() {
-				if def == nil {
-					continue
-				}
-				if !def.Used {
-					continue
-				}
-				fieldName := util.ToPublicGoVariable(def.Name)
-				if typ.HasField(fieldName) {
-					continue
-				}
-				if _, exists := fieldNameMap[fieldName]; exists {
-					continue
-				}
-				typ.Fields = append(typ.Fields, &Field{
-					Name: fieldName,
-					Type: file.toTypeText(def.Expr.Type),
-				})
-				fieldNameMap[fieldName] = struct{}{}
+func newServiceTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
+	var ret []*Type
+	for _, msg := range msgs {
+		ret = append(ret, newTypeDeclaresWithMessage(file, msg)...)
+	}
+	sort.Slice(ret, func(i, j int) bool {
+		return ret[i].Name < ret[j].Name
+	})
+	return ret
+}
+
+func newTypeDeclares(file *File, msg *resolver.Message) []*Type {
+	ret := newTypeDeclaresWithMessage(file, msg)
+	for _, msg := range msg.NestedMessages {
+		ret = append(ret, newTypeDeclares(file, msg)...)
+	}
+	return ret
+}
+
+func newTypeDeclaresWithMessage(file *File, msg *resolver.Message) []*Type {
+	if !msg.HasRule() {
+		return nil
+	}
+	arg := msg.Rule.MessageArgument
+	if arg == nil {
+		return nil
+	}
+	msgName := fullMessageName(msg)
+	argName := fmt.Sprintf("%sArgument", msgName)
+	msgFQDN := fmt.Sprintf(`%s.%s`, msg.PackageName(), msg.Name)
+	typ := &Type{
+		Name:      argName,
+		Desc:      fmt.Sprintf(`%s is argument for %q message`, argName, msgFQDN),
+		ProtoFQDN: arg.FQDN(),
+	}
+
+	genMsg := &Message{Message: msg, file: file}
+	fieldNameMap := make(map[string]struct{})
+	for _, group := range genMsg.VariableDefinitionGroups() {
+		for _, def := range group.VariableDefinitions() {
+			if def == nil {
+				continue
 			}
-		}
-		for _, field := range arg.Fields {
-			typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
-			fieldName := util.ToPublicGoVariable(field.Name)
+			if !def.Used {
+				continue
+			}
+			fieldName := util.ToPublicGoVariable(def.Name)
+			if typ.HasField(fieldName) {
+				continue
+			}
 			if _, exists := fieldNameMap[fieldName]; exists {
 				continue
 			}
 			typ.Fields = append(typ.Fields, &Field{
 				Name: fieldName,
-				Type: file.toTypeText(field.Type),
+				Type: file.toTypeText(def.Expr.Type),
 			})
 			fieldNameMap[fieldName] = struct{}{}
 		}
-		sort.Slice(typ.Fields, func(i, j int) bool {
-			return typ.Fields[i].Name < typ.Fields[j].Name
+	}
+	for _, field := range arg.Fields {
+		typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
+		fieldName := util.ToPublicGoVariable(field.Name)
+		if _, exists := fieldNameMap[fieldName]; exists {
+			continue
+		}
+		typ.Fields = append(typ.Fields, &Field{
+			Name: fieldName,
+			Type: file.toTypeText(field.Type),
 		})
-		typeNameMap[argName] = struct{}{}
-		declTypes = append(declTypes, typ)
-		for _, field := range msg.CustomResolverFields() {
-			typeName := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
-			fields := []*Field{{Type: fmt.Sprintf("*%s", argName)}}
-			if msg.HasCustomResolver() {
-				fields = append(fields, &Field{
-					Name: msgName,
-					Type: file.toTypeText(resolver.NewMessageType(msg, false)),
-				})
-			}
-			sort.Slice(fields, func(i, j int) bool {
-				return fields[i].Name < fields[j].Name
-			})
-			declTypes = append(declTypes, &Type{
-				Name:   typeName,
-				Fields: fields,
-				Desc: fmt.Sprintf(
-					`%s is custom resolver's argument for %q field of %q message`,
-					typeName,
-					field.Name,
-					msgFQDN,
-				),
+		fieldNameMap[fieldName] = struct{}{}
+	}
+	sort.Slice(typ.Fields, func(i, j int) bool {
+		return typ.Fields[i].Name < typ.Fields[j].Name
+	})
+
+	declTypes := []*Type{typ}
+	for _, field := range msg.CustomResolverFields() {
+		typeName := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
+		fields := []*Field{{Type: fmt.Sprintf("*%s", argName)}}
+		if msg.HasCustomResolver() {
+			fields = append(fields, &Field{
+				Name: msgName,
+				Type: file.toTypeText(resolver.NewMessageType(msg, false)),
 			})
 		}
+		sort.Slice(fields, func(i, j int) bool {
+			return fields[i].Name < fields[j].Name
+		})
+		declTypes = append(declTypes, &Type{
+			Name:   typeName,
+			Fields: fields,
+			Desc: fmt.Sprintf(
+				`%s is custom resolver's argument for %q field of %q message`,
+				typeName,
+				field.Name,
+				msgFQDN,
+			),
+		})
 	}
-	sort.Slice(declTypes, func(i, j int) bool {
-		return declTypes[i].Name < declTypes[j].Name
-	})
 	return declTypes
 }
 
@@ -585,7 +605,7 @@ func (s *Service) CELPlugins() []*CELPlugin {
 }
 
 func (s *Service) Types() Types {
-	return newTypeDeclares(s.file, s.Service.Messages)
+	return newServiceTypeDeclares(s.file, s.Service.Messages)
 }
 
 func (s *Service) OneofTypes() []*OneofType {
@@ -1422,10 +1442,7 @@ func (m *Message) CustomResolverName() string {
 }
 
 func (m *Message) ReturnType() string {
-	if m.Service.GoPackage().ImportPath == m.GoPackage().ImportPath {
-		return m.Name
-	}
-	return fmt.Sprintf("%s.%s", m.GoPackage().Name, m.Name)
+	return strings.TrimPrefix(m.file.toTypeText(resolver.NewMessageType(m.Message, false)), "*")
 }
 
 func (m *Message) LogValueReturnType() string {

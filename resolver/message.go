@@ -1,7 +1,7 @@
 package resolver
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/mercari/grpc-federation/types"
@@ -27,7 +27,7 @@ func newMessageArgument(msg *Message) *Message {
 	}
 	return &Message{
 		File: &file,
-		Name: fmt.Sprintf("%sArgument", msg.Name),
+		Name: strings.Join(append(msg.ParentMessageNames(), msg.Name+"Argument"), "_"),
 	}
 }
 

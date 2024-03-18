@@ -3204,6 +3204,22 @@ func TestMap(t *testing.T) {
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
+	postItemArg := testutil.NewMessageBuilder("Posts_PostItemArgument").
+		AddField("id", resolver.StringType).
+		Build(t)
+
+	postItem := testutil.NewMessageBuilder("PostItem").
+		AddFieldWithRule(
+			"name",
+			resolver.StringType,
+			testutil.NewFieldRuleBuilder(resolver.NewByValue("'item_' + $.id", resolver.StringType)).Build(t),
+		).SetRule(
+		testutil.NewMessageRuleBuilder().
+			SetMessageArgument(postItemArg).
+			Build(t),
+	).Build(t)
+	repeatedPostItemType := resolver.NewMessageType(postItem, true)
+
 	fb.SetPackage("org.federation").
 		SetGoPackage("example/federation", "federation").
 		AddMessage(
@@ -3211,6 +3227,7 @@ func TestMap(t *testing.T) {
 				AddField("post_ids", resolver.StringRepeatedType).
 				Build(t),
 		).
+		AddMessage(postItemArg).
 		AddMessage(
 			testutil.NewMessageBuilder("UserArgument").
 				AddField("user_id", resolver.StringType).
@@ -3277,6 +3294,7 @@ func TestMap(t *testing.T) {
 		).
 		AddMessage(
 			testutil.NewMessageBuilder("Posts").
+				AddMessage(postItem).
 				AddFieldWithRule(
 					"ids",
 					resolver.StringRepeatedType,
@@ -3296,6 +3314,11 @@ func TestMap(t *testing.T) {
 					"users",
 					ref.RepeatedType(t, "org.federation", "User"),
 					testutil.NewFieldRuleBuilder(resolver.NewByValue("users", ref.RepeatedType(t, "org.user", "User"))).Build(t),
+				).
+				AddFieldWithRule(
+					"items",
+					repeatedPostItemType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("items", repeatedPostItemType)).Build(t),
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
@@ -3377,6 +3400,36 @@ func TestMap(t *testing.T) {
 								).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("items").
+								SetUsed(true).
+								SetMap(
+									testutil.NewMapExprBuilder().
+										SetIterator(
+											testutil.NewIteratorBuilder().
+												SetName("iter").
+												SetSource("posts").
+												Build(t),
+										).
+										SetExpr(
+											testutil.NewMapIteratorExprBuilder().
+												SetMessage(
+													testutil.NewMessageExprBuilder().
+														SetMessage(postItem).
+														SetArgs(
+															testutil.NewMessageDependencyArgumentBuilder().
+																Add("id", resolver.NewByValue("iter.id", resolver.StringType)).
+																Build(t),
+														).
+														Build(t),
+												).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "PostsArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
@@ -3392,6 +3445,17 @@ func TestMap(t *testing.T) {
 										Build(t),
 								).
 								SetEnd(testutil.NewVariableDefinition("ids")).
+								Build(t),
+						).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(
+									testutil.NewVariableDefinitionGroupBuilder().
+										AddStart(testutil.NewVariableDefinitionGroupByName("res")).
+										SetEnd(testutil.NewVariableDefinition("posts")).
+										Build(t),
+								).
+								SetEnd(testutil.NewVariableDefinition("items")).
 								Build(t),
 						).
 						AddVariableDefinitionGroup(
@@ -3465,6 +3529,7 @@ func TestMap(t *testing.T) {
 				).
 				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "GetPostsResponse"), ref.Message(t, "org.federation", "GetPostsResponseArgument")).
+				AddMessage(postItem, postItemArg).
 				AddMessage(ref.Message(t, "org.federation", "Posts"), ref.Message(t, "org.federation", "PostsArgument")).
 				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
 				Build(t),

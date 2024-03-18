@@ -648,6 +648,10 @@ func (r *Resolver) resolveMessageByName(ctx *context, name string) (*Message, er
 	if strings.Contains(name, ".") {
 		pkg, err := r.lookupPackage(name)
 		if err != nil {
+			// attempt to resolve the message because of a possible name specified as a nested message.
+			if msg := r.resolveMessage(ctx, ctx.file().Package, name, source.NewMessageBuilder(ctx.fileName(), name)); msg != nil {
+				return msg, nil
+			}
 			return nil, err
 		}
 		msgName := r.trimPackage(pkg, name)
@@ -2286,7 +2290,7 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessageDependencyGraphNode) []*Message {
 	msg := node.Message
 	arg := msg.Rule.MessageArgument
-	fileDesc := r.messageArgumentFileDescriptor(arg)
+	fileDesc := messageArgumentFileDescriptor(arg)
 	if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -2999,7 +3003,7 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 	return nil, fmt.Errorf("unknown type %s is required", typ.TypeName())
 }
 
-func (r *Resolver) messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {
+func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {
 	desc := arg.File.Desc
 	msg := &descriptorpb.DescriptorProto{
 		Name: proto.String(arg.Name),
