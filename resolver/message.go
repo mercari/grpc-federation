@@ -283,6 +283,14 @@ func (m *Message) Oneof(name string) *Oneof {
 	return nil
 }
 
+func (m *Message) AllMessages() []*Message {
+	ret := []*Message{m}
+	for _, msg := range m.NestedMessages {
+		ret = append(ret, msg.AllMessages()...)
+	}
+	return ret
+}
+
 func (m *Message) AllEnums() []*Enum {
 	enums := m.Enums
 	for _, msg := range m.NestedMessages {

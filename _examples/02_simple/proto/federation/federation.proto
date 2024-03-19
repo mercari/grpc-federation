@@ -38,6 +38,7 @@ message GetPostResponse {
     def { name: "uuid" by: ".grpc.federation.uuid.newRandomFromRand(fixed_rand)" }
     def { name: "loc" by: "grpc.federation.time.loadLocation('Asia/Tokyo')"}
     def { name: "value1" by: "grpc.federation.metadata.incoming()['key1'][0]"}
+    def { name: "a" message { name: "A" } }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).string = "hello"];
@@ -50,6 +51,27 @@ message GetPostResponse {
   int32 item_type_value = 9 [(grpc.federation.field).by = "federation.Item.ItemType.value('ITEM_TYPE_1')"];
   int32 location_type_value = 10 [(grpc.federation.field).by = "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')"];
   int32 user_item_type_value = 11 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_2')"];
+  A a = 12 [(grpc.federation.field).by = "a"];
+}
+
+message A {
+  message B {
+    option (grpc.federation.message) = {
+      def [
+        { name: "foo" message: { name: "A.B.C" args { name: "type" string: "foo" } } },
+        { name: "bar" message: { name: "A.B.C" args { name: "type" string: "bar" } } }
+      ]
+    };
+    message C {
+      string type = 1 [(grpc.federation.field).by = "$.type"];
+    }
+    C foo = 1 [(grpc.federation.field).by = "foo"];
+    C bar = 2 [(grpc.federation.field).by = "bar"];
+  }
+  option (grpc.federation.message) = {
+    def { name: "b" message { name: "A.B" } }
+  };
+  B b = 1 [(grpc.federation.field).by = "b"];
 }
 
 message Post {

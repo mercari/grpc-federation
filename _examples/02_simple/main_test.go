@@ -253,6 +253,16 @@ func TestFederation(t *testing.T) {
 		ItemTypeValue:     1,
 		LocationTypeValue: 1,
 		UserItemTypeValue: 2,
+		A: &federation.A{
+			B: &federation.A_B{
+				Foo: &federation.A_B_C{
+					Type: "foo",
+				},
+				Bar: &federation.A_B_C{
+					Type: "bar",
+				},
+			},
+		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
@@ -263,6 +273,9 @@ func TestFederation(t *testing.T) {
 		federation.User_AttrB{},
 		federation.Item_Location_B{},
 		federation.Item_Location_AddrB{},
+		federation.A{},
+		federation.A_B{},
+		federation.A_B_C{},
 		anypb.Any{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
