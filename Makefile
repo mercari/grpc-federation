@@ -36,7 +36,7 @@ tools:
 		github.com/golangci/golangci-lint/cmd/golangci-lint
 
 .PHONY: lint
-lint: lint/examples lint/golangci-lint lint/gomod
+lint: lint/examples lint/golangci-lint lint/gomod lint/buf
 
 .PHONY: fmt
 fmt: fmt/golangci-lint tidy fmt/buf
@@ -65,6 +65,15 @@ lint/gomod: tidy
 	else \
 		echo "go mod tidy resulted in a change of files."; \
 		echo "Run make tidy locally before pushing"; \
+		exit 1; \
+	fi
+
+lint/buf: fmt/buf
+	if git diff --quiet proto; then \
+        exit 0; \
+	else \
+		echo "buf format resulted in a change of files."; \
+		echo "Run make fmt/buf locally before pushing"; \
 		exit 1; \
 	fi
 
