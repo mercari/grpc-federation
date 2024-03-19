@@ -9,10 +9,10 @@ option go_package = "github.com/mercari/grpc-federation/grpc/federation/generato
 
 enum ActionType {
   GENERATE_ACTION = 0;
-  KEEP_ACTION     = 1;
-  CREATE_ACTION   = 2;
-  DELETE_ACTION   = 3;
-  UPDATE_ACTION   = 4;
+  KEEP_ACTION = 1;
+  CREATE_ACTION = 2;
+  DELETE_ACTION = 3;
+  UPDATE_ACTION = 4;
 }
 
 message ProtoCodeGeneratorResponse {
@@ -40,7 +40,7 @@ message ProtoCodeGeneratorResponse {
   }
   optional int32 minimum_edition = 3;
   optional int32 maximum_edition = 4;
-  
+
   message File {
     optional string name = 1;
     optional string insertion_point = 2;
@@ -61,18 +61,18 @@ message CodeGeneratorRequest {
 }
 
 message Reference {
-  map<string,File> file_map = 1;
-  map<string,Service> service_map = 2;
-  map<string,Method> method_map = 3;
-  map<string,Message> message_map = 4;
-  map<string,Field> field_map = 5;
-  map<string,Enum> enum_map = 6;
-  map<string,EnumValue> enum_value_map = 7;
-  map<string,Oneof> oneof_map = 8;
-  map<string,CELPlugin> cel_plugin_map = 9;
-  map<string,MessageDependencyGraph> graph_map = 10;
-  map<string,VariableDefinition> variable_definition_map = 11;
-  map<string,VariableDefinitionGroup> variable_definition_group_map = 12;
+  map<string, File> file_map = 1;
+  map<string, Service> service_map = 2;
+  map<string, Method> method_map = 3;
+  map<string, Message> message_map = 4;
+  map<string, Field> field_map = 5;
+  map<string, Enum> enum_map = 6;
+  map<string, EnumValue> enum_value_map = 7;
+  map<string, Oneof> oneof_map = 8;
+  map<string, CELPlugin> cel_plugin_map = 9;
+  map<string, MessageDependencyGraph> graph_map = 10;
+  map<string, VariableDefinition> variable_definition_map = 11;
+  map<string, VariableDefinitionGroup> variable_definition_group_map = 12;
 }
 
 message File {
@@ -86,18 +86,18 @@ message File {
   repeated string cel_plugin_ids = 8;
   repeated string import_file_ids = 9;
 }
-  
+
 message Package {
   string name = 1;
   repeated string file_ids = 2;
 }
-  
+
 message GoPackage {
   string name = 1;
   string import_path = 2;
   string alias_name = 3;
 }
-  
+
 message Service {
   string id = 1;
   string name = 2;
@@ -117,7 +117,7 @@ message ServiceDependency {
   string name = 1;
   string service_id = 2;
 }
-  
+
 message Method {
   string id = 1;
   string name = 2;
@@ -130,7 +130,7 @@ message Method {
 message MethodRule {
   google.protobuf.Duration timeout = 1;
 }
- 
+
 message Message {
   string id = 1;
   string name = 2;
@@ -202,7 +202,7 @@ message VariableDefinitionGroup {
   oneof group {
     SequentialVariableDefinitionGroup sequential = 2;
     ConcurrentVariableDefinitionGroup concurrent = 3;
-  };
+  }
 }
 
 message SequentialVariableDefinitionGroup {
@@ -234,29 +234,29 @@ message VariableExpr {
     CallExpr call = 4;
     MessageExpr message = 5;
     ValidationExpr validation = 6;
-  };
+  }
 }
 
 enum TypeKind {
-  UNKNOWN_TYPE  = 0;
-  DOUBLE_TYPE   = 1;
-  FLOAT_TYPE    = 2;
-  INT64_TYPE    = 3;
-  UINT64_TYPE   = 4;
-  INT32_TYPE    = 5;
-  FIXED64_TYPE  = 6;
-  FIXED32_TYPE  = 7;
-  BOOL_TYPE     = 8;
-  STRING_TYPE   = 9;
-  GROUP_TYPE    = 10;
-  MESSAGE_TYPE  = 11;
-  BYTES_TYPE    = 12;
-  UINT32_TYPE   = 13;
-  ENUM_TYPE     = 14;
+  UNKNOWN_TYPE = 0;
+  DOUBLE_TYPE = 1;
+  FLOAT_TYPE = 2;
+  INT64_TYPE = 3;
+  UINT64_TYPE = 4;
+  INT32_TYPE = 5;
+  FIXED64_TYPE = 6;
+  FIXED32_TYPE = 7;
+  BOOL_TYPE = 8;
+  STRING_TYPE = 9;
+  GROUP_TYPE = 10;
+  MESSAGE_TYPE = 11;
+  BYTES_TYPE = 12;
+  UINT32_TYPE = 13;
+  ENUM_TYPE = 14;
   SFIXED32_TYPE = 15;
   SFIXED64_TYPE = 16;
-  SINT32_TYPE   = 17;
-  SINT64_TYPE   = 18;
+  SINT32_TYPE = 17;
+  SINT64_TYPE = 18;
 }
 
 message Type {
@@ -266,7 +266,7 @@ message Type {
     string message_id = 3;
     string enum_id = 4;
     string oneof_field_id = 5;
-  };
+  }
 }
 
 message CELValue {
@@ -289,7 +289,7 @@ message MapIteratorExpr {
   oneof expr {
     CELValue by = 2;
     MessageExpr message = 3;
-  };
+  }
 }
 
 message CallExpr {
@@ -304,7 +304,7 @@ message RetryPolicy {
   oneof policy {
     RetryPolicyConstant constant = 1;
     RetryPolicyExponential exponential = 2;
-  };
+  }
 }
 
 message RetryPolicyConstant {
@@ -342,7 +342,7 @@ message Value {
   oneof value {
     CELValue cel = 2;
     ConstValue const = 3;
-  };
+  }
 }
 
 message ConstValue {
@@ -428,7 +428,7 @@ message MessageValue {
   // fields represents message's fields.
   repeated MessageFieldValue fields = 2;
 }
-  
+
 // MessageFieldValue represents message's field.
 message MessageFieldValue {
   string field = 1;
@@ -584,7 +584,7 @@ message EnumValueRule {
   bool default = 1;
   repeated string alias_ids = 2;
 }
- 
+
 message CELPlugin {
   string id = 1;
   string name = 2;

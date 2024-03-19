@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"context"
+	"example/favorite"
 	"log/slog"
 	"os"
 	"testing"
@@ -80,6 +81,9 @@ func TestFederation(t *testing.T) {
 						Id:   requestID,
 						Name: "bar",
 					},
+					Reaction: &federation.Reaction{
+						FavoriteType: favorite.FavoriteType_TYPE1,
+					},
 				},
 			}
 		)
@@ -96,7 +100,7 @@ func TestFederation(t *testing.T) {
 		}
 		if diff := cmp.Diff(
 			got, expected,
-			cmpopts.IgnoreUnexported(federation.GetPostResponse{}, federation.Post{}, federation.User{}),
+			cmpopts.IgnoreUnexported(federation.GetPostResponse{}, federation.Post{}, federation.User{}, federation.Reaction{}),
 		); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}

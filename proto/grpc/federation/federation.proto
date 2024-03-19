@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package grpc.federation;
 
+import "google/protobuf/any.proto";
 import "google/protobuf/descriptor.proto";
 import "google/rpc/code.proto";
 import "google/rpc/error_details.proto";
-import "google/protobuf/any.proto";
 import "grpc/federation/private.proto";
 
 option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
@@ -208,32 +208,32 @@ message GRPCError {
 }
 
 message GRPCErrorDetail {
- // if specifies condition rule in CEL. If the condition is true, gRPC error detail is added to the error.
- string if = 1;
- // def define variables in current scope.
- repeated VariableDefinition def = 2;
- // message represents arbitrary messages to describe the detail of the error.
- repeated MessageExpr message = 3;
- // error_info describes the cause of the error with structured details.
- repeated google.rpc.ErrorInfo error_info = 4;
- // retry_info describes when the clients can retry a failed request.
- repeated google.rpc.RetryInfo retry_info = 5;
- // debug_info describes additional debugging info.
- repeated google.rpc.DebugInfo debug_info = 6;
- // quota_failure describes how a quota check failed.
- repeated google.rpc.QuotaFailure quota_failure = 7;
- // precondition_failure describes what preconditions have failed.
- repeated google.rpc.PreconditionFailure precondition_failure = 8;
- // bad_request describes violations in a client request.
- repeated google.rpc.BadRequest bad_request = 9;
- // request_info contains metadata about the request that clients can attach.
- repeated google.rpc.RequestInfo request_info = 10;
- // resource_info describes the resource that is being accessed.
- repeated google.rpc.ResourceInfo resource_info = 11;
- // help provides links to documentation or for performing an out of band action.
- repeated google.rpc.Help help = 12;
- // localized_message provides a localized error message that is safe to return to the user.
- repeated google.rpc.LocalizedMessage localized_message = 13;
+  // if specifies condition rule in CEL. If the condition is true, gRPC error detail is added to the error.
+  string if = 1;
+  // def define variables in current scope.
+  repeated VariableDefinition def = 2;
+  // message represents arbitrary messages to describe the detail of the error.
+  repeated MessageExpr message = 3;
+  // error_info describes the cause of the error with structured details.
+  repeated google.rpc.ErrorInfo error_info = 4;
+  // retry_info describes when the clients can retry a failed request.
+  repeated google.rpc.RetryInfo retry_info = 5;
+  // debug_info describes additional debugging info.
+  repeated google.rpc.DebugInfo debug_info = 6;
+  // quota_failure describes how a quota check failed.
+  repeated google.rpc.QuotaFailure quota_failure = 7;
+  // precondition_failure describes what preconditions have failed.
+  repeated google.rpc.PreconditionFailure precondition_failure = 8;
+  // bad_request describes violations in a client request.
+  repeated google.rpc.BadRequest bad_request = 9;
+  // request_info contains metadata about the request that clients can attach.
+  repeated google.rpc.RequestInfo request_info = 10;
+  // resource_info describes the resource that is being accessed.
+  repeated google.rpc.ResourceInfo resource_info = 11;
+  // help provides links to documentation or for performing an out of band action.
+  repeated google.rpc.Help help = 12;
+  // localized_message provides a localized error message that is safe to return to the user.
+  repeated google.rpc.LocalizedMessage localized_message = 13;
 }
 
 // Validation represents a validation rule against variables defined within the current scope.

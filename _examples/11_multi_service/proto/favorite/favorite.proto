@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package favorite;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/favorite;favorite";
+
+enum FavoriteType {
+  option (grpc.federation.enum).alias = "favorite.FavoriteType";
+  UNKNOWN = 0;
+  TYPE1 = 1;
+  TYPE2 = 2;
+}
