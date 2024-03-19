@@ -64,13 +64,32 @@ message Posts {
             args { name: "user_id", by: "iter.user_id" }
           }
         }
+      },
+      {
+        name: "items"
+        map {
+          iterator {
+            name: "iter"
+            src: "posts"
+          }
+          message {
+            name: "Posts.PostItem"
+            args { name: "id" by: "iter.id" }
+          }
+        }
       }
     ]
   };
+
+  message PostItem {
+    string name = 1 [(grpc.federation.field).by = "'item_' + $.id"];
+  };
+
   repeated string ids = 1 [(grpc.federation.field).by = "ids"];
   repeated string titles = 2 [(grpc.federation.field).by = "posts.map(post, post.title)"];
   repeated string contents = 3 [(grpc.federation.field).by = "posts.map(post, post.content)"];
   repeated User users = 4 [(grpc.federation.field).by = "users"];
+  repeated PostItem items = 5 [(grpc.federation.field).by = "items"];
 }
 
 message User {

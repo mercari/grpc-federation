@@ -160,11 +160,16 @@ func TestFederation(t *testing.T) {
 					Name: "name_y",
 				},
 			},
+			Items: []*federation.Posts_PostItem{
+				{Name: "item_x"},
+				{Name: "item_y"},
+			},
 		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostsResponse{},
 		federation.Posts{},
 		federation.User{},
+		federation.Posts_PostItem{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
