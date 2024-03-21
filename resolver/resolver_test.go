@@ -103,6 +103,14 @@ func TestSimpleAggregation(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("User_AttrAArgument").
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("User_AttrBArgument").
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("User").
 				AddMessage(
 					testutil.NewMessageBuilder("ProfileEntry").
@@ -116,6 +124,7 @@ func TestSimpleAggregation(t *testing.T) {
 						AddFieldWithAlias("foo", resolver.StringType, ref.Field(t, "org.user", "User.AttrA", "foo")).
 						SetRule(
 							testutil.NewMessageRuleBuilder().
+								SetMessageArgument(ref.Message(t, "org.federation", "User_AttrAArgument")).
 								SetAlias(ref.Message(t, "org.user", "User.AttrA")).
 								Build(t),
 						).
@@ -126,6 +135,7 @@ func TestSimpleAggregation(t *testing.T) {
 						AddFieldWithAlias("bar", resolver.BoolType, ref.Field(t, "org.user", "User.AttrB", "bar")).
 						SetRule(
 							testutil.NewMessageRuleBuilder().
+								SetMessageArgument(ref.Message(t, "org.federation", "User_AttrBArgument")).
 								SetAlias(ref.Message(t, "org.user", "User.AttrB")).
 								Build(t),
 						).

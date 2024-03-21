@@ -209,7 +209,9 @@ func (r *Resolver) existsServiceRule(files []*File) bool {
 func (r *Resolver) allMessages(files []*File) []*Message {
 	msgs := make([]*Message, 0, len(r.cachedMessageMap))
 	for _, file := range files {
-		msgs = append(msgs, file.Messages...)
+		for _, msg := range file.Messages {
+			msgs = append(msgs, msg.AllMessages()...)
+		}
 	}
 	return msgs
 }

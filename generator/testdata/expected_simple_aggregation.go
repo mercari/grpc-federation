@@ -67,6 +67,16 @@ type Org_Federation_User_AgeArgument[T any] struct {
 	Client T
 }
 
+// Org_Federation_User_AttrAArgument is argument for "org.federation.AttrA" message.
+type Org_Federation_User_AttrAArgument[T any] struct {
+	Client T
+}
+
+// Org_Federation_User_AttrBArgument is argument for "org.federation.AttrB" message.
+type Org_Federation_User_AttrBArgument[T any] struct {
+	Client T
+}
+
 // Org_Federation_ZArgument is argument for "org.federation.Z" message.
 type Org_Federation_ZArgument[T any] struct {
 	Client T
