@@ -16,6 +16,10 @@ lint:
 test:
 	go test -race ./ -count=1
 
+.PHONY: bench
+bench:
+	@go test -bench ./ -run 'BenchmarkFederation' -count=20
+
 .PHONY: grpc-federation/generate
 grpc-federation/generate:
 	@$(GOBIN)/grpc-federation-generator ./proto/federation/federation.proto
