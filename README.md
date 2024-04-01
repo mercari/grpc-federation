@@ -6,6 +6,8 @@
 
 gRPC Federation auto-generates a BFF (Backend for Frontend) server, aggregating and returning results from microservices using the gRPC protocol, configured through Protocol Buffer options.
 
+[Public Roadmap is here](https://github.com/orgs/mercari/projects/1).
+
 # Motivation
 
 Imagine a system with a backend of multiple microservices. Instead of the client directly communicating with each microservice, it's more efficient to use a dedicated service (BFF - Backend for Frontend) to aggregate information and send it back to the client. However, as the system grows, determining which team should handle the BFF service becomes unclear. This is where Federated Architecture, like [GraphQL (Apollo) Federation](https://www.apollographql.com/docs/federation/), comes in.
