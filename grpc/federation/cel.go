@@ -559,7 +559,7 @@ func SetGRPCError(ctx context.Context, value localValue, err error) {
 	if !ok {
 		return
 	}
-	grpcErr := &Error{
+	grpcErr := &grpcfedcel.Error{
 		Code:    int32(stat.Code()),
 		Message: stat.Message(),
 	}

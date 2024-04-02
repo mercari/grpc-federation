@@ -2,7 +2,7 @@
 // protoc-gen-go-vtproto version: v0.6.0
 // source: grpc/federation/private.proto
 
-package federation
+package cel
 
 import (
 	fmt "fmt"

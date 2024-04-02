@@ -7,6 +7,7 @@
 package federation
 
 import (
+	_ "github.com/mercari/grpc-federation/grpc/federation/cel"
 	code "google.golang.org/genproto/googleapis/rpc/code"
 	errdetails "google.golang.org/genproto/googleapis/rpc/errdetails"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -4067,7 +4068,6 @@ func file_grpc_federation_federation_proto_init() {
 	if File_grpc_federation_federation_proto != nil {
 		return
 	}
-	file_grpc_federation_private_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_grpc_federation_federation_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*EnumRule); i {
