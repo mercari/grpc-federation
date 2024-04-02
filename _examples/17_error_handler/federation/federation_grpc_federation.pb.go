@@ -22,8 +22,8 @@ var (
 
 // Org_Federation_CustomMessageArgument is argument for "org.federation.CustomMessage" message.
 type Org_Federation_CustomMessageArgument[T any] struct {
-	Msg    string
-	Client T
+	ErrorInfo *grpcfedcel.Error
+	Client    T
 }
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
@@ -137,7 +137,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
 		"grpc.federation.private.CustomMessageArgument": {
-			"msg": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Msg"),
+			"error_info": grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("grpc.federation.private.Error"), "ErrorInfo"),
 		},
 		"grpc.federation.private.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
@@ -207,8 +207,8 @@ func (s *FederationService) resolve_Org_Federation_CustomMessage(ctx context.Con
 	ret := &CustomMessage{}
 
 	// field binding section.
-	// (grpc.federation.field).by = "'custom error message:' + $.msg"
-	if err := grpcfed.SetCELValue(ctx, value, "'custom error message:' + $.msg", func(v string) { ret.Msg = v }); err != nil {
+	// (grpc.federation.field).by = "'custom error message:' + $.error_info.message"
+	if err := grpcfed.SetCELValue(ctx, value, "'custom error message:' + $.error_info.message", func(v string) { ret.Msg = v }); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
@@ -421,7 +421,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 						     name: "_def0_err_detail0_msg0"
 						     message {
 						       name: "CustomMessage"
-						       args { name: "msg", by: "id" }
+						       args { name: "error_info", by: "error" }
 						     }
 						   }
 						*/
@@ -433,9 +433,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 								args := &Org_Federation_CustomMessageArgument[*FederationServiceDependentClientSet]{
 									Client: s.client,
 								}
-								// { name: "msg", by: "id" }
-								if err := grpcfed.SetCELValue(ctx, value, "id", func(v string) {
-									args.Msg = v
+								// { name: "error_info", by: "error" }
+								if err := grpcfed.SetCELValue(ctx, value, "error", func(v *grpcfedcel.Error) {
+									args.ErrorInfo = v
 								}); err != nil {
 									return nil, err
 								}
@@ -564,6 +564,13 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	return ret, nil
 }
 
+func (s *FederationService) logvalue_Grpc_Federation_Private_Error(v *grpcfedcel.Error) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
+}
+
 func (s *FederationService) logvalue_Org_Federation_CustomMessage(v *CustomMessage) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
@@ -578,7 +585,7 @@ func (s *FederationService) logvalue_Org_Federation_CustomMessageArgument(v *Org
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
-		slog.String("msg", v.Msg),
+		slog.Any("error_info", s.logvalue_Grpc_Federation_Private_Error(v.ErrorInfo)),
 	)
 }
 

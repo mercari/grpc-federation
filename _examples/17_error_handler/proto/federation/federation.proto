@@ -48,7 +48,7 @@ message Post {
             message: "'this is custom error message'"
             details {
               def { name: "localized_msg" message { name: "LocalizedMessage" args { name: "value" by: "id" } } }
-              message { name: "CustomMessage" args { name: "msg" by: "id" } }
+              message { name: "CustomMessage" args { name: "error_info" by: "error" } }
               precondition_failure {
                 violations {
                   type: "'some-type'"
@@ -82,5 +82,5 @@ message LocalizedMessage {
 }
 
 message CustomMessage {
-  string msg = 1 [(grpc.federation.field).by = "'custom error message:' + $.msg"];
+  string msg = 1 [(grpc.federation.field).by = "'custom error message:' + $.error_info.message"];
 }

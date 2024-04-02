@@ -3005,6 +3005,8 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 	return nil, fmt.Errorf("unknown type %s is required", typ.TypeName())
 }
 
+const privateProtoFile = "grpc/federation/private.proto"
+
 func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {
 	desc := arg.File.Desc
 	msg := &descriptorpb.DescriptorProto{
@@ -3031,10 +3033,21 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 			Label:    &label,
 		})
 	}
+	var importedPrivateFile bool
+	for _, dep := range desc.GetDependency() {
+		if dep == privateProtoFile {
+			importedPrivateFile = true
+			break
+		}
+	}
+	deps := append(desc.GetDependency(), arg.File.Name)
+	if !importedPrivateFile {
+		deps = append(deps, privateProtoFile)
+	}
 	return &descriptorpb.FileDescriptorProto{
 		Name:             proto.String(arg.Name),
 		Package:          proto.String(federation.PrivatePackageName),
-		Dependency:       append(desc.Dependency, arg.File.Name),
+		Dependency:       deps,
 		PublicDependency: desc.PublicDependency,
 		WeakDependency:   desc.WeakDependency,
 		MessageType:      []*descriptorpb.DescriptorProto{msg},
