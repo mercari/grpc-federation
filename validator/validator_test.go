@@ -344,21 +344,24 @@ testdata/invalid_method_response.proto:69:36: ERROR: <input>:1:8: undefined fiel
                                         ^
 `},
 		{file: "invalid_message_name.proto", expected: `
-testdata/invalid_message_name.proto: "federation.Invalid" message does not exist
 testdata/invalid_message_name.proto:15:7: [WARN] "user.UserService" defined in "dependencies" of "grpc.federation.service" but it is not used
 15:        { name: "user_service", service: "user.UserService" }
            ^
+testdata/invalid_message_name.proto:51:17: "federation.Invalid" message does not exist
+51:          message {
+                     ^
 testdata/invalid_message_name.proto:52:17: undefined message specified
 52:            name: "Invalid"
                      ^
-testdata/invalid_message_name.proto:61:47: unknown type null_type is required
-61:    User user = 4 [(grpc.federation.field).by = "user"];
+testdata/invalid_message_name.proto:58:17: "post.Invalid" message does not exist
+58:          message {
+                     ^
+testdata/invalid_message_name.proto:59:17: undefined message specified
+59:            name: "post.Invalid"
+                     ^
+testdata/invalid_message_name.proto:68:47: unknown type null_type is required
+68:    User user = 4 [(grpc.federation.field).by = "user1"];
                                                    ^
-testdata/invalid_message_name.proto:70:36: ERROR: <input>:1:8: undefined field 'user_id'
- | __ARG__.user_id
- | .......^
-70:          request { field: "id", by: "$.user_id" }
-                                        ^
 `},
 		{file: "invalid_message_argument.proto", expected: `
 testdata/invalid_message_argument.proto:54:19: ERROR: <input>:1:11: type 'string' does not support field selection

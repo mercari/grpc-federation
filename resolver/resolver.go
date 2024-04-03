@@ -391,7 +391,7 @@ func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDesc
 	}
 	for idx, msgType := range def.GetTypes() {
 		builder := builder.WithTypes(idx)
-		msg, err := r.resolveMessageByName(ctx, msgType.GetName())
+		msg, err := r.resolveMessageByName(ctx, msgType.GetName(), source.ToLazyMessageBuilder(builder, msgType.GetName()))
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -646,20 +646,20 @@ func (r *Resolver) resolveMethod(ctx *context, service *Service, methodDef *desc
 	return method
 }
 
-func (r *Resolver) resolveMessageByName(ctx *context, name string) (*Message, error) {
+func (r *Resolver) resolveMessageByName(ctx *context, name string, builder *source.MessageBuilder) (*Message, error) {
 	if strings.Contains(name, ".") {
 		pkg, err := r.lookupPackage(name)
 		if err != nil {
 			// attempt to resolve the message because of a possible name specified as a nested message.
-			if msg := r.resolveMessage(ctx, ctx.file().Package, name, source.NewMessageBuilder(ctx.fileName(), name)); msg != nil {
+			if msg := r.resolveMessage(ctx, ctx.file().Package, name, builder); msg != nil {
 				return msg, nil
 			}
 			return nil, err
 		}
 		msgName := r.trimPackage(pkg, name)
-		return r.resolveMessage(ctx, pkg, msgName, source.NewMessageBuilder(ctx.fileName(), msgName)), nil
+		return r.resolveMessage(ctx, pkg, msgName, source.ToLazyMessageBuilder(builder, msgName)), nil
 	}
-	return r.resolveMessage(ctx, ctx.file().Package, name, source.NewMessageBuilder(ctx.fileName(), name)), nil
+	return r.resolveMessage(ctx, ctx.file().Package, name, builder), nil
 }
 
 func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string, builder *source.MessageBuilder) *Message {
@@ -1324,7 +1324,7 @@ func (r *Resolver) resolveMessageExpr(ctx *context, def *federation.MessageExpr,
 	if def == nil {
 		return nil
 	}
-	msg, err := r.resolveMessageByName(ctx, def.GetName())
+	msg, err := r.resolveMessageByName(ctx, def.GetName(), source.ToLazyMessageBuilder(builder, def.GetName()))
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(

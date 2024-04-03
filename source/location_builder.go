@@ -1,5 +1,9 @@
 package source
 
+type Locationer interface {
+	Location() *Location
+}
+
 func NewLocationBuilder(fileName string) *LocationBuilder {
 	return &LocationBuilder{
 		location: &Location{FileName: fileName},
@@ -534,6 +538,19 @@ func (b *MessageBuilder) WithOneof(name string) *OneofBuilder {
 
 func (b *MessageBuilder) Location() *Location {
 	return b.root
+}
+
+// ToLazyMessageBuilder sets new Message to the root lazily to return the original Location
+// unless MessageBuilder's methods are called afterword.
+func ToLazyMessageBuilder(l Locationer, name string) *MessageBuilder {
+	root := l.Location().Clone()
+	return &MessageBuilder{
+		root: root,
+		message: func(loc *Location) *Message {
+			loc.Message = &Message{Name: name}
+			return loc.Message
+		},
+	}
 }
 
 type FieldBuilder struct {
