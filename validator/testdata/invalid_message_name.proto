@@ -47,9 +47,16 @@ message Post {
       },
       { name: "post", by: "res.post", autobind: true  },
       {
-        name: "user"
+        name: "user1"
         message {
           name: "Invalid"
+          args { inline: "post" }
+        }
+      },
+      {
+        name: "user2"
+        message {
+          name: "post.Invalid"
           args { inline: "post" }
         }
       }
@@ -58,20 +65,10 @@ message Post {
   string id = 1;
   string title = 2;
   string content = 3;
-  User user = 4 [(grpc.federation.field).by = "user"];
+  User user = 4 [(grpc.federation.field).by = "user1"];
 }
 
 message User {
-  option (grpc.federation.message) = {
-    def {
-      name: "res"
-      call {
-        method: "user.UserService/GetUser"
-        request { field: "id", by: "$.user_id" }
-      }
-    }
-    def { name: "user", by: "res.user", autobind: true  }
-  };
-  string id = 1;
-  string name = 2;
+  string id = 1 [(grpc.federation.field).string = "id"];
+  string name = 2 [(grpc.federation.field).string = "name"];
 }
