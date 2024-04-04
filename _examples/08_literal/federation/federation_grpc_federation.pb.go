@@ -21,7 +21,7 @@ var (
 )
 
 // Org_Federation_ContentArgument is argument for "org.federation.Content" message.
-type Org_Federation_ContentArgument[T any] struct {
+type Org_Federation_ContentArgument struct {
 	BoolField        bool
 	BoolsField       []bool
 	ByField          string
@@ -59,16 +59,14 @@ type Org_Federation_ContentArgument[T any] struct {
 	Uint32SField     []uint32
 	Uint64Field      uint64
 	Uint64SField     []uint64
-	Client           T
 }
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type Org_Federation_GetResponseArgument[T any] struct {
+type Org_Federation_GetResponseArgument struct {
 	Content  *content.Content
 	Content2 *Content
 	Id       string
 	Res      *content.GetContentResponse
-	Client   T
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -89,14 +87,11 @@ type FederationServiceClientFactory interface {
 	Content_ContentServiceClient(FederationServiceClientConfig) (content.ContentServiceClient, error)
 }
 
-// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// FederationServiceClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type FederationServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -144,7 +139,6 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	Content_ContentServiceClient, err := cfg.Client.Content_ContentServiceClient(FederationServiceClientConfig{
 		Service: "content.ContentService",
-		Name:    "",
 	})
 	if err != nil {
 		return nil, err
@@ -232,9 +226,8 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]{
-		Client: s.client,
-		Id:     req.Id,
+	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
+		Id: req.Id,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -245,7 +238,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 }
 
 // resolve_Org_Federation_Content resolve "org.federation.Content" message.
-func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, req *Org_Federation_ContentArgument[*FederationServiceDependentClientSet]) (*Content, error) {
+func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, req *Org_Federation_ContentArgument) (*Content, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Content")
 	defer span.End()
 
@@ -452,7 +445,7 @@ func (s *FederationService) resolve_Org_Federation_Content(ctx context.Context, 
 }
 
 // resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) (*GetResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
@@ -656,8 +649,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Type:   grpcfed.CELObjectType("org.federation.Content"),
 			Setter: func(value *localValueType, v *Content) { value.vars.content2 = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_ContentArgument[*FederationServiceDependentClientSet]{
-					Client:           s.client,
+				args := &Org_Federation_ContentArgument{
 					DoubleField:      1.23,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { name: "double_field", double: 1.23 }
 					DoublesField:     []float64{4.56, 7.89},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // { name: "doubles_field", doubles: [4.56, 7.89] }
 					FloatField:       4.56,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { name: "float_field", float: 4.56 }
@@ -867,7 +859,7 @@ func (s *FederationService) logvalue_Org_Federation_Content(v *Content) slog.Val
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_ContentArgument(v *Org_Federation_ContentArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_ContentArgument(v *Org_Federation_ContentArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -935,7 +927,7 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

@@ -23,63 +23,54 @@ var (
 )
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
-type Org_Federation_GetPostResponseArgument[T any] struct {
-	Id     string
-	Post   *Post
-	Uuid   *grpcfedcel.UUID
-	Client T
+type Org_Federation_GetPostResponseArgument struct {
+	Id   string
+	Post *Post
+	Uuid *grpcfedcel.UUID
 }
 
 // Org_Federation_ItemArgument is argument for "org.federation.Item" message.
-type Org_Federation_ItemArgument[T any] struct {
-	Client T
+type Org_Federation_ItemArgument struct {
 }
 
 // Org_Federation_MArgument is argument for "org.federation.M" message.
-type Org_Federation_MArgument[T any] struct {
-	Client T
+type Org_Federation_MArgument struct {
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
-type Org_Federation_PostArgument[T any] struct {
-	Id     string
-	M      *M
-	Post   *post.Post
-	Res    *post.GetPostResponse
-	User   *User
-	Client T
+type Org_Federation_PostArgument struct {
+	Id   string
+	M    *M
+	Post *post.Post
+	Res  *post.GetPostResponse
+	User *User
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
-type Org_Federation_UserArgument[T any] struct {
+type Org_Federation_UserArgument struct {
 	Content string
 	Id      string
 	Res     *user.GetUserResponse
 	Title   string
 	User    *user.User
 	UserId  string
-	Client  T
 }
 
 // Org_Federation_User_AgeArgument is custom resolver's argument for "age" field of "org.federation.User" message.
-type Org_Federation_User_AgeArgument[T any] struct {
-	*Org_Federation_UserArgument[T]
-	Client T
+type Org_Federation_User_AgeArgument struct {
+	*Org_Federation_UserArgument
 }
 
 // Org_Federation_User_AttrAArgument is argument for "org.federation.AttrA" message.
-type Org_Federation_User_AttrAArgument[T any] struct {
-	Client T
+type Org_Federation_User_AttrAArgument struct {
 }
 
 // Org_Federation_User_AttrBArgument is argument for "org.federation.AttrB" message.
-type Org_Federation_User_AttrBArgument[T any] struct {
-	Client T
+type Org_Federation_User_AttrBArgument struct {
 }
 
 // Org_Federation_ZArgument is argument for "org.federation.Z" message.
-type Org_Federation_ZArgument[T any] struct {
-	Client T
+type Org_Federation_ZArgument struct {
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -105,14 +96,11 @@ type FederationServiceClientFactory interface {
 	Org_User_UserServiceClient(FederationServiceClientConfig) (user.UserServiceClient, error)
 }
 
-// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// FederationServiceClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type FederationServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -125,9 +113,9 @@ type FederationServiceDependentClientSet struct {
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
 	// Resolve_Org_Federation_User_Age implements resolver for "org.federation.User.age".
-	Resolve_Org_Federation_User_Age(context.Context, *Org_Federation_User_AgeArgument[*FederationServiceDependentClientSet]) (uint64, error)
+	Resolve_Org_Federation_User_Age(context.Context, *Org_Federation_User_AgeArgument) (uint64, error)
 	// Resolve_Org_Federation_Z implements resolver for "org.federation.Z".
-	Resolve_Org_Federation_Z(context.Context, *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (*Z, error)
+	Resolve_Org_Federation_Z(context.Context, *Org_Federation_ZArgument) (*Z, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -145,14 +133,14 @@ type FederationServiceUnimplementedResolver struct{}
 
 // Resolve_Org_Federation_User_Age resolve "org.federation.User.age".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User_Age(context.Context, *Org_Federation_User_AgeArgument[*FederationServiceDependentClientSet]) (ret uint64, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User_Age(context.Context, *Org_Federation_User_AgeArgument) (ret uint64, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_User_Age not implemented")
 	return
 }
 
 // Resolve_Org_Federation_Z resolve "org.federation.Z".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_Z(context.Context, *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (ret *Z, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_Z(context.Context, *Org_Federation_ZArgument) (ret *Z, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_Z not implemented")
 	return
 }
@@ -184,14 +172,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
 		Service: "org.post.PostService",
-		Name:    "",
 	})
 	if err != nil {
 		return nil, err
 	}
 	Org_User_UserServiceClient, err := cfg.Client.Org_User_UserServiceClient(FederationServiceClientConfig{
 		Service: "org.user.UserService",
-		Name:    "",
 	})
 	if err != nil {
 		return nil, err
@@ -257,9 +243,8 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 		}
 	}()
 	res, err := grpcfed.WithTimeout[GetPostResponse](ctx, "org.federation.FederationService/GetPost", 60000000000 /* 1m0s */, func(ctx context.Context) (*GetPostResponse, error) {
-		return s.resolve_Org_Federation_GetPostResponse(ctx, &Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]{
-			Client: s.client,
-			Id:     req.Id,
+		return s.resolve_Org_Federation_GetPostResponse(ctx, &Org_Federation_GetPostResponseArgument{
+			Id: req.Id,
 		})
 	})
 	if err != nil {
@@ -271,7 +256,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 }
 
 // resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *Org_Federation_GetPostResponseArgument) (*GetPostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse")
 	defer span.End()
 
@@ -308,9 +293,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Type:   grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) { value.vars.post = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_PostArgument[*FederationServiceDependentClientSet]{
-					Client: s.client,
-				}
+				args := &Org_Federation_PostArgument{}
 				// { name: "id", by: "$.id" }
 				if err := grpcfed.SetCELValue(ctx, value, "$.id", func(v string) {
 					args.Id = v
@@ -386,7 +369,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 }
 
 // resolve_Org_Federation_M resolve "org.federation.M" message.
-func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *Org_Federation_MArgument[*FederationServiceDependentClientSet]) (*M, error) {
+func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *Org_Federation_MArgument) (*M, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.M")
 	defer span.End()
 
@@ -404,7 +387,7 @@ func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *O
 }
 
 // resolve_Org_Federation_Post resolve "org.federation.Post" message.
-func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req *Org_Federation_PostArgument[*FederationServiceDependentClientSet]) (*Post, error) {
+func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req *Org_Federation_PostArgument) (*Post, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Post")
 	defer span.End()
 
@@ -447,9 +430,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Type:   grpcfed.CELObjectType("org.federation.M"),
 			Setter: func(value *localValueType, v *M) { value.vars.m = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_MArgument[*FederationServiceDependentClientSet]{
-					Client: s.client,
-				}
+				args := &Org_Federation_MArgument{}
 				return s.resolve_Org_Federation_M(ctx, args)
 			},
 		}); err != nil {
@@ -532,9 +513,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Type:   grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) { value.vars.user = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_UserArgument[*FederationServiceDependentClientSet]{
-					Client: s.client,
-				}
+				args := &Org_Federation_UserArgument{}
 				// { inline: "post" }
 				if err := grpcfed.SetCELValue(ctx, value, "post", func(v *post.Post) {
 					args.Id = v.GetId()
@@ -569,9 +548,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Type:   grpcfed.CELObjectType("org.federation.Z"),
 			Setter: func(value *localValueType, v *Z) { value.vars.z = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_ZArgument[*FederationServiceDependentClientSet]{
-					Client: s.client,
-				}
+				args := &Org_Federation_ZArgument{}
 				return s.resolve_Org_Federation_Z(ctx, args)
 			},
 		}); err != nil {
@@ -611,7 +588,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 }
 
 // resolve_Org_Federation_User resolve "org.federation.User" message.
-func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) (*User, error) {
+func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.User")
 	defer span.End()
 
@@ -701,8 +678,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	{
 		// (grpc.federation.field).custom_resolver = true
 		var err error
-		ret.Age, err = s.resolver.Resolve_Org_Federation_User_Age(ctx, &Org_Federation_User_AgeArgument[*FederationServiceDependentClientSet]{
-			Client:                      s.client,
+		ret.Age, err = s.resolver.Resolve_Org_Federation_User_Age(ctx, &Org_Federation_User_AgeArgument{
 			Org_Federation_UserArgument: req,
 		})
 		if err != nil {
@@ -729,7 +705,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 }
 
 // resolve_Org_Federation_Z resolve "org.federation.Z" message.
-func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) (*Z, error) {
+func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *Org_Federation_ZArgument) (*Z, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Z")
 	defer span.End()
 
@@ -860,7 +836,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -902,7 +878,7 @@ func (s *FederationService) logvalue_Org_Federation_M(v *M) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_MArgument(v *Org_Federation_MArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_MArgument(v *Org_Federation_MArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -923,7 +899,7 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federation_PostArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federation_PostArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -950,7 +926,7 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1010,7 +986,7 @@ func (s *FederationService) logvalue_Org_Federation_Z(v *Z) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_ZArgument(v *Org_Federation_ZArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_ZArgument(v *Org_Federation_ZArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

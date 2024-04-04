@@ -10,6 +10,5 @@ var (
 )
 
 // Federation_ReactionArgument is argument for "federation.Reaction" message.
-type Federation_ReactionArgument[T any] struct {
-	Client T
+type Federation_ReactionArgument struct {
 }

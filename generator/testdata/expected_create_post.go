@@ -21,16 +21,15 @@ var (
 )
 
 // Org_Federation_CreatePostArgument is argument for "org.federation.CreatePost" message.
-type Org_Federation_CreatePostArgument[T any] struct {
+type Org_Federation_CreatePostArgument struct {
 	Content string
 	Title   string
 	Type    PostType
 	UserId  string
-	Client  T
 }
 
 // Org_Federation_CreatePostResponseArgument is argument for "org.federation.CreatePostResponse" message.
-type Org_Federation_CreatePostResponseArgument[T any] struct {
+type Org_Federation_CreatePostResponseArgument struct {
 	Content string
 	Cp      *CreatePost
 	P       *post.Post
@@ -38,12 +37,10 @@ type Org_Federation_CreatePostResponseArgument[T any] struct {
 	Title   string
 	Type    PostType
 	UserId  string
-	Client  T
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
-type Org_Federation_PostArgument[T any] struct {
-	Client T
+type Org_Federation_PostArgument struct {
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -64,14 +61,11 @@ type FederationServiceClientFactory interface {
 	Org_Post_PostServiceClient(FederationServiceClientConfig) (post.PostServiceClient, error)
 }
 
-// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// FederationServiceClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type FederationServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -119,7 +113,6 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	Org_Post_PostServiceClient, err := cfg.Client.Org_Post_PostServiceClient(FederationServiceClientConfig{
 		Service: "org.post.PostService",
-		Name:    "post_service",
 	})
 	if err != nil {
 		return nil, err
@@ -177,8 +170,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_CreatePostResponse(ctx, &Org_Federation_CreatePostResponseArgument[*FederationServiceDependentClientSet]{
-		Client:  s.client,
+	res, err := s.resolve_Org_Federation_CreatePostResponse(ctx, &Org_Federation_CreatePostResponseArgument{
 		Title:   req.Title,
 		Content: req.Content,
 		UserId:  req.UserId,
@@ -193,7 +185,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 }
 
 // resolve_Org_Federation_CreatePost resolve "org.federation.CreatePost" message.
-func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *Org_Federation_CreatePostArgument[*FederationServiceDependentClientSet]) (*CreatePost, error) {
+func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *Org_Federation_CreatePostArgument) (*CreatePost, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePost")
 	defer span.End()
 
@@ -235,7 +227,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 }
 
 // resolve_Org_Federation_CreatePostResponse resolve "org.federation.CreatePostResponse" message.
-func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx context.Context, req *Org_Federation_CreatePostResponseArgument[*FederationServiceDependentClientSet]) (*CreatePostResponse, error) {
+func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx context.Context, req *Org_Federation_CreatePostResponseArgument) (*CreatePostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePostResponse")
 	defer span.End()
 
@@ -270,9 +262,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		Type:   grpcfed.CELObjectType("org.federation.CreatePost"),
 		Setter: func(value *localValueType, v *CreatePost) { value.vars.cp = v },
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Org_Federation_CreatePostArgument[*FederationServiceDependentClientSet]{
-				Client: s.client,
-			}
+			args := &Org_Federation_CreatePostArgument{}
 			// { name: "title", by: "$.title" }
 			if err := grpcfed.SetCELValue(ctx, value, "$.title", func(v string) {
 				args.Title = v
@@ -425,7 +415,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) sl
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *Org_Federation_CreatePostArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *Org_Federation_CreatePostArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -446,7 +436,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePostResponse(v *Create
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v *Org_Federation_CreatePostResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v *Org_Federation_CreatePostResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

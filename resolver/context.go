@@ -139,6 +139,7 @@ func (c *context) error() error {
 	return c.errorBuilder.build()
 }
 
+//nolint:unused
 func (c *context) addWarning(w *Warning) {
 	c.allWarnings.warnings = append(c.allWarnings.warnings, w)
 }

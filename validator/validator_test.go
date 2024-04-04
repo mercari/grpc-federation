@@ -33,10 +33,10 @@ testdata/invalid_condition_type.proto:36:13: return value of "if" must be bool t
                  ^
 `},
 		{file: "invalid_field_option.proto", expected: `
-testdata/invalid_field_option.proto:34:50: ERROR: <input>:1:5: undefined field 'invalid'
+testdata/invalid_field_option.proto:30:50: ERROR: <input>:1:5: undefined field 'invalid'
  | post.invalid
  | ....^
-34:    Post post = 1 [(grpc.federation.field) = { by: "post.invalid" }];
+30:    Post post = 1 [(grpc.federation.field) = { by: "post.invalid" }];
                                                       ^
 `},
 		{file: "invalid_go_package.proto", expected: `
@@ -45,11 +45,11 @@ testdata/invalid_go_package.proto:9:21: go_package option "a;b;c;d" is invalid
                         ^
 `},
 		{file: "invalid_enum_alias_target.proto", expected: `
-testdata/invalid_enum_alias_target.proto:52:41: required specify alias = "org.post.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
-52:    option (grpc.federation.enum).alias = "org.post.FakePostDataType";
+testdata/invalid_enum_alias_target.proto:48:41: required specify alias = "org.post.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
+48:    option (grpc.federation.enum).alias = "org.post.FakePostDataType";
                                              ^
-testdata/invalid_enum_alias_target.proto:71:43: required specify alias = "org.post.PostContent.Category" in grpc.federation.enum option for the "org.federation.PostContent.Category" type to automatically assign a value to the "PostContent.category" field via autobind
-71:      option (grpc.federation.enum).alias = "org.post.FakePostContent.FakeCategory";
+testdata/invalid_enum_alias_target.proto:67:43: required specify alias = "org.post.PostContent.Category" in grpc.federation.enum option for the "org.federation.PostContent.Category" type to automatically assign a value to the "PostContent.category" field via autobind
+67:      option (grpc.federation.enum).alias = "org.post.FakePostContent.FakeCategory";
                                                ^
 `},
 		{file: "invalid_error_variable.proto", expected: `
@@ -98,49 +98,49 @@ testdata/invalid_map_iterator_src.proto:54:47: ERROR: <input>:1:8: undefined fie
                                                    ^
 `},
 		{file: "invalid_message_alias_target.proto", expected: `
-testdata/invalid_message_alias_target.proto:60:44: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
-60:    option (grpc.federation.message).alias = "org.post.FakePostData";
+testdata/invalid_message_alias_target.proto:56:44: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
+56:    option (grpc.federation.message).alias = "org.post.FakePostData";
                                                 ^
 `},
 		{file: "invalid_message_alias.proto", expected: `
-testdata/invalid_message_alias.proto:48:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
-48:    PostData data = 4;
+testdata/invalid_message_alias.proto:44:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
+44:    PostData data = 4;
        ^
-testdata/invalid_message_alias.proto:58:44: cannot find package from "invalid.Invalid"
-58:    option (grpc.federation.message).alias = "invalid.Invalid";
+testdata/invalid_message_alias.proto:54:44: cannot find package from "invalid.Invalid"
+54:    option (grpc.federation.message).alias = "invalid.Invalid";
                                                 ^
-testdata/invalid_message_alias.proto:60:3: "type" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
-60:    PostType type = 1;
+testdata/invalid_message_alias.proto:56:3: "type" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+56:    PostType type = 1;
        ^
-testdata/invalid_message_alias.proto:61:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
-61:    string title = 2;
+testdata/invalid_message_alias.proto:57:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+57:    string title = 2;
        ^
-testdata/invalid_message_alias.proto:62:3: "content" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
-62:    PostContent content = 3;
+testdata/invalid_message_alias.proto:58:3: "content" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+58:    PostContent content = 3;
        ^
 `},
 		{file: "invalid_method.proto", expected: `
-testdata/invalid_method.proto:40:24: invalid method format. required format is "<package-name>.<service-name>/<method-name>" but specified ""
-40:        { call { method: "" } },
+testdata/invalid_method.proto:36:24: invalid method format. required format is "<package-name>.<service-name>/<method-name>" but specified ""
+36:        { call { method: "" } },
                             ^
-testdata/invalid_method.proto:45:26: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container '')
+testdata/invalid_method.proto:41:26: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container '')
  | invalid
  | ^
-45:            args { inline: "invalid" }
+41:            args { inline: "invalid" }
                               ^
-testdata/invalid_method.proto:50:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
-50:    string id = 1;
+testdata/invalid_method.proto:46:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
+46:    string id = 1;
        ^
-testdata/invalid_method.proto:51:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
-51:    string title = 2;
+testdata/invalid_method.proto:47:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
+47:    string title = 2;
        ^
-testdata/invalid_method.proto:52:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
-52:    string content = 3;
+testdata/invalid_method.proto:48:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
+48:    string content = 3;
        ^
-testdata/invalid_method.proto:62:36: ERROR: <input>:1:8: undefined field 'user_id'
+testdata/invalid_method.proto:58:36: ERROR: <input>:1:8: undefined field 'user_id'
  | __ARG__.user_id
  | .......^
-62:          request { field: "id", by: "$.user_id" }
+58:          request { field: "id", by: "$.user_id" }
                                         ^
 `},
 		{file: "invalid_oneof_selection.proto", expected: `
@@ -175,46 +175,43 @@ testdata/invalid_oneof.proto:91:3: "foo" field in "org.federation.UserSelection"
        ^
 `},
 		{file: "invalid_retry.proto", expected: `
-testdata/invalid_retry.proto:42:23: time: missing unit in duration "1"
-42:              interval: "1"
+testdata/invalid_retry.proto:38:23: time: missing unit in duration "1"
+38:              interval: "1"
                            ^
-testdata/invalid_retry.proto:58:31: time: missing unit in duration "2"
-58:              initial_interval: "2"
+testdata/invalid_retry.proto:54:31: time: missing unit in duration "2"
+54:              initial_interval: "2"
                                    ^
-testdata/invalid_retry.proto:74:27: time: missing unit in duration "3"
-74:              max_interval: "3"
+testdata/invalid_retry.proto:70:27: time: missing unit in duration "3"
+70:              max_interval: "3"
                                ^
 `},
 		{file: "invalid_method_service_name.proto", expected: `
 testdata/invalid_method_service_name.proto: "post.InvalidService" service does not exist
-testdata/invalid_method_service_name.proto:40:24: cannot find "method" method because the service to which the method belongs does not exist
-40:        { call { method: "post.InvalidService/method" } },
+testdata/invalid_method_service_name.proto:36:24: cannot find "method" method because the service to which the method belongs does not exist
+36:        { call { method: "post.InvalidService/method" } },
                             ^
-testdata/invalid_method_service_name.proto:50:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
-50:    string id = 1;
+testdata/invalid_method_service_name.proto:46:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
+46:    string id = 1;
        ^
-testdata/invalid_method_service_name.proto:51:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
-51:    string title = 2;
+testdata/invalid_method_service_name.proto:47:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
+47:    string title = 2;
        ^
-testdata/invalid_method_service_name.proto:52:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
-52:    string content = 3;
+testdata/invalid_method_service_name.proto:48:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
+48:    string content = 3;
        ^
 `},
 		{file: "invalid_method_name.proto", expected: `
-testdata/invalid_method_name.proto:14:7: [WARN] "post.PostService" defined in "dependencies" of "grpc.federation.service" but it is not used
-14:        { name: "post_service", service: "post.PostService" },
-           ^
-testdata/invalid_method_name.proto:41:24: "invalid" method does not exist in PostService service
-41:        { call { method: "post.PostService/invalid" } },
+testdata/invalid_method_name.proto:36:24: "invalid" method does not exist in PostService service
+36:        { call { method: "post.PostService/invalid" } },
                             ^
-testdata/invalid_method_name.proto:51:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
-51:    string id = 1;
+testdata/invalid_method_name.proto:46:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
+46:    string id = 1;
        ^
-testdata/invalid_method_name.proto:52:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
-52:    string title = 2;
+testdata/invalid_method_name.proto:47:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
+47:    string title = 2;
        ^
-testdata/invalid_method_name.proto:53:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
-53:    string content = 3;
+testdata/invalid_method_name.proto:48:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
+48:    string content = 3;
        ^
 `},
 		{file: "invalid_method_timeout_format.proto", expected: `
@@ -224,18 +221,18 @@ testdata/invalid_method_timeout_format.proto:12:47: time: unknown unit "p" in du
 `},
 
 		{file: "invalid_method_request.proto", expected: `
-testdata/invalid_method_request.proto:45:28: "invalid" field does not exist in "post.GetPostRequest" message for method request
-45:            request { field: "invalid", by: "$.invalid" }
+testdata/invalid_method_request.proto:40:28: "invalid" field does not exist in "post.GetPostRequest" message for method request
+40:            request { field: "invalid", by: "$.invalid" }
                                 ^
-testdata/invalid_method_request.proto:45:43: ERROR: <input>:1:8: undefined field 'invalid'
+testdata/invalid_method_request.proto:40:43: ERROR: <input>:1:8: undefined field 'invalid'
  | __ARG__.invalid
  | .......^
-45:            request { field: "invalid", by: "$.invalid" }
+40:            request { field: "invalid", by: "$.invalid" }
                                                ^
 `},
 		{file: "missing_field_option.proto", expected: `
-testdata/missing_field_option.proto:61:3: "user" field in "federation.Post" message needs to specify "grpc.federation.field" option
-61:    User user = 4;
+testdata/missing_field_option.proto:56:3: "user" field in "federation.Post" message needs to specify "grpc.federation.field" option
+56:    User user = 4;
        ^
 `},
 		{file: "missing_map_iterator.proto", expected: `
@@ -247,69 +244,69 @@ testdata/missing_map_iterator.proto:36:13: map iterator src must be specified
                  ^
 `},
 		{file: "missing_message_alias.proto", expected: `
-testdata/missing_message_alias.proto:48:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
-48:    PostData data = 4;
+testdata/missing_message_alias.proto:44:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
+44:    PostData data = 4;
        ^
-testdata/missing_message_alias.proto:58:3: "type" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
-58:    PostType type = 1;
+testdata/missing_message_alias.proto:54:3: "type" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+54:    PostType type = 1;
        ^
-testdata/missing_message_alias.proto:59:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
-59:    string title = 2;
+testdata/missing_message_alias.proto:55:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+55:    string title = 2;
        ^
-testdata/missing_message_alias.proto:60:3: use "alias" in "grpc.federation.field" option, but "alias" is not defined in "grpc.federation.message" option
-60:    PostContent content = 3 [(grpc.federation.field).alias = "content"];
+testdata/missing_message_alias.proto:56:3: use "alias" in "grpc.federation.field" option, but "alias" is not defined in "grpc.federation.message" option
+56:    PostContent content = 3 [(grpc.federation.field).alias = "content"];
        ^
 `},
 		{file: "missing_enum_alias.proto", expected: `
-testdata/missing_enum_alias.proto:51:1: required specify alias = "org.post.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
-51:  enum PostType {
+testdata/missing_enum_alias.proto:47:1: required specify alias = "org.post.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
+47:  enum PostType {
      ^
-testdata/missing_enum_alias.proto:53:62: use "alias" in "grpc.federation.enum_value" option, but "alias" is not defined in "grpc.federation.enum" option
-53:    POST_TYPE_FOO = 1 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_A"] }];
+testdata/missing_enum_alias.proto:49:62: use "alias" in "grpc.federation.enum_value" option, but "alias" is not defined in "grpc.federation.enum" option
+49:    POST_TYPE_FOO = 1 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_A"] }];
                                                                   ^
-testdata/missing_enum_alias.proto:54:62: use "alias" in "grpc.federation.enum_value" option, but "alias" is not defined in "grpc.federation.enum" option
-54:    POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_B", "POST_TYPE_C"] }];
+testdata/missing_enum_alias.proto:50:62: use "alias" in "grpc.federation.enum_value" option, but "alias" is not defined in "grpc.federation.enum" option
+50:    POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_B", "POST_TYPE_C"] }];
                                                                   ^
-testdata/missing_enum_alias.proto:68:3: required specify alias = "org.post.PostContent.Category" in grpc.federation.enum option for the "org.federation.PostContent.Category" type to automatically assign a value to the "PostContent.category" field via autobind
-68:    enum Category {
+testdata/missing_enum_alias.proto:64:3: required specify alias = "org.post.PostContent.Category" in grpc.federation.enum option for the "org.federation.PostContent.Category" type to automatically assign a value to the "PostContent.category" field via autobind
+64:    enum Category {
        ^
 `},
 		{file: "missing_enum_value.proto", expected: `
-testdata/missing_enum_value.proto:54:3: specified "alias" in grpc.federation.enum option, but "FOO" value does not exist in "org.post.PostDataType" enum
-54:    FOO = 0;
+testdata/missing_enum_value.proto:50:3: specified "alias" in grpc.federation.enum option, but "FOO" value does not exist in "org.post.PostDataType" enum
+50:    FOO = 0;
        ^
-testdata/missing_enum_value.proto:71:5: specified "alias" in grpc.federation.enum option, but "CATEGORY_C" value does not exist in "org.post.PostContent.Category" enum
-71:      CATEGORY_C = 2;
+testdata/missing_enum_value.proto:67:5: specified "alias" in grpc.federation.enum option, but "CATEGORY_C" value does not exist in "org.post.PostContent.Category" enum
+67:      CATEGORY_C = 2;
          ^
 `},
 		{file: "missing_enum_value_alias.proto", expected: `
-testdata/missing_enum_value_alias.proto:54:3: specified "alias" in grpc.federation.enum option, but "POST_TYPE_UNKNOWN" value does not exist in "org.post.PostDataType" enum
-54:    POST_TYPE_UNKNOWN = 0;
+testdata/missing_enum_value_alias.proto:50:3: specified "alias" in grpc.federation.enum option, but "POST_TYPE_UNKNOWN" value does not exist in "org.post.PostDataType" enum
+50:    POST_TYPE_UNKNOWN = 0;
        ^
-testdata/missing_enum_value_alias.proto:55:3: specified "alias" in grpc.federation.enum option, but "POST_TYPE_FOO" value does not exist in "org.post.PostDataType" enum
-55:    POST_TYPE_FOO = 1;
+testdata/missing_enum_value_alias.proto:51:3: specified "alias" in grpc.federation.enum option, but "POST_TYPE_FOO" value does not exist in "org.post.PostDataType" enum
+51:    POST_TYPE_FOO = 1;
        ^
-testdata/missing_enum_value_alias.proto:56:3: specified "alias" in grpc.federation.enum option, but "POST_TYPE_BAR" value does not exist in "org.post.PostDataType" enum
-56:    POST_TYPE_BAR = 2;
+testdata/missing_enum_value_alias.proto:52:3: specified "alias" in grpc.federation.enum option, but "POST_TYPE_BAR" value does not exist in "org.post.PostDataType" enum
+52:    POST_TYPE_BAR = 2;
        ^
 `},
 		{file: "valid_enum_value_reference.proto", expected: ""},
 		{file: "missing_message_field_alias.proto", expected: `
-testdata/missing_message_field_alias.proto:80:3: specified "alias" in grpc.federation.message option, but "dup_body" field does not exist in "org.post.PostContent" message
-80:    string dup_body = 4;
+testdata/missing_message_field_alias.proto:76:3: specified "alias" in grpc.federation.message option, but "dup_body" field does not exist in "org.post.PostContent" message
+76:    string dup_body = 4;
        ^
-testdata/missing_message_field_alias.proto:80:3: "dup_body" field in "org.federation.PostContent" message needs to specify "grpc.federation.field" option
-80:    string dup_body = 4;
+testdata/missing_message_field_alias.proto:76:3: "dup_body" field in "org.federation.PostContent" message needs to specify "grpc.federation.field" option
+76:    string dup_body = 4;
        ^
 `},
 		{file: "missing_message_option.proto", expected: `
-testdata/missing_message_option.proto:51:17: "federation.User" message does not specify "grpc.federation.message" option
-51:            name: "User"
+testdata/missing_message_option.proto:47:17: "federation.User" message does not specify "grpc.federation.message" option
+47:            name: "User"
                      ^
 `},
 		{file: "missing_method_request_value.proto", expected: `
-testdata/missing_method_request_value.proto:45:19: value must be specified
-45:            request { field: "id" }
+testdata/missing_method_request_value.proto:40:19: value must be specified
+40:            request { field: "id" }
                        ^
 `},
 		{file: "missing_response_message_option.proto", expected: `
@@ -318,136 +315,102 @@ testdata/missing_response_message_option.proto:18:1: "federation.GetPostResponse
      ^
 `},
 		{file: "invalid_method_response.proto", expected: `
-testdata/invalid_method_response.proto:47:27: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container '')
+testdata/invalid_method_response.proto:42:27: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container '')
  | invalid
  | ^
-47:        { name: "post", by: "invalid", autobind: true  },
+42:        { name: "post", by: "invalid", autobind: true  },
                                ^
-testdata/invalid_method_response.proto:52:26: ERROR: <input>:1:1: undeclared reference to 'post' (in container '')
+testdata/invalid_method_response.proto:47:26: ERROR: <input>:1:1: undeclared reference to 'post' (in container '')
  | post
  | ^
-52:            args { inline: "post" }
+47:            args { inline: "post" }
                               ^
-testdata/invalid_method_response.proto:57:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
-57:    string id = 1;
+testdata/invalid_method_response.proto:52:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
+52:    string id = 1;
        ^
-testdata/invalid_method_response.proto:58:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
-58:    string title = 2;
+testdata/invalid_method_response.proto:53:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
+53:    string title = 2;
        ^
-testdata/invalid_method_response.proto:59:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
-59:    string content = 3;
+testdata/invalid_method_response.proto:54:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
+54:    string content = 3;
        ^
-testdata/invalid_method_response.proto:69:36: ERROR: <input>:1:8: undefined field 'user_id'
+testdata/invalid_method_response.proto:64:36: ERROR: <input>:1:8: undefined field 'user_id'
  | __ARG__.user_id
  | .......^
-69:          request { field: "id", by: "$.user_id" }
+64:          request { field: "id", by: "$.user_id" }
                                         ^
 `},
 		{file: "invalid_message_name.proto", expected: `
-testdata/invalid_message_name.proto:15:7: [WARN] "user.UserService" defined in "dependencies" of "grpc.federation.service" but it is not used
-15:        { name: "user_service", service: "user.UserService" }
-           ^
-testdata/invalid_message_name.proto:51:17: "federation.Invalid" message does not exist
-51:          message {
+testdata/invalid_message_name.proto:46:17: "federation.Invalid" message does not exist
+46:          message {
                      ^
-testdata/invalid_message_name.proto:52:17: undefined message specified
-52:            name: "Invalid"
+testdata/invalid_message_name.proto:47:17: undefined message specified
+47:            name: "Invalid"
                      ^
-testdata/invalid_message_name.proto:58:17: "post.Invalid" message does not exist
-58:          message {
+testdata/invalid_message_name.proto:53:17: "post.Invalid" message does not exist
+53:          message {
                      ^
-testdata/invalid_message_name.proto:59:17: undefined message specified
-59:            name: "post.Invalid"
+testdata/invalid_message_name.proto:54:17: undefined message specified
+54:            name: "post.Invalid"
                      ^
-testdata/invalid_message_name.proto:68:47: unknown type null_type is required
-68:    User user = 4 [(grpc.federation.field).by = "user1"];
+testdata/invalid_message_name.proto:63:47: unknown type null_type is required
+63:    User user = 4 [(grpc.federation.field).by = "user1"];
                                                    ^
 `},
 		{file: "invalid_message_argument.proto", expected: `
-testdata/invalid_message_argument.proto:54:19: ERROR: <input>:1:11: type 'string' does not support field selection
+testdata/invalid_message_argument.proto:49:19: ERROR: <input>:1:11: type 'string' does not support field selection
  | __ARG__.id.invalid
  | ..........^
-54:              { by: "$.id.invalid" },
+49:              { by: "$.id.invalid" },
                        ^
-testdata/invalid_message_argument.proto:55:23: inline value is not message type
-55:              { inline: "post.id" },
+testdata/invalid_message_argument.proto:50:23: inline value is not message type
+50:              { inline: "post.id" },
                            ^
-testdata/invalid_message_argument.proto:56:19: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+testdata/invalid_message_argument.proto:51:19: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
  | ....
  | .^
-56:              { by: "...." },
+51:              { by: "...." },
                        ^
-testdata/invalid_message_argument.proto:57:23: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+testdata/invalid_message_argument.proto:52:23: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
  | ....
  | .^
-57:              { inline: "...." }
+52:              { inline: "...." }
                            ^
-testdata/invalid_message_argument.proto:75:36: ERROR: <input>:1:8: undefined field 'user_id'
+testdata/invalid_message_argument.proto:70:36: ERROR: <input>:1:8: undefined field 'user_id'
  | __ARG__.user_id
  | .......^
-75:          request { field: "id", by: "$.user_id" }
+70:          request { field: "id", by: "$.user_id" }
                                         ^
 `},
 		{file: "invalid_message_field_alias.proto", expected: `
-testdata/invalid_message_field_alias.proto:63:3: The types of "org.federation.PostData"'s "title" field ("int64") and "org.post.PostData"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
-63:    int64 title = 2;
+testdata/invalid_message_field_alias.proto:59:3: The types of "org.federation.PostData"'s "title" field ("int64") and "org.post.PostData"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
+59:    int64 title = 2;
        ^
-testdata/invalid_message_field_alias.proto:63:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
-63:    int64 title = 2;
+testdata/invalid_message_field_alias.proto:59:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+59:    int64 title = 2;
        ^
-testdata/invalid_message_field_alias.proto:79:3: The types of "org.federation.PostContent"'s "body" field ("int64") and "org.post.PostContent"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
-79:    int64 body = 3;
+testdata/invalid_message_field_alias.proto:75:3: The types of "org.federation.PostContent"'s "body" field ("int64") and "org.post.PostContent"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
+75:    int64 body = 3;
        ^
-testdata/invalid_message_field_alias.proto:79:3: "body" field in "org.federation.PostContent" message needs to specify "grpc.federation.field" option
-79:    int64 body = 3;
+testdata/invalid_message_field_alias.proto:75:3: "body" field in "org.federation.PostContent" message needs to specify "grpc.federation.field" option
+75:    int64 body = 3;
        ^
-`},
-		{file: "duplicate_service_dependency_name.proto", expected: `
-testdata/duplicate_service_dependency_name.proto:15:17: "dup_name" name duplicated
-15:          { name: "dup_name", service: "user.UserService" }
-                     ^
-`},
-		{file: "invalid_service_dependency_package.proto", expected: `
-testdata/invalid_service_dependency_package.proto:14:42: cannot find package from "invalid.PostService"
-14:          { name: "post_service", service: "invalid.PostService" },
-                                              ^
-testdata/invalid_service_dependency_package.proto:15:42: cannot find package from "invalid.UserService"
-15:          { name: "user_service", service: "invalid.UserService" }
-                                              ^
-`},
-		{file: "invalid_service_dependency_service.proto", expected: `
-testdata/invalid_service_dependency_service.proto: "post.InvalidService" service does not exist
-testdata/invalid_service_dependency_service.proto: "user.InvalidService" service does not exist
-testdata/invalid_service_dependency_service.proto:14:42: "post.InvalidService" does not exist
-14:          { name: "post_service", service: "post.InvalidService" },
-                                              ^
-testdata/invalid_service_dependency_service.proto:15:42: "user.InvalidService" does not exist
-15:          { name: "user_service", service: "user.InvalidService" }
-                                              ^
-`},
-		{file: "missing_service_dependency_service.proto", expected: `
-testdata/missing_service_dependency_service.proto:14:9: "service" must be specified
-14:          { name: "post_service" },
-             ^
-testdata/missing_service_dependency_service.proto:15:9: "service" must be specified
-15:          { name: "user_service" }
-             ^
 `},
 		{file: "recursive_message_name.proto", expected: `
-testdata/recursive_message_name.proto:37:1: found cyclic dependency in "federation.Post" message. dependency path: GetPostResponse => Post => Post
-37:  message Post {
+testdata/recursive_message_name.proto:33:1: found cyclic dependency in "federation.Post" message. dependency path: GetPostResponse => Post => Post
+33:  message Post {
      ^
-testdata/recursive_message_name.proto:48:39: recursive definition: "Post" is own message name
-48:        { name: "self", message { name: "Post" } }
+testdata/recursive_message_name.proto:44:39: recursive definition: "Post" is own message name
+44:        { name: "self", message { name: "Post" } }
                                            ^
-testdata/recursive_message_name.proto:51:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
-51:    string id = 1;
+testdata/recursive_message_name.proto:47:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
+47:    string id = 1;
        ^
-testdata/recursive_message_name.proto:52:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
-52:    string title = 2;
+testdata/recursive_message_name.proto:48:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
+48:    string title = 2;
        ^
-testdata/recursive_message_name.proto:53:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
-53:    string content = 3;
+testdata/recursive_message_name.proto:49:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
+49:    string content = 3;
        ^
 `},
 		{file: "message_cyclic_dependency.proto", expected: `
@@ -456,44 +419,44 @@ testdata/message_cyclic_dependency.proto:27:1: found cyclic dependency in "org.f
      ^
 `},
 		{file: "invalid_validation_return_type.proto", expected: `
-testdata/invalid_validation_return_type.proto:50:17: if must always return a boolean value
-50:              if: "post.id"
+testdata/invalid_validation_return_type.proto:48:17: if must always return a boolean value
+48:              if: "post.id"
                      ^
 `},
 		{file: "invalid_validation_details_return_type.proto", expected: `
-testdata/invalid_validation_details_return_type.proto:51:19: if must always return a boolean value
-51:                if: "'string'"
+testdata/invalid_validation_details_return_type.proto:49:19: if must always return a boolean value
+49:                if: "'string'"
                        ^
 `},
 		{file: "invalid_validation_message_argument.proto", expected: `
-testdata/invalid_validation_message_argument.proto:71:52: ERROR: <input>:1:8: undefined field 'message'
+testdata/invalid_validation_message_argument.proto:69:52: ERROR: <input>:1:8: undefined field 'message'
  | __ARG__.message
  | .......^
-71:    string message = 1 [(grpc.federation.field).by = "$.message"];
+69:    string message = 1 [(grpc.federation.field).by = "$.message"];
                                                         ^
 `},
 		{file: "invalid_validation_precondition_failure.proto", expected: `
-testdata/invalid_validation_precondition_failure.proto:54:25: type must always return a string value
-54:                    type: "1",
+testdata/invalid_validation_precondition_failure.proto:52:25: type must always return a string value
+52:                    type: "1",
                              ^
-testdata/invalid_validation_precondition_failure.proto:55:28: subject must always return a string value
-55:                    subject: "2",
+testdata/invalid_validation_precondition_failure.proto:53:28: subject must always return a string value
+53:                    subject: "2",
                                 ^
-testdata/invalid_validation_precondition_failure.proto:56:32: description must always return a string value
-56:                    description: "3",
+testdata/invalid_validation_precondition_failure.proto:54:32: description must always return a string value
+54:                    description: "3",
                                     ^
 `},
 		{file: "invalid_validation_bad_request.proto", expected: `
-testdata/invalid_validation_bad_request.proto:54:26: field must always return a string value
-54:                    field: "1",
+testdata/invalid_validation_bad_request.proto:52:26: field must always return a string value
+52:                    field: "1",
                               ^
-testdata/invalid_validation_bad_request.proto:55:32: description must always return a string value
-55:                    description: "2",
+testdata/invalid_validation_bad_request.proto:53:32: description must always return a string value
+53:                    description: "2",
                                     ^
 `},
 		{file: "invalid_validation_localized_message.proto", expected: `
-testdata/invalid_validation_localized_message.proto:54:26: message must always return a string value
-54:                  message: "1"
+testdata/invalid_validation_localized_message.proto:52:26: message must always return a string value
+52:                  message: "1"
                               ^
 `},
 	}

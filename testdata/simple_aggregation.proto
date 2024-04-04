@@ -10,12 +10,7 @@ import "user.proto";
 option go_package = "example/federation;federation";
 
 service FederationService {
-  option (grpc.federation.service) = {
-    dependencies: [
-      { service: "org.post.PostService" },
-      { service: "org.user.UserService" }
-    ]
-  };
+  option (grpc.federation.service) = {};
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {
     option (grpc.federation.method).timeout = "1m";
   };

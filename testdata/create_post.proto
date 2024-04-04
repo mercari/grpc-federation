@@ -8,11 +8,7 @@ import "post.proto";
 option go_package = "example/federation;federation";
 
 service FederationService {
-  option (grpc.federation.service) = {
-    dependencies: [
-      { name: "post_service", service: "org.post.PostService" }
-    ]
-  };
+  option (grpc.federation.service) = {};
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {};
 }
 

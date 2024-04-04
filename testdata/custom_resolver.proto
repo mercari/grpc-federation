@@ -9,12 +9,7 @@ import "user.proto";
 option go_package = "example/federation;federation";
 
 service FederationService {
-  option (grpc.federation.service) = {
-    dependencies: [
-      { name: "post_service", service: "org.post.PostService" },
-      { name: "user_service", service: "org.user.UserService" }
-    ]
-  };
+  option (grpc.federation.service) = {};
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
 }
 

@@ -20,7 +20,7 @@ import (
 
 type Resolver struct{}
 
-func (r *Resolver) Resolve_Org_Federation_CustomHandlerMessage(context.Context, *federation.Org_Federation_CustomHandlerMessageArgument[*federation.FederationServiceDependentClientSet]) (*federation.CustomHandlerMessage, error) {
+func (r *Resolver) Resolve_Org_Federation_CustomHandlerMessage(_ context.Context, _ *federation.Org_Federation_CustomHandlerMessageArgument) (*federation.CustomHandlerMessage, error) {
 	return &federation.CustomHandlerMessage{}, nil
 }
 

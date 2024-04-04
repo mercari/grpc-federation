@@ -22,16 +22,14 @@ var (
 )
 
 // Federation_GetResponseArgument is argument for "federation.GetResponse" message.
-type Federation_GetResponseArgument[T any] struct {
-	Id     string
-	P      *Post
-	Client T
+type Federation_GetResponseArgument struct {
+	Id string
+	P  *Post
 }
 
 // Federation_GetResponse_PostArgument is custom resolver's argument for "post" field of "federation.GetResponse" message.
-type Federation_GetResponse_PostArgument[T any] struct {
-	*Federation_GetResponseArgument[T]
-	Client T
+type Federation_GetResponse_PostArgument struct {
+	*Federation_GetResponseArgument
 }
 
 // OtherServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -50,14 +48,11 @@ type OtherServiceConfig struct {
 type OtherServiceClientFactory interface {
 }
 
-// OtherServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// OtherServiceClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type OtherServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // OtherServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -68,7 +63,7 @@ type OtherServiceDependentClientSet struct {
 // OtherServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type OtherServiceResolver interface {
 	// Resolve_Federation_GetResponse_Post implements resolver for "federation.GetResponse.post".
-	Resolve_Federation_GetResponse_Post(context.Context, *Federation_GetResponse_PostArgument[*OtherServiceDependentClientSet]) (*Post, error)
+	Resolve_Federation_GetResponse_Post(context.Context, *Federation_GetResponse_PostArgument) (*Post, error)
 }
 
 // OtherServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -86,7 +81,7 @@ type OtherServiceUnimplementedResolver struct{}
 
 // Resolve_Federation_GetResponse_Post resolve "federation.GetResponse.post".
 // This method always returns Unimplemented error.
-func (OtherServiceUnimplementedResolver) Resolve_Federation_GetResponse_Post(context.Context, *Federation_GetResponse_PostArgument[*OtherServiceDependentClientSet]) (ret *Post, e error) {
+func (OtherServiceUnimplementedResolver) Resolve_Federation_GetResponse_Post(context.Context, *Federation_GetResponse_PostArgument) (ret *Post, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_GetResponse_Post not implemented")
 	return
 }
@@ -157,9 +152,8 @@ func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetRespon
 			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Federation_GetResponse(ctx, &Federation_GetResponseArgument[*OtherServiceDependentClientSet]{
-		Client: s.client,
-		Id:     req.Id,
+	res, err := s.resolve_Federation_GetResponse(ctx, &Federation_GetResponseArgument{
+		Id: req.Id,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -170,7 +164,7 @@ func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetRespon
 }
 
 // resolve_Federation_GetResponse resolve "federation.GetResponse" message.
-func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *Federation_GetResponseArgument[*OtherServiceDependentClientSet]) (*GetResponse, error) {
+func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.GetResponse")
 	defer span.End()
 
@@ -197,9 +191,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 		Type:   grpcfed.CELObjectType("federation.Post"),
 		Setter: func(value *localValueType, v *Post) { value.vars.p = v },
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Federation_PostArgument[*OtherServiceDependentClientSet]{
-				Client: s.client,
-			}
+			args := &Federation_PostArgument{}
 			return s.resolve_Federation_Post(ctx, args)
 		},
 	}); err != nil {
@@ -217,8 +209,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	{
 		// (grpc.federation.field).custom_resolver = true
 		var err error
-		ret.Post, err = s.resolver.Resolve_Federation_GetResponse_Post(ctx, &Federation_GetResponse_PostArgument[*OtherServiceDependentClientSet]{
-			Client:                         s.client,
+		ret.Post, err = s.resolver.Resolve_Federation_GetResponse_Post(ctx, &Federation_GetResponse_PostArgument{
 			Federation_GetResponseArgument: req,
 		})
 		if err != nil {
@@ -232,7 +223,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 }
 
 // resolve_Federation_Post resolve "federation.Post" message.
-func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federation_PostArgument[*OtherServiceDependentClientSet]) (*Post, error) {
+func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federation_PostArgument) (*Post, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.Post")
 	defer span.End()
 
@@ -268,9 +259,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 			Type:   grpcfed.CELObjectType("federation.Reaction"),
 			Setter: func(value *localValueType, v *Reaction) { value.vars.reaction = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_ReactionArgument[*OtherServiceDependentClientSet]{
-					Client: s.client,
-				}
+				args := &Federation_ReactionArgument{}
 				return s.resolve_Federation_Reaction(ctx, args)
 			},
 		}); err != nil {
@@ -300,10 +289,9 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 			Type:   grpcfed.CELObjectType("federation.User"),
 			Setter: func(value *localValueType, v *User) { value.vars.u = v },
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_UserArgument[*OtherServiceDependentClientSet]{
-					Client: s.client,
-					Id:     "foo", // { name: "id", string: "foo" }
-					Name:   "bar", // { name: "name", string: "bar" }
+				args := &Federation_UserArgument{
+					Id:   "foo", // { name: "id", string: "foo" }
+					Name: "bar", // { name: "name", string: "bar" }
 				}
 				return s.resolve_Federation_User(ctx, args)
 			},
@@ -345,7 +333,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 }
 
 // resolve_Federation_Reaction resolve "federation.Reaction" message.
-func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Federation_ReactionArgument[*OtherServiceDependentClientSet]) (*Reaction, error) {
+func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Federation_ReactionArgument) (*Reaction, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.Reaction")
 	defer span.End()
 
@@ -372,7 +360,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 }
 
 // resolve_Federation_User resolve "federation.User" message.
-func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federation_UserArgument[*OtherServiceDependentClientSet]) (*User, error) {
+func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
 
@@ -424,7 +412,7 @@ func (s *OtherService) logvalue_Federation_GetResponse(v *GetResponse) slog.Valu
 	)
 }
 
-func (s *OtherService) logvalue_Federation_GetResponseArgument(v *Federation_GetResponseArgument[*OtherServiceDependentClientSet]) slog.Value {
+func (s *OtherService) logvalue_Federation_GetResponseArgument(v *Federation_GetResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -446,7 +434,7 @@ func (s *OtherService) logvalue_Federation_Post(v *Post) slog.Value {
 	)
 }
 
-func (s *OtherService) logvalue_Federation_PostArgument(v *Federation_PostArgument[*OtherServiceDependentClientSet]) slog.Value {
+func (s *OtherService) logvalue_Federation_PostArgument(v *Federation_PostArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -462,7 +450,7 @@ func (s *OtherService) logvalue_Federation_Reaction(v *Reaction) slog.Value {
 	)
 }
 
-func (s *OtherService) logvalue_Federation_ReactionArgument(v *Federation_ReactionArgument[*OtherServiceDependentClientSet]) slog.Value {
+func (s *OtherService) logvalue_Federation_ReactionArgument(v *Federation_ReactionArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -479,7 +467,7 @@ func (s *OtherService) logvalue_Federation_User(v *User) slog.Value {
 	)
 }
 
-func (s *OtherService) logvalue_Federation_UserArgument(v *Federation_UserArgument[*OtherServiceDependentClientSet]) slog.Value {
+func (s *OtherService) logvalue_Federation_UserArgument(v *Federation_UserArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

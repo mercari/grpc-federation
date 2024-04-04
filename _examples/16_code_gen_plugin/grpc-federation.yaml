@@ -11,4 +11,4 @@ plugins:
   - plugin: grpc-federation
     opt:
       - paths=source_relative
-      - plugins=file://plugin.wasm:a5df9515c8a59aa39e22b1e542aef472bea0412f7897131af5224e73989a8845
+      - plugins=file://plugin.wasm:14ef11e49c0a6224fd120d24d693da1fa74381198ac6ae8fd19b073aa2d984d3

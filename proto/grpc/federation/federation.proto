@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package grpc.federation;
 
-import "google/protobuf/any.proto";
 import "google/protobuf/descriptor.proto";
 import "google/rpc/code.proto";
 import "google/rpc/error_details.proto";
@@ -62,7 +61,7 @@ message OneofRule {}
 message ServiceRule {
   // dependencies defines a unique name for all services on which federation service depends.
   // The name will be used when creating the gRPC client.
-  repeated ServiceDependency dependencies = 1;
+  repeated ServiceDependency dependencies = 1 [deprecated = true];
 }
 
 // ServiceDependency assigns a uniquely determined name to the service.

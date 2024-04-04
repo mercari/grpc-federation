@@ -1374,14 +1374,6 @@ func NewServiceRuleBuilder() *ServiceRuleBuilder {
 	}
 }
 
-func (b *ServiceRuleBuilder) AddDependency(name string, svc *resolver.Service) *ServiceRuleBuilder {
-	b.rule.Dependencies = append(b.rule.Dependencies, &resolver.ServiceDependency{
-		Name:    name,
-		Service: svc,
-	})
-	return b
-}
-
 func (b *ServiceRuleBuilder) Build(t *testing.T) *resolver.ServiceRule {
 	t.Helper()
 	return b.rule

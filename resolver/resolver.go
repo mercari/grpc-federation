@@ -220,7 +220,7 @@ func (r *Resolver) validateServiceFromFiles(ctx *context, files []*File) {
 	for _, file := range files {
 		ctx := ctx.withFile(file)
 		for _, svc := range file.Services {
-			r.validateService(ctx, svc, source.NewServiceBuilder(ctx.fileName(), svc.Name))
+			r.validateService(ctx, svc)
 		}
 	}
 }
@@ -281,34 +281,11 @@ func (r *Resolver) samePackageFiles(src *File) []*File {
 	return ret
 }
 
-func (r *Resolver) validateService(ctx *context, svc *Service, builder *source.ServiceBuilder) {
+func (r *Resolver) validateService(ctx *context, svc *Service) {
 	if svc.Rule == nil {
 		return
 	}
-	r.validateServiceDependency(ctx, svc, builder)
 	r.validateMethodResponse(ctx, svc)
-}
-
-func (r *Resolver) validateServiceDependency(ctx *context, service *Service, builder *source.ServiceBuilder) {
-	useSvcMap := map[string]struct{}{}
-	useServices := service.UseServices()
-	for _, svc := range useServices {
-		useSvcMap[svc.FQDN()] = struct{}{}
-	}
-	depSvcMap := map[string]struct{}{}
-	for idx, dep := range service.Rule.Dependencies {
-		if dep.Service == nil {
-			continue
-		}
-		depSvcName := dep.Service.FQDN()
-		if _, exists := useSvcMap[depSvcName]; !exists {
-			ctx.addWarning(&Warning{
-				Location: builder.WithOption().WithDependencies(idx).Location(),
-				Message:  fmt.Sprintf(`%q defined in "dependencies" of "grpc.federation.service" but it is not used`, depSvcName),
-			})
-		}
-		depSvcMap[depSvcName] = struct{}{}
-	}
 }
 
 func (r *Resolver) validateMethodResponse(ctx *context, service *Service) {
@@ -551,42 +528,6 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string, build
 	}
 	r.cachedServiceMap[fqdn] = service
 	return service
-}
-
-func (r *Resolver) resolveServiceDependency(ctx *context, def *federation.ServiceDependency, builder *source.ServiceDependencyOptionBuilder) *ServiceDependency {
-	var service *Service
-	serviceWithPkgName := def.GetService()
-	if serviceWithPkgName == "" {
-		ctx.addError(
-			ErrWithLocation(
-				`"service" must be specified`,
-				builder.WithService().Location(),
-			),
-		)
-	} else {
-		pkg, err := r.lookupPackage(serviceWithPkgName)
-		if err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					builder.WithService().Location(),
-				),
-			)
-		}
-		if pkg != nil {
-			serviceName := r.trimPackage(pkg, serviceWithPkgName)
-			service = r.resolveService(ctx, pkg, serviceName, source.NewServiceBuilder(ctx.fileName(), serviceName))
-			if service == nil {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(`%q does not exist`, serviceWithPkgName),
-						builder.WithService().Location(),
-					),
-				)
-			}
-		}
-	}
-	return &ServiceDependency{Name: def.GetName(), Service: service}
 }
 
 func (r *Resolver) resolveMethod(ctx *context, service *Service, methodDef *descriptorpb.MethodDescriptorProto, builder *source.MethodBuilder) *Method {
@@ -1116,35 +1057,11 @@ func (r *Resolver) resolveEnumRules(ctx *context, enums []*Enum) {
 	}
 }
 
-func (r *Resolver) resolveServiceRule(ctx *context, def *federation.ServiceRule, builder *source.ServiceOptionBuilder) *ServiceRule {
+func (r *Resolver) resolveServiceRule(_ *context, def *federation.ServiceRule, _ *source.ServiceOptionBuilder) *ServiceRule {
 	if def == nil {
 		return nil
 	}
-	var deps []*ServiceDependency
-	if len(def.GetDependencies()) != 0 {
-		deps = make([]*ServiceDependency, 0, len(def.GetDependencies()))
-		svcNameMap := map[string]struct{}{}
-		for idx, depDef := range def.GetDependencies() {
-			builder := builder.WithDependencies(idx)
-			dep := r.resolveServiceDependency(ctx, depDef, builder)
-			if dep.Service == nil {
-				continue
-			}
-			if dep.Name != "" {
-				if _, exists := svcNameMap[dep.Name]; exists {
-					ctx.addError(
-						ErrWithLocation(
-							fmt.Sprintf(`%q name duplicated`, dep.Name),
-							builder.WithName().Location(),
-						),
-					)
-				}
-				svcNameMap[dep.Name] = struct{}{}
-			}
-			deps = append(deps, dep)
-		}
-	}
-	return &ServiceRule{Dependencies: deps}
+	return &ServiceRule{}
 }
 
 func (r *Resolver) resolveMethodRule(ctx *context, def *federation.MethodRule, builder *source.MethodBuilder) *MethodRule {
