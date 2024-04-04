@@ -19,11 +19,10 @@ var (
 )
 
 // Org_Federation_IsMatchResponseArgument is argument for "org.federation.IsMatchResponse" message.
-type Org_Federation_IsMatchResponseArgument[T any] struct {
+type Org_Federation_IsMatchResponseArgument struct {
 	Expr    string
 	Matched bool
 	Target  string
-	Client  T
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -43,14 +42,11 @@ type FederationServiceConfig struct {
 type FederationServiceClientFactory interface {
 }
 
-// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// FederationServiceClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type FederationServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -168,8 +164,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_IsMatchResponse(ctx, &Org_Federation_IsMatchResponseArgument[*FederationServiceDependentClientSet]{
-		Client: s.client,
+	res, err := s.resolve_Org_Federation_IsMatchResponse(ctx, &Org_Federation_IsMatchResponseArgument{
 		Expr:   req.Expr,
 		Target: req.Target,
 	})
@@ -182,7 +177,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 }
 
 // resolve_Org_Federation_IsMatchResponse resolve "org.federation.IsMatchResponse" message.
-func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.Context, req *Org_Federation_IsMatchResponseArgument[*FederationServiceDependentClientSet]) (*IsMatchResponse, error) {
+func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.Context, req *Org_Federation_IsMatchResponseArgument) (*IsMatchResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.IsMatchResponse")
 	defer span.End()
 
@@ -238,7 +233,7 @@ func (s *FederationService) logvalue_Org_Federation_IsMatchResponse(v *IsMatchRe
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_IsMatchResponseArgument(v *Org_Federation_IsMatchResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_IsMatchResponseArgument(v *Org_Federation_IsMatchResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

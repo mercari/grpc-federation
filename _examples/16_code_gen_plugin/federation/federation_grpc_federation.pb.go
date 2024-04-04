@@ -19,9 +19,8 @@ var (
 )
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type Org_Federation_GetResponseArgument[T any] struct {
-	Id     int64
-	Client T
+type Org_Federation_GetResponseArgument struct {
+	Id int64
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -40,14 +39,11 @@ type FederationServiceConfig struct {
 type FederationServiceClientFactory interface {
 }
 
-// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// FederationServiceClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type FederationServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -58,7 +54,7 @@ type FederationServiceDependentClientSet struct {
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
 	// Resolve_Org_Federation_GetResponse implements resolver for "org.federation.GetResponse".
-	Resolve_Org_Federation_GetResponse(context.Context, *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) (*GetResponse, error)
+	Resolve_Org_Federation_GetResponse(context.Context, *Org_Federation_GetResponseArgument) (*GetResponse, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -76,7 +72,7 @@ type FederationServiceUnimplementedResolver struct{}
 
 // Resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetResponse(context.Context, *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) (ret *GetResponse, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetResponse(context.Context, *Org_Federation_GetResponseArgument) (ret *GetResponse, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_GetResponse not implemented")
 	return
 }
@@ -140,9 +136,8 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 		}
 	}()
 	res, err := grpcfed.WithTimeout[GetResponse](ctx, "org.federation.FederationService/Get", 10000000000 /* 10s */, func(ctx context.Context) (*GetResponse, error) {
-		return s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]{
-			Client: s.client,
-			Id:     req.Id,
+		return s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
+			Id: req.Id,
 		})
 	})
 	if err != nil {
@@ -154,7 +149,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 }
 
 // resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) (*GetResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
@@ -181,7 +176,7 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

@@ -34,10 +34,7 @@ var otherServicePostData = &federation.Post{
 	},
 }
 
-func (r *Resolver) Resolve_Federation_GetResponse_Post(
-	ctx context.Context,
-	arg *federation.Federation_GetResponse_PostArgument[*federation.OtherServiceDependentClientSet],
-) (*federation.Post, error) {
+func (r *Resolver) Resolve_Federation_GetResponse_Post(_ context.Context, _ *federation.Federation_GetResponse_PostArgument) (*federation.Post, error) {
 	return otherServicePostData, nil
 }
 

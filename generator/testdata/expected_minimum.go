@@ -19,10 +19,9 @@ var (
 )
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
-type Org_Federation_GetPostResponseArgument[T any] struct {
-	Id     string
-	Type   PostType
-	Client T
+type Org_Federation_GetPostResponseArgument struct {
+	Id   string
+	Type PostType
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -41,14 +40,11 @@ type FederationServiceConfig struct {
 type FederationServiceClientFactory interface {
 }
 
-// FederationServiceClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// FederationServiceClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type FederationServiceClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // FederationServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -59,7 +55,7 @@ type FederationServiceDependentClientSet struct {
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
 	// Resolve_Org_Federation_GetPostResponse implements resolver for "org.federation.GetPostResponse".
-	Resolve_Org_Federation_GetPostResponse(context.Context, *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error)
+	Resolve_Org_Federation_GetPostResponse(context.Context, *Org_Federation_GetPostResponseArgument) (*GetPostResponse, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -77,7 +73,7 @@ type FederationServiceUnimplementedResolver struct{}
 
 // Resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResponse(context.Context, *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (ret *GetPostResponse, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResponse(context.Context, *Org_Federation_GetPostResponseArgument) (ret *GetPostResponse, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_GetPostResponse not implemented")
 	return
 }
@@ -142,10 +138,9 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 			grpcfed.OutputErrorLog(ctx, s.logger, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]{
-		Client: s.client,
-		Id:     req.Id,
-		Type:   req.Type,
+	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &Org_Federation_GetPostResponseArgument{
+		Id:   req.Id,
+		Type: req.Type,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -156,7 +151,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 }
 
 // resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) (*GetPostResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *Org_Federation_GetPostResponseArgument) (*GetPostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse")
 	defer span.End()
 
@@ -183,7 +178,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument[*FederationServiceDependentClientSet]) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *Org_Federation_GetPostResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

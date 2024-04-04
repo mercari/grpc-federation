@@ -2,59 +2,11 @@
 
 # grpc.federation.service
 
-| field | type | required or optional |
-| ----- | ---- | ------------------- |
-| [`dependencies`](#grpcfederationservicedependencies) | repeated ServiceDependency | optional |
-
-## (grpc.federation.service).dependencies
-
-`dependencies` defines a unique name for all services on which federation service depends.
-The name will be used when creating the gRPC client.
-
-### Example
+The `grpc.federation.service` option is **always required** to enable gRPC Federation. Please specify as follows.
 
 ```proto
 service MyService {
-  option (grpc.federation.service).dependencies = [
-    { name: "foo", service: "foopkg.FooService" },
-    { name: "bar", service: "barpkg.BarService" }
-  ]
-}
-```
-
-### reference
-
-| field | type | required or optional |
-| ----- | ---- | ------------------- |
-| [`name`](#grpcfederationservicedependenciesname) | string | optional |
-| [`service`](#grpcfederationservicedependenciesservice) | string | required |
-
-## (grpc.federation.service).dependencies.name
-
-Name to be used when initializing the gRPC client.
-
-### Example
-
-```proto
-service MyService {
-  option (grpc.federation.service).dependencies = {
-    name: "foo"
-    service: "foopkg.FooService"
-  };
-}
-```
-
-## (grpc.federation.service).dependencies.service
-
-Service is the name of the dependent service.
-
-### Example
-
-```proto
-service MyService {
-  option (grpc.federation.service).dependencies = {
-    service: "foopkg.FooService"
-  };
+  option (grpc.federation.service) = {};
 }
 ```
 

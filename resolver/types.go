@@ -69,7 +69,6 @@ type Method struct {
 }
 
 type ServiceRule struct {
-	Dependencies []*ServiceDependency
 }
 
 type ServiceDependency struct {

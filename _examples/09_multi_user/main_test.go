@@ -55,15 +55,11 @@ func (s *UserServer) GetUser(ctx context.Context, req *user.GetUserRequest) (*us
 
 type resolver struct{}
 
-func (r *resolver) Resolve_Org_Federation_Sub(
-	_ context.Context,
-	_ *federation.Org_Federation_SubArgument[*federation.FederationServiceDependentClientSet]) (*federation.Sub, error) {
+func (r *resolver) Resolve_Org_Federation_Sub(_ context.Context, _ *federation.Org_Federation_SubArgument) (*federation.Sub, error) {
 	return &federation.Sub{}, nil
 }
 
-func (r *resolver) Resolve_Org_Federation_User_Name(
-	_ context.Context,
-	arg *federation.Org_Federation_User_NameArgument[*federation.FederationServiceDependentClientSet]) (string, error) {
+func (r *resolver) Resolve_Org_Federation_User_Name(_ context.Context, arg *federation.Org_Federation_User_NameArgument) (string, error) {
 	return arg.User.Name, nil
 }
 

@@ -96,12 +96,8 @@ func (s *Service) ExistsCustomResolver() bool {
 
 func (s *Service) ServiceDependencies() []*ServiceDependency {
 	useServices := s.UseServices()
-	deps := make([]*ServiceDependency, 0, len(s.Rule.Dependencies)+len(useServices))
+	deps := make([]*ServiceDependency, 0, len(useServices))
 	depSvcMap := map[string]*ServiceDependency{}
-	for _, dep := range s.Rule.Dependencies {
-		depSvcMap[dep.Service.FQDN()] = dep
-		deps = append(deps, dep)
-	}
 	for _, svc := range useServices {
 		if _, exists := depSvcMap[svc.FQDN()]; !exists {
 			deps = append(deps, &ServiceDependency{Service: svc})

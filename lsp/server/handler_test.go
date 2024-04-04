@@ -89,35 +89,6 @@ func TestHandler_DidChange(t *testing.T) {
 				Diagnostics: []protocol.Diagnostic{},
 			},
 		},
-		{
-			desc: "duplicated service dependency name",
-			params: &protocol.DidChangeTextDocumentParams{
-				TextDocument: protocol.VersionedTextDocumentIdentifier{
-					TextDocumentIdentifier: protocol.TextDocumentIdentifier{
-						URI: mustTestdataAbs(t, "../../validator/testdata/duplicate_service_dependency_name.proto"),
-					},
-				},
-			},
-			expected: protocol.PublishDiagnosticsParams{
-				URI: mustTestdataAbs(t, "../../validator/testdata/duplicate_service_dependency_name.proto"),
-				Diagnostics: []protocol.Diagnostic{
-					{
-						Range: protocol.Range{
-							Start: protocol.Position{
-								Line:      14,
-								Character: 16,
-							},
-							End: protocol.Position{
-								Line:      14,
-								Character: 26,
-							},
-						},
-						Severity: protocol.DiagnosticSeverityError,
-						Message:  `"dup_name" name duplicated`,
-					},
-				},
-			},
-		},
 	}
 
 	for _, tc := range tests {

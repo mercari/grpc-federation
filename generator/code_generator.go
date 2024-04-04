@@ -435,11 +435,6 @@ func (f *File) Imports() []*Import {
 	for pkg := range f.pkgMap {
 		addImport(pkg)
 	}
-	for _, s := range f.File.Services {
-		for _, dep := range s.Rule.Dependencies {
-			addImport(dep.Service.GoPackage())
-		}
-	}
 	sort.Slice(imports, func(i, j int) bool {
 		return imports[i].Path < imports[j].Path
 	})
@@ -1083,10 +1078,9 @@ func (s *Service) setLogValueByMessageArgument(msg *resolver.Message) {
 	if _, exists := s.nameToLogValueMap[name]; exists {
 		return
 	}
-	generics := fmt.Sprintf("[*%sDependentClientSet]", s.Name)
 	logValue := &LogValue{
 		Name:      name,
-		ValueType: "*" + protoFQDNToPublicGoName(arg.FQDN()) + generics,
+		ValueType: "*" + protoFQDNToPublicGoName(arg.FQDN()),
 		Attrs:     make([]*LogValueAttr, 0, len(arg.Fields)),
 		Type:      resolver.NewMessageType(arg, false),
 	}
@@ -2366,7 +2360,7 @@ func (d *VariableDefinition) RequestType() string {
 		)
 	case expr.Message != nil:
 		msgName := fullMessageName(expr.Message.Message)
-		return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, d.Service.Name)
+		return fmt.Sprintf("%sArgument", msgName)
 	}
 	return ""
 }
@@ -2523,7 +2517,7 @@ func (r *MapResolver) RequestType() string {
 	switch {
 	case expr.Message != nil:
 		msgName := fullMessageName(expr.Message.Message)
-		return fmt.Sprintf("%sArgument[*%sDependentClientSet]", msgName, r.Service.Name)
+		return fmt.Sprintf("%sArgument", msgName)
 	}
 	return ""
 }
@@ -2616,12 +2610,6 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 	}
 
 	var generateArgs []*Argument
-	if !isRequestArgument {
-		generateArgs = append(generateArgs, &Argument{
-			Name:  "Client",
-			Value: "s.client",
-		})
-	}
 	for _, arg := range args {
 		for _, generatedArg := range argument(file, arg.Name, arg.Type, arg.Value) {
 			protofmt := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)

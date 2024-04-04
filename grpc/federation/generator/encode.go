@@ -175,24 +175,7 @@ func (e *encoder) toServiceRule(rule *resolver.ServiceRule) *plugin.ServiceRule 
 	if rule == nil {
 		return nil
 	}
-	return &plugin.ServiceRule{
-		Dependencies: e.toServiceDependencies(rule.Dependencies),
-	}
-}
-
-func (e *encoder) toServiceDependencies(deps []*resolver.ServiceDependency) []*plugin.ServiceDependency {
-	ret := make([]*plugin.ServiceDependency, 0, len(deps))
-	for _, dep := range deps {
-		ret = append(ret, e.toServiceDependency(dep))
-	}
-	return ret
-}
-
-func (e *encoder) toServiceDependency(dep *resolver.ServiceDependency) *plugin.ServiceDependency {
-	return &plugin.ServiceDependency{
-		Name:      dep.Name,
-		ServiceId: e.toServiceID(dep.Service),
-	}
+	return &plugin.ServiceRule{}
 }
 
 func (e *encoder) toMessages(msgs []*resolver.Message) []*plugin.Message {

@@ -25,15 +25,14 @@ var (
 {{- range .Types }}
 
 // {{ .Desc }}.
-type {{ .Name }}[T any] struct {
+type {{ .Name }} struct {
 	{{- range .Fields }}
 	{{- if .Name }}
 	{{ .Name }} {{ .Type }}
 	{{- else }}
-	{{ .Type }}[T]
+	{{ .Type }}
 	{{- end }}
 	{{- end }}
-	Client T
 }
 
 {{- end }}
@@ -82,14 +81,11 @@ type {{ $serviceName }}ClientFactory interface {
 	{{- end }}
 }
 
-// {{ $serviceName }}ClientConfig information set in `dependencies` of the `grpc.federation.service` option.
+// {{ $serviceName }}ClientConfig helper to create gRPC client.
 // Hints for creating a gRPC Client.
 type {{ $serviceName }}ClientConfig struct {
-	// Service returns the name of the service on Protocol Buffers.
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
 	Service string
-	// Name is the value set for `name` in `dependencies` of the `grpc.federation.service` option.
-	// It must be unique among the services on which the Federation Service depends.
-	Name string
 }
 
 // {{ $serviceName }}DependentClientSet has a gRPC client for all services on which the federation service depends.
@@ -104,7 +100,7 @@ type {{ $serviceName }}DependentClientSet struct {
 type {{ $serviceName }}Resolver interface {
 	{{- range $customResolvers }}
 	// {{ .Name }} implements resolver for "{{ .ProtoFQDN }}".
-	{{ .Name }}(context.Context, *{{ .RequestType }}[*{{ $serviceName }}DependentClientSet]) ({{ .ReturnType }}, error)
+	{{ .Name }}(context.Context, *{{ .RequestType }}) ({{ .ReturnType }}, error)
 	{{- end }}
 }
 
@@ -127,7 +123,7 @@ type {{ $serviceName }}UnimplementedResolver struct {}
 {{- range $customResolvers }}
 // {{ .Name }} resolve "{{ .ProtoFQDN }}".
 // This method always returns Unimplemented error.
-func ({{ $serviceName }}UnimplementedResolver) {{ .Name }}(context.Context, *{{ .RequestType }}[*{{ $serviceName }}DependentClientSet]) (ret {{ .ReturnType }}, e error) {
+func ({{ $serviceName }}UnimplementedResolver) {{ .Name }}(context.Context, *{{ .RequestType }}) (ret {{ .ReturnType }}, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method {{ .Name }} not implemented")
 	return
 }
@@ -179,7 +175,6 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	{{- range $serviceDependencies }}
 	{{ .ClientName }}, err := cfg.Client.{{ .ClientName }}({{ $serviceName }}ClientConfig{
 		Service: "{{ .ServiceName }}",
-		Name: "{{ .NameConfig }}",
 	})
 	if err != nil {
 		return nil, err
@@ -292,16 +287,14 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	}()
 	{{- if .UseTimeout }}
 	res, err := grpcfed.WithTimeout[{{ .ReturnTypeWithoutPtr }}](ctx, "{{ .ProtoFQDN }}", {{ .Timeout }}, func(ctx context.Context) ({{ .ReturnType }}, error) {
-		return s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}[*{{ $serviceName }}DependentClientSet]{
-			Client: s.client,
+		return s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}{
 			{{- range .ReturnTypeArguments }}
 			{{ . }}: req.{{ . }},
 			{{- end }}
 		})
 	})
 	{{- else }}
-	res, err := s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}[*{{ $serviceName }}DependentClientSet]{
-		Client: s.client,
+	res, err := s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}{
 		{{- range .ReturnTypeArguments }}
 		{{ . }}: req.{{ . }},
 		{{- end }}
@@ -321,7 +314,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 {{- $hasCELValue := .HasCELValue }}
 {{ if .HasRule }}
 // {{ .ResolverName }} resolve "{{ .ProtoFQDN }}" message.
-func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .RequestType }}[*{{ $serviceName }}DependentClientSet]) (*{{ .ReturnType }}, error) {
+func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .RequestType }}) (*{{ .ReturnType }}, error) {
 	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
 	defer span.End()
 
@@ -371,8 +364,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{
 		// (grpc.federation.field).custom_resolver = true
 		var err error
-		ret.{{ .Name }}, err = s.resolver.{{ .ResolverName }}(ctx, &{{ .RequestType }}[*{{ $serviceName }}DependentClientSet]{
-			Client: s.client,
+		ret.{{ .Name }}, err = s.resolver.{{ .ResolverName }}(ctx, &{{ .RequestType }}{
 			{{ .MessageArgumentName }}: req,
 			{{- if $hasMsgCustomResolver }}
 			{{ .MessageName }}: ret,

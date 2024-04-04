@@ -407,12 +407,7 @@ func TestSimpleAggregation(t *testing.T) {
 					ref.Message(t, "org.federation", "GetPostResponse"),
 					testutil.NewMethodRuleBuilder().Timeout("1m").Build(t),
 				).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("", ref.Service(t, "org.post", "PostService")).
-						AddDependency("", ref.Service(t, "org.user", "UserService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "M"), ref.Message(t, "org.federation", "MArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
@@ -656,11 +651,7 @@ func TestCreatePost(t *testing.T) {
 		AddService(
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("CreatePost", ref.Message(t, "org.federation", "CreatePostRequest"), ref.Message(t, "org.federation", "CreatePostResponse"), nil).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("post_service", ref.Service(t, "org.post", "PostService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "CreatePost"), ref.Message(t, "org.federation", "CreatePostArgument")).
 				AddMessage(ref.Message(t, "org.federation", "CreatePostResponse"), ref.Message(t, "org.federation", "CreatePostResponseArgument")).
 				Build(t),
@@ -975,12 +966,7 @@ func TestCustomResolver(t *testing.T) {
 		AddService(
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("GetPost", ref.Message(t, "org.federation", "GetPostRequest"), ref.Message(t, "org.federation", "GetPostResponse"), nil).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("post_service", ref.Service(t, "org.post", "PostService")).
-						AddDependency("user_service", ref.Service(t, "org.user", "UserService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
 				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
@@ -1610,11 +1596,7 @@ func TestAlias(t *testing.T) {
 		AddService(
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("GetPost", ref.Message(t, "org.federation", "GetPostRequest"), ref.Message(t, "org.federation", "GetPostResponse"), nil).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("post_service", ref.Service(t, "org.post", "PostService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
 				Build(t),
@@ -1787,11 +1769,7 @@ func TestAutobind(t *testing.T) {
 		AddService(
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("GetPost", ref.Message(t, "org.federation", "GetPostRequest"), ref.Message(t, "org.federation", "GetPostResponse"), nil).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("", ref.Service(t, "org.post", "PostService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Post"), ref.Message(t, "org.federation", "PostArgument")).
 				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
@@ -2442,11 +2420,7 @@ func TestConstValue(t *testing.T) {
 		AddService(
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("Get", ref.Message(t, "org.federation", "GetRequest"), ref.Message(t, "org.federation", "GetResponse"), nil).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("", ref.Service(t, "content", "ContentService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "Content"), ref.Message(t, "org.federation", "ContentArgument")).
 				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
 				Build(t),
@@ -2699,11 +2673,7 @@ func TestMultiUser(t *testing.T) {
 		AddService(
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("Get", ref.Message(t, "org.federation", "GetRequest"), ref.Message(t, "org.federation", "GetResponse"), nil).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("", ref.Service(t, "org.user", "UserService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "Sub"), ref.Message(t, "org.federation", "SubArgument")).
 				AddMessage(ref.Message(t, "org.federation", "User"), ref.Message(t, "org.federation", "UserArgument")).
@@ -4047,11 +4017,7 @@ func TestErrorHandler(t *testing.T) {
 					ref.Message(t, "org.federation", "GetPostResponse"),
 					nil,
 				).
-				SetRule(
-					testutil.NewServiceRuleBuilder().
-						AddDependency("", ref.Service(t, "org.post", "PostService")).
-						Build(t),
-				).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "CustomMessage"), ref.Message(t, "org.federation", "CustomMessageArgument")).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				AddMessage(ref.Message(t, "org.federation", "LocalizedMessage"), ref.Message(t, "org.federation", "LocalizedMessageArgument")).

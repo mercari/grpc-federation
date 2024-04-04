@@ -7,7 +7,7 @@ import (
 	"example/federation"
 )
 
-func (r *resolver) Resolve_Org_Federation_GetResponse(ctx context.Context, req *federation.Org_Federation_GetResponseArgument[*federation.FederationServiceDependentClientSet]) (*federation.GetResponse, error) {
+func (r *resolver) Resolve_Org_Federation_GetResponse(ctx context.Context, req *federation.Org_Federation_GetResponseArgument) (*federation.GetResponse, error) {
 	return &federation.GetResponse{
 		Id: req.Id,
 	}, nil

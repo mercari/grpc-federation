@@ -220,10 +220,7 @@ func (d *decoder) toService(id string) (*resolver.Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	rule, err := d.toServiceRule(svc.GetRule())
-	if err != nil {
-		return nil, err
-	}
+	rule := d.toServiceRule(svc.GetRule())
 	ret.Methods = methods
 	ret.File = file
 	ret.Messages = msgs
@@ -233,43 +230,11 @@ func (d *decoder) toService(id string) (*resolver.Service, error) {
 	return ret, nil
 }
 
-func (d *decoder) toServiceRule(rule *plugin.ServiceRule) (*resolver.ServiceRule, error) {
+func (d *decoder) toServiceRule(rule *plugin.ServiceRule) *resolver.ServiceRule {
 	if rule == nil {
-		return nil, nil
+		return nil
 	}
-	deps, err := d.toServiceDependencies(rule.GetDependencies())
-	if err != nil {
-		return nil, err
-	}
-	return &resolver.ServiceRule{
-		Dependencies: deps,
-	}, nil
-}
-
-func (d *decoder) toServiceDependencies(deps []*plugin.ServiceDependency) ([]*resolver.ServiceDependency, error) {
-	if deps == nil {
-		return nil, nil
-	}
-	ret := make([]*resolver.ServiceDependency, 0, len(deps))
-	for _, dep := range deps {
-		sd, err := d.toServiceDependency(dep)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, sd)
-	}
-	return ret, nil
-}
-
-func (d *decoder) toServiceDependency(dep *plugin.ServiceDependency) (*resolver.ServiceDependency, error) {
-	svc, err := d.toService(dep.GetServiceId())
-	if err != nil {
-		return nil, err
-	}
-	return &resolver.ServiceDependency{
-		Name:    dep.GetName(),
-		Service: svc,
-	}, nil
+	return &resolver.ServiceRule{}
 }
 
 func (d *decoder) toMessages(ids []string) ([]*resolver.Message, error) {

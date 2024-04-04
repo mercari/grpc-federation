@@ -8,11 +8,7 @@ import "content.proto";
 option go_package = "example/federation;federation";
 
 service FederationService {
-  option (grpc.federation.service) = {
-    dependencies: [
-      { service: "content.ContentService" }
-    ]
-  };
+  option (grpc.federation.service) = {};
   rpc Get(GetRequest) returns (GetResponse) {};
 }
 

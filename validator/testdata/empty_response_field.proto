@@ -8,11 +8,7 @@ import "echo.proto";
 option go_package = "example/federation;federation";
 
 service FederationService {
-  option (grpc.federation.service) = {
-    dependencies: [
-      { name: "echo_service", service: "echo.EchoService" }
-    ]
-  };
+  option (grpc.federation.service) = {};
   rpc Echo(EchoRequest) returns (EchoResponse) {};
 }
 
