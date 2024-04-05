@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {
+}
+
+message GetResponse {
+  string a = 1 [(grpc.federation.field).by = "1"];
+  int32 b = 2 [(grpc.federation.field).by = "uint(2)"];
+  uint32 c = 3 [(grpc.federation.field).by = "int(3)"];
+}

@@ -913,8 +913,44 @@ func (r *Resolver) validateName(name string) error {
 func (r *Resolver) validateMessages(ctx *context, msgs []*Message) {
 	for _, msg := range msgs {
 		ctx := ctx.withFile(msg.File).withMessage(msg)
-		r.validateMessageFields(ctx, msg, source.NewMessageBuilder(msg.File.Name, msg.Name))
+		builder := source.NewMessageBuilder(msg.File.Name, msg.Name)
+		r.validateMessageAlias(ctx, msg, builder)
+		r.validateMessageFields(ctx, msg, builder)
 		r.validateMessages(ctx, msg.NestedMessages)
+	}
+}
+
+func (r *Resolver) validateMessageAlias(ctx *context, msg *Message, builder *source.MessageBuilder) {
+	if msg.Rule == nil {
+		return
+	}
+	if msg.Rule.Alias == nil {
+		return
+	}
+	if msg.Rule.CustomResolver || msg.Rule.DefSet != nil && len(msg.Rule.DefSet.Defs) != 0 {
+		ctx.addError(
+			ErrWithLocation(
+				`"def" or "custom_resolver" cannot be used with alias option`,
+				builder.Location(),
+			),
+		)
+	}
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule != nil && field.Rule.Alias != nil && field.Rule.Value == nil && !field.Rule.CustomResolver {
+			continue
+		}
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					`%q field does not use the alias option. only alias option is available in alias message`,
+					field.FQDN(),
+				),
+				builder.WithField(field.Name).Location(),
+			),
+		)
 	}
 }
 
@@ -939,24 +975,20 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 		if field.Type == nil {
 			continue
 		}
-		fieldType := field.Type
-		if fieldType.Kind != types.Message && fieldType.Kind != types.Enum {
-			continue
-		}
 		rule := field.Rule
 		if rule.Value != nil {
-			r.validateBindFieldType(ctx, rule.Value.Type(), field)
+			r.validateBindFieldType(ctx, rule.Value.Type(), field, builder)
 		}
 		if rule.Alias != nil {
-			r.validateBindFieldType(ctx, rule.Alias.Type, field)
+			r.validateBindFieldType(ctx, rule.Alias.Type, field, builder)
 		}
 		if rule.AutoBindField != nil {
-			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field)
+			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field, builder)
 		}
 	}
 }
 
-func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *Field) {
+func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *Field, builder *source.FieldBuilder) {
 	if fromType == nil || toField == nil {
 		return
 	}
@@ -983,7 +1015,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the "%s.%s" field via autobind`,
 						fromMessageName, toMessageName, ctx.messageName(), toField.Name,
 					),
-					source.NewMessageBuilder(ctx.fileName(), ctx.messageName()).WithField(toField.Name).Location(),
+					builder.Location(),
 				),
 			)
 			return
@@ -1043,6 +1075,31 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 				),
 			)
 		}
+		return
+	}
+	if (fromType.Kind.IsInt() || fromType.Kind.IsUint()) && toField.Type.Kind == types.Enum {
+		// number to enum is valid.
+		return
+	}
+	if fromType.Kind.IsInt() && toField.Type.Kind.IsInt() {
+		return
+	}
+	if fromType.Kind.IsUint() && toField.Type.Kind.IsUint() {
+		return
+	}
+	if fromType.Kind.IsFloat() && toField.Type.Kind.IsFloat() {
+		return
+	}
+	if fromType.Kind != toField.Type.Kind {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					`cannot convert type automatically: field type is %q but specified value type is %q`,
+					toField.Type.Kind.ToString(), fromType.Kind.ToString(),
+				),
+				builder.Location(),
+			),
+		)
 		return
 	}
 }
@@ -1510,17 +1567,21 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 		if msg.Rule == nil {
 			return nil
 		}
+		if !msg.Rule.CustomResolver && msg.Rule.Alias == nil {
+			return nil
+		}
+		ret := &FieldRule{}
 		if msg.Rule.CustomResolver {
-			return &FieldRule{MessageCustomResolver: true}
+			ret.MessageCustomResolver = true
 		}
 		if msg.Rule.Alias != nil {
 			alias := r.resolveFieldAlias(ctx, msg, field, "", builder)
 			if alias == nil {
 				return nil
 			}
-			return &FieldRule{Alias: alias}
+			ret.Alias = alias
 		}
-		return nil
+		return ret
 	}
 	oneof := r.resolveFieldOneofRule(ctx, field, ruleDef.GetOneof(), builder)
 	var value *Value
@@ -2283,20 +2344,34 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, defs []*VariableDe
 		}
 	}
 
-	evaluatedArgNameMap := make(map[string]struct{})
+	evaluatedArgNameMap := make(map[string]*Type)
 	var fields []*Field
 	for _, varDef := range defs {
 		for _, msgExpr := range varDef.MessageExprs() {
 			r.validateMessageDependencyArgumentName(ctx, argNameMap, varDef)
 			for argIdx, arg := range msgExpr.Args {
-				if _, exists := evaluatedArgNameMap[arg.Name]; exists {
-					continue
-				}
 				if arg.Value == nil {
 					continue
 				}
 				fieldType := arg.Value.Type()
 				if fieldType == nil {
+					continue
+				}
+				if typ, exists := evaluatedArgNameMap[arg.Name]; exists {
+					if typ.Kind != fieldType.Kind {
+						ctx.addError(
+							ErrWithLocation(
+								fmt.Sprintf(
+									"%q argument name is declared with a different type kind. found %q and %q type",
+									arg.Name,
+									typ.Kind.ToString(),
+									fieldType.Kind.ToString(),
+								),
+								varDef.builder.WithMessage().
+									WithArgs(argIdx).Location(),
+							),
+						)
+					}
 					continue
 				}
 				if arg.Value.CEL != nil && arg.Value.Inline {
@@ -2312,13 +2387,16 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, defs []*VariableDe
 						continue
 					}
 					fields = append(fields, fieldType.Message.Fields...)
+					for _, field := range fieldType.Message.Fields {
+						evaluatedArgNameMap[field.Name] = field.Type
+					}
 				} else {
 					fields = append(fields, &Field{
 						Name: arg.Name,
 						Type: fieldType,
 					})
+					evaluatedArgNameMap[arg.Name] = fieldType
 				}
-				evaluatedArgNameMap[arg.Name] = struct{}{}
 			}
 		}
 	}
