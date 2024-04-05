@@ -359,7 +359,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		return nil, err
 	}
 	// (grpc.federation.field).by = "org.federation.Item.ItemType.value('ITEM_TYPE_1')"
-	if err := grpcfed.SetCELValue(ctx, value, "org.federation.Item.ItemType.value('ITEM_TYPE_1')", func(v int32) { ret.EnumValue = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, value, "org.federation.Item.ItemType.value('ITEM_TYPE_1')", func(v Item_ItemType) { ret.EnumValue = s.cast_Org_Federation_Item_ItemType__to__int32(v) }); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
@@ -721,6 +721,11 @@ func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *O
 
 	s.logger.DebugContext(ctx, "resolved org.federation.Z", slog.Any("org.federation.Z", s.logvalue_Org_Federation_Z(ret)))
 	return ret, nil
+}
+
+// cast_Org_Federation_Item_ItemType__to__int32 cast from "org.federation.Item.ItemType" to "int32".
+func (s *FederationService) cast_Org_Federation_Item_ItemType__to__int32(from Item_ItemType) int32 {
+	return int32(from)
 }
 
 // cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType cast from "org.user.Item.ItemType" to "org.federation.Item.ItemType".
