@@ -1810,327 +1810,44 @@ func TestConstValue(t *testing.T) {
 				AddValueWithAlias("CONTENT_TYPE_3", ref.EnumValue(t, "content", "ContentType", "CONTENT_TYPE_3")).
 				Build(t),
 		).
-		AddMessage(
-			testutil.NewMessageBuilder("ContentArgument").
-				AddField("by_field", resolver.StringType).
-				AddField("double_field", resolver.DoubleType).
-				AddField("doubles_field", resolver.DoubleRepeatedType).
-				AddField("float_field", resolver.FloatType).
-				AddField("floats_field", resolver.FloatRepeatedType).
-				AddField("int32_field", resolver.Int32Type).
-				AddField("int32s_field", resolver.Int32RepeatedType).
-				AddField("int64_field", resolver.Int64Type).
-				AddField("int64s_field", resolver.Int64RepeatedType).
-				AddField("uint32_field", resolver.Uint32Type).
-				AddField("uint32s_field", resolver.Uint32RepeatedType).
-				AddField("uint64_field", resolver.Uint64Type).
-				AddField("uint64s_field", resolver.Uint64RepeatedType).
-				AddField("sint32_field", resolver.Sint32Type).
-				AddField("sint32s_field", resolver.Sint32RepeatedType).
-				AddField("sint64_field", resolver.Sint64Type).
-				AddField("sint64s_field", resolver.Sint64RepeatedType).
-				AddField("fixed32_field", resolver.Fixed32Type).
-				AddField("fixed32s_field", resolver.Fixed32RepeatedType).
-				AddField("fixed64_field", resolver.Fixed64Type).
-				AddField("fixed64s_field", resolver.Fixed64RepeatedType).
-				AddField("sfixed32_field", resolver.Sfixed32Type).
-				AddField("sfixed32s_field", resolver.Sfixed32RepeatedType).
-				AddField("sfixed64_field", resolver.Sfixed64Type).
-				AddField("sfixed64s_field", resolver.Sfixed64RepeatedType).
-				AddField("bool_field", resolver.BoolType).
-				AddField("bools_field", resolver.BoolRepeatedType).
-				AddField("string_field", resolver.StringType).
-				AddField("strings_field", resolver.StringRepeatedType).
-				AddField("byte_string_field", resolver.BytesType).
-				AddField("byte_strings_field", resolver.BytesRepeatedType).
-				AddField("enum_field", ref.Type(t, "org.federation", "ContentType")).
-				AddField("enums_field", ref.RepeatedType(t, "org.federation", "ContentType")).
-				AddField("env_field", resolver.StringType).
-				AddField("envs_field", resolver.StringRepeatedType).
-				Build(t),
-		).
+		AddMessage(testutil.NewMessageBuilder("ContentArgument").Build(t)).
 		AddMessage(
 			testutil.NewMessageBuilder("Content").
-				AddFieldWithRule(
-					"by_field",
-					resolver.StringType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "by_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "by_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"double_field",
-					resolver.DoubleType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.DoubleType, resolver.DoubleType, "double_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "double_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"doubles_field",
-					resolver.DoubleRepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.DoubleRepeatedType, resolver.DoubleRepeatedType, "doubles_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "doubles_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"float_field",
-					resolver.FloatType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.FloatType, resolver.FloatType, "float_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "float_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"floats_field",
-					resolver.FloatRepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.FloatRepeatedType, resolver.FloatRepeatedType, "floats_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "floats_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"int32_field",
-					resolver.Int32Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Int32Type, resolver.Int32Type, "int32_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "int32_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"int32s_field",
-					resolver.Int32RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Int32RepeatedType, resolver.Int32RepeatedType, "int32s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "int32s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"int64_field",
-					resolver.Int64Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Int64Type, resolver.Int64Type, "int64_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "int64_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"int64s_field",
-					resolver.Int64RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Int64RepeatedType, resolver.Int64RepeatedType, "int64s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "int64s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"uint32_field",
-					resolver.Uint32Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Uint32Type, resolver.Uint32Type, "uint32_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "uint32_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"uint32s_field",
-					resolver.Uint32RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Uint32RepeatedType, resolver.Uint32RepeatedType, "uint32s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "uint32s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"uint64_field",
-					resolver.Uint64Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Uint64Type, resolver.Uint64Type, "uint64_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "uint64_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"uint64s_field",
-					resolver.Uint64RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Uint64RepeatedType, resolver.Uint64RepeatedType, "uint64s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "uint64s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sint32_field",
-					resolver.Sint32Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sint32Type, resolver.Sint32Type, "sint32_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sint32_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sint32s_field",
-					resolver.Sint32RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sint32RepeatedType, resolver.Sint32RepeatedType, "sint32s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sint32s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sint64_field",
-					resolver.Sint64Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sint64Type, resolver.Sint64Type, "sint64_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sint64_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sint64s_field",
-					resolver.Sint64RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sint64RepeatedType, resolver.Sint64RepeatedType, "sint64s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sint64s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"fixed32_field",
-					resolver.Fixed32Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Fixed32Type, resolver.Fixed32Type, "fixed32_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "fixed32_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"fixed32s_field",
-					resolver.Fixed32RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Fixed32RepeatedType, resolver.Fixed32RepeatedType, "fixed32s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "fixed32s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"fixed64_field",
-					resolver.Fixed64Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Fixed64Type, resolver.Fixed64Type, "fixed64_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "fixed64_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"fixed64s_field",
-					resolver.Fixed64RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Fixed64RepeatedType, resolver.Fixed64RepeatedType, "fixed64s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "fixed64s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sfixed32_field",
-					resolver.Sfixed32Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sfixed32Type, resolver.Sfixed32Type, "sfixed32_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sfixed32_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sfixed32s_field",
-					resolver.Sfixed32RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sfixed32RepeatedType, resolver.Sfixed32RepeatedType, "sfixed32s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sfixed32s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sfixed64_field",
-					resolver.Sfixed64Type,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sfixed64Type, resolver.Sfixed64Type, "sfixed64_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sfixed64_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"sfixed64s_field",
-					resolver.Sfixed64RepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.Sfixed64RepeatedType, resolver.Sfixed64RepeatedType, "sfixed64s_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "sfixed64s_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"bool_field",
-					resolver.BoolType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.BoolType, resolver.BoolType, "bool_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "bool_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"bools_field",
-					resolver.BoolRepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.BoolRepeatedType, resolver.BoolRepeatedType, "bools_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "bools_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"string_field",
-					resolver.StringType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "string_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "string_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"strings_field",
-					resolver.StringRepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.StringRepeatedType, resolver.StringRepeatedType, "strings_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "strings_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"byte_string_field",
-					resolver.BytesType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.BytesType, resolver.BytesType, "byte_string_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "byte_string_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"byte_strings_field",
-					resolver.BytesRepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.BytesRepeatedType, resolver.BytesRepeatedType, "byte_strings_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "byte_strings_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"enum_field",
-					ref.Type(t, "org.federation", "ContentType"),
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(ref.Type(t, "org.federation", "ContentType"), ref.Type(t, "org.federation", "ContentType"), "enum_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "enum_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"enums_field",
-					ref.RepeatedType(t, "org.federation", "ContentType"),
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(ref.RepeatedType(t, "org.federation", "ContentType"), ref.RepeatedType(t, "org.federation", "ContentType"), "enums_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "enums_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"env_field",
-					resolver.StringType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "env_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "env_field")).Build(t),
-				).
-				AddFieldWithRule(
-					"envs_field",
-					resolver.StringRepeatedType,
-					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(resolver.StringRepeatedType, resolver.StringRepeatedType, "envs_field").
-							Build(t),
-					).SetAlias(ref.Field(t, "content", "Content", "envs_field")).Build(t),
-				).
+				AddFieldWithAlias("by_field", resolver.StringType, ref.Field(t, "content", "Content", "by_field")).
+				AddFieldWithAlias("double_field", resolver.DoubleType, ref.Field(t, "content", "Content", "double_field")).
+				AddFieldWithAlias("doubles_field", resolver.DoubleRepeatedType, ref.Field(t, "content", "Content", "doubles_field")).
+				AddFieldWithAlias("float_field", resolver.FloatType, ref.Field(t, "content", "Content", "float_field")).
+				AddFieldWithAlias("floats_field", resolver.FloatRepeatedType, ref.Field(t, "content", "Content", "floats_field")).
+				AddFieldWithAlias("int32_field", resolver.Int32Type, ref.Field(t, "content", "Content", "int32_field")).
+				AddFieldWithAlias("int32s_field", resolver.Int32RepeatedType, ref.Field(t, "content", "Content", "int32s_field")).
+				AddFieldWithAlias("int64_field", resolver.Int64Type, ref.Field(t, "content", "Content", "int64_field")).
+				AddFieldWithAlias("int64s_field", resolver.Int64RepeatedType, ref.Field(t, "content", "Content", "int64s_field")).
+				AddFieldWithAlias("uint32_field", resolver.Uint32Type, ref.Field(t, "content", "Content", "uint32_field")).
+				AddFieldWithAlias("uint32s_field", resolver.Uint32RepeatedType, ref.Field(t, "content", "Content", "uint32s_field")).
+				AddFieldWithAlias("uint64_field", resolver.Uint64Type, ref.Field(t, "content", "Content", "uint64_field")).
+				AddFieldWithAlias("uint64s_field", resolver.Uint64RepeatedType, ref.Field(t, "content", "Content", "uint64s_field")).
+				AddFieldWithAlias("sint32_field", resolver.Sint32Type, ref.Field(t, "content", "Content", "sint32_field")).
+				AddFieldWithAlias("sint32s_field", resolver.Sint32RepeatedType, ref.Field(t, "content", "Content", "sint32s_field")).
+				AddFieldWithAlias("sint64_field", resolver.Sint64Type, ref.Field(t, "content", "Content", "sint64_field")).
+				AddFieldWithAlias("sint64s_field", resolver.Sint64RepeatedType, ref.Field(t, "content", "Content", "sint64s_field")).
+				AddFieldWithAlias("fixed32_field", resolver.Fixed32Type, ref.Field(t, "content", "Content", "fixed32_field")).
+				AddFieldWithAlias("fixed32s_field", resolver.Fixed32RepeatedType, ref.Field(t, "content", "Content", "fixed32s_field")).
+				AddFieldWithAlias("fixed64_field", resolver.Fixed64Type, ref.Field(t, "content", "Content", "fixed64_field")).
+				AddFieldWithAlias("fixed64s_field", resolver.Fixed64RepeatedType, ref.Field(t, "content", "Content", "fixed64s_field")).
+				AddFieldWithAlias("sfixed32_field", resolver.Sfixed32Type, ref.Field(t, "content", "Content", "sfixed32_field")).
+				AddFieldWithAlias("sfixed32s_field", resolver.Sfixed32RepeatedType, ref.Field(t, "content", "Content", "sfixed32s_field")).
+				AddFieldWithAlias("sfixed64_field", resolver.Sfixed64Type, ref.Field(t, "content", "Content", "sfixed64_field")).
+				AddFieldWithAlias("sfixed64s_field", resolver.Sfixed64RepeatedType, ref.Field(t, "content", "Content", "sfixed64s_field")).
+				AddFieldWithAlias("bool_field", resolver.BoolType, ref.Field(t, "content", "Content", "bool_field")).
+				AddFieldWithAlias("bools_field", resolver.BoolRepeatedType, ref.Field(t, "content", "Content", "bools_field")).
+				AddFieldWithAlias("string_field", resolver.StringType, ref.Field(t, "content", "Content", "string_field")).
+				AddFieldWithAlias("strings_field", resolver.StringRepeatedType, ref.Field(t, "content", "Content", "strings_field")).
+				AddFieldWithAlias("byte_string_field", resolver.BytesType, ref.Field(t, "content", "Content", "byte_string_field")).
+				AddFieldWithAlias("byte_strings_field", resolver.BytesRepeatedType, ref.Field(t, "content", "Content", "byte_strings_field")).
+				AddFieldWithAlias("enum_field", ref.Type(t, "org.federation", "ContentType"), ref.Field(t, "content", "Content", "enum_field")).
+				AddFieldWithAlias("enums_field", ref.RepeatedType(t, "org.federation", "ContentType"), ref.Field(t, "content", "Content", "enums_field")).
+				AddFieldWithAlias("env_field", resolver.StringType, ref.Field(t, "content", "Content", "env_field")).
+				AddFieldWithAlias("envs_field", resolver.StringRepeatedType, ref.Field(t, "content", "Content", "envs_field")).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetAlias(ref.Message(t, "content", "Content")).
@@ -2155,18 +1872,10 @@ func TestConstValue(t *testing.T) {
 					).Build(t),
 				).
 				AddFieldWithRule(
-					"content2",
-					ref.Type(t, "org.federation", "Content"),
-					testutil.NewFieldRuleBuilder(
-						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "Content"), ref.Type(t, "org.federation", "Content"), "content2").
-							Build(t),
-					).Build(t),
-				).
-				AddFieldWithRule(
 					"cel_expr",
 					resolver.Int64Type,
 					testutil.NewFieldRuleBuilder(
-						testutil.NewNameReferenceValueBuilder(resolver.Int64Type, resolver.Int64Type, "content.int32_field + content.sint32_field + content2.int64_field + content2.sint64_field").
+						testutil.NewNameReferenceValueBuilder(resolver.Int64Type, resolver.Int64Type, "content.int32_field + content.sint32_field").
 							Build(t),
 					).Build(t),
 				).
@@ -2288,112 +1997,6 @@ func TestConstValue(t *testing.T) {
 								SetBy(testutil.NewCELValueBuilder("res.content", ref.Type(t, "content", "Content")).Build(t)).
 								Build(t),
 						).
-						AddVariableDefinition(
-							testutil.NewVariableDefinitionBuilder().
-								SetName("content2").
-								SetUsed(true).
-								SetMessage(
-									testutil.NewMessageExprBuilder().
-										SetMessage(ref.Message(t, "org.federation", "Content")).
-										SetArgs(
-											testutil.NewMessageDependencyArgumentBuilder().
-												Add("by_field", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
-												Add("double_field", resolver.NewDoubleValue(1.23)).
-												Add("doubles_field", resolver.NewDoublesValue(4.56, 7.89)).
-												Add("float_field", resolver.NewFloatValue(4.56)).
-												Add("floats_field", resolver.NewFloatsValue(7.89, 1.23)).
-												Add("int32_field", resolver.NewInt32Value(-1)).
-												Add("int32s_field", resolver.NewInt32sValue(-2, -3)).
-												Add("int64_field", resolver.NewInt64Value(-4)).
-												Add("int64s_field", resolver.NewInt64sValue(-5, -6)).
-												Add("uint32_field", resolver.NewUint32Value(1)).
-												Add("uint32s_field", resolver.NewUint32sValue(2, 3)).
-												Add("uint64_field", resolver.NewUint64Value(4)).
-												Add("uint64s_field", resolver.NewUint64sValue(5, 6)).
-												Add("sint32_field", resolver.NewSint32Value(-7)).
-												Add("sint32s_field", resolver.NewSint32sValue(-8, -9)).
-												Add("sint64_field", resolver.NewSint64Value(-10)).
-												Add("sint64s_field", resolver.NewSint64sValue(-11, -12)).
-												Add("fixed32_field", resolver.NewFixed32Value(10)).
-												Add("fixed32s_field", resolver.NewFixed32sValue(11, 12)).
-												Add("fixed64_field", resolver.NewFixed64Value(13)).
-												Add("fixed64s_field", resolver.NewFixed64sValue(14, 15)).
-												Add("sfixed32_field", resolver.NewSfixed32Value(-14)).
-												Add("sfixed32s_field", resolver.NewSfixed32sValue(-15, -16)).
-												Add("sfixed64_field", resolver.NewSfixed64Value(-17)).
-												Add("sfixed64s_field", resolver.NewSfixed64sValue(-18, -19)).
-												Add("bool_field", resolver.NewBoolValue(true)).
-												Add("bools_field", resolver.NewBoolsValue(true, false)).
-												Add("string_field", resolver.NewStringValue("foo")).
-												Add("strings_field", resolver.NewStringsValue("hello", "world")).
-												Add("byte_string_field", resolver.NewByteStringValue([]byte("foo"))).
-												Add("byte_strings_field", resolver.NewByteStringsValue([]byte("foo"), []byte("bar"))).
-												Add("enum_field", resolver.NewEnumValue(ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_1"))).
-												Add(
-													"enums_field",
-													resolver.NewEnumsValue(
-														ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_2"),
-														ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_3"),
-													),
-												).
-												Add("env_field", resolver.NewEnvValue("foo")).
-												Add("envs_field", resolver.NewEnvsValue("foo", "bar")).
-												Add(
-													"message_field",
-													resolver.NewMessageValue(
-														ref.Type(t, "org.federation", "Content"),
-														map[string]*resolver.Value{
-															"double_field":       resolver.NewDoubleValue(1.23),
-															"doubles_field":      resolver.NewDoublesValue(4.56, 7.89),
-															"float_field":        resolver.NewFloatValue(4.56),
-															"floats_field":       resolver.NewFloatsValue(7.89, 1.23),
-															"int32_field":        resolver.NewInt32Value(-1),
-															"int32s_field":       resolver.NewInt32sValue(-2, -3),
-															"int64_field":        resolver.NewInt64Value(-4),
-															"int64s_field":       resolver.NewInt64sValue(-5, -6),
-															"uint32_field":       resolver.NewUint32Value(1),
-															"uint32s_field":      resolver.NewUint32sValue(2, 3),
-															"uint64_field":       resolver.NewUint64Value(4),
-															"uint64s_field":      resolver.NewUint64sValue(5, 6),
-															"sint32_field":       resolver.NewSint32Value(-7),
-															"sint32s_field":      resolver.NewSint32sValue(-8, -9),
-															"sint64_field":       resolver.NewSint64Value(-10),
-															"sint64s_field":      resolver.NewSint64sValue(-11, -12),
-															"fixed32_field":      resolver.NewFixed32Value(10),
-															"fixed32s_field":     resolver.NewFixed32sValue(11, 12),
-															"fixed64_field":      resolver.NewFixed64Value(13),
-															"fixed64s_field":     resolver.NewFixed64sValue(14, 15),
-															"sfixed32_field":     resolver.NewSfixed32Value(-14),
-															"sfixed32s_field":    resolver.NewSfixed32sValue(-15, -16),
-															"sfixed64_field":     resolver.NewSfixed64Value(-17),
-															"sfixed64s_field":    resolver.NewSfixed64sValue(-18, -19),
-															"bool_field":         resolver.NewBoolValue(true),
-															"bools_field":        resolver.NewBoolsValue(true, false),
-															"string_field":       resolver.NewStringValue("foo"),
-															"strings_field":      resolver.NewStringsValue("hello", "world"),
-															"byte_string_field":  resolver.NewByteStringValue([]byte("foo")),
-															"byte_strings_field": resolver.NewByteStringsValue([]byte("foo"), []byte("bar")),
-															"enum_field":         resolver.NewEnumValue(ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_1")),
-															"enums_field": resolver.NewEnumsValue(
-																ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_2"),
-																ref.EnumValue(t, "org.federation", "ContentType", "CONTENT_TYPE_3"),
-															),
-															"env_field":      resolver.NewEnvValue("foo"),
-															"envs_field":     resolver.NewEnvsValue("foo", "bar"),
-															"message_field":  resolver.NewMessageValue(ref.Type(t, "org.federation", "Content"), map[string]*resolver.Value{}),
-															"messages_field": resolver.NewMessagesValue(ref.RepeatedType(t, "org.federation", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{}),
-														},
-													),
-												).
-												Add(
-													"messages_field",
-													resolver.NewMessagesValue(ref.RepeatedType(t, "org.federation", "Content"), map[string]*resolver.Value{}, map[string]*resolver.Value{})).
-												Build(t),
-										).
-										Build(t),
-								).
-								Build(t),
-						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
@@ -2407,7 +2010,6 @@ func TestConstValue(t *testing.T) {
 								SetEnd(testutil.NewVariableDefinition("content")).
 								Build(t),
 						).
-						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("content2")).
 						Build(t),
 				).
 				Build(t),
@@ -2421,7 +2023,6 @@ func TestConstValue(t *testing.T) {
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("Get", ref.Message(t, "org.federation", "GetRequest"), ref.Message(t, "org.federation", "GetResponse"), nil).
 				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
-				AddMessage(ref.Message(t, "org.federation", "Content"), ref.Message(t, "org.federation", "ContentArgument")).
 				AddMessage(ref.Message(t, "org.federation", "GetResponse"), ref.Message(t, "org.federation", "GetResponseArgument")).
 				Build(t),
 		)
@@ -2432,18 +2033,12 @@ func TestConstValue(t *testing.T) {
 		&resolver.Field{
 			Name: "message_field",
 			Type: resolver.NewMessageType(content, false),
-			Rule: testutil.NewFieldRuleBuilder(
-				testutil.NewMessageArgumentValueBuilder(resolver.NewMessageType(content, false), resolver.NewMessageType(content, false), "message_field").
-					Build(t),
-			).SetAlias(ref.Field(t, "content", "Content", "message_field")).Build(t),
+			Rule: testutil.NewFieldRuleBuilder(nil).SetAlias(ref.Field(t, "content", "Content", "message_field")).Build(t),
 		},
 		&resolver.Field{
 			Name: "messages_field",
 			Type: ref.RepeatedType(t, "org.federation", "Content"),
-			Rule: testutil.NewFieldRuleBuilder(
-				testutil.NewMessageArgumentValueBuilder(ref.RepeatedType(t, "org.federation", "Content"), ref.RepeatedType(t, "org.federation", "Content"), "messages_field").
-					Build(t),
-			).SetAlias(ref.Field(t, "content", "Content", "messages_field")).Build(t),
+			Rule: testutil.NewFieldRuleBuilder(nil).SetAlias(ref.Field(t, "content", "Content", "messages_field")).Build(t),
 		},
 	)
 

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {
+}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    def {
+      message {
+        name: "Foo"
+        args { name: "id" string: "foo" }
+      }
+    }
+    def {
+      message {
+        name: "Foo"
+        args { name: "id" int32: 1 }
+      }
+    }
+  };
+}
+
+message Foo {
+  string id = 1 [(grpc.federation.field).by = "$.id"];
+}

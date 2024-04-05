@@ -60,6 +60,17 @@ message PostData {
   PostContent content = 3;
 }
 
+message PostData2 {
+  option (grpc.federation.message) = {
+    alias: "org.post.PostData"
+    custom_resolver: true
+  };
+
+  PostType type = 1 [(grpc.federation.field).by = "org.federation.PostType.POST_TYPE_FOO"];
+  string title = 2;
+  PostContent content = 3;
+}
+
 message PostContent {
   option (grpc.federation.message).alias = "org.post.PostContent";
 

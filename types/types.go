@@ -26,6 +26,30 @@ var (
 	Sint64        = Kind(descriptorpb.FieldDescriptorProto_TYPE_SINT64)
 )
 
+func (k Kind) IsInt() bool {
+	switch k {
+	case Int64, Int32, Sfixed32, Sfixed64, Sint32, Sint64:
+		return true
+	}
+	return false
+}
+
+func (k Kind) IsUint() bool {
+	switch k {
+	case Uint64, Uint32, Fixed32, Fixed64:
+		return true
+	}
+	return false
+}
+
+func (k Kind) IsFloat() bool {
+	switch k {
+	case Double, Float:
+		return true
+	}
+	return false
+}
+
 func (k Kind) ToString() string {
 	switch k {
 	case Double:

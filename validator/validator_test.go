@@ -19,6 +19,11 @@ func TestValidator(t *testing.T) {
 	}{
 		{file: "empty_response_field.proto", expected: `
 `},
+		{file: "different_message_argument_type.proto", expected: `
+testdata/different_message_argument_type.proto:28:14: "id" argument name is declared with a different type kind. found "string" and "int32" type
+28:          args { name: "id" int32: 1 }
+                  ^
+`},
 		{file: "invalid_autobind.proto", expected: `
 testdata/invalid_autobind.proto:23:3: "id" field found multiple times in the message specified by autobind. since it is not possible to determine one, please use "grpc.federation.field" to explicitly bind it. found message names are "a" name at def and "b" name at def
 23:    string id = 1;
@@ -38,6 +43,17 @@ testdata/invalid_field_option.proto:30:50: ERROR: <input>:1:5: undefined field '
  | ....^
 30:    Post post = 1 [(grpc.federation.field) = { by: "post.invalid" }];
                                                       ^
+`},
+		{file: "invalid_field_type.proto", expected: `
+testdata/invalid_field_type.proto:18:3: cannot convert type automatically: field type is "string" but specified value type is "int64"
+18:    string a = 1 [(grpc.federation.field).by = "1"];
+       ^
+testdata/invalid_field_type.proto:19:3: cannot convert type automatically: field type is "int32" but specified value type is "uint64"
+19:    int32 b = 2 [(grpc.federation.field).by = "uint(2)"];
+       ^
+testdata/invalid_field_type.proto:20:3: cannot convert type automatically: field type is "uint32" but specified value type is "int64"
+20:    uint32 c = 3 [(grpc.federation.field).by = "int(3)"];
+       ^
 `},
 		{file: "invalid_go_package.proto", expected: `
 testdata/invalid_go_package.proto:9:21: go_package option "a;b;c;d" is invalid
@@ -389,11 +405,17 @@ testdata/invalid_message_field_alias.proto:59:3: The types of "org.federation.Po
 testdata/invalid_message_field_alias.proto:59:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
 59:    int64 title = 2;
        ^
-testdata/invalid_message_field_alias.proto:75:3: The types of "org.federation.PostContent"'s "body" field ("int64") and "org.post.PostContent"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
-75:    int64 body = 3;
+testdata/invalid_message_field_alias.proto:63:1: "def" or "custom_resolver" cannot be used with alias option
+63:  message PostData2 {
+     ^
+testdata/invalid_message_field_alias.proto:69:3: "org.federation.PostData2.type" field does not use the alias option. only alias option is available in alias message
+69:    PostType type = 1 [(grpc.federation.field).by = "org.federation.PostType.POST_TYPE_FOO"];
        ^
-testdata/invalid_message_field_alias.proto:75:3: "body" field in "org.federation.PostContent" message needs to specify "grpc.federation.field" option
-75:    int64 body = 3;
+testdata/invalid_message_field_alias.proto:86:3: The types of "org.federation.PostContent"'s "body" field ("int64") and "org.post.PostContent"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
+86:    int64 body = 3;
+       ^
+testdata/invalid_message_field_alias.proto:86:3: "body" field in "org.federation.PostContent" message needs to specify "grpc.federation.field" option
+86:    int64 body = 3;
        ^
 `},
 		{file: "recursive_message_name.proto", expected: `
