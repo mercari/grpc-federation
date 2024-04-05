@@ -2842,7 +2842,7 @@ func (r *Resolver) enumAccessors() []cel.EnvOption {
 			),
 			cel.Function(
 				fmt.Sprintf("%s.value", enum.FQDN()),
-				cel.Overload(fmt.Sprintf("%s_value_string_int", enum.FQDN()), []*cel.Type{cel.StringType}, cel.IntType,
+				cel.Overload(fmt.Sprintf("%s_value_string_enum", enum.FQDN()), []*cel.Type{cel.StringType}, celtypes.NewOpaqueType(enum.FQDN(), cel.IntType),
 					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
 				),
 			),
@@ -2916,7 +2916,12 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 			descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL,
 		)
 	case celtypes.OpaqueKind:
-		return r.fromCELType(ctx, typ.Parameters()[0])
+		param := typ.Parameters()[0]
+		enum, ok := r.cachedEnumMap[typ.TypeName()]
+		if ok && param.Kind() == celtypes.IntKind {
+			return &Type{Kind: types.Enum, Enum: enum}, nil
+		}
+		return r.fromCELType(ctx, param)
 	}
 
 	return nil, fmt.Errorf("unknown type %s is required", typ.TypeName())

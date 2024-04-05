@@ -43,10 +43,12 @@ message GetPostResponse {
   string item_type_name = 6 [(grpc.federation.field).by = "federation.Item.ItemType.name(federation.Item.ItemType.ITEM_TYPE_1)"];
   string location_type_name = 7 [(grpc.federation.field).by = "federation.Item.Location.LocationType.name(federation.Item.Location.LocationType.LOCATION_TYPE_1)"];
   string user_item_type_name = 8 [(grpc.federation.field).by = "user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)"];
-  int32 item_type_value = 9 [(grpc.federation.field).by = "federation.Item.ItemType.value('ITEM_TYPE_1')"];
-  int32 location_type_value = 10 [(grpc.federation.field).by = "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')"];
-  int32 user_item_type_value = 11 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_2')"];
-  A a = 12 [(grpc.federation.field).by = "a"];
+  Item.ItemType item_type_value_enum = 9 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_1')"];
+  int32 item_type_value_int = 10 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_1')"];
+  Item.ItemType item_type_value_cast = 11 [(grpc.federation.field).by = "1"];
+  int32 location_type_value = 12 [(grpc.federation.field).by = "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')"];
+  int32 user_item_type_value = 13 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_2')"];
+  A a = 14 [(grpc.federation.field).by = "a"];
 }
 
 message A {

@@ -391,6 +391,11 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 	return ret, nil
 }
 
+// cast_int64__to__Favorite_FavoriteType cast from "int64" to "favorite.FavoriteType".
+func (s *OtherService) cast_int64__to__Favorite_FavoriteType(from int64) favorite.FavoriteType {
+	return favorite.FavoriteType(from)
+}
+
 func (s *OtherService) logvalue_Favorite_FavoriteType(v favorite.FavoriteType) slog.Value {
 	switch v {
 	case favorite.FavoriteType_UNKNOWN:

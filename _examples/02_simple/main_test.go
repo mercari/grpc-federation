@@ -250,7 +250,9 @@ func TestFederation(t *testing.T) {
 		ItemTypeName:      "ITEM_TYPE_1",
 		LocationTypeName:  "LOCATION_TYPE_1",
 		UserItemTypeName:  "ITEM_TYPE_2",
-		ItemTypeValue:     1,
+		ItemTypeValueEnum: federation.Item_ITEM_TYPE_1,
+		ItemTypeValueInt:  1,
+		ItemTypeValueCast: federation.Item_ITEM_TYPE_1,
 		LocationTypeValue: 1,
 		UserItemTypeValue: 2,
 		A: &federation.A{

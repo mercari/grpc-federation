@@ -796,6 +796,26 @@ func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(fro
 	}
 }
 
+// cast_float64__to__float32 cast from "double" to "float".
+func (s *FederationService) cast_float64__to__float32(from float64) float32 {
+	return float32(from)
+}
+
+// cast_int64__to__Org_Federation_ContentType cast from "int64" to "org.federation.ContentType".
+func (s *FederationService) cast_int64__to__Org_Federation_ContentType(from int64) ContentType {
+	return ContentType(from)
+}
+
+// cast_int64__to__int32 cast from "int64" to "sint32".
+func (s *FederationService) cast_int64__to__int32(from int64) int32 {
+	return int32(from)
+}
+
+// cast_int64__to__int64 cast from "int64" to "sint64".
+func (s *FederationService) cast_int64__to__int64(from int64) int64 {
+	return int64(from)
+}
+
 // cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType cast from "repeated content.ContentType" to "repeated org.federation.ContentType".
 func (s *FederationService) cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType(from []content.ContentType) []ContentType {
 	ret := make([]ContentType, 0, len(from))
@@ -812,6 +832,70 @@ func (s *FederationService) cast_repeated_Content_Content__to__repeated_Org_Fede
 		ret = append(ret, s.cast_Content_Content__to__Org_Federation_Content(v))
 	}
 	return ret
+}
+
+// cast_repeated_float64__to__repeated_float32 cast from "repeated double" to "repeated float".
+func (s *FederationService) cast_repeated_float64__to__repeated_float32(from []float64) []float32 {
+	ret := make([]float32, 0, len(from))
+	for _, v := range from {
+		ret = append(ret, s.cast_float64__to__float32(v))
+	}
+	return ret
+}
+
+// cast_repeated_int64__to__repeated_Org_Federation_ContentType cast from "repeated int64" to "repeated org.federation.ContentType".
+func (s *FederationService) cast_repeated_int64__to__repeated_Org_Federation_ContentType(from []int64) []ContentType {
+	ret := make([]ContentType, 0, len(from))
+	for _, v := range from {
+		ret = append(ret, s.cast_int64__to__Org_Federation_ContentType(v))
+	}
+	return ret
+}
+
+// cast_repeated_int64__to__repeated_int32 cast from "repeated int64" to "repeated sint32".
+func (s *FederationService) cast_repeated_int64__to__repeated_int32(from []int64) []int32 {
+	ret := make([]int32, 0, len(from))
+	for _, v := range from {
+		ret = append(ret, s.cast_int64__to__int32(v))
+	}
+	return ret
+}
+
+// cast_repeated_int64__to__repeated_int64 cast from "repeated int64" to "repeated sint64".
+func (s *FederationService) cast_repeated_int64__to__repeated_int64(from []int64) []int64 {
+	ret := make([]int64, 0, len(from))
+	for _, v := range from {
+		ret = append(ret, s.cast_int64__to__int64(v))
+	}
+	return ret
+}
+
+// cast_repeated_uint64__to__repeated_uint32 cast from "repeated uint64" to "repeated uint32".
+func (s *FederationService) cast_repeated_uint64__to__repeated_uint32(from []uint64) []uint32 {
+	ret := make([]uint32, 0, len(from))
+	for _, v := range from {
+		ret = append(ret, s.cast_uint64__to__uint32(v))
+	}
+	return ret
+}
+
+// cast_repeated_uint64__to__repeated_uint64 cast from "repeated uint64" to "repeated fixed64".
+func (s *FederationService) cast_repeated_uint64__to__repeated_uint64(from []uint64) []uint64 {
+	ret := make([]uint64, 0, len(from))
+	for _, v := range from {
+		ret = append(ret, s.cast_uint64__to__uint64(v))
+	}
+	return ret
+}
+
+// cast_uint64__to__uint32 cast from "uint64" to "uint32".
+func (s *FederationService) cast_uint64__to__uint32(from uint64) uint32 {
+	return uint32(from)
+}
+
+// cast_uint64__to__uint64 cast from "uint64" to "fixed64".
+func (s *FederationService) cast_uint64__to__uint64(from uint64) uint64 {
+	return uint64(from)
 }
 
 func (s *FederationService) logvalue_Org_Federation_Content(v *Content) slog.Value {
