@@ -441,6 +441,10 @@ func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseTy
 		{{- template "castOneof" .ToOneof }}
 	{{- else if .IsStruct }}
 	{{- template "castMessage" .ToStruct }}
+	{{- else if .IsEnumToNumber }}
+	return {{ .ResponseType }}(from)
+	{{- else if .IsNumberToEnum }}
+	return {{ .ResponseType }}(from)
 	{{- else if .IsEnum }}
 	{{- template "castEnum" .ToEnum }}
 	{{- else }}

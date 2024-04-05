@@ -695,18 +695,32 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "federation.Item.ItemType.value('ITEM_TYPE_1')"
-	if err := grpcfed.SetCELValue(ctx, value, "federation.Item.ItemType.value('ITEM_TYPE_1')", func(v int32) { ret.ItemTypeValue = v }); err != nil {
+	// (grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_1')"
+	if err := grpcfed.SetCELValue(ctx, value, "user.Item.ItemType.value('ITEM_TYPE_1')", func(v user.Item_ItemType) {
+		ret.ItemTypeValueEnum = s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_1')"
+	if err := grpcfed.SetCELValue(ctx, value, "user.Item.ItemType.value('ITEM_TYPE_1')", func(v user.Item_ItemType) { ret.ItemTypeValueInt = s.cast_User_Item_ItemType__to__int32(v) }); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "1"
+	if err := grpcfed.SetCELValue(ctx, value, "1", func(v Item_ItemType) { ret.ItemTypeValueCast = v }); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	// (grpc.federation.field).by = "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')"
-	if err := grpcfed.SetCELValue(ctx, value, "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')", func(v int32) { ret.LocationTypeValue = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, value, "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')", func(v Item_Location_LocationType) {
+		ret.LocationTypeValue = s.cast_Federation_Item_Location_LocationType__to__int32(v)
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	// (grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_2')"
-	if err := grpcfed.SetCELValue(ctx, value, "user.Item.ItemType.value('ITEM_TYPE_2')", func(v int32) { ret.UserItemTypeValue = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, value, "user.Item.ItemType.value('ITEM_TYPE_2')", func(v user.Item_ItemType) { ret.UserItemTypeValue = s.cast_User_Item_ItemType__to__int32(v) }); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
@@ -949,6 +963,11 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	return ret, nil
 }
 
+// cast_Federation_Item_Location_LocationType__to__int32 cast from "federation.Item.Location.LocationType" to "int32".
+func (s *FederationService) cast_Federation_Item_Location_LocationType__to__int32(from Item_Location_LocationType) int32 {
+	return int32(from)
+}
+
 // cast_User_Item_ItemType__to__Federation_Item_ItemType cast from "user.Item.ItemType" to "federation.Item.ItemType".
 func (s *FederationService) cast_User_Item_ItemType__to__Federation_Item_ItemType(from user.Item_ItemType) Item_ItemType {
 	switch from {
@@ -963,6 +982,11 @@ func (s *FederationService) cast_User_Item_ItemType__to__Federation_Item_ItemTyp
 	default:
 		return 0
 	}
+}
+
+// cast_User_Item_ItemType__to__int32 cast from "user.Item.ItemType" to "int32".
+func (s *FederationService) cast_User_Item_ItemType__to__int32(from user.Item_ItemType) int32 {
+	return int32(from)
 }
 
 // cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_ cast from "user.Item.Location.addr_a" to "federation.Item.Location.addr_a".
@@ -1083,6 +1107,11 @@ func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.U
 	}
 }
 
+// cast_int64__to__Federation_Item_ItemType cast from "int64" to "federation.Item.ItemType".
+func (s *FederationService) cast_int64__to__Federation_Item_ItemType(from int64) Item_ItemType {
+	return Item_ItemType(from)
+}
+
 // cast_repeated_User_Item__to__repeated_Federation_Item cast from "repeated user.Item" to "repeated federation.Item".
 func (s *FederationService) cast_repeated_User_Item__to__repeated_Federation_Item(from []*user.Item) []*Item {
 	ret := make([]*Item, 0, len(from))
@@ -1156,7 +1185,9 @@ func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostRespon
 		slog.String("item_type_name", v.GetItemTypeName()),
 		slog.String("location_type_name", v.GetLocationTypeName()),
 		slog.String("user_item_type_name", v.GetUserItemTypeName()),
-		slog.Int64("item_type_value", int64(v.GetItemTypeValue())),
+		slog.String("item_type_value_enum", s.logvalue_Federation_Item_ItemType(v.GetItemTypeValueEnum()).String()),
+		slog.Int64("item_type_value_int", int64(v.GetItemTypeValueInt())),
+		slog.String("item_type_value_cast", s.logvalue_Federation_Item_ItemType(v.GetItemTypeValueCast()).String()),
 		slog.Int64("location_type_value", int64(v.GetLocationTypeValue())),
 		slog.Int64("user_item_type_value", int64(v.GetUserItemTypeValue())),
 		slog.Any("a", s.logvalue_Federation_A(v.GetA())),

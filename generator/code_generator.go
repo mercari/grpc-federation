@@ -1634,8 +1634,16 @@ func (f *CastField) IsStruct() bool {
 	return f.fromType.Kind == types.Message
 }
 
+func (f *CastField) IsEnumToNumber() bool {
+	return f.fromType.Kind == types.Enum && f.toType.Kind != types.Enum && f.toType.IsNumber()
+}
+
+func (f *CastField) IsNumberToEnum() bool {
+	return f.fromType.Kind != types.Enum && f.fromType.IsNumber() && f.toType.Kind == types.Enum
+}
+
 func (f *CastField) IsEnum() bool {
-	return f.fromType.Kind == types.Enum
+	return f.fromType.Kind == types.Enum && f.toType.Kind == types.Enum
 }
 
 type CastEnum struct {
