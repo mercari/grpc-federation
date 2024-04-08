@@ -52,6 +52,10 @@ func TestCandidates(t *testing.T) {
 	r := &Resolver{
 		files: []*descriptorpb.FileDescriptorProto{
 			{
+				Name:    proto.String("another/foo.proto"),
+				Package: proto.String("anotherfoo"),
+			},
+			{
 				Name:    proto.String("foo.proto"),
 				Package: proto.String("foo"),
 			},

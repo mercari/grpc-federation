@@ -77,7 +77,11 @@ func (r *Resolver) Candidates(loc *source.Location) []string {
 			protoPkgName := file.GetPackage()
 			switch {
 			case loc.Message != nil:
-				msg := r.cachedMessageMap[fmt.Sprintf("%s.%s", protoPkgName, loc.Message.Name)]
+				msg, ok := r.cachedMessageMap[fmt.Sprintf("%s.%s", protoPkgName, loc.Message.Name)]
+				if !ok {
+					// The file name could match wrongly if it has the same suffix
+					continue
+				}
 				return r.candidatesMessage(msg, loc.Message)
 			case loc.Service != nil:
 			}
