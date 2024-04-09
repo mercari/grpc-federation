@@ -171,3 +171,7 @@ federationServer, err := federation.NewFederationService(federation.FederationSe
 })
 ```
 
+# How it works
+
+Host and wasm plugin using stdio to exchange data.
+The exchanged data types are `CELPluginRequest` and `CELPluginResponse` defined on [plugin.proto](https://github.com/mercari/grpc-federation/blob/main/proto/grpc/federation/plugin.proto). Actually, the data is converted to json and then exchanged.
