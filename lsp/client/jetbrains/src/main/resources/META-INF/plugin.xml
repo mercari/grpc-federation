@@ -1,0 +1,22 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>com.github.mercari.grpcfederation</id>
+    <name>gRPC Federation</name>
+    <vendor>mercari</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.ultimate</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <platform.lsp.serverSupportProvider implementation="com.github.mercari.grpcfederation.lsp.GrpcFederationLspServerSupportProvider"/>
+        <projectService serviceInterface="com.github.mercari.grpcfederation.settings.ProjectSettingsService"
+                        serviceImplementation="com.github.mercari.grpcfederation.settings.impl.ProjectSettingsServiceImpl"/>
+        <projectConfigurable
+                parentId="tools"
+                instance="com.github.mercari.grpcfederation.settings.ProjectSettingsConfigurable"
+                id="com.github.mercari.grpcfederation.settings.ProjectSettingsConfigurable"
+                displayName="gRPC Federation"
+                nonDefaultProject="true"/>
+    </extensions>
+    <resource-bundle>messages.Bundle</resource-bundle>
+</idea-plugin>
