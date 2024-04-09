@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package grpc.federation;
 
-import "google/protobuf/descriptor.proto";
 import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
 
 option go_package = "github.com/mercari/grpc-federation/grpc/federation/cel/plugin;plugin";
 
@@ -121,5 +121,5 @@ message CELPluginValue {
     bool bool = 6;
     uint64 ptr = 7;
     google.protobuf.Any message = 8;
-  };
+  }
 }
