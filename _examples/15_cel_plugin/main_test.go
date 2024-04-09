@@ -63,6 +63,7 @@ func TestFederation(t *testing.T) {
 		ctx, "",
 		grpc.WithContextDialer(dialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
 		t.Fatal(err)
