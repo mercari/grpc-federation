@@ -28,7 +28,7 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 		if err != nil {
 			continue
 		}
-		if len(content) == 0 {
+		if content == "" {
 			continue
 		}
 		res, err := handleRegexpPlugin([]byte(content), plug)

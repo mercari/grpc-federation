@@ -14,7 +14,7 @@ lint:
 
 .PHONY: test
 test:
-	go test -race ./ -count=1
+	go test -v -race ./ -count=1
 
 .PHONY: grpc-federation/generate
 grpc-federation/generate:
