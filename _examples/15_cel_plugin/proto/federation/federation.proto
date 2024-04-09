@@ -19,10 +19,8 @@ message IsMatchRequest {
     
 message IsMatchResponse {
   option (grpc.federation.message) = {
-    def {
-      name: "matched"
-      by: "example.regexp.compile($.expr).matchString($.target)"
-    }
+    def { name: "re" by: "example.regexp.compile($.expr)" }
+    def { name: "matched" by: "re.matchString($.target)" }
   };
   bool result = 1 [(grpc.federation.field).by = "matched"];
 }

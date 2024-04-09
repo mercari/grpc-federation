@@ -7,7 +7,7 @@ import "grpc/federation/plugin.proto";
 option go_package = "example/plugin;pluginpb";
 
 message Regexp {
-  uint64 ptr = 1; // store raw pointer value.
+  uint32 ptr = 1; // store raw pointer value.
 }
 
 option (grpc.federation.plugin).export = {

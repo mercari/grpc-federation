@@ -1,5 +1,3 @@
-//go:build !tinygo.wasm
-
 package federation
 
 // Aliases list of types or functions from third-party libraries to minimize the list of imported packages.

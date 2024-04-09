@@ -3,9 +3,8 @@ package generator
 import (
 	"fmt"
 	"io"
-	"time"
 
-	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/mercari/grpc-federation/grpc/federation/generator/plugin"
 	"github.com/mercari/grpc-federation/resolver"
@@ -24,11 +23,11 @@ func ToCodeGeneratorRequest(r io.Reader) (*CodeGeneratorRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := new(plugin.CodeGeneratorRequest)
-	if err := v.UnmarshalVT(b); err != nil {
+	var v plugin.CodeGeneratorRequest
+	if err := proto.Unmarshal(b, &v); err != nil {
 		return nil, err
 	}
-	return newDecoder(v.GetReference()).toCodeGeneratorRequest(v)
+	return newDecoder(v.GetReference()).toCodeGeneratorRequest(&v)
 }
 
 type decoder struct {
@@ -949,18 +948,6 @@ func (d *decoder) toMapIteratorExpr(expr *plugin.MapIteratorExpr) (*resolver.Map
 	return ret, nil
 }
 
-// (*durationpb.Duration).AsDuration's origin implementation is here.
-// https://github.com/protocolbuffers/protobuf-go/blob/3068604084670a0d5cc410b3489db359c30afd33/types/known/durationpb/duration.pb.go#L171-L188
-// However, this cannot be compiled by tinygo, so use the one without the overflow logic.
-// Since this is used in decode process, it is assumed that overflow does not occur.
-func asDurationNoOverflow(v *durationpb.Duration) time.Duration {
-	secs := v.GetSeconds()
-	nanos := v.GetNanos()
-	d := time.Duration(secs) * time.Second
-	d += time.Duration(nanos) * time.Nanosecond
-	return d
-}
-
 func (d *decoder) toCallExpr(expr *plugin.CallExpr) (*resolver.CallExpr, error) {
 	if expr == nil {
 		return nil, nil
@@ -980,7 +967,7 @@ func (d *decoder) toCallExpr(expr *plugin.CallExpr) (*resolver.CallExpr, error) 
 		return nil, err
 	}
 	if expr.Timeout != nil {
-		timeout := asDurationNoOverflow(expr.GetTimeout())
+		timeout := expr.GetTimeout().AsDuration()
 		ret.Timeout = &timeout
 	}
 	ret.Method = mtd
@@ -1056,7 +1043,7 @@ func (d *decoder) toRetryPolicy(retry *plugin.RetryPolicy) (*resolver.RetryPolic
 	switch {
 	case retry.GetConstant() != nil:
 		cons := retry.GetConstant()
-		interval := asDurationNoOverflow(cons.GetInterval())
+		interval := cons.GetInterval().AsDuration()
 		ret.Constant = &resolver.RetryPolicyConstant{
 			Interval:   interval,
 			MaxRetries: cons.GetMaxRetries(),
@@ -1064,9 +1051,9 @@ func (d *decoder) toRetryPolicy(retry *plugin.RetryPolicy) (*resolver.RetryPolic
 		return ret, nil
 	case retry.GetExponential() != nil:
 		exp := retry.GetExponential()
-		initialInterval := asDurationNoOverflow(exp.GetInitialInterval())
-		maxInterval := asDurationNoOverflow(exp.GetMaxInterval())
-		maxElapsedTime := asDurationNoOverflow(exp.GetMaxElapsedTime())
+		initialInterval := exp.GetInitialInterval().AsDuration()
+		maxInterval := exp.GetMaxInterval().AsDuration()
+		maxElapsedTime := exp.GetMaxElapsedTime().AsDuration()
 		ret.Exponential = &resolver.RetryPolicyExponential{
 			InitialInterval:     initialInterval,
 			RandomizationFactor: exp.GetRandomizationFactor(),
@@ -1424,7 +1411,7 @@ func (d *decoder) toMethodRule(rule *plugin.MethodRule) *resolver.MethodRule {
 	}
 	ret := &resolver.MethodRule{}
 	if rule.Timeout != nil {
-		timeout := asDurationNoOverflow(rule.GetTimeout())
+		timeout := rule.GetTimeout().AsDuration()
 		ret.Timeout = &timeout
 	}
 	return ret

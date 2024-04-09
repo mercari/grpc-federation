@@ -3,8 +3,9 @@ syntax = "proto3";
 package grpc.federation;
 
 import "google/protobuf/descriptor.proto";
+import "google/protobuf/any.proto";
 
-option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
+option go_package = "github.com/mercari/grpc-federation/grpc/federation/cel/plugin;plugin";
 
 extend google.protobuf.FileOptions {
   PluginRule plugin = 1187;
@@ -92,4 +93,33 @@ message CELVariable {
   string type = 3;
   // repeated is whether repeated type or not.
   bool repeated = 4;
+}
+
+message CELPluginRequest {
+  string method = 1;
+  repeated CELPluginGRPCMetadata metadata = 2;
+  repeated CELPluginValue args = 3;
+}
+
+message CELPluginResponse {
+  CELPluginValue value = 1;
+  string error = 2;
+}
+
+message CELPluginGRPCMetadata {
+  string key = 1;
+  repeated string values = 2;
+}
+
+message CELPluginValue {
+  oneof value {
+    int64 int64 = 1;
+    uint64 uint64 = 2;
+    double double = 3;
+    string string = 4;
+    bytes bytes = 5;
+    bool bool = 6;
+    uint64 ptr = 7;
+    google.protobuf.Any message = 8;
+  };
 }
