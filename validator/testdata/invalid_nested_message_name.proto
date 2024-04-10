@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+import "post.proto";
+import "user.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetARequest) returns (GetAResponse) {};
+}
+
+message GetARequest {
+  string id = 1;
+}
+
+message GetAResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "a"
+      message {
+        name: "A"
+      }
+    }
+  };
+  A post = 1 [(grpc.federation.field).by = "a"];
+}
+
+message A {
+  message B {
+    option (grpc.federation.message) = {
+      def [
+        { name: "b1" message: { name: "Invalid1" } }
+      ]
+    };
+    message C {
+      option (grpc.federation.message) = {
+        def [
+          { name: "c1" message: { name: "Invalid2" } }
+        ]
+      };
+      string c1 = 1 [(grpc.federation.field).by = "c1"];
+    }
+    string b1 = 1 [(grpc.federation.field).by = "b1"];
+  }
+  option (grpc.federation.message) = {
+    def { name: "b" message { name: "A.B" } }
+  };
+  B b = 1 [(grpc.federation.field).by = "b"];
+}
