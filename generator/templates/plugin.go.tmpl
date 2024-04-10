@@ -8,39 +8,59 @@ type {{ $pluginName }} interface {
 	{{- end }}
 }
 
-var (
-	reg_{{ $pluginName }} {{ $pluginName }}
-	mu_{{ $pluginName }} grpcfed.RWMutex
-)
-
 func Register{{ $pluginName }}(plug {{ $pluginName }}) {
-	mu_{{ $pluginName }}.Lock()
-	defer mu_{{ $pluginName }}.Unlock()
-	reg_{{ $pluginName }} = plug
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		content, err := reader.ReadString('\n')
+		if err != nil {
+			continue
+		}
+		if content == "" {
+			continue
+		}
+		res, err := handle{{ $pluginName }}([]byte(content), plug)
+		if err != nil {
+			res = grpcfed.ToErrorCELPluginResponse(err)
+		}
+		encoded, err := grpcfed.EncodeCELPluginResponse(res)
+		if err != nil {
+			continue
+		}
+		_, _ = os.Stdout.Write(append(encoded, '\n'))
+	}
 }
 
-{{ range $pluginFunctions }}
-//export {{ .ExportName }}
-func {{ .ExportName }}(mdptr uint32, mdsize uint32, {{- range .WasmArgs }}{{ .Name }} {{ .Type }},{{- end }}) grpcfed.ReturnValue {
-	var md metadata.MD
-	if err := json.Unmarshal(grpcfed.ToBytes(mdptr, mdsize), &md); err != nil {
-		return grpcfed.ErrorToReturnValue(err)
+func handle{{ $pluginName }}(content []byte, plug {{ $pluginName }}) (*grpcfed.CELPluginResponse, error) {
+	req, err := grpcfed.DecodeCELPluginRequest(content)
+	if err != nil {
+		return nil, err
+	}
+	md := make(metadata.MD)
+	for _, m := range req.GetMetadata() {
+		md[m.GetKey()] = m.GetValues()
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), md)
-	{{- range .WasmArgs }}
-	{{- if not .Skip }}
-	converted_{{ .Name }} := {{ .ConvertProcess }}
+	switch req.GetMethod() {
+	{{- range $pluginFunctions }}
+	case "{{ .ExportName }}":
+		{{- $argLen := len .Args }}
+		if len(req.GetArgs()) != {{ $argLen }} {
+			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), {{ $argLen }})
+		}
+		{{- range $idx, $arg := .Args }}
+		arg{{ $idx }}, err := grpcfed.{{ $arg.Converter }}(req.GetArgs()[{{ $idx }}])
+		if err != nil {
+			return nil, err
+		}
+		{{- end }}
+		ret, err := plug.{{ .Name }}(ctx, {{- range $idx, $arg := .Args }}arg{{ $idx }},{{- end }})
+		if err != nil {
+			return nil, err
+		}
+		return grpcfed.{{ .Return.Converter }}(ret)
 	{{- end }}
-	{{- end }}
-
-	mu_{{ $pluginName }}.RLock()
-	ret, err := reg_{{ $pluginName }}.{{ .Name }}(ctx, {{- range .WasmArgs }}{{- if not .Skip }}converted_{{ .Name }},{{- end }}{{- end }})
-	mu_{{ $pluginName }}.RUnlock()
-	if err != nil {
-		return grpcfed.ErrorToReturnValue(err)
 	}
-	return grpcfed.{{ .Return.FuncName }}ToReturnValue(ret)
+	return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
 }
-{{ end }}
 {{- end }}
 {{- end }}

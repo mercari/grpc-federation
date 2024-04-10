@@ -57,14 +57,14 @@ func main() {
 
 ## 4. Compile a plugin to WebAssembly
 
-Run `make build/wasm` to compile to WebAssembly by `tinygo`.
+Run `make build/wasm` to compile to WebAssembly.
 ( `regexp.wasm` is output )
 
 ## 5. Calculates sha256 value for the WebAssembly file
 
 ```console
 $ sha256sum regexp.wasm
-4da3439e679aeb1012275cb9356a87eca39275e10fda6666c95420d77a2602d3  regexp.wasm
+820f86011519c42da0fe9876bc2ca7fbee5df746acf104d9e2b9bba802ddd2b9  regexp.wasm
 ```
 
 ## 6. Load plugin ( WebAssembly ) file
@@ -76,7 +76,7 @@ federationServer, err := federation.NewFederationService(federation.FederationSe
 	CELPlugin: &federation.FederationServiceCELPluginConfig{
 		Regexp: federation.FederationServiceCELPluginWasmConfig{
 			Path:   "regexp.wasm",
-			Sha256: "4da3439e679aeb1012275cb9356a87eca39275e10fda6666c95420d77a2602d3",
+			Sha256: "820f86011519c42da0fe9876bc2ca7fbee5df746acf104d9e2b9bba802ddd2b9",
 		},
 	},
 })

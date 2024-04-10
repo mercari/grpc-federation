@@ -2,8 +2,10 @@
 package pluginpb
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
+	"fmt"
+	"os"
 	"reflect"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
@@ -19,50 +21,69 @@ type RegexpPlugin interface {
 	Example_Regexp_Regexp_MatchString(context.Context, *Regexp, string) (bool, error)
 }
 
-var (
-	reg_RegexpPlugin RegexpPlugin
-	mu_RegexpPlugin  grpcfed.RWMutex
-)
-
 func RegisterRegexpPlugin(plug RegexpPlugin) {
-	mu_RegexpPlugin.Lock()
-	defer mu_RegexpPlugin.Unlock()
-	reg_RegexpPlugin = plug
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		content, err := reader.ReadString('\n')
+		if err != nil {
+			continue
+		}
+		if content == "" {
+			continue
+		}
+		res, err := handleRegexpPlugin([]byte(content), plug)
+		if err != nil {
+			res = grpcfed.ToErrorCELPluginResponse(err)
+		}
+		encoded, err := grpcfed.EncodeCELPluginResponse(res)
+		if err != nil {
+			continue
+		}
+		_, _ = os.Stdout.Write(append(encoded, '\n'))
+	}
 }
 
-//export example_regexp_compile_string_example_regexp_Regexp
-func example_regexp_compile_string_example_regexp_Regexp(mdptr uint32, mdsize uint32, arg0 uint32, arg1 uint32) grpcfed.ReturnValue {
-	var md metadata.MD
-	if err := json.Unmarshal(grpcfed.ToBytes(mdptr, mdsize), &md); err != nil {
-		return grpcfed.ErrorToReturnValue(err)
+func handleRegexpPlugin(content []byte, plug RegexpPlugin) (*grpcfed.CELPluginResponse, error) {
+	req, err := grpcfed.DecodeCELPluginRequest(content)
+	if err != nil {
+		return nil, err
+	}
+	md := make(metadata.MD)
+	for _, m := range req.GetMetadata() {
+		md[m.GetKey()] = m.GetValues()
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), md)
-	converted_arg0 := grpcfed.ToString(arg0, arg1)
-
-	mu_RegexpPlugin.RLock()
-	ret, err := reg_RegexpPlugin.Example_Regexp_Compile(ctx, converted_arg0)
-	mu_RegexpPlugin.RUnlock()
-	if err != nil {
-		return grpcfed.ErrorToReturnValue(err)
+	switch req.GetMethod() {
+	case "example_regexp_compile_string_example_regexp_Regexp":
+		if len(req.GetArgs()) != 1 {
+			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
+		}
+		arg0, err := grpcfed.ToString(req.GetArgs()[0])
+		if err != nil {
+			return nil, err
+		}
+		ret, err := plug.Example_Regexp_Compile(ctx, arg0)
+		if err != nil {
+			return nil, err
+		}
+		return grpcfed.ToMessageCELPluginResponse[*Regexp](ret)
+	case "example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool":
+		if len(req.GetArgs()) != 2 {
+			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 2)
+		}
+		arg0, err := grpcfed.ToMessage[*Regexp](req.GetArgs()[0])
+		if err != nil {
+			return nil, err
+		}
+		arg1, err := grpcfed.ToString(req.GetArgs()[1])
+		if err != nil {
+			return nil, err
+		}
+		ret, err := plug.Example_Regexp_Regexp_MatchString(ctx, arg0, arg1)
+		if err != nil {
+			return nil, err
+		}
+		return grpcfed.ToBoolCELPluginResponse(ret)
 	}
-	return grpcfed.MessageToReturnValue(ret)
-}
-
-//export example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool
-func example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool(mdptr uint32, mdsize uint32, arg0 uint32, arg1 uint32, arg2 uint32) grpcfed.ReturnValue {
-	var md metadata.MD
-	if err := json.Unmarshal(grpcfed.ToBytes(mdptr, mdsize), &md); err != nil {
-		return grpcfed.ErrorToReturnValue(err)
-	}
-	ctx := metadata.NewIncomingContext(context.Background(), md)
-	converted_arg0 := grpcfed.ToMessage[Regexp](arg0)
-	converted_arg1 := grpcfed.ToString(arg1, arg2)
-
-	mu_RegexpPlugin.RLock()
-	ret, err := reg_RegexpPlugin.Example_Regexp_Regexp_MatchString(ctx, converted_arg0, converted_arg1)
-	mu_RegexpPlugin.RUnlock()
-	if err != nil {
-		return grpcfed.ErrorToReturnValue(err)
-	}
-	return grpcfed.BoolToReturnValue(ret)
+	return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
 }

@@ -237,7 +237,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 				},
 				{{- end }}
 			},
-		})
+		}, celHelper.CELRegistry())
 		if err != nil {
 			return nil, err
 		}

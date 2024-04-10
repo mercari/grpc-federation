@@ -12,4 +12,4 @@ plugins:
     out: .
     opt:
       - paths=source_relative
-      - plugins=file://plugin.wasm:14ef11e49c0a6224fd120d24d693da1fa74381198ac6ae8fd19b073aa2d984d3
+      - plugins=file://plugin.wasm:19cc645beeb3d2a5b55182015e61a33c3c93b0ff961085966a450c397ed2b747

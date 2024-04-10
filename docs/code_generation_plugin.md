@@ -55,10 +55,8 @@ You can use `embed` library as you would normally write a Go program. Also, sinc
 
 ## 2. Compile plugin to WebAssembly
 
-Compile the plugin to WebAssembly using [`TinyGo`](https://tinygo.org/).
-
 ```console
-$ tinygo build -o plugin.wasm -target wasi -no-debug -scheduler=none ./cmd/plugin
+$ GOOS=wasip1 GOARCH=wasm go build -o plugin.wasm ./cmd/plugin
 ```
 
 ## 3. Calculates sha256 value for the WebAssembly file

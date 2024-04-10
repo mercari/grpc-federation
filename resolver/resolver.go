@@ -1,5 +1,3 @@
-//go:build !tinygo.wasm
-
 package resolver
 
 import (
@@ -20,6 +18,7 @@ import (
 
 	"github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
+	celplugin "github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
 	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/types"
 )
@@ -305,7 +304,7 @@ func (r *Resolver) validateMethodResponse(ctx *context, service *Service) {
 func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorProto, builder *source.LocationBuilder) *File {
 	file := r.defToFileMap[def]
 	ctx = ctx.withFile(file)
-	pluginRuleDef, err := getExtensionRule[*federation.PluginRule](def.GetOptions(), federation.E_Plugin)
+	pluginRuleDef, err := getExtensionRule[*celplugin.PluginRule](def.GetOptions(), celplugin.E_Plugin)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -352,7 +351,7 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 	return file
 }
 
-func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDescriptorProto, def *federation.Export, builder *source.ExportBuilder) *CELPlugin {
+func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDescriptorProto, def *celplugin.Export, builder *source.ExportBuilder) *CELPlugin {
 	if def == nil {
 		return nil
 	}
@@ -390,7 +389,7 @@ func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDesc
 	return plugin
 }
 
-func (r *Resolver) resolvePluginMethod(ctx *context, msg *Message, fn *federation.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
+func (r *Resolver) resolvePluginMethod(ctx *context, msg *Message, fn *celplugin.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
 	msgType := NewMessageType(msg, false)
 	pluginFunc := &CELFunction{
 		Name:     fn.GetName(),
@@ -404,7 +403,7 @@ func (r *Resolver) resolvePluginMethod(ctx *context, msg *Message, fn *federatio
 	return pluginFunc
 }
 
-func (r *Resolver) resolvePluginGlobalFunction(ctx *context, pkgName string, fn *federation.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
+func (r *Resolver) resolvePluginGlobalFunction(ctx *context, pkgName string, fn *celplugin.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
 	pluginFunc := &CELFunction{
 		Name: fmt.Sprintf("%s.%s", pkgName, fn.GetName()),
 	}
@@ -415,7 +414,7 @@ func (r *Resolver) resolvePluginGlobalFunction(ctx *context, pkgName string, fn 
 	return pluginFunc
 }
 
-func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []*federation.CELFunctionArgument, ret *federation.CELType, builder *source.PluginFunctionBuilder) ([]*Type, *Type) {
+func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []*celplugin.CELFunctionArgument, ret *celplugin.CELType, builder *source.PluginFunctionBuilder) ([]*Type, *Type) {
 	argTypes := r.resolvePluginFunctionArguments(ctx, args, builder)
 	if ret == nil {
 		return argTypes, nil
@@ -432,7 +431,7 @@ func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []
 	return argTypes, retType
 }
 
-func (r *Resolver) resolvePluginFunctionArguments(ctx *context, args []*federation.CELFunctionArgument, builder *source.PluginFunctionBuilder) []*Type {
+func (r *Resolver) resolvePluginFunctionArguments(ctx *context, args []*celplugin.CELFunctionArgument, builder *source.PluginFunctionBuilder) []*Type {
 	var ret []*Type
 	for argIdx, arg := range args {
 		typ, err := r.resolvePluginFunctionType(ctx, arg.GetType(), arg.GetRepeated())

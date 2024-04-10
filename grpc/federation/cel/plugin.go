@@ -2,9 +2,9 @@ package cel
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"google.golang.org/grpc/metadata"
 )
@@ -35,8 +35,8 @@ type WasmConfig struct {
 	Sha256 string
 }
 
-func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
-	wasm, err := NewWasmPlugin(ctx, cfg.Wasm)
+func NewCELPlugin(ctx context.Context, cfg CELPluginConfig, celRegistry *types.Registry) (*CELPlugin, error) {
+	wasm, err := NewWasmPlugin(ctx, cfg.Wasm, celRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +60,11 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 	if !ok {
 		md = make(metadata.MD)
 	}
-	mdb, _ := json.Marshal(md)
 	var opts []cel.EnvOption
 	for _, fn := range p.Functions {
 		fn := fn
 		bindFunc := cel.FunctionBinding(func(args ...ref.Val) ref.Val {
-			return p.wasm.Call(p.ctx, fn, mdb, args...)
+			return p.wasm.Call(p.ctx, fn, md, args...)
 		})
 		var overload cel.FunctionOpt
 		if fn.IsMethod {

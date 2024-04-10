@@ -1,44 +1,43 @@
-//go:build !tinygo.wasm
-
 package cel
 
 import (
+	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
+	"io"
 	"os"
-	"reflect"
-	"unsafe"
+	"path/filepath"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+
+	"github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
 )
 
 var (
-	ErrOutOfRangeAccessWasmMemory = errors.New(
-		`grpc-federation: detected out of range access`,
-	)
 	ErrWasmContentMismatch = errors.New(
 		`grpc-federation: wasm file content mismatch`,
 	)
 )
 
 type WasmPlugin struct {
-	File   string
-	r      wazero.Runtime
-	mod    api.Module
-	malloc api.Function
-	free   api.Function
+	r           wazero.Runtime
+	celRegistry *types.Registry
+	stdin       *io.PipeWriter
+	stdout      *io.PipeReader
 }
 
-func NewWasmPlugin(ctx context.Context, wasmCfg WasmConfig) (*WasmPlugin, error) {
+func NewWasmPlugin(ctx context.Context, wasmCfg WasmConfig, celRegistry *types.Registry) (*WasmPlugin, error) {
 	wasmFile, err := os.ReadFile(wasmCfg.Path)
 	if err != nil {
 		return nil, err
@@ -49,227 +48,192 @@ func NewWasmPlugin(ctx context.Context, wasmCfg WasmConfig) (*WasmPlugin, error)
 		return nil, fmt.Errorf(`expected [%s] but got [%s]: %w`, wasmCfg.Sha256, gotHash, ErrWasmContentMismatch)
 	}
 	cfg := wazero.NewRuntimeConfig()
-	r := wazero.NewRuntimeWithConfig(ctx, cfg)
-
-	if _, err := r.NewHostModuleBuilder("env").
-		NewFunctionBuilder().WithFunc(wasmDebugLog).Export("grpc_federation_log").
-		Instantiate(ctx); err != nil {
-		return nil, err
+	if cache := getCompilationCache(); cache != nil {
+		cfg = cfg.WithCompilationCache(cache)
 	}
 
+	r := wazero.NewRuntimeWithConfig(ctx, cfg)
 	wasi_snapshot_preview1.MustInstantiate(ctx, r)
 
-	mod, err := r.Instantiate(ctx, wasmFile)
+	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("grpc-federation: failed to compile module: %w", err)
 	}
+	stdinR, stdinW := io.Pipe()
+	stdoutR, stdoutW := io.Pipe()
+	modCfg := wazero.NewModuleConfig().
+		WithStdin(stdinR).
+		WithStdout(stdoutW).
+		WithStderr(os.Stderr)
+
+	go r.InstantiateModule(ctx, mod, modCfg) //nolint: errcheck
 	return &WasmPlugin{
-		File:   wasmCfg.Path,
-		r:      r,
-		mod:    mod,
-		malloc: mod.ExportedFunction("malloc"),
-		free:   mod.ExportedFunction("free"),
+		r:           r,
+		celRegistry: celRegistry,
+		stdin:       stdinW,
+		stdout:      stdoutR,
 	}, nil
 }
 
-func (p *WasmPlugin) Call(ctx context.Context, fn *CELFunction, md []byte, args ...ref.Val) ref.Val {
-	f := p.mod.ExportedFunction(fn.ID)
-	if f == nil {
-		return types.NewErr(fmt.Sprintf("grpc-federation: failed to find exported function %s in %s", fn.Name, p.File))
+func getCompilationCache() wazero.CompilationCache {
+	tmpDir := os.TempDir()
+	if tmpDir == "" {
+		return nil
 	}
-
-	ptr, size, err := p.stringToPtr(ctx, string(md))
-	if err != nil {
-		return types.NewErr(fmt.Sprintf("grpc-federation: failed to encode metadata: %s", err.Error()))
-	}
-	wasmArgs := []uint64{api.EncodeU32(ptr), api.EncodeU32(size)}
-	for idx, arg := range args {
-		wasmArg, err := p.refToWASMType(ctx, fn.Args[idx], arg)
-		if err != nil {
-			return types.NewErr(err.Error())
+	cacheDir := filepath.Join(tmpDir, "grpc-federation")
+	if _, err := os.Stat(cacheDir); err != nil {
+		if err := os.Mkdir(cacheDir, 0o755); err != nil {
+			return nil
 		}
-		wasmArgs = append(wasmArgs, wasmArg...)
 	}
-	result, err := f.Call(ctx, wasmArgs...)
+	cache, err := wazero.NewCompilationCacheWithDir(cacheDir)
 	if err != nil {
-		return types.NewErr(err.Error())
+		return nil
 	}
-	ret := ReturnValue(result[0])
-	if err := p.returnValueToError(ret); err != nil {
-		return types.NewErr(err.Error())
-	}
-	return p.returnValueToCELValue(fn, fn.Return, ret)
+	return cache
 }
 
-func (p *WasmPlugin) refToWASMType(ctx context.Context, typ *cel.Type, v ref.Val) ([]uint64, error) {
+func (p *WasmPlugin) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+	if err := p.sendRequest(fn, md, args...); err != nil {
+		return types.NewErr(err.Error())
+	}
+	return p.recvResponse(fn)
+}
+
+func (p *WasmPlugin) sendRequest(fn *CELFunction, md metadata.MD, args ...ref.Val) error {
+	req := &plugin.CELPluginRequest{Method: fn.ID}
+	for key, values := range md {
+		req.Metadata = append(req.Metadata, &plugin.CELPluginGRPCMetadata{
+			Key:    key,
+			Values: values,
+		})
+	}
+	for idx, arg := range args {
+		pluginArg, err := p.refToCELPluginValue(fn.Args[idx], arg)
+		if err != nil {
+			return err
+		}
+		req.Args = append(req.Args, pluginArg)
+	}
+
+	encoded, err := protojson.Marshal(req)
+	if err != nil {
+		return err
+	}
+	if _, err := p.stdin.Write(append(encoded, '\n')); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *WasmPlugin) recvResponse(fn *CELFunction) ref.Val {
+	reader := bufio.NewReader(p.stdout)
+	content, err := reader.ReadString('\n')
+	if err != nil {
+		return types.NewErr(fmt.Sprintf("grpc-federation: failed to receive response from wasm plugin: %s", err.Error()))
+	}
+	if content == "" {
+		return types.NewErr("grpc-federation: receive empty response from wasm plugin")
+	}
+
+	var res plugin.CELPluginResponse
+	if err := protojson.Unmarshal([]byte(content), &res); err != nil {
+		return types.NewErr(fmt.Sprintf("grpc-federation: failed to decode response: %s", err.Error()))
+	}
+	if res.Error != "" {
+		return types.NewErr(res.Error)
+	}
+	return p.celPluginValueToRef(fn, fn.Return, res.Value)
+}
+
+func (p *WasmPlugin) refToCELPluginValue(typ *cel.Type, v ref.Val) (*plugin.CELPluginValue, error) {
 	switch typ.Kind() {
 	case types.BoolKind:
 		vv := v.(types.Bool)
-		if vv {
-			return []uint64{uint64(1)}, nil
-		}
-		return []uint64{uint64(0)}, nil
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Bool{
+				Bool: bool(vv),
+			},
+		}, nil
 	case types.DoubleKind:
 		vv := v.(types.Double)
-		return []uint64{api.EncodeF64(float64(vv))}, nil
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Double{
+				Double: float64(vv),
+			},
+		}, nil
 	case types.IntKind:
 		vv := v.(types.Int)
-		return []uint64{api.EncodeI64(int64(vv))}, nil
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Int64{
+				Int64: int64(vv),
+			},
+		}, nil
 	case types.BytesKind:
 		vv := v.(types.Bytes)
-		ptr, size, err := p.stringToPtr(ctx, string(vv))
-		if err != nil {
-			return nil, err
-		}
-		return []uint64{api.EncodeU32(ptr), api.EncodeU32(size)}, nil
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Bytes{
+				Bytes: []byte(vv),
+			},
+		}, nil
 	case types.StringKind:
 		vv := v.(types.String)
-		ptr, size, err := p.stringToPtr(ctx, string(vv))
-		if err != nil {
-			return nil, err
-		}
-		return []uint64{api.EncodeU32(ptr), api.EncodeU32(size)}, nil
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_String_{
+				String_: string(vv),
+			},
+		}, nil
 	case types.UintKind:
 		vv := v.(types.Uint)
-		return []uint64{uint64(vv)}, nil
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Uint64{
+				Uint64: uint64(vv),
+			},
+		}, nil
 	case types.StructKind:
-		switch obj := v.Value().(type) {
-		case *objectValueWrapper:
-			return []uint64{obj.wasmValue()}, nil
+		switch vv := v.Value().(type) {
+		case proto.Message:
+			any, ok := vv.(*anypb.Any)
+			if !ok {
+				anyValue, err := anypb.New(vv)
+				if err != nil {
+					return nil, fmt.Errorf("grpc-federation: failed to create any instance: %w", err)
+				}
+				any = anyValue
+			}
+			return &plugin.CELPluginValue{
+				Value: &plugin.CELPluginValue_Message{
+					Message: any,
+				},
+			}, nil
 		default:
 			return nil, fmt.Errorf(
 				`grpc-federation: currently unsupported native proto message "%T"`,
-				obj,
+				v.Value(),
 			)
 		}
 	}
 	return nil, fmt.Errorf(`grpc-federation: found unexpected cel function's argument type "%s"`, typ)
 }
 
-type objectValueWrapper struct {
-	typ *cel.Type
-	ptr unsafe.Pointer
-}
-
-func (w *objectValueWrapper) wasmValue() uint64 {
-	return uint64(uintptr(w.ptr))
-}
-
-func (w *objectValueWrapper) ConvertToNative(typeDesc reflect.Type) (any, error) { return w, nil }
-
-func (w *objectValueWrapper) ConvertToType(typeValue ref.Type) ref.Val { return w }
-
-func (w *objectValueWrapper) Equal(other ref.Val) ref.Val { return nil }
-
-func (w *objectValueWrapper) Type() ref.Type { return w.typ }
-
-func (w *objectValueWrapper) Value() any { return w }
-
-func (p *WasmPlugin) returnValueToCELValue(fn *CELFunction, typ *cel.Type, v ReturnValue) ref.Val {
+func (p *WasmPlugin) celPluginValueToRef(fn *CELFunction, typ *cel.Type, v *plugin.CELPluginValue) ref.Val {
 	switch typ.Kind() {
 	case types.BoolKind:
-		return types.Bool(p.returnValueToBool(v))
+		return types.Bool(v.GetBool())
 	case types.BytesKind:
-		return types.Bytes(p.returnValueToBytes(v))
+		return types.Bytes(v.GetBytes())
 	case types.DoubleKind:
-		return types.Double(p.returnValueToFloat64(v))
+		return types.Double(v.GetDouble())
 	case types.ErrorKind:
-		return types.NewErr(p.returnValueToString(v))
+		return types.NewErr(v.GetString_())
 	case types.IntKind:
-		return types.Int(p.returnValueToInt64(v))
+		return types.Int(v.GetInt64())
 	case types.StringKind:
-		return types.String(p.returnValueToString(v))
+		return types.String(v.GetString_())
 	case types.UintKind:
-		return types.Uint(p.returnValueToUint64(v))
+		return types.Uint(v.GetUint64())
 	case types.StructKind:
-		return &objectValueWrapper{
-			typ: typ,
-			ptr: p.returnValueToPtr(v),
-		}
+		return p.celRegistry.NativeToValue(v.GetMessage())
 	}
 	return types.NewErr("grpc-federation: unknown result type %s from %s function", typ, fn.Name)
-}
-
-type ReturnValue uint64
-
-func (p *WasmPlugin) returnValueToPtr(v ReturnValue) unsafe.Pointer {
-	return unsafe.Pointer(uintptr(v >> 32))
-}
-
-func (p *WasmPlugin) returnValueToBool(v ReturnValue) bool {
-	return uint32(v>>32) == 1
-}
-
-func (p *WasmPlugin) returnValueToInt64(v ReturnValue) int64 {
-	return int64(v >> 32)
-}
-
-func (p *WasmPlugin) returnValueToUint64(v ReturnValue) uint64 {
-	return uint64(v) >> 32
-}
-
-func (p *WasmPlugin) returnValueToFloat64(v ReturnValue) float64 {
-	return api.DecodeF64(uint64(v) >> 32)
-}
-
-func (p *WasmPlugin) returnValueToString(v ReturnValue) string {
-	ptr := uint32(v >> 32)
-	size := uint32(v)
-	return p.ptrToString(ptr, size)
-}
-
-func (p *WasmPlugin) returnValueToBytes(v ReturnValue) []byte {
-	return []byte(p.returnValueToString(v))
-}
-
-func (p *WasmPlugin) returnValueToError(v ReturnValue) error {
-	ptr := uint32(v >> 32)
-	size := uint32(v)
-
-	if (size & (1 << 31)) <= 0 {
-		return nil
-	}
-
-	size &^= (1 << 31)
-	bytes, ok := p.mod.Memory().Read(ptr, size)
-	if !ok {
-		return fmt.Errorf(
-			`failed to read wasm memory: (ptr, size) = (%d, %d) and memory size is %d: %w`,
-			ptr, size, p.mod.Memory().Size(),
-			ErrOutOfRangeAccessWasmMemory,
-		)
-	}
-	return errors.New(string(bytes))
-}
-
-func (p *WasmPlugin) stringToPtr(ctx context.Context, s string) (uint32, uint32, error) {
-	results, err := p.malloc.Call(ctx, uint64(len(s)))
-	if err != nil {
-		return 0, 0, err
-	}
-	ptr := uint32(results[0])
-	size := uint32(len(s))
-	if !p.mod.Memory().Write(ptr, []byte(s)) {
-		return 0, 0, fmt.Errorf(
-			`failed to write wasm memory: (ptr, size) = (%d, %d) and memory size is %d: %w`,
-			ptr, size, p.mod.Memory().Size(),
-			ErrOutOfRangeAccessWasmMemory,
-		)
-	}
-	return ptr, size, nil
-}
-
-func (p *WasmPlugin) ptrToString(ptr, size uint32) string {
-	return unsafe.String((*byte)(unsafe.Pointer(uintptr(ptr))), size)
-}
-
-func wasmDebugLog(_ context.Context, m api.Module, offset, byteCount uint32) {
-	buf, ok := m.Memory().Read(offset, byteCount)
-	if !ok {
-		log.Panicf(
-			`grpc-federation: failed to output debug log: detected out of range access. (ptr, size) = (%d, %d)`,
-			offset, byteCount,
-		)
-	}
-	fmt.Fprintln(os.Stdout, string(buf))
 }

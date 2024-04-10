@@ -63,6 +63,7 @@ func TestFederation(t *testing.T) {
 		ctx, "",
 		grpc.WithContextDialer(dialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +78,7 @@ func TestFederation(t *testing.T) {
 		CELPlugin: &federation.FederationServiceCELPluginConfig{
 			Regexp: federation.FederationServiceCELPluginWasmConfig{
 				Path:   "regexp.wasm",
-				Sha256: "0930ae259c7b742192327a7761fb207ea1d3b7f37f912ca4dc742b3f359af0f9",
+				Sha256: "c64d6c921ad87cc3bd462324184ba3d1c09f0c3cf2856d2dd1868b7131fe6eb8",
 			},
 		},
 		Logger: logger,

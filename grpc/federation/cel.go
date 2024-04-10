@@ -1,5 +1,3 @@
-//go:build !tinygo.wasm
-
 package federation
 
 import (
@@ -31,6 +29,10 @@ type CELTypeHelper struct {
 	celRegistry    *celtypes.Registry
 	structFieldMap map[string]map[string]*celtypes.FieldType
 	mapMu          sync.RWMutex
+}
+
+func (h *CELTypeHelper) CELRegistry() *celtypes.Registry {
+	return h.celRegistry
 }
 
 func (h *CELTypeHelper) TypeProvider() celtypes.Provider {
