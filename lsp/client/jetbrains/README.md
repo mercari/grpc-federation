@@ -1,36 +1,28 @@
-# gRPC Federation Language Server for JetBrains
-
 <!-- Plugin description -->
+# gRPC Federation Language Server for JetBrains
+The gRPC Federation Language Server for JetBrains is a plugin designed for JetBrains IDEs to integrate with the gRPC Federation language server, offering various useful functionalities such as code completion.
+
 ## Features
 
-### Goto Definition
+Currently, the following features are supported:
 
-It supports jumps to the following definition sources.
-
-- Imported file name
-    - e.g.) import "<u>path/to/foo.proto</u>"
-
-- Type of field definition
-    - e.g.) <u>Foo</u> foo = 1
-
-- gRPC method name
-    - e.g.) def { call { method: "<u>foopkg.FooService/BarMethod</u>" } }
-
-- Alias name
-    - e.g.) option (grpc.federation.message).alias = "<u>foopkg.Bar</u>"
-
-### Diagnostics
-### Code Completion
-<!-- Plugin description end -->
+- Goto Definition
+- Diagnostics
+- Code Completion
 
 ## Installation
-To use the plugin, `grpc-federation-language-server` must be present in the path. If Go is available, run the following command to install it.
+To utilize the plugin, `grpc-federation-language-server` must be accessible in the path. If Go is available, execute the following command to install it:
 
 ```console
 $ go install github.com/mercari/grpc-federation/cmd/grpc-federation-language-server@latest
 ```
 
-Then install the plugin from the Marketplace.
+Afterward, install the plugin from the Marketplace.
 
 `Settings/Preferences` > `Plugins` > `Marketplace` > `Search for "gRPC Federation"` > `Install`
 
+## Configuration
+For `grpc-federation-language-server` to function properly, provide proto import paths to import dependent proto files.
+
+`Settings/Preferences` > `Tools` > `gRPC Federation` > `Proto Import Paths`
+<!-- Plugin description end -->
