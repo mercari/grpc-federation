@@ -30,9 +30,11 @@ jobs:
         env:
           PUBLISH_TOKEN: ${{ secrets.JET_BRAINS_PUBLISH_TOKEN }}
         run: ./gradlew publishPlugin
+        working-directory: ./lsp/client/jetbrains
 
       # Upload artifact as a release asset
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload ${{ github.event.release.tag_name }} ./build/distributions/*
+        working-directory: ./lsp/client/jetbrains
