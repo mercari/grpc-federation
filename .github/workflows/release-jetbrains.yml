@@ -36,5 +36,5 @@ jobs:
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ env.GITHUB_REF_NAME }} ./build/distributions/*
+        run: gh release upload $GITHUB_REF_NAME ./build/distributions/*
         working-directory: ./lsp/client/jetbrains
