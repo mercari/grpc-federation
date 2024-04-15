@@ -3,6 +3,8 @@ package federation
 
 import (
 	"reflect"
+
+	favorite "example/favorite"
 )
 
 var (
@@ -11,4 +13,5 @@ var (
 
 // Federation_ReactionArgument is argument for "federation.Reaction" message.
 type Federation_ReactionArgument struct {
+	V favorite.FavoriteType
 }

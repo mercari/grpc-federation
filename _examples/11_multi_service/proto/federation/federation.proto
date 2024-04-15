@@ -5,6 +5,7 @@ package federation;
 import "grpc/federation/federation.proto";
 import "comment/comment.proto";
 import "federation/reaction.proto";
+import "favorite/favorite.proto";
 
 option go_package = "example/federation;federation";
 
@@ -40,16 +41,29 @@ message Post {
     }
   };
   option (grpc.federation.message).def = {
+    name: "favorite_value" by: "favorite.FavoriteType.value('TYPE1')"
+  };
+  option (grpc.federation.message).def = {
     name: "reaction"
     message {
       name: "Reaction"
+      args { name: "v" by: "favorite_value" }
     }
   };
+
   string id = 1 [(grpc.federation.field).string = "post-id"];
   string title = 2 [(grpc.federation.field).string = "title"];
   string content = 3 [(grpc.federation.field).string = "content"];
   User user = 4 [(grpc.federation.field).by = "u"];
   Reaction reaction = 5 [(grpc.federation.field).by = "reaction"];
+  MyFavoriteType favorite_value = 6 [(grpc.federation.field).by = "favorite_value"];
+}
+
+enum MyFavoriteType {
+  option (grpc.federation.enum).alias = "favorite.FavoriteType";
+
+  UNKNOWN = 0 [(grpc.federation.enum_value).alias = "UNKNOWN"];
+  TYPE1 = 5000 [(grpc.federation.enum_value).alias = "TYPE1"];
 }
 
 message User {
