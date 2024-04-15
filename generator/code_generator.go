@@ -855,16 +855,6 @@ func (f *File) messageTypeToText(msg *resolver.Message) string {
 	return fmt.Sprintf("*%s.%s", msg.GoPackage().Name, name)
 }
 
-// enumTextForService used by Enums().
-func (f *File) enumTextForService(enum *resolver.Enum) string {
-	// f.enums contain all the enums defined in the package
-	// Currently Enums are used only from a File contains Services
-	if len(f.File.Services) != 0 {
-		f.pkgMap[enum.GoPackage()] = struct{}{}
-	}
-	return f.enumTypeToText(enum)
-}
-
 func (f *File) enumTypeToText(enum *resolver.Enum) string {
 	var name string
 	if enum.Message != nil {
