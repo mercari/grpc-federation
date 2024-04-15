@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	gocontext "context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -31,6 +30,7 @@ type Resolver struct {
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
 	celPluginMap               map[string]*CELPlugin
+	ctxOverloadIDPrefixes      []string
 
 	serviceToRuleMap   map[*Service]*federation.ServiceRule
 	methodToRuleMap    map[*Method]*federation.MethodRule
@@ -56,6 +56,7 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 		protoPackageNameToFileDefs: make(map[string][]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToPackage:  make(map[string]*Package),
 		celPluginMap:               make(map[string]*CELPlugin),
+		ctxOverloadIDPrefixes:      grpcfedcel.NewLibrary().ContextOverloadIDPrefixes(),
 
 		serviceToRuleMap:   make(map[*Service]*federation.ServiceRule),
 		methodToRuleMap:    make(map[*Method]*federation.MethodRule),
@@ -1408,6 +1409,10 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 }
 
 func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, builder *source.GRPCErrorOptionBuilder) *GRPCError {
+	var msg *CELValue
+	if m := def.GetMessage(); m != "" {
+		msg = &CELValue{Expr: m}
+	}
 	return &GRPCError{
 		DefSet: &VariableDefinitionSet{
 			Defs: r.resolveVariableDefinitions(ctx, def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
@@ -1416,7 +1421,7 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 		},
 		If:      r.resolveGRPCErrorIf(def.GetIf()),
 		Code:    def.GetCode(),
-		Message: def.GetMessage(),
+		Message: msg,
 		Details: r.resolveGRPCErrorDetails(ctx, def.GetDetails(), builder),
 		Ignore:  def.GetIgnore(),
 	}
@@ -2693,6 +2698,24 @@ func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr
 			),
 		)
 	}
+	if grpcErr.Message != nil {
+		if err := r.resolveCELValue(ctx, env, grpcErr.Message); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithMessage().Location(),
+				),
+			)
+		}
+		if grpcErr.Message.Out != nil && grpcErr.Message.Out.Kind != types.String {
+			ctx.addError(
+				ErrWithLocation(
+					"message must always return a string value",
+					builder.WithMessage().Location(),
+				),
+			)
+		}
+	}
 	for idx, detail := range grpcErr.Details {
 		r.resolveGRPCErrorDetailCELValues(ctx, env, detail, builder.WithDetail(idx))
 	}
@@ -2879,6 +2902,24 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	if err != nil {
 		return err
 	}
+	var useContextLib bool
+	for _, ref := range checkedExpr.GetReferenceMap() {
+		for _, overloadID := range ref.GetOverloadId() {
+			for _, prefix := range r.ctxOverloadIDPrefixes {
+				if strings.HasPrefix(overloadID, prefix) {
+					useContextLib = true
+				}
+			}
+			for _, plugin := range r.celPluginMap {
+				for _, fn := range plugin.Functions {
+					if strings.HasPrefix(overloadID, fn.ID) {
+						useContextLib = true
+					}
+				}
+			}
+		}
+	}
+	value.UseContextLibrary = useContextLib
 	value.Out = out
 	value.CheckedExpr = checkedExpr
 	return nil
@@ -2888,7 +2929,6 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary()),
-		cel.Lib(grpcfedcel.NewContextualLibrary(gocontext.Background())),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),

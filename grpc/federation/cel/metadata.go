@@ -11,10 +11,8 @@ import (
 
 const MetadataPackageName = "metadata"
 
-func NewMetadataLibrary(ctx context.Context) *MetadataLibrary {
-	return &MetadataLibrary{
-		ctx: ctx,
-	}
+func NewMetadataLibrary() *MetadataLibrary {
+	return &MetadataLibrary{}
 }
 
 type MetadataLibrary struct {
@@ -23,6 +21,10 @@ type MetadataLibrary struct {
 
 func (lib *MetadataLibrary) LibraryName() string {
 	return packageName(MetadataPackageName)
+}
+
+func (lib *MetadataLibrary) Initialize(ctx context.Context) {
+	lib.ctx = ctx
 }
 
 func createMetadata(name string) string {

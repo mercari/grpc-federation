@@ -322,8 +322,8 @@ func (e *GRPCError) ProtoFormat(opt *ProtoFormatOption) string {
 	if val := e.If; val != nil {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", val.Expr))
 	}
-	if m := e.Message; m != "" {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("message: %q", m))
+	if m := e.Message; m != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("message: %q", m.Expr))
 	}
 	if len(e.Details) != 0 {
 		elems = append(elems, e.Details.ProtoFormat(nextOpt))

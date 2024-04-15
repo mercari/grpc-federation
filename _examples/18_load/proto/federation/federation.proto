@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "plugin/plugin.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {}
+    
+message GetResponse {
+  option (grpc.federation.message) = {
+    def { name: "id_from_plugin" by: "example.account.get_id()" }
+    def { name: "id_from_metadata" by: "grpc.federation.metadata.incoming()['id'][0]" }
+  };
+  string id_from_plugin = 1 [(grpc.federation.field).by = "id_from_plugin"];
+  string id_from_metadata = 2 [(grpc.federation.field).by = "id_from_metadata"];
+}

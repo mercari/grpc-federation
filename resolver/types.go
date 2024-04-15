@@ -226,7 +226,7 @@ type GRPCError struct {
 	DefSet  *VariableDefinitionSet
 	If      *CELValue
 	Code    code.Code
-	Message string
+	Message *CELValue
 	Details GRPCErrorDetails
 	Ignore  bool
 }
@@ -437,9 +437,10 @@ type Value struct {
 }
 
 type CELValue struct {
-	Expr        string
-	Out         *Type
-	CheckedExpr *exprv1.CheckedExpr
+	Expr              string
+	Out               *Type
+	CheckedExpr       *exprv1.CheckedExpr
+	UseContextLibrary bool
 }
 
 type ConstValue struct {
