@@ -399,7 +399,7 @@ func validateMessageNodeCyclicDependency(target *MessageDependencyGraphNode, vis
 		}
 		return ErrWithLocation(
 			fmt.Sprintf(`found cyclic dependency for "%s.%s" message. dependency path: %s`, target.BaseMessage.PackageName(), target.BaseMessage.Name, dependencyPath),
-			source.NewMessageBuilder(target.BaseMessage.File.Name, target.BaseMessage.Name).Location(),
+			newMessageBuilderFromMessage(target.BaseMessage).Location(),
 		)
 	}
 	visited[target] = struct{}{}
@@ -439,7 +439,7 @@ func validateAllMessageGraphNodeCyclicDependency(target *AllMessageDependencyGra
 
 		return ErrWithLocation(
 			fmt.Sprintf(`found cyclic dependency in "%s.%s" message. dependency path: %s`, target.Message.PackageName(), target.Message.Name, dependencyPath),
-			source.NewMessageBuilder(target.Message.File.Name, target.Message.Name).Location(),
+			newMessageBuilderFromMessage(target.Message).Location(),
 		)
 	}
 	visited[target] = struct{}{}

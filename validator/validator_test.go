@@ -134,6 +134,23 @@ testdata/invalid_message_alias.proto:57:3: "title" field in "org.federation.Post
 testdata/invalid_message_alias.proto:58:3: "content" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
 58:    PostContent content = 3;
        ^
+testdata/invalid_message_alias.proto:73:3: "org.federation.SomeUser" message does not exist
+73:    option (grpc.federation.message).alias = "SomeUser";
+       ^
+testdata/invalid_message_alias.proto:75:3: "name" field in "org.federation.User" message needs to specify "grpc.federation.field" option
+75:    string name = 1;
+       ^
+testdata/invalid_message_alias.proto:79:3: "google.protobuf.Comment" message does not exist
+79:    option (grpc.federation.message).alias = "google.protobuf.Comment";
+       ^
+testdata/invalid_message_alias.proto:81:3: "body" field in "org.federation.Comment" message needs to specify "grpc.federation.field" option
+81:    string body = 1;
+       ^
+`},
+		{file: "invalid_nested_message_field.proto", expected: `
+testdata/invalid_nested_message_field.proto:52:7: "body" field in "federation.A.B.C" message needs to specify "grpc.federation.field" option
+52:        string body = 1;
+           ^
 `},
 		{file: "invalid_method.proto", expected: `
 testdata/invalid_method.proto:36:24: invalid method format. required format is "<package-name>.<service-name>/<method-name>" but specified ""
@@ -373,6 +390,26 @@ testdata/invalid_message_name.proto:63:47: unknown type null_type is required
 63:    User user = 4 [(grpc.federation.field).by = "user1"];
                                                    ^
 `},
+		{file: "invalid_nested_message_name.proto", expected: `
+testdata/invalid_nested_message_name.proto:36:31: "federation.Invalid1" message does not exist
+36:          { name: "b1" message: { name: "Invalid1" } }
+                                   ^
+testdata/invalid_nested_message_name.proto:36:39: undefined message specified
+36:          { name: "b1" message: { name: "Invalid1" } }
+                                           ^
+testdata/invalid_nested_message_name.proto:42:33: "federation.Invalid2" message does not exist
+42:            { name: "c1" message: { name: "Invalid2" } }
+                                     ^
+testdata/invalid_nested_message_name.proto:42:41: undefined message specified
+42:            { name: "c1" message: { name: "Invalid2" } }
+                                             ^
+testdata/invalid_nested_message_name.proto:45:51: unknown type null_type is required
+45:        string c1 = 1 [(grpc.federation.field).by = "c1"];
+                                                       ^
+testdata/invalid_nested_message_name.proto:47:49: unknown type null_type is required
+47:      string b1 = 1 [(grpc.federation.field).by = "b1"];
+                                                     ^
+`},
 		{file: "invalid_message_argument.proto", expected: `
 testdata/invalid_message_argument.proto:49:19: ERROR: <input>:1:11: type 'string' does not support field selection
  | __ARG__.id.invalid
@@ -439,6 +476,14 @@ testdata/recursive_message_name.proto:49:3: "content" field in "federation.Post"
 testdata/message_cyclic_dependency.proto:27:1: found cyclic dependency in "org.federation.A" message. dependency path: GetResponse => A => AA => AAA => A
 27:  message A {
      ^
+`},
+		{file: "nested_message_cyclic_dependency.proto", expected: `
+testdata/nested_message_cyclic_dependency.proto:50:5: found cyclic dependency in "federation.C" message. dependency path: GetAResponse => A => B => C => C
+50:      message C {
+         ^
+testdata/nested_message_cyclic_dependency.proto:55:19: recursive definition: "C" is own message name
+55:              name: "A.B.C"
+                       ^
 `},
 		{file: "invalid_validation_return_type.proto", expected: `
 testdata/invalid_validation_return_type.proto:48:17: if must always return a boolean value

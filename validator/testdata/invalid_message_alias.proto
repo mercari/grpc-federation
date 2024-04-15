@@ -68,3 +68,15 @@ message PostContent {
   string head = 2;
   string body = 3;
 }
+
+message User {
+  option (grpc.federation.message).alias = "SomeUser";
+
+  string name = 1;
+}
+
+message Comment {
+  option (grpc.federation.message).alias = "google.protobuf.Comment";
+
+  string body = 1;
+}

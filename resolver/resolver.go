@@ -733,7 +733,9 @@ func (r *Resolver) resolveRule(ctx *context, files []*File) {
 	for _, file := range files {
 		ctx := ctx.withFile(file)
 		r.resolveServiceRules(ctx, file.Services)
-		r.resolveMessageRules(ctx, file.Messages)
+		r.resolveMessageRules(ctx, file.Messages, func(name string) *source.MessageBuilder {
+			return source.NewMessageBuilder(file.Name, name)
+		})
 		r.resolveEnumRules(ctx, file.Enums)
 	}
 }
@@ -752,19 +754,21 @@ func (r *Resolver) resolveMethodRules(ctx *context, mtds []*Method, builder *sou
 	}
 }
 
-func (r *Resolver) resolveMessageRules(ctx *context, msgs []*Message) {
+func (r *Resolver) resolveMessageRules(ctx *context, msgs []*Message, builder func(name string) *source.MessageBuilder) {
 	for _, msg := range msgs {
 		ctx := ctx.withMessage(msg)
-		builder := source.NewMessageBuilder(msg.File.Name, msg.Name)
-		r.resolveMessageRule(ctx, msg, r.messageToRuleMap[msg], builder.WithOption())
-		r.resolveFieldRules(ctx, msg, builder)
+		mb := builder(msg.Name)
+		r.resolveMessageRule(ctx, msg, r.messageToRuleMap[msg], mb.WithOption())
+		r.resolveFieldRules(ctx, msg, mb)
 		r.resolveEnumRules(ctx, msg.Enums)
 		if msg.HasCustomResolver() || msg.HasCustomResolverFields() {
-			// If use custom resolver, set the `Used` flag true
+			// If using custom resolver, set the `Used` flag true
 			// because all dependency message references are passed as arguments for custom resolver.
 			msg.UseAllNameReference()
 		}
-		r.resolveMessageRules(ctx, msg.NestedMessages)
+		r.resolveMessageRules(ctx, msg.NestedMessages, func(name string) *source.MessageBuilder {
+			return mb.WithMessage(name)
+		})
 	}
 }
 
@@ -912,10 +916,10 @@ func (r *Resolver) validateName(name string) error {
 func (r *Resolver) validateMessages(ctx *context, msgs []*Message) {
 	for _, msg := range msgs {
 		ctx := ctx.withFile(msg.File).withMessage(msg)
-		builder := source.NewMessageBuilder(msg.File.Name, msg.Name)
-		r.validateMessageAlias(ctx, msg, builder)
-		r.validateMessageFields(ctx, msg, builder)
-		r.validateMessages(ctx, msg.NestedMessages)
+		mb := newMessageBuilderFromMessage(msg)
+		r.validateMessageAlias(ctx, msg, mb)
+		r.validateMessageFields(ctx, msg, mb)
+		// Don't have to check msg.NestedMessages since r.allMessages(files) already includes nested messages
 	}
 }
 
@@ -1173,9 +1177,9 @@ func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string, builder *
 			return nil
 		}
 		name := r.trimPackage(pkg, aliasName)
-		return r.resolveMessage(ctx, pkg, name, source.NewMessageBuilder(ctx.fileName(), name))
+		return r.resolveMessage(ctx, pkg, name, source.ToLazyMessageBuilder(builder, name))
 	}
-	return r.resolveMessage(ctx, ctx.file().Package, aliasName, source.NewMessageBuilder(ctx.fileName(), aliasName))
+	return r.resolveMessage(ctx, ctx.file().Package, aliasName, source.ToLazyMessageBuilder(builder, aliasName))
 }
 
 func (r *Resolver) resolveVariableDefinitions(ctx *context, varDefs []*federation.VariableDefinition, builderFn func(idx int) *source.VariableDefinitionOptionBuilder) []*VariableDefinition {
@@ -2268,13 +2272,14 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 
 func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessageDependencyGraphNode) []*Message {
 	msg := node.Message
+	builder := newMessageBuilderFromMessage(msg)
 	arg := msg.Rule.MessageArgument
 	fileDesc := messageArgumentFileDescriptor(arg)
 	if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
-				source.NewMessageBuilder(msg.File.Name, msg.Name).Location(),
+				builder.Location(),
 			),
 		)
 		return nil
@@ -2284,12 +2289,12 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
-				source.NewMessageBuilder(msg.File.Name, msg.Name).Location(),
+				builder.Location(),
 			),
 		)
 		return nil
 	}
-	r.resolveMessageCELValues(ctx.withFile(msg.File).withMessage(msg), env, msg)
+	r.resolveMessageCELValues(ctx.withFile(msg.File).withMessage(msg), env, msg, builder)
 
 	msgs := []*Message{msg}
 	msgToDefsMap := msg.Rule.DefSet.MessageToDefsMap()
@@ -2425,7 +2430,7 @@ func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMa
 	}
 }
 
-func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Message) {
+func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Message, builder *source.MessageBuilder) {
 	if msg.Rule == nil {
 		return
 	}
@@ -2438,7 +2443,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 			continue
 		}
 
-		fieldBuilder := source.NewMessageBuilder(msg.File.Name, msg.Name).WithField(field.Name).WithOption()
+		fieldBuilder := builder.WithField(field.Name).WithOption()
 
 		if field.Rule.Value != nil {
 			if err := r.resolveCELValue(ctx, env, field.Rule.Value.CEL); err != nil {
@@ -3514,6 +3519,14 @@ func (r *Resolver) trimPackage(pkg *Package, name string) string {
 		return name
 	}
 	return strings.TrimPrefix(name, fmt.Sprintf("%s.", pkg.Name))
+}
+
+func newMessageBuilderFromMessage(message *Message) *source.MessageBuilder {
+	if message.ParentMessage == nil {
+		return source.NewMessageBuilder(message.FileName(), message.Name)
+	}
+	builder := newMessageBuilderFromMessage(message.ParentMessage)
+	return builder.WithMessage(message.Name)
 }
 
 func splitGoPackageName(goPackage string) (string, string, error) {
