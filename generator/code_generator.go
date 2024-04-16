@@ -383,9 +383,14 @@ func (f *File) Enums() []*Enum {
 		if strings.HasPrefix(protoName, "google.") {
 			continue
 		}
+		// f.enums contain all the enums defined in the package
+		// Currently Enums are used only from a File contains Services.
+		if len(f.File.Services) != 0 {
+			f.pkgMap[enum.GoPackage()] = struct{}{}
+		}
 		ret = append(ret, &Enum{
 			ProtoName: protoName,
-			GoName:    f.toTypeText(&resolver.Type{Kind: types.Enum, Enum: enum}),
+			GoName:    f.enumTypeToText(enum),
 		})
 	}
 	return ret
@@ -808,6 +813,7 @@ func (f *File) toTypeText(t *resolver.Type) string {
 	case types.Bytes:
 		typ = "[]byte"
 	case types.Enum:
+		f.pkgMap[t.Enum.GoPackage()] = struct{}{}
 		typ = f.enumTypeToText(t.Enum)
 	case types.Message:
 		if t.OneofField != nil {
@@ -860,11 +866,6 @@ func (f *File) messageTypeToText(msg *resolver.Message) string {
 }
 
 func (f *File) enumTypeToText(enum *resolver.Enum) string {
-	// f.enums contain all the enums defined in the package
-	// Currently Enums are used only from a File contains Services
-	if len(f.File.Services) != 0 {
-		f.pkgMap[enum.GoPackage()] = struct{}{}
-	}
 	var name string
 	if enum.Message != nil {
 		name = strings.Join(append(enum.Message.ParentMessageNames(), enum.Message.Name, enum.Name), "_")

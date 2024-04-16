@@ -91,7 +91,7 @@ func toCELType(typ *Type) *cel.Type {
 	case types.Bytes:
 		return cel.BytesType
 	case types.Enum:
-		return cel.IntType
+		return celtypes.NewOpaqueType(typ.Enum.FQDN(), cel.IntType)
 	}
 	return cel.NullType
 }
