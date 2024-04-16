@@ -1,7 +1,8 @@
 {{- define "errorHandler" }}
 {{- $ctx := .Ctx }}
-{{- if .Definition.HasErrorHandler }}
-{{- $grpcErrors := .Definition.GRPCErrors }}
+{{- $def := .Definition }}
+{{- if $def.HasErrorHandler }}
+{{- $grpcErrors := $def.GRPCErrors }}
 {{- if $grpcErrors }}
 grpcfed.SetGRPCError({{ $ctx }}, value, err)
 stat, handleErr := func() (*grpcfed.Status, error) {
@@ -10,74 +11,102 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 	{{- if .VariableDefinitionSet }}
 	{{- template "evalDefSet" .VariableDefinitionSet }}
 	{{- end }}
-	if err := grpcfed.If({{ $ctx }}, value, "{{ .If.Expr }}", func(value *localValueType) error {
-		{{- if .Ignore }}
-		stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-		return nil
-		{{- else }}
+	if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
+		Value: value,
+		Expr: "{{ .If.Expr }}",
+		UseContextLibrary: {{ .If.UseContextLibrary }},
+		CacheIndex: {{ $def.CELCacheIndex }},
+		Body: func(value *localValueType) error {
+			{{- if .Ignore }}
+			stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+			return nil
+			{{- else }}
 
-		errorMessage, err := grpcfed.EvalCEL(ctx, value, "{{ .Message }}", reflect.TypeOf(""))
-		if err != nil {
-			return err
-		}
+			{{- if .Message }}
+			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				Value: value,
+				Expr: "{{ .Message.Expr }}",
+				UseContextLibrary: {{ .Message.UseContextLibrary }},
+				OutType: reflect.TypeOf(""),
+				CacheIndex: {{ $def.CELCacheIndex }},
+			})
+			if err != nil {
+				return err
+			}
+			errorMessage := errmsg.(string)
+			{{- else }}
+			errorMessage := "error"
+			{{- end }}
 
-		{{- $details := .Details }}
-		{{- if $details }}
-		var details       []grpcfed.ProtoMessage
-		{{- range $details }}
-		{{- if .VariableDefinitionSet }}
-		if _, err := func() (any, error){
-			{{- template "evalDefSet" .VariableDefinitionSet }}
-			return nil, nil
-		}(); err != nil {
-			return err
-		}
-		{{- end }}
-		if err := grpcfed.If({{ $ctx }}, value, "{{ .If.Expr }}", func(value *localValueType) error {
-			{{- if .MessageSet }}
+			{{- $details := .Details }}
+			{{- if $details }}
+			var details       []grpcfed.ProtoMessage
+			{{- range $details }}
+			{{- if .VariableDefinitionSet }}
 			if _, err := func() (any, error){
-				{{- template "evalDefSet" .MessageSet }}
+				{{- template "evalDefSet" .VariableDefinitionSet }}
 				return nil, nil
 			}(); err != nil {
 				return err
 			}
-			{{- range $idx, $def := .MessageSet.Definitions }}
-			if detail := grpcfed.CustomMessage({{ $ctx }}, value, "{{ $def.Name }}", {{ $idx }}); detail != nil {
-				details = append(details, detail)
+			{{- end }}
+			if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
+				Value: value,
+				Expr: "{{ .If.Expr }}",
+				UseContextLibrary: {{ .If.UseContextLibrary }},
+				CacheIndex: {{ $def.CELCacheIndex }},
+				Body: func(value *localValueType) error {
+					{{- if .MessageSet }}
+					if _, err := func() (any, error){
+						{{- template "evalDefSet" .MessageSet }}
+						return nil, nil
+					}(); err != nil {
+						return err
+					}
+					{{- range $idx, $def := .MessageSet.Definitions }}
+					if detail := grpcfed.CustomMessage({{ $ctx }}, &grpcfed.CustomMessageParam{
+						Value: value,
+						MessageValueName: "{{ $def.Name }}",
+						CacheIndex: {{ $def.CELCacheIndex }},
+						MessageIndex: {{ $idx }},
+					}); detail != nil {
+						details = append(details, detail)
+					}
+					{{- end }}
+					{{- end }}
+
+					{{- range .PreconditionFailures }}
+					{{- template "preconditionFailure" . }}
+					{{- end }}
+					{{- range .BadRequests }}
+					{{- template "badRequest" . }}
+					{{- end }}
+					{{- range .LocalizedMessages }}
+					{{- template "localizedMessage" . }}
+					{{- end }}
+					return nil
+				},
+			}); err != nil {
+				return err
 			}
 			{{- end }}
 			{{- end }}
 
-			{{- range .PreconditionFailures }}
-			{{- template "preconditionFailure" . }}
-			{{- end }}
-			{{- range .BadRequests }}
-			{{- template "badRequest" . }}
-			{{- end }}
-			{{- range .LocalizedMessages }}
-			{{- template "localizedMessage" . }}
+			{{- if $details }}
+			status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage)
+			statusWithDetails, err := status.WithDetails(details...)
+			if err != nil {
+				s.logger.ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
+				stat = status
+			} else {
+				stat = statusWithDetails
+			}
+			{{- else }}
+			stat = grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage)
 			{{- end }}
 			return nil
-		}); err != nil {
-			return err
-		}
-		{{- end }}
-		{{- end }}
-
-		{{- if $details }}
-		status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage.(string))
-		statusWithDetails, err := status.WithDetails(details...)
-		if err != nil {
-			s.logger.ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
-			stat = status
-		} else {
-			stat = statusWithDetails
-		}
-		{{- else }}
-		stat = grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage.(string))
-		{{- end }}
-		return nil
-		{{- end }}
+			{{- end }}
+		},
 	}); err != nil {
 		return nil, err
 	}
@@ -90,23 +119,23 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 if handleErr != nil {
 	s.logger.ErrorContext({{ $ctx }}, "failed to handle error", slog.String("error", handleErr.Error()))
 	// If it fails during error handling, return the original error.
-	if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
+	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 		return nil, err
 	}
 } else if stat != nil {
-	if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, stat.Err()); err != nil {
+	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, stat.Err()); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 		return nil, err
 	}
 } else {
-	if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
+	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 		return nil, err
 	}
 }
 {{- else }}
-if err := s.errorHandler({{ $ctx }}, {{ .Definition.ServiceName }}_DependentMethod_{{ .Definition.DependentMethodName }}, err); err != nil {
+if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 	grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 	return nil, err
 }
@@ -148,7 +177,12 @@ func(){
 		return
 	}
 	{{- range $i, $message := .Messages.Defs }}
-	if detail := grpcfed.CustomMessage(ctx, value, "{{ $message.Name }}", {{ $i }}); detail != nil {
+	if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
+		Value: value,
+		MessageValueName: "{{ $message.Name }}",
+		CacheIndex: {{ $message.CELCacheIndex }},
+		MessageIndex: {{ $i }},
+	}); detail != nil {
 		details = append(details, detail)
 	}
 	{{- end }}
@@ -163,6 +197,12 @@ if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFail
 		Type:    "{{ .Type.Expr }}",
 		Subject: "{{ .Subject.Expr }}",
 		Desc:    "{{ .Description.Expr }}",
+		TypeUseContextLibrary:    {{ .Type.UseContextLibrary }},
+		SubjectUseContextLibrary: {{ .Subject.UseContextLibrary }},
+		DescUseContextLibrary:    {{ .Description.UseContextLibrary }},
+		TypeCacheIndex: {{ .CELCacheIndex }},
+		SubjectCacheIndex: {{ .CELCacheIndex }},
+		DescCacheIndex: {{ .CELCacheIndex }},
 	},
 	{{- end }}
 }); detail != nil {
@@ -176,6 +216,10 @@ if detail := grpcfed.BadRequest(ctx, value, []*grpcfed.BadRequestFieldViolation{
 	{
 		Field: "{{ .Field.Expr }}",
 		Desc:  "{{ .Description.Expr }}",
+		FieldUseContextLibrary: {{ .Field.UseContextLibrary }},
+		DescUseContextLibrary: {{ .Description.UseContextLibrary }},
+		FieldCacheIndex: {{ .CELCacheIndex }},
+		DescCacheIndex: {{ .CELCacheIndex }},
 	},
 	{{- end }}
 }); detail != nil {
@@ -184,7 +228,13 @@ if detail := grpcfed.BadRequest(ctx, value, []*grpcfed.BadRequestFieldViolation{
 {{- end }}
 
 {{- define "localizedMessage" }}
-if detail := grpcfed.LocalizedMessage(ctx, value, "{{ .Locale }}", "{{ .Message.Expr }}"); detail != nil {
+if detail := grpcfed.LocalizedMessage(ctx, &grpcfed.LocalizedMessageParam{
+	Value: value,
+	Locale: "{{ .Locale }}",
+	Message: "{{ .Message.Expr }}",
+	UseContextLibrary: {{ .Message.UseContextLibrary }},
+	CacheIndex: {{ .CELCacheIndex }},
+}); detail != nil {
 	details = append(details, detail)
 }
 {{- end }}

@@ -1,19 +1,33 @@
 package cel
 
 import (
+	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+
+	"github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
 )
 
 type CELPlugin struct {
-	Name      string
-	Functions []*CELFunction
-	wasm      *WasmPlugin
-	ctx       context.Context
+	cfg         CELPluginConfig
+	mod         wazero.CompiledModule
+	wasmRuntime wazero.Runtime
 }
 
 type CELFunction struct {
@@ -35,36 +49,114 @@ type WasmConfig struct {
 	Sha256 string
 }
 
-func NewCELPlugin(ctx context.Context, cfg CELPluginConfig, celRegistry *types.Registry) (*CELPlugin, error) {
-	wasm, err := NewWasmPlugin(ctx, cfg.Wasm, celRegistry)
+var (
+	ErrWasmContentMismatch = errors.New(
+		`grpc-federation: wasm file content mismatch`,
+	)
+)
+
+func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
+	wasmFile, err := os.ReadFile(cfg.Wasm.Path)
 	if err != nil {
 		return nil, err
 	}
+	hash := sha256.Sum256(wasmFile)
+	gotHash := hex.EncodeToString(hash[:])
+	if cfg.Wasm.Sha256 != gotHash {
+		return nil, fmt.Errorf(`expected [%s] but got [%s]: %w`, cfg.Wasm.Sha256, gotHash, ErrWasmContentMismatch)
+	}
+	runtimeCfg := wazero.NewRuntimeConfig().WithCloseOnContextDone(true)
+	if cache := getCompilationCache(); cache != nil {
+		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
+	}
+
+	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
+	wasi_snapshot_preview1.MustInstantiate(ctx, r)
+
+	mod, err := r.CompileModule(ctx, wasmFile)
+	if err != nil {
+		return nil, fmt.Errorf("grpc-federation: failed to compile module: %w", err)
+	}
+
 	return &CELPlugin{
-		Name:      cfg.Name,
-		Functions: cfg.Functions,
-		wasm:      wasm,
+		cfg:         cfg,
+		mod:         mod,
+		wasmRuntime: r,
 	}, nil
 }
 
-func (p *CELPlugin) SetContext(ctx context.Context) {
-	p.ctx = ctx
-}
-
-func (p *CELPlugin) LibraryName() string {
-	return p.Name
-}
-
-func (p *CELPlugin) CompileOptions() []cel.EnvOption {
-	md, ok := metadata.FromIncomingContext(p.ctx)
-	if !ok {
-		md = make(metadata.MD)
+func getCompilationCache() wazero.CompilationCache {
+	tmpDir := os.TempDir()
+	if tmpDir == "" {
+		return nil
 	}
+	cacheDir := filepath.Join(tmpDir, "grpc-federation")
+	if _, err := os.Stat(cacheDir); err != nil {
+		if err := os.Mkdir(cacheDir, 0o755); err != nil {
+			return nil
+		}
+	}
+	cache, err := wazero.NewCompilationCacheWithDir(cacheDir)
+	if err != nil {
+		return nil
+	}
+	return cache
+}
+
+func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) *CELPluginInstance {
+	stdinR, stdinW := io.Pipe()
+	stdoutR, stdoutW := io.Pipe()
+	modCfg := wazero.NewModuleConfig().
+		WithStdin(stdinR).
+		WithStdout(stdoutW).
+		WithStderr(os.Stderr)
+
+	go p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg) //nolint: errcheck
+	return &CELPluginInstance{
+		name:        p.cfg.Name,
+		functions:   p.cfg.Functions,
+		celRegistry: celRegistry,
+		stdin:       stdinW,
+		stdout:      stdoutR,
+	}
+}
+
+type CELPluginInstance struct {
+	ctx         context.Context
+	name        string
+	functions   []*CELFunction
+	celRegistry *types.Registry
+	stdin       *io.PipeWriter
+	stdout      *io.PipeReader
+}
+
+var exitSignal = "exit\n"
+
+func (i *CELPluginInstance) Close(ctx context.Context) error {
+	if _, err := i.stdin.Write([]byte(exitSignal)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i *CELPluginInstance) Initialize(ctx context.Context) {
+	i.ctx = ctx
+}
+
+func (i *CELPluginInstance) LibraryName() string {
+	return i.name
+}
+
+func (i *CELPluginInstance) CompileOptions() []cel.EnvOption {
 	var opts []cel.EnvOption
-	for _, fn := range p.Functions {
+	for _, fn := range i.functions {
 		fn := fn
 		bindFunc := cel.FunctionBinding(func(args ...ref.Val) ref.Val {
-			return p.wasm.Call(p.ctx, fn, md, args...)
+			md, ok := metadata.FromIncomingContext(i.ctx)
+			if !ok {
+				md = make(metadata.MD)
+			}
+			return i.Call(i.ctx, fn, md, args...)
 		})
 		var overload cel.FunctionOpt
 		if fn.IsMethod {
@@ -77,6 +169,151 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 	return opts
 }
 
-func (p *CELPlugin) ProgramOptions() []cel.ProgramOption {
+func (i *CELPluginInstance) ProgramOptions() []cel.ProgramOption {
 	return []cel.ProgramOption{}
+}
+
+func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+	if err := i.sendRequest(fn, md, args...); err != nil {
+		return types.NewErr(err.Error())
+	}
+	return i.recvResponse(fn)
+}
+
+func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ...ref.Val) error {
+	req := &plugin.CELPluginRequest{Method: fn.ID}
+	for key, values := range md {
+		req.Metadata = append(req.Metadata, &plugin.CELPluginGRPCMetadata{
+			Key:    key,
+			Values: values,
+		})
+	}
+	for idx, arg := range args {
+		pluginArg, err := i.refToCELPluginValue(fn.Args[idx], arg)
+		if err != nil {
+			return err
+		}
+		req.Args = append(req.Args, pluginArg)
+	}
+
+	encoded, err := protojson.Marshal(req)
+	if err != nil {
+		return err
+	}
+	if _, err := i.stdin.Write(append(encoded, '\n')); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
+	reader := bufio.NewReader(i.stdout)
+	content, err := reader.ReadString('\n')
+	if err != nil {
+		return types.NewErr(fmt.Sprintf("grpc-federation: failed to receive response from wasm plugin: %s", err.Error()))
+	}
+	if content == "" {
+		return types.NewErr("grpc-federation: receive empty response from wasm plugin")
+	}
+
+	var res plugin.CELPluginResponse
+	if err := protojson.Unmarshal([]byte(content), &res); err != nil {
+		return types.NewErr(fmt.Sprintf("grpc-federation: failed to decode response: %s", err.Error()))
+	}
+	if res.Error != "" {
+		return types.NewErr(res.Error)
+	}
+	return i.celPluginValueToRef(fn, fn.Return, res.Value)
+}
+
+func (i *CELPluginInstance) refToCELPluginValue(typ *cel.Type, v ref.Val) (*plugin.CELPluginValue, error) {
+	switch typ.Kind() {
+	case types.BoolKind:
+		vv := v.(types.Bool)
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Bool{
+				Bool: bool(vv),
+			},
+		}, nil
+	case types.DoubleKind:
+		vv := v.(types.Double)
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Double{
+				Double: float64(vv),
+			},
+		}, nil
+	case types.IntKind:
+		vv := v.(types.Int)
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Int64{
+				Int64: int64(vv),
+			},
+		}, nil
+	case types.BytesKind:
+		vv := v.(types.Bytes)
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Bytes{
+				Bytes: []byte(vv),
+			},
+		}, nil
+	case types.StringKind:
+		vv := v.(types.String)
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_String_{
+				String_: string(vv),
+			},
+		}, nil
+	case types.UintKind:
+		vv := v.(types.Uint)
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_Uint64{
+				Uint64: uint64(vv),
+			},
+		}, nil
+	case types.StructKind:
+		switch vv := v.Value().(type) {
+		case proto.Message:
+			any, ok := vv.(*anypb.Any)
+			if !ok {
+				anyValue, err := anypb.New(vv)
+				if err != nil {
+					return nil, fmt.Errorf("grpc-federation: failed to create any instance: %w", err)
+				}
+				any = anyValue
+			}
+			return &plugin.CELPluginValue{
+				Value: &plugin.CELPluginValue_Message{
+					Message: any,
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf(
+				`grpc-federation: currently unsupported native proto message "%T"`,
+				v.Value(),
+			)
+		}
+	}
+	return nil, fmt.Errorf(`grpc-federation: found unexpected cel function's argument type "%s"`, typ)
+}
+
+func (i *CELPluginInstance) celPluginValueToRef(fn *CELFunction, typ *cel.Type, v *plugin.CELPluginValue) ref.Val {
+	switch typ.Kind() {
+	case types.BoolKind:
+		return types.Bool(v.GetBool())
+	case types.BytesKind:
+		return types.Bytes(v.GetBytes())
+	case types.DoubleKind:
+		return types.Double(v.GetDouble())
+	case types.ErrorKind:
+		return types.NewErr(v.GetString_())
+	case types.IntKind:
+		return types.Int(v.GetInt64())
+	case types.StringKind:
+		return types.String(v.GetString_())
+	case types.UintKind:
+		return types.Uint(v.GetUint64())
+	case types.StructKind:
+		return i.celRegistry.NativeToValue(v.GetMessage())
+	}
+	return types.NewErr("grpc-federation: unknown result type %s from %s function", typ, fn.Name)
 }

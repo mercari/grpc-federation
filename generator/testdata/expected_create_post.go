@@ -98,12 +98,15 @@ const (
 // FederationService represents Federation Service.
 type FederationService struct {
 	*UnimplementedFederationServiceServer
-	cfg          FederationServiceConfig
-	logger       *slog.Logger
-	errorHandler grpcfed.ErrorHandler
-	env          *grpcfed.CELEnv
-	tracer       trace.Tracer
-	client       *FederationServiceDependentClientSet
+	cfg           FederationServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	celTypeHelper *grpcfed.CELTypeHelper
+	envOpts       []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -125,7 +128,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
+	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
 		"grpc.federation.private.CreatePostArgument": {
 			"title":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Title"),
 			"content": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Content"),
@@ -138,20 +141,20 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 			"type":    grpcfed.NewCELFieldType(grpcfed.CELIntType, "Type"),
 		},
-	})
-	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
+	}
+	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	var envOpts []grpcfed.CELEnvOption
+	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
 	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.post.PostType", post.PostType_value, post.PostType_name)...)
-	env, err := grpcfed.NewCELEnv(envOpts...)
-	if err != nil {
-		return nil, err
-	}
 	return &FederationService{
-		cfg:          cfg,
-		logger:       logger,
-		errorHandler: errorHandler,
-		env:          env,
-		tracer:       otel.Tracer("org.federation.FederationService"),
+		cfg:           cfg,
+		logger:        logger,
+		errorHandler:  errorHandler,
+		envOpts:       envOpts,
+		celTypeHelper: celTypeHelper,
+		celCacheMap:   grpcfed.NewCELCacheMap(),
+		tracer:        otel.Tracer("org.federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
@@ -164,6 +167,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 	defer span.End()
 
 	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
@@ -195,29 +199,58 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "grpc.federation.private.CreatePostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.CreatePostArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			s.logger.ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &CreatePost{}
 
 	// field binding section.
 	// (grpc.federation.field).by = "$.title"
-	if err := grpcfed.SetCELValue(ctx, value, "$.title", func(v string) { ret.Title = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              "$.title",
+		UseContextLibrary: false,
+		CacheIndex:        1,
+		Setter:            func(v string) { ret.Title = v },
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	// (grpc.federation.field).by = "$.content"
-	if err := grpcfed.SetCELValue(ctx, value, "$.content", func(v string) { ret.Content = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              "$.content",
+		UseContextLibrary: false,
+		CacheIndex:        2,
+		Setter:            func(v string) { ret.Content = v },
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	// (grpc.federation.field).by = "$.user_id"
-	if err := grpcfed.SetCELValue(ctx, value, "$.user_id", func(v string) { ret.UserId = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              "$.user_id",
+		UseContextLibrary: false,
+		CacheIndex:        3,
+		Setter:            func(v string) { ret.UserId = v },
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	// (grpc.federation.field).by = "$.type"
-	if err := grpcfed.SetCELValue(ctx, value, "$.type", func(v PostType) { ret.Type = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostType]{
+		Value:             value,
+		Expr:              "$.type",
+		UseContextLibrary: false,
+		CacheIndex:        4,
+		Setter:            func(v PostType) { ret.Type = v },
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
@@ -240,7 +273,12 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 			res *post.CreatePostResponse
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "grpc.federation.private.CreatePostResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.CreatePostResponseArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			s.logger.ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// This section's codes are generated by the following proto definition.
 	/*
@@ -264,26 +302,50 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Org_Federation_CreatePostArgument{}
 			// { name: "title", by: "$.title" }
-			if err := grpcfed.SetCELValue(ctx, value, "$.title", func(v string) {
-				args.Title = v
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+				Value:             value,
+				Expr:              "$.title",
+				UseContextLibrary: false,
+				CacheIndex:        5,
+				Setter: func(v string) {
+					args.Title = v
+				},
 			}); err != nil {
 				return nil, err
 			}
 			// { name: "content", by: "$.content" }
-			if err := grpcfed.SetCELValue(ctx, value, "$.content", func(v string) {
-				args.Content = v
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+				Value:             value,
+				Expr:              "$.content",
+				UseContextLibrary: false,
+				CacheIndex:        6,
+				Setter: func(v string) {
+					args.Content = v
+				},
 			}); err != nil {
 				return nil, err
 			}
 			// { name: "user_id", by: "$.user_id" }
-			if err := grpcfed.SetCELValue(ctx, value, "$.user_id", func(v string) {
-				args.UserId = v
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+				Value:             value,
+				Expr:              "$.user_id",
+				UseContextLibrary: false,
+				CacheIndex:        7,
+				Setter: func(v string) {
+					args.UserId = v
+				},
 			}); err != nil {
 				return nil, err
 			}
 			// { name: "type", by: "$.type" }
-			if err := grpcfed.SetCELValue(ctx, value, "$.type", func(v PostType) {
-				args.Type = v
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostType]{
+				Value:             value,
+				Expr:              "$.type",
+				UseContextLibrary: false,
+				CacheIndex:        8,
+				Setter: func(v PostType) {
+					args.Type = v
+				},
 			}); err != nil {
 				return nil, err
 			}
@@ -311,8 +373,14 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &post.CreatePostRequest{}
 			// { field: "post", by: "cp" }
-			if err := grpcfed.SetCELValue(ctx, value, "cp", func(v *CreatePost) {
-				args.Post = s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(v)
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*CreatePost]{
+				Value:             value,
+				Expr:              "cp",
+				UseContextLibrary: false,
+				CacheIndex:        9,
+				Setter: func(v *CreatePost) {
+					args.Post = s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(v)
+				},
 			}); err != nil {
 				return nil, err
 			}
@@ -333,10 +401,12 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.Post, *localValueType]{
-		Name:   "p",
-		Type:   grpcfed.CELObjectType("org.post.Post"),
-		Setter: func(value *localValueType, v *post.Post) { value.vars.p = v },
-		By:     "res.post",
+		Name:                "p",
+		Type:                grpcfed.CELObjectType("org.post.Post"),
+		Setter:              func(value *localValueType, v *post.Post) { value.vars.p = v },
+		By:                  "res.post",
+		ByUseContextLibrary: false,
+		ByCacheIndex:        10,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -352,7 +422,13 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 
 	// field binding section.
 	// (grpc.federation.field).by = "p"
-	if err := grpcfed.SetCELValue(ctx, value, "p", func(v *post.Post) { ret.Post = s.cast_Org_Post_Post__to__Org_Federation_Post(v) }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post.Post]{
+		Value:             value,
+		Expr:              "p",
+		UseContextLibrary: false,
+		CacheIndex:        11,
+		Setter:            func(v *post.Post) { ret.Post = s.cast_Org_Post_Post__to__Org_Federation_Post(v) },
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}

@@ -81,13 +81,16 @@ func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResp
 // FederationService represents Federation Service.
 type FederationService struct {
 	*UnimplementedFederationServiceServer
-	cfg          FederationServiceConfig
-	logger       *slog.Logger
-	errorHandler grpcfed.ErrorHandler
-	env          *grpcfed.CELEnv
-	tracer       trace.Tracer
-	resolver     FederationServiceResolver
-	client       *FederationServiceDependentClientSet
+	cfg           FederationServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	resolver      FederationServiceResolver
+	celTypeHelper *grpcfed.CELTypeHelper
+	envOpts       []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -103,26 +106,26 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
+	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
 		"grpc.federation.private.GetPostResponseArgument": {
 			"id":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 			"type": grpcfed.NewCELFieldType(grpcfed.CELIntType, "Type"),
 		},
-	})
-	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
-	env, err := grpcfed.NewCELEnv(envOpts...)
-	if err != nil {
-		return nil, err
 	}
+	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	var envOpts []grpcfed.CELEnvOption
+	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
 	return &FederationService{
-		cfg:          cfg,
-		logger:       logger,
-		errorHandler: errorHandler,
-		env:          env,
-		tracer:       otel.Tracer("org.federation.FederationService"),
-		resolver:     cfg.Resolver,
-		client:       &FederationServiceDependentClientSet{},
+		cfg:           cfg,
+		logger:        logger,
+		errorHandler:  errorHandler,
+		envOpts:       envOpts,
+		celTypeHelper: celTypeHelper,
+		celCacheMap:   grpcfed.NewCELCacheMap(),
+		tracer:        otel.Tracer("org.federation.FederationService"),
+		resolver:      cfg.Resolver,
+		client:        &FederationServiceDependentClientSet{},
 	}, nil
 }
 
@@ -132,6 +135,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	defer span.End()
 
 	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

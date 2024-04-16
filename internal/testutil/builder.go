@@ -922,7 +922,10 @@ func (b *GRPCErrorBuilder) SetCode(v code.Code) *GRPCErrorBuilder {
 }
 
 func (b *GRPCErrorBuilder) SetMessage(v string) *GRPCErrorBuilder {
-	b.err.Message = v
+	b.err.Message = &resolver.CELValue{
+		Expr: v,
+		Out:  resolver.StringType,
+	}
 	return b
 }
 

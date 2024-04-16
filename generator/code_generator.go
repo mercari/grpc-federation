@@ -48,11 +48,7 @@ type File struct {
 func (f *File) Services() []*Service {
 	ret := make([]*Service, 0, len(f.File.Services))
 	for _, svc := range f.File.Services {
-		ret = append(ret, &Service{
-			Service:           svc,
-			file:              f,
-			nameToLogValueMap: make(map[string]*LogValue),
-		})
+		ret = append(ret, newService(svc, f))
 	}
 	return ret
 }
@@ -241,6 +237,20 @@ type Service struct {
 	*resolver.Service
 	file              *File
 	nameToLogValueMap map[string]*LogValue
+	celCacheIndex     int
+}
+
+func newService(svc *resolver.Service, file *File) *Service {
+	return &Service{
+		Service:           svc,
+		file:              file,
+		nameToLogValueMap: make(map[string]*LogValue),
+	}
+}
+
+func (s *Service) CELCacheIndex() int {
+	s.celCacheIndex++
+	return s.celCacheIndex
 }
 
 type Import struct {
@@ -1269,7 +1279,7 @@ func (s *Service) dependentMethods(msg *resolver.Message) []*DependentMethod {
 
 type Method struct {
 	*resolver.Method
-	Service *resolver.Service
+	Service *Service
 	file    *File
 }
 
@@ -1325,7 +1335,7 @@ func (s *Service) Methods() []*Method {
 	methods := make([]*Method, 0, len(s.Service.Methods))
 	for _, method := range s.Service.Methods {
 		methods = append(methods, &Method{
-			Service: s.Service,
+			Service: s,
 			Method:  method,
 			file:    s.file,
 		})
@@ -1335,8 +1345,12 @@ func (s *Service) Methods() []*Method {
 
 type Message struct {
 	*resolver.Message
-	Service *resolver.Service
+	Service *Service
 	file    *File
+}
+
+func (m *Message) CELCacheIndex() int {
+	return m.Service.CELCacheIndex()
 }
 
 func (m *Message) ProtoFQDN() string {
@@ -1389,6 +1403,18 @@ func (m *Message) VariableDefinitionSet() *VariableDefinitionSet {
 type VariableDefinitionSet struct {
 	msg *Message
 	*resolver.VariableDefinitionSet
+}
+
+func (set *VariableDefinitionSet) Definitions() []*VariableDefinition {
+	ret := make([]*VariableDefinition, 0, len(set.VariableDefinitionSet.Definitions()))
+	for _, def := range set.VariableDefinitionSet.Definitions() {
+		ret = append(ret, &VariableDefinition{
+			Service:            set.msg.Service,
+			Message:            set.msg,
+			VariableDefinition: def,
+		})
+	}
+	return ret
 }
 
 func (set *VariableDefinitionSet) DependencyGraph() string {
@@ -1487,14 +1513,16 @@ func (r *ReturnField) HasFieldOneofRule() bool {
 }
 
 type OneofField struct {
-	Expr           string
-	By             string
-	Type           string
-	Condition      string
-	Name           string
-	Value          string
-	Message        *Message
-	FieldOneofRule *resolver.FieldOneofRule
+	ExprUseContextLibrary bool
+	ByUseContextLibrary   bool
+	Expr                  string
+	By                    string
+	Type                  string
+	Condition             string
+	Name                  string
+	Value                 string
+	Message               *Message
+	FieldOneofRule        *resolver.FieldOneofRule
 }
 
 func (oneof *OneofField) VariableDefinitionSet() *VariableDefinitionSet {
@@ -1985,24 +2013,27 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 			}
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
-					By:             rule.Oneof.By.Expr,
-					Type:           typ,
-					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
-					Name:           fieldName,
-					Value:          fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
-					FieldOneofRule: rule.Oneof,
-					Message:        m,
+					ByUseContextLibrary: rule.Oneof.By.UseContextLibrary,
+					By:                  rule.Oneof.By.Expr,
+					Type:                typ,
+					Condition:           fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
+					Name:                fieldName,
+					Value:               fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
+					FieldOneofRule:      rule.Oneof,
+					Message:             m,
 				}
 			} else {
 				caseFields = append(caseFields, &OneofField{
-					Expr:           rule.Oneof.If.Expr,
-					By:             rule.Oneof.By.Expr,
-					Type:           typ,
-					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
-					Name:           fieldName,
-					Value:          fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
-					FieldOneofRule: rule.Oneof,
-					Message:        m,
+					ExprUseContextLibrary: rule.Oneof.If.UseContextLibrary,
+					ByUseContextLibrary:   rule.Oneof.By.UseContextLibrary,
+					Expr:                  rule.Oneof.If.Expr,
+					By:                    rule.Oneof.By.Expr,
+					Type:                  typ,
+					Condition:             fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
+					Name:                  fieldName,
+					Value:                 fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
+					FieldOneofRule:        rule.Oneof,
+					Message:               m,
 				})
 			}
 		}
@@ -2016,7 +2047,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 }
 
 type VariableDefinitionGroup struct {
-	Service *resolver.Service
+	Service *Service
 	Message *Message
 	resolver.VariableDefinitionGroup
 }
@@ -2090,9 +2121,13 @@ func (g *VariableDefinitionGroup) End() *VariableDefinition {
 }
 
 type VariableDefinition struct {
-	Service *resolver.Service
+	Service *Service
 	Message *Message
 	*resolver.VariableDefinition
+}
+
+func (d *VariableDefinition) CELCacheIndex() int {
+	return d.Service.CELCacheIndex()
 }
 
 func (d *VariableDefinition) Key() string {
@@ -2105,6 +2140,10 @@ func (d *VariableDefinition) UseIf() bool {
 
 func (d *VariableDefinition) If() string {
 	return d.VariableDefinition.If.Expr
+}
+
+func (d *VariableDefinition) IfUseContextLibrary() bool {
+	return d.VariableDefinition.If.UseContextLibrary
 }
 
 func (d *VariableDefinition) UseTimeout() bool {
@@ -2190,6 +2229,10 @@ type GRPCError struct {
 	msg *Message
 }
 
+func (e *GRPCError) CELCacheIndex() int {
+	return e.msg.Service.CELCacheIndex()
+}
+
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
 // e.g. FAILED_PRECONDITION -> FailedPrecondition.
 func (e *GRPCError) GoGRPCStatusCode() string {
@@ -2268,6 +2311,98 @@ func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
 	}
 }
 
+func (detail *GRPCErrorDetail) PreconditionFailures() []*PreconditionFailure {
+	ret := make([]*PreconditionFailure, 0, len(detail.GRPCErrorDetail.PreconditionFailures))
+	for _, pf := range detail.GRPCErrorDetail.PreconditionFailures {
+		ret = append(ret, &PreconditionFailure{
+			PreconditionFailure: pf,
+			msg:                 detail.msg,
+		})
+	}
+	return ret
+}
+
+func (detail *GRPCErrorDetail) BadRequests() []*BadRequest {
+	ret := make([]*BadRequest, 0, len(detail.GRPCErrorDetail.BadRequests))
+	for _, b := range detail.GRPCErrorDetail.BadRequests {
+		ret = append(ret, &BadRequest{
+			BadRequest: b,
+			msg:        detail.msg,
+		})
+	}
+	return ret
+}
+
+func (detail *GRPCErrorDetail) LocalizedMessages() []*LocalizedMessage {
+	ret := make([]*LocalizedMessage, 0, len(detail.GRPCErrorDetail.LocalizedMessages))
+	for _, m := range detail.GRPCErrorDetail.LocalizedMessages {
+		ret = append(ret, &LocalizedMessage{
+			LocalizedMessage: m,
+			msg:              detail.msg,
+		})
+	}
+	return ret
+}
+
+type PreconditionFailure struct {
+	*resolver.PreconditionFailure
+	msg *Message
+}
+
+type PreconditionFailureViolation struct {
+	*resolver.PreconditionFailureViolation
+	msg *Message
+}
+
+func (pf *PreconditionFailure) Violations() []*PreconditionFailureViolation {
+	ret := make([]*PreconditionFailureViolation, 0, len(pf.PreconditionFailure.Violations))
+	for _, v := range pf.PreconditionFailure.Violations {
+		ret = append(ret, &PreconditionFailureViolation{
+			PreconditionFailureViolation: v,
+			msg:                          pf.msg,
+		})
+	}
+	return ret
+}
+
+func (v *PreconditionFailureViolation) CELCacheIndex() int {
+	return v.msg.Service.CELCacheIndex()
+}
+
+type BadRequest struct {
+	*resolver.BadRequest
+	msg *Message
+}
+
+type BadRequestFieldViolation struct {
+	*resolver.BadRequestFieldViolation
+	msg *Message
+}
+
+func (b *BadRequest) FieldViolations() []*BadRequestFieldViolation {
+	ret := make([]*BadRequestFieldViolation, 0, len(b.BadRequest.FieldViolations))
+	for _, v := range b.BadRequest.FieldViolations {
+		ret = append(ret, &BadRequestFieldViolation{
+			BadRequestFieldViolation: v,
+			msg:                      b.msg,
+		})
+	}
+	return ret
+}
+
+func (v *BadRequestFieldViolation) CELCacheIndex() int {
+	return v.msg.Service.CELCacheIndex()
+}
+
+type LocalizedMessage struct {
+	msg *Message
+	*resolver.LocalizedMessage
+}
+
+func (m *LocalizedMessage) CELCacheIndex() int {
+	return m.msg.Service.CELCacheIndex()
+}
+
 func (d *VariableDefinition) ServiceName() string {
 	return d.Service.Name
 }
@@ -2322,7 +2457,6 @@ func (d *VariableDefinition) IsMap() bool {
 
 func (d *VariableDefinition) MapResolver() *MapResolver {
 	return &MapResolver{
-		File:    d.Service.File,
 		Service: d.Service,
 		MapExpr: d.VariableDefinition.Expr.Map,
 		file:    d.Message.file,
@@ -2376,8 +2510,7 @@ func (d *VariableDefinition) ResponseVariable() *ResponseVariable {
 }
 
 type MapResolver struct {
-	File    *resolver.File
-	Service *resolver.Service
+	Service *Service
 	MapExpr *resolver.MapExpr
 	file    *File
 }
@@ -2691,7 +2824,7 @@ func (s *Service) Messages() []*Message {
 	for _, msg := range s.Service.Messages {
 		msgs = append(msgs, &Message{
 			Message: msg,
-			Service: s.Service,
+			Service: s,
 			file:    s.file,
 		})
 	}

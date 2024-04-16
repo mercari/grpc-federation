@@ -135,12 +135,15 @@ type FederationServiceUnimplementedResolver struct{}
 // FederationService represents Federation Service.
 type FederationService struct {
 	*UnimplementedFederationServiceServer
-	cfg          FederationServiceConfig
-	logger       *slog.Logger
-	errorHandler grpcfed.ErrorHandler
-	env          *grpcfed.CELEnv
-	tracer       trace.Tracer
-	client       *FederationServiceDependentClientSet
+	cfg           FederationServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	celTypeHelper *grpcfed.CELTypeHelper
+	envOpts       []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -153,7 +156,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
+	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
 		"grpc.federation.private.AAArgument": {},
 		"grpc.federation.private.AArgument":  {},
 		"grpc.federation.private.ABArgument": {},
@@ -183,19 +186,19 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		"grpc.federation.private.JArgument": {
 			"i": grpcfed.NewCELFieldType(grpcfed.CELStringType, "I"),
 		},
-	})
-	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
-	env, err := grpcfed.NewCELEnv(envOpts...)
-	if err != nil {
-		return nil, err
 	}
+	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	var envOpts []grpcfed.CELEnvOption
+	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	return &FederationService{
-		cfg:          cfg,
-		logger:       logger,
-		errorHandler: errorHandler,
-		env:          env,
-		tracer:       otel.Tracer("org.federation.FederationService"),
-		client:       &FederationServiceDependentClientSet{},
+		cfg:           cfg,
+		logger:        logger,
+		errorHandler:  errorHandler,
+		envOpts:       envOpts,
+		celTypeHelper: celTypeHelper,
+		celCacheMap:   grpcfed.NewCELCacheMap(),
+		tracer:        otel.Tracer("org.federation.FederationService"),
+		client:        &FederationServiceDependentClientSet{},
 	}, nil
 }
 
@@ -205,6 +208,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 	defer span.End()
 
 	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
@@ -233,7 +237,12 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 			ab *AB
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "grpc.federation.private.AArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.AArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			s.logger.ErrorContext(ctx, err.Error())
+		}
+	}()
 	// A tree view of message dependencies is shown below.
 	/*
 	   aa ─┐
@@ -464,7 +473,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			j *J
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(s.env, "grpc.federation.private.GetResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetResponseArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			s.logger.ErrorContext(ctx, err.Error())
+		}
+	}()
 	// A tree view of message dependencies is shown below.
 	/*
 	   a ─┐
@@ -529,8 +543,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_CArgument{}
 						// { name: "a", by: "a.name" }
-						if err := grpcfed.SetCELValue(ctx, value, "a.name", func(v string) {
-							args.A = v
+						if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+							Value:             value,
+							Expr:              "a.name",
+							UseContextLibrary: false,
+							CacheIndex:        1,
+							Setter: func(v string) {
+								args.A = v
+							},
 						}); err != nil {
 							return nil, err
 						}
@@ -583,8 +603,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_DArgument{}
 						// { name: "b", by: "b.name" }
-						if err := grpcfed.SetCELValue(ctx, value, "b.name", func(v string) {
-							args.B = v
+						if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+							Value:             value,
+							Expr:              "b.name",
+							UseContextLibrary: false,
+							CacheIndex:        2,
+							Setter: func(v string) {
+								args.B = v
+							},
 						}); err != nil {
 							return nil, err
 						}
@@ -620,14 +646,26 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_EArgument{}
 					// { name: "c", by: "c.name" }
-					if err := grpcfed.SetCELValue(ctx, value, "c.name", func(v string) {
-						args.C = v
+					if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+						Value:             value,
+						Expr:              "c.name",
+						UseContextLibrary: false,
+						CacheIndex:        3,
+						Setter: func(v string) {
+							args.C = v
+						},
 					}); err != nil {
 						return nil, err
 					}
 					// { name: "d", by: "d.name" }
-					if err := grpcfed.SetCELValue(ctx, value, "d.name", func(v string) {
-						args.D = v
+					if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+						Value:             value,
+						Expr:              "d.name",
+						UseContextLibrary: false,
+						CacheIndex:        4,
+						Setter: func(v string) {
+							args.D = v
+						},
 					}); err != nil {
 						return nil, err
 					}
@@ -682,8 +720,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_CArgument{}
 						// { name: "a", by: "a.name" }
-						if err := grpcfed.SetCELValue(ctx, value, "a.name", func(v string) {
-							args.A = v
+						if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+							Value:             value,
+							Expr:              "a.name",
+							UseContextLibrary: false,
+							CacheIndex:        5,
+							Setter: func(v string) {
+								args.A = v
+							},
 						}); err != nil {
 							return nil, err
 						}
@@ -736,8 +780,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &Org_Federation_DArgument{}
 						// { name: "b", by: "b.name" }
-						if err := grpcfed.SetCELValue(ctx, value, "b.name", func(v string) {
-							args.B = v
+						if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+							Value:             value,
+							Expr:              "b.name",
+							UseContextLibrary: false,
+							CacheIndex:        6,
+							Setter: func(v string) {
+								args.B = v
+							},
 						}); err != nil {
 							return nil, err
 						}
@@ -773,14 +823,26 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &Org_Federation_FArgument{}
 					// { name: "c", by: "c.name" }
-					if err := grpcfed.SetCELValue(ctx, value, "c.name", func(v string) {
-						args.C = v
+					if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+						Value:             value,
+						Expr:              "c.name",
+						UseContextLibrary: false,
+						CacheIndex:        7,
+						Setter: func(v string) {
+							args.C = v
+						},
 					}); err != nil {
 						return nil, err
 					}
 					// { name: "d", by: "d.name" }
-					if err := grpcfed.SetCELValue(ctx, value, "d.name", func(v string) {
-						args.D = v
+					if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+						Value:             value,
+						Expr:              "d.name",
+						UseContextLibrary: false,
+						CacheIndex:        8,
+						Setter: func(v string) {
+							args.D = v
+						},
 					}); err != nil {
 						return nil, err
 					}
@@ -842,20 +904,38 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_HArgument{}
 				// { name: "e", by: "e.name" }
-				if err := grpcfed.SetCELValue(ctx, value, "e.name", func(v string) {
-					args.E = v
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              "e.name",
+					UseContextLibrary: false,
+					CacheIndex:        9,
+					Setter: func(v string) {
+						args.E = v
+					},
 				}); err != nil {
 					return nil, err
 				}
 				// { name: "f", by: "f.name" }
-				if err := grpcfed.SetCELValue(ctx, value, "f.name", func(v string) {
-					args.F = v
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              "f.name",
+					UseContextLibrary: false,
+					CacheIndex:        10,
+					Setter: func(v string) {
+						args.F = v
+					},
 				}); err != nil {
 					return nil, err
 				}
 				// { name: "g", by: "g.name" }
-				if err := grpcfed.SetCELValue(ctx, value, "g.name", func(v string) {
-					args.G = v
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              "g.name",
+					UseContextLibrary: false,
+					CacheIndex:        11,
+					Setter: func(v string) {
+						args.G = v
+					},
 				}); err != nil {
 					return nil, err
 				}
@@ -909,8 +989,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_JArgument{}
 				// { name: "i", by: "i.name" }
-				if err := grpcfed.SetCELValue(ctx, value, "i.name", func(v string) {
-					args.I = v
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              "i.name",
+					UseContextLibrary: false,
+					CacheIndex:        12,
+					Setter: func(v string) {
+						args.I = v
+					},
 				}); err != nil {
 					return nil, err
 				}
@@ -944,12 +1030,24 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 
 	// field binding section.
 	// (grpc.federation.field).by = "h.name"
-	if err := grpcfed.SetCELValue(ctx, value, "h.name", func(v string) { ret.Hname = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              "h.name",
+		UseContextLibrary: false,
+		CacheIndex:        13,
+		Setter:            func(v string) { ret.Hname = v },
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 	// (grpc.federation.field).by = "j.name"
-	if err := grpcfed.SetCELValue(ctx, value, "j.name", func(v string) { ret.Jname = v }); err != nil {
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              "j.name",
+		UseContextLibrary: false,
+		CacheIndex:        14,
+		Setter:            func(v string) { ret.Jname = v },
+	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}

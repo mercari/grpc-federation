@@ -18,6 +18,9 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 		if content == "" {
 			continue
 		}
+		if content == "exit\n" {
+			return
+		}
 		res, err := handle{{ $pluginName }}([]byte(content), plug)
 		if err != nil {
 			res = grpcfed.ToErrorCELPluginResponse(err)
