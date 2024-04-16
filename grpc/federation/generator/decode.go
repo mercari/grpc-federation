@@ -1106,11 +1106,14 @@ func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) 
 		return nil, nil
 	}
 	ret := &resolver.GRPCError{
-		Code:    e.GetCode(),
-		Message: e.GetMessage(),
+		Code: e.GetCode(),
 	}
 
 	ifValue, err := d.toCELValue(e.GetIf())
+	if err != nil {
+		return nil, err
+	}
+	msgValue, err := d.toCELValue(e.GetMessage())
 	if err != nil {
 		return nil, err
 	}
@@ -1119,6 +1122,7 @@ func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) 
 		return nil, err
 	}
 	ret.If = ifValue
+	ret.Message = msgValue
 	ret.Details = details
 	return ret, nil
 }

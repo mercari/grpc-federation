@@ -1098,7 +1098,7 @@ func (e *encoder) toGRPCError(err *resolver.GRPCError) *plugin.GRPCError {
 	return &plugin.GRPCError{
 		Code:    err.Code,
 		If:      e.toCELValue(err.If),
-		Message: err.Message,
+		Message: e.toCELValue(err.Message),
 		Details: e.toGRPCErrorDetails(err.Details),
 	}
 }

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package example.account;
+
+import "grpc/federation/plugin.proto";
+
+option go_package = "example/plugin;pluginpb";
+
+option (grpc.federation.plugin).export = {
+  name: "account"
+  functions: [
+    {
+      name: "get_id"
+      desc: "get id text from incoming metadata"
+      return { type: "string" }
+    }
+  ]
+};

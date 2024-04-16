@@ -21,6 +21,7 @@ type (
 	ProtoMessage   = protoadapt.MessageV1
 	CELTypeDeclare = cel.Type
 	CELEnv         = cel.Env
+	CELEnvOption   = cel.EnvOption
 	CELFieldType   = types.FieldType
 	Code           = codes.Code
 	RWMutex        = sync.RWMutex

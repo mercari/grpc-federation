@@ -1,20 +1,29 @@
 {{- define "evalDef" -}}
-{{- if .Definition.IsMap -}}
-{{- $mapResolver := .Definition.MapResolver -}}
-grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ .Definition.Type }}, {{ $mapResolver.IteratorSourceType }}, *localValueType]{
-	{{- if .Definition.UseIf }}
-	If: "{{ .Definition.If }}",
+{{- $def := .Definition }}
+{{- if $def.IsMap -}}
+{{- $mapResolver := $def.MapResolver -}}
+grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapResolver.IteratorSourceType }}, *localValueType]{
+	{{- if $def.UseIf }}
+	If: "{{ $def.If }}",
+	IfUseContextLibrary: {{ $def.IfUseContextLibrary }},
+	IfCacheIndex: {{ $def.CELCacheIndex }},
 	{{- end }}
-	Name:   "{{ .Definition.Key }}",
-	Type:   {{ .Definition.CELType }},
-	Setter: func(value *localValueType, v {{ .Definition.Type }}) { value.vars.{{ .Definition.Key }} = v },
+	Name:   "{{ $def.Key }}",
+	Type:   {{ $def.CELType }},
+	Setter: func(value *localValueType, v {{ $def.Type }}) { value.vars.{{ $def.Key }} = v },
 	IteratorName: "{{ $mapResolver.IteratorName }}",
 	IteratorType: {{ $mapResolver.IteratorCELType }},
 	IteratorSource: func(value *localValueType) []{{ $mapResolver.IteratorSourceType }}{ return {{ $mapResolver.IteratorSource }} },
 	Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 		{{- if $mapResolver.IsBy }}
 		{{- $by := $mapResolver.MapExpr.Expr.By }}
-		return grpcfed.EvalCEL(ctx, value, "{{ $by.Expr }}", reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}))
+		return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+			Value: value,
+			Expr: "{{ $by.Expr }}",
+			UseContextLibrary: {{ $by.UseContextLibrary }},
+			OutType: reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}),
+			CacheIndex: {{ $def.CELCacheIndex }},
+		})
 		{{- else if $mapResolver.IsMessage }}
 		{{- $arguments := $mapResolver.Arguments }}
 		args := &{{ $mapResolver.RequestType }}{
@@ -27,14 +36,20 @@ grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ .Definition.Type }}, {{ 
 		{{- range $arguments }}
 		{{- if .CEL }}
 		{{ .ProtoComment }}
-		if err := grpcfed.SetCELValue(ctx, value, "{{ .CEL.Expr }}", func(v {{ .Type }}){
-			{{- if ne (len .InlineFields) 0 }}
-			{{- range .InlineFields }}
-			args.{{ .Name }} = {{ .Value }}
-			{{- end }}
-			{{- else }}
-			args.{{ .Name }} = {{ .Value }}
-			{{- end }}
+		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
+			Value: value,
+			Expr: "{{ .CEL.Expr }}",
+			UseContextLibrary: {{ .CEL.UseContextLibrary }},
+			CacheIndex: {{ $def.CELCacheIndex }},
+			Setter: func(v {{ .Type }}){
+				{{- if ne (len .InlineFields) 0 }}
+				{{- range .InlineFields }}
+				args.{{ .Name }} = {{ .Value }}
+				{{- end }}
+				{{- else }}
+				args.{{ .Name }} = {{ .Value }}
+				{{- end }}
+			},
 		}); err != nil {
 			return nil, err
 		}
@@ -45,24 +60,28 @@ grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ .Definition.Type }}, {{ 
 	},
 })
 {{- else -}}
-grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ .Definition.Type }}, *localValueType]{
-	{{- if .Definition.UseIf }}
-	If: "{{ .Definition.If }}",
+grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
+	{{- if $def.UseIf }}
+	If: "{{ $def.If }}",
+	IfUseContextLibrary: {{ $def.IfUseContextLibrary }},
+	IfCacheIndex: {{ $def.CELCacheIndex }},
 	{{- end }}
-	Name:   "{{ .Definition.Key }}",
-	Type:   {{ .Definition.CELType }},
-	Setter: func(value *localValueType, v {{ .Definition.Type }}) { value.vars.{{ .Definition.Key }} = v },
-	{{- if .Definition.IsBy }}
-	By:     "{{ .Definition.By.Expr }}",
-	{{- else if .Definition.IsValidation }}
+	Name:   "{{ $def.Key }}",
+	Type:   {{ $def.CELType }},
+	Setter: func(value *localValueType, v {{ $def.Type }}) { value.vars.{{ $def.Key }} = v },
+	{{- if $def.IsBy }}
+	By:     "{{ $def.By.Expr }}",
+	ByUseContextLibrary: {{ $def.By.UseContextLibrary }},
+	ByCacheIndex: {{ $def.CELCacheIndex }},
+	{{- else if $def.IsValidation }}
 	Validation:  func(ctx context.Context, value *localValueType) error {
-		{{- template "messageValidation" (map "Ctx" .Ctx "Error" .Definition.ValidationError) }}
+		{{- template "messageValidation" (map "Ctx" .Ctx "Error" $def.ValidationError) }}
 	},
 	{{- else }}
 	Message: func(ctx context.Context, value *localValueType) (any, error) {
-		{{- $arguments := .Definition.Arguments }}
-		{{- if .Definition.UseArgs }}
-		args := &{{ .Definition.RequestType }}{
+		{{- $arguments := $def.Arguments }}
+		{{- if $def.UseArgs }}
+		args := &{{ $def.RequestType }}{
 			{{- range $arguments }}
 			{{- if not .CEL }}
 			{{ .Name }}: {{ .Value }}, {{ .ProtoComment }}
@@ -73,37 +92,43 @@ grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ .Definition.Type }}, *localVal
 		{{- range $arguments }}
 		{{- if .CEL }}
 		{{ .ProtoComment }}
-		if err := grpcfed.SetCELValue(ctx, value, "{{ .CEL.Expr }}", func(v {{ .Type }}){
-			{{- if ne (len .InlineFields) 0 }}
-			{{- range .InlineFields }}
-			args.{{ .Name }} = {{ .Value }}
-			{{- end }}
-			{{- else }}
-			args.{{ .Name }} = {{ .Value }}
-			{{- end }}
+		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
+			Value: value,
+			Expr: "{{ .CEL.Expr }}",
+			UseContextLibrary: {{ .CEL.UseContextLibrary }},
+			CacheIndex: {{ $def.CELCacheIndex }},
+			Setter: func(v {{ .Type }}){
+				{{- if ne (len .InlineFields) 0 }}
+				{{- range .InlineFields }}
+				args.{{ .Name }} = {{ .Value }}
+				{{- end }}
+				{{- else }}
+				args.{{ .Name }} = {{ .Value }}
+				{{- end }}
+			},
 		}); err != nil {
 			return nil, err
 		}
 		{{- end }}
 		{{- end }}
-		{{- if .Definition.UseTimeout }}
-		return grpcfed.WithTimeout[{{ .Definition.ReturnType }}](ctx, "{{ .Definition.MethodFQDN }}", {{ .Definition.Timeout }}, func(ctx context.Context) (*{{ .Definition.ReturnType }}, error) {
-			{{- if .Definition.UseRetry }}
-			{{- template "retry" (map "Retry" .Definition.Retry) }}
-			return grpcfed.WithRetry[{{ .Definition.ReturnType }}](b, func() (*{{ .Definition.ReturnType }}, error) {
-				return s.{{ .Definition.Caller }}(ctx, args)
+		{{- if $def.UseTimeout }}
+		return grpcfed.WithTimeout[{{ $def.ReturnType }}](ctx, "{{ $def.MethodFQDN }}", {{ $def.Timeout }}, func(ctx context.Context) (*{{ $def.ReturnType }}, error) {
+			{{- if $def.UseRetry }}
+			{{- template "retry" (map "Retry" $def.Retry) }}
+			return grpcfed.WithRetry[{{ $def.ReturnType }}](b, func() (*{{ $def.ReturnType }}, error) {
+				return s.{{ $def.Caller }}(ctx, args)
 			})
 			{{- else }}
-			return s.{{ .Definition.Caller }}(ctx, args)
+			return s.{{ $def.Caller }}(ctx, args)
 			{{- end }}
 		})
-		{{- else if .Definition.UseRetry }}
-		{{- template "retry" (map "Retry" .Definition.Retry) }}
-		return grpcfed.WithRetry[{{ .Definition.ReturnType }}](b, func() (*{{ .Definition.ReturnType }}, error) {
-			return s.{{ .Definition.Caller }}(ctx, args)
+		{{- else if $def.UseRetry }}
+		{{- template "retry" (map "Retry" $def.Retry) }}
+		return grpcfed.WithRetry[{{ $def.ReturnType }}](b, func() (*{{ $def.ReturnType }}, error) {
+			return s.{{ $def.Caller }}(ctx, args)
 		})
 		{{- else }}
-		return s.{{ .Definition.Caller }}(ctx, args)
+		return s.{{ $def.Caller }}(ctx, args)
 		{{- end }}
 	},
 	{{- end }}

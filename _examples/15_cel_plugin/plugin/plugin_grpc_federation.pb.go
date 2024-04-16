@@ -31,6 +31,9 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 		if content == "" {
 			continue
 		}
+		if content == "exit\n" {
+			return
+		}
 		res, err := handleRegexpPlugin([]byte(content), plug)
 		if err != nil {
 			res = grpcfed.ToErrorCELPluginResponse(err)

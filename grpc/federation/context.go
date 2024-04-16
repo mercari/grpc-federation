@@ -3,13 +3,11 @@ package federation
 import (
 	"context"
 	"log/slog"
-
-	"github.com/mercari/grpc-federation/grpc/federation/cel"
 )
 
 type (
-	loggerKey    struct{}
-	celPluginKey struct{}
+	loggerKey      struct{}
+	celCacheMapKey struct{}
 )
 
 func WithLogger(ctx context.Context, logger *slog.Logger) context.Context {
@@ -24,14 +22,14 @@ func Logger(ctx context.Context) *slog.Logger {
 	return value.(*slog.Logger)
 }
 
-func WithCELPlugins(ctx context.Context, plugins []*cel.CELPlugin) context.Context {
-	return context.WithValue(ctx, celPluginKey{}, plugins)
+func WithCELCacheMap(ctx context.Context, celCacheMap *CELCacheMap) context.Context {
+	return context.WithValue(ctx, celCacheMapKey{}, celCacheMap)
 }
 
-func CELPlugins(ctx context.Context) []*cel.CELPlugin {
-	value := ctx.Value(celPluginKey{})
+func getCELCacheMap(ctx context.Context) *CELCacheMap {
+	value := ctx.Value(celCacheMapKey{})
 	if value == nil {
 		return nil
 	}
-	return value.([]*cel.CELPlugin)
+	return value.(*CELCacheMap)
 }

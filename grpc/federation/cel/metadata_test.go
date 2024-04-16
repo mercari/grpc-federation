@@ -67,7 +67,9 @@ func TestMetadata(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			env, err := cel.NewEnv(cel.Lib(cellib.NewMetadataLibrary(test.ctx())))
+			lib := cellib.NewMetadataLibrary()
+			lib.Initialize(test.ctx())
+			env, err := cel.NewEnv(cel.Lib(lib))
 			if err != nil {
 				t.Fatal(err)
 			}

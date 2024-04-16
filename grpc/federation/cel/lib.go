@@ -10,9 +10,31 @@ import (
 type Library struct {
 	name    string
 	subLibs []cel.SingletonLibrary
+	ctxLibs []ContextualLibrary
+}
+
+func (lib *Library) ContextualLibraries() []ContextualLibrary {
+	if lib == nil {
+		return nil
+	}
+	return lib.ctxLibs
+}
+
+func (lib *Library) ContextOverloadIDPrefixes() []string {
+	var ret []string
+	for _, ctxlib := range lib.ctxLibs {
+		ret = append(ret, strings.ReplaceAll(ctxlib.LibraryName(), ".", "_"))
+	}
+	return ret
+}
+
+type ContextualLibrary interface {
+	LibraryName() string
+	Initialize(context.Context)
 }
 
 func NewLibrary() *Library {
+	mdLib := NewMetadataLibrary()
 	return &Library{
 		name: "grpc.federation.static",
 		subLibs: []cel.SingletonLibrary{
@@ -20,16 +42,9 @@ func NewLibrary() *Library {
 			new(ListLibrary),
 			new(RandLibrary),
 			new(UUIDLibrary),
+			mdLib,
 		},
-	}
-}
-
-func NewContextualLibrary(ctx context.Context) *Library {
-	return &Library{
-		name: "grpc.federation.contextual",
-		subLibs: []cel.SingletonLibrary{
-			NewMetadataLibrary(ctx),
-		},
+		ctxLibs: []ContextualLibrary{mdLib},
 	}
 }
 

@@ -80,13 +80,16 @@ func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetResponse
 // FederationService represents Federation Service.
 type FederationService struct {
 	*UnimplementedFederationServiceServer
-	cfg          FederationServiceConfig
-	logger       *slog.Logger
-	errorHandler grpcfed.ErrorHandler
-	env          *grpcfed.CELEnv
-	tracer       trace.Tracer
-	resolver     FederationServiceResolver
-	client       *FederationServiceDependentClientSet
+	cfg           FederationServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	resolver      FederationServiceResolver
+	celTypeHelper *grpcfed.CELTypeHelper
+	envOpts       []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -102,24 +105,24 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
-	celHelper := grpcfed.NewCELTypeHelper(map[string]map[string]*grpcfed.CELFieldType{
+	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
 		"grpc.federation.private.GetResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELIntType, "Id"),
 		},
-	})
-	envOpts := grpcfed.NewDefaultEnvOptions(celHelper)
-	env, err := grpcfed.NewCELEnv(envOpts...)
-	if err != nil {
-		return nil, err
 	}
+	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	var envOpts []grpcfed.CELEnvOption
+	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	return &FederationService{
-		cfg:          cfg,
-		logger:       logger,
-		errorHandler: errorHandler,
-		env:          env,
-		tracer:       otel.Tracer("org.federation.FederationService"),
-		resolver:     cfg.Resolver,
-		client:       &FederationServiceDependentClientSet{},
+		cfg:           cfg,
+		logger:        logger,
+		errorHandler:  errorHandler,
+		envOpts:       envOpts,
+		celTypeHelper: celTypeHelper,
+		celCacheMap:   grpcfed.NewCELCacheMap(),
+		tracer:        otel.Tracer("org.federation.FederationService"),
+		resolver:      cfg.Resolver,
+		client:        &FederationServiceDependentClientSet{},
 	}, nil
 }
 
@@ -129,6 +132,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 	defer span.End()
 
 	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())

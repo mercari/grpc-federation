@@ -508,7 +508,7 @@ message GRPCError {
   VariableDefinitionSet def_set = 1;
   CELValue if = 2;
   google.rpc.Code code = 3;
-  string message = 4;
+  CELValue message = 4;
   repeated GRPCErrorDetail details = 5;
   bool ignore = 6;
 }
