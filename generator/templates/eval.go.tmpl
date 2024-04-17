@@ -115,8 +115,15 @@ grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 		return grpcfed.WithTimeout[{{ $def.ReturnType }}](ctx, "{{ $def.MethodFQDN }}", {{ $def.Timeout }}, func(ctx context.Context) (*{{ $def.ReturnType }}, error) {
 			{{- if $def.UseRetry }}
 			{{- template "retry" (map "Retry" $def.Retry) }}
-			return grpcfed.WithRetry[{{ $def.ReturnType }}](b, func() (*{{ $def.ReturnType }}, error) {
-				return s.{{ $def.Caller }}(ctx, args)
+			return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ $def.ReturnType }}]{
+				Value: value,
+				If: "{{ $def.Retry.If.Expr }}",
+				UseContextLibrary: {{ $def.Retry.If.UseContextLibrary }},
+				CacheIndex: {{ $def.CELCacheIndex }},
+				BackOff: b,
+				Body: func() (*{{ $def.ReturnType }}, error) {
+					return s.{{ $def.Caller }}(ctx, args)
+				},
 			})
 			{{- else }}
 			return s.{{ $def.Caller }}(ctx, args)
@@ -124,8 +131,15 @@ grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 		})
 		{{- else if $def.UseRetry }}
 		{{- template "retry" (map "Retry" $def.Retry) }}
-		return grpcfed.WithRetry[{{ $def.ReturnType }}](b, func() (*{{ $def.ReturnType }}, error) {
-			return s.{{ $def.Caller }}(ctx, args)
+		return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ $def.ReturnType }}]{
+			Value: value,
+			If: "{{ $def.Retry.If.Expr }}",
+			UseContextLibrary: {{ $def.Retry.If.UseContextLibrary }},
+			CacheIndex: {{ $def.CELCacheIndex }},
+			BackOff: b,
+			Body: func() (*{{ $def.ReturnType }}, error) {
+				return s.{{ $def.Caller }}(ctx, args)
+			},
 		})
 		{{- else }}
 		return s.{{ $def.Caller }}(ctx, args)

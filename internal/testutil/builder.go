@@ -796,16 +796,53 @@ func (b *CallExprBuilder) SetTimeout(v string) *CallExprBuilder {
 	return b
 }
 
+func (b *CallExprBuilder) SetRetryIf(expr string) *CallExprBuilder {
+	ifValue := &resolver.CELValue{
+		Expr: expr,
+		Out:  resolver.BoolType,
+	}
+	if b.expr.Retry != nil {
+		b.expr.Retry.If = ifValue
+	} else {
+		b.expr.Retry = &resolver.RetryPolicy{If: ifValue}
+	}
+	return b
+}
+
 func (b *CallExprBuilder) SetRetryPolicyConstant(constant *resolver.RetryPolicyConstant) *CallExprBuilder {
-	b.expr.Retry = &resolver.RetryPolicy{
-		Constant: constant,
+	defaultIfValue := &resolver.CELValue{
+		Expr: "true",
+		Out:  resolver.BoolType,
+	}
+	if b.expr.Retry != nil {
+		b.expr.Retry.Constant = constant
+		if b.expr.Retry.If == nil {
+			b.expr.Retry.If = defaultIfValue
+		}
+	} else {
+		b.expr.Retry = &resolver.RetryPolicy{
+			If:       defaultIfValue,
+			Constant: constant,
+		}
 	}
 	return b
 }
 
 func (b *CallExprBuilder) SetRetryPolicyExponential(exp *resolver.RetryPolicyExponential) *CallExprBuilder {
-	b.expr.Retry = &resolver.RetryPolicy{
-		Exponential: exp,
+	defaultIfValue := &resolver.CELValue{
+		Expr: "true",
+		Out:  resolver.BoolType,
+	}
+	if b.expr.Retry != nil {
+		b.expr.Retry.Exponential = exp
+		if b.expr.Retry.If == nil {
+			b.expr.Retry.If = defaultIfValue
+		}
+	} else {
+		b.expr.Retry = &resolver.RetryPolicy{
+			If:          defaultIfValue,
+			Exponential: exp,
+		}
 	}
 	return b
 }

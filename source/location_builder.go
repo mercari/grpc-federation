@@ -933,6 +933,16 @@ type RetryOptionBuilder struct {
 	option func(*Location) *RetryOption
 }
 
+func (b *RetryOptionBuilder) WithIf() *RetryOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.If = true
+	return &RetryOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
 func (b *RetryOptionBuilder) WithConstantInterval() *RetryOptionBuilder {
 	root := b.root.Clone()
 	option := b.option(root)

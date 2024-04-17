@@ -171,6 +171,7 @@ func TestSimpleAggregation(t *testing.T) {
 												Build(t),
 										).
 										SetTimeout("20s").
+										SetRetryIf("error.code != google.rpc.Code.UNIMPLEMENTED").
 										SetRetryPolicyExponential(
 											testutil.NewRetryPolicyExponentialBuilder().
 												SetInitialInterval("1s").

@@ -256,6 +256,10 @@ message RetryPolicy {
     // https://pkg.go.dev/github.com/cenkalti/backoff/v4#section-readme.
     RetryPolicyExponential exponential = 2;
   }
+  // if specifies condition in CEL. If the condition is true, run the retry process according to the policy.
+  // If this field is omitted, it is always treated as 'true' and run the retry process.
+  // The return value must always be of type boolean.
+  string if = 3;
 }
 
 // RetryPolicyConstant define "constant" based retry policy.

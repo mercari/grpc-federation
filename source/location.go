@@ -207,6 +207,7 @@ type RequestOption struct {
 
 // RetryOption represents resolver.retry location of grpc.federation.message option.
 type RetryOption struct {
+	If          bool
 	Constant    *RetryConstantOption
 	Exponential *RetryExponentialOption
 }

@@ -771,58 +771,6 @@ func (f *File) findServiceByPos(ctx *findContext, pos Position, node *ast.Servic
 }
 
 func (f *File) findServiceOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
-	literal, ok := node.Val.(*ast.MessageLiteralNode)
-	if !ok {
-		return nil
-	}
-	for _, elem := range literal.Elements {
-		optName := elem.Name.Name.AsIdentifier()
-		switch optName {
-		case "dependencies":
-			if found := f.findServiceDependencyByPos(ctx, pos, f.getMessageListFromNode(elem.Val)); found != nil {
-				return found
-			}
-		}
-	}
-	return nil
-}
-
-func (f *File) findServiceDependencyByPos(ctx *findContext, pos Position, list []*ast.MessageLiteralNode) *Location {
-	for idx, literal := range list {
-		for _, dep := range literal.Elements {
-			fieldName := dep.Name.Name.AsIdentifier()
-			switch fieldName {
-			case "name":
-				value, ok := dep.Val.(*ast.StringLiteralNode)
-				if !ok {
-					return nil
-				}
-				if f.containsPos(value, pos) {
-					ctx.serviceDepOption = &ServiceDependencyOption{
-						Idx:  idx,
-						Name: true,
-					}
-					return f.buildLocation(ctx)
-				}
-			case "service":
-				value, ok := dep.Val.(*ast.StringLiteralNode)
-				if !ok {
-					return nil
-				}
-				if f.containsPos(value, pos) {
-					ctx.serviceDepOption = &ServiceDependencyOption{
-						Idx:     idx,
-						Service: true,
-					}
-					return f.buildLocation(ctx)
-				}
-			}
-		}
-		if f.containsPos(literal, pos) {
-			ctx.serviceDepOption = &ServiceDependencyOption{}
-			return f.buildLocation(ctx)
-		}
-	}
 	return nil
 }
 
@@ -1222,6 +1170,12 @@ func (f *File) nodeInfoByRetry(node *ast.MessageLiteralNode, retry *RetryOption)
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
+		case retry.If && fieldName == "if":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
 		case retry.Constant != nil && fieldName == "constant":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
@@ -1586,48 +1540,8 @@ func (f *File) nodeInfoByService(node *ast.ServiceNode, svc *Service) *ast.NodeI
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByServiceOption(node *ast.OptionNode, opt *ServiceOption) *ast.NodeInfo {
-	literal, ok := node.Val.(*ast.MessageLiteralNode)
-	if !ok {
-		return nil
-	}
-	var deps []*ast.MessageLiteralNode
-	for _, elem := range literal.Elements {
-		optName := elem.Name.Name.AsIdentifier()
-		switch {
-		case opt.Dependencies != nil && optName == "dependencies":
-			deps = append(deps, f.getMessageListFromNode(elem.Val)...)
-		}
-	}
-	if len(deps) != 0 {
-		return f.nodeInfoByServiceDependency(deps, opt.Dependencies)
-	}
+func (f *File) nodeInfoByServiceOption(node *ast.OptionNode, _ *ServiceOption) *ast.NodeInfo {
 	return f.nodeInfo(node)
-}
-
-func (f *File) nodeInfoByServiceDependency(list []*ast.MessageLiteralNode, dep *ServiceDependencyOption) *ast.NodeInfo {
-	if dep.Idx >= len(list) {
-		return nil
-	}
-	literal := list[dep.Idx]
-	for _, elem := range literal.Elements {
-		fieldName := elem.Name.Name.AsIdentifier()
-		switch {
-		case dep.Name && fieldName == "name":
-			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfo(value)
-		case dep.Service && fieldName == "service":
-			value, ok := elem.Val.(*ast.StringLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfo(value)
-		}
-	}
-	return f.nodeInfo(literal)
 }
 
 func (f *File) nodeInfoByMethod(node *ast.RPCNode, mtd *Method) *ast.NodeInfo {

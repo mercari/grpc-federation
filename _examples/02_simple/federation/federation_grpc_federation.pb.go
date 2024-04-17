@@ -931,8 +931,15 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				b := grpcfed.NewConstantBackOff(2000000000) /* 2s */
 				b = grpcfed.BackOffWithMaxRetries(b, 3)
 				b = grpcfed.BackOffWithContext(b, ctx)
-				return grpcfed.WithRetry[post.GetPostResponse](b, func() (*post.GetPostResponse, error) {
-					return s.client.Post_PostServiceClient.GetPost(ctx, args)
+				return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[post.GetPostResponse]{
+					Value:             value,
+					If:                "true",
+					UseContextLibrary: false,
+					CacheIndex:        26,
+					BackOff:           b,
+					Body: func() (*post.GetPostResponse, error) {
+						return s.client.Post_PostServiceClient.GetPost(ctx, args)
+					},
 				})
 			})
 		},
@@ -957,7 +964,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Setter:              func(value *localValueType, v *post.Post) { value.vars.post = v },
 		By:                  "res.post",
 		ByUseContextLibrary: false,
-		ByCacheIndex:        26,
+		ByCacheIndex:        27,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -984,7 +991,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				Value:             value,
 				Expr:              "post",
 				UseContextLibrary: false,
-				CacheIndex:        27,
+				CacheIndex:        28,
 				Setter: func(v *post.Post) {
 					args.Id = v.GetId()
 					args.Title = v.GetTitle()
@@ -1018,7 +1025,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              "user",
 		UseContextLibrary: false,
-		CacheIndex:        28,
+		CacheIndex:        29,
 		Setter:            func(v *User) { ret.User = v },
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -1070,7 +1077,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				Value:             value,
 				Expr:              "$.user_id",
 				UseContextLibrary: false,
-				CacheIndex:        29,
+				CacheIndex:        30,
 				Setter: func(v string) {
 					args.Id = v
 				},
@@ -1087,8 +1094,15 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				})
 				b = grpcfed.BackOffWithMaxRetries(b, 3)
 				b = grpcfed.BackOffWithContext(b, ctx)
-				return grpcfed.WithRetry[user.GetUserResponse](b, func() (*user.GetUserResponse, error) {
-					return s.client.User_UserServiceClient.GetUser(ctx, args)
+				return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[user.GetUserResponse]{
+					Value:             value,
+					If:                "true",
+					UseContextLibrary: false,
+					CacheIndex:        31,
+					BackOff:           b,
+					Body: func() (*user.GetUserResponse, error) {
+						return s.client.User_UserServiceClient.GetUser(ctx, args)
+					},
 				})
 			})
 		},
@@ -1113,7 +1127,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		Setter:              func(value *localValueType, v *user.User) { value.vars.user = v },
 		By:                  "res.user",
 		ByUseContextLibrary: false,
-		ByCacheIndex:        30,
+		ByCacheIndex:        32,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

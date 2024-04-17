@@ -3,6 +3,7 @@ package federation
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"runtime/debug"
 	"time"
 
@@ -79,16 +80,39 @@ func NewExponentialBackOff(cfg *ExponentialBackOffConfig) *BackOff {
 	}
 }
 
-func WithRetry[T any](b *BackOff, fn func() (*T, error)) (*T, error) {
+type RetryParam[T any] struct {
+	Value             localValue
+	If                string
+	UseContextLibrary bool
+	CacheIndex        int
+	BackOff           *BackOff
+	Body              func() (*T, error)
+}
+
+func WithRetry[T any](ctx context.Context, param *RetryParam[T]) (*T, error) {
 	var res *T
 	if err := backoff.Retry(func() (err error) {
-		result, err := fn()
+		result, err := param.Body()
 		if err != nil {
+			SetGRPCError(ctx, param.Value, err)
+			cond, evalErr := EvalCEL(ctx, &EvalCELRequest{
+				Value:             param.Value,
+				Expr:              param.If,
+				UseContextLibrary: param.UseContextLibrary,
+				OutType:           reflect.TypeOf(false),
+				CacheIndex:        param.CacheIndex,
+			})
+			if evalErr != nil {
+				return backoff.Permanent(evalErr)
+			}
+			if !cond.(bool) {
+				return backoff.Permanent(err)
+			}
 			return err
 		}
 		res = result
 		return nil
-	}, b); err != nil {
+	}, param.BackOff); err != nil {
 		return nil, err
 	}
 	return res, nil

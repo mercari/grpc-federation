@@ -85,6 +85,7 @@ message User {
         request { field: "id" by: "$.user_id" }
         timeout: "20s"
         retry {
+          if: "error.code != google.rpc.Code.UNIMPLEMENTED"
           exponential {
             initial_interval: "1s"
             randomization_factor: 0.7
