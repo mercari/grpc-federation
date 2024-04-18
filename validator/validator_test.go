@@ -208,14 +208,22 @@ testdata/invalid_oneof.proto:91:3: "foo" field in "org.federation.UserSelection"
        ^
 `},
 		{file: "invalid_retry.proto", expected: `
-testdata/invalid_retry.proto:38:23: time: missing unit in duration "1"
-38:              interval: "1"
+testdata/invalid_retry.proto:37:15: ERROR: <input>:1:1: undeclared reference to 'foo' (in container '')
+ | foo
+ | ^
+37:            if: "foo"
+                   ^
+testdata/invalid_retry.proto:39:23: time: missing unit in duration "1"
+39:              interval: "1"
                            ^
-testdata/invalid_retry.proto:54:31: time: missing unit in duration "2"
-54:              initial_interval: "2"
+testdata/invalid_retry.proto:54:15: if must always return a boolean value
+54:            if: "1"
+                   ^
+testdata/invalid_retry.proto:56:31: time: missing unit in duration "2"
+56:              initial_interval: "2"
                                    ^
-testdata/invalid_retry.proto:70:27: time: missing unit in duration "3"
-70:              max_interval: "3"
+testdata/invalid_retry.proto:72:27: time: missing unit in duration "3"
+72:              max_interval: "3"
                                ^
 `},
 		{file: "invalid_method_service_name.proto", expected: `

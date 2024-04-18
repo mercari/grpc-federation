@@ -2621,6 +2621,14 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 					),
 				)
 			}
+			if retry.If.Out != nil && retry.If.Out.Kind != types.Bool {
+				ctx.addError(
+					ErrWithLocation(
+						"if must always return a boolean value",
+						retryBuilder.WithIf().Location(),
+					),
+				)
+			}
 		}
 		for idx, grpcErr := range expr.Call.Errors {
 			r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, callBuilder.WithError(idx))
