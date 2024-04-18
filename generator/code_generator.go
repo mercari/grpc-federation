@@ -2016,9 +2016,9 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 				}
 			default:
 				// Since fromType is a primitive type, type conversion is possible on the CEL side.
-				toType := toType.Clone()
-				toType.OneofField = nil
-				typ = m.file.toTypeText(toType)
+				deletedOneofFieldType := toType.Clone()
+				deletedOneofFieldType.OneofField = nil
+				typ = m.file.toTypeText(deletedOneofFieldType)
 			}
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
