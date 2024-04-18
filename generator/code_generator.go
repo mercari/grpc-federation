@@ -739,6 +739,9 @@ func toMakeZeroValue(file *File, t *resolver.Type) string {
 	if t.Repeated || t.Kind == types.Bytes {
 		return fmt.Sprintf("%s(nil)", text)
 	}
+	if t.OneofField != nil {
+		return fmt.Sprintf("(%s)(nil)", text)
+	}
 	if t.IsNumber() {
 		return fmt.Sprintf("%s(0)", text)
 	}
@@ -780,6 +783,14 @@ func (f *File) toTypeText(t *resolver.Type) string {
 	if t == nil {
 		return "any"
 	}
+	if t.OneofField != nil {
+		typ := f.oneofTypeToText(t.OneofField)
+		if t.Repeated {
+			return "[]" + typ
+		}
+		return typ
+	}
+
 	var typ string
 	switch t.Kind {
 	case types.Double:
@@ -816,11 +827,7 @@ func (f *File) toTypeText(t *resolver.Type) string {
 		f.pkgMap[t.Enum.GoPackage()] = struct{}{}
 		typ = f.enumTypeToText(t.Enum)
 	case types.Message:
-		if t.OneofField != nil {
-			typ = f.oneofTypeToText(t.OneofField)
-		} else {
-			typ = f.messageTypeToText(t.Message)
-		}
+		typ = f.messageTypeToText(t.Message)
 	default:
 		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind.ToString())
 	}
@@ -2009,7 +2016,9 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 				}
 			default:
 				// Since fromType is a primitive type, type conversion is possible on the CEL side.
-				typ = m.file.toTypeText(toType)
+				deletedOneofFieldType := toType.Clone()
+				deletedOneofFieldType.OneofField = nil
+				typ = m.file.toTypeText(deletedOneofFieldType)
 			}
 			if rule.Oneof.Default {
 				defaultField = &OneofField{

@@ -116,6 +116,7 @@ func TestFederation(t *testing.T) {
 		User: &federation.User{
 			Id: "b",
 		},
+		Msg: "bbb",
 	}, cmpopts.IgnoreUnexported(
 		federation.GetResponse{},
 		federation.User{},

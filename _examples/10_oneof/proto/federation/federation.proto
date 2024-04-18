@@ -23,8 +23,10 @@ message GetResponse {
         args { name: "value", string: "foo" }
       }
     }
+    def { name: "msg_sel" message { name: "MessageSelection" } }
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
+  string msg = 2 [(grpc.federation.field).by = "msg_sel.message"];
 }
 
 message UserSelection {
@@ -68,6 +70,29 @@ message UserSelection {
           }
         }
         by: "uc"
+      }
+    ];
+  }
+}
+
+message MessageSelection {
+  oneof message {
+    string msg_a = 1 [
+      (grpc.federation.field).oneof = {
+        if: "false"
+        by: "'aaa'"
+      }
+    ];
+    string msg_b = 2 [
+      (grpc.federation.field).oneof = {
+        if: "true"
+        by: "'bbb'"
+      }
+    ];
+    string msg_c = 3 [
+      (grpc.federation.field).oneof = {
+        default: true
+        by: "'ccc'"
       }
     ];
   }
