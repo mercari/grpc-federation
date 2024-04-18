@@ -44,6 +44,9 @@ message Post {
     name: "favorite_value" by: "favorite.FavoriteType.value('TYPE1')"
   };
   option (grpc.federation.message).def = {
+    name: "cmp" by: "favorite_value == favorite.FavoriteType.TYPE1"
+  };
+  option (grpc.federation.message).def = {
     name: "reaction"
     message {
       name: "Reaction"
@@ -57,6 +60,7 @@ message Post {
   User user = 4 [(grpc.federation.field).by = "u"];
   Reaction reaction = 5 [(grpc.federation.field).by = "reaction"];
   MyFavoriteType favorite_value = 6 [(grpc.federation.field).by = "favorite_value"];
+  bool cmp = 7 [(grpc.federation.field).by = "cmp"];
 }
 
 enum MyFavoriteType {
