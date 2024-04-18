@@ -34,6 +34,7 @@ message A {
         method: "post.PostService/GetPost"
         request { field: "id", string: "foo" }
         retry {
+          if: "foo"
           constant {
             interval: "1"
           }
@@ -50,6 +51,7 @@ message B {
         method: "post.PostService/GetPost"
         request { field: "id", string: "foo" }
         retry {
+          if: "1"
           exponential {
             initial_interval: "2"
           }

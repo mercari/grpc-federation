@@ -29,57 +29,6 @@ func TestFile_FindLocationByPos(t *testing.T) {
 			expected: nil,
 		},
 		{
-			desc: "find a ServiceDependencyOption name",
-			file: "service.proto",
-			pos: source.Position{
-				Line: 15,
-				Col:  15,
-			},
-			expected: &source.Location{
-				FileName: "service.proto",
-				Service: &source.Service{
-					Name: "FederationService",
-					Option: &source.ServiceOption{
-						Dependencies: &source.ServiceDependencyOption{Name: true},
-					},
-				},
-			},
-		},
-		{
-			desc: "find a ServiceDependencyOption name",
-			file: "service.proto",
-			pos: source.Position{
-				Line: 15,
-				Col:  15,
-			},
-			expected: &source.Location{
-				FileName: "service.proto",
-				Service: &source.Service{
-					Name: "FederationService",
-					Option: &source.ServiceOption{
-						Dependencies: &source.ServiceDependencyOption{Name: true},
-					},
-				},
-			},
-		},
-		{
-			desc: "find a ServiceDependencyOption service",
-			file: "service.proto",
-			pos: source.Position{
-				Line: 15,
-				Col:  32,
-			},
-			expected: &source.Location{
-				FileName: "service.proto",
-				Service: &source.Service{
-					Name: "FederationService",
-					Option: &source.ServiceOption{
-						Dependencies: &source.ServiceDependencyOption{Service: true},
-					},
-				},
-			},
-		},
-		{
 			desc: "find a MethodOption string timeout",
 			file: "service.proto",
 			pos: source.Position{

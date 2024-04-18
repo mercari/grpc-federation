@@ -1938,7 +1938,12 @@ func (r *Resolver) resolveRetry(ctx *context, def *federation.RetryPolicy, timeo
 	if def == nil {
 		return nil
 	}
+	ifExpr := "true"
+	if cond := def.GetIf(); cond != "" {
+		ifExpr = cond
+	}
 	return &RetryPolicy{
+		If:          &CELValue{Expr: ifExpr},
 		Constant:    r.resolveRetryConstant(ctx, def.GetConstant(), builder),
 		Exponential: r.resolveRetryExponential(ctx, def.GetExponential(), timeout, builder),
 	}
@@ -2605,6 +2610,26 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		grpcErrEnv, _ := env.Extend(
 			cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
 		)
+		if expr.Call.Retry != nil {
+			retryBuilder := callBuilder.WithRetry()
+			retry := expr.Call.Retry
+			if err := r.resolveCELValue(ctx, grpcErrEnv, retry.If); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						retryBuilder.WithIf().Location(),
+					),
+				)
+			}
+			if retry.If.Out != nil && retry.If.Out.Kind != types.Bool {
+				ctx.addError(
+					ErrWithLocation(
+						"if must always return a boolean value",
+						retryBuilder.WithIf().Location(),
+					),
+				)
+			}
+		}
 		for idx, grpcErr := range expr.Call.Errors {
 			r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, callBuilder.WithError(idx))
 		}

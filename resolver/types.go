@@ -386,6 +386,7 @@ type MethodCall struct {
 }
 
 type RetryPolicy struct {
+	If          *CELValue
 	Constant    *RetryPolicyConstant
 	Exponential *RetryPolicyExponential
 }
