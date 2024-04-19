@@ -13,5 +13,6 @@ var (
 
 // Federation_ReactionArgument is argument for "federation.Reaction" message.
 type Federation_ReactionArgument struct {
-	V favorite.FavoriteType
+	Cmp bool
+	V   favorite.FavoriteType
 }

@@ -80,8 +80,10 @@ func TestFederation(t *testing.T) {
 					},
 					Reaction: &federation.Reaction{
 						FavoriteType: favorite.FavoriteType_TYPE1,
+						Cmp:          true,
 					},
 					FavoriteValue: federation.MyFavoriteType_TYPE1,
+					Cmp:           true,
 				},
 			}
 		)

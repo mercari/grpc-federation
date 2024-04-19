@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/operators"
+	"github.com/google/cel-go/common/overloads"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -2964,6 +2966,7 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CustomTypeProvider(r.celRegistry),
 	}
 	envOpts = append(envOpts, r.enumAccessors()...)
+	envOpts = append(envOpts, r.enumOperators()...)
 	for _, plugin := range r.celPluginMap {
 		envOpts = append(envOpts, cel.Lib(plugin))
 	}
@@ -2996,6 +2999,23 @@ func (r *Resolver) enumAccessors() []cel.EnvOption {
 		)
 	}
 	return ret
+}
+
+// enumOperators an enum may be treated as an `opaque<int>` or as an `int`.
+// In this case, the default `equal` and `not-equal` operators cannot be used, so operators are registered so that different types can be compared.
+func (r *Resolver) enumOperators() []cel.EnvOption {
+	return []cel.EnvOption{
+		cel.Function(operators.Equals,
+			cel.Overload(overloads.Equals, []*cel.Type{celtypes.NewTypeParamType("A"), celtypes.NewTypeParamType("B")}, cel.BoolType,
+				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val { return nil }),
+			),
+		),
+		cel.Function(operators.NotEquals,
+			cel.Overload(overloads.NotEquals, []*cel.Type{celtypes.NewTypeParamType("A"), celtypes.NewTypeParamType("B")}, cel.BoolType,
+				cel.BinaryBinding(func(lhs, rhs ref.Val) ref.Val { return nil }),
+			),
+		),
+	}
 }
 
 func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {

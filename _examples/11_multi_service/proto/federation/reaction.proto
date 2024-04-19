@@ -8,5 +8,10 @@ import "favorite/favorite.proto";
 option go_package = "example/federation;federation";
 
 message Reaction {
+  option (grpc.federation.message) = {
+    def { name: "cmp" by: "$.v == favorite.FavoriteType.TYPE1" }
+  };
+
   favorite.FavoriteType favorite_type = 1 [(grpc.federation.field).by = "favorite.FavoriteType.TYPE1"];
+  bool cmp = 2 [(grpc.federation.field).by = "cmp"];
 }
