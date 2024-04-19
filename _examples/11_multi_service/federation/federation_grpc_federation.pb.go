@@ -522,12 +522,23 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	// (grpc.federation.field).by = "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))",
+		UseContextLibrary: false,
+		CacheIndex:        12,
+		Setter:            func(v string) { ret.FavoriteTypeStr = v },
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 	// (grpc.federation.field).by = "cmp"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:             value,
 		Expr:              "cmp",
 		UseContextLibrary: false,
-		CacheIndex:        12,
+		CacheIndex:        13,
 		Setter:            func(v bool) { ret.Cmp = v },
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -565,7 +576,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              "$.id",
 		UseContextLibrary: false,
-		CacheIndex:        13,
+		CacheIndex:        14,
 		Setter:            func(v string) { ret.Id = v },
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -576,7 +587,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              "$.name",
 		UseContextLibrary: false,
-		CacheIndex:        14,
+		CacheIndex:        15,
 		Setter:            func(v string) { ret.Name = v },
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -672,6 +683,7 @@ func (s *FederationService) logvalue_Federation_Reaction(v *Reaction) slog.Value
 	}
 	return slog.GroupValue(
 		slog.String("favorite_type", s.logvalue_Favorite_FavoriteType(v.GetFavoriteType()).String()),
+		slog.String("favorite_type_str", v.GetFavoriteTypeStr()),
 		slog.Bool("cmp", v.GetCmp()),
 	)
 }
