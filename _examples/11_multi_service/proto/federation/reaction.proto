@@ -13,5 +13,6 @@ message Reaction {
   };
 
   favorite.FavoriteType favorite_type = 1 [(grpc.federation.field).by = "favorite.FavoriteType.TYPE1"];
-  bool cmp = 2 [(grpc.federation.field).by = "cmp"];
+  string favorite_type_str = 2 [(grpc.federation.field).by = "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))"];
+  bool cmp = 3 [(grpc.federation.field).by = "cmp"];
 }

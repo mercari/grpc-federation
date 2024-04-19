@@ -2989,6 +2989,9 @@ func (r *Resolver) enumAccessors() []cel.EnvOption {
 				cel.Overload(fmt.Sprintf("%s_name_int_string", enum.FQDN()), []*cel.Type{cel.IntType}, cel.StringType,
 					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
 				),
+				cel.Overload(fmt.Sprintf("%s_name_enum_string", enum.FQDN()), []*cel.Type{celtypes.NewOpaqueType(enum.FQDN(), cel.IntType)}, cel.StringType,
+					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
+				),
 			),
 			cel.Function(
 				fmt.Sprintf("%s.value", enum.FQDN()),
