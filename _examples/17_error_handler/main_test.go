@@ -45,25 +45,10 @@ type PostServer struct {
 	*post.UnimplementedPostServiceServer
 }
 
+var getPostError error
+
 func (s *PostServer) GetPost(ctx context.Context, req *post.GetPostRequest) (*post.GetPostResponse, error) {
-	st := status.New(codes.FailedPrecondition, "failed to create post message")
-	var details []protoadapt.MessageV1
-	details = append(details, &errdetails.PreconditionFailure{
-		Violations: []*errdetails.PreconditionFailure_Violation{
-			{
-				Type:        "foo",
-				Subject:     "bar",
-				Description: "baz",
-			},
-		},
-	})
-	details = append(details, &errdetails.LocalizedMessage{
-		Locale:  "en-US",
-		Message: "hello",
-	})
-	details = append(details, &post.Post{Id: req.GetId()})
-	stWithDetails, _ := st.WithDetails(details...)
-	return nil, stWithDetails.Err()
+	return nil, getPostError
 }
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
@@ -130,6 +115,25 @@ func TestFederation(t *testing.T) {
 
 	client := federation.NewFederationServiceClient(conn)
 	t.Run("custom error", func(t *testing.T) {
+		st := status.New(codes.FailedPrecondition, "failed to create post message")
+		var details []protoadapt.MessageV1
+		details = append(details, &errdetails.PreconditionFailure{
+			Violations: []*errdetails.PreconditionFailure_Violation{
+				{
+					Type:        "foo",
+					Subject:     "bar",
+					Description: "baz",
+				},
+			},
+		})
+		details = append(details, &errdetails.LocalizedMessage{
+			Locale:  "en-US",
+			Message: "hello",
+		})
+		details = append(details, &post.Post{Id: "xxx"})
+		stWithDetails, _ := st.WithDetails(details...)
+		getPostError = stWithDetails.Err()
+
 		_, err := client.GetPost(ctx, &federation.GetPostRequest{Id: "x"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -142,7 +146,27 @@ func TestFederation(t *testing.T) {
 			t.Fatalf("got unexpected error: %v", err)
 		}
 	})
+	t.Run("ignore error and response", func(t *testing.T) {
+		st := status.New(codes.Unimplemented, "unimplemented error")
+		getPostError = st.Err()
+
+		res, err := client.GetPost(ctx, &federation.GetPostRequest{Id: ""})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(res, &federation.GetPostResponse{Post: &federation.Post{Id: "anonymous"}},
+			cmpopts.IgnoreUnexported(
+				federation.GetPostResponse{},
+				federation.Post{},
+			),
+		); diff != "" {
+			t.Errorf("(-got, +want)\n%s", diff)
+		}
+	})
 	t.Run("ignore error", func(t *testing.T) {
+		st := status.New(codes.FailedPrecondition, "failed to create post message")
+		getPostError = st.Err()
+
 		res, err := client.GetPost(ctx, &federation.GetPostRequest{Id: ""})
 		if err != nil {
 			t.Fatal(err)

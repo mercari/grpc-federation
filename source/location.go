@@ -241,13 +241,14 @@ type ValidationExprOption struct {
 }
 
 type GRPCErrorOption struct {
-	Idx     int
-	Def     *VariableDefinitionOption
-	If      bool
-	Code    bool
-	Message bool
-	Ignore  bool
-	Detail  *GRPCErrorDetailOption
+	Idx               int
+	Def               *VariableDefinitionOption
+	If                bool
+	Code              bool
+	Message           bool
+	Ignore            bool
+	IgnoreAndResponse bool
+	Detail            *GRPCErrorDetailOption
 }
 
 type GRPCErrorDetailOption struct {

@@ -39,7 +39,7 @@ message Post {
           request { field: "id" by: "$.id" }
           error {
             def { name: "id" by: "$.id" }
-            if: "error.precondition_failures[0].violations[0].subject == 'bar' && error.localized_messages[0].message == 'hello' && error.custom_messages[0].id == 'x'"
+            if: "error.precondition_failures[?0].violations[?0].subject == optional.of('bar') && error.localized_messages[?0].message == optional.of('hello') && error.custom_messages[?0].id == optional.of('xxx')"
             code: FAILED_PRECONDITION
             message: "'this is custom error message'"
             details {
@@ -57,6 +57,10 @@ message Post {
                 message: "localized_msg.value"
               }
             }
+          }
+          error {
+            if: "error.code == google.rpc.Code.UNIMPLEMENTED"
+            ignore_and_response: "post.GetPostResponse{post: post.Post{id: 'anonymous'}}"
           }
           error {
             ignore: true

@@ -1415,9 +1415,31 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 }
 
 func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, builder *source.GRPCErrorOptionBuilder) *GRPCError {
-	var msg *CELValue
+	var (
+		msg               *CELValue
+		ignoreAndResponse *CELValue
+	)
 	if m := def.GetMessage(); m != "" {
 		msg = &CELValue{Expr: m}
+	}
+	if res := def.GetIgnoreAndResponse(); res != "" {
+		if def.GetIgnore() {
+			ctx.addError(
+				ErrWithLocation(
+					`cannot set both "ignore" and "ignore_and_response"`,
+					builder.WithIgnore().Location(),
+				),
+			)
+		}
+		if def.GetIgnore() {
+			ctx.addError(
+				ErrWithLocation(
+					`cannot set both "ignore" and "ignore_and_response"`,
+					builder.WithIgnoreAndResponse().Location(),
+				),
+			)
+		}
+		ignoreAndResponse = &CELValue{Expr: res}
 	}
 	return &GRPCError{
 		DefSet: &VariableDefinitionSet{
@@ -1425,11 +1447,12 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 				return builder.WithDef(idx)
 			}),
 		},
-		If:      r.resolveGRPCErrorIf(def.GetIf()),
-		Code:    def.GetCode(),
-		Message: msg,
-		Details: r.resolveGRPCErrorDetails(ctx, def.GetDetails(), builder),
-		Ignore:  def.GetIgnore(),
+		If:                r.resolveGRPCErrorIf(def.GetIf()),
+		Code:              def.GetCode(),
+		Message:           msg,
+		Details:           r.resolveGRPCErrorDetails(ctx, def.GetDetails(), builder),
+		Ignore:            def.GetIgnore(),
+		IgnoreAndResponse: ignoreAndResponse,
 	}
 }
 
@@ -2633,7 +2656,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 			}
 		}
 		for idx, grpcErr := range expr.Call.Errors {
-			r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, callBuilder.WithError(idx))
+			r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, expr.Call.Method.Response, callBuilder.WithError(idx))
 		}
 		expr.Type = NewMessageType(expr.Call.Method.Response, false)
 	case expr.Message != nil:
@@ -2662,7 +2685,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		expr.Type = NewMessageType(expr.Message.Message, false)
 	case expr.Validation != nil:
 		validationBuilder := builder.WithValidation()
-		r.resolveGRPCErrorCELValues(ctx, env, expr.Validation.Error, validationBuilder.WithError())
+		r.resolveGRPCErrorCELValues(ctx, env, expr.Validation.Error, nil, validationBuilder.WithError())
 		// This is a dummy type since the output from the validation is not supposed to be used (at least for now)
 		expr.Type = BoolType
 	}
@@ -2707,7 +2730,7 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 	}
 }
 
-func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr *GRPCError, builder *source.GRPCErrorOptionBuilder) {
+func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr *GRPCError, response *Message, builder *source.GRPCErrorOptionBuilder) {
 	if grpcErr == nil {
 		return
 	}
@@ -2729,6 +2752,27 @@ func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr
 				builder.WithIf().Location(),
 			),
 		)
+	}
+	if grpcErr.IgnoreAndResponse != nil {
+		if err := r.resolveCELValue(ctx, env, grpcErr.IgnoreAndResponse); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithIgnoreAndResponse().Location(),
+				),
+			)
+		}
+		if grpcErr.IgnoreAndResponse.Out != nil && response != nil {
+			msg := grpcErr.IgnoreAndResponse.Out.Message
+			if msg == nil || msg != response {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`value must be %q type`, response.FQDN()),
+						builder.WithIgnoreAndResponse().Location(),
+					),
+				)
+			}
+		}
 	}
 	if grpcErr.Message != nil {
 		if err := r.resolveCELValue(ctx, env, grpcErr.Message); err != nil {

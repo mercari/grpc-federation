@@ -971,6 +971,14 @@ func (b *GRPCErrorBuilder) SetIgnore(v bool) *GRPCErrorBuilder {
 	return b
 }
 
+func (b *GRPCErrorBuilder) SetIgnoreAndResponse(v string, typ *resolver.Type) *GRPCErrorBuilder {
+	b.err.IgnoreAndResponse = &resolver.CELValue{
+		Expr: v,
+		Out:  typ,
+	}
+	return b
+}
+
 func (b *GRPCErrorBuilder) AddDetail(v *resolver.GRPCErrorDetail) *GRPCErrorBuilder {
 	b.err.Details = append(b.err.Details, v)
 	return b

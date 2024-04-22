@@ -20,6 +20,20 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			{{- if .Ignore }}
 			stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
 			return nil
+			{{- else if .IgnoreAndResponse }}
+			stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+			if err := grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
+				Name: "{{ $def.Key }}",
+				Type: {{ $def.CELType }},
+				Setter: func(value *localValueType, v {{ $def.Type }}) { value.vars.{{ $def.Key }} = v },
+				By: "{{ .IgnoreAndResponse.Expr }}",
+				ByUseContextLibrary: {{ .IgnoreAndResponse.UseContextLibrary }},
+				ByCacheIndex: {{ $def.CELCacheIndex }},
+			}); err != nil {
+				s.logger.ErrorContext({{ $ctx }}, "failed to set response when ignored", slog.String("error", err.Error()))
+				return nil
+			}
+			return nil
 			{{- else }}
 
 			{{- if .Message }}
