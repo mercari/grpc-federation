@@ -1040,6 +1040,11 @@ func (d *decoder) toRetryPolicy(retry *plugin.RetryPolicy) (*resolver.RetryPolic
 		return nil, nil
 	}
 	ret := &resolver.RetryPolicy{}
+	ifValue, err := d.toCELValue(retry.GetIf())
+	if err != nil {
+		return nil, err
+	}
+	ret.If = ifValue
 	switch {
 	case retry.GetConstant() != nil:
 		cons := retry.GetConstant()
@@ -1106,7 +1111,8 @@ func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) 
 		return nil, nil
 	}
 	ret := &resolver.GRPCError{
-		Code: e.GetCode(),
+		Code:   e.GetCode(),
+		Ignore: e.GetIgnore(),
 	}
 
 	ifValue, err := d.toCELValue(e.GetIf())
@@ -1121,9 +1127,14 @@ func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) 
 	if err != nil {
 		return nil, err
 	}
+	ignoreAndResponse, err := d.toCELValue(e.GetIgnoreAndResponse())
+	if err != nil {
+		return nil, err
+	}
 	ret.If = ifValue
 	ret.Message = msgValue
 	ret.Details = details
+	ret.IgnoreAndResponse = ignoreAndResponse
 	return ret, nil
 }
 

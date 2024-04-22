@@ -1430,8 +1430,6 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 					builder.WithIgnore().Location(),
 				),
 			)
-		}
-		if def.GetIgnore() {
 			ctx.addError(
 				ErrWithLocation(
 					`cannot set both "ignore" and "ignore_and_response"`,
