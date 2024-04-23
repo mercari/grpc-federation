@@ -7,7 +7,7 @@ SHELL := env PATH='$(PATH)' bash
 PKG := github.com/mercari/grpc-federation
 
 # retrieve all packages related to the test
-PKGS := $(shell go list ./... | grep -v tools | grep -v cmd)
+PKGS := $(shell go list ./... | grep -v cmd)
 
 # remove $PKG prefix from package name and add a dot character to convert it to a relative path.
 COVER_PKGS := $(foreach pkg,$(PKGS),$(subst $(PKG),.,$(pkg)))
@@ -42,7 +42,6 @@ fmt: fmt/golangci-lint tidy fmt/buf
 .PHONY: tidy
 tidy: tidy/examples
 	go mod tidy
-	cd tools && go mod tidy
 
 tidy/examples: $(foreach var,$(EXAMPLES),tidy/examples/$(var))
 
@@ -58,7 +57,7 @@ lint/golangci-lint:
 	$(GOBIN)/golangci-lint run $(args) ./...
 
 lint/gomod: tidy
-	if git diff --quiet go.mod go.sum tools/go.mod tools/go.sum; then \
+	if git diff --quiet go.mod go.sum; then \
         exit 0; \
 	else \
 		echo "go mod tidy resulted in a change of files."; \
@@ -121,7 +120,7 @@ versioning/vscode-extension:
 
 .PHONY: test
 test: test/examples
-	go test -race -coverpkg=$(COVERPKG_OPT) -covermode=atomic -coverprofile=cover.out.tmp `go list ./... | grep -v github.com/mercari/grpc-federation/tools`
+	go test -race -coverpkg=$(COVERPKG_OPT) -covermode=atomic -coverprofile=cover.out.tmp `go list ./...`
 	cat cover.out.tmp |grep -v "pb.go" > cover.out && rm cover.out.tmp
 
 test/examples: $(foreach var,$(EXAMPLES),test/examples/$(var))
