@@ -3532,6 +3532,15 @@ func TestErrorHandler(t *testing.T) {
 										).
 										AddError(
 											testutil.NewGRPCErrorBuilder().
+												SetIf("error.code == google.rpc.Code.UNIMPLEMENTED").
+												SetIgnoreAndResponse(
+													"org.post.GetPostResponse{post: org.post.Post{id: 'anonymous', title: 'none'}}",
+													ref.Type(t, "org.post", "GetPostResponse"),
+												).
+												Build(t),
+										).
+										AddError(
+											testutil.NewGRPCErrorBuilder().
 												SetIf("true").
 												SetIgnore(true).
 												Build(t),

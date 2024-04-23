@@ -831,7 +831,9 @@ func (e *encoder) toRetryPolicy(policy *resolver.RetryPolicy) *plugin.RetryPolic
 	if policy == nil {
 		return nil
 	}
-	ret := &plugin.RetryPolicy{}
+	ret := &plugin.RetryPolicy{
+		If: e.toCELValue(policy.If),
+	}
 	switch {
 	case policy.Constant != nil:
 		ret.Policy = &plugin.RetryPolicy_Constant{
@@ -1096,10 +1098,12 @@ func (e *encoder) toGRPCError(err *resolver.GRPCError) *plugin.GRPCError {
 		return nil
 	}
 	return &plugin.GRPCError{
-		Code:    err.Code,
-		If:      e.toCELValue(err.If),
-		Message: e.toCELValue(err.Message),
-		Details: e.toGRPCErrorDetails(err.Details),
+		Code:              err.Code,
+		If:                e.toCELValue(err.If),
+		Message:           e.toCELValue(err.Message),
+		Details:           e.toGRPCErrorDetails(err.Details),
+		Ignore:            err.Ignore,
+		IgnoreAndResponse: e.toCELValue(err.IgnoreAndResponse),
 	}
 }
 

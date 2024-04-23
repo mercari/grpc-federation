@@ -32,6 +32,17 @@ testdata/invalid_autobind.proto:23:3: "id" field in "org.federation.GetResponse"
 23:    string id = 1;
        ^
 `},
+		{file: "invalid_call_error_handler.proto", expected: `
+testdata/invalid_call_error_handler.proto:42:21: cannot set both "ignore" and "ignore_and_response"
+42:              ignore: true
+                         ^
+testdata/invalid_call_error_handler.proto:43:34: cannot set both "ignore" and "ignore_and_response"
+43:              ignore_and_response: "post.GetPostResponse{}"
+                                      ^
+testdata/invalid_call_error_handler.proto:46:34: value must be "post.GetPostResponse" type
+46:              ignore_and_response: "10"
+                                      ^
+`},
 		{file: "invalid_condition_type.proto", expected: `
 testdata/invalid_condition_type.proto:36:13: return value of "if" must be bool type but got string type
 36:          if: "$.id"

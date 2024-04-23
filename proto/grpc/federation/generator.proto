@@ -298,6 +298,7 @@ message RetryPolicy {
     RetryPolicyConstant constant = 1;
     RetryPolicyExponential exponential = 2;
   }
+  CELValue if = 3;
 }
 
 message RetryPolicyConstant {
@@ -511,6 +512,7 @@ message GRPCError {
   CELValue message = 4;
   repeated GRPCErrorDetail details = 5;
   bool ignore = 6;
+  CELValue ignore_and_response = 7;
 }
 
 message GRPCErrorDetail {

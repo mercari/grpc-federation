@@ -223,12 +223,13 @@ type ValidationExpr struct {
 }
 
 type GRPCError struct {
-	DefSet  *VariableDefinitionSet
-	If      *CELValue
-	Code    code.Code
-	Message *CELValue
-	Details GRPCErrorDetails
-	Ignore  bool
+	DefSet            *VariableDefinitionSet
+	If                *CELValue
+	Code              code.Code
+	Message           *CELValue
+	Details           GRPCErrorDetails
+	Ignore            bool
+	IgnoreAndResponse *CELValue
 }
 
 type GRPCErrorDetails []*GRPCErrorDetail

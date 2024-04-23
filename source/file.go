@@ -1113,7 +1113,10 @@ func (f *File) nodeInfoByMapExpr(node *ast.MessageLiteralNode, _ *MapExprOption)
 }
 
 func (f *File) nodeInfoByCallExpr(node *ast.MessageLiteralNode, call *CallExprOption) *ast.NodeInfo {
-	var requests []*ast.MessageLiteralNode
+	var (
+		requests []*ast.MessageLiteralNode
+		grpcErrs []*ast.MessageLiteralNode
+	)
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
@@ -1133,10 +1136,15 @@ func (f *File) nodeInfoByCallExpr(node *ast.MessageLiteralNode, call *CallExprOp
 				return nil
 			}
 			return f.nodeInfoByRetry(value, call.Retry)
+		case call.Error != nil && fieldName == "error":
+			grpcErrs = append(grpcErrs, f.getMessageListFromNode(elem.Val)...)
 		}
 	}
 	if len(requests) != 0 {
 		return f.nodeInfoByMethodRequest(requests, call.Request)
+	}
+	if len(grpcErrs) != 0 {
+		return f.nodeInfoByGRPCError(grpcErrs, call.Error)
 	}
 	return f.nodeInfo(node)
 }
@@ -1261,18 +1269,34 @@ func (f *File) nodeInfoByValidationExpr(node *ast.MessageLiteralNode, opt *Valid
 			if !ok {
 				return nil
 			}
-			return f.nodeInfoByGRPCError(value, opt.Error)
+			return f.nodeInfoByGRPCError([]*ast.MessageLiteralNode{value}, opt.Error)
 		}
 	}
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByGRPCError(node *ast.MessageLiteralNode, opt *GRPCErrorOption) *ast.NodeInfo {
+func (f *File) nodeInfoByGRPCError(list []*ast.MessageLiteralNode, opt *GRPCErrorOption) *ast.NodeInfo {
+	if opt.Idx >= len(list) {
+		return nil
+	}
+	node := list[opt.Idx]
 	var errDetails []*ast.MessageLiteralNode
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
 		case opt.If && fieldName == "if":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.Ignore && fieldName == "ignore":
+			value, ok := elem.Val.(*ast.IdentNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.IgnoreAndResponse && fieldName == "ignore_and_response":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil

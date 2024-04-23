@@ -416,7 +416,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			}
 			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 				Value:             value,
-				Expr:              "error.precondition_failures[0].violations[0].subject == 'bar' && error.localized_messages[0].message == 'hello' && error.custom_messages[0].id == 'x'",
+				Expr:              "error.precondition_failures[?0].violations[?0].subject == optional.of('bar') && error.localized_messages[?0].message == optional.of('hello') && error.custom_messages[?0].id == optional.of('xxx')",
 				UseContextLibrary: false,
 				CacheIndex:        7,
 				Body: func(value *localValueType) error {
@@ -573,9 +573,35 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			}
 			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 				Value:             value,
-				Expr:              "true",
+				Expr:              "error.code == google.rpc.Code.UNIMPLEMENTED",
 				UseContextLibrary: false,
 				CacheIndex:        17,
+				Body: func(value *localValueType) error {
+					stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+					if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
+						Name:                "res",
+						Type:                grpcfed.CELObjectType("post.GetPostResponse"),
+						Setter:              func(value *localValueType, v *post.GetPostResponse) { value.vars.res = v },
+						By:                  "post.GetPostResponse{post: post.Post{id: 'anonymous'}}",
+						ByUseContextLibrary: false,
+						ByCacheIndex:        18,
+					}); err != nil {
+						s.logger.ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
+						return nil
+					}
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			if stat != nil {
+				return stat, nil
+			}
+			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+				Value:             value,
+				Expr:              "true",
+				UseContextLibrary: false,
+				CacheIndex:        19,
 				Body: func(value *localValueType) error {
 					stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
 					return nil
@@ -590,7 +616,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Value:             value,
 				Expr:              "true",
 				UseContextLibrary: false,
-				CacheIndex:        18,
+				CacheIndex:        20,
 				Body: func(value *localValueType) error {
 					errorMessage := "error"
 					stat = grpcfed.NewGRPCStatus(grpcfed.CancelledCode, errorMessage)
@@ -638,7 +664,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		Setter:              func(value *localValueType, v *post.Post) { value.vars.post = v },
 		By:                  "res.post",
 		ByUseContextLibrary: false,
-		ByCacheIndex:        19,
+		ByCacheIndex:        21,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

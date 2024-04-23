@@ -420,8 +420,39 @@ Specify the retry policy if the method call fails.
 
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
+| [`if`](#grpcfederationmessagedefcallretryif) | [CEL](./cel.md) | optional |
 | [`constant`](#grpcfederationmessagedefcallretryconstant) | RetryPolicyConstant | optional |
 | [`exponential`](#grpcfederationmessagedefcallretryexponential) | RetryPolicyExponential | optional |
+
+## (grpc.federation.message).def.call.retry.if
+
+`if` specifies condition in CEL. If the condition is `true`, run the retry process according to the policy.
+If this field is omitted, it is always treated as `true` and run the retry process.
+The return value must always be of type `boolean`.
+
+> [!NOTE]
+> Within the `if`, the `error` variable can be used as a gRPC error variable when evaluating CEL.
+> [A detailed description of this variable is here](./cel.md#error)
+
+### Example
+
+```proto
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "foopkg.FooService/GetFoo"
+        retry {
+          if: "error.code != google.rpc.Code.UNIMPLEMENTED"
+          constant {
+            interval: "10s"
+          }
+        }
+      }
+    }
+  };
+}
+```
 
 ## (grpc.federation.message).def.call.retry.constant
 
@@ -665,15 +696,88 @@ message MyMessage {
 | field | type | required or optional |
 | ----- | ---- | -------------------- |
 | [`def`](#grpcfederationmessagedef) | repeated VariableDefinition | optional |
-| `if`      | [CEL](./cel.md) | optional |
-| `code`    | google.rpc.Code | required |
-| `message` | [CEL](./cel.md) | required |
+| [`if`](#grpcfederationmessagedefcallerrorif) | [CEL](./cel.md) | optional |
+| [`code`](#grpcfederationmessagedefcallerrorcode) | [google.rpc.Code](../proto_deps/google/rpc/code.proto) | required |
+| [`message`](#grpcfederationmessagedefcallerrormessage) | [CEL](./cel.md) | required |
 | `details` | repeated GRPCErrorDetail | optional |
-| `ignore`  | bool | optional |
+| [`ignore`](#grpcfederationmessagedefcallerrorignore) | bool | optional |
+| [`ignore_and_response`](#grpcfederationmessagedefcallerrorignore_and_response) | [CEL](./cel.md) | optional |
 
 > [!NOTE]
 > Within the error block, the `error` variable can be used as a special variable when evaluating CEL.
 > [A detailed description of this variable is here](./cel.md#error)
+
+## (grpc.federation.message).def.call.error.if
+
+`if` specifies condition in CEL. If the condition is `true`, it returns defined error information.
+If this field is omitted, it is always treated as `true` and returns defined error information.
+The return value must always be of type `boolean`.
+
+## (grpc.federation.message).def.call.error.code
+
+`code` is a gRPC status code.
+
+## (grpc.federation.message).def.call.error.message
+
+`message` is a gRPC status message.
+If omitted, the message will be auto-generated from the configurations.
+
+## (grpc.federation.message).def.call.error.ignore
+
+`ignore` ignore the error if the condition in the `if` field is `true` and `ignore` field is set to `true`.
+When an error is ignored, the returned response is always `null` value.
+If you want to return a response that is not `null`, please use `ignore_and_response` feature.
+Therefore, `ignore` and `ignore_and_response` cannot be specified same.
+
+### Example
+
+```proto
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "foopkg.FooService/GetFoo"
+
+        error {
+          // dscribe the condition for ignoring error.
+          if: "error.code == google.rpc.Code.UNAVAILABLE"
+          ignore: true
+        }
+      }
+    }
+  };
+}
+```
+
+## (grpc.federation.message).def.call.error.ignore_and_response
+
+`ignore_and_response` ignore the error if the condition in the `if` field is `true` and it returns response specified in CEL.
+The evaluation value of CEL must always be the same as the response message type.
+`ignore` and `ignore_and_response` cannot be specified same.
+
+### Example
+
+```proto
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "foopkg.FooService/GetFoo"
+
+        error {
+          // dscribe the condition for ignoring error.
+          if: "error.code == google.rpc.Code.UNAVAILABLE"
+
+          // specify the response to return when errors are ignored.
+          // The return value must always be a response message.
+          ignore_and_response: "foopkg.Foo{x: 1}"
+        }
+      }
+    }
+  };
+}
+```
+
 
 ## (grpc.federation.message).def.message
 
@@ -874,7 +978,7 @@ A validation rule and validation error to be returned.
 
 | field                                                        | type                           | required or optional |
 |--------------------------------------------------------------|--------------------------------|----------------------|
-| [`code`](#grpcfederationmessagedefvalidationerrorcode)       | google.rpc.Code                | required             |
+| [`code`](#grpcfederationmessagedefvalidationerrorcode)       | [google.rpc.Code](../proto_deps/google/rpc/code.proto) | required |
 | [`message`](#grpcfederationmessagedefvalidationerrormessage) | string                         | optional             |
 | [`if`](#grpcfederationmessagedefvalidationerrorif)           | [CEL](./cel.md)                            | optional             |
 | [`details`](#grpcfederationmessagedefvalidationerrordetails) | repeated ValidationErrorDetail | optional             |

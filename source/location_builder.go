@@ -1024,7 +1024,7 @@ func (b *ValidationExprOptionBuilder) WithName() *ValidationExprOptionBuilder {
 func (b *ValidationExprOptionBuilder) WithError() *GRPCErrorOptionBuilder {
 	root := b.root.Clone()
 	option := b.option(root)
-	option.Error = &GRPCErrorOption{Idx: -1} // not used idx field.
+	option.Error = &GRPCErrorOption{Idx: 0}
 	return &GRPCErrorOptionBuilder{
 		root: root,
 		option: func(loc *Location) *GRPCErrorOption {
@@ -1084,6 +1084,16 @@ func (b *GRPCErrorOptionBuilder) WithIgnore() *GRPCErrorOptionBuilder {
 	root := b.root.Clone()
 	option := b.option(root)
 	option.Ignore = true
+	return &GRPCErrorOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCErrorOptionBuilder) WithIgnoreAndResponse() *GRPCErrorOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.IgnoreAndResponse = true
 	return &GRPCErrorOptionBuilder{
 		root:   root,
 		option: b.option,
