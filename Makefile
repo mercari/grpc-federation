@@ -27,13 +27,11 @@ VERSION ?= $(GIT_REF)
 
 .PHONY: tools
 tools:
-	cd tools && GOFLAGS='-mod=readonly' go install \
-		github.com/bufbuild/buf/cmd/buf \
-		google.golang.org/protobuf/cmd/protoc-gen-go \
-		google.golang.org/grpc/cmd/protoc-gen-go-grpc \
-		github.com/envoyproxy/protoc-gen-validate/cmd/protoc-gen-validate-go \
-		github.com/planetscale/vtprotobuf/cmd/protoc-gen-go-vtproto \
-		github.com/golangci/golangci-lint/cmd/golangci-lint
+	go install github.com/bufbuild/buf/cmd/buf@v1.30.1
+	go install github.com/envoyproxy/protoc-gen-validate/cmd/protoc-gen-validate-go@v1.0.4
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0
 
 .PHONY: lint
 lint: lint/examples lint/golangci-lint lint/gomod lint/buf
