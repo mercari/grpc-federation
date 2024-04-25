@@ -1,6 +1,8 @@
 package federation
 
 import (
+	"encoding/json"
+
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -19,6 +21,10 @@ func DecodeCELPluginRequest(v []byte) (*celplugin.CELPluginRequest, error) {
 		return nil, err
 	}
 	return &req, nil
+}
+
+func EncodeCELPluginVersion(v CELPluginVersionSchema) ([]byte, error) {
+	return json.Marshal(v)
 }
 
 func EncodeCELPluginResponse(v *celplugin.CELPluginResponse) ([]byte, error) {

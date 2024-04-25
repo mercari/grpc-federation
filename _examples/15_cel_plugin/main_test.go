@@ -1,7 +1,11 @@
 package main_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	_ "embed"
+	"encoding/hex"
 	"log/slog"
 	"net"
 	"os"
@@ -27,10 +31,17 @@ const bufSize = 1024
 
 var (
 	listener *bufconn.Listener
+	//go:embed regexp.wasm
+	wasm []byte
 )
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
 	return listener.Dial()
+}
+
+func toSha256(v []byte) string {
+	hash := sha256.Sum256(v)
+	return hex.EncodeToString(hash[:])
 }
 
 func TestFederation(t *testing.T) {
@@ -77,8 +88,8 @@ func TestFederation(t *testing.T) {
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
 		CELPlugin: &federation.FederationServiceCELPluginConfig{
 			Regexp: federation.FederationServiceCELPluginWasmConfig{
-				Path:   "regexp.wasm",
-				Sha256: "75a09b3951ea9ac4dd8d5c36e7ba7da13d07e0ba6872ed9edb35b99bf0838a7c",
+				Reader: bytes.NewReader(wasm),
+				Sha256: toSha256(wasm),
 			},
 		},
 		Logger: logger,

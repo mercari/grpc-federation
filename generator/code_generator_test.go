@@ -65,6 +65,7 @@ func TestCodeGenerate(t *testing.T) {
 			if len(result.Files) != 1 {
 				t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 			}
+			result.Files[0].Name = filepath.Base(result.Files[0].Name)
 			out, err := generator.NewCodeGenerator().Generate(result.Files[0], result.Enums)
 			if err != nil {
 				t.Fatal(err)
