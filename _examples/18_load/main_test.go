@@ -1,7 +1,11 @@
 package main_test
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	_ "embed"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"net"
@@ -23,10 +27,17 @@ const bufSize = 1024
 
 var (
 	listener *bufconn.Listener
+	//go:embed account.wasm
+	wasm []byte
 )
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
 	return listener.Dial()
+}
+
+func toSha256(v []byte) string {
+	hash := sha256.Sum256(v)
+	return hex.EncodeToString(hash[:])
 }
 
 func TestCELEvaluation(t *testing.T) {
@@ -51,8 +62,8 @@ func TestCELEvaluation(t *testing.T) {
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
 		CELPlugin: &federation.FederationServiceCELPluginConfig{
 			Account: federation.FederationServiceCELPluginWasmConfig{
-				Path:   "account.wasm",
-				Sha256: "c7b0a1dcca329d837cfe875c83aee9ac665c2546995bc90514175aaf40719c83",
+				Reader: bytes.NewReader(wasm),
+				Sha256: toSha256(wasm),
 			},
 		},
 		Logger: logger,
@@ -117,8 +128,8 @@ func Benchmark_CELEvaluation(b *testing.B) {
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
 		CELPlugin: &federation.FederationServiceCELPluginConfig{
 			Account: federation.FederationServiceCELPluginWasmConfig{
-				Path:   "account.wasm",
-				Sha256: "c7b0a1dcca329d837cfe875c83aee9ac665c2546995bc90514175aaf40719c83",
+				Reader: bytes.NewReader(wasm),
+				Sha256: toSha256(wasm),
 			},
 		},
 		Logger: logger,

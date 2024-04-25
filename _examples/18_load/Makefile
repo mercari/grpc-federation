@@ -39,7 +39,7 @@ jaeger/stop:
 	@docker stop $(shell docker ps -q  --filter ancestor=$(JAEGER_IMAGE))
 
 build/wasm:
-	GOOS=wasip1 GOARCH=wasm go build -o account.wasm ./cmd/plugin
+	GOOS=wasip1 GOARCH=wasm go build -ldflags "-w -s" -o account.wasm ./cmd/plugin
 
 .PHONY: bench
 bench:

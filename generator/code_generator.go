@@ -15,6 +15,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
 	"github.com/mercari/grpc-federation/util"
@@ -45,6 +46,14 @@ type File struct {
 	pkgMap map[*resolver.GoPackage]struct{}
 }
 
+func (f *File) Version() string {
+	return grpcfed.Version
+}
+
+func (f *File) Source() string {
+	return f.Name
+}
+
 func (f *File) Services() []*Service {
 	ret := make([]*Service, 0, len(f.File.Services))
 	for _, svc := range f.File.Services {
@@ -56,6 +65,10 @@ func (f *File) Services() []*Service {
 type CELPlugin struct {
 	file *File
 	*resolver.CELPlugin
+}
+
+func (p *CELPlugin) FederationVersion() string {
+	return grpcfed.Version
 }
 
 func (p *CELPlugin) FieldName() string {

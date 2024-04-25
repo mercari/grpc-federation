@@ -23,7 +23,8 @@ EXAMPLES := $(wildcard _examples/*)
 
 GIT_REF := $(shell git rev-parse --short=7 HEAD)
 
-VERSION ?= $(GIT_REF)
+VERSION ?= dev
+LDFLAGS := -w -s -X=grpc/federation.Version=$(VERSION)
 
 .PHONY: tools
 tools:
@@ -95,16 +96,16 @@ generate/examples/%:
 build: build/protoc-gen-grpc-federation build/grpc-federation-linter build/grpc-federation-language-server build/grpc-federation-generator
 
 build/protoc-gen-grpc-federation:
-	go build -o $(GOBIN)/protoc-gen-grpc-federation ./cmd/protoc-gen-grpc-federation
+	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/protoc-gen-grpc-federation ./cmd/protoc-gen-grpc-federation
 
 build/grpc-federation-linter:
-	go build -o $(GOBIN)/grpc-federation-linter ./cmd/grpc-federation-linter
+	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/grpc-federation-linter ./cmd/grpc-federation-linter
 
 build/grpc-federation-language-server:
-	go build -o $(GOBIN)/grpc-federation-language-server ./cmd/grpc-federation-language-server
+	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/grpc-federation-language-server ./cmd/grpc-federation-language-server
 
 build/grpc-federation-generator:
-	go build -o $(GOBIN)/grpc-federation-generator ./cmd/grpc-federation-generator
+	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/grpc-federation-generator ./cmd/grpc-federation-generator
 
 .PHONY: build/vscode-extension
 build/vscode-extension: versioning/vscode-extension install/vscode-dependencies

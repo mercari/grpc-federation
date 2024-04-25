@@ -21,6 +21,19 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 		if content == "exit\n" {
 			return
 		}
+		if content == "version\n" {
+			b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
+				ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
+				FederationVersion: "{{ .FederationVersion }}",
+				Functions: []string{
+					{{- range $pluginFunctions }}
+					"{{ .ExportName }}",
+					{{- end }}
+				},
+			})
+			_, _ = os.Stdout.Write(append(b, '\n'))
+			continue
+		}
 		res, err := handle{{ $pluginName }}([]byte(content), plug)
 		if err != nil {
 			res = grpcfed.ToErrorCELPluginResponse(err)

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -45,7 +46,7 @@ type CELPluginConfig struct {
 }
 
 type WasmConfig struct {
-	Path   string
+	Reader io.Reader
 	Sha256 string
 }
 
@@ -56,7 +57,10 @@ var (
 )
 
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
-	wasmFile, err := os.ReadFile(cfg.Wasm.Path)
+	if cfg.Wasm.Reader == nil {
+		return nil, fmt.Errorf("grpc-federation: WasmConfig.Reader field is required")
+	}
+	wasmFile, err := io.ReadAll(cfg.Wasm.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -130,10 +134,58 @@ type CELPluginInstance struct {
 	stdout      *io.PipeReader
 }
 
-var exitSignal = "exit\n"
+const PluginProtocolVersion = 1
+
+type PluginVersionSchema struct {
+	ProtocolVersion   int      `json:"protocolVersion"`
+	FederationVersion string   `json:"grpcFederationVersion"`
+	Functions         []string `json:"functions"`
+}
+
+var (
+	versionCommand = "version\n"
+	exitCommand    = "exit\n"
+)
+
+func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
+	if _, err := i.stdin.Write([]byte(versionCommand)); err != nil {
+		return fmt.Errorf("failed to send cel protocol version command: %w", err)
+	}
+	content, err := i.recvContent()
+	if err != nil {
+		return fmt.Errorf("failed to receive cel protocol version command: %w", err)
+	}
+	var v PluginVersionSchema
+	if err := json.Unmarshal([]byte(content), &v); err != nil {
+		return fmt.Errorf("failed to decode cel plugin's version schema: %w", err)
+	}
+	if v.ProtocolVersion != PluginProtocolVersion {
+		return fmt.Errorf(
+			"grpc-federation: cel plugin protocol version mismatch: expected version %d but got %d. plugin's gRPC Federation version is %s",
+			PluginProtocolVersion,
+			v.ProtocolVersion,
+			v.FederationVersion,
+		)
+	}
+	implementedMethodMap := make(map[string]struct{})
+	for _, fn := range v.Functions {
+		implementedMethodMap[fn] = struct{}{}
+	}
+
+	var missingFunctions []string
+	for _, fn := range i.functions {
+		if _, exists := implementedMethodMap[fn.ID]; !exists {
+			missingFunctions = append(missingFunctions, fn.ID)
+		}
+	}
+	if len(missingFunctions) != 0 {
+		return fmt.Errorf("grpc-federation: cel plugin functions are missing: [%v]", missingFunctions)
+	}
+	return nil
+}
 
 func (i *CELPluginInstance) Close(ctx context.Context) error {
-	if _, err := i.stdin.Write([]byte(exitSignal)); err != nil {
+	if _, err := i.stdin.Write([]byte(exitCommand)); err != nil {
 		return err
 	}
 	return nil
@@ -207,13 +259,9 @@ func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ..
 }
 
 func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
-	reader := bufio.NewReader(i.stdout)
-	content, err := reader.ReadString('\n')
+	content, err := i.recvContent()
 	if err != nil {
-		return types.NewErr(fmt.Sprintf("grpc-federation: failed to receive response from wasm plugin: %s", err.Error()))
-	}
-	if content == "" {
-		return types.NewErr("grpc-federation: receive empty response from wasm plugin")
+		return types.NewErr(err.Error())
 	}
 
 	var res plugin.CELPluginResponse
@@ -224,6 +272,18 @@ func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
 		return types.NewErr(res.Error)
 	}
 	return i.celPluginValueToRef(fn, fn.Return, res.Value)
+}
+
+func (i *CELPluginInstance) recvContent() (string, error) {
+	reader := bufio.NewReader(i.stdout)
+	content, err := reader.ReadString('\n')
+	if err != nil {
+		return "", fmt.Errorf("grpc-federation: failed to receive response from wasm plugin: %w", err)
+	}
+	if content == "" {
+		return "", errors.New("grpc-federation: receive empty response from wasm plugin")
+	}
+	return content, nil
 }
 
 func (i *CELPluginInstance) refToCELPluginValue(typ *cel.Type, v ref.Val) (*plugin.CELPluginValue, error) {
