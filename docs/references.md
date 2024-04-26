@@ -191,8 +191,8 @@ message MyMessage {
     def {
       call { method: "foopkg.FooService/GetFoo" }
 
-      // The value returned by `call` is `foopkg.GetReply` message.
-      // In this case, if a field with the same name and type as the field in the `GetReply` message exists in `MyMessage`,
+      // The value returned by `call` is `foopkg.GetFooReply` message.
+      // In this case, if a field with the same name and type as the field in the `GetFooReply` message exists in `MyMessage`,
       // field binding is automatically performed.
       autobind: true
     }

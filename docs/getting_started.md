@@ -148,7 +148,7 @@ So first, we use [`def`](https://github.com/mercari/grpc-federation/blob/main/do
 +      name: "p"
 +      message {
 +        name: "Post"
-+        args { name: "pid", by: "$.post_id" }
++        args { name: "pid", by: "$.id" }
 +      }
 +    }
    };
@@ -161,7 +161,7 @@ The above definition is equivalent to the following pseudo Go code.
 ```go
 // getGetPostReply returns GetPostReply message by GetPostRequest message.
 func getGetPostReply(req *pb.GetPostRequest) *pb.GetPostReply {
-    p := getPost(&PostArgument{Pid: req.GetPostId()})
+    p := getPost(&PostArgument{Pid: req.GetId()})
     ...
 }
 
@@ -175,9 +175,9 @@ func getPost(arg *PostArgument) *pb.Post {
 - `name: "p"`: It means to create a variable named `p`
 - `message {}`: It menas to get message instance
 - `name: "Post"`: It means to get `Post` message in `federation` package.
-- `args: {name: "pid", by: "$.post_id"}`: It means to retrieve the Post message, to pass as an argument a value whose name is `pid` and whose value is `$.post_id`.
+- `args: {name: "pid", by: "$.id"}`: It means to retrieve the Post message, to pass as an argument a value whose name is `pid` and whose value is `$.id`.
 
-`$.post_id` indicates a reference to a message argument. The message argument for a `GetPostReply` message is a `GetPostRequest` message. Therefore, the `"$."` can be used to refer to each field of `GetPostRequest` message.
+`$.id` indicates a reference to a message argument. The message argument for a `GetPostReply` message is a `GetPostRequest` message. Therefore, the `"$."` can be used to refer to each field of `GetPostRequest` message.
 
 For more information on each feature, please refer to the [API Reference](./references.md)
 
@@ -193,7 +193,7 @@ Assigns the value using `grpc.federation.field` option to a field ( field bindin
        name: "p"
        message {
          name: "Post"
-         args { name: "pid", by: "$.post_id" }
+         args { name: "pid", by: "$.id" }
        }
      }
    };
@@ -213,7 +213,7 @@ message GetPostReply {
       name: "p"
       message {
         name: "Post"
-        args { name: "pid", by: "$.post_id" }
+        args { name: "pid", by: "$.id" }
       }
     }
   };
@@ -350,7 +350,7 @@ message GetPostReply {
       name: "p"
       message {
         name: "Post"
-        args { name: "pid", by: "$.post_id" }
+        args { name: "pid", by: "$.id" }
       }
     }
   };
