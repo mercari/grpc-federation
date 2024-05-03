@@ -33,17 +33,21 @@ func (g *CodeGenerator) Generate(file *resolver.File, enums []*resolver.Enum) ([
 	if err != nil {
 		return nil, err
 	}
-	return generateGoContent(tmpl, &File{
-		File:   file,
-		enums:  enums,
-		pkgMap: make(map[*resolver.GoPackage]struct{}),
-	})
+	return generateGoContent(tmpl, NewFile(file, enums))
 }
 
 type File struct {
 	*resolver.File
 	enums  []*resolver.Enum
 	pkgMap map[*resolver.GoPackage]struct{}
+}
+
+func NewFile(file *resolver.File, enums []*resolver.Enum) *File {
+	return &File{
+		File:   file,
+		pkgMap: make(map[*resolver.GoPackage]struct{}),
+		enums:  enums,
+	}
 }
 
 func (f *File) Version() string {

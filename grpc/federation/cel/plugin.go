@@ -113,25 +113,33 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	modCfg := wazero.NewModuleConfig().
 		WithStdin(stdinR).
 		WithStdout(stdoutW).
-		WithStderr(os.Stderr)
+		WithStderr(os.Stderr).
+		WithArgs("plugin")
 
-	go p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg) //nolint: errcheck
+	instanceModErrCh := make(chan error)
+	go func() {
+		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
+		instanceModErrCh <- err
+	}()
 	return &CELPluginInstance{
-		name:        p.cfg.Name,
-		functions:   p.cfg.Functions,
-		celRegistry: celRegistry,
-		stdin:       stdinW,
-		stdout:      stdoutR,
+		name:             p.cfg.Name,
+		functions:        p.cfg.Functions,
+		celRegistry:      celRegistry,
+		stdin:            stdinW,
+		stdout:           stdoutR,
+		instanceModErrCh: instanceModErrCh,
 	}
 }
 
 type CELPluginInstance struct {
-	ctx         context.Context
-	name        string
-	functions   []*CELFunction
-	celRegistry *types.Registry
-	stdin       *io.PipeWriter
-	stdout      *io.PipeReader
+	ctx              context.Context
+	name             string
+	functions        []*CELFunction
+	celRegistry      *types.Registry
+	stdin            *io.PipeWriter
+	stdout           *io.PipeReader
+	instanceModErrCh chan error
+	closed           bool
 }
 
 const PluginProtocolVersion = 1
@@ -148,7 +156,7 @@ var (
 )
 
 func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
-	if _, err := i.stdin.Write([]byte(versionCommand)); err != nil {
+	if err := i.write([]byte(versionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
 	content, err := i.recvContent()
@@ -184,8 +192,27 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 	return nil
 }
 
+func (i *CELPluginInstance) write(cmd []byte) error {
+	if i.closed {
+		return errors.New("grpc-federation: plugin has already been closed")
+	}
+
+	writeCh := make(chan error)
+	go func() {
+		_, err := i.stdin.Write(cmd)
+		writeCh <- err
+	}()
+	select {
+	case err := <-i.instanceModErrCh:
+		return err
+	case err := <-writeCh:
+		return err
+	}
+}
+
 func (i *CELPluginInstance) Close(ctx context.Context) error {
-	if _, err := i.stdin.Write([]byte(exitCommand)); err != nil {
+	defer func() { i.closed = true }()
+	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
 	}
 	return nil
@@ -252,7 +279,7 @@ func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ..
 	if err != nil {
 		return err
 	}
-	if _, err := i.stdin.Write(append(encoded, '\n')); err != nil {
+	if err := i.write(append(encoded, '\n')); err != nil {
 		return err
 	}
 	return nil
@@ -275,15 +302,34 @@ func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
 }
 
 func (i *CELPluginInstance) recvContent() (string, error) {
-	reader := bufio.NewReader(i.stdout)
-	content, err := reader.ReadString('\n')
-	if err != nil {
-		return "", fmt.Errorf("grpc-federation: failed to receive response from wasm plugin: %w", err)
+	if i.closed {
+		return "", errors.New("grpc-federation: plugin has already been closed")
 	}
-	if content == "" {
-		return "", errors.New("grpc-federation: receive empty response from wasm plugin")
+
+	type readResult struct {
+		response string
+		err      error
 	}
-	return content, nil
+	readCh := make(chan readResult)
+	go func() {
+		reader := bufio.NewReader(i.stdout)
+		content, err := reader.ReadString('\n')
+		if err != nil {
+			readCh <- readResult{err: fmt.Errorf("grpc-federation: failed to receive response from wasm plugin: %w", err)}
+			return
+		}
+		if content == "" {
+			readCh <- readResult{err: errors.New("grpc-federation: receive empty response from wasm plugin")}
+			return
+		}
+		readCh <- readResult{response: content}
+	}()
+	select {
+	case err := <-i.instanceModErrCh:
+		return "", err
+	case result := <-readCh:
+		return result.response, result.err
+	}
 }
 
 func (i *CELPluginInstance) refToCELPluginValue(typ *cel.Type, v ref.Val) (*plugin.CELPluginValue, error) {

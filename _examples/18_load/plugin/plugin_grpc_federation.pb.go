@@ -55,7 +55,8 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 		}
 		encoded, err := grpcfed.EncodeCELPluginResponse(res)
 		if err != nil {
-			continue
+			fmt.Fprintf(os.Stderr, "fatal error: failed to encode cel plugin response: %s\n", err.Error())
+			os.Exit(1)
 		}
 		_, _ = os.Stdout.Write(append(encoded, '\n'))
 	}
