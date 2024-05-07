@@ -87,6 +87,7 @@ func (e *CompilerError) Error() string {
 const (
 	grpcFederationFilePath        = "grpc/federation/federation.proto"
 	grpcFederationPrivateFilePath = "grpc/federation/private.proto"
+	grpcFederationPluginFilePath  = "grpc/federation/plugin.proto"
 	googleRPCCodeFilePath         = "google/rpc/code.proto"
 	googleRPCErrorDetailsFilePath = "google/rpc/error_details.proto"
 )
@@ -130,6 +131,11 @@ func RelativePathFromImportPaths(protoPath string, importPaths []string) (string
 	return protoPath, nil
 }
 
+type dependentProtoFileSet struct {
+	path string
+	data []byte
+}
+
 // Compile compile the target Protocol Buffers file and produces all file descriptors.
 func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Option) ([]*descriptorpb.FileDescriptorProto, error) {
 	c.importPaths = []string{}
@@ -154,17 +160,16 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 				}
 				f, err := os.Open(p)
 				if err != nil {
-					if !c.manualImport && strings.HasSuffix(p, grpcFederationFilePath) {
-						return io.NopCloser(bytes.NewBuffer(federation.ProtoFile)), nil
-					}
-					if !c.manualImport && strings.HasSuffix(p, grpcFederationPrivateFilePath) {
-						return io.NopCloser(bytes.NewBuffer(federation.PrivateProtoFile)), nil
-					}
-					if !c.manualImport && strings.HasSuffix(p, googleRPCCodeFilePath) {
-						return io.NopCloser(bytes.NewBuffer(rpc.GoogleRPCCodeProtoFile)), nil
-					}
-					if !c.manualImport && strings.HasSuffix(p, googleRPCErrorDetailsFilePath) {
-						return io.NopCloser(bytes.NewBuffer(rpc.GoogleRPCErrorDetailsProtoFile)), nil
+					for _, set := range []*dependentProtoFileSet{
+						{path: grpcFederationFilePath, data: federation.ProtoFile},
+						{path: grpcFederationPrivateFilePath, data: federation.PrivateProtoFile},
+						{path: grpcFederationPluginFilePath, data: federation.PluginProtoFile},
+						{path: googleRPCCodeFilePath, data: rpc.GoogleRPCCodeProtoFile},
+						{path: googleRPCErrorDetailsFilePath, data: rpc.GoogleRPCErrorDetailsProtoFile},
+					} {
+						if !c.manualImport && strings.HasSuffix(p, set.path) {
+							return io.NopCloser(bytes.NewBuffer(set.data)), nil
+						}
 					}
 					return nil, err
 				}
