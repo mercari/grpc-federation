@@ -9,3 +9,6 @@ var ProtoFile []byte
 
 //go:embed private.proto
 var PrivateProtoFile []byte
+
+//go:embed plugin.proto
+var PluginProtoFile []byte
