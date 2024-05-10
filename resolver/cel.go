@@ -175,14 +175,14 @@ func (f *CELFunction) signatures(args []*Type, ret *Type) []*CELPluginFunctionSi
 		if arg.Kind == types.Enum {
 			sigs = append(sigs,
 				f.signatures(
-					append(append(append([]*Type{}, args[:idx]...), &Type{Kind: types.Int32}), args[idx+1:]...),
+					append(append(append([]*Type{}, args[:idx]...), Int32Type), args[idx+1:]...),
 					ret,
 				)...,
 			)
 		}
 	}
 	if ret.Kind == types.Enum {
-		sigs = append(sigs, f.signatures(args, &Type{Kind: types.Int32})...)
+		sigs = append(sigs, f.signatures(args, Int32Type)...)
 	}
 	var celArgs []*cel.Type
 	for _, arg := range args {
