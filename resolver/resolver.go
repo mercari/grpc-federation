@@ -461,8 +461,15 @@ func (r *Resolver) resolvePluginFunctionType(ctx *context, typeName string, repe
 	}
 	kind := types.ToKind(typeName)
 	if kind == types.Unknown {
-		// TODO: do not consider enums at first.
-		kind = types.Message
+		// we want to avoid capturing errors when calling resolveType, so create a new context to bypass it.
+		ctx := newContext().withFile(ctx.file())
+		if typ, err := r.resolveType(ctx, typeName, types.Message, label); err == nil && typ.Message != nil {
+			return typ, nil
+		}
+		if typ, err := r.resolveType(ctx, typeName, types.Enum, label); err == nil && typ.Enum != nil {
+			return typ, nil
+		}
+		return nil, fmt.Errorf("unexpected type %s", typeName)
 	}
 	return r.resolveType(ctx, typeName, kind, label)
 }
