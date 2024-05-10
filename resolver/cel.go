@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
@@ -146,16 +147,64 @@ func (plugin *CELPlugin) LibraryName() string {
 	return plugin.Name
 }
 
-func (f *CELFunction) CELArgs() []*cel.Type {
-	ret := make([]*cel.Type, 0, len(f.Args))
-	for _, arg := range f.Args {
-		ret = append(ret, ToCELType(arg))
+type CELPluginFunctionSignature struct {
+	ID     string
+	Args   []*cel.Type
+	Return *cel.Type
+}
+
+// Signatures returns signature for overload function.
+// If there is an enum type, we need to prepare functions for both `opaque<int>` and `int` patterns.
+func (f *CELFunction) Signatures() []*CELPluginFunctionSignature {
+	sigs := f.signatures(f.Args, f.Return)
+	sigMap := make(map[string]struct{})
+	ret := make([]*CELPluginFunctionSignature, 0, len(sigs))
+	for _, sig := range sigs {
+		if _, exists := sigMap[sig.ID]; exists {
+			continue
+		}
+		ret = append(ret, sig)
+		sigMap[sig.ID] = struct{}{}
 	}
 	return ret
 }
 
-func (f *CELFunction) CELReturn() *cel.Type {
-	return ToCELType(f.Return)
+func (f *CELFunction) signatures(args []*Type, ret *Type) []*CELPluginFunctionSignature {
+	var sigs []*CELPluginFunctionSignature
+	for idx, arg := range args {
+		if arg.Kind == types.Enum {
+			sigs = append(sigs,
+				f.signatures(
+					append(append(append([]*Type{}, args[:idx]...), Int32Type), args[idx+1:]...),
+					ret,
+				)...,
+			)
+		}
+	}
+	if ret.Kind == types.Enum {
+		sigs = append(sigs, f.signatures(args, Int32Type)...)
+	}
+	var celArgs []*cel.Type
+	for _, arg := range args {
+		celArgs = append(celArgs, ToCELType(arg))
+	}
+	sigs = append(sigs, &CELPluginFunctionSignature{
+		ID:     f.toSignatureID(append(args, ret)),
+		Args:   celArgs,
+		Return: toCELType(ret),
+	})
+	return sigs
+}
+
+func (f *CELFunction) toSignatureID(t []*Type) string {
+	var typeNames []string
+	for _, tt := range t {
+		if tt == nil {
+			continue
+		}
+		typeNames = append(typeNames, tt.FQDN())
+	}
+	return strings.ReplaceAll(strings.Join(append([]string{f.ID}, typeNames...), "_"), ".", "_")
 }
 
 func (plugin *CELPlugin) CompileOptions() []cel.EnvOption {
@@ -165,12 +214,14 @@ func (plugin *CELPlugin) CompileOptions() []cel.EnvOption {
 			overload cel.FunctionOpt
 			bindFunc = cel.FunctionBinding(func(args ...ref.Val) ref.Val { return nil })
 		)
-		if fn.Receiver != nil {
-			overload = cel.MemberOverload(fn.ID, fn.CELArgs(), fn.CELReturn(), bindFunc)
-		} else {
-			overload = cel.Overload(fn.ID, fn.CELArgs(), fn.CELReturn(), bindFunc)
+		for _, sig := range fn.Signatures() {
+			if fn.Receiver != nil {
+				overload = cel.MemberOverload(sig.ID, sig.Args, sig.Return, bindFunc)
+			} else {
+				overload = cel.Overload(sig.ID, sig.Args, sig.Return, bindFunc)
+			}
+			opts = append(opts, cel.Function(fn.Name, overload))
 		}
-		opts = append(opts, cel.Function(fn.Name, overload))
 	}
 	return opts
 }
