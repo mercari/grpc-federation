@@ -319,7 +319,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				}); err != nil {
 					return nil, err
 				}
-				s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("call_request", s.logvalue_Post_GetPostRequest(args)))
+				s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("post.GetPostRequest", s.logvalue_Post_GetPostRequest(args)))
 				return s.client.Post_PostServiceClient.GetPost(ctx, args)
 			},
 		}); err != nil {
@@ -406,7 +406,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				}); err != nil {
 					return nil, err
 				}
-				s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("call_request", s.logvalue_Post_GetPostRequest(args)))
+				s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("post.GetPostRequest", s.logvalue_Post_GetPostRequest(args)))
 				return s.client.Post_PostServiceClient.GetPost(ctx, args)
 			},
 		}); err != nil {

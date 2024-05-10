@@ -277,7 +277,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			}); err != nil {
 				return nil, err
 			}
-			s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("call_request", s.logvalue_Post_GetPostRequest(args)))
+			s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("post.GetPostRequest", s.logvalue_Post_GetPostRequest(args)))
 			return grpcfed.WithTimeout[post.GetPostResponse](ctx, "post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
 				b := grpcfed.NewConstantBackOff(30000000) /* 30ms */
 				b = grpcfed.BackOffWithMaxRetries(b, 3)

@@ -389,7 +389,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 			}); err != nil {
 				return nil, err
 			}
-			s.logger.DebugContext(ctx, "call org.post.PostService/CreatePost", slog.Any("call_request", s.logvalue_Org_Post_CreatePostRequest(args)))
+			s.logger.DebugContext(ctx, "call org.post.PostService/CreatePost", slog.Any("org.post.CreatePostRequest", s.logvalue_Org_Post_CreatePostRequest(args)))
 			return s.client.Org_Post_PostServiceClient.CreatePost(ctx, args)
 		},
 	}); err != nil {

@@ -368,7 +368,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				}); err != nil {
 					return nil, err
 				}
-				s.logger.DebugContext(ctx, "call org.post.PostService/GetPosts", slog.Any("call_request", s.logvalue_Org_Post_GetPostsRequest(args)))
+				s.logger.DebugContext(ctx, "call org.post.PostService/GetPosts", slog.Any("org.post.GetPostsRequest", s.logvalue_Org_Post_GetPostsRequest(args)))
 				return s.client.Org_Post_PostServiceClient.GetPosts(ctx, args)
 			},
 		}); err != nil {
@@ -463,7 +463,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				}); err != nil {
 					return nil, err
 				}
-				s.logger.DebugContext(ctx, "call org.post.PostService/GetPosts", slog.Any("call_request", s.logvalue_Org_Post_GetPostsRequest(args)))
+				s.logger.DebugContext(ctx, "call org.post.PostService/GetPosts", slog.Any("org.post.GetPostsRequest", s.logvalue_Org_Post_GetPostsRequest(args)))
 				return s.client.Org_Post_PostServiceClient.GetPosts(ctx, args)
 			},
 		}); err != nil {
@@ -568,7 +568,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				}); err != nil {
 					return nil, err
 				}
-				s.logger.DebugContext(ctx, "call org.post.PostService/GetPosts", slog.Any("call_request", s.logvalue_Org_Post_GetPostsRequest(args)))
+				s.logger.DebugContext(ctx, "call org.post.PostService/GetPosts", slog.Any("org.post.GetPostsRequest", s.logvalue_Org_Post_GetPostsRequest(args)))
 				return s.client.Org_Post_PostServiceClient.GetPosts(ctx, args)
 			},
 		}); err != nil {
@@ -804,7 +804,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			}); err != nil {
 				return nil, err
 			}
-			s.logger.DebugContext(ctx, "call org.user.UserService/GetUser", slog.Any("call_request", s.logvalue_Org_User_GetUserRequest(args)))
+			s.logger.DebugContext(ctx, "call org.user.UserService/GetUser", slog.Any("org.user.GetUserRequest", s.logvalue_Org_User_GetUserRequest(args)))
 			return s.client.Org_User_UserServiceClient.GetUser(ctx, args)
 		},
 	}); err != nil {

@@ -292,7 +292,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}); err != nil {
 				return nil, err
 			}
-			s.logger.DebugContext(ctx, "call content.ContentService/GetContent", slog.Any("call_request", s.logvalue_Content_GetContentRequest(args)))
+			s.logger.DebugContext(ctx, "call content.ContentService/GetContent", slog.Any("content.GetContentRequest", s.logvalue_Content_GetContentRequest(args)))
 			return s.client.Content_ContentServiceClient.GetContent(ctx, args)
 		},
 	}); err != nil {

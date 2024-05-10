@@ -2201,6 +2201,14 @@ func (d *VariableDefinition) MethodFQDN() string {
 	return ""
 }
 
+func (d *VariableDefinition) RequestTypeFQDN() string {
+	expr := d.VariableDefinition.Expr
+	if expr.Call != nil {
+		return expr.Call.Request.Type.FQDN()
+	}
+	return ""
+}
+
 func (d *VariableDefinition) Timeout() string {
 	expr := d.VariableDefinition.Expr
 	if expr.Call != nil {
@@ -2463,11 +2471,8 @@ func (d *VariableDefinition) RequestType() string {
 
 func (d *VariableDefinition) LogValueRequestType() string {
 	expr := d.VariableDefinition.Expr
-	switch {
-	case expr.Call != nil:
+	if expr.Call != nil {
 		return fullMessageName(expr.Call.Request.Type)
-	case expr.Message != nil:
-		return fullMessageName(expr.Message.Message)
 	}
 	return ""
 }

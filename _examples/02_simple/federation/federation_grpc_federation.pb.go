@@ -932,7 +932,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			}); err != nil {
 				return nil, err
 			}
-			s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("call_request", s.logvalue_Post_GetPostRequest(args)))
+			s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("post.GetPostRequest", s.logvalue_Post_GetPostRequest(args)))
 			return grpcfed.WithTimeout[post.GetPostResponse](ctx, "post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
 				b := grpcfed.NewConstantBackOff(2000000000) /* 2s */
 				b = grpcfed.BackOffWithMaxRetries(b, 3)
@@ -1090,7 +1090,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 			}); err != nil {
 				return nil, err
 			}
-			s.logger.DebugContext(ctx, "call user.UserService/GetUser", slog.Any("call_request", s.logvalue_User_GetUserRequest(args)))
+			s.logger.DebugContext(ctx, "call user.UserService/GetUser", slog.Any("user.GetUserRequest", s.logvalue_User_GetUserRequest(args)))
 			return grpcfed.WithTimeout[user.GetUserResponse](ctx, "user.UserService/GetUser", 20000000000 /* 20s */, func(ctx context.Context) (*user.GetUserResponse, error) {
 				b := grpcfed.NewExponentialBackOff(&grpcfed.ExponentialBackOffConfig{
 					InitialInterval:     1000000000, /* 1s */

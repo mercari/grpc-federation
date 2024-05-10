@@ -505,7 +505,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				}); err != nil {
 					return nil, err
 				}
-				s.logger.DebugContext(ctx, "call user.UserService/GetUser", slog.Any("call_request", s.logvalue_User_GetUserRequest(args)))
+				s.logger.DebugContext(ctx, "call user.UserService/GetUser", slog.Any("user.GetUserRequest", s.logvalue_User_GetUserRequest(args)))
 				return s.client.User_UserServiceClient.GetUser(ctx, args)
 			},
 		}); err != nil {
