@@ -309,6 +309,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			}); err != nil {
 				return nil, err
 			}
+			s.logger.DebugContext(ctx, "call org.post.PostService/GetPost", slog.Any("call_request", s.logvalue_Org_Post_GetPostRequest(args)))
 			return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
 		},
 	}); err != nil {
@@ -486,4 +487,13 @@ func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Va
 		return slog.StringValue("POST_TYPE_BAR")
 	}
 	return slog.StringValue("")
+}
+
+func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+	)
 }

@@ -292,6 +292,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			}); err != nil {
 				return nil, err
 			}
+			s.logger.DebugContext(ctx, "call content.ContentService/GetContent", slog.Any("call_request", s.logvalue_Content_GetContentRequest(args)))
 			return s.client.Content_ContentServiceClient.GetContent(ctx, args)
 		},
 	}); err != nil {
@@ -434,6 +435,108 @@ func (s *FederationService) cast_repeated_Content_Content__to__repeated_Org_Fede
 	return ret
 }
 
+func (s *FederationService) logvalue_Content_Content(v *content.Content) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("by_field", v.GetByField()),
+		slog.Float64("double_field", v.GetDoubleField()),
+		slog.Any("doubles_field", v.GetDoublesField()),
+		slog.Float64("float_field", float64(v.GetFloatField())),
+		slog.Any("floats_field", v.GetFloatsField()),
+		slog.Int64("int32_field", int64(v.GetInt32Field())),
+		slog.Any("int32s_field", v.GetInt32SField()),
+		slog.Int64("int64_field", v.GetInt64Field()),
+		slog.Any("int64s_field", v.GetInt64SField()),
+		slog.Uint64("uint32_field", uint64(v.GetUint32Field())),
+		slog.Any("uint32s_field", v.GetUint32SField()),
+		slog.Uint64("uint64_field", v.GetUint64Field()),
+		slog.Any("uint64s_field", v.GetUint64SField()),
+		slog.Int64("sint32_field", int64(v.GetSint32Field())),
+		slog.Any("sint32s_field", v.GetSint32SField()),
+		slog.Int64("sint64_field", v.GetSint64Field()),
+		slog.Any("sint64s_field", v.GetSint64SField()),
+		slog.Uint64("fixed32_field", uint64(v.GetFixed32Field())),
+		slog.Any("fixed32s_field", v.GetFixed32SField()),
+		slog.Uint64("fixed64_field", v.GetFixed64Field()),
+		slog.Any("fixed64s_field", v.GetFixed64SField()),
+		slog.Int64("sfixed32_field", int64(v.GetSfixed32Field())),
+		slog.Any("sfixed32s_field", v.GetSfixed32SField()),
+		slog.Int64("sfixed64_field", v.GetSfixed64Field()),
+		slog.Any("sfixed64s_field", v.GetSfixed64SField()),
+		slog.Bool("bool_field", v.GetBoolField()),
+		slog.Any("bools_field", v.GetBoolsField()),
+		slog.String("string_field", v.GetStringField()),
+		slog.Any("strings_field", v.GetStringsField()),
+		slog.String("byte_string_field", string(v.GetByteStringField())),
+		slog.Any("byte_strings_field", v.GetByteStringsField()),
+		slog.String("enum_field", s.logvalue_Content_ContentType(v.GetEnumField()).String()),
+		slog.Any("enums_field", s.logvalue_repeated_Content_ContentType(v.GetEnumsField())),
+		slog.String("env_field", v.GetEnvField()),
+		slog.Any("envs_field", v.GetEnvsField()),
+		slog.Any("message_field", s.logvalue_Content_Content(v.GetMessageField())),
+		slog.Any("messages_field", s.logvalue_repeated_Content_Content(v.GetMessagesField())),
+	)
+}
+
+func (s *FederationService) logvalue_Content_ContentType(v content.ContentType) slog.Value {
+	switch v {
+	case content.ContentType_CONTENT_TYPE_1:
+		return slog.StringValue("CONTENT_TYPE_1")
+	case content.ContentType_CONTENT_TYPE_2:
+		return slog.StringValue("CONTENT_TYPE_2")
+	case content.ContentType_CONTENT_TYPE_3:
+		return slog.StringValue("CONTENT_TYPE_3")
+	}
+	return slog.StringValue("")
+}
+
+func (s *FederationService) logvalue_Content_GetContentRequest(v *content.GetContentRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("by_field", v.GetByField()),
+		slog.Float64("double_field", v.GetDoubleField()),
+		slog.Any("doubles_field", v.GetDoublesField()),
+		slog.Float64("float_field", float64(v.GetFloatField())),
+		slog.Any("floats_field", v.GetFloatsField()),
+		slog.Int64("int32_field", int64(v.GetInt32Field())),
+		slog.Any("int32s_field", v.GetInt32SField()),
+		slog.Int64("int64_field", v.GetInt64Field()),
+		slog.Any("int64s_field", v.GetInt64SField()),
+		slog.Uint64("uint32_field", uint64(v.GetUint32Field())),
+		slog.Any("uint32s_field", v.GetUint32SField()),
+		slog.Uint64("uint64_field", v.GetUint64Field()),
+		slog.Any("uint64s_field", v.GetUint64SField()),
+		slog.Int64("sint32_field", int64(v.GetSint32Field())),
+		slog.Any("sint32s_field", v.GetSint32SField()),
+		slog.Int64("sint64_field", v.GetSint64Field()),
+		slog.Any("sint64s_field", v.GetSint64SField()),
+		slog.Uint64("fixed32_field", uint64(v.GetFixed32Field())),
+		slog.Any("fixed32s_field", v.GetFixed32SField()),
+		slog.Uint64("fixed64_field", v.GetFixed64Field()),
+		slog.Any("fixed64s_field", v.GetFixed64SField()),
+		slog.Int64("sfixed32_field", int64(v.GetSfixed32Field())),
+		slog.Any("sfixed32s_field", v.GetSfixed32SField()),
+		slog.Int64("sfixed64_field", v.GetSfixed64Field()),
+		slog.Any("sfixed64s_field", v.GetSfixed64SField()),
+		slog.Bool("bool_field", v.GetBoolField()),
+		slog.Any("bools_field", v.GetBoolsField()),
+		slog.String("string_field", v.GetStringField()),
+		slog.Any("strings_field", v.GetStringsField()),
+		slog.String("byte_string_field", string(v.GetByteStringField())),
+		slog.Any("byte_strings_field", v.GetByteStringsField()),
+		slog.String("enum_field", s.logvalue_Content_ContentType(v.GetEnumField()).String()),
+		slog.Any("enums_field", s.logvalue_repeated_Content_ContentType(v.GetEnumsField())),
+		slog.String("env_field", v.GetEnvField()),
+		slog.Any("envs_field", v.GetEnvsField()),
+		slog.Any("message_field", s.logvalue_Content_Content(v.GetMessageField())),
+		slog.Any("messages_field", s.logvalue_repeated_Content_Content(v.GetMessagesField())),
+	)
+}
+
 func (s *FederationService) logvalue_Org_Federation_Content(v *Content) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
@@ -508,6 +611,28 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_F
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
+}
+
+func (s *FederationService) logvalue_repeated_Content_Content(v []*content.Content) slog.Value {
+	attrs := make([]slog.Attr, 0, len(v))
+	for idx, vv := range v {
+		attrs = append(attrs, slog.Attr{
+			Key:   grpcfed.ToLogAttrKey(idx),
+			Value: s.logvalue_Content_Content(vv),
+		})
+	}
+	return slog.GroupValue(attrs...)
+}
+
+func (s *FederationService) logvalue_repeated_Content_ContentType(v []content.ContentType) slog.Value {
+	attrs := make([]slog.Attr, 0, len(v))
+	for idx, vv := range v {
+		attrs = append(attrs, slog.Attr{
+			Key:   grpcfed.ToLogAttrKey(idx),
+			Value: s.logvalue_Content_ContentType(vv),
+		})
+	}
+	return slog.GroupValue(attrs...)
 }
 
 func (s *FederationService) logvalue_repeated_Org_Federation_Content(v []*Content) slog.Value {

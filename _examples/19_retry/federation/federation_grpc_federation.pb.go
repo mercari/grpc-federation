@@ -277,6 +277,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			}); err != nil {
 				return nil, err
 			}
+			s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("call_request", s.logvalue_Post_GetPostRequest(args)))
 			return grpcfed.WithTimeout[post.GetPostResponse](ctx, "post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
 				b := grpcfed.NewConstantBackOff(30000000) /* 30ms */
 				b = grpcfed.BackOffWithMaxRetries(b, 3)
@@ -336,5 +337,23 @@ func (s *FederationService) logvalue_Federation_PostArgument(v *Federation_PostA
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
+	)
+}
+
+func (s *FederationService) logvalue_Post_GetPostRequest(v *post.GetPostRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+	)
+}
+
+func (s *FederationService) logvalue_Post_GetPostsRequest(v *post.GetPostsRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("ids", v.GetIds()),
 	)
 }

@@ -935,7 +935,14 @@ type LogValueAttr struct {
 }
 
 func (s *Service) LogValues() []*LogValue {
-	for _, msg := range s.Service.Messages {
+	msgs := s.Service.Messages
+	for _, dep := range s.Service.ServiceDependencies() {
+		for _, method := range dep.Service.Methods {
+			msgs = append(msgs, method.Request)
+		}
+	}
+
+	for _, msg := range msgs {
 		if msg.Rule != nil {
 			s.setLogValueByMessageArgument(msg)
 		}
@@ -2454,6 +2461,17 @@ func (d *VariableDefinition) RequestType() string {
 	return ""
 }
 
+func (d *VariableDefinition) LogValueRequestType() string {
+	expr := d.VariableDefinition.Expr
+	switch {
+	case expr.Call != nil:
+		return fullMessageName(expr.Call.Request.Type)
+	case expr.Message != nil:
+		return fullMessageName(expr.Message.Message)
+	}
+	return ""
+}
+
 func (d *VariableDefinition) ReturnType() string {
 	expr := d.VariableDefinition.Expr
 	switch {
@@ -2479,6 +2497,10 @@ func (d *VariableDefinition) IsBy() bool {
 
 func (d *VariableDefinition) IsMap() bool {
 	return d.VariableDefinition.Expr.Map != nil
+}
+
+func (d *VariableDefinition) IsCall() bool {
+	return d.VariableDefinition.Expr.Call != nil
 }
 
 func (d *VariableDefinition) MapResolver() *MapResolver {

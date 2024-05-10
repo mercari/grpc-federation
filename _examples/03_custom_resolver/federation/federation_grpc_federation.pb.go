@@ -499,6 +499,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				}); err != nil {
 					return nil, err
 				}
+				s.logger.DebugContext(ctx, "call post.PostService/GetPost", slog.Any("call_request", s.logvalue_Post_GetPostRequest(args)))
 				return s.client.Post_PostServiceClient.GetPost(ctx, args)
 			},
 		}); err != nil {
@@ -669,6 +670,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 			}); err != nil {
 				return nil, err
 			}
+			s.logger.DebugContext(ctx, "call user.UserService/GetUser", slog.Any("call_request", s.logvalue_User_GetUserRequest(args)))
 			return s.client.User_UserServiceClient.GetUser(ctx, args)
 		},
 	}); err != nil {
@@ -821,5 +823,41 @@ func (s *FederationService) logvalue_Federation_UserArgument(v *Federation_UserA
 		slog.String("title", v.Title),
 		slog.String("content", v.Content),
 		slog.String("user_id", v.UserId),
+	)
+}
+
+func (s *FederationService) logvalue_Post_GetPostRequest(v *post.GetPostRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+	)
+}
+
+func (s *FederationService) logvalue_Post_GetPostsRequest(v *post.GetPostsRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("ids", v.GetIds()),
+	)
+}
+
+func (s *FederationService) logvalue_User_GetUserRequest(v *user.GetUserRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+	)
+}
+
+func (s *FederationService) logvalue_User_GetUsersRequest(v *user.GetUsersRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("ids", v.GetIds()),
 	)
 }
