@@ -389,6 +389,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 			}); err != nil {
 				return nil, err
 			}
+			s.logger.DebugContext(ctx, "call org.post.PostService/CreatePost", slog.Any("org.post.CreatePostRequest", s.logvalue_Org_Post_CreatePostRequest(args)))
 			return s.client.Org_Post_PostServiceClient.CreatePost(ctx, args)
 		},
 	}); err != nil {
@@ -548,6 +549,57 @@ func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Va
 	case PostType_POST_TYPE_A:
 		return slog.StringValue("POST_TYPE_A")
 	case PostType_POST_TYPE_B:
+		return slog.StringValue("POST_TYPE_B")
+	}
+	return slog.StringValue("")
+}
+
+func (s *FederationService) logvalue_Org_Post_CreatePost(v *post.CreatePost) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("title", v.GetTitle()),
+		slog.String("content", v.GetContent()),
+		slog.String("user_id", v.GetUserId()),
+		slog.String("type", s.logvalue_Org_Post_PostType(v.GetType()).String()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_CreatePostRequest(v *post.CreatePostRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("post", s.logvalue_Org_Post_CreatePost(v.GetPost())),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_GetPostsRequest(v *post.GetPostsRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("ids", v.GetIds()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_PostType(v post.PostType) slog.Value {
+	switch v {
+	case post.PostType_POST_TYPE_UNKNOWN:
+		return slog.StringValue("POST_TYPE_UNKNOWN")
+	case post.PostType_POST_TYPE_A:
+		return slog.StringValue("POST_TYPE_A")
+	case post.PostType_POST_TYPE_B:
 		return slog.StringValue("POST_TYPE_B")
 	}
 	return slog.StringValue("")

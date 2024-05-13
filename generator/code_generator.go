@@ -935,7 +935,14 @@ type LogValueAttr struct {
 }
 
 func (s *Service) LogValues() []*LogValue {
-	for _, msg := range s.Service.Messages {
+	msgs := s.Service.Messages
+	for _, dep := range s.Service.ServiceDependencies() {
+		for _, method := range dep.Service.Methods {
+			msgs = append(msgs, method.Request)
+		}
+	}
+
+	for _, msg := range msgs {
 		if msg.Rule != nil {
 			s.setLogValueByMessageArgument(msg)
 		}
@@ -2194,6 +2201,14 @@ func (d *VariableDefinition) MethodFQDN() string {
 	return ""
 }
 
+func (d *VariableDefinition) RequestTypeFQDN() string {
+	expr := d.VariableDefinition.Expr
+	if expr.Call != nil {
+		return expr.Call.Request.Type.FQDN()
+	}
+	return ""
+}
+
 func (d *VariableDefinition) Timeout() string {
 	expr := d.VariableDefinition.Expr
 	if expr.Call != nil {
@@ -2454,6 +2469,14 @@ func (d *VariableDefinition) RequestType() string {
 	return ""
 }
 
+func (d *VariableDefinition) LogValueRequestType() string {
+	expr := d.VariableDefinition.Expr
+	if expr.Call != nil {
+		return fullMessageName(expr.Call.Request.Type)
+	}
+	return ""
+}
+
 func (d *VariableDefinition) ReturnType() string {
 	expr := d.VariableDefinition.Expr
 	switch {
@@ -2479,6 +2502,10 @@ func (d *VariableDefinition) IsBy() bool {
 
 func (d *VariableDefinition) IsMap() bool {
 	return d.VariableDefinition.Expr.Map != nil
+}
+
+func (d *VariableDefinition) IsCall() bool {
+	return d.VariableDefinition.Expr.Call != nil
 }
 
 func (d *VariableDefinition) MapResolver() *MapResolver {

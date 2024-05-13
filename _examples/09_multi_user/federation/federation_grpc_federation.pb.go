@@ -505,6 +505,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				}); err != nil {
 					return nil, err
 				}
+				s.logger.DebugContext(ctx, "call user.UserService/GetUser", slog.Any("user.GetUserRequest", s.logvalue_User_GetUserRequest(args)))
 				return s.client.User_UserServiceClient.GetUser(ctx, args)
 			},
 		}); err != nil {
@@ -681,4 +682,13 @@ func (s *FederationService) logvalue_Org_Federation_UserIDArgument(v *Org_Federa
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+func (s *FederationService) logvalue_User_GetUserRequest(v *user.GetUserRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+	)
 }
