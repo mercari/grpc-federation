@@ -362,13 +362,12 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- $hasMsgCustomResolver := .HasCustomResolver }}
 	{{- if $hasMsgCustomResolver }}
 	// `custom_resolver = true` in "grpc.federation.message" option.
-	ctx = grpcfed.WithCustomResolverValue(ctx)
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))  // create a new reference to logger.
 	ret, err := s.resolver.{{ .CustomResolverName }}(ctx, req)
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	{{- else }}
 	ret := &{{ .ReturnType }}{}
 	{{- end }}
@@ -382,7 +381,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- if .IsCustomResolverField }}
 	{
 		// (grpc.federation.field).custom_resolver = true
-		ctx = grpcfed.WithCustomResolverValue(ctx)
+		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 		var err error
 		ret.{{ .Name }}, err = s.resolver.{{ .ResolverName }}(ctx, &{{ .RequestType }}{
 			{{ .MessageArgumentName }}: req,
@@ -394,7 +393,6 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	}
 	{{- else if .IsOneofField }}
 	{{ $name := .Name }}

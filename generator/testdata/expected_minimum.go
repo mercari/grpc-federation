@@ -168,13 +168,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
-	ctx = grpcfed.WithCustomResolverValue(ctx)
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 	ret, err := s.resolver.Resolve_Org_Federation_GetPostResponse(ctx, req)
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GetPostResponse", slog.Any("org.federation.GetPostResponse", s.logvalue_Org_Federation_GetPostResponse(ret)))
 	return ret, nil
