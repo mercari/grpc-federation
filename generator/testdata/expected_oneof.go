@@ -301,7 +301,11 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	     name: "_def0"
 	     call {
 	       method: "org.user.UserService/GetUser"
-	       request { field: "id", by: "$.user_id" }
+	       request: [
+	         { field: "id", by: "$.user_id" },
+	         { field: "foo", by: "1", if: "false" },
+	         { field: "bar", by: "'hello'", if: "true" }
+	       ]
 	     }
 	   }
 	*/
@@ -319,6 +323,50 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				CacheIndex:        2,
 				Setter: func(v string) {
 					args.Id = v
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "foo", by: "1", if: "false" }
+			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+				Value:             value,
+				Expr:              "false",
+				UseContextLibrary: false,
+				CacheIndex:        3,
+				Body: func(value *localValueType) error {
+					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+						Value:             value,
+						Expr:              "1",
+						UseContextLibrary: false,
+						CacheIndex:        4,
+						Setter: func(v int64) {
+							args.Foobar = &user.GetUserRequest_Foo{
+								Foo: v,
+							}
+						},
+					})
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "bar", by: "'hello'", if: "true" }
+			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+				Value:             value,
+				Expr:              "true",
+				UseContextLibrary: false,
+				CacheIndex:        5,
+				Body: func(value *localValueType) error {
+					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+						Value:             value,
+						Expr:              "'hello'",
+						UseContextLibrary: false,
+						CacheIndex:        6,
+						Setter: func(v string) {
+							args.Foobar = &user.GetUserRequest_Bar{
+								Bar: v,
+							}
+						},
+					})
 				},
 			}); err != nil {
 				return nil, err
@@ -341,7 +389,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		Value:             value,
 		Expr:              "$.user_id",
 		UseContextLibrary: false,
-		CacheIndex:        3,
+		CacheIndex:        7,
 		Setter:            func(v string) { ret.Id = v },
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -412,7 +460,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		Expr:              "m.value == $.value",
 		UseContextLibrary: false,
 		OutType:           reflect.TypeOf(true),
-		CacheIndex:        4,
+		CacheIndex:        8,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -423,7 +471,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		Expr:              "m.value != $.value",
 		UseContextLibrary: false,
 		OutType:           reflect.TypeOf(true),
-		CacheIndex:        5,
+		CacheIndex:        9,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -460,7 +508,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Value:             value,
 			Expr:              "ua",
 			UseContextLibrary: false,
-			CacheIndex:        6,
+			CacheIndex:        10,
 			Setter:            func(v *User) { ret.User = &UserSelection_UserA{UserA: v} },
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
@@ -496,7 +544,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Value:             value,
 			Expr:              "ub",
 			UseContextLibrary: false,
-			CacheIndex:        7,
+			CacheIndex:        11,
 			Setter:            func(v *User) { ret.User = &UserSelection_UserB{UserB: v} },
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
@@ -525,7 +573,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 					Value:             value,
 					Expr:              "$.value",
 					UseContextLibrary: false,
-					CacheIndex:        8,
+					CacheIndex:        12,
 					Setter: func(v string) {
 						args.UserId = v
 					},
@@ -542,7 +590,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Value:             value,
 			Expr:              "uc",
 			UseContextLibrary: false,
-			CacheIndex:        9,
+			CacheIndex:        13,
 			Setter:            func(v *User) { ret.User = &UserSelection_UserC{UserC: v} },
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)

@@ -371,6 +371,12 @@ message MethodRequest {
   optional string env = 37;
   // repeated env literal values.
   repeated string envs = 38;
+  // if describes the condition to be assigned to field.
+  // The return value must be of type bool.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  // If the field is a 'oneof' field, it must be specified.
+  optional string if = 39;
 }
 
 // MethodResponse define which value of the method response is referenced.

@@ -1002,6 +1002,16 @@ func (b *RequestOptionBuilder) WithBy() *RequestOptionBuilder {
 	}
 }
 
+func (b *RequestOptionBuilder) WithIf() *RequestOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.If = true
+	return &RequestOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
 func (b *RequestOptionBuilder) Location() *Location {
 	return b.root
 }

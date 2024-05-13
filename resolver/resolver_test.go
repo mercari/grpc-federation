@@ -2341,7 +2341,9 @@ func TestOneof(t *testing.T) {
 										SetMethod(ref.Method(t, "org.user", "UserService", "GetUser")).
 										SetRequest(
 											testutil.NewRequestBuilder().
-												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t)).
+												AddField("id", resolver.StringType, resolver.NewByValue("$.user_id", resolver.StringType)).
+												AddFieldWithIf("foo", resolver.Int64Type, resolver.NewByValue("1", resolver.Int64Type), "false").
+												AddFieldWithIf("bar", resolver.StringType, resolver.NewByValue("'hello'", resolver.StringType), "true").
 												Build(t),
 										).
 										Build(t),
@@ -3709,6 +3711,13 @@ func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 		AddMessage(
 			testutil.NewMessageBuilder("GetUserRequest").
 				AddField("id", resolver.StringType).
+				AddField("foo", resolver.Int64Type).
+				AddField("bar", resolver.StringType).
+				AddOneof(
+					testutil.NewOneofBuilder("foobar").
+						AddFieldNames("foo", "bar").
+						Build(t),
+				).
 				Build(t),
 		).
 		AddMessage(

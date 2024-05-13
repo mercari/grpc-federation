@@ -89,7 +89,11 @@ message User {
     def {
       call {
         method: "org.user.UserService/GetUser"
-        request { field: "id", by: "$.user_id" }
+        request [
+          { field: "id", by: "$.user_id" },
+          { field: "foo" by: "1" if: "false" },
+          { field: "bar" by: "'hello'" if: "true" }
+        ]
       }
     }
   };

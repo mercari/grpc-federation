@@ -329,6 +329,7 @@ message Argument {
   string name = 1;
   Type type = 2;
   Value value = 3;
+  string if = 4;
 }
 
 message Value {

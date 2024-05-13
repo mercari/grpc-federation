@@ -2653,13 +2653,16 @@ func (d *VariableDefinition) ValidationError() *GRPCError {
 }
 
 type Argument struct {
-	Name         string
-	Value        string
-	CEL          *resolver.CELValue
-	InlineFields []*Argument
-	ProtoComment string
-	ZeroValue    string
-	Type         string
+	Name           string
+	Value          string
+	CEL            *resolver.CELValue
+	If             *resolver.CELValue
+	InlineFields   []*Argument
+	ProtoComment   string
+	ZeroValue      string
+	Type           string
+	OneofName      string
+	OneofFieldName string
 }
 
 func (d *VariableDefinition) Arguments() []*Argument {
@@ -2698,7 +2701,7 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 
 	var generateArgs []*Argument
 	for _, arg := range args {
-		for _, generatedArg := range argument(file, arg.Name, arg.Type, arg.Value) {
+		for _, generatedArg := range argument(file, arg) {
 			protofmt := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
 			if protofmt != "" {
 				generatedArg.ProtoComment = "// " + protofmt
@@ -2709,31 +2712,43 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 	return generateArgs
 }
 
-func argument(file *File, name string, typ *resolver.Type, value *resolver.Value) []*Argument {
-	if value.Const != nil {
+func argument(file *File, arg *resolver.Argument) []*Argument {
+	if arg.Value.Const != nil {
 		return []*Argument{
 			{
-				Name:  util.ToPublicGoVariable(name),
-				Value: toGoConstValue(file, value.Const.Type, value.Const.Value),
+				Name:  util.ToPublicGoVariable(arg.Name),
+				Value: toGoConstValue(file, arg.Value.Const.Type, arg.Value.Const.Value),
+				If:    arg.If,
 			},
 		}
 	}
-	if value.CEL == nil {
+	if arg.Value.CEL == nil {
 		return nil
 	}
+	var (
+		oneofName      string
+		oneofFieldName string
+	)
+	if arg.Type != nil && arg.Type.OneofField != nil {
+		oneofName = util.ToPublicGoVariable(arg.Type.OneofField.Oneof.Name)
+		oneofFieldName = strings.TrimPrefix(file.oneofTypeToText(arg.Type.OneofField), "*")
+	}
 	var inlineFields []*Argument
-	if value.Inline {
-		for _, field := range value.CEL.Out.Message.Fields {
+	if arg.Value.Inline {
+		for _, field := range arg.Value.CEL.Out.Message.Fields {
 			inlineFields = append(inlineFields, &Argument{
-				Name:  util.ToPublicGoVariable(field.Name),
-				Value: fmt.Sprintf("v.Get%s()", util.ToPublicGoVariable(field.Name)),
+				Name:           util.ToPublicGoVariable(field.Name),
+				Value:          fmt.Sprintf("v.Get%s()", util.ToPublicGoVariable(field.Name)),
+				OneofName:      oneofName,
+				OneofFieldName: oneofFieldName,
+				If:             arg.If,
 			})
 		}
 	}
-	fromType := value.CEL.Out
+	fromType := arg.Value.CEL.Out
 	var toType *resolver.Type
-	if typ != nil {
-		toType = typ
+	if arg.Type != nil {
+		toType = arg.Type
 	} else {
 		toType = fromType
 	}
@@ -2764,16 +2779,25 @@ func argument(file *File, name string, typ *resolver.Type, value *resolver.Value
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
 		zeroValue = toMakeZeroValue(file, toType)
-		argType = toText
+		if oneofName != "" {
+			t := toType.Clone()
+			t.OneofField = nil
+			argType = file.toTypeText(t)
+		} else {
+			argType = toText
+		}
 	}
 	return []*Argument{
 		{
-			Name:         util.ToPublicGoVariable(name),
-			Value:        argValue,
-			CEL:          value.CEL,
-			InlineFields: inlineFields,
-			ZeroValue:    zeroValue,
-			Type:         argType,
+			Name:           util.ToPublicGoVariable(arg.Name),
+			Value:          argValue,
+			CEL:            arg.Value.CEL,
+			InlineFields:   inlineFields,
+			ZeroValue:      zeroValue,
+			Type:           argType,
+			OneofName:      oneofName,
+			OneofFieldName: oneofFieldName,
+			If:             arg.If,
 		},
 	}
 }

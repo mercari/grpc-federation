@@ -196,27 +196,33 @@ ERROR: <input>:1:4: undefined field 'user'
                                                    ^
 `},
 		{file: "invalid_oneof.proto", expected: `
-testdata/invalid_oneof.proto:39:13: return value of "if" must be bool type but got int64 type
-39:          if: "1"
+testdata/invalid_oneof.proto:40:13: return value of "if" must be bool type but got int64 type
+40:          if: "1"
                  ^
-testdata/invalid_oneof.proto:52:39: "if" or "default" must be specified in "grpc.federation.field.oneof"
-52:        (grpc.federation.field).oneof = {
+testdata/invalid_oneof.proto:53:39: "if" or "default" must be specified in "grpc.federation.field.oneof"
+53:        (grpc.federation.field).oneof = {
                                            ^
-testdata/invalid_oneof.proto:65:39: "by" must be specified in "grpc.federation.field.oneof"
-65:        (grpc.federation.field).oneof = {
+testdata/invalid_oneof.proto:66:39: "by" must be specified in "grpc.federation.field.oneof"
+66:        (grpc.federation.field).oneof = {
                                            ^
-testdata/invalid_oneof.proto:79:18: "default" found multiple times in the "grpc.federation.field.oneof". "default" can only be specified once per oneof
-79:          default: true
+testdata/invalid_oneof.proto:80:18: "default" found multiple times in the "grpc.federation.field.oneof". "default" can only be specified once per oneof
+80:          default: true
                       ^
-testdata/invalid_oneof.proto:91:3: "oneof" feature can only be used for fields within oneof
-91:    bool foo = 5 [(grpc.federation.field).oneof = {
+testdata/invalid_oneof.proto:92:3: "oneof" feature can only be used for fields within oneof
+92:    bool foo = 5 [(grpc.federation.field).oneof = {
        ^
-testdata/invalid_oneof.proto:91:3: value must be specified
-91:    bool foo = 5 [(grpc.federation.field).oneof = {
+testdata/invalid_oneof.proto:92:3: value must be specified
+92:    bool foo = 5 [(grpc.federation.field).oneof = {
        ^
-testdata/invalid_oneof.proto:91:3: "foo" field in "org.federation.UserSelection" message needs to specify "grpc.federation.field" option
-91:    bool foo = 5 [(grpc.federation.field).oneof = {
+testdata/invalid_oneof.proto:92:3: "foo" field in "org.federation.UserSelection" message needs to specify "grpc.federation.field" option
+92:    bool foo = 5 [(grpc.federation.field).oneof = {
        ^
+testdata/invalid_oneof.proto:109:20: "foo" field is a oneof field, so you need to specify an "if" expression
+109:            { field: "foo" by: "1" },
+                         ^
+testdata/invalid_oneof.proto:110:20: "bar" field is a oneof field, so you need to specify an "if" expression
+110:            { field: "bar" by: "'hello'" }
+                         ^
 `},
 		{file: "invalid_retry.proto", expected: `
 testdata/invalid_retry.proto:37:15: ERROR: <input>:1:1: undeclared reference to 'foo' (in container '')

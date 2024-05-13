@@ -10,6 +10,10 @@ service UserService {
 
 message GetUserRequest {
   string id = 1;
+  oneof foobar {
+    int64 foo = 2;
+    string bar = 3;
+  }
 }
 
 message GetUserResponse {

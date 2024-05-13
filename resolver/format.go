@@ -390,6 +390,9 @@ func (a *Argument) ProtoFormat(opt *ProtoFormatOption, isRequestArg bool) string
 	if a.Value != nil {
 		elems = append(elems, a.Value.ProtoFormat(opt))
 	}
+	if a.If != nil {
+		elems = append(elems, fmt.Sprintf("if: %q", a.If.Expr))
+	}
 	if len(elems) == 0 {
 		return ""
 	}
