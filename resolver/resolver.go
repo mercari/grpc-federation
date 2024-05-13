@@ -2107,10 +2107,23 @@ func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*fe
 				builder.WithRequest(idx).WithBy().Location(),
 			))
 		}
+		var ifValue *CELValue
+		if req.GetIf() != "" {
+			ifValue = &CELValue{Expr: req.GetIf()}
+		}
+		if argType != nil && argType.OneofField != nil && ifValue == nil {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(`%q field is a oneof field, so you need to specify an "if" expression`, fieldName),
+					builder.WithRequest(idx).WithField().Location(),
+				),
+			)
+		}
 		args = append(args, &Argument{
 			Name:  fieldName,
 			Type:  argType,
 			Value: value,
+			If:    ifValue,
 		})
 	}
 	return &Request{Args: args, Type: reqType}
@@ -2634,6 +2647,24 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 							callBuilder.WithRequest(idx).WithBy().Location(),
 						),
 					)
+				}
+				if arg.If != nil {
+					if err := r.resolveCELValue(ctx, env, arg.If); err != nil {
+						ctx.addError(
+							ErrWithLocation(
+								err.Error(),
+								callBuilder.WithRequest(idx).WithIf().Location(),
+							),
+						)
+					}
+					if arg.If.Out != nil && arg.If.Out.Kind != types.Bool {
+						ctx.addError(
+							ErrWithLocation(
+								"if must always return a boolean value",
+								callBuilder.WithRequest(idx).WithIf().Location(),
+							),
+						)
+					}
 				}
 			}
 		}

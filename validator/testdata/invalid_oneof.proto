@@ -3,6 +3,7 @@ syntax = "proto3";
 package org.federation;
 
 import "federation.proto";
+import "user.proto";
 
 option go_package = "example/federation;federation";
 
@@ -99,5 +100,17 @@ message M {
 }
 
 message User {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "user.UserService/GetUser"
+        request [
+          { field: "id" by: "'id'" },
+          { field: "foo" by: "1" },
+          { field: "bar" by: "'hello'" }
+        ]
+      }
+    }
+  };
   string id = 1 [(grpc.federation.field).by = "$.user_id"];
 }

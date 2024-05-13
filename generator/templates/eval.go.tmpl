@@ -1,8 +1,9 @@
 {{- define "evalDef" -}}
 {{- $def := .Definition }}
+{{- $ctx := .Ctx }}
 {{- if $def.IsMap -}}
 {{- $mapResolver := $def.MapResolver -}}
-grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapResolver.IteratorSourceType }}, *localValueType]{
+grpcfed.EvalDefMap({{ $ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapResolver.IteratorSourceType }}, *localValueType]{
 	{{- if $def.UseIf }}
 	If: "{{ $def.If }}",
 	IfUseContextLibrary: {{ $def.IfUseContextLibrary }},
@@ -34,33 +35,14 @@ grpcfed.EvalDefMap({{ .Ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapRes
 			{{- end }}
 		}
 		{{- range $arguments }}
-		{{- if .CEL }}
-		{{ .ProtoComment }}
-		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
-			Value: value,
-			Expr: "{{ .CEL.Expr }}",
-			UseContextLibrary: {{ .CEL.UseContextLibrary }},
-			CacheIndex: {{ $def.CELCacheIndex }},
-			Setter: func(v {{ .Type }}){
-				{{- if ne (len .InlineFields) 0 }}
-				{{- range .InlineFields }}
-				args.{{ .Name }} = {{ .Value }}
-				{{- end }}
-				{{- else }}
-				args.{{ .Name }} = {{ .Value }}
-				{{- end }}
-			},
-		}); err != nil {
-			return nil, err
-		}
-		{{- end }}
+		{{- template "setCELArgument" (map "Argument" . "Definition" $def) }}
 		{{- end }}
 		return s.{{ $mapResolver.Caller }}(ctx, args)
 		{{- end }}
 	},
 })
 {{- else -}}
-grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
+grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
 	{{- if $def.UseIf }}
 	If: "{{ $def.If }}",
 	IfUseContextLibrary: {{ $def.IfUseContextLibrary }},
@@ -90,26 +72,7 @@ grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 		}
 		{{- end }}
 		{{- range $arguments }}
-		{{- if .CEL }}
-		{{ .ProtoComment }}
-		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
-			Value: value,
-			Expr: "{{ .CEL.Expr }}",
-			UseContextLibrary: {{ .CEL.UseContextLibrary }},
-			CacheIndex: {{ $def.CELCacheIndex }},
-			Setter: func(v {{ .Type }}){
-				{{- if ne (len .InlineFields) 0 }}
-				{{- range .InlineFields }}
-				args.{{ .Name }} = {{ .Value }}
-				{{- end }}
-				{{- else }}
-				args.{{ .Name }} = {{ .Value }}
-				{{- end }}
-			},
-		}); err != nil {
-			return nil, err
-		}
-		{{- end }}
+		{{- template "setCELArgument" (map "Argument" . "Definition" $def) }}
 		{{- end }}
 		{{- if $def.IsCall }}
 		s.logger.DebugContext(ctx, "call {{ $def.MethodFQDN }}", slog.Any("{{ $def.RequestTypeFQDN }}", s.logvalue_{{ $def.LogValueRequestType }}(args)))
@@ -219,6 +182,91 @@ if err := eg.Wait(); err != nil {
 	return nil, err
 }
 {{- end }}
+{{- end }}
+
+{{- end }}
+
+{{- define "setCELArgument" -}}
+{{- $def := .Definition }}
+{{- $arg := .Argument }}
+
+{{- if $arg.CEL }}
+{{- if $arg.If }}
+{{ $arg.ProtoComment }}
+if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+	Value: value,
+	Expr: "{{ $arg.If.Expr }}",
+	UseContextLibrary: {{ $arg.If.UseContextLibrary }},
+	CacheIndex: {{ $def.CELCacheIndex }},
+	Body: func(value *localValueType) error {
+		return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
+			Value: value,
+			Expr: "{{ $arg.CEL.Expr }}",
+			UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
+			CacheIndex: {{ $def.CELCacheIndex }},
+			Setter: func(v {{ $arg.Type }}){
+				{{- template "setArgumentBySetter" $arg }}
+			},
+		})
+	},
+}); err != nil {
+	return nil, err
+}
+{{- else }}
+{{ $arg.ProtoComment }}
+if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
+	Value: value,
+	Expr: "{{ $arg.CEL.Expr }}",
+	UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
+	CacheIndex: {{ $def.CELCacheIndex }},
+	Setter: func(v {{ $arg.Type }}){
+		{{- template "setArgumentBySetter" $arg }}
+	},
+}); err != nil {
+	return nil, err
+}
+{{- end }}
+{{- end }}
+
+{{- end }}
+
+{{- define "setCELValue" -}}
+{{- $def := .Definition }}
+{{- $arg := .Argument }}
+
+if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
+	Value: value,
+	Expr: "{{ $arg.CEL.Expr }}",
+	UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
+	CacheIndex: {{ $def.CELCacheIndex }},
+	Setter: func(v {{ $arg.Type }}){
+		{{- template "setArgumentBySetter" $arg }}
+	},
+}); err != nil {
+	return err
+}
+{{- end }}
+
+{{- define "setArgumentBySetter" -}}
+
+{{- if ne (len .InlineFields) 0 }}
+{{- range .InlineFields }}
+{{- template "setArgument" . }}
+{{- end }}
+{{- else }}
+{{- template "setArgument" . }}
+{{- end }}
+
+{{- end }}
+
+{{- define "setArgument" -}}
+
+{{- if .OneofName }}
+args.{{ .OneofName }} = &{{ .OneofFieldName }}{
+	{{ .Name }}: {{ .Value }},
+}
+{{- else }}
+args.{{ .Name }} = {{ .Value }}
 {{- end }}
 
 {{- end }}

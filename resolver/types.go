@@ -430,6 +430,7 @@ type Argument struct {
 	Name  string
 	Type  *Type
 	Value *Value
+	If    *CELValue
 }
 
 type Value struct {

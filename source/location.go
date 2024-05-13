@@ -203,6 +203,7 @@ type RequestOption struct {
 	Idx   int
 	Field bool
 	By    bool
+	If    bool
 }
 
 // RetryOption represents resolver.retry location of grpc.federation.message option.

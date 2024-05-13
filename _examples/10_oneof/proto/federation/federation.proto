@@ -38,7 +38,11 @@ message UserSelection {
           name: "ua"
           message {
             name: "User"
-            args { name: "user_id", string: "a" }
+            args [
+             { name: "user_id", string: "a" },
+             { name: "foo" by: "0" },
+             { name: "bar" by: "'hello'"}
+            ]
           }
         }
         by: "ua"
@@ -52,7 +56,11 @@ message UserSelection {
           name: "ub"
           message {
             name: "User"
-            args { name: "user_id", string: "b" }
+            args [
+              { name: "user_id", string: "b" },
+              { name: "foo" by: "0" },
+              { name: "bar" by: "'hello'"}
+            ]
           }
         }
         by: "ub"
@@ -66,7 +74,11 @@ message UserSelection {
           name: "uc"
           message {
             name: "User"
-            args { name: "user_id", by: "$.value" }
+            args [
+              { name: "user_id", by: "$.value" },
+              { name: "foo" by: "0" },
+              { name: "bar" by: "'hello'"}
+            ]
           }
         }
         by: "uc"
@@ -107,7 +119,11 @@ message User {
     def {
       call {
         method: "user.UserService/GetUser"
-        request { field: "id", by: "$.user_id" }
+        request [
+          { field: "id", by: "$.user_id" },
+          { field: "foo" by: "$.foo" if: "$.foo != 0" },
+          { field: "bar" by: "$.bar" if: "$.bar != ''" }
+        ]
       }
     }
   };

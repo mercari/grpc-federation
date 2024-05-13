@@ -894,6 +894,7 @@ func (e *encoder) toArg(arg *resolver.Argument) *plugin.Argument {
 		Name:  arg.Name,
 		Type:  e.toType(arg.Type),
 		Value: e.toValue(arg.Value),
+		If:    e.toCELValue(arg.If),
 	}
 }
 

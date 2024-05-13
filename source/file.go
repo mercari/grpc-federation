@@ -733,6 +733,23 @@ func (f *File) findMethodRequestByPos(ctx *findContext, defIdx int, pos Position
 					}
 					return f.buildLocation(ctx)
 				}
+			case "if":
+				value, ok := field.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.def = &VariableDefinitionOption{
+						Idx: defIdx,
+						Call: &CallExprOption{
+							Request: &RequestOption{
+								Idx: idx,
+								If:  true,
+							},
+						},
+					}
+					return f.buildLocation(ctx)
+				}
 			}
 		}
 		if f.containsPos(literal, pos) {
@@ -1164,6 +1181,12 @@ func (f *File) nodeInfoByMethodRequest(list []*ast.MessageLiteralNode, req *Requ
 			}
 			return f.nodeInfo(value)
 		case req.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case req.If && fieldName == "if":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil

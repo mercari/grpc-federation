@@ -1252,6 +1252,19 @@ func (b *RequestBuilder) AddField(name string, typ *resolver.Type, value *resolv
 	return b
 }
 
+func (b *RequestBuilder) AddFieldWithIf(name string, typ *resolver.Type, value *resolver.Value, ifValue string) *RequestBuilder {
+	b.req.Args = append(b.req.Args, &resolver.Argument{
+		Name:  name,
+		Type:  typ,
+		Value: value,
+		If: &resolver.CELValue{
+			Expr: ifValue,
+			Out:  resolver.BoolType,
+		},
+	})
+	return b
+}
+
 func (b *RequestBuilder) Build(t *testing.T) *resolver.Request {
 	t.Helper()
 	return b.req

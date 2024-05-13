@@ -1155,6 +1155,8 @@ func (s *FederationService) logvalue_Org_User_GetUserRequest(v *user.GetUserRequ
 	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
+		slog.Int64("foo", v.GetFoo()),
+		slog.String("bar", v.GetBar()),
 	)
 }
 

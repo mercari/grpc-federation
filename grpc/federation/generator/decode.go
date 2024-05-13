@@ -1029,9 +1029,14 @@ func (d *decoder) toArg(arg *plugin.Argument) (*resolver.Argument, error) {
 	if err != nil {
 		return nil, err
 	}
+	ifValue, err := d.toCELValue(arg.GetIf())
+	if err != nil {
+		return nil, err
+	}
 
 	ret.Type = typ
 	ret.Value = value
+	ret.If = ifValue
 	return ret, nil
 }
 
