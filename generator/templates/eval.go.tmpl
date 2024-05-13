@@ -111,6 +111,9 @@ grpcfed.EvalDef({{ .Ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 		}
 		{{- end }}
 		{{- end }}
+		{{- if $def.IsCall }}
+		s.logger.DebugContext(ctx, "call {{ $def.MethodFQDN }}", slog.Any("{{ $def.RequestTypeFQDN }}", s.logvalue_{{ $def.LogValueRequestType }}(args)))
+		{{- end }}
 		{{- if $def.UseTimeout }}
 		return grpcfed.WithTimeout[{{ $def.ReturnType }}](ctx, "{{ $def.MethodFQDN }}", {{ $def.Timeout }}, func(ctx context.Context) (*{{ $def.ReturnType }}, error) {
 			{{- if $def.UseRetry }}
