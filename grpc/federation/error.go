@@ -38,10 +38,11 @@ func GoWithRecover(eg *errgroup.Group, fn func() (any, error)) {
 	})
 }
 
-func OutputErrorLog(ctx context.Context, logger *slog.Logger, err error) {
+func OutputErrorLog(ctx context.Context, err error) {
 	if err == nil {
 		return
 	}
+	logger := Logger(ctx)
 	if status, ok := grpcstatus.FromError(err); ok {
 		logger.ErrorContext(ctx, status.Message(),
 			slog.Group("grpc_status",

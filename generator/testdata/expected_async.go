@@ -217,13 +217,13 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -234,7 +234,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.A")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.A", slog.Any("message_args", s.logvalue_Org_Federation_AArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.A", slog.Any("message_args", s.logvalue_Org_Federation_AArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -245,7 +245,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.AArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 	// A tree view of message dependencies is shown below.
@@ -317,7 +317,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "a" // (grpc.federation.field).string = "a"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.A", slog.Any("org.federation.A", s.logvalue_Org_Federation_A(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.A", slog.Any("org.federation.A", s.logvalue_Org_Federation_A(ret)))
 	return ret, nil
 }
 
@@ -326,7 +326,7 @@ func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *
 	ctx, span := s.tracer.Start(ctx, "org.federation.AA")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.AA", slog.Any("message_args", s.logvalue_Org_Federation_AAArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.AA", slog.Any("message_args", s.logvalue_Org_Federation_AAArgument(req)))
 
 	// create a message value to be returned.
 	ret := &AA{}
@@ -334,7 +334,7 @@ func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *
 	// field binding section.
 	ret.Name = "aa" // (grpc.federation.field).string = "aa"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.AA", slog.Any("org.federation.AA", s.logvalue_Org_Federation_AA(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.AA", slog.Any("org.federation.AA", s.logvalue_Org_Federation_AA(ret)))
 	return ret, nil
 }
 
@@ -343,7 +343,7 @@ func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *
 	ctx, span := s.tracer.Start(ctx, "org.federation.AB")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.AB", slog.Any("message_args", s.logvalue_Org_Federation_ABArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.AB", slog.Any("message_args", s.logvalue_Org_Federation_ABArgument(req)))
 
 	// create a message value to be returned.
 	ret := &AB{}
@@ -351,7 +351,7 @@ func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *
 	// field binding section.
 	ret.Name = "ab" // (grpc.federation.field).string = "ab"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.AB", slog.Any("org.federation.AB", s.logvalue_Org_Federation_AB(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.AB", slog.Any("org.federation.AB", s.logvalue_Org_Federation_AB(ret)))
 	return ret, nil
 }
 
@@ -360,7 +360,7 @@ func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.B")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.B", slog.Any("message_args", s.logvalue_Org_Federation_BArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.B", slog.Any("message_args", s.logvalue_Org_Federation_BArgument(req)))
 
 	// create a message value to be returned.
 	ret := &B{}
@@ -368,7 +368,7 @@ func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "b" // (grpc.federation.field).string = "b"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.B", slog.Any("org.federation.B", s.logvalue_Org_Federation_B(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.B", slog.Any("org.federation.B", s.logvalue_Org_Federation_B(ret)))
 	return ret, nil
 }
 
@@ -377,7 +377,7 @@ func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.C")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.C", slog.Any("message_args", s.logvalue_Org_Federation_CArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.C", slog.Any("message_args", s.logvalue_Org_Federation_CArgument(req)))
 
 	// create a message value to be returned.
 	ret := &C{}
@@ -385,7 +385,7 @@ func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "c" // (grpc.federation.field).string = "c"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.C", slog.Any("org.federation.C", s.logvalue_Org_Federation_C(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.C", slog.Any("org.federation.C", s.logvalue_Org_Federation_C(ret)))
 	return ret, nil
 }
 
@@ -394,7 +394,7 @@ func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.D")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.D", slog.Any("message_args", s.logvalue_Org_Federation_DArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.D", slog.Any("message_args", s.logvalue_Org_Federation_DArgument(req)))
 
 	// create a message value to be returned.
 	ret := &D{}
@@ -402,7 +402,7 @@ func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "d" // (grpc.federation.field).string = "d"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.D", slog.Any("org.federation.D", s.logvalue_Org_Federation_D(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.D", slog.Any("org.federation.D", s.logvalue_Org_Federation_D(ret)))
 	return ret, nil
 }
 
@@ -411,7 +411,7 @@ func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.E")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.E", slog.Any("message_args", s.logvalue_Org_Federation_EArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.E", slog.Any("message_args", s.logvalue_Org_Federation_EArgument(req)))
 
 	// create a message value to be returned.
 	ret := &E{}
@@ -419,7 +419,7 @@ func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "e" // (grpc.federation.field).string = "e"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.E", slog.Any("org.federation.E", s.logvalue_Org_Federation_E(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.E", slog.Any("org.federation.E", s.logvalue_Org_Federation_E(ret)))
 	return ret, nil
 }
 
@@ -428,7 +428,7 @@ func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.F")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.F", slog.Any("message_args", s.logvalue_Org_Federation_FArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.F", slog.Any("message_args", s.logvalue_Org_Federation_FArgument(req)))
 
 	// create a message value to be returned.
 	ret := &F{}
@@ -436,7 +436,7 @@ func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "f" // (grpc.federation.field).string = "f"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.F", slog.Any("org.federation.F", s.logvalue_Org_Federation_F(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.F", slog.Any("org.federation.F", s.logvalue_Org_Federation_F(ret)))
 	return ret, nil
 }
 
@@ -445,7 +445,7 @@ func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.G")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.G", slog.Any("message_args", s.logvalue_Org_Federation_GArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.G", slog.Any("message_args", s.logvalue_Org_Federation_GArgument(req)))
 
 	// create a message value to be returned.
 	ret := &G{}
@@ -453,7 +453,7 @@ func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "g" // (grpc.federation.field).string = "g"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.G", slog.Any("org.federation.G", s.logvalue_Org_Federation_G(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.G", slog.Any("org.federation.G", s.logvalue_Org_Federation_G(ret)))
 	return ret, nil
 }
 
@@ -462,7 +462,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -481,7 +481,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 	// A tree view of message dependencies is shown below.
@@ -1057,7 +1057,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
 	return ret, nil
 }
 
@@ -1066,7 +1066,7 @@ func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.H")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.H", slog.Any("message_args", s.logvalue_Org_Federation_HArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.H", slog.Any("message_args", s.logvalue_Org_Federation_HArgument(req)))
 
 	// create a message value to be returned.
 	ret := &H{}
@@ -1074,7 +1074,7 @@ func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "h" // (grpc.federation.field).string = "h"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.H", slog.Any("org.federation.H", s.logvalue_Org_Federation_H(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.H", slog.Any("org.federation.H", s.logvalue_Org_Federation_H(ret)))
 	return ret, nil
 }
 
@@ -1083,7 +1083,7 @@ func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.I")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.I", slog.Any("message_args", s.logvalue_Org_Federation_IArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.I", slog.Any("message_args", s.logvalue_Org_Federation_IArgument(req)))
 
 	// create a message value to be returned.
 	ret := &I{}
@@ -1091,7 +1091,7 @@ func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "i" // (grpc.federation.field).string = "i"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.I", slog.Any("org.federation.I", s.logvalue_Org_Federation_I(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.I", slog.Any("org.federation.I", s.logvalue_Org_Federation_I(ret)))
 	return ret, nil
 }
 
@@ -1100,7 +1100,7 @@ func (s *FederationService) resolve_Org_Federation_J(ctx context.Context, req *O
 	ctx, span := s.tracer.Start(ctx, "org.federation.J")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.J", slog.Any("message_args", s.logvalue_Org_Federation_JArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.J", slog.Any("message_args", s.logvalue_Org_Federation_JArgument(req)))
 
 	// create a message value to be returned.
 	ret := &J{}
@@ -1108,7 +1108,7 @@ func (s *FederationService) resolve_Org_Federation_J(ctx context.Context, req *O
 	// field binding section.
 	ret.Name = "j" // (grpc.federation.field).string = "j"
 
-	s.logger.DebugContext(ctx, "resolved org.federation.J", slog.Any("org.federation.J", s.logvalue_Org_Federation_J(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.J", slog.Any("org.federation.J", s.logvalue_Org_Federation_J(ret)))
 	return ret, nil
 }
 

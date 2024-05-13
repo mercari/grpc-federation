@@ -176,7 +176,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	res, err := s.resolve_Org_Federation_CreatePostResponse(ctx, &Org_Federation_CreatePostResponseArgument{
@@ -187,7 +187,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -198,7 +198,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePost")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -207,7 +207,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.CreatePostArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -260,7 +260,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved org.federation.CreatePost", slog.Any("org.federation.CreatePost", s.logvalue_Org_Federation_CreatePost(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.CreatePost", slog.Any("org.federation.CreatePost", s.logvalue_Org_Federation_CreatePost(ret)))
 	return ret, nil
 }
 
@@ -269,7 +269,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePostResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.CreatePostResponse", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.CreatePostResponse", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostResponseArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -281,7 +281,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.CreatePostResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -389,7 +389,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 			}); err != nil {
 				return nil, err
 			}
-			s.logger.DebugContext(ctx, "call org.post.PostService/CreatePost", slog.Any("org.post.CreatePostRequest", s.logvalue_Org_Post_CreatePostRequest(args)))
+			grpcfed.Logger(ctx).DebugContext(ctx, "call org.post.PostService/CreatePost", slog.Any("org.post.CreatePostRequest", s.logvalue_Org_Post_CreatePostRequest(args)))
 			return s.client.Org_Post_PostServiceClient.CreatePost(ctx, args)
 		},
 	}); err != nil {
@@ -439,7 +439,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved org.federation.CreatePostResponse", slog.Any("org.federation.CreatePostResponse", s.logvalue_Org_Federation_CreatePostResponse(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.CreatePostResponse", slog.Any("org.federation.CreatePostResponse", s.logvalue_Org_Federation_CreatePostResponse(ret)))
 	return ret, nil
 }
 

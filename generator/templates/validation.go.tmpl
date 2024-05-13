@@ -83,7 +83,7 @@ if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 		status := grpcfed.NewGRPCStatus(grpcfed.{{ .Error.GoGRPCStatusCode }}, errorMessage)
 		statusWithDetails, err := status.WithDetails(details...)
 		if err != nil {
-			s.logger.ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
+			grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
 			stat = status
 		} else {
 			stat = statusWithDetails

@@ -50,6 +50,8 @@ type Resolver struct {
 }
 
 func (r *Resolver) Resolve_Federation_User(ctx context.Context, arg *federation.Federation_UserArgument) (*federation.User, error) {
+	grpcfed.SetLogger(ctx, grpcfed.Logger(ctx).With(slog.String("foo", "hoge")))
+
 	return &federation.User{
 		Id:   arg.U.Id,
 		Name: arg.U.Name,

@@ -161,7 +161,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	res, err := s.resolve_Federation_GetPostResponse(ctx, &Federation_GetPostResponseArgument{
@@ -169,7 +169,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -180,7 +180,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "federation.GetPostResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -190,7 +190,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetPostResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -235,7 +235,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.GetPostResponse", slog.Any("federation.GetPostResponse", s.logvalue_Federation_GetPostResponse(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetPostResponse", slog.Any("federation.GetPostResponse", s.logvalue_Federation_GetPostResponse(ret)))
 	return ret, nil
 }
 
@@ -244,7 +244,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	ctx, span := s.tracer.Start(ctx, "federation.Post")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -257,7 +257,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.PostArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 	// A tree view of message dependencies is shown below.
@@ -467,7 +467,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
 	return ret, nil
 }
 
@@ -476,7 +476,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	ctx, span := s.tracer.Start(ctx, "federation.Reaction")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.Reaction", slog.Any("message_args", s.logvalue_Federation_ReactionArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Reaction", slog.Any("message_args", s.logvalue_Federation_ReactionArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -486,7 +486,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ReactionArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -550,7 +550,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.Reaction", slog.Any("federation.Reaction", s.logvalue_Federation_Reaction(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Reaction", slog.Any("federation.Reaction", s.logvalue_Federation_Reaction(ret)))
 	return ret, nil
 }
 
@@ -559,7 +559,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -568,7 +568,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -599,7 +599,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
 	return ret, nil
 }
 
@@ -826,13 +826,13 @@ func (s *DebugService) GetStatus(ctx context.Context, req *GetStatusRequest) (re
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	res, err := s.resolve_Federation_GetStatusResponse(ctx, &Federation_GetStatusResponseArgument{})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -843,7 +843,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	ctx, span := s.tracer.Start(ctx, "federation.GetStatusResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.GetStatusResponse", slog.Any("message_args", s.logvalue_Federation_GetStatusResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetStatusResponse", slog.Any("message_args", s.logvalue_Federation_GetStatusResponseArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -853,7 +853,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetStatusResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -905,7 +905,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.GetStatusResponse", slog.Any("federation.GetStatusResponse", s.logvalue_Federation_GetStatusResponse(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetStatusResponse", slog.Any("federation.GetStatusResponse", s.logvalue_Federation_GetStatusResponse(ret)))
 	return ret, nil
 }
 
@@ -914,7 +914,7 @@ func (s *DebugService) resolve_Federation_User(ctx context.Context, req *Federat
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -923,7 +923,7 @@ func (s *DebugService) resolve_Federation_User(ctx context.Context, req *Federat
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -954,7 +954,7 @@ func (s *DebugService) resolve_Federation_User(ctx context.Context, req *Federat
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
 	return ret, nil
 }
 
