@@ -179,7 +179,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	res, err := s.resolve_Org_Federation_IsMatchResponse(ctx, &Org_Federation_IsMatchResponseArgument{
@@ -188,7 +188,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -199,7 +199,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	ctx, span := s.tracer.Start(ctx, "org.federation.IsMatchResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.IsMatchResponse", slog.Any("message_args", s.logvalue_Org_Federation_IsMatchResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.IsMatchResponse", slog.Any("message_args", s.logvalue_Org_Federation_IsMatchResponseArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -210,7 +210,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.IsMatchResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -272,7 +272,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved org.federation.IsMatchResponse", slog.Any("org.federation.IsMatchResponse", s.logvalue_Org_Federation_IsMatchResponse(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.IsMatchResponse", slog.Any("org.federation.IsMatchResponse", s.logvalue_Org_Federation_IsMatchResponse(ret)))
 	return ret, nil
 }
 

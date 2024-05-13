@@ -164,7 +164,7 @@ func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetRespon
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	res, err := s.resolve_Federation_GetResponse(ctx, &Federation_GetResponseArgument{
@@ -172,7 +172,7 @@ func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetRespon
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -183,7 +183,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	ctx, span := s.tracer.Start(ctx, "federation.GetResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.GetResponse", slog.Any("message_args", s.logvalue_Federation_GetResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetResponse", slog.Any("message_args", s.logvalue_Federation_GetResponseArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -193,7 +193,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -228,6 +228,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	// field binding section.
 	{
 		// (grpc.federation.field).custom_resolver = true
+		ctx = grpcfed.WithCustomResolverValue(ctx)
 		var err error
 		ret.Post, err = s.resolver.Resolve_Federation_GetResponse_Post(ctx, &Federation_GetResponse_PostArgument{
 			Federation_GetResponseArgument: req,
@@ -236,9 +237,10 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
+		ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.GetResponse", slog.Any("federation.GetResponse", s.logvalue_Federation_GetResponse(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetResponse", slog.Any("federation.GetResponse", s.logvalue_Federation_GetResponse(ret)))
 	return ret, nil
 }
 
@@ -247,7 +249,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 	ctx, span := s.tracer.Start(ctx, "federation.Post")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -260,7 +262,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.PostArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 	// A tree view of message dependencies is shown below.
@@ -470,7 +472,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
 	return ret, nil
 }
 
@@ -479,7 +481,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 	ctx, span := s.tracer.Start(ctx, "federation.Reaction")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.Reaction", slog.Any("message_args", s.logvalue_Federation_ReactionArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Reaction", slog.Any("message_args", s.logvalue_Federation_ReactionArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -489,7 +491,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ReactionArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -553,7 +555,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.Reaction", slog.Any("federation.Reaction", s.logvalue_Federation_Reaction(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Reaction", slog.Any("federation.Reaction", s.logvalue_Federation_Reaction(ret)))
 	return ret, nil
 }
 
@@ -562,7 +564,7 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
@@ -571,7 +573,7 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 
@@ -602,7 +604,7 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 		return nil, err
 	}
 
-	s.logger.DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
 	return ret, nil
 }
 

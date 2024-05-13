@@ -293,7 +293,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	{{- if .UseTimeout }}
@@ -313,7 +313,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	{{- end }}
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -330,7 +330,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve {{ .ProtoFQDN }}", slog.Any("message_args", s.logvalue_{{ .RequestType }}(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve {{ .ProtoFQDN }}", slog.Any("message_args", s.logvalue_{{ .RequestType }}(req)))
 	{{- if .IsDeclVariables }}
 	type localValueType struct {
 		*grpcfed.LocalValue
@@ -343,7 +343,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "{{ .RequestProtoType }}", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
-			s.logger.ErrorContext(ctx, err.Error())
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
 	{{- end }}
@@ -362,11 +362,13 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- $hasMsgCustomResolver := .HasCustomResolver }}
 	{{- if $hasMsgCustomResolver }}
 	// `custom_resolver = true` in "grpc.federation.message" option.
+	ctx = grpcfed.WithCustomResolverValue(ctx)
 	ret, err := s.resolver.{{ .CustomResolverName }}(ctx, req)
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	{{- else }}
 	ret := &{{ .ReturnType }}{}
 	{{- end }}
@@ -380,6 +382,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- if .IsCustomResolverField }}
 	{
 		// (grpc.federation.field).custom_resolver = true
+		ctx = grpcfed.WithCustomResolverValue(ctx)
 		var err error
 		ret.{{ .Name }}, err = s.resolver.{{ .ResolverName }}(ctx, &{{ .RequestType }}{
 			{{ .MessageArgumentName }}: req,
@@ -391,6 +394,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
+		ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	}
 	{{- else if .IsOneofField }}
 	{{ $name := .Name }}
@@ -464,7 +468,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- end }}
 	{{- end }}
 
-	s.logger.DebugContext(ctx, "resolved {{ .ProtoFQDN }}", slog.Any("{{ .ProtoFQDN }}", s.logvalue_{{ .LogValueReturnType }}(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved {{ .ProtoFQDN }}", slog.Any("{{ .ProtoFQDN }}", s.logvalue_{{ .LogValueReturnType }}(ret)))
 	return ret, nil
 }
 {{ end }}

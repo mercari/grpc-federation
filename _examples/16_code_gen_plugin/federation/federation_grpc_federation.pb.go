@@ -141,7 +141,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 	defer func() {
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, debug.Stack())
-			grpcfed.OutputErrorLog(ctx, s.logger, e)
+			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
 	res, err := grpcfed.WithTimeout[GetResponse](ctx, "org.federation.FederationService/Get", 10000000000 /* 10s */, func(ctx context.Context) (*GetResponse, error) {
@@ -151,7 +151,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
-		grpcfed.OutputErrorLog(ctx, s.logger, err)
+		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
@@ -162,17 +162,19 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 
-	s.logger.DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
+	ctx = grpcfed.WithCustomResolverValue(ctx)
 	ret, err := s.resolver.Resolve_Org_Federation_GetResponse(ctx, req)
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 
-	s.logger.DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GetResponse", slog.Any("org.federation.GetResponse", s.logvalue_Org_Federation_GetResponse(ret)))
 	return ret, nil
 }
 

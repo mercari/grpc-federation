@@ -30,7 +30,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 				ByUseContextLibrary: {{ .IgnoreAndResponse.UseContextLibrary }},
 				ByCacheIndex: {{ $def.CELCacheIndex }},
 			}); err != nil {
-				s.logger.ErrorContext({{ $ctx }}, "failed to set response when ignored", slog.String("error", err.Error()))
+				grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed to set response when ignored", slog.String("error", err.Error()))
 				return nil
 			}
 			return nil
@@ -110,7 +110,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage)
 			statusWithDetails, err := status.WithDetails(details...)
 			if err != nil {
-				s.logger.ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
+				grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
 				stat = status
 			} else {
 				stat = statusWithDetails
@@ -131,7 +131,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 	return nil, nil
 }()
 if handleErr != nil {
-	s.logger.ErrorContext({{ $ctx }}, "failed to handle error", slog.String("error", handleErr.Error()))
+	grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed to handle error", slog.String("error", handleErr.Error()))
 	// If it fails during error handling, return the original error.
 	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
@@ -187,7 +187,7 @@ func(){
 		return nil, nil
 	}()
 	if err != nil {
-		s.logger.ErrorContext(ctx, "failed resolving messages", slog.String("error", err.Error()))
+		grpcfed.Logger(ctx).ErrorContext(ctx, "failed resolving messages", slog.String("error", err.Error()))
 		return
 	}
 	{{- range $i, $message := .Messages.Defs }}
