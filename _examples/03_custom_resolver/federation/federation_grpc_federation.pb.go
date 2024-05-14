@@ -292,13 +292,12 @@ func (s *FederationService) resolve_Federation_ForNameless(ctx context.Context, 
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
-	ctx = grpcfed.WithCustomResolverValue(ctx)
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 	ret, err := s.resolver.Resolve_Federation_ForNameless(ctx, req)
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.ForNameless", slog.Any("federation.ForNameless", s.logvalue_Federation_ForNameless(ret)))
 	return ret, nil
@@ -591,7 +590,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	ret.Content = value.vars.post.GetContent() // { name: "post", autobind: true }
 	{
 		// (grpc.federation.field).custom_resolver = true
-		ctx = grpcfed.WithCustomResolverValue(ctx)
+		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 		var err error
 		ret.User, err = s.resolver.Resolve_Federation_Post_User(ctx, &Federation_Post_UserArgument{
 			Federation_PostArgument: req,
@@ -600,7 +599,6 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
@@ -616,13 +614,12 @@ func (s *FederationService) resolve_Federation_Unused(ctx context.Context, req *
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
-	ctx = grpcfed.WithCustomResolverValue(ctx)
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 	ret, err := s.resolver.Resolve_Federation_Unused(ctx, req)
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Unused", slog.Any("federation.Unused", s.logvalue_Federation_Unused(ret)))
 	return ret, nil
@@ -711,18 +708,17 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
-	ctx = grpcfed.WithCustomResolverValue(ctx)
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 	ret, err := s.resolver.Resolve_Federation_User(ctx, req)
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 
 	// field binding section.
 	{
 		// (grpc.federation.field).custom_resolver = true
-		ctx = grpcfed.WithCustomResolverValue(ctx)
+		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 		var err error
 		ret.Name, err = s.resolver.Resolve_Federation_User_Name(ctx, &Federation_User_NameArgument{
 			Federation_UserArgument: req,
@@ -732,7 +728,6 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))

@@ -228,7 +228,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	// field binding section.
 	{
 		// (grpc.federation.field).custom_resolver = true
-		ctx = grpcfed.WithCustomResolverValue(ctx)
+		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 		var err error
 		ret.Post, err = s.resolver.Resolve_Federation_GetResponse_Post(ctx, &Federation_GetResponse_PostArgument{
 			Federation_GetResponseArgument: req,
@@ -237,7 +237,6 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-		ctx = grpcfed.WithLogger(ctx, grpcfed.GetCustomResolverValue(ctx).Logger)
 	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetResponse", slog.Any("federation.GetResponse", s.logvalue_Federation_GetResponse(ret)))
