@@ -10,6 +10,7 @@ import (
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
 	cellib "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/grpc/federation/cel/testdata/testpb"
 )
