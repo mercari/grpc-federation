@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/common/types"
 )
 
 type Library struct {
@@ -33,13 +34,13 @@ type ContextualLibrary interface {
 	Initialize(context.Context)
 }
 
-func NewLibrary() *Library {
+func NewLibrary(typeAdapter types.Adapter) *Library {
 	mdLib := NewMetadataLibrary()
 	return &Library{
 		name: "grpc.federation.static",
 		subLibs: []cel.SingletonLibrary{
 			new(TimeLibrary),
-			new(ListLibrary),
+			NewListLibrary(typeAdapter),
 			new(RandLibrary),
 			new(UUIDLibrary),
 			mdLib,

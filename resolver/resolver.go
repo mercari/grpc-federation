@@ -50,15 +50,16 @@ type Resolver struct {
 
 func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 	msgMap := make(map[string]*Message)
+	celRegistry := newCELRegistry(msgMap)
 	return &Resolver{
 		files:                      files,
-		celRegistry:                newCELRegistry(msgMap),
+		celRegistry:                celRegistry,
 		defToFileMap:               make(map[*descriptorpb.FileDescriptorProto]*File),
 		fileNameToDefMap:           make(map[string]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToFileDefs: make(map[string][]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToPackage:  make(map[string]*Package),
 		celPluginMap:               make(map[string]*CELPlugin),
-		ctxOverloadIDPrefixes:      grpcfedcel.NewLibrary().ContextOverloadIDPrefixes(),
+		ctxOverloadIDPrefixes:      grpcfedcel.NewLibrary(celRegistry).ContextOverloadIDPrefixes(),
 
 		serviceToRuleMap:   make(map[*Service]*federation.ServiceRule),
 		methodToRuleMap:    make(map[*Method]*federation.MethodRule),
@@ -3040,7 +3041,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary()),
+		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),

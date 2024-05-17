@@ -201,14 +201,14 @@ grpc.federation.cel.test.Message{id: "b"}
 			name: "sortStableAsc",
 			expr: `[
 grpc.federation.cel.test.Message{id:"A", num:25}, 
-grpc.federation.cel.test.Message{id:"A", num:75}, 
+grpc.federation.cel.test.Message{id:"E", num:75}, 
 grpc.federation.cel.test.Message{id:"A", num:75}, 
 grpc.federation.cel.test.Message{id:"B", num:75},
+grpc.federation.cel.test.Message{id:"A", num:75},
 grpc.federation.cel.test.Message{id:"B", num:25},
 grpc.federation.cel.test.Message{id:"C", num:25},
-grpc.federation.cel.test.Message{id:"E", num:75},
 grpc.federation.cel.test.Message{id:"E", num:25},
-].sortStableAsc(v, v.num)`,
+].sortStableAsc(v, v.id).sortStableAsc(v, v.num)`,
 			cmp: func(got any) error {
 				lister, ok := got.(traits.Lister)
 				if !ok {
@@ -266,14 +266,14 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 			name: "sortStableDesc",
 			expr: `[
 grpc.federation.cel.test.Message{id:"A", num:25}, 
-grpc.federation.cel.test.Message{id:"A", num:75}, 
+grpc.federation.cel.test.Message{id:"E", num:75}, 
 grpc.federation.cel.test.Message{id:"A", num:75}, 
 grpc.federation.cel.test.Message{id:"B", num:75},
+grpc.federation.cel.test.Message{id:"A", num:75},
 grpc.federation.cel.test.Message{id:"B", num:25},
 grpc.federation.cel.test.Message{id:"C", num:25},
-grpc.federation.cel.test.Message{id:"E", num:75},
 grpc.federation.cel.test.Message{id:"E", num:25},
-].sortStableDesc(v, v.num)`,
+].sortStableDesc(v, v.id).sortStableDesc(v, v.num)`,
 			cmp: func(got any) error {
 				lister, ok := got.(traits.Lister)
 				if !ok {
@@ -281,27 +281,23 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 				}
 				expected := []*testpb.Message{
 					{
-						Id:  "A",
-						Num: 75,
-					},
-					{
-						Id:  "A",
-						Num: 75,
-					},
-					{
-						Id:  "B",
-						Num: 75,
-					},
-					{
 						Id:  "E",
 						Num: 75,
 					},
 					{
-						Id:  "A",
-						Num: 25,
+						Id:  "B",
+						Num: 75,
 					},
 					{
-						Id:  "B",
+						Id:  "A",
+						Num: 75,
+					},
+					{
+						Id:  "A",
+						Num: 75,
+					},
+					{
+						Id:  "E",
 						Num: 25,
 					},
 					{
@@ -309,7 +305,11 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 						Num: 25,
 					},
 					{
-						Id:  "E",
+						Id:  "B",
+						Num: 25,
+					},
+					{
+						Id:  "A",
 						Num: 25,
 					},
 				}
@@ -331,7 +331,7 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			env, err := cel.NewEnv(
-				cel.Lib(new(cellib.ListLibrary)),
+				cel.Lib(cellib.NewListLibrary(types.DefaultTypeAdapter)),
 				cel.Types(&testpb.Message{}, &testpb.InnerMessage{}),
 			)
 			if err != nil {
