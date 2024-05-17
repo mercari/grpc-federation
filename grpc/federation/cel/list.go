@@ -29,7 +29,7 @@ func (lib *ListLibrary) LibraryName() string {
 }
 
 func (lib *ListLibrary) CompileOptions() []cel.EnvOption {
-	listTypeT := cel.ListType(cel.TypeParamType("T"))
+	listTypeO := cel.ListType(cel.TypeParamType("O"))
 	listTypeE := cel.ListType(cel.TypeParamType("E"))
 	opts := []cel.EnvOption{
 		cel.OptionalTypes(),
@@ -56,25 +56,25 @@ func (lib *ListLibrary) CompileOptions() []cel.EnvOption {
 		),
 		cel.Function(listSortAscFunc,
 			cel.Overload("grpc_federation_list_@sort_asc",
-				[]*cel.Type{listTypeT, listTypeE}, listTypeT,
+				[]*cel.Type{listTypeO, listTypeE}, listTypeO,
 				cel.BinaryBinding(sortAsc),
 			),
 		),
 		cel.Function(listSortDescFunc,
 			cel.Overload("grpc_federation_list_@sort_desc",
-				[]*cel.Type{listTypeT, listTypeE}, listTypeT,
+				[]*cel.Type{listTypeO, listTypeE}, listTypeO,
 				cel.BinaryBinding(sortDesc),
 			),
 		),
 		cel.Function(listSortStableAscFunc,
 			cel.Overload("grpc_federation_list_@sort_stable_asc",
-				[]*cel.Type{listTypeT, listTypeE}, listTypeT,
+				[]*cel.Type{listTypeO, listTypeE}, listTypeO,
 				cel.BinaryBinding(sortStableAsc),
 			),
 		),
 		cel.Function(listSortStableDescFunc,
 			cel.Overload("grpc_federation_list_@sort_stable_desc",
-				[]*cel.Type{listTypeT, listTypeE}, listTypeT,
+				[]*cel.Type{listTypeO, listTypeE}, listTypeO,
 				cel.BinaryBinding(sortStableDesc),
 			),
 		),
@@ -131,46 +131,43 @@ func makeSort(function string, mef cel.MacroExprFactory, target ast.Expr, args [
 	if err != nil {
 		return nil, err
 	}
-
 	return mef.NewCall(function, target, mp), nil
 }
 
-func sortAsc(target, expanded ref.Val) ref.Val {
-	return sortByOrder(target, expanded, -types.IntOne, false)
+func sortAsc(orig, expanded ref.Val) ref.Val {
+	return sortRefVal(orig, expanded, -types.IntOne, false)
 }
 
-func sortDesc(target, expanded ref.Val) ref.Val {
-	return sortByOrder(target, expanded, types.IntOne, false)
+func sortDesc(orig, expanded ref.Val) ref.Val {
+	return sortRefVal(orig, expanded, types.IntOne, false)
 }
 
-func sortStableAsc(target, expanded ref.Val) ref.Val {
-	return sortByOrder(target, expanded, -types.IntOne, true)
+func sortStableAsc(orig, expanded ref.Val) ref.Val {
+	return sortRefVal(orig, expanded, -types.IntOne, true)
 }
 
-func sortStableDesc(target, expanded ref.Val) ref.Val {
-	return sortByOrder(target, expanded, types.IntOne, true)
+func sortStableDesc(orig, expanded ref.Val) ref.Val {
+	return sortRefVal(orig, expanded, types.IntOne, true)
 }
 
-func sortByOrder(target, expanded ref.Val, direction types.Int, stable bool) ref.Val {
-	targetLister := target.(traits.Lister)
+func sortRefVal(orig, expanded ref.Val, direction types.Int, stable bool) ref.Val {
+	origLister := orig.(traits.Lister)
 	expandedLister := expanded.(traits.Lister)
-	if targetLister.Size().(types.Int) != expandedLister.Size().(types.Int) {
-		return types.NewErr("size of list of target and expanded does not match")
-	}
 
+	// The element being sorted must be values before expansion.
 	type sortVal struct {
-		TargetVal   ref.Val
+		OrigVal     ref.Val
 		ExpandedVal ref.Val
 	}
-	vals := make([]*sortVal, 0, int64(targetLister.Size().(types.Int)))
-	for i := types.IntZero; i < targetLister.Size().(types.Int); i++ {
-		tgtVal := targetLister.Get(i)
+	vals := make([]*sortVal, 0, int64(origLister.Size().(types.Int)))
+	for i := types.IntZero; i < origLister.Size().(types.Int); i++ {
+		origVal := origLister.Get(i)
 		expVal := expandedLister.Get(i)
 		if _, ok := expVal.(traits.Comparer); !ok {
-			return types.NewErr("%s is not comparable", expVal.Type())
+			return types.NewErr("%s of list[%d] is not comparable", expVal.Type(), i)
 		}
 		vals = append(vals, &sortVal{
-			TargetVal:   tgtVal,
+			OrigVal:     origVal,
 			ExpandedVal: expVal,
 		})
 	}
@@ -193,11 +190,11 @@ func sortByOrder(target, expanded ref.Val, direction types.Int, stable bool) ref
 		return types.NewErr("cannot sort because some elements of list are not comparable")
 	}
 
-	resVal := make([]ref.Val, 0, len(vals))
+	resVals := make([]ref.Val, 0, len(vals))
 	for _, v := range vals {
-		resVal = append(resVal, v.TargetVal)
+		resVals = append(resVals, v.OrigVal)
 	}
-	return types.DefaultTypeAdapter.NativeToValue(resVal)
+	return types.DefaultTypeAdapter.NativeToValue(resVals)
 }
 
 func extractIdent(e ast.Expr) (string, bool) {

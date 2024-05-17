@@ -114,7 +114,7 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
-			name: "sortAsc struct",
+			name: "sortAsc field selection",
 			expr: `[
 grpc.federation.cel.test.Message{id: "a", inner: grpc.federation.cel.test.InnerMessage{id: "a2"}}, 
 grpc.federation.cel.test.Message{id: "c", inner: grpc.federation.cel.test.InnerMessage{id: "c2"}}, 
@@ -160,7 +160,7 @@ grpc.federation.cel.test.Message{id: "b", inner: grpc.federation.cel.test.InnerM
 			},
 		},
 		{
-			name: "sortDesc struct",
+			name: "sortDesc field selection",
 			expr: `[
 grpc.federation.cel.test.Message{id: "a"}, 
 grpc.federation.cel.test.Message{id: "c"}, 
