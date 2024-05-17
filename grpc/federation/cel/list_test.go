@@ -2,13 +2,16 @@ package cel_test
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
+	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/go-cmp/cmp"
-
+	"github.com/google/go-cmp/cmp/cmpopts"
 	cellib "github.com/mercari/grpc-federation/grpc/federation/cel"
+	"github.com/mercari/grpc-federation/grpc/federation/cel/testdata/testpb"
 )
 
 func TestList(t *testing.T) {
@@ -64,11 +67,271 @@ func TestList(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name: "sortAsc",
+			expr: "[4, 1, 3, 2].sortAsc(v, v)",
+			cmp: func(got any) error {
+				lister, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := []int64{1, 2, 3, 4}
+				if lister.Size().(types.Int) != types.Int(len(expected)) {
+					return fmt.Errorf("invalid size")
+				}
+
+				gotV, err := lister.ConvertToNative(reflect.TypeOf([]int64{}))
+				if err != nil {
+					return fmt.Errorf("failed to conver to native: %w", err)
+				}
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "sortDesc",
+			expr: "[4, 1, 3, 2].sortDesc(v, v)",
+			cmp: func(got any) error {
+				lister, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := []int64{4, 3, 2, 1}
+				if lister.Size().(types.Int) != types.Int(len(expected)) {
+					return fmt.Errorf("invalid size")
+				}
+
+				gotV, err := lister.ConvertToNative(reflect.TypeOf([]int64{}))
+				if err != nil {
+					return fmt.Errorf("failed to conver to native: %w", err)
+				}
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "sortAsc struct",
+			expr: `[
+grpc.federation.cel.test.Message{id: "a", inner: grpc.federation.cel.test.InnerMessage{id: "a2"}}, 
+grpc.federation.cel.test.Message{id: "c", inner: grpc.federation.cel.test.InnerMessage{id: "c2"}}, 
+grpc.federation.cel.test.Message{id: "b", inner: grpc.federation.cel.test.InnerMessage{id: "b2"}}
+].sortAsc(v, v.inner.id)`,
+			cmp: func(got any) error {
+				lister, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := []*testpb.Message{
+					{
+						Id: "a",
+						Inner: &testpb.InnerMessage{
+							Id: "a2",
+						},
+					},
+					{
+						Id: "b",
+						Inner: &testpb.InnerMessage{
+							Id: "b2",
+						},
+					},
+					{
+						Id: "c",
+						Inner: &testpb.InnerMessage{
+							Id: "c2",
+						},
+					},
+				}
+				if lister.Size().(types.Int) != types.Int(len(expected)) {
+					return fmt.Errorf("invalid size")
+				}
+
+				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
+				if err != nil {
+					return fmt.Errorf("failed to conver to native: %w", err)
+				}
+				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{}, testpb.InnerMessage{})); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "sortDesc struct",
+			expr: `[
+grpc.federation.cel.test.Message{id: "a"}, 
+grpc.federation.cel.test.Message{id: "c"}, 
+grpc.federation.cel.test.Message{id: "b"}
+].sortDesc(v, v.id)`,
+			cmp: func(got any) error {
+				lister, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := []*testpb.Message{
+					{
+						Id: "c",
+					},
+					{
+						Id: "b",
+					},
+					{
+						Id: "a",
+					},
+				}
+				if lister.Size().(types.Int) != types.Int(len(expected)) {
+					return fmt.Errorf("invalid size")
+				}
+
+				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
+				if err != nil {
+					return fmt.Errorf("failed to conver to native: %w", err)
+				}
+				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{})); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "sortStableAsc",
+			expr: `[
+grpc.federation.cel.test.Message{id:"A", num:25}, 
+grpc.federation.cel.test.Message{id:"A", num:75}, 
+grpc.federation.cel.test.Message{id:"A", num:75}, 
+grpc.federation.cel.test.Message{id:"B", num:75},
+grpc.federation.cel.test.Message{id:"B", num:25},
+grpc.federation.cel.test.Message{id:"C", num:25},
+grpc.federation.cel.test.Message{id:"E", num:75},
+grpc.federation.cel.test.Message{id:"E", num:25},
+].sortStableAsc(v, v.num)`,
+			cmp: func(got any) error {
+				lister, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := []*testpb.Message{
+					{
+						Id:  "A",
+						Num: 25,
+					},
+					{
+						Id:  "B",
+						Num: 25,
+					},
+					{
+						Id:  "C",
+						Num: 25,
+					},
+					{
+						Id:  "E",
+						Num: 25,
+					},
+					{
+						Id:  "A",
+						Num: 75,
+					},
+					{
+						Id:  "A",
+						Num: 75,
+					},
+					{
+						Id:  "B",
+						Num: 75,
+					},
+					{
+						Id:  "E",
+						Num: 75,
+					},
+				}
+				if lister.Size().(types.Int) != types.Int(len(expected)) {
+					return fmt.Errorf("invalid size")
+				}
+
+				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
+				if err != nil {
+					return fmt.Errorf("failed to conver to native: %w", err)
+				}
+				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{})); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "sortStableDesc",
+			expr: `[
+grpc.federation.cel.test.Message{id:"A", num:25}, 
+grpc.federation.cel.test.Message{id:"A", num:75}, 
+grpc.federation.cel.test.Message{id:"A", num:75}, 
+grpc.federation.cel.test.Message{id:"B", num:75},
+grpc.federation.cel.test.Message{id:"B", num:25},
+grpc.federation.cel.test.Message{id:"C", num:25},
+grpc.federation.cel.test.Message{id:"E", num:75},
+grpc.federation.cel.test.Message{id:"E", num:25},
+].sortStableDesc(v, v.num)`,
+			cmp: func(got any) error {
+				lister, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := []*testpb.Message{
+					{
+						Id:  "A",
+						Num: 75,
+					},
+					{
+						Id:  "A",
+						Num: 75,
+					},
+					{
+						Id:  "B",
+						Num: 75,
+					},
+					{
+						Id:  "E",
+						Num: 75,
+					},
+					{
+						Id:  "A",
+						Num: 25,
+					},
+					{
+						Id:  "B",
+						Num: 25,
+					},
+					{
+						Id:  "C",
+						Num: 25,
+					},
+					{
+						Id:  "E",
+						Num: 25,
+					},
+				}
+				if lister.Size().(types.Int) != types.Int(len(expected)) {
+					return fmt.Errorf("invalid size")
+				}
+
+				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
+				if err != nil {
+					return fmt.Errorf("failed to conver to native: %w", err)
+				}
+				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{})); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			env, err := cel.NewEnv(
 				cel.Lib(new(cellib.ListLibrary)),
+				cel.Types(&testpb.Message{}, &testpb.InnerMessage{}),
 			)
 			if err != nil {
 				t.Fatal(err)
