@@ -333,6 +333,7 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 			env, err := cel.NewEnv(
 				cel.Lib(cellib.NewListLibrary(types.DefaultTypeAdapter)),
 				cel.Types(&testpb.Message{}, &testpb.InnerMessage{}),
+				cel.ASTValidators(cellib.NewListValidator()),
 			)
 			if err != nil {
 				t.Fatal(err)

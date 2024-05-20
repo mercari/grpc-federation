@@ -49,6 +49,12 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 	}
 }
 
+func NewASTValidators() []cel.ASTValidator {
+	return []cel.ASTValidator{
+		NewListValidator(),
+	}
+}
+
 func IsStandardLibraryType(typeName string) bool {
 	return strings.HasPrefix(strings.TrimPrefix(typeName, "."), "grpc.federation.")
 }

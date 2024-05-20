@@ -171,9 +171,6 @@ func (lib *ListLibrary) sortRefVal(orig, expanded ref.Val, direction types.Int, 
 	for i := types.IntZero; i < origLister.Size().(types.Int); i++ {
 		origVal := origLister.Get(i)
 		expVal := expandedLister.Get(i)
-		if _, ok := expVal.(traits.Comparer); !ok {
-			return types.NewErr("%s of list[%d] is not comparable", expVal.Type(), i)
-		}
 		vals = append(vals, &sortVal{
 			OrigVal:     origVal,
 			ExpandedVal: expVal,
@@ -184,19 +181,11 @@ func (lib *ListLibrary) sortRefVal(orig, expanded ref.Val, direction types.Int, 
 	if stable {
 		fn = sort.SliceStable
 	}
-
-	var hasErr bool
 	fn(vals, func(i, j int) bool {
 		cmp := vals[i].ExpandedVal.(traits.Comparer)
 		out := cmp.Compare(vals[j].ExpandedVal)
-		if types.IsUnknownOrError(out) {
-			hasErr = true
-		}
 		return out == direction
 	})
-	if hasErr {
-		return types.NewErr("cannot sort because some elements of list are not comparable")
-	}
 
 	resVals := make([]ref.Val, 0, len(vals))
 	for _, v := range vals {
@@ -211,4 +200,43 @@ func extractIdent(e ast.Expr) (string, bool) {
 		return e.AsIdent(), true
 	}
 	return "", false
+}
+
+type listValidator struct{}
+
+func NewListValidator() cel.ASTValidator {
+	return &listValidator{}
+}
+
+func (v *listValidator) Name() string {
+	return "grpc.federation.list.validator"
+}
+
+func (v *listValidator) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, iss *cel.Issues) {
+	root := ast.NavigateAST(a)
+
+	// Checks at compile time if the value types are comparable
+	funcNames := []string{
+		listSortAscFunc,
+		listSortDescFunc,
+		listSortStableAscFunc,
+		listSortStableDescFunc,
+	}
+	for _, funcName := range funcNames {
+		funcCalls := ast.MatchDescendants(root, ast.FunctionMatcher(funcName))
+		for _, call := range funcCalls {
+			arg1 := call.AsCall().Args()[1]
+			expr, ok := arg1.AsComprehension().AccuInit().(ast.NavigableExpr)
+			if !ok {
+				continue
+			}
+			params := expr.Type().Parameters()
+			if len(params) <= 0 {
+				continue
+			}
+			if !params[0].HasTrait(traits.ComparerType) {
+				iss.ReportErrorAtID(expr.ID(), "%s is not comparable", expr.Type())
+			}
+		}
+	}
 }
