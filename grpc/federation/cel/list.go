@@ -231,7 +231,7 @@ func (v *listValidator) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, 
 				continue
 			}
 			params := expr.Type().Parameters()
-			if len(params) <= 0 {
+			if len(params) == 0 {
 				continue
 			}
 			if !params[0].HasTrait(traits.ComparerType) {
