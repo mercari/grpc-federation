@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package grpc.federation.cel.test;
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation/cel/testdata/testpb";
+
+message Message {
+  string id  = 1;
+  int32 num = 2;
+  InnerMessage inner = 3;
+}
+
+message InnerMessage {
+  string id = 1;
+}

@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPosts(GetPostsRequest) returns (GetPostsResponse) {};
+}
+
+message GetPostsRequest {
+  repeated string ids = 1;
+}
+    
+message GetPostsResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "posts"
+      message {
+        name: "Posts"
+        args { name: "ids", by: "$.ids" }
+      }
+    }
+  };
+  Posts posts = 1 [(grpc.federation.field).by = "posts"];
+}
+
+message Posts {
+  option (grpc.federation.message) = {
+    def [
+      {
+        name: "ids"
+        by: "$.ids"
+      },
+      {
+        name: "users"
+        map {
+          iterator {
+            name: "iter"
+            src: "ids"
+          }
+          message {
+            name: "User"
+            args { name: "user_id", by: "iter" }
+          }
+        }
+      }
+    ]
+  };
+  repeated string ids = 1 [(grpc.federation.field).by = "$.ids.sortAsc(v, v)"];
+  repeated User users = 2 [(grpc.federation.field).by = "users.sortAsc(v, v.id)"];
+  repeated User invalid = 3 [(grpc.federation.field).by = "users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)"];
+}
+
+message User {
+  string id = 1 [(grpc.federation.field).by = "$.user_id"];
+}
