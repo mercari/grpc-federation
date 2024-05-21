@@ -4,6 +4,10 @@
 
 - [`reduce`](#reduce)
 - [`first`](#first)
+- [`sortAsc`](#sortAsc)
+- [`sortDesc`](#sortDesc)
+- [`sortStableAsc`](#sortStableAsc)
+- [`sortStableDesc`](#sortStableDesc)
 
 # Macros
 
@@ -49,6 +53,78 @@ range.filter(var, <expr>)[?0]
 
 ```cel
 [1, 2, 3, 4].first(v, v % 2 == 0) //=> optional.of(2)
+```
+
+## sortAsc
+
+Returns elements sorted in ascending order. Compares values evaluated by the expression.
+
+### Parameters
+
+`range.sortAsc(var, <expr>)`
+
+- `range`: repeated type value
+- `var`: current iteration value
+- `<expr>`: expression for value to be compared
+
+### Examples
+
+```cel
+[4, 2, 3, 1].sortAsc(v, v) //=> [1, 2, 3, 4]
+```
+
+## sortDesc
+
+Returns elements sorted in descending order. Compares values evaluated by the expression.
+
+### Parameters
+
+`range.sortDesc(var, <expr>)`
+
+- `range`: repeated type value
+- `var`: current iteration value
+- `<expr>`: expression for value to be compared
+
+### Examples
+
+```cel
+[4, 2, 3, 1].sortDesc(v, v) //=> [4, 3, 2, 1]
+```
+
+## sortStableAsc
+
+Returns elements sorted in ascending order. Compares values evaluated by the expression. The sorting algorithm is guaranteed to be stable.
+
+### Parameters
+
+`range.sortStableAsc(var, <expr>)`
+
+- `range`: repeated type value
+- `var`: current iteration value
+- `<expr>`: expression for value to be compared
+
+### Examples
+
+```cel
+[4, 2, 3, 1].sortStableAsc(v, v) //=> [1, 2, 3, 4]
+```
+
+## sortStableDesc
+
+Returns elements sorted in descending order. Compares values evaluated by the expression. The sorting algorithm is guaranteed to be stable.
+
+### Parameters
+
+`range.sortStableDesc(var, <expr>)`
+
+- `range`: repeated type value
+- `var`: current iteration value
+- `<expr>`: expression for value to be compared
+
+### Examples
+
+```cel
+[4, 2, 3, 1].sortStableDesc(v, v) //=> [4, 3, 2, 1]
 ```
 
 # Functions

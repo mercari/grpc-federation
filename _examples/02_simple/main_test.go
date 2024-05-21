@@ -265,6 +265,19 @@ func TestFederation(t *testing.T) {
 				},
 			},
 		},
+		SortedValues: []int32{1, 2, 3, 4},
+		SortedItems: []*federation.Item{
+			{
+				Location: &federation.Item_Location{
+					Addr1: "b",
+				},
+			},
+			{
+				Location: &federation.Item_Location{
+					Addr1: "a",
+				},
+			},
+		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},

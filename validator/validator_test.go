@@ -539,6 +539,22 @@ testdata/invalid_validation_localized_message.proto:52:26: message must always r
 52:                  message: "1"
                               ^
 `},
+		{file: "invalid_list_sort.proto", expected: `
+testdata/invalid_list_sort.proto:55:59: ERROR: <input>:1:14: list(org.federation.User) is not comparable
+ | users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | .............^
+ERROR: <input>:1:29: list(org.federation.User) is not comparable
+ | users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ............................^
+ERROR: <input>:1:49: list(org.federation.User) is not comparable
+ | users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ................................................^
+ERROR: <input>:1:70: list(org.federation.User) is not comparable
+ | users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | .....................................................................^
+55:    repeated User invalid = 3 [(grpc.federation.field).by = "users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)"];
+                                                               ^
+`},
 	}
 	ctx := context.Background()
 	v := validator.New()

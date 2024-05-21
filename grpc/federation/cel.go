@@ -278,7 +278,7 @@ func NewLocalValue(ctx context.Context, celTypeHelper *CELTypeHelper, envOpts []
 		append(newEnvOpts, envOpts...),
 		cel.Variable(MessageArgumentVariableName, cel.ObjectType(argName)),
 	)
-	defaultLib := grpcfedcel.NewLibrary()
+	defaultLib := grpcfedcel.NewLibrary(celTypeHelper)
 	newEnvOpts = append(newEnvOpts, cel.Lib(defaultLib))
 	instances := make([]*grpcfedcel.CELPluginInstance, 0, len(celPlugins))
 	for _, plugin := range celPlugins {
