@@ -1,6 +1,7 @@
 package cel
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/google/cel-go/cel"
@@ -138,8 +139,11 @@ func (lib *ListLibrary) makeSort(function string, mef cel.MacroExprFactory, targ
 	if err != nil {
 		return nil, err
 	}
-	// Avoid incompatible type already exists for expression error by copying a map expression with new set of identifiers
-	return mef.NewCall(function, target, mef.Copy(mp)), nil
+	// When sort macros are called in a chain (e.g., [1, 2].sortAsc(v, v).sortDesc(v, v)), the makeSort method is called two or more times.
+	// Then, on the second and subsequent calls to the makeSort method, the map call expression created by parser.MakeMap is passed to the target argument.
+	// Passing it to the global sort function call (e.g., grpc.federaiton.list.@sortAsc) will cause an `incompatible type already exists for expression error`.
+	// To avoid this, use mef.Copy for the target argument to assign a new set of identifiers.
+	return mef.NewCall(function, mef.Copy(target), mp), nil
 }
 
 func (lib *ListLibrary) sortAsc(orig, expanded ref.Val) ref.Val {
@@ -222,11 +226,12 @@ func (v *listValidator) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, 
 		listSortStableAscFunc,
 		listSortStableDescFunc,
 	}
+	dupErrs := map[string]struct{}{}
 	for _, funcName := range funcNames {
 		funcCalls := ast.MatchDescendants(root, ast.FunctionMatcher(funcName))
 		for _, call := range funcCalls {
 			arg1 := call.AsCall().Args()[1]
-			expr, ok := arg1.AsComprehension().AccuInit().(ast.NavigableExpr)
+			expr, ok := arg1.AsComprehension().Result().(ast.NavigableExpr)
 			if !ok {
 				continue
 			}
@@ -234,8 +239,13 @@ func (v *listValidator) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, 
 			if len(params) == 0 {
 				continue
 			}
-			if !params[0].HasTrait(traits.ComparerType) {
+			// If an error occurs when calling sort macros in a chain, the same error is reported multiple times.
+			// To avoid this, check if the error already report and ignore it.
+			loc := a.SourceInfo().GetStartLocation(expr.ID())
+			dupKey := fmt.Sprintf("%s:%d:%d:%s", funcName, loc.Column(), loc.Line(), expr.Type())
+			if _, exists := dupErrs[dupKey]; !exists && !params[0].HasTrait(traits.ComparerType) {
 				iss.ReportErrorAtID(expr.ID(), "%s is not comparable", expr.Type())
+				dupErrs[dupKey] = struct{}{}
 			}
 		}
 	}

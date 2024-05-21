@@ -83,7 +83,7 @@ func TestList(t *testing.T) {
 
 				gotV, err := lister.ConvertToNative(reflect.TypeOf([]int64{}))
 				if err != nil {
-					return fmt.Errorf("failed to conver to native: %w", err)
+					return fmt.Errorf("failed to convert to native: %w", err)
 				}
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
@@ -106,7 +106,7 @@ func TestList(t *testing.T) {
 
 				gotV, err := lister.ConvertToNative(reflect.TypeOf([]int64{}))
 				if err != nil {
-					return fmt.Errorf("failed to conver to native: %w", err)
+					return fmt.Errorf("failed to convert to native: %w", err)
 				}
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
@@ -152,7 +152,7 @@ grpc.federation.cel.test.Message{id: "b", inner: grpc.federation.cel.test.InnerM
 
 				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
 				if err != nil {
-					return fmt.Errorf("failed to conver to native: %w", err)
+					return fmt.Errorf("failed to convert to native: %w", err)
 				}
 				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{}, testpb.InnerMessage{})); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
@@ -189,7 +189,7 @@ grpc.federation.cel.test.Message{id: "b"}
 
 				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
 				if err != nil {
-					return fmt.Errorf("failed to conver to native: %w", err)
+					return fmt.Errorf("failed to convert to native: %w", err)
 				}
 				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{})); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
@@ -254,7 +254,7 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 
 				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
 				if err != nil {
-					return fmt.Errorf("failed to conver to native: %w", err)
+					return fmt.Errorf("failed to convert to native: %w", err)
 				}
 				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{})); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
@@ -319,7 +319,7 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 
 				gotV, err := lister.ConvertToNative(reflect.TypeOf([]*testpb.Message{}))
 				if err != nil {
-					return fmt.Errorf("failed to conver to native: %w", err)
+					return fmt.Errorf("failed to convert to native: %w", err)
 				}
 				if diff := cmp.Diff(gotV, expected, cmpopts.IgnoreUnexported(testpb.Message{})); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
@@ -352,6 +352,91 @@ grpc.federation.cel.test.Message{id:"E", num:25},
 			}
 			if err := test.cmp(out); err != nil {
 				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestListValidator(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     string
+		expected string
+	}{
+		{
+			name:     "sort int",
+			expr:     `[1, 2].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)`,
+			expected: ``,
+		},
+		{
+			name:     "sort string",
+			expr:     `['a', 'b'].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)`,
+			expected: ``,
+		},
+		{
+			name: "sort timestamp",
+			expr: `[
+google.protobuf.Timestamp{seconds: 1}, 
+google.protobuf.Timestamp{seconds: 2},
+].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)`,
+			expected: ``,
+		},
+		{
+			name: "sort uncomparable dynamic type",
+			expr: `[1, 'a'].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)`,
+			expected: `ERROR: <input>:1:17: list(dyn) is not comparable
+ | [1, 'a'].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ................^
+ERROR: <input>:1:32: list(dyn) is not comparable
+ | [1, 'a'].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ...............................^
+ERROR: <input>:1:52: list(dyn) is not comparable
+ | [1, 'a'].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ...................................................^
+ERROR: <input>:1:73: list(dyn) is not comparable
+ | [1, 'a'].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ........................................................................^`,
+		},
+		{
+			name: "sort uncomparable struct type",
+			expr: `[
+grpc.federation.cel.test.Message{id: "a"}, 
+grpc.federation.cel.test.Message{id: "b"}
+].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)`,
+			expected: `ERROR: <input>:4:10: list(grpc.federation.cel.test.Message) is not comparable
+ | ].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | .........^
+ERROR: <input>:4:25: list(grpc.federation.cel.test.Message) is not comparable
+ | ].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ........................^
+ERROR: <input>:4:45: list(grpc.federation.cel.test.Message) is not comparable
+ | ].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | ............................................^
+ERROR: <input>:4:66: list(grpc.federation.cel.test.Message) is not comparable
+ | ].sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)
+ | .................................................................^`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			env, err := cel.NewEnv(
+				cel.Lib(cellib.NewListLibrary(types.DefaultTypeAdapter)),
+				cel.Types(&testpb.Message{}, &testpb.InnerMessage{}),
+				cel.ASTValidators(cellib.NewListValidator()),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, iss := env.Compile(test.expr)
+			if test.expected == "" {
+				if iss.Err() != nil {
+					t.Errorf("expected no error but got: %v", iss.Err())
+				}
+				return
+			}
+			if diff := cmp.Diff(iss.Err().Error(), test.expected); diff != "" {
+				t.Errorf("(-got, +want)\n%s", diff)
 			}
 		})
 	}
