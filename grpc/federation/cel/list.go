@@ -140,8 +140,8 @@ func (lib *ListLibrary) makeSort(function string, mef cel.MacroExprFactory, targ
 		return nil, err
 	}
 	// When sort macros are called in a chain (e.g., [1, 2].sortAsc(v, v).sortDesc(v, v)), the makeSort method is called two or more times.
-	// Then, on the second and subsequent calls to the makeSort method, the map call expression created by parser.MakeMap is passed to the target argument.
-	// Passing it to the global sort function call (e.g., grpc.federaiton.list.@sortAsc) will cause an `incompatible type already exists for expression error`.
+	// Then, on the second and subsequent calls to the makeSort method, the call expression created by the previous makeSort method is passed to the target argument.
+	// Passing it as is to the global sort function call (e.g., grpc.federaiton.list.@sortAsc) will cause an `incompatible type already exists for expression error`.
 	// To avoid this, use mef.Copy for the target argument to assign a new set of identifiers.
 	return mef.NewCall(function, mef.Copy(target), mp), nil
 }

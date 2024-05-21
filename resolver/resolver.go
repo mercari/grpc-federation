@@ -33,7 +33,6 @@ type Resolver struct {
 	protoPackageNameToPackage  map[string]*Package
 	celPluginMap               map[string]*CELPlugin
 	ctxOverloadIDPrefixes      []string
-	astValidators              []cel.ASTValidator
 
 	serviceToRuleMap   map[*Service]*federation.ServiceRule
 	methodToRuleMap    map[*Method]*federation.MethodRule
@@ -61,7 +60,6 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 		protoPackageNameToPackage:  make(map[string]*Package),
 		celPluginMap:               make(map[string]*CELPlugin),
 		ctxOverloadIDPrefixes:      grpcfedcel.NewLibrary(celRegistry).ContextOverloadIDPrefixes(),
-		astValidators:              grpcfedcel.NewASTValidators(),
 
 		serviceToRuleMap:   make(map[*Service]*federation.ServiceRule),
 		methodToRuleMap:    make(map[*Method]*federation.MethodRule),
@@ -3047,7 +3045,7 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
-		cel.ASTValidators(r.astValidators...),
+		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 	}
 	envOpts = append(envOpts, r.enumAccessors()...)
 	envOpts = append(envOpts, r.enumOperators()...)
