@@ -207,9 +207,12 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name:   "p",
-		Type:   grpcfed.CELObjectType("federation.Post"),
-		Setter: func(value *localValueType, v *Post) { value.vars.p = v },
+		Name: "p",
+		Type: grpcfed.CELObjectType("federation.Post"),
+		Setter: func(value *localValueType, v *Post) error {
+			value.vars.p = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Federation_PostArgument{}
 			return s.resolve_Federation_Post(ctx, args)
@@ -284,9 +287,12 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[favorite.FavoriteType, *localValueType]{
-			Name:                "favorite_value",
-			Type:                grpcfed.CELIntType,
-			Setter:              func(value *localValueType, v favorite.FavoriteType) { value.vars.favorite_value = v },
+			Name: "favorite_value",
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v favorite.FavoriteType) error {
+				value.vars.favorite_value = v
+				return nil
+			},
 			By:                  "favorite.FavoriteType.value('TYPE1')",
 			ByUseContextLibrary: false,
 			ByCacheIndex:        1,
@@ -303,9 +309,12 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[bool, *localValueType]{
-			Name:                "cmp",
-			Type:                grpcfed.CELBoolType,
-			Setter:              func(value *localValueType, v bool) { value.vars.cmp = v },
+			Name: "cmp",
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.cmp = v
+				return nil
+			},
 			By:                  "favorite_value == favorite.FavoriteType.TYPE1",
 			ByUseContextLibrary: false,
 			ByCacheIndex:        2,
@@ -326,9 +335,12 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[favorite.FavoriteType, *localValueType]{
-			Name:                "favorite_value",
-			Type:                grpcfed.CELIntType,
-			Setter:              func(value *localValueType, v favorite.FavoriteType) { value.vars.favorite_value = v },
+			Name: "favorite_value",
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v favorite.FavoriteType) error {
+				value.vars.favorite_value = v
+				return nil
+			},
 			By:                  "favorite.FavoriteType.value('TYPE1')",
 			ByUseContextLibrary: false,
 			ByCacheIndex:        3,
@@ -348,9 +360,12 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Reaction, *localValueType]{
-			Name:   "reaction",
-			Type:   grpcfed.CELObjectType("federation.Reaction"),
-			Setter: func(value *localValueType, v *Reaction) { value.vars.reaction = v },
+			Name: "reaction",
+			Type: grpcfed.CELObjectType("federation.Reaction"),
+			Setter: func(value *localValueType, v *Reaction) error {
+				value.vars.reaction = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Federation_ReactionArgument{}
 				// { name: "v", by: "favorite_value" }
@@ -359,8 +374,9 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 					Expr:              "favorite_value",
 					UseContextLibrary: false,
 					CacheIndex:        4,
-					Setter: func(v favorite.FavoriteType) {
+					Setter: func(v favorite.FavoriteType) error {
 						args.V = v
+						return nil
 					},
 				}); err != nil {
 					return nil, err
@@ -390,9 +406,12 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
-			Name:   "u",
-			Type:   grpcfed.CELObjectType("federation.User"),
-			Setter: func(value *localValueType, v *User) { value.vars.u = v },
+			Name: "u",
+			Type: grpcfed.CELObjectType("federation.User"),
+			Setter: func(value *localValueType, v *User) error {
+				value.vars.u = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Federation_UserArgument{
 					Id:   "foo", // { name: "id", string: "foo" }
@@ -430,7 +449,10 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		Expr:              "u",
 		UseContextLibrary: false,
 		CacheIndex:        5,
-		Setter:            func(v *User) { ret.User = v },
+		Setter: func(v *User) error {
+			ret.User = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -441,7 +463,10 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		Expr:              "reaction",
 		UseContextLibrary: false,
 		CacheIndex:        6,
-		Setter:            func(v *Reaction) { ret.Reaction = v },
+		Setter: func(v *Reaction) error {
+			ret.Reaction = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -452,8 +477,13 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		Expr:              "favorite_value",
 		UseContextLibrary: false,
 		CacheIndex:        7,
-		Setter: func(v favorite.FavoriteType) {
-			ret.FavoriteValue = s.cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(v)
+		Setter: func(v favorite.FavoriteType) error {
+			favoriteValueValue, err := s.cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(v)
+			if err != nil {
+				return err
+			}
+			ret.FavoriteValue = favoriteValueValue
+			return nil
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -465,7 +495,10 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 		Expr:              "cmp",
 		UseContextLibrary: false,
 		CacheIndex:        8,
-		Setter:            func(v bool) { ret.Cmp = v },
+		Setter: func(v bool) error {
+			ret.Cmp = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -502,9 +535,12 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
-		Name:                "cmp",
-		Type:                grpcfed.CELBoolType,
-		Setter:              func(value *localValueType, v bool) { value.vars.cmp = v },
+		Name: "cmp",
+		Type: grpcfed.CELBoolType,
+		Setter: func(value *localValueType, v bool) error {
+			value.vars.cmp = v
+			return nil
+		},
 		By:                  "$.v == favorite.FavoriteType.TYPE1",
 		ByUseContextLibrary: false,
 		ByCacheIndex:        9,
@@ -526,7 +562,10 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 		Expr:              "favorite.FavoriteType.TYPE1",
 		UseContextLibrary: false,
 		CacheIndex:        10,
-		Setter:            func(v favorite.FavoriteType) { ret.FavoriteType = v },
+		Setter: func(v favorite.FavoriteType) error {
+			ret.FavoriteType = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -537,7 +576,10 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 		Expr:              "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))",
 		UseContextLibrary: false,
 		CacheIndex:        11,
-		Setter:            func(v string) { ret.FavoriteTypeStr = v },
+		Setter: func(v string) error {
+			ret.FavoriteTypeStr = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -548,7 +590,10 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 		Expr:              "cmp",
 		UseContextLibrary: false,
 		CacheIndex:        12,
-		Setter:            func(v bool) { ret.Cmp = v },
+		Setter: func(v bool) error {
+			ret.Cmp = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -586,7 +631,10 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 		Expr:              "$.id",
 		UseContextLibrary: false,
 		CacheIndex:        13,
-		Setter:            func(v string) { ret.Id = v },
+		Setter: func(v string) error {
+			ret.Id = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -597,7 +645,10 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 		Expr:              "$.name",
 		UseContextLibrary: false,
 		CacheIndex:        14,
-		Setter:            func(v string) { ret.Name = v },
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -608,20 +659,20 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 }
 
 // cast_Favorite_FavoriteType__to__Federation_MyFavoriteType cast from "favorite.FavoriteType" to "federation.MyFavoriteType".
-func (s *OtherService) cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(from favorite.FavoriteType) MyFavoriteType {
+func (s *OtherService) cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(from favorite.FavoriteType) (MyFavoriteType, error) {
 	switch from {
 	case favorite.FavoriteType_UNKNOWN:
-		return MyFavoriteType_UNKNOWN
+		return MyFavoriteType_UNKNOWN, nil
 	case favorite.FavoriteType_TYPE1:
-		return MyFavoriteType_TYPE1
+		return MyFavoriteType_TYPE1, nil
 	default:
-		return 0
+		return 0, nil
 	}
 }
 
 // cast_int64__to__Favorite_FavoriteType cast from "int64" to "favorite.FavoriteType".
-func (s *OtherService) cast_int64__to__Favorite_FavoriteType(from int64) favorite.FavoriteType {
-	return favorite.FavoriteType(from)
+func (s *OtherService) cast_int64__to__Favorite_FavoriteType(from int64) (favorite.FavoriteType, error) {
+	return favorite.FavoriteType(from), nil
 }
 
 func (s *OtherService) logvalue_Favorite_FavoriteType(v favorite.FavoriteType) slog.Value {

@@ -199,9 +199,12 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name:   "post",
-		Type:   grpcfed.CELObjectType("federation.Post"),
-		Setter: func(value *localValueType, v *Post) { value.vars.post = v },
+		Name: "post",
+		Type: grpcfed.CELObjectType("federation.Post"),
+		Setter: func(value *localValueType, v *Post) error {
+			value.vars.post = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Federation_PostArgument{}
 			// { name: "id", by: "$.id" }
@@ -210,8 +213,9 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				Expr:              "$.id",
 				UseContextLibrary: false,
 				CacheIndex:        1,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.Id = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -260,9 +264,12 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-		Name:   "_def0",
-		Type:   grpcfed.CELObjectType("post.GetPostResponse"),
-		Setter: func(value *localValueType, v *post.GetPostResponse) { value.vars._def0 = v },
+		Name: "_def0",
+		Type: grpcfed.CELObjectType("post.GetPostResponse"),
+		Setter: func(value *localValueType, v *post.GetPostResponse) error {
+			value.vars._def0 = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &post.GetPostRequest{}
 			// { field: "id", by: "$.id" }
@@ -271,8 +278,9 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				Expr:              "$.id",
 				UseContextLibrary: false,
 				CacheIndex:        2,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.Id = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err

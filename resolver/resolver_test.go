@@ -32,7 +32,7 @@ func TestSimpleAggregation(t *testing.T) {
 				).
 				AddFieldWithAlias("name", resolver.StringType, ref.Field(t, "org.user", "Item", "name")).
 				AddFieldWithTypeNameAndAlias(t, "type", "ItemType", false, ref.Field(t, "org.user", "Item", "type")).
-				AddFieldWithAlias("value", resolver.Int64Type, ref.Field(t, "org.user", "Item", "value")).
+				AddFieldWithAlias("value", resolver.Uint32Type, ref.Field(t, "org.user", "Item", "value")).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						SetAlias(ref.Message(t, "org.user", "Item")).
@@ -515,31 +515,39 @@ func TestCreatePost(t *testing.T) {
 					resolver.StringType,
 					testutil.NewFieldRuleBuilder(
 						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "title").Build(t),
-					).Build(t),
+					).SetAlias(ref.Field(t, "org.post", "CreatePost", "title")).Build(t),
 				).
 				AddFieldWithRule(
 					"content",
 					resolver.StringType,
 					testutil.NewFieldRuleBuilder(
 						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "content").Build(t),
-					).Build(t),
+					).SetAlias(ref.Field(t, "org.post", "CreatePost", "content")).Build(t),
 				).
 				AddFieldWithRule(
 					"user_id",
 					resolver.StringType,
 					testutil.NewFieldRuleBuilder(
 						testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "user_id").Build(t),
-					).Build(t),
+					).SetAlias(ref.Field(t, "org.post", "CreatePost", "user_id")).Build(t),
 				).
 				AddFieldWithRule(
 					"type",
 					ref.Type(t, "org.federation", "PostType"),
 					testutil.NewFieldRuleBuilder(
 						testutil.NewMessageArgumentValueBuilder(ref.Type(t, "org.federation", "PostType"), ref.Type(t, "org.federation", "PostType"), "type").Build(t),
-					).Build(t),
+					).SetAlias(ref.Field(t, "org.post", "CreatePost", "type")).Build(t),
+				).
+				AddFieldWithRule(
+					"post_type",
+					ref.Type(t, "org.federation", "PostType"),
+					testutil.NewFieldRuleBuilder(
+						resolver.NewByValue("org.federation.PostType.POST_TYPE_1", resolver.Int32Type),
+					).SetAlias(ref.Field(t, "org.post", "CreatePost", "post_type")).Build(t),
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
+						SetAlias(ref.Message(t, "org.post", "CreatePost")).
 						SetMessageArgument(ref.Message(t, "org.federation", "CreatePostArgument")).
 						Build(t),
 				).
@@ -3801,6 +3809,7 @@ func getPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddField("content", resolver.StringType).
 				AddField("user_id", resolver.StringType).
 				AddField("type", ref.Type(t, "org.post", "PostType")).
+				AddField("post_type", resolver.Int32Type).
 				Build(t),
 		).
 		AddMessage(

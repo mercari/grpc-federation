@@ -111,7 +111,10 @@ message User {
         name: "res"
         call {
           method: "user.UserService/GetUser"
-          request { field: "id", by: "$.user_id" }
+          request [
+            { field: "id", by: "$.user_id" },
+            { field: "type" by: "user.Item.ItemType.value('ITEM_TYPE_1')" }
+          ]
           timeout: "20s"
           retry {
             exponential {

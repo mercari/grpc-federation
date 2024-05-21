@@ -97,9 +97,10 @@ func RecoverError(v interface{}, rawStack []byte) *RecoveredError {
 }
 
 var (
-	ErrClientConfig    = errors.New("grpc-federation: Client field is not set. this field must be set")
-	ErrResolverConfig  = errors.New("grpc-federation: Resolver field is not set. this field must be set")
-	ErrCELPluginConfig = errors.New("grpc-federation: CELPlugin field is not set. this field must be set")
-	ErrCELCacheMap     = errors.New("grpc-federation: CELCacheMap is not found")
-	ErrCELCacheIndex   = errors.New("grpc-federation: CELCacheIndex is not set")
+	ErrClientConfig           = errors.New("grpc-federation: Client field is not set. this field must be set")
+	ErrResolverConfig         = errors.New("grpc-federation: Resolver field is not set. this field must be set")
+	ErrCELPluginConfig        = errors.New("grpc-federation: CELPlugin field is not set. this field must be set")
+	ErrCELCacheMap            = errors.New("grpc-federation: CELCacheMap is not found")
+	ErrCELCacheIndex          = errors.New("grpc-federation: CELCacheIndex is not set")
+	ErrOverflowTypeConversion = errors.New("grpc-federation: overflow type conversion was detected")
 )

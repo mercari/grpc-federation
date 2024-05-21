@@ -221,7 +221,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		Expr:              "$.title",
 		UseContextLibrary: false,
 		CacheIndex:        1,
-		Setter:            func(v string) { ret.Title = v },
+		Setter: func(v string) error {
+			ret.Title = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -232,7 +235,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		Expr:              "$.content",
 		UseContextLibrary: false,
 		CacheIndex:        2,
-		Setter:            func(v string) { ret.Content = v },
+		Setter: func(v string) error {
+			ret.Content = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -243,7 +249,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		Expr:              "$.user_id",
 		UseContextLibrary: false,
 		CacheIndex:        3,
-		Setter:            func(v string) { ret.UserId = v },
+		Setter: func(v string) error {
+			ret.UserId = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -254,7 +263,24 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		Expr:              "$.type",
 		UseContextLibrary: false,
 		CacheIndex:        4,
-		Setter:            func(v PostType) { ret.Type = v },
+		Setter: func(v PostType) error {
+			ret.Type = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "org.federation.PostType.POST_TYPE_A"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostType]{
+		Value:             value,
+		Expr:              "org.federation.PostType.POST_TYPE_A",
+		UseContextLibrary: false,
+		CacheIndex:        5,
+		Setter: func(v PostType) error {
+			ret.PostType = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -301,9 +327,12 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*CreatePost, *localValueType]{
-		Name:   "cp",
-		Type:   grpcfed.CELObjectType("org.federation.CreatePost"),
-		Setter: func(value *localValueType, v *CreatePost) { value.vars.cp = v },
+		Name: "cp",
+		Type: grpcfed.CELObjectType("org.federation.CreatePost"),
+		Setter: func(value *localValueType, v *CreatePost) error {
+			value.vars.cp = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Org_Federation_CreatePostArgument{}
 			// { name: "title", by: "$.title" }
@@ -311,9 +340,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 				Value:             value,
 				Expr:              "$.title",
 				UseContextLibrary: false,
-				CacheIndex:        5,
-				Setter: func(v string) {
+				CacheIndex:        6,
+				Setter: func(v string) error {
 					args.Title = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -323,9 +353,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 				Value:             value,
 				Expr:              "$.content",
 				UseContextLibrary: false,
-				CacheIndex:        6,
-				Setter: func(v string) {
+				CacheIndex:        7,
+				Setter: func(v string) error {
 					args.Content = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -335,9 +366,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 				Value:             value,
 				Expr:              "$.user_id",
 				UseContextLibrary: false,
-				CacheIndex:        7,
-				Setter: func(v string) {
+				CacheIndex:        8,
+				Setter: func(v string) error {
 					args.UserId = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -347,9 +379,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 				Value:             value,
 				Expr:              "$.type",
 				UseContextLibrary: false,
-				CacheIndex:        8,
-				Setter: func(v PostType) {
+				CacheIndex:        9,
+				Setter: func(v PostType) error {
 					args.Type = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -372,9 +405,12 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.CreatePostResponse, *localValueType]{
-		Name:   "res",
-		Type:   grpcfed.CELObjectType("org.post.CreatePostResponse"),
-		Setter: func(value *localValueType, v *post.CreatePostResponse) { value.vars.res = v },
+		Name: "res",
+		Type: grpcfed.CELObjectType("org.post.CreatePostResponse"),
+		Setter: func(value *localValueType, v *post.CreatePostResponse) error {
+			value.vars.res = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &post.CreatePostRequest{}
 			// { field: "post", by: "cp" }
@@ -382,9 +418,14 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 				Value:             value,
 				Expr:              "cp",
 				UseContextLibrary: false,
-				CacheIndex:        9,
-				Setter: func(v *CreatePost) {
-					args.Post = s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(v)
+				CacheIndex:        10,
+				Setter: func(v *CreatePost) error {
+					postValue, err := s.cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(v)
+					if err != nil {
+						return err
+					}
+					args.Post = postValue
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -407,12 +448,15 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.Post, *localValueType]{
-		Name:                "p",
-		Type:                grpcfed.CELObjectType("org.post.Post"),
-		Setter:              func(value *localValueType, v *post.Post) { value.vars.p = v },
+		Name: "p",
+		Type: grpcfed.CELObjectType("org.post.Post"),
+		Setter: func(value *localValueType, v *post.Post) error {
+			value.vars.p = v
+			return nil
+		},
 		By:                  "res.post",
 		ByUseContextLibrary: false,
-		ByCacheIndex:        10,
+		ByCacheIndex:        11,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -432,8 +476,15 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 		Value:             value,
 		Expr:              "p",
 		UseContextLibrary: false,
-		CacheIndex:        11,
-		Setter:            func(v *post.Post) { ret.Post = s.cast_Org_Post_Post__to__Org_Federation_Post(v) },
+		CacheIndex:        12,
+		Setter: func(v *post.Post) error {
+			postValue, err := s.cast_Org_Post_Post__to__Org_Federation_Post(v)
+			if err != nil {
+				return err
+			}
+			ret.Post = postValue
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -444,45 +495,73 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 }
 
 // cast_Org_Federation_CreatePost__to__Org_Post_CreatePost cast from "org.federation.CreatePost" to "org.post.CreatePost".
-func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(from *CreatePost) *post.CreatePost {
+func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreatePost(from *CreatePost) (*post.CreatePost, error) {
 	if from == nil {
-		return nil
+		return nil, nil
+	}
+
+	titleValue := from.GetTitle()
+	contentValue := from.GetContent()
+	userIdValue := from.GetUserId()
+	typeValue, err := s.cast_Org_Federation_PostType__to__Org_Post_PostType(from.GetType())
+	if err != nil {
+		return nil, err
+	}
+	postTypeValue, err := s.cast_Org_Federation_PostType__to__int32(from.GetPostType())
+	if err != nil {
+		return nil, err
 	}
 
 	return &post.CreatePost{
-		Title:   from.GetTitle(),
-		Content: from.GetContent(),
-		UserId:  from.GetUserId(),
-		Type:    s.cast_Org_Federation_PostType__to__Org_Post_PostType(from.GetType()),
-	}
+		Title:    titleValue,
+		Content:  contentValue,
+		UserId:   userIdValue,
+		Type:     typeValue,
+		PostType: postTypeValue,
+	}, nil
 }
 
 // cast_Org_Federation_PostType__to__Org_Post_PostType cast from "org.federation.PostType" to "org.post.PostType".
-func (s *FederationService) cast_Org_Federation_PostType__to__Org_Post_PostType(from PostType) post.PostType {
+func (s *FederationService) cast_Org_Federation_PostType__to__Org_Post_PostType(from PostType) (post.PostType, error) {
 	switch from {
 	case PostType_POST_TYPE_UNKNOWN:
-		return post.PostType_POST_TYPE_UNKNOWN
+		return post.PostType_POST_TYPE_UNKNOWN, nil
 	case PostType_POST_TYPE_A:
-		return post.PostType_POST_TYPE_A
+		return post.PostType_POST_TYPE_A, nil
 	case PostType_POST_TYPE_B:
-		return post.PostType_POST_TYPE_B
+		return post.PostType_POST_TYPE_B, nil
 	default:
-		return 0
+		return 0, nil
 	}
 }
 
+// cast_Org_Federation_PostType__to__int32 cast from "org.federation.PostType" to "int32".
+func (s *FederationService) cast_Org_Federation_PostType__to__int32(from PostType) (int32, error) {
+	return int32(from), nil
+}
+
 // cast_Org_Post_Post__to__Org_Federation_Post cast from "org.post.Post" to "org.federation.Post".
-func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *post.Post) *Post {
+func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *post.Post) (*Post, error) {
 	if from == nil {
-		return nil
+		return nil, nil
 	}
 
+	idValue := from.GetId()
+	titleValue := from.GetTitle()
+	contentValue := from.GetContent()
+	userIdValue := from.GetUserId()
+
 	return &Post{
-		Id:      from.GetId(),
-		Title:   from.GetTitle(),
-		Content: from.GetContent(),
-		UserId:  from.GetUserId(),
-	}
+		Id:      idValue,
+		Title:   titleValue,
+		Content: contentValue,
+		UserId:  userIdValue,
+	}, nil
+}
+
+// cast_int64__to__Org_Federation_PostType cast from "int64" to "org.federation.PostType".
+func (s *FederationService) cast_int64__to__Org_Federation_PostType(from int64) (PostType, error) {
+	return PostType(from), nil
 }
 
 func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) slog.Value {
@@ -494,6 +573,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) sl
 		slog.String("content", v.GetContent()),
 		slog.String("user_id", v.GetUserId()),
 		slog.String("type", s.logvalue_Org_Federation_PostType(v.GetType()).String()),
+		slog.String("post_type", s.logvalue_Org_Federation_PostType(v.GetPostType()).String()),
 	)
 }
 
@@ -563,6 +643,7 @@ func (s *FederationService) logvalue_Org_Post_CreatePost(v *post.CreatePost) slo
 		slog.String("content", v.GetContent()),
 		slog.String("user_id", v.GetUserId()),
 		slog.String("type", s.logvalue_Org_Post_PostType(v.GetType()).String()),
+		slog.Int64("post_type", int64(v.GetPostType())),
 	)
 }
 

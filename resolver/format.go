@@ -44,12 +44,12 @@ func (r *FieldRule) ProtoFormat(opt *ProtoFormatOption) string {
 	switch {
 	case r.CustomResolver:
 		return indent + "(grpc.federation.field).custom_resolver = true"
-	case r.Alias != nil:
-		return indent + fmt.Sprintf("(grpc.federation.field).alias = %q", r.Alias.Name)
 	case r.Value != nil:
 		value := r.Value.ProtoFormat(opt)
 		value = strings.Replace(value, ":", " =", 1)
 		return indent + fmt.Sprintf("(grpc.federation.field).%s", value)
+	case r.Alias != nil:
+		return indent + fmt.Sprintf("(grpc.federation.field).alias = %q", r.Alias.Name)
 	}
 	return ""
 }

@@ -3,6 +3,8 @@ package generator
 import (
 	"errors"
 	"fmt"
+
+	"github.com/mercari/grpc-federation/util"
 )
 
 // CreateMap creates a map from a list of key-value pairs to pass multiple arguments to sub-templates.
@@ -40,4 +42,8 @@ func ParentCtx(level int) (string, error) {
 // Add adds two numbers.
 func Add(n1, n2 int) int {
 	return n1 + n2
+}
+
+func LocalVariable(v string) string {
+	return util.ToPrivateGoVariable(v) + "Value"
 }

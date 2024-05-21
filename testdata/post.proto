@@ -45,6 +45,7 @@ message CreatePost {
   string content = 2;
   string user_id = 3;
   PostType type = 4;
+  int32 post_type = 5;
 }
 
 message Post {

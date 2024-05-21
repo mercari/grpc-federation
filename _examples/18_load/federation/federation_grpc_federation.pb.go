@@ -208,9 +208,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[string, *localValueType]{
-			Name:                "id_from_metadata",
-			Type:                grpcfed.CELStringType,
-			Setter:              func(value *localValueType, v string) { value.vars.id_from_metadata = v },
+			Name: "id_from_metadata",
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.id_from_metadata = v
+				return nil
+			},
 			By:                  "grpc.federation.metadata.incoming()['id'][0]",
 			ByUseContextLibrary: true,
 			ByCacheIndex:        1,
@@ -231,9 +234,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[string, *localValueType]{
-			Name:                "id_from_plugin",
-			Type:                grpcfed.CELStringType,
-			Setter:              func(value *localValueType, v string) { value.vars.id_from_plugin = v },
+			Name: "id_from_plugin",
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.id_from_plugin = v
+				return nil
+			},
 			By:                  "example.account.get_id()",
 			ByUseContextLibrary: true,
 			ByCacheIndex:        2,
@@ -262,7 +268,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Expr:              "id_from_plugin",
 		UseContextLibrary: false,
 		CacheIndex:        3,
-		Setter:            func(v string) { ret.IdFromPlugin = v },
+		Setter: func(v string) error {
+			ret.IdFromPlugin = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -273,7 +282,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Expr:              "id_from_metadata",
 		UseContextLibrary: false,
 		CacheIndex:        4,
-		Setter:            func(v string) { ret.IdFromMetadata = v },
+		Setter: func(v string) error {
+			ret.IdFromMetadata = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
