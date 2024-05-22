@@ -3,7 +3,12 @@
 {{- $error := .Error }}
 var stat *grpcfed.Status
 {{- if $error.VariableDefinitionSet }}
-{{- template "evalDefSet" $error.VariableDefinitionSet }}
+if _, err := func() (any, error) {
+	{{- template "evalDefSet" $error.VariableDefinitionSet }}
+	return nil, nil
+}(); err != nil {
+	return err
+}
 {{- end }}
 if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 	Value: value,
