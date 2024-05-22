@@ -30,7 +30,7 @@ func Int32ToUint32(v int32) (uint32, error) {
 	return uint32(v), nil
 }
 
-func Int32ToUint64(v int64) (uint64, error) {
+func Int32ToUint64(v int32) (uint64, error) {
 	if v < 0 {
 		return 0, fmt.Errorf("failed to convert int32(%d) to uint64: %w", v, ErrOverflowTypeConversion)
 	}
@@ -58,7 +58,7 @@ func Uint64ToUint32(v uint64) (uint32, error) {
 	return uint32(v), nil
 }
 
-func Uint32ToInt32(v uint64) (int32, error) {
+func Uint32ToInt32(v uint32) (int32, error) {
 	if (1 << 31) <= v {
 		return 0, fmt.Errorf("failed to convert uint32(%d) to int32: %w", v, ErrOverflowTypeConversion)
 	}
