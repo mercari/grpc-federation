@@ -92,6 +92,21 @@ message GetPostResponse {
             }
           }
         }
+      },
+      {
+        validation {
+          error {
+            def [
+              {
+                name: "condition",
+                by: "post.id != 'some-id'"
+              }
+            ]
+            code: FAILED_PRECONDITION
+            message: "'validation4 failed!'",
+            if: "condition"
+          }
+        }
       }
     ]
   };
