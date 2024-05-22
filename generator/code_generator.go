@@ -1517,6 +1517,7 @@ func (m *Message) DeclVariables() []*DeclVariable {
 type ReturnField struct {
 	Name                  string
 	Value                 string
+	CastValue             string
 	IsCustomResolverField bool
 	IsOneofField          bool
 	CEL                   *resolver.CELValue
@@ -1552,6 +1553,7 @@ type OneofField struct {
 	Condition             string
 	Name                  string
 	Value                 string
+	CastValue             string
 	Message               *Message
 	FieldOneofRule        *resolver.FieldOneofRule
 }
@@ -1623,6 +1625,28 @@ func (f *CastField) IsNumberToEnum() bool {
 
 func (f *CastField) IsEnum() bool {
 	return f.fromType.Kind == types.Enum && f.toType.Kind == types.Enum
+}
+
+var (
+	castValidationNumberMap = map[string]bool{
+		types.Int64.ToString() + types.Int32.ToString():   true,
+		types.Int64.ToString() + types.Uint32.ToString():  true,
+		types.Int64.ToString() + types.Uint64.ToString():  true,
+		types.Int32.ToString() + types.Uint32.ToString():  true,
+		types.Int32.ToString() + types.Uint64.ToString():  true,
+		types.Uint64.ToString() + types.Int32.ToString():  true,
+		types.Uint64.ToString() + types.Int64.ToString():  true,
+		types.Uint64.ToString() + types.Uint32.ToString(): true,
+		types.Uint32.ToString() + types.Int32.ToString():  true,
+	}
+)
+
+func (f *CastField) IsRequiredValidationNumber() bool {
+	return castValidationNumberMap[f.fromType.Kind.ToString()+f.toType.Kind.ToString()]
+}
+
+func (f *CastField) CastWithValidationName() string {
+	return fmt.Sprintf("%sTo%s", util.ToPublicVariable(f.RequestType()), util.ToPublicVariable(f.ResponseType()))
 }
 
 type CastEnum struct {
@@ -1794,9 +1818,6 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 		fromType = fromField.Type
 		toType = toField.Type
 	}
-	if fromType.Kind != toType.Kind {
-		return nil
-	}
 	requiredCast := requiredCast(fromType, toType)
 	return &CastStructField{
 		ToFieldName:   util.ToPublicGoVariable(toField.Name),
@@ -1906,18 +1927,20 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 
 	fieldName := util.ToPublicGoVariable(field.Name)
 
-	var returnFieldValue string
+	var (
+		value     = fmt.Sprintf("value.vars.%s.Get%s()", name, fieldName)
+		castValue string
+	)
 	if field.RequiredTypeConversion() {
 		fromType := field.SourceType()
 		toType := field.Type
 		castFuncName := castFuncName(fromType, toType)
-		returnFieldValue = fmt.Sprintf("s.%s(value.vars.%s.Get%s())", castFuncName, name, fieldName)
-	} else {
-		returnFieldValue = fmt.Sprintf("value.vars.%s.Get%s()", name, fieldName)
+		castValue = fmt.Sprintf("s.%s(value.vars.%s.Get%s())", castFuncName, name, fieldName)
 	}
 	return &ReturnField{
 		Name:         fieldName,
-		Value:        returnFieldValue,
+		Value:        value,
+		CastValue:    castValue,
 		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
 	}
 }
@@ -1941,9 +1964,9 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	fromText := m.file.toTypeText(fromType)
 
 	var (
-		returnFieldValue = "v"
-		zeroValue        string
-		typ              string
+		zeroValue string
+		typ       string
+		castValue string
 	)
 	switch fromType.Kind {
 	case types.Message:
@@ -1951,14 +1974,14 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		typ = fromText
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
-			returnFieldValue = fmt.Sprintf("s.%s(v)", castFuncName)
+			castValue = fmt.Sprintf("s.%s(v)", castFuncName)
 		}
 	case types.Enum:
 		zeroValue = toMakeZeroValue(m.file, fromType)
 		typ = fromText
 		if field.RequiredTypeConversion() {
 			castFuncName := castFuncName(fromType, toType)
-			returnFieldValue = fmt.Sprintf("s.%s(v)", castFuncName)
+			castValue = fmt.Sprintf("s.%s(v)", castFuncName)
 		}
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
@@ -1966,9 +1989,10 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		typ = toText
 	}
 	return &ReturnField{
-		Name:  util.ToPublicGoVariable(field.Name),
-		Value: returnFieldValue,
-		CEL:   value,
+		Name:      util.ToPublicGoVariable(field.Name),
+		Value:     "v",
+		CastValue: castValue,
+		CEL:       value,
 		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
 			Prefix:         "// ",
 			IndentSpaceNum: 2,
@@ -2009,6 +2033,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 				Condition: fmt.Sprintf("%s != nil", returnField.Value),
 				Name:      returnField.Name,
 				Value:     returnField.Value,
+				CastValue: returnField.CastValue,
 			})
 		case rule.Oneof != nil:
 			// explicit binding with FieldOneofRule.
@@ -2021,28 +2046,31 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 				oneofTypeName += "_"
 			}
 			var (
-				typ      string
-				argValue = "v"
+				typ       string
+				value     string
+				castValue string
 			)
 			switch fromType.Kind {
 			case types.Message:
 				typ = m.file.toTypeText(fromType)
+				value = fmt.Sprintf("&%s{%s: v}", oneofTypeName, fieldName)
 				if requiredCast(fromType, toType) {
 					castFuncName := castFuncName(fromType, toType)
-					argValue = fmt.Sprintf("s.%s(v)", castFuncName)
+					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFuncName)
 				}
 			case types.Enum:
 				typ = "int64"
-				argValue = fmt.Sprintf("%s(v)", m.file.toTypeText(fromType))
+				value = fmt.Sprintf("&%s{%s: %s(v)}", oneofTypeName, fieldName, m.file.toTypeText(fromType))
 				if requiredCast(fromType, toType) {
 					castFuncName := castFuncName(fromType, toType)
-					argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFuncName)
 				}
 			default:
 				// Since fromType is a primitive type, type conversion is possible on the CEL side.
 				deletedOneofFieldType := toType.Clone()
 				deletedOneofFieldType.OneofField = nil
 				typ = m.file.toTypeText(deletedOneofFieldType)
+				value = fmt.Sprintf("&%s{%s: v}", oneofTypeName, fieldName)
 			}
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
@@ -2051,7 +2079,8 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 					Type:                typ,
 					Condition:           fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:                fieldName,
-					Value:               fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
+					Value:               value,
+					CastValue:           castValue,
 					FieldOneofRule:      rule.Oneof,
 					Message:             m,
 				}
@@ -2064,7 +2093,8 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 					Type:                  typ,
 					Condition:             fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:                  fieldName,
-					Value:                 fmt.Sprintf("&%s{%s: %s}", oneofTypeName, fieldName, argValue),
+					Value:                 value,
+					CastValue:             castValue,
 					FieldOneofRule:        rule.Oneof,
 					Message:               m,
 				})
@@ -2690,6 +2720,7 @@ type Argument struct {
 	Type           string
 	OneofName      string
 	OneofFieldName string
+	RequiredCast   bool
 }
 
 func (d *VariableDefinition) Arguments() []*Argument {
@@ -2784,22 +2815,23 @@ func argument(file *File, arg *resolver.Argument) []*Argument {
 	fromText := file.toTypeText(fromType)
 
 	var (
-		argValue  = "v"
-		zeroValue string
-		argType   string
+		argValue     = "v"
+		zeroValue    string
+		argType      string
+		requiredCast = requiredCast(fromType, toType)
 	)
 	switch fromType.Kind {
 	case types.Message:
 		zeroValue = toMakeZeroValue(file, fromType)
 		argType = fromText
-		if requiredCast(fromType, toType) {
+		if requiredCast {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	case types.Enum:
 		zeroValue = toMakeZeroValue(file, fromType)
 		argType = fromText
-		if requiredCast(fromType, toType) {
+		if requiredCast {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
@@ -2825,6 +2857,7 @@ func argument(file *File, arg *resolver.Argument) []*Argument {
 			OneofName:      oneofName,
 			OneofFieldName: oneofFieldName,
 			If:             arg.If,
+			RequiredCast:   requiredCast,
 		},
 	}
 }
@@ -2938,9 +2971,10 @@ func (s *Service) CastFields() []*CastField {
 func loadTemplate() (*template.Template, error) {
 	tmpl, err := template.New("server.go.tmpl").Funcs(
 		map[string]any{
-			"add":       Add,
-			"map":       CreateMap,
-			"parentCtx": ParentCtx,
+			"add":             Add,
+			"map":             CreateMap,
+			"parentCtx":       ParentCtx,
+			"toLocalVariable": LocalVariable,
 		},
 	).ParseFS(tmpls, "templates/*.tmpl")
 	if err != nil {

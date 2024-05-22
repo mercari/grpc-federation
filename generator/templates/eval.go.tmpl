@@ -11,7 +11,10 @@ grpcfed.EvalDefMap({{ $ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapRes
 	{{- end }}
 	Name:   "{{ $def.Key }}",
 	Type:   {{ $def.CELType }},
-	Setter: func(value *localValueType, v {{ $def.Type }}) { value.vars.{{ $def.Key }} = v },
+	Setter: func(value *localValueType, v {{ $def.Type }}) error {
+		value.vars.{{ $def.Key }} = v
+		return nil
+	},
 	IteratorName: "{{ $mapResolver.IteratorName }}",
 	IteratorType: {{ $mapResolver.IteratorCELType }},
 	IteratorSource: func(value *localValueType) []{{ $mapResolver.IteratorSourceType }}{ return {{ $mapResolver.IteratorSource }} },
@@ -50,7 +53,10 @@ grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 	{{- end }}
 	Name:   "{{ $def.Key }}",
 	Type:   {{ $def.CELType }},
-	Setter: func(value *localValueType, v {{ $def.Type }}) { value.vars.{{ $def.Key }} = v },
+	Setter: func(value *localValueType, v {{ $def.Type }}) error {
+		value.vars.{{ $def.Key }} = v
+		return nil
+	},
 	{{- if $def.IsBy }}
 	By:     "{{ $def.By.Expr }}",
 	ByUseContextLibrary: {{ $def.By.UseContextLibrary }},
@@ -204,7 +210,7 @@ if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 			Expr: "{{ $arg.CEL.Expr }}",
 			UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
 			CacheIndex: {{ $def.CELCacheIndex }},
-			Setter: func(v {{ $arg.Type }}){
+			Setter: func(v {{ $arg.Type }}) error {
 				{{- template "setArgumentBySetter" $arg }}
 			},
 		})
@@ -219,7 +225,7 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 	Expr: "{{ $arg.CEL.Expr }}",
 	UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
 	CacheIndex: {{ $def.CELCacheIndex }},
-	Setter: func(v {{ $arg.Type }}){
+	Setter: func(v {{ $arg.Type }}) error {
 		{{- template "setArgumentBySetter" $arg }}
 	},
 }); err != nil {
@@ -239,7 +245,7 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 	Expr: "{{ $arg.CEL.Expr }}",
 	UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
 	CacheIndex: {{ $def.CELCacheIndex }},
-	Setter: func(v {{ $arg.Type }}){
+	Setter: func(v {{ $arg.Type }}) error {
 		{{- template "setArgumentBySetter" $arg }}
 	},
 }); err != nil {
@@ -256,17 +262,39 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 {{- else }}
 {{- template "setArgument" . }}
 {{- end }}
+return nil
 
 {{- end }}
 
 {{- define "setArgument" -}}
 
 {{- if .OneofName }}
+{{- if .RequiredCast }}
+{{ toLocalVariable .Name }}, err := {{ .Value }}
+if err != nil {
+	return err
+}
+args.{{ .OneofName }} = &{{ .OneofFieldName }}{
+	{{ .Name }}: {{ toLocalVariable .Name }},
+}
+{{- else }}
 args.{{ .OneofName }} = &{{ .OneofFieldName }}{
 	{{ .Name }}: {{ .Value }},
 }
+{{- end }}
+
+{{- else }}
+
+{{- if .RequiredCast }}
+{{ toLocalVariable .Name }}, err := {{ .Value }}
+if err != nil {
+	return err
+}
+args.{{ .Name }} = {{ toLocalVariable .Name }}
 {{- else }}
 args.{{ .Name }} = {{ .Value }}
+{{- end }}
+
 {{- end }}
 
 {{- end }}

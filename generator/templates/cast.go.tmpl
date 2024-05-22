@@ -2,85 +2,109 @@
 ret := make({{ .ResponseType }}, 0, len(from))
 for _, v := range from {
 	{{- if .ElemRequiredCast }}
-	ret = append(ret, s.{{ .ElemCastName }}(v))
+	casted, err := s.{{ .ElemCastName }}(v)
+	if err != nil {
+		return nil, err
+	}
+	ret = append(ret, casted)
 	{{- else }}
 	ret = append(ret, v)
 	{{- end }}
 }
-return ret
+return ret, nil
 {{- end }}
 
 {{- define "castMessage" }}
 if from == nil {
-	return nil
+	return nil, nil
 }
 {{ $oneofFields := .Oneofs }}
 {{- if $oneofFields }}
+{{- range .Fields }}
+{{- $fieldName := toLocalVariable .ToFieldName }}
+{{- if .RequiredCast }}
+{{ $fieldName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+if err != nil {
+	return nil, err
+}
+{{- else }}
+{{ $fieldName }} := from.Get{{ .FromFieldName }}()
+{{- end }}
+{{- end }}
+
 ret := &{{ .Name }}{
 	{{- range .Fields }}
-
-	{{- if .RequiredCast }}
-	{{ .ToFieldName }}: s.{{ .CastName }}(from.Get{{ .FromFieldName }}()),
-	{{- else }}
-	{{ .ToFieldName }}: from.Get{{ .FromFieldName }}(),
-	{{- end }}
-
+	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
 	{{- end }}
 }
 {{- range .Oneofs }}
 switch {
 	{{ $name := .Name }}
+	{{- $localName := toLocalVariable $name }}
 	{{- range .Fields }}
 	case from.Get{{ .FromFieldName }}() != nil:
 	{{- if .RequiredCast }}
-	ret.{{ $name }} = s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+	{{ $localName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+	if err != nil {
+		return nil, err
+	}
 	{{- else }}
-	ret.{{ $name }} = from.Get{{ .FromFieldName }}()
+	{{ $localName }} := from.Get{{ .FromFieldName }}()
 	{{- end }}
+	ret.{{ $name }} = {{ $localName }}
 	{{- end }}
 }
 {{- end }}
-return ret
+return ret, nil
 
 {{- else }}
+{{- range .Fields }}
+{{- $fieldName := toLocalVariable .ToFieldName }}
+{{- if .RequiredCast }}
+{{ $fieldName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+if err != nil {
+	return nil, err
+}
+{{- else }}
+{{ $fieldName }} := from.Get{{ .FromFieldName }}()
+{{- end }}
+
+{{- end }}
 
 return &{{ .Name }}{
 	{{- range .Fields }}
-
-	{{- if .RequiredCast }}
-	{{ .ToFieldName }}: s.{{ .CastName }}(from.Get{{ .FromFieldName }}()),
-	{{- else }}
-	{{ .ToFieldName }}: from.Get{{ .FromFieldName }}(),
+	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
 	{{- end }}
-
-	{{- end }}
-}
+}, nil
 
 {{- end }}
 {{- end }}
 
 {{- define "castOneof" }}
 if from == nil {
-	return nil
+	return nil, nil
 }
-return &{{ .Name }}{
-	{{- if .RequiredCast }}
-	{{ .FieldName }}: s.{{ .CastName }}(from),
-	{{- else }}
-	{{ .FieldName }}: from,
-	{{- end }}
+{{ $fieldName := toLocalVariable .FieldName }}
+{{- if .RequiredCast }}
+{{ $fieldName }}, err := s.{{ .CastName }}(from)
+if err != nil {
+	return nil, err
 }
+{{- else }}
+{{ $fieldName }} := from
+{{- end }}
+return &{{ .Name }}{ {{ .FieldName }}: {{ $fieldName }} }, nil
 {{- end }}
 
 {{- define "castEnum" }}
 switch from {
 	{{- range .FromValues }}
 	case {{ .FromValue }}:
-	return {{ .ToValue }}
+	return {{ .ToValue }}, nil
 	{{- end }}
 	{{- if .DefaultValue }}
 	default:
-	return {{ .DefaultValue }}
+	return {{ .DefaultValue }}, nil
 	{{- end }}
 }
 {{- end }}

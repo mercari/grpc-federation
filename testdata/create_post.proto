@@ -56,10 +56,13 @@ message CreatePostResponse {
 }
 
 message CreatePost {
+  option (grpc.federation.message).alias = "org.post.CreatePost";
+
   string title = 1 [(grpc.federation.field).by = "$.title"];
   string content = 2 [(grpc.federation.field).by = "$.content"];
   string user_id = 3 [(grpc.federation.field).by = "$.user_id"];
   PostType type = 4 [(grpc.federation.field).by = "$.type"];
+  PostType post_type = 5 [(grpc.federation.field).by = "org.federation.PostType.POST_TYPE_A"];
 }
 
 message Post {

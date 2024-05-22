@@ -303,9 +303,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Post, *localValueType]{
-			Name:   "post",
-			Type:   grpcfed.CELObjectType("org.federation.Post"),
-			Setter: func(value *localValueType, v *Post) { value.vars.post = v },
+			Name: "post",
+			Type: grpcfed.CELObjectType("org.federation.Post"),
+			Setter: func(value *localValueType, v *Post) error {
+				value.vars.post = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_PostArgument{}
 				// { name: "id", by: "$.id" }
@@ -314,8 +317,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					Expr:              "$.id",
 					UseContextLibrary: false,
 					CacheIndex:        1,
-					Setter: func(v string) {
+					Setter: func(v string) error {
 						args.Id = v
+						return nil
 					},
 				}); err != nil {
 					return nil, err
@@ -339,9 +343,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*grpcfedcel.UUID, *localValueType]{
-			Name:                "uuid",
-			Type:                grpcfed.CELObjectType("grpc.federation.uuid.UUID"),
-			Setter:              func(value *localValueType, v *grpcfedcel.UUID) { value.vars.uuid = v },
+			Name: "uuid",
+			Type: grpcfed.CELObjectType("grpc.federation.uuid.UUID"),
+			Setter: func(value *localValueType, v *grpcfedcel.UUID) error {
+				value.vars.uuid = v
+				return nil
+			},
 			By:                  "grpc.federation.uuid.newRandom()",
 			ByUseContextLibrary: false,
 			ByCacheIndex:        2,
@@ -370,7 +377,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		Expr:              "post",
 		UseContextLibrary: false,
 		CacheIndex:        3,
-		Setter:            func(v *Post) { ret.Post = v },
+		Setter: func(v *Post) error {
+			ret.Post = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -382,7 +392,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		Expr:              "uuid.string()",
 		UseContextLibrary: false,
 		CacheIndex:        4,
-		Setter:            func(v string) { ret.Uuid = v },
+		Setter: func(v string) error {
+			ret.Uuid = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -393,7 +406,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		Expr:              "org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)",
 		UseContextLibrary: false,
 		CacheIndex:        5,
-		Setter:            func(v string) { ret.EnumName = v },
+		Setter: func(v string) error {
+			ret.EnumName = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -404,7 +420,14 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		Expr:              "org.federation.Item.ItemType.value('ITEM_TYPE_1')",
 		UseContextLibrary: false,
 		CacheIndex:        6,
-		Setter:            func(v Item_ItemType) { ret.EnumValue = s.cast_Org_Federation_Item_ItemType__to__int32(v) },
+		Setter: func(v Item_ItemType) error {
+			enumValueValue, err := s.cast_Org_Federation_Item_ItemType__to__int32(v)
+			if err != nil {
+				return err
+			}
+			ret.EnumValue = enumValueValue
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -477,9 +500,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*M, *localValueType]{
-			Name:   "m",
-			Type:   grpcfed.CELObjectType("org.federation.M"),
-			Setter: func(value *localValueType, v *M) { value.vars.m = v },
+			Name: "m",
+			Type: grpcfed.CELObjectType("org.federation.M"),
+			Setter: func(value *localValueType, v *M) error {
+				value.vars.m = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_MArgument{}
 				return s.resolve_Org_Federation_M(ctx, args)
@@ -504,9 +530,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-			Name:   "res",
-			Type:   grpcfed.CELObjectType("org.post.GetPostResponse"),
-			Setter: func(value *localValueType, v *post.GetPostResponse) { value.vars.res = v },
+			Name: "res",
+			Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
+			Setter: func(value *localValueType, v *post.GetPostResponse) error {
+				value.vars.res = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &post.GetPostRequest{}
 				// { field: "id", by: "$.id" }
@@ -515,8 +544,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					Expr:              "$.id",
 					UseContextLibrary: false,
 					CacheIndex:        7,
-					Setter: func(v string) {
+					Setter: func(v string) error {
 						args.Id = v
+						return nil
 					},
 				}); err != nil {
 					return nil, err
@@ -554,9 +584,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.Post, *localValueType]{
-			Name:                "post",
-			Type:                grpcfed.CELObjectType("org.post.Post"),
-			Setter:              func(value *localValueType, v *post.Post) { value.vars.post = v },
+			Name: "post",
+			Type: grpcfed.CELObjectType("org.post.Post"),
+			Setter: func(value *localValueType, v *post.Post) error {
+				value.vars.post = v
+				return nil
+			},
 			By:                  "res.post",
 			ByUseContextLibrary: false,
 			ByCacheIndex:        9,
@@ -576,9 +609,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
-			Name:   "user",
-			Type:   grpcfed.CELObjectType("org.federation.User"),
-			Setter: func(value *localValueType, v *User) { value.vars.user = v },
+			Name: "user",
+			Type: grpcfed.CELObjectType("org.federation.User"),
+			Setter: func(value *localValueType, v *User) error {
+				value.vars.user = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_UserArgument{}
 				// { inline: "post" }
@@ -587,11 +623,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					Expr:              "post",
 					UseContextLibrary: false,
 					CacheIndex:        10,
-					Setter: func(v *post.Post) {
+					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
 						args.Content = v.GetContent()
 						args.UserId = v.GetUserId()
+						return nil
 					},
 				}); err != nil {
 					return nil, err
@@ -617,9 +654,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Z, *localValueType]{
-			Name:   "z",
-			Type:   grpcfed.CELObjectType("org.federation.Z"),
-			Setter: func(value *localValueType, v *Z) { value.vars.z = v },
+			Name: "z",
+			Type: grpcfed.CELObjectType("org.federation.Z"),
+			Setter: func(value *localValueType, v *Z) error {
+				value.vars.z = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_ZArgument{}
 				return s.resolve_Org_Federation_Z(ctx, args)
@@ -654,7 +694,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		Expr:              "user",
 		UseContextLibrary: false,
 		CacheIndex:        11,
-		Setter:            func(v *User) { ret.User = v },
+		Setter: func(v *User) error {
+			ret.User = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -697,9 +740,12 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.GetUserResponse, *localValueType]{
-		Name:   "res",
-		Type:   grpcfed.CELObjectType("org.user.GetUserResponse"),
-		Setter: func(value *localValueType, v *user.GetUserResponse) { value.vars.res = v },
+		Name: "res",
+		Type: grpcfed.CELObjectType("org.user.GetUserResponse"),
+		Setter: func(value *localValueType, v *user.GetUserResponse) error {
+			value.vars.res = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &user.GetUserRequest{}
 			// { field: "id", by: "$.user_id" }
@@ -708,8 +754,9 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				Expr:              "$.user_id",
 				UseContextLibrary: false,
 				CacheIndex:        12,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.Id = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -753,9 +800,12 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.User, *localValueType]{
-		Name:                "user",
-		Type:                grpcfed.CELObjectType("org.user.User"),
-		Setter:              func(value *localValueType, v *user.User) { value.vars.user = v },
+		Name: "user",
+		Type: grpcfed.CELObjectType("org.user.User"),
+		Setter: func(value *localValueType, v *user.User) error {
+			value.vars.user = v
+			return nil
+		},
 		By:                  "res.user",
 		ByUseContextLibrary: false,
 		ByCacheIndex:        14,
@@ -772,9 +822,16 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	ret := &User{}
 
 	// field binding section.
-	ret.Id = value.vars.user.GetId()                                                            // { name: "user", autobind: true }
-	ret.Type = s.cast_Org_User_UserType__to__Org_Federation_UserType(value.vars.user.GetType()) // { name: "user", autobind: true }
-	ret.Name = value.vars.user.GetName()                                                        // { name: "user", autobind: true }
+	ret.Id = value.vars.user.GetId() // { name: "user", autobind: true }
+	{
+		typeValue, err := s.cast_Org_User_UserType__to__Org_Federation_UserType(value.vars.user.GetType()) // { name: "user", autobind: true }
+		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
+			return nil, err
+		}
+		ret.Type = typeValue
+	}
+	ret.Name = value.vars.user.GetName() // { name: "user", autobind: true }
 	{
 		// (grpc.federation.field).custom_resolver = true
 		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
@@ -787,18 +844,40 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			return nil, err
 		}
 	}
-	ret.Desc = value.vars.user.GetDesc()                                                                    // { name: "user", autobind: true }
-	ret.MainItem = s.cast_Org_User_Item__to__Org_Federation_Item(value.vars.user.GetMainItem())             // { name: "user", autobind: true }
-	ret.Items = s.cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item(value.vars.user.GetItems()) // { name: "user", autobind: true }
-	ret.Profile = value.vars.user.GetProfile()                                                              // { name: "user", autobind: true }
+	ret.Desc = value.vars.user.GetDesc() // { name: "user", autobind: true }
+	{
+		mainItemValue, err := s.cast_Org_User_Item__to__Org_Federation_Item(value.vars.user.GetMainItem()) // { name: "user", autobind: true }
+		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
+			return nil, err
+		}
+		ret.MainItem = mainItemValue
+	}
+	{
+		itemsValue, err := s.cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item(value.vars.user.GetItems()) // { name: "user", autobind: true }
+		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
+			return nil, err
+		}
+		ret.Items = itemsValue
+	}
+	ret.Profile = value.vars.user.GetProfile() // { name: "user", autobind: true }
 
 	switch {
-	case s.cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(value.vars.user.GetAttrA()) != nil:
+	case value.vars.user.GetAttrA() != nil:
 
-		ret.Attr = s.cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(value.vars.user.GetAttrA())
-	case s.cast_Org_User_User_B__to__Org_Federation_User_B(value.vars.user.GetB()) != nil:
+		attrValue, err := s.cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(value.vars.user.GetAttrA())
+		if err != nil {
+			return nil, err
+		}
+		ret.Attr = attrValue
+	case value.vars.user.GetB() != nil:
 
-		ret.Attr = s.cast_Org_User_User_B__to__Org_Federation_User_B(value.vars.user.GetB())
+		attrValue, err := s.cast_Org_User_User_B__to__Org_Federation_User_B(value.vars.user.GetB())
+		if err != nil {
+			return nil, err
+		}
+		ret.Attr = attrValue
 	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.User", slog.Any("org.federation.User", s.logvalue_Org_Federation_User(ret)))
@@ -826,98 +905,127 @@ func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *O
 }
 
 // cast_Org_Federation_Item_ItemType__to__int32 cast from "org.federation.Item.ItemType" to "int32".
-func (s *FederationService) cast_Org_Federation_Item_ItemType__to__int32(from Item_ItemType) int32 {
-	return int32(from)
+func (s *FederationService) cast_Org_Federation_Item_ItemType__to__int32(from Item_ItemType) (int32, error) {
+	return int32(from), nil
 }
 
 // cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType cast from "org.user.Item.ItemType" to "org.federation.Item.ItemType".
-func (s *FederationService) cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from user.Item_ItemType) Item_ItemType {
+func (s *FederationService) cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from user.Item_ItemType) (Item_ItemType, error) {
 	switch from {
 	case user.Item_ITEM_TYPE_1:
-		return Item_ITEM_TYPE_1
+		return Item_ITEM_TYPE_1, nil
 	case user.Item_ITEM_TYPE_2:
-		return Item_ITEM_TYPE_2
+		return Item_ITEM_TYPE_2, nil
 	case user.Item_ITEM_TYPE_3:
-		return Item_ITEM_TYPE_3
+		return Item_ITEM_TYPE_3, nil
 	default:
-		return 0
+		return 0, nil
 	}
 }
 
 // cast_Org_User_Item__to__Org_Federation_Item cast from "org.user.Item" to "org.federation.Item".
-func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *user.Item) *Item {
+func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *user.Item) (*Item, error) {
 	if from == nil {
-		return nil
+		return nil, nil
+	}
+
+	nameValue := from.GetName()
+	typeValue, err := s.cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from.GetType())
+	if err != nil {
+		return nil, err
+	}
+	valueValue, err := s.cast_int64__to__uint32(from.GetValue())
+	if err != nil {
+		return nil, err
 	}
 
 	return &Item{
-		Name:  from.GetName(),
-		Type:  s.cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from.GetType()),
-		Value: from.GetValue(),
-	}
+		Name:  nameValue,
+		Type:  typeValue,
+		Value: valueValue,
+	}, nil
 }
 
 // cast_Org_User_UserType__to__Org_Federation_UserType cast from "org.user.UserType" to "org.federation.UserType".
-func (s *FederationService) cast_Org_User_UserType__to__Org_Federation_UserType(from user.UserType) UserType {
+func (s *FederationService) cast_Org_User_UserType__to__Org_Federation_UserType(from user.UserType) (UserType, error) {
 	switch from {
 	case user.UserType_USER_TYPE_1:
-		return UserType_USER_TYPE_1
+		return UserType_USER_TYPE_1, nil
 	case user.UserType_USER_TYPE_2:
-		return UserType_USER_TYPE_2
+		return UserType_USER_TYPE_2, nil
 	default:
-		return 0
+		return 0, nil
 	}
 }
 
 // cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_ cast from "org.user.User.attr_a" to "org.federation.User.attr_a".
-func (s *FederationService) cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(from *user.User_AttrA) *User_AttrA_ {
+func (s *FederationService) cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(from *user.User_AttrA) (*User_AttrA_, error) {
 	if from == nil {
-		return nil
+		return nil, nil
 	}
-	return &User_AttrA_{
-		AttrA: s.cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from),
+
+	attrAValue, err := s.cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from)
+	if err != nil {
+		return nil, err
 	}
+	return &User_AttrA_{AttrA: attrAValue}, nil
 }
 
 // cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA cast from "org.user.User.AttrA" to "org.federation.User.AttrA".
-func (s *FederationService) cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from *user.User_AttrA) *User_AttrA {
+func (s *FederationService) cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from *user.User_AttrA) (*User_AttrA, error) {
 	if from == nil {
-		return nil
+		return nil, nil
 	}
 
+	fooValue := from.GetFoo()
+
 	return &User_AttrA{
-		Foo: from.GetFoo(),
-	}
+		Foo: fooValue,
+	}, nil
 }
 
 // cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB cast from "org.user.User.AttrB" to "org.federation.User.AttrB".
-func (s *FederationService) cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from *user.User_AttrB) *User_AttrB {
+func (s *FederationService) cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from *user.User_AttrB) (*User_AttrB, error) {
 	if from == nil {
-		return nil
+		return nil, nil
 	}
 
+	barValue := from.GetBar()
+
 	return &User_AttrB{
-		Bar: from.GetBar(),
-	}
+		Bar: barValue,
+	}, nil
 }
 
 // cast_Org_User_User_B__to__Org_Federation_User_B cast from "org.user.User.b" to "org.federation.User.b".
-func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from *user.User_AttrB) *User_B {
+func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from *user.User_AttrB) (*User_B, error) {
 	if from == nil {
-		return nil
+		return nil, nil
 	}
-	return &User_B{
-		B: s.cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from),
+
+	bValue, err := s.cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from)
+	if err != nil {
+		return nil, err
 	}
+	return &User_B{B: bValue}, nil
+}
+
+// cast_int64__to__uint32 cast from "int64" to "uint32".
+func (s *FederationService) cast_int64__to__uint32(from int64) (uint32, error) {
+	return grpcfed.Int64ToUint32(from)
 }
 
 // cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item cast from "repeated org.user.Item" to "repeated org.federation.Item".
-func (s *FederationService) cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item(from []*user.Item) []*Item {
+func (s *FederationService) cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item(from []*user.Item) ([]*Item, error) {
 	ret := make([]*Item, 0, len(from))
 	for _, v := range from {
-		ret = append(ret, s.cast_Org_User_Item__to__Org_Federation_Item(v))
+		casted, err := s.cast_Org_User_Item__to__Org_Federation_Item(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
 	}
-	return ret
+	return ret, nil
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Value {
@@ -959,7 +1067,7 @@ func (s *FederationService) logvalue_Org_Federation_Item(v *Item) slog.Value {
 	return slog.GroupValue(
 		slog.String("name", v.GetName()),
 		slog.String("type", s.logvalue_Org_Federation_Item_ItemType(v.GetType()).String()),
-		slog.Int64("value", v.GetValue()),
+		slog.Uint64("value", uint64(v.GetValue())),
 	)
 }
 
@@ -1109,6 +1217,7 @@ func (s *FederationService) logvalue_Org_Post_CreatePost(v *post.CreatePost) slo
 		slog.String("content", v.GetContent()),
 		slog.String("user_id", v.GetUserId()),
 		slog.String("type", s.logvalue_Org_Post_PostType(v.GetType()).String()),
+		slog.Int64("post_type", int64(v.GetPostType())),
 	)
 }
 

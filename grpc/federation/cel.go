@@ -429,7 +429,7 @@ type Def[T any, U localValue] struct {
 	If                  string
 	Name                string
 	Type                *cel.Type
-	Setter              func(U, T)
+	Setter              func(U, T) error
 	By                  string
 	IfUseContextLibrary bool
 	ByUseContextLibrary bool
@@ -445,7 +445,7 @@ type DefMap[T any, U any, V localValue] struct {
 	IfCacheIndex        int
 	Name                string
 	Type                *cel.Type
-	Setter              func(V, T)
+	Setter              func(V, T) error
 	IteratorName        string
 	IteratorType        *cel.Type
 	IteratorSource      func(V) []U
@@ -456,7 +456,7 @@ type DefMap[T any, U any, V localValue] struct {
 func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) error {
 	var (
 		v    T
-		err  error
+		errs []error
 		cond = true
 		name = def.Name
 	)
@@ -503,17 +503,23 @@ func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 		if ret != nil {
 			v = ret.(T)
 		}
-		err = runErr
+		if runErr != nil {
+			errs = append(errs, runErr)
+		}
 	}
 
 	value.lock()
-	def.Setter(value, v)
+	if err := def.Setter(value, v); err != nil {
+		errs = append(errs, err)
+	}
 	value.setEnvOptValue(name, def.Type)
 	value.setEvalValue(name, v)
 	value.unlock()
 
-	if err != nil {
-		return err
+	if len(errs) == 1 {
+		return errs[0]
+	} else if len(errs) > 1 {
+		return errors.Join(errs...)
 	}
 	return nil
 }
@@ -521,7 +527,7 @@ func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 func EvalDefMap[T any, U any, V localValue](ctx context.Context, value V, def DefMap[T, U, V]) error {
 	var (
 		v    T
-		err  error
+		errs []error
 		cond = true
 		name = def.Name
 	)
@@ -556,17 +562,23 @@ func EvalDefMap[T any, U any, V localValue](ctx context.Context, value V, def De
 		if ret != nil {
 			v = ret.(T)
 		}
-		err = runErr
+		if runErr != nil {
+			errs = append(errs, runErr)
+		}
 	}
 
 	value.lock()
-	def.Setter(value, v)
+	if err := def.Setter(value, v); err != nil {
+		errs = append(errs, err)
+	}
 	value.setEnvOptValue(name, def.Type)
 	value.setEvalValue(name, v)
 	value.unlock()
 
-	if err != nil {
-		return err
+	if len(errs) == 1 {
+		return errs[0]
+	} else if len(errs) > 1 {
+		return errors.Join(errs...)
 	}
 	return nil
 }
@@ -811,7 +823,7 @@ type SetCELValueParam[T any] struct {
 	Expr              string
 	UseContextLibrary bool
 	CacheIndex        int
-	Setter            func(T)
+	Setter            func(T) error
 }
 
 func SetCELValue[T any](ctx context.Context, param *SetCELValueParam[T]) error {
@@ -828,7 +840,10 @@ func SetCELValue[T any](ctx context.Context, param *SetCELValueParam[T]) error {
 	}
 
 	param.Value.lock()
-	param.Setter(out.(T))
-	param.Value.unlock()
+	defer param.Value.unlock()
+
+	if err := param.Setter(out.(T)); err != nil {
+		return err
+	}
 	return nil
 }

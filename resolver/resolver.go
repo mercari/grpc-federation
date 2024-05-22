@@ -890,7 +890,7 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message, builder *so
 		if autoBindField.Field.Type == nil || field.Type == nil {
 			continue
 		}
-		if autoBindField.Field.Type.Kind != field.Type.Kind {
+		if isDifferentType(autoBindField.Field.Type, field.Type) {
 			continue
 		}
 		if autoBindField.VariableDefinition != nil {
@@ -928,43 +928,8 @@ func (r *Resolver) validateMessages(ctx *context, msgs []*Message) {
 	for _, msg := range msgs {
 		ctx := ctx.withFile(msg.File).withMessage(msg)
 		mb := newMessageBuilderFromMessage(msg)
-		r.validateMessageAlias(ctx, msg, mb)
 		r.validateMessageFields(ctx, msg, mb)
 		// Don't have to check msg.NestedMessages since r.allMessages(files) already includes nested messages
-	}
-}
-
-func (r *Resolver) validateMessageAlias(ctx *context, msg *Message, builder *source.MessageBuilder) {
-	if msg.Rule == nil {
-		return
-	}
-	if msg.Rule.Alias == nil {
-		return
-	}
-	if msg.Rule.CustomResolver || msg.Rule.DefSet != nil && len(msg.Rule.DefSet.Defs) != 0 {
-		ctx.addError(
-			ErrWithLocation(
-				`"def" or "custom_resolver" cannot be used with alias option`,
-				builder.Location(),
-			),
-		)
-	}
-	for _, field := range msg.Fields {
-		if field.Rule == nil {
-			continue
-		}
-		if field.Rule != nil && field.Rule.Alias != nil && field.Rule.Value == nil && !field.Rule.CustomResolver {
-			continue
-		}
-		ctx.addError(
-			ErrWithLocation(
-				fmt.Sprintf(
-					`%q field does not use the alias option. only alias option is available in alias message`,
-					field.FQDN(),
-				),
-				builder.WithField(field.Name).Location(),
-			),
-		)
 	}
 }
 
@@ -999,6 +964,109 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 		if rule.AutoBindField != nil {
 			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field, builder)
 		}
+	}
+}
+
+func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toField *Field, builder *source.RequestOptionBuilder) {
+	if fromType == nil || toField == nil {
+		return
+	}
+	toType := toField.Type
+	if toType.Kind == types.Message {
+		if fromType.Message == nil || toType.Message == nil {
+			return
+		}
+		if fromType.Message.IsMapEntry {
+			// If it is a map entry, ignore it.
+			return
+		}
+		fromMessage := fromType.Message
+		fromMessageName := fromType.Message.FQDN()
+		toMessageName := toType.Message.FQDN()
+		if fromMessageName == toMessageName {
+			// assignment of the same type is okay.
+			return
+		}
+		if fromMessage.Rule == nil || fromMessage.Rule.Alias == nil {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the %q field`,
+						toMessageName, fromMessageName, toField.FQDN(),
+					),
+					builder.Location(),
+				),
+			)
+			return
+		}
+		fromMessageAliasName := fromMessage.Rule.Alias.FQDN()
+		if fromMessageAliasName != toMessageName {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the %q field`,
+						toMessageName, fromMessageName, toField.FQDN(),
+					),
+					source.NewMessageBuilder(fromMessage.File.Name, fromMessage.Name).
+						WithOption().WithAlias().Location(),
+				),
+			)
+			return
+		}
+		return
+	}
+	if toType.Kind == types.Enum {
+		if fromType.Enum == nil || toType.Enum == nil {
+			return
+		}
+		fromEnum := fromType.Enum
+		fromEnumName := fromEnum.FQDN()
+		toEnumName := toType.Enum.FQDN()
+		if fromEnumName == toEnumName {
+			// assignment of the same type is okay.
+			return
+		}
+		var fromEnumMessageName string
+		if fromEnum.Message != nil {
+			fromEnumMessageName = fromEnum.Message.Name
+		}
+		if fromEnum.Rule == nil || fromEnum.Rule.Alias == nil {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the %q field`,
+						toEnumName, fromEnumName, toField.FQDN(),
+					),
+					source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).Location(),
+				),
+			)
+			return
+		}
+		fromEnumAliasName := fromEnum.Rule.Alias.FQDN()
+		if fromEnumAliasName != toEnumName {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the %q field`,
+						toEnumName, fromEnumName, toField.FQDN(),
+					),
+					source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).WithOption().Location(),
+				),
+			)
+		}
+		return
+	}
+	if isDifferentType(fromType, toField.Type) {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					`cannot convert type automatically: field type is %q but specified value type is %q`,
+					toField.Type.Kind.ToString(), fromType.Kind.ToString(),
+				),
+				builder.Location(),
+			),
+		)
+		return
 	}
 }
 
@@ -1091,20 +1159,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 		}
 		return
 	}
-	if (fromType.Kind.IsInt() || fromType.Kind.IsUint()) && toField.Type.Kind == types.Enum {
-		// number to enum is valid.
-		return
-	}
-	if fromType.Kind.IsInt() && toField.Type.Kind.IsInt() {
-		return
-	}
-	if fromType.Kind.IsUint() && toField.Type.Kind.IsUint() {
-		return
-	}
-	if fromType.Kind.IsFloat() && toField.Type.Kind.IsFloat() {
-		return
-	}
-	if fromType.Kind != toField.Type.Kind {
+	if isDifferentType(fromType, toField.Type) {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
@@ -1704,7 +1759,7 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 	if field.Type == nil || aliasField.Type == nil {
 		return nil
 	}
-	if field.Type.Kind != aliasField.Type.Kind {
+	if isDifferentType(field.Type, aliasField.Type) {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
@@ -1747,7 +1802,7 @@ func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, f
 	if field.Type == nil || aliasField.Type == nil {
 		return nil
 	}
-	if field.Type.Kind != aliasField.Type.Kind {
+	if isDifferentType(field.Type, aliasField.Type) {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
@@ -2088,18 +2143,18 @@ func (r *Resolver) resolveRetryExponential(ctx *context, def *federation.RetryPo
 }
 
 func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*federation.MethodRequest, builder *source.CallExprOptionBuilder) *Request {
-	reqType := method.Request
+	reqMsg := method.Request
 	args := make([]*Argument, 0, len(requestDef))
 	for idx, req := range requestDef {
 		fieldName := req.GetField()
 		var argType *Type
-		if !reqType.HasField(fieldName) {
+		if !reqMsg.HasField(fieldName) {
 			ctx.addError(ErrWithLocation(
-				fmt.Sprintf(`%q field does not exist in "%s.%s" message for method request`, fieldName, reqType.PackageName(), reqType.Name),
+				fmt.Sprintf(`%q field does not exist in %q message for method request`, fieldName, reqMsg.FQDN()),
 				builder.WithRequest(idx).WithField().Location(),
 			))
 		} else {
-			argType = reqType.Field(fieldName).Type
+			argType = reqMsg.Field(fieldName).Type
 		}
 		value, err := r.resolveValue(ctx, methodRequestToCommonValueDef(req))
 		if err != nil {
@@ -2127,7 +2182,7 @@ func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*fe
 			If:    ifValue,
 		})
 	}
-	return &Request{Args: args, Type: reqType}
+	return &Request{Args: args, Type: reqMsg}
 }
 
 func (r *Resolver) resolveMessageExprArgument(ctx *context, argDef *federation.Argument, builder *source.ArgumentOptionBuilder) *Argument {
@@ -2648,6 +2703,10 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 							callBuilder.WithRequest(idx).WithBy().Location(),
 						),
 					)
+				}
+				field := expr.Call.Request.Type.Field(arg.Name)
+				if field != nil && arg.Value.CEL != nil && arg.Value.CEL.Out != nil {
+					r.validateRequestFieldType(ctx, arg.Value.CEL.Out, field, callBuilder.WithRequest(idx))
 				}
 				if arg.If != nil {
 					if err := r.resolveCELValue(ctx, env, arg.If); err != nil {
@@ -3689,6 +3748,16 @@ func (r *Resolver) trimPackage(pkg *Package, name string) string {
 		return name
 	}
 	return strings.TrimPrefix(name, fmt.Sprintf("%s.", pkg.Name))
+}
+
+func isDifferentType(from, to *Type) bool {
+	if from == nil || to == nil {
+		return false
+	}
+	if from.IsNumber() && to.IsNumber() {
+		return false
+	}
+	return from.Kind != to.Kind
 }
 
 func newMessageBuilderFromMessage(message *Message) *source.MessageBuilder {

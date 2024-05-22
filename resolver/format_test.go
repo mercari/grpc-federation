@@ -132,7 +132,9 @@ func TestProtoFormat(t *testing.T) {
     }
   }`,
 				"CreatePost": `
-  option (grpc.federation.message) = {}`,
+  option (grpc.federation.message) = {
+    alias: "org.post.CreatePost"
+  }`,
 			},
 		},
 		{

@@ -236,9 +236,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name:   "post",
-		Type:   grpcfed.CELObjectType("org.federation.Post"),
-		Setter: func(value *localValueType, v *Post) { value.vars.post = v },
+		Name: "post",
+		Type: grpcfed.CELObjectType("org.federation.Post"),
+		Setter: func(value *localValueType, v *Post) error {
+			value.vars.post = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Org_Federation_PostArgument{}
 			// { name: "id", by: "$.id" }
@@ -247,8 +250,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 				Expr:              "$.id",
 				UseContextLibrary: false,
 				CacheIndex:        1,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.Id = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -273,7 +277,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 		Expr:              "post",
 		UseContextLibrary: false,
 		CacheIndex:        2,
-		Setter:            func(v *Post) { ret.Post = v },
+		Setter: func(v *Post) error {
+			ret.Post = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -313,9 +320,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name:   "post",
-		Type:   grpcfed.CELObjectType("org.federation.Post"),
-		Setter: func(value *localValueType, v *Post) { value.vars.post = v },
+		Name: "post",
+		Type: grpcfed.CELObjectType("org.federation.Post"),
+		Setter: func(value *localValueType, v *Post) error {
+			value.vars.post = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Org_Federation_PostArgument{}
 			// { name: "id", by: "$.id" }
@@ -324,8 +334,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 				Expr:              "$.id",
 				UseContextLibrary: false,
 				CacheIndex:        3,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.Id = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -350,7 +361,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 		Expr:              "post",
 		UseContextLibrary: false,
 		CacheIndex:        4,
-		Setter:            func(v *Post) { ret.Post = v },
+		Setter: func(v *Post) error {
+			ret.Post = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -390,9 +404,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-		Name:   "res",
-		Type:   grpcfed.CELObjectType("org.post.GetPostResponse"),
-		Setter: func(value *localValueType, v *post.GetPostResponse) { value.vars.res = v },
+		Name: "res",
+		Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
+		Setter: func(value *localValueType, v *post.GetPostResponse) error {
+			value.vars.res = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &post.GetPostRequest{}
 			// { field: "id", by: "$.id" }
@@ -401,8 +418,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Expr:              "$.id",
 				UseContextLibrary: false,
 				CacheIndex:        5,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.Id = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -430,7 +448,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		Expr:              "res.post.id",
 		UseContextLibrary: false,
 		CacheIndex:        6,
-		Setter:            func(v string) { ret.Id = v },
+		Setter: func(v string) error {
+			ret.Id = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

@@ -238,9 +238,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*content.GetContentResponse, *localValueType]{
-		Name:   "res",
-		Type:   grpcfed.CELObjectType("content.GetContentResponse"),
-		Setter: func(value *localValueType, v *content.GetContentResponse) { value.vars.res = v },
+		Name: "res",
+		Type: grpcfed.CELObjectType("content.GetContentResponse"),
+		Setter: func(value *localValueType, v *content.GetContentResponse) error {
+			value.vars.res = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &content.GetContentRequest{
 				DoubleField:      1.23,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { field: "double_field", double: 1.23 }
@@ -286,8 +289,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				Expr:              "$.id",
 				UseContextLibrary: false,
 				CacheIndex:        1,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.ByField = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -310,9 +314,12 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*content.Content, *localValueType]{
-		Name:                "content",
-		Type:                grpcfed.CELObjectType("content.Content"),
-		Setter:              func(value *localValueType, v *content.Content) { value.vars.content = v },
+		Name: "content",
+		Type: grpcfed.CELObjectType("content.Content"),
+		Setter: func(value *localValueType, v *content.Content) error {
+			value.vars.content = v
+			return nil
+		},
 		By:                  "res.content",
 		ByUseContextLibrary: false,
 		ByCacheIndex:        2,
@@ -335,7 +342,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Expr:              "content",
 		UseContextLibrary: false,
 		CacheIndex:        3,
-		Setter:            func(v *content.Content) { ret.Content = s.cast_Content_Content__to__Org_Federation_Content(v) },
+		Setter: func(v *content.Content) error {
+			contentValue, err := s.cast_Content_Content__to__Org_Federation_Content(v)
+			if err != nil {
+				return err
+			}
+			ret.Content = contentValue
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -346,7 +360,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Expr:              "content.int32_field + content.sint32_field",
 		UseContextLibrary: false,
 		CacheIndex:        4,
-		Setter:            func(v int64) { ret.CelExpr = v },
+		Setter: func(v int64) error {
+			ret.CelExpr = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -357,82 +374,140 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 }
 
 // cast_Content_ContentType__to__Org_Federation_ContentType cast from "content.ContentType" to "org.federation.ContentType".
-func (s *FederationService) cast_Content_ContentType__to__Org_Federation_ContentType(from content.ContentType) ContentType {
+func (s *FederationService) cast_Content_ContentType__to__Org_Federation_ContentType(from content.ContentType) (ContentType, error) {
 	switch from {
 	case content.ContentType_CONTENT_TYPE_1:
-		return ContentType_CONTENT_TYPE_1
+		return ContentType_CONTENT_TYPE_1, nil
 	case content.ContentType_CONTENT_TYPE_2:
-		return ContentType_CONTENT_TYPE_2
+		return ContentType_CONTENT_TYPE_2, nil
 	case content.ContentType_CONTENT_TYPE_3:
-		return ContentType_CONTENT_TYPE_3
+		return ContentType_CONTENT_TYPE_3, nil
 	default:
-		return 0
+		return 0, nil
 	}
 }
 
 // cast_Content_Content__to__Org_Federation_Content cast from "content.Content" to "org.federation.Content".
-func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(from *content.Content) *Content {
+func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(from *content.Content) (*Content, error) {
 	if from == nil {
-		return nil
+		return nil, nil
+	}
+
+	byFieldValue := from.GetByField()
+	doubleFieldValue := from.GetDoubleField()
+	doublesFieldValue := from.GetDoublesField()
+	floatFieldValue := from.GetFloatField()
+	floatsFieldValue := from.GetFloatsField()
+	int32FieldValue := from.GetInt32Field()
+	int32SFieldValue := from.GetInt32SField()
+	int64FieldValue := from.GetInt64Field()
+	int64SFieldValue := from.GetInt64SField()
+	uint32FieldValue := from.GetUint32Field()
+	uint32SFieldValue := from.GetUint32SField()
+	uint64FieldValue := from.GetUint64Field()
+	uint64SFieldValue := from.GetUint64SField()
+	sint32FieldValue := from.GetSint32Field()
+	sint32SFieldValue := from.GetSint32SField()
+	sint64FieldValue := from.GetSint64Field()
+	sint64SFieldValue := from.GetSint64SField()
+	fixed32FieldValue := from.GetFixed32Field()
+	fixed32SFieldValue := from.GetFixed32SField()
+	fixed64FieldValue := from.GetFixed64Field()
+	fixed64SFieldValue := from.GetFixed64SField()
+	sfixed32FieldValue := from.GetSfixed32Field()
+	sfixed32SFieldValue := from.GetSfixed32SField()
+	sfixed64FieldValue := from.GetSfixed64Field()
+	sfixed64SFieldValue := from.GetSfixed64SField()
+	boolFieldValue := from.GetBoolField()
+	boolsFieldValue := from.GetBoolsField()
+	stringFieldValue := from.GetStringField()
+	stringsFieldValue := from.GetStringsField()
+	byteStringFieldValue := from.GetByteStringField()
+	byteStringsFieldValue := from.GetByteStringsField()
+	enumFieldValue, err := s.cast_Content_ContentType__to__Org_Federation_ContentType(from.GetEnumField())
+	if err != nil {
+		return nil, err
+	}
+	enumsFieldValue, err := s.cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType(from.GetEnumsField())
+	if err != nil {
+		return nil, err
+	}
+	envFieldValue := from.GetEnvField()
+	envsFieldValue := from.GetEnvsField()
+	messageFieldValue, err := s.cast_Content_Content__to__Org_Federation_Content(from.GetMessageField())
+	if err != nil {
+		return nil, err
+	}
+	messagesFieldValue, err := s.cast_repeated_Content_Content__to__repeated_Org_Federation_Content(from.GetMessagesField())
+	if err != nil {
+		return nil, err
 	}
 
 	return &Content{
-		ByField:          from.GetByField(),
-		DoubleField:      from.GetDoubleField(),
-		DoublesField:     from.GetDoublesField(),
-		FloatField:       from.GetFloatField(),
-		FloatsField:      from.GetFloatsField(),
-		Int32Field:       from.GetInt32Field(),
-		Int32SField:      from.GetInt32SField(),
-		Int64Field:       from.GetInt64Field(),
-		Int64SField:      from.GetInt64SField(),
-		Uint32Field:      from.GetUint32Field(),
-		Uint32SField:     from.GetUint32SField(),
-		Uint64Field:      from.GetUint64Field(),
-		Uint64SField:     from.GetUint64SField(),
-		Sint32Field:      from.GetSint32Field(),
-		Sint32SField:     from.GetSint32SField(),
-		Sint64Field:      from.GetSint64Field(),
-		Sint64SField:     from.GetSint64SField(),
-		Fixed32Field:     from.GetFixed32Field(),
-		Fixed32SField:    from.GetFixed32SField(),
-		Fixed64Field:     from.GetFixed64Field(),
-		Fixed64SField:    from.GetFixed64SField(),
-		Sfixed32Field:    from.GetSfixed32Field(),
-		Sfixed32SField:   from.GetSfixed32SField(),
-		Sfixed64Field:    from.GetSfixed64Field(),
-		Sfixed64SField:   from.GetSfixed64SField(),
-		BoolField:        from.GetBoolField(),
-		BoolsField:       from.GetBoolsField(),
-		StringField:      from.GetStringField(),
-		StringsField:     from.GetStringsField(),
-		ByteStringField:  from.GetByteStringField(),
-		ByteStringsField: from.GetByteStringsField(),
-		EnumField:        s.cast_Content_ContentType__to__Org_Federation_ContentType(from.GetEnumField()),
-		EnumsField:       s.cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType(from.GetEnumsField()),
-		EnvField:         from.GetEnvField(),
-		EnvsField:        from.GetEnvsField(),
-		MessageField:     s.cast_Content_Content__to__Org_Federation_Content(from.GetMessageField()),
-		MessagesField:    s.cast_repeated_Content_Content__to__repeated_Org_Federation_Content(from.GetMessagesField()),
-	}
+		ByField:          byFieldValue,
+		DoubleField:      doubleFieldValue,
+		DoublesField:     doublesFieldValue,
+		FloatField:       floatFieldValue,
+		FloatsField:      floatsFieldValue,
+		Int32Field:       int32FieldValue,
+		Int32SField:      int32SFieldValue,
+		Int64Field:       int64FieldValue,
+		Int64SField:      int64SFieldValue,
+		Uint32Field:      uint32FieldValue,
+		Uint32SField:     uint32SFieldValue,
+		Uint64Field:      uint64FieldValue,
+		Uint64SField:     uint64SFieldValue,
+		Sint32Field:      sint32FieldValue,
+		Sint32SField:     sint32SFieldValue,
+		Sint64Field:      sint64FieldValue,
+		Sint64SField:     sint64SFieldValue,
+		Fixed32Field:     fixed32FieldValue,
+		Fixed32SField:    fixed32SFieldValue,
+		Fixed64Field:     fixed64FieldValue,
+		Fixed64SField:    fixed64SFieldValue,
+		Sfixed32Field:    sfixed32FieldValue,
+		Sfixed32SField:   sfixed32SFieldValue,
+		Sfixed64Field:    sfixed64FieldValue,
+		Sfixed64SField:   sfixed64SFieldValue,
+		BoolField:        boolFieldValue,
+		BoolsField:       boolsFieldValue,
+		StringField:      stringFieldValue,
+		StringsField:     stringsFieldValue,
+		ByteStringField:  byteStringFieldValue,
+		ByteStringsField: byteStringsFieldValue,
+		EnumField:        enumFieldValue,
+		EnumsField:       enumsFieldValue,
+		EnvField:         envFieldValue,
+		EnvsField:        envsFieldValue,
+		MessageField:     messageFieldValue,
+		MessagesField:    messagesFieldValue,
+	}, nil
 }
 
 // cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType cast from "repeated content.ContentType" to "repeated org.federation.ContentType".
-func (s *FederationService) cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType(from []content.ContentType) []ContentType {
+func (s *FederationService) cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType(from []content.ContentType) ([]ContentType, error) {
 	ret := make([]ContentType, 0, len(from))
 	for _, v := range from {
-		ret = append(ret, s.cast_Content_ContentType__to__Org_Federation_ContentType(v))
+		casted, err := s.cast_Content_ContentType__to__Org_Federation_ContentType(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
 	}
-	return ret
+	return ret, nil
 }
 
 // cast_repeated_Content_Content__to__repeated_Org_Federation_Content cast from "repeated content.Content" to "repeated org.federation.Content".
-func (s *FederationService) cast_repeated_Content_Content__to__repeated_Org_Federation_Content(from []*content.Content) []*Content {
+func (s *FederationService) cast_repeated_Content_Content__to__repeated_Org_Federation_Content(from []*content.Content) ([]*Content, error) {
 	ret := make([]*Content, 0, len(from))
 	for _, v := range from {
-		ret = append(ret, s.cast_Content_Content__to__Org_Federation_Content(v))
+		casted, err := s.cast_Content_Content__to__Org_Federation_Content(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
 	}
-	return ret
+	return ret, nil
 }
 
 func (s *FederationService) logvalue_Content_Content(v *content.Content) slog.Value {

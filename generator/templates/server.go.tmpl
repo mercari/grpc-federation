@@ -423,11 +423,28 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			Expr: "{{ .By }}",
 			UseContextLibrary: {{ .ByUseContextLibrary }},
 			CacheIndex: {{ $msg.CELCacheIndex }},
-			Setter: func(v {{ .Type }}) { ret.{{ $name }} = {{ .Value }} },
+			Setter: func(v {{ .Type }}) error {
+				{{- if .CastValue }}
+				{{ toLocalVariable $name }}, err := {{ .CastValue }}
+				if err != nil {
+					return nil, err
+				}
+				ret.{{ $name }} = {{ toLocalVariable $name }}
+				{{- else }}
+				ret.{{ $name }} = {{ .Value }}
+				{{- end }}
+				return nil
+			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
+		{{- else if .CastValue }}
+		{{ toLocalVariable $name }}, err := {{ .CastValue }}
+		if err != nil {
+			return nil, err
+		}
+		ret.{{ $name }} = {{ toLocalVariable $name }}
 		{{- else }}
 		ret.{{ $name }} = {{ .Value }}
 		{{- end }}
@@ -441,7 +458,18 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			Expr: "{{ $defaultOneofField.By }}",
 			UseContextLibrary: {{ $defaultOneofField.ByUseContextLibrary }},
 			CacheIndex: {{ $msg.CELCacheIndex }},
-			Setter: func(v {{ $defaultOneofField.Type }}) { ret.{{ $name }} = {{ $defaultOneofField.Value }} },
+			Setter: func(v {{ $defaultOneofField.Type }}) error {
+				{{- if $defaultOneofField.CastValue }}
+				{{ toLocalVariable $name }}, err := {{ $defaultOneofField.CastValue }}
+				if err != nil {
+					return err
+				}
+				ret.{{ $name }} = {{ toLocalVariable $name }}
+				{{- else }}
+				ret.{{ $name }} = {{ $defaultOneofField.Value }}
+				{{- end }}
+				return nil
+			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
@@ -456,10 +484,30 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		Expr: "{{ .CEL.Expr }}",
 		UseContextLibrary: {{ .CEL.UseContextLibrary }},
 		CacheIndex: {{ $msg.CELCacheIndex }},
-		Setter: func(v {{ .Type }}){ ret.{{ .Name }} = {{ .Value }}},
+		Setter: func(v {{ .Type }}) error {
+			{{- if .CastValue }}
+			{{ toLocalVariable .Name }}, err := {{ .CastValue }}
+			if err != nil {
+				return err
+			}
+			ret.{{ .Name }} = {{ toLocalVariable .Name }}
+			{{- else }}
+			ret.{{ .Name }} = {{ .Value }}
+			{{- end }}
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
+	}
+	{{- else if .CastValue }}
+	{
+		{{ toLocalVariable .Name }}, err := {{ .CastValue }} {{ .ProtoComment }}
+		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
+			return nil, err
+		}
+		ret.{{ .Name }} = {{ toLocalVariable .Name }}
 	}
 	{{- else }}
 	ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
@@ -473,7 +521,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 {{- end }}
 {{ range .CastFields }}
 // {{ .Name }} cast from "{{ .RequestProtoFQDN }}" to "{{ .ResponseProtoFQDN }}".
-func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseType }} {
+func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) ({{ .ResponseType }}, error) {
 	{{- if .IsSlice }}
 	{{- template "castRepeated" .ToSlice }}
 		{{- else if .IsOneof }}
@@ -481,13 +529,15 @@ func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) {{ .ResponseTy
 	{{- else if .IsStruct }}
 	{{- template "castMessage" .ToStruct }}
 	{{- else if .IsEnumToNumber }}
-	return {{ .ResponseType }}(from)
+	return {{ .ResponseType }}(from), nil
 	{{- else if .IsNumberToEnum }}
-	return {{ .ResponseType }}(from)
+	return {{ .ResponseType }}(from), nil
 	{{- else if .IsEnum }}
 	{{- template "castEnum" .ToEnum }}
+	{{- else if .IsRequiredValidationNumber }}
+	return grpcfed.{{ .CastWithValidationName }}(from)
 	{{- else }}
-	return {{ .ResponseType }}(from)
+	return {{ .ResponseType }}(from), nil
 	{{- end }}
 }
 {{ end }}

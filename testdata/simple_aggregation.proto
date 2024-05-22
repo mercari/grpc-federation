@@ -133,7 +133,7 @@ message Item {
 
   string name = 1;
   ItemType type = 2;
-  int64 value = 3;
+  uint32 value = 3;
 }
 
 message Z {

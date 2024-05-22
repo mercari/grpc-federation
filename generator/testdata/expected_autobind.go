@@ -213,9 +213,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name:   "_def0",
-		Type:   grpcfed.CELObjectType("org.federation.Post"),
-		Setter: func(value *localValueType, v *Post) { value.vars._def0 = v },
+		Name: "_def0",
+		Type: grpcfed.CELObjectType("org.federation.Post"),
+		Setter: func(value *localValueType, v *Post) error {
+			value.vars._def0 = v
+			return nil
+		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &Org_Federation_PostArgument{}
 			// { name: "id", by: "$.id" }
@@ -224,8 +227,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				Expr:              "$.id",
 				UseContextLibrary: false,
 				CacheIndex:        1,
-				Setter: func(v string) {
+				Setter: func(v string) error {
 					args.Id = v
+					return nil
 				},
 			}); err != nil {
 				return nil, err
@@ -293,9 +297,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-			Name:   "res",
-			Type:   grpcfed.CELObjectType("org.post.GetPostResponse"),
-			Setter: func(value *localValueType, v *post.GetPostResponse) { value.vars.res = v },
+			Name: "res",
+			Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
+			Setter: func(value *localValueType, v *post.GetPostResponse) error {
+				value.vars.res = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &post.GetPostRequest{}
 				// { field: "id", by: "$.id" }
@@ -304,8 +311,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					Expr:              "$.id",
 					UseContextLibrary: false,
 					CacheIndex:        2,
-					Setter: func(v string) {
+					Setter: func(v string) error {
 						args.Id = v
+						return nil
 					},
 				}); err != nil {
 					return nil, err
@@ -329,9 +337,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.Post, *localValueType]{
-			Name:                "_def1",
-			Type:                grpcfed.CELObjectType("org.post.Post"),
-			Setter:              func(value *localValueType, v *post.Post) { value.vars._def1 = v },
+			Name: "_def1",
+			Type: grpcfed.CELObjectType("org.post.Post"),
+			Setter: func(value *localValueType, v *post.Post) error {
+				value.vars._def1 = v
+				return nil
+			},
 			By:                  "res.post",
 			ByUseContextLibrary: false,
 			ByCacheIndex:        3,
@@ -356,9 +367,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
-			Name:   "_def2",
-			Type:   grpcfed.CELObjectType("org.federation.User"),
-			Setter: func(value *localValueType, v *User) { value.vars._def2 = v },
+			Name: "_def2",
+			Type: grpcfed.CELObjectType("org.federation.User"),
+			Setter: func(value *localValueType, v *User) error {
+				value.vars._def2 = v
+				return nil
+			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_UserArgument{
 					UserId: "foo", // { name: "user_id", string: "foo" }
@@ -422,7 +436,10 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		Expr:              "$.user_id",
 		UseContextLibrary: false,
 		CacheIndex:        4,
-		Setter:            func(v string) { ret.Uid = v },
+		Setter: func(v string) error {
+			ret.Uid = v
+			return nil
+		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -500,6 +517,7 @@ func (s *FederationService) logvalue_Org_Post_CreatePost(v *post.CreatePost) slo
 		slog.String("content", v.GetContent()),
 		slog.String("user_id", v.GetUserId()),
 		slog.String("type", s.logvalue_Org_Post_PostType(v.GetType()).String()),
+		slog.Int64("post_type", int64(v.GetPostType())),
 	)
 }
 

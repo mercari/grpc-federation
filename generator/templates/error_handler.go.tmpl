@@ -25,7 +25,10 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			if err := grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
 				Name: "{{ $def.Key }}",
 				Type: {{ $def.CELType }},
-				Setter: func(value *localValueType, v {{ $def.Type }}) { value.vars.{{ $def.Key }} = v },
+				Setter: func(value *localValueType, v {{ $def.Type }}) error {
+					value.vars.{{ $def.Key }} = v
+					return nil
+				},
 				By: "{{ .IgnoreAndResponse.Expr }}",
 				ByUseContextLibrary: {{ .IgnoreAndResponse.UseContextLibrary }},
 				ByCacheIndex: {{ $def.CELCacheIndex }},
