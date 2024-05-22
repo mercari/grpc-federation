@@ -1,6 +1,6 @@
 # gRPC Federation Language Server for VSCode
 
-<img width="500px" src="https://github.com/mercari/grpc-federation/blob/main/images/icon.png?raw=true"/>
+<img width="500px" src="https://github.com/mercari/grpc-federation/blob/main/images/logo.png?raw=true"/>
 
 ## Features
 

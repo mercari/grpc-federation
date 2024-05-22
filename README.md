@@ -1,6 +1,6 @@
 # gRPC Federation
 
-<img width="500px" src="https://github.com/mercari/grpc-federation/blob/main/images/icon.png?raw=true"/>
+<img width="500px" src="https://github.com/mercari/grpc-federation/blob/main/images/logo.png?raw=true"/>
 
 [![Test](https://github.com/mercari/grpc-federation/actions/workflows/test.yml/badge.svg)](https://github.com/mercari/grpc-federation/actions/workflows/test.yml)
 [![GoDoc](https://godoc.org/github.com/mercari/grpc-federation?status.svg)](https://pkg.go.dev/github.com/mercari/grpc-federation?tab=doc)
