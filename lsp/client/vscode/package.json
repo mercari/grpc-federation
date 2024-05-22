@@ -4,6 +4,7 @@
 	"description": "gRPC Federation Language Server Extension",
 	"author": "Mercari, Inc",
 	"license": "MIT",
+	"icon": "https://github.com/mercari/grpc-federation/blob/main/images/logo.png",
 	"version": "0.0.1",
 	"repository": {
 		"type": "git",
