@@ -1,8 +1,6 @@
 package resolver
 
 import (
-	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
@@ -497,51 +495,4 @@ func dependServicesByDefinition(def *VariableDefinition, defMap map[*VariableDef
 		}
 	}
 	return ret
-}
-
-func (r *MessageRule) AliasFields() []*Field {
-	if len(r.Aliases) == 0 {
-		return nil
-	}
-	if len(r.Aliases) == 1 {
-		return r.Aliases[0].Fields
-	}
-
-	type FieldWithCount struct {
-		field *Field
-		count int
-	}
-
-	fieldMap := make(map[string]*FieldWithCount)
-	for _, alias := range r.Aliases {
-		for _, field := range alias.Fields {
-			fieldID := fmt.Sprintf("%s:%s", field.Name, field.Type.Kind.ToString())
-			fieldWithCount := fieldMap[fieldID]
-			if fieldWithCount == nil {
-				fieldWithCount = &FieldWithCount{field: field}
-				fieldMap[fieldID] = fieldWithCount
-			}
-			fieldWithCount.count++
-		}
-	}
-
-	var ret []*Field
-	for _, fieldWithCount := range fieldMap {
-		if fieldWithCount.count == len(r.Aliases) {
-			ret = append(ret, fieldWithCount.field)
-		}
-	}
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].Name < ret[j].Name
-	})
-	return ret
-}
-
-func (r *MessageRule) AliasField(fieldName string) *Field {
-	for _, field := range r.AliasFields() {
-		if field.Name == fieldName {
-			return field
-		}
-	}
-	return nil
 }

@@ -49,6 +49,8 @@ func (r *FieldRule) ProtoFormat(opt *ProtoFormatOption) string {
 		value = strings.Replace(value, ":", " =", 1)
 		return indent + fmt.Sprintf("(grpc.federation.field).%s", value)
 	case len(r.Aliases) != 0:
+		// In cases where the output of an alias is needed,
+		// we only need to output the first specified alias directly, so it's fine to ignore the other elements.
 		return indent + fmt.Sprintf("(grpc.federation.field).alias = %q", r.Aliases[0].Name)
 	}
 	return ""
