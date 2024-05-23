@@ -181,6 +181,26 @@ testdata/invalid_method.proto:58:36: ERROR: <input>:1:8: undefined field 'user_i
 58:          request { field: "id", by: "$.user_id" }
                                         ^
 `},
+		{file: "invalid_multi_alias.proto", expected: `
+testdata/invalid_multi_alias.proto:59:12: required specify alias = "org.post.v2.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
+59:      alias: [ "org.post.PostDataType" ]
+                ^
+testdata/invalid_multi_alias.proto:73:3: The types of "org.federation.PostData"'s "title" field ("string") and "org.post.v2.PostData"'s field ("int64") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
+73:    string title = 2;
+       ^
+testdata/invalid_multi_alias.proto:73:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+73:    string title = 2;
+       ^
+testdata/invalid_multi_alias.proto:75:3: specified "alias" in grpc.federation.message option, but "dummy" field does not exist in "org.post.PostData" message
+75:    int64 dummy = 4;
+       ^
+testdata/invalid_multi_alias.proto:75:3: "dummy" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
+75:    int64 dummy = 4;
+       ^
+testdata/invalid_multi_alias.proto:80:12: required specify alias = "org.post.v2.PostContent" in grpc.federation.message option for the "org.federation.PostContent" type to automatically assign a value to the "PostData.content" field via autobind
+80:      alias: [ "org.post.PostContent" ]
+                ^
+`},
 		{file: "invalid_oneof_selection.proto", expected: `
 testdata/invalid_oneof_selection.proto:26:47: "org.federation.UserSelection" type has "user" as oneof name, but "user" has a difference type and cannot be accessed directly, so "user" becomes an undefined field
 ERROR: <input>:1:4: undefined field 'user'

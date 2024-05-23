@@ -1661,13 +1661,13 @@ type CastEnumValue struct {
 
 func (f *CastField) ToEnum() *CastEnum {
 	toEnum := f.toType.Enum
-	if toEnum.Rule != nil && toEnum.Rule.Alias != nil {
-		return f.toEnumByAlias(toEnum)
+	if toEnum.Rule != nil && len(toEnum.Rule.Aliases) != 0 {
+		return f.toEnumByAlias(toEnum, f.fromType.Enum)
 	}
 	fromEnum := f.fromType.Enum
-	if fromEnum.Rule != nil && fromEnum.Rule.Alias != nil {
+	if fromEnum.Rule != nil && len(fromEnum.Rule.Aliases) != 0 {
 		// the type conversion is performed at the time of gRPC method call.
-		return f.toEnumByAlias(fromEnum)
+		return f.toEnumByAlias(fromEnum, f.toType.Enum)
 	}
 	toEnumName := toEnumValuePrefix(f.file, f.toType)
 	fromEnumName := toEnumValuePrefix(f.file, f.fromType)
@@ -1691,7 +1691,7 @@ func (f *CastField) ToEnum() *CastEnum {
 	}
 }
 
-func (f *CastField) toEnumByAlias(enum *resolver.Enum) *CastEnum {
+func (f *CastField) toEnumByAlias(enum, aliasEnum *resolver.Enum) *CastEnum {
 	toEnumName := toEnumValuePrefix(f.file, f.toType)
 	fromEnumName := toEnumValuePrefix(f.file, f.fromType)
 	var (
@@ -1702,11 +1702,16 @@ func (f *CastField) toEnumByAlias(enum *resolver.Enum) *CastEnum {
 		if value.Rule == nil {
 			continue
 		}
-		for _, alias := range value.Rule.Aliases {
-			enumValues = append(enumValues, &CastEnumValue{
-				FromValue: toEnumValueText(fromEnumName, alias.Value),
-				ToValue:   toEnumValueText(toEnumName, value.Value),
-			})
+		for _, enumValueAlias := range value.Rule.Aliases {
+			if enumValueAlias.EnumAlias != aliasEnum {
+				continue
+			}
+			for _, alias := range enumValueAlias.Aliases {
+				enumValues = append(enumValues, &CastEnumValue{
+					FromValue: toEnumValueText(fromEnumName, alias.Value),
+					ToValue:   toEnumValueText(toEnumName, value.Value),
+				})
+			}
 		}
 		if value.Rule.Default {
 			defaultValue = toEnumValueText(toEnumName, value.Value)
@@ -1801,23 +1806,29 @@ func (f *CastField) ToStruct() *CastStruct {
 }
 
 func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Message) *CastStructField {
-	var (
-		fromField *resolver.Field
-		toType    *resolver.Type
-		fromType  *resolver.Type
-	)
-	if toField.HasRule() && toField.Rule.Alias != nil {
-		fromField = toField.Rule.Alias
-		fromType = fromField.Type
-		toType = toField.Type
-	} else {
-		fromField = fromMsg.Field(toField.Name)
-		if fromField == nil {
-			return nil
+	if toField.HasRule() && len(toField.Rule.Aliases) != 0 {
+		for _, alias := range toField.Rule.Aliases {
+			if fromMsg != alias.Message {
+				continue
+			}
+			fromField := alias
+			fromType := fromField.Type
+			toType := toField.Type
+			requiredCast := requiredCast(fromType, toType)
+			return &CastStructField{
+				ToFieldName:   util.ToPublicGoVariable(toField.Name),
+				FromFieldName: util.ToPublicGoVariable(fromField.Name),
+				RequiredCast:  requiredCast,
+				CastName:      castFuncName(fromType, toType),
+			}
 		}
-		fromType = fromField.Type
-		toType = toField.Type
 	}
+	fromField := fromMsg.Field(toField.Name)
+	if fromField == nil {
+		return nil
+	}
+	fromType := fromField.Type
+	toType := toField.Type
 	requiredCast := requiredCast(fromType, toType)
 	return &CastStructField{
 		ToFieldName:   util.ToPublicGoVariable(toField.Name),
@@ -1932,7 +1943,22 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		castValue string
 	)
 	if field.RequiredTypeConversion() {
-		fromType := field.SourceType()
+		var fromType *resolver.Type
+		for _, sourceType := range field.SourceTypes() {
+			if typ := m.autoBindSourceType(autoBindField, sourceType); typ != nil {
+				fromType = typ
+				break
+			}
+		}
+		if fromType == nil {
+			panic(
+				fmt.Sprintf(
+					"failed to autobind: expected message type is %q but it is not found from %q field",
+					autoBindField.Field.Message.FQDN(),
+					field.FQDN(),
+				),
+			)
+		}
 		toType := field.Type
 		castFuncName := castFuncName(fromType, toType)
 		castValue = fmt.Sprintf("s.%s(value.vars.%s.Get%s())", castFuncName, name, fieldName)
@@ -1942,6 +1968,29 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		Value:        value,
 		CastValue:    castValue,
 		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
+	}
+}
+
+func (m *Message) autoBindSourceType(autoBindField *resolver.AutoBindField, candidateType *resolver.Type) *resolver.Type {
+	switch autoBindField.Field.Type.Kind {
+	case types.Message:
+		if candidateType.Message == nil {
+			return nil
+		}
+		if autoBindField.Field.Type.Message != candidateType.Message {
+			return nil
+		}
+		return candidateType
+	case types.Enum:
+		if candidateType.Enum == nil {
+			return nil
+		}
+		if autoBindField.Field.Type.Enum != candidateType.Enum {
+			return nil
+		}
+		return candidateType
+	default:
+		return candidateType
 	}
 }
 

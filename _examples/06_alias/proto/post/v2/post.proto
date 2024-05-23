@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package org.post;
+package org.post.v2;
 
-option go_package = "example/post;post";
+option go_package = "example/post/v2;postv2";
 
 service PostService {
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
@@ -31,7 +31,7 @@ message PostData {
   PostDataType type = 1;
   string title = 2;
   PostContent content = 3;
-  string data = 4;
+  string v2_data = 4;
 }
   
 message PostContent {

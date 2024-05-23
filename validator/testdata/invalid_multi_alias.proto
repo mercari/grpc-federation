@@ -3,8 +3,8 @@ syntax = "proto3";
 package org.federation;
 
 import "grpc/federation/federation.proto";
-import "post/post.proto";
-import "post/v2/post.proto";
+import "nested_post.proto";
+import "nested_post2.proto";
 
 option go_package = "example/federation;federation";
 
@@ -56,7 +56,7 @@ message Post {
 
 enum PostType {
   option (grpc.federation.enum) = {
-    alias: [ "org.post.PostDataType", "org.post.v2.PostDataType" ]
+    alias: [ "org.post.PostDataType" ]
   };
 
   POST_TYPE_UNKNOWN = 0 [(grpc.federation.enum_value).default = true];
@@ -72,16 +72,17 @@ message PostData {
   PostType type = 1;
   string title = 2;
   PostContent content = 3;
+  int64 dummy = 4;
 }
 
 message PostContent {
   option (grpc.federation.message) = {
-    alias: [ "org.post.PostContent", "org.post.v2.PostContent" ]
+    alias: [ "org.post.PostContent" ]
   };
 
   enum Category {
     option (grpc.federation.enum) = {
-      alias: [ "org.post.PostContent.Category", "org.post.v2.PostContent.Category" ]
+      alias: [ "org.post.PostContent.Category" ]
     };
   
     CATEGORY_A = 0;

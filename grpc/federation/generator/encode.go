@@ -230,8 +230,12 @@ func (e *encoder) toMessageRule(rule *resolver.MessageRule) *plugin.MessageRule 
 	ret := &plugin.MessageRule{
 		CustomResolver: rule.CustomResolver,
 	}
+	var aliasIDs []string
+	for _, msg := range e.toMessages(rule.Aliases) {
+		aliasIDs = append(aliasIDs, msg.GetId())
+	}
 	ret.MessageArgumentId = e.toMessage(rule.MessageArgument).GetId()
-	ret.AliasId = e.toMessage(rule.Alias).GetId()
+	ret.AliasIds = aliasIDs
 	ret.DefSet = e.toVariableDefinitionSet(rule.DefSet)
 	return ret
 }
@@ -284,9 +288,25 @@ func (e *encoder) toEnumRule(rule *resolver.EnumRule) *plugin.EnumRule {
 	if rule == nil {
 		return nil
 	}
-	return &plugin.EnumRule{
-		AliasId: e.toEnumID(rule.Alias),
+	var aliasIDs []string
+	for _, alias := range rule.Aliases {
+		aliasIDs = append(aliasIDs, e.toEnumID(alias))
 	}
+	return &plugin.EnumRule{
+		AliasIds: aliasIDs,
+	}
+}
+
+func (e *encoder) toEnumValueAliases(aliases []*resolver.EnumValueAlias) []*plugin.EnumValueAlias {
+	ret := make([]*plugin.EnumValueAlias, 0, len(aliases))
+	for _, alias := range aliases {
+		v := e.toEnumValueAlias(alias)
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret
 }
 
 func (e *encoder) toEnumValues(values []*resolver.EnumValue) []*plugin.EnumValue {
@@ -299,6 +319,20 @@ func (e *encoder) toEnumValues(values []*resolver.EnumValue) []*plugin.EnumValue
 		ret = append(ret, enumValue)
 	}
 	return ret
+}
+
+func (e *encoder) toEnumValueAlias(alias *resolver.EnumValueAlias) *plugin.EnumValueAlias {
+	if alias == nil {
+		return nil
+	}
+	var valueIDs []string
+	for _, valueAlias := range alias.Aliases {
+		valueIDs = append(valueIDs, e.toEnumValueID(valueAlias))
+	}
+	return &plugin.EnumValueAlias{
+		EnumAliasId: e.toEnumID(alias.EnumAlias),
+		AliasIds:    valueIDs,
+	}
 }
 
 func (e *encoder) toEnumValue(value *resolver.EnumValue) *plugin.EnumValue {
@@ -323,9 +357,7 @@ func (e *encoder) toEnumValueRule(rule *resolver.EnumValueRule) *plugin.EnumValu
 	}
 	ret := &plugin.EnumValueRule{
 		Default: rule.Default,
-	}
-	for _, value := range e.toEnumValues(rule.Aliases) {
-		ret.AliasIds = append(ret.AliasIds, value.GetId())
+		Aliases: e.toEnumValueAliases(rule.Aliases),
 	}
 	return ret
 }
@@ -364,11 +396,15 @@ func (e *encoder) toFieldRule(rule *resolver.FieldRule) *plugin.FieldRule {
 	if rule == nil {
 		return nil
 	}
+	var aliasIds []string
+	for _, field := range e.toFields(rule.Aliases) {
+		aliasIds = append(aliasIds, field.GetId())
+	}
 	return &plugin.FieldRule{
 		Value:                 e.toValue(rule.Value),
 		CustomResolver:        rule.CustomResolver,
 		MessageCustomResolver: rule.MessageCustomResolver,
-		AliasId:               e.toField(rule.Alias).GetId(),
+		AliasIds:              aliasIds,
 		AutoBindField:         e.toAutoBindField(rule.AutoBindField),
 		OneofRule:             e.toFieldOneofRule(rule.Oneof),
 	}

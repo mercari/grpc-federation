@@ -375,7 +375,7 @@ func (d *decoder) toFieldRule(rule *plugin.FieldRule) (*resolver.FieldRule, erro
 	if err != nil {
 		return nil, err
 	}
-	alias, err := d.toField(rule.GetAliasId())
+	aliases, err := d.toFields(rule.GetAliasIds())
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +388,7 @@ func (d *decoder) toFieldRule(rule *plugin.FieldRule) (*resolver.FieldRule, erro
 		return nil, err
 	}
 	ret.Value = value
-	ret.Alias = alias
+	ret.Aliases = aliases
 	ret.AutoBindField = autoBindField
 	ret.Oneof = fieldOneofRule
 	return ret, nil
@@ -643,7 +643,7 @@ func (d *decoder) toMessageRule(rule *plugin.MessageRule) (*resolver.MessageRule
 	if err != nil {
 		return nil, err
 	}
-	alias, err := d.toMessage(rule.GetAliasId())
+	aliases, err := d.toMessages(rule.GetAliasIds())
 	if err != nil {
 		return nil, err
 	}
@@ -654,7 +654,7 @@ func (d *decoder) toMessageRule(rule *plugin.MessageRule) (*resolver.MessageRule
 	return &resolver.MessageRule{
 		CustomResolver:  rule.GetCustomResolver(),
 		MessageArgument: msgArg,
-		Alias:           alias,
+		Aliases:         aliases,
 		DefSet:          defSet,
 	}, nil
 }
@@ -1496,13 +1496,28 @@ func (d *decoder) toEnumRule(rule *plugin.EnumRule) (*resolver.EnumRule, error) 
 	if rule == nil {
 		return nil, nil
 	}
-	alias, err := d.toEnum(rule.GetAliasId())
+	aliases, err := d.toEnums(rule.GetAliasIds())
 	if err != nil {
 		return nil, err
 	}
 	return &resolver.EnumRule{
-		Alias: alias,
+		Aliases: aliases,
 	}, nil
+}
+
+func (d *decoder) toEnumValueAliases(aliases []*plugin.EnumValueAlias) ([]*resolver.EnumValueAlias, error) {
+	ret := make([]*resolver.EnumValueAlias, 0, len(aliases))
+	for _, alias := range aliases {
+		v, err := d.toEnumValueAlias(alias)
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret, nil
 }
 
 func (d *decoder) toEnumValues(ids []string) ([]*resolver.EnumValue, error) {
@@ -1518,6 +1533,24 @@ func (d *decoder) toEnumValues(ids []string) ([]*resolver.EnumValue, error) {
 		ret = append(ret, ev)
 	}
 	return ret, nil
+}
+
+func (d *decoder) toEnumValueAlias(alias *plugin.EnumValueAlias) (*resolver.EnumValueAlias, error) {
+	if alias == nil {
+		return nil, nil
+	}
+	enumAlias, err := d.toEnum(alias.GetEnumAliasId())
+	if err != nil {
+		return nil, err
+	}
+	enumValues, err := d.toEnumValues(alias.GetAliasIds())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.EnumValueAlias{
+		EnumAlias: enumAlias,
+		Aliases:   enumValues,
+	}, nil
 }
 
 func (d *decoder) toEnumValue(id string) (*resolver.EnumValue, error) {
@@ -1551,7 +1584,7 @@ func (d *decoder) toEnumValueRule(rule *plugin.EnumValueRule) (*resolver.EnumVal
 	if rule == nil {
 		return nil, nil
 	}
-	aliases, err := d.toEnumValues(rule.GetAliasIds())
+	aliases, err := d.toEnumValueAliases(rule.GetAliases())
 	if err != nil {
 		return nil, err
 	}
