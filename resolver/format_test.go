@@ -67,6 +67,10 @@ func TestProtoFormat(t *testing.T) {
       autobind: true
       message {
         name: "M"
+        args: [
+          { name: "x", by: "10" },
+          { name: "y", by: "1" }
+        ]
       }
     }
   }`,
@@ -89,6 +93,16 @@ func TestProtoFormat(t *testing.T) {
       name: "user"
       autobind: true
       by: "res.user"
+    }
+    def {
+      name: "_def2"
+      message {
+        name: "M"
+        args: [
+          { name: "x", by: "uint(2)" },
+          { name: "y", by: "org.user.Item.ItemType.value('ITEM_TYPE_2')" }
+        ]
+      }
     }
   }`,
 			},

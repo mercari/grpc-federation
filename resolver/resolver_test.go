@@ -68,6 +68,8 @@ func TestSimpleAggregation(t *testing.T) {
 		).
 		AddMessage(
 			testutil.NewMessageBuilder("MArgument").
+				AddField("x", resolver.Uint64Type).
+				AddField("y", ref.Type(t, "org.user", "Item.ItemType")).
 				Build(t),
 		).
 		AddMessage(
@@ -193,12 +195,31 @@ func TestSimpleAggregation(t *testing.T) {
 								SetBy(testutil.NewCELValueBuilder("res.user", ref.Type(t, "org.user", "User")).Build(t)).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def2").
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "M")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("x", resolver.NewByValue("uint(2)", resolver.Uint64Type)).
+												Add("y", resolver.NewByValue("org.user.Item.ItemType.value('ITEM_TYPE_2')", ref.Type(t, "org.user", "Item.ItemType"))).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "UserArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "M")).
 								Add(ref.Message(t, "org.user", "GetUserResponse")).
 								Build(t),
 						).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("_def2")).
 						AddVariableDefinitionGroup(
 							testutil.NewVariableDefinitionGroupBuilder().
 								AddStart(testutil.NewVariableDefinitionGroupByName("res")).
@@ -295,6 +316,12 @@ func TestSimpleAggregation(t *testing.T) {
 								SetMessage(
 									testutil.NewMessageExprBuilder().
 										SetMessage(ref.Message(t, "org.federation", "M")).
+										SetArgs(
+											testutil.NewMessageDependencyArgumentBuilder().
+												Add("x", resolver.NewByValue("10", resolver.Int64Type)).
+												Add("y", resolver.NewByValue("1", resolver.Int64Type)).
+												Build(t),
+										).
 										Build(t),
 								).
 								Build(t),

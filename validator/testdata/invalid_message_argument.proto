@@ -11,6 +11,8 @@ option go_package = "example/federation;federation";
 service FederationService {
   option (grpc.federation.service) = {};
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+  rpc Foo(FooRequest) returns (FooResponse) {}
+  rpc Bar(BarRequest) returns (BarResponse) {}
 }
 
 message GetPostRequest {
@@ -74,4 +76,37 @@ message User {
   };
   string id = 1;
   string name = 2;
+}
+
+message FooRequest {}
+message FooResponse {
+  option (grpc.federation.message) = {
+    def {
+      message {
+        name: "M"
+        args { name: "x" by: "true" }
+      }
+      autobind: true
+    }
+  };
+  string x = 1;
+}
+
+
+message BarRequest {}
+message BarResponse {
+  option (grpc.federation.message) = {
+    def {
+      message {
+        name: "M"
+        args { name: "x" by: "'foo'" }
+      }
+      autobind: true
+    }
+  };
+  string x = 1;
+}
+
+message M {
+  string x = 1 [(grpc.federation.field).by = "'hello'"];
 }

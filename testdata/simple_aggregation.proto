@@ -58,7 +58,17 @@ message Post {
       { name: "post" by: "res.post" autobind: true },
       { name: "user" message { name: "User" args { inline: "post" } } },
       { name: "z" message { name: "Z" } },
-      { name: "m" message { name: "M" } autobind: true}
+      {
+        name: "m"
+        message {
+          name: "M"
+          args [
+            { name: "x" by: "10" },
+            { name: "y" by: "1" }
+          ]
+        }
+        autobind: true
+      }
     ]
   };
   string id = 1;
@@ -97,6 +107,15 @@ message User {
       }
     }
     def { name: "user" by: "res.user" autobind: true }
+    def {
+      message {
+        name: "M"
+        args [
+          { name: "x" by: "uint(2)" },
+          { name: "y" by: "org.user.Item.ItemType.value('ITEM_TYPE_2')" }
+        ]
+      }
+    }
   };
   string id = 1;
   UserType type = 2;

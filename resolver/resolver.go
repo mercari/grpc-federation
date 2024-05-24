@@ -2481,9 +2481,9 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		}
 		if _, exists := r.cachedMessageMap[depMsgArg.FQDN()]; !exists {
 			r.cachedMessageMap[depMsgArg.FQDN()] = depMsgArg
-			defs := msgToDefsMap[depMsg]
-			depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, defs)...)
 		}
+		defs := msgToDefsMap[depMsg]
+		depMsgArg.Fields = append(depMsgArg.Fields, r.resolveMessageArgumentFields(ctx, depMsgArg, defs)...)
 		for _, field := range depMsgArg.Fields {
 			field.Message = depMsgArg
 		}
@@ -2493,7 +2493,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 	return msgs
 }
 
-func (r *Resolver) resolveMessageArgumentFields(ctx *context, defs []*VariableDefinition) []*Field {
+func (r *Resolver) resolveMessageArgumentFields(ctx *context, arg *Message, defs []*VariableDefinition) []*Field {
 	argNameMap := make(map[string]struct{})
 	for _, varDef := range defs {
 		for _, msgExpr := range varDef.MessageExprs() {
@@ -2507,6 +2507,11 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, defs []*VariableDe
 	}
 
 	evaluatedArgNameMap := make(map[string]*Type)
+	// First, evaluate the fields that are already registered in the message argument.
+	for _, field := range arg.Fields {
+		evaluatedArgNameMap[field.Name] = field.Type
+		argNameMap[field.Name] = struct{}{}
+	}
 	var fields []*Field
 	for _, varDef := range defs {
 		for _, msgExpr := range varDef.MessageExprs() {
@@ -2520,7 +2525,7 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, defs []*VariableDe
 					continue
 				}
 				if typ, exists := evaluatedArgNameMap[arg.Name]; exists {
-					if typ.Kind != fieldType.Kind {
+					if isDifferentType(typ, fieldType) {
 						ctx.addError(
 							ErrWithLocation(
 								fmt.Sprintf(
@@ -2548,8 +2553,25 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, defs []*VariableDe
 						)
 						continue
 					}
-					fields = append(fields, fieldType.Message.Fields...)
 					for _, field := range fieldType.Message.Fields {
+						if typ, exists := evaluatedArgNameMap[field.Name]; exists {
+							if isDifferentType(typ, field.Type) {
+								ctx.addError(
+									ErrWithLocation(
+										fmt.Sprintf(
+											"%q argument name is declared with a different type kind. found %q and %q type",
+											field.Name,
+											typ.Kind.ToString(),
+											field.Type.Kind.ToString(),
+										),
+										varDef.builder.WithMessage().
+											WithArgs(argIdx).Location(),
+									),
+								)
+							}
+							continue
+						}
+						fields = append(fields, field)
 						evaluatedArgNameMap[field.Name] = field.Type
 					}
 				} else {
@@ -2569,10 +2591,17 @@ func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMa
 	for _, msgExpr := range def.MessageExprs() {
 		curDepArgNameMap := make(map[string]struct{})
 		for _, arg := range msgExpr.Args {
-			if arg.Name == "" {
-				continue
+			if arg.Name != "" {
+				curDepArgNameMap[arg.Name] = struct{}{}
 			}
-			curDepArgNameMap[arg.Name] = struct{}{}
+			if arg.Value.CEL != nil && arg.Value.Inline {
+				fieldType := arg.Value.Type()
+				if fieldType != nil && fieldType.Message != nil {
+					for _, field := range fieldType.Message.Fields {
+						curDepArgNameMap[field.Name] = struct{}{}
+					}
+				}
+			}
 		}
 		for name := range argNameMap {
 			if _, exists := curDepArgNameMap[name]; exists {

@@ -2803,6 +2803,7 @@ func toValue(file *File, typ *resolver.Type, value *resolver.Value) string {
 func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 	var (
 		isRequestArgument bool
+		msgArg            *resolver.Message
 		args              []*resolver.Argument
 	)
 	switch {
@@ -2810,14 +2811,17 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 		isRequestArgument = true
 		args = expr.Call.Request.Args
 	case expr.Message != nil:
+		msg := expr.Message.Message
+		if msg.Rule != nil {
+			msgArg = msg.Rule.MessageArgument
+		}
 		args = expr.Message.Args
 	case expr.By != nil:
 		return nil
 	}
-
 	var generateArgs []*Argument
 	for _, arg := range args {
-		for _, generatedArg := range argument(file, arg) {
+		for _, generatedArg := range argument(file, msgArg, arg) {
 			protofmt := arg.ProtoFormat(resolver.DefaultProtoFormatOption, isRequestArgument)
 			if protofmt != "" {
 				generatedArg.ProtoComment = "// " + protofmt
@@ -2828,7 +2832,7 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 	return generateArgs
 }
 
-func argument(file *File, arg *resolver.Argument) []*Argument {
+func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*Argument {
 	if arg.Value.Const != nil {
 		return []*Argument{
 			{
@@ -2861,7 +2865,7 @@ func argument(file *File, arg *resolver.Argument) []*Argument {
 			})
 		}
 	}
-	fromType := arg.Value.CEL.Out
+	fromType := arg.Value.Type()
 	var toType *resolver.Type
 	if arg.Type != nil {
 		toType = arg.Type
@@ -2873,25 +2877,37 @@ func argument(file *File, arg *resolver.Argument) []*Argument {
 	fromText := file.toTypeText(fromType)
 
 	var (
-		argValue     = "v"
-		zeroValue    string
-		argType      string
-		requiredCast = requiredCast(fromType, toType)
+		argValue       = "v"
+		zeroValue      string
+		argType        string
+		isRequiredCast bool
 	)
 	switch fromType.Kind {
 	case types.Message:
 		zeroValue = toMakeZeroValue(file, fromType)
 		argType = fromText
-		if requiredCast {
+		isRequiredCast = requiredCast(fromType, toType)
+		if isRequiredCast {
 			castFuncName := castFuncName(fromType, toType)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	case types.Enum:
 		zeroValue = toMakeZeroValue(file, fromType)
 		argType = fromText
-		if requiredCast {
-			castFuncName := castFuncName(fromType, toType)
-			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+		if msgArg != nil && arg.Name != "" {
+			msgArgField := msgArg.Field(arg.Name)
+			isRequiredCast = msgArgField != nil && msgArgField.Type.Kind != toType.Kind
+			if isRequiredCast {
+				castFuncName := castFuncName(fromType, msgArgField.Type)
+				argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+			}
+		}
+		if !isRequiredCast {
+			isRequiredCast = requiredCast(fromType, toType)
+			if isRequiredCast {
+				castFuncName := castFuncName(fromType, toType)
+				argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+			}
 		}
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
@@ -2902,6 +2918,14 @@ func argument(file *File, arg *resolver.Argument) []*Argument {
 			argType = file.toTypeText(t)
 		} else {
 			argType = toText
+		}
+		if msgArg != nil && arg.Name != "" {
+			msgArgField := msgArg.Field(arg.Name)
+			isRequiredCast = msgArgField != nil && msgArgField.Type.Kind != toType.Kind
+			if isRequiredCast {
+				castFuncName := castFuncName(toType, msgArgField.Type)
+				argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
+			}
 		}
 	}
 	return []*Argument{
@@ -2915,7 +2939,7 @@ func argument(file *File, arg *resolver.Argument) []*Argument {
 			OneofName:      oneofName,
 			OneofFieldName: oneofFieldName,
 			If:             arg.If,
-			RequiredCast:   requiredCast,
+			RequiredCast:   isRequiredCast,
 		},
 	}
 }
