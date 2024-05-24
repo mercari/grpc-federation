@@ -48,8 +48,10 @@ func (r *FieldRule) ProtoFormat(opt *ProtoFormatOption) string {
 		value := r.Value.ProtoFormat(opt)
 		value = strings.Replace(value, ":", " =", 1)
 		return indent + fmt.Sprintf("(grpc.federation.field).%s", value)
-	case r.Alias != nil:
-		return indent + fmt.Sprintf("(grpc.federation.field).alias = %q", r.Alias.Name)
+	case len(r.Aliases) != 0:
+		// In cases where the output of an alias is needed,
+		// we only need to output the first specified alias directly, so it's fine to ignore the other elements.
+		return indent + fmt.Sprintf("(grpc.federation.field).alias = %q", r.Aliases[0].Name)
 	}
 	return ""
 }
@@ -69,8 +71,14 @@ func (r *MessageRule) ProtoFormat(opt *ProtoFormatOption) string {
 	if r.CustomResolver {
 		elems = append(elems, nextOpt.indentFormat()+"custom_resolver: true")
 	}
-	if r.Alias != nil {
-		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("alias: %q", r.Alias.FQDN()))
+	var aliases []string
+	for _, alias := range r.Aliases {
+		aliases = append(aliases, fmt.Sprintf("%q", alias.FQDN()))
+	}
+	if len(aliases) == 1 {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("alias: %s", aliases[0]))
+	} else if len(aliases) > 1 {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("alias: [%s]", strings.Join(aliases, ", ")))
 	}
 	if len(elems) == 0 {
 		return indent + "option (grpc.federation.message) = {}"

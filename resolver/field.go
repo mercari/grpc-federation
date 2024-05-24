@@ -20,9 +20,12 @@ func (f *Field) typeConversionDecls(convertedFQDNMap map[string]struct{}) []*Typ
 	if !f.RequiredTypeConversion() {
 		return nil
 	}
-	fromType := f.SourceType()
 	toType := f.Type
-	return uniqueTypeConversionDecls(typeConversionDecls(fromType, toType, convertedFQDNMap))
+	var decls []*TypeConversionDecl
+	for _, fromType := range f.SourceTypes() {
+		decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
+	}
+	return uniqueTypeConversionDecls(decls)
 }
 
 func (f *Field) RequiredTypeConversion() bool {
@@ -32,21 +35,30 @@ func (f *Field) RequiredTypeConversion() bool {
 	if f.HasCustomResolver() {
 		return false
 	}
-	return requiredTypeConversion(f.SourceType(), f.Type)
+	for _, fromType := range f.SourceTypes() {
+		if requiredTypeConversion(fromType, f.Type) {
+			return true
+		}
+	}
+	return false
 }
 
-func (f *Field) SourceType() *Type {
+func (f *Field) SourceTypes() []*Type {
 	if !f.HasRule() {
 		return nil
 	}
 	rule := f.Rule
 	switch {
 	case rule.Value != nil:
-		return rule.Value.Type()
-	case rule.Alias != nil:
-		return rule.Alias.Type
+		return []*Type{rule.Value.Type()}
+	case len(rule.Aliases) != 0:
+		ret := make([]*Type, 0, len(rule.Aliases))
+		for _, alias := range rule.Aliases {
+			ret = append(ret, alias.Type)
+		}
+		return ret
 	case rule.AutoBindField != nil:
-		return rule.AutoBindField.Field.Type
+		return []*Type{rule.AutoBindField.Field.Type}
 	}
 	return nil
 }

@@ -21,19 +21,25 @@ import (
 
 	"example/federation"
 	"example/post"
+	postv2 "example/post/v2"
 )
 
 const bufSize = 1024
 
 var (
-	listener   *bufconn.Listener
-	postClient post.PostServiceClient
+	listener     *bufconn.Listener
+	postClient   post.PostServiceClient
+	postv2Client postv2.PostServiceClient
 )
 
 type clientConfig struct{}
 
 func (c *clientConfig) Org_Post_PostServiceClient(cfg federation.FederationServiceClientConfig) (post.PostServiceClient, error) {
 	return postClient, nil
+}
+
+func (c *clientConfig) Org_Post_V2_PostServiceClient(cfg federation.FederationServiceClientConfig) (postv2.PostServiceClient, error) {
+	return postv2Client, nil
 }
 
 type PostServer struct {
@@ -51,6 +57,27 @@ func (s *PostServer) GetPost(ctx context.Context, req *post.GetPostRequest) (*po
 					Category: post.PostContent_CATEGORY_A,
 					Head:     "headhead",
 					Body:     "bodybody",
+				},
+			},
+		},
+	}, nil
+}
+
+type PostV2Server struct {
+	*postv2.UnimplementedPostServiceServer
+}
+
+func (s *PostV2Server) GetPost(ctx context.Context, req *postv2.GetPostRequest) (*postv2.GetPostResponse, error) {
+	return &postv2.GetPostResponse{
+		Post: &postv2.Post{
+			Id: req.Id,
+			Data: &postv2.PostData{
+				Type:  postv2.PostDataType_POST_TYPE_C,
+				Title: "foo2",
+				Content: &postv2.PostContent{
+					Category: postv2.PostContent_CATEGORY_A,
+					Head:     "headhead2",
+					Body:     "bodybody2",
 				},
 			},
 		},
@@ -94,6 +121,7 @@ func TestFederation(t *testing.T) {
 	defer conn.Close()
 
 	postClient = post.NewPostServiceClient(conn)
+	postv2Client = postv2.NewPostServiceClient(conn)
 
 	grpcServer := grpc.NewServer()
 
@@ -108,6 +136,7 @@ func TestFederation(t *testing.T) {
 		t.Fatal(err)
 	}
 	post.RegisterPostServiceServer(grpcServer, &PostServer{})
+	postv2.RegisterPostServiceServer(grpcServer, &PostV2Server{})
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 
 	go func() {
@@ -133,6 +162,15 @@ func TestFederation(t *testing.T) {
 					Head:    "headhead",
 					Body:    "bodybody",
 					DupBody: "bodybody",
+				},
+			},
+			Data2: &federation.PostData{
+				Type:  federation.PostType_POST_TYPE_BAR,
+				Title: "foo2",
+				Content: &federation.PostContent{
+					Head:    "headhead2",
+					Body:    "bodybody2",
+					DupBody: "bodybody2",
 				},
 			},
 		},

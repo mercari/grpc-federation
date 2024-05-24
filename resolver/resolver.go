@@ -958,8 +958,8 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 		if rule.Value != nil {
 			r.validateBindFieldType(ctx, rule.Value.Type(), field, builder)
 		}
-		if rule.Alias != nil {
-			r.validateBindFieldType(ctx, rule.Alias.Type, field, builder)
+		for _, alias := range rule.Aliases {
+			r.validateBindFieldType(ctx, alias.Type, field, builder)
 		}
 		if rule.AutoBindField != nil {
 			r.validateBindFieldType(ctx, rule.AutoBindField.Field.Type, field, builder)
@@ -987,7 +987,7 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			// assignment of the same type is okay.
 			return
 		}
-		if fromMessage.Rule == nil || fromMessage.Rule.Alias == nil {
+		if fromMessage.Rule == nil || len(fromMessage.Rule.Aliases) == 0 {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -999,19 +999,21 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			)
 			return
 		}
-		fromMessageAliasName := fromMessage.Rule.Alias.FQDN()
-		if fromMessageAliasName != toMessageName {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the %q field`,
-						toMessageName, fromMessageName, toField.FQDN(),
+		for _, alias := range fromMessage.Rule.Aliases {
+			fromMessageAliasName := alias.FQDN()
+			if fromMessageAliasName != toMessageName {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(
+							`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the %q field`,
+							toMessageName, fromMessageName, toField.FQDN(),
+						),
+						source.NewMessageBuilder(fromMessage.File.Name, fromMessage.Name).
+							WithOption().WithAlias().Location(),
 					),
-					source.NewMessageBuilder(fromMessage.File.Name, fromMessage.Name).
-						WithOption().WithAlias().Location(),
-				),
-			)
-			return
+				)
+				return
+			}
 		}
 		return
 	}
@@ -1030,7 +1032,7 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 		if fromEnum.Message != nil {
 			fromEnumMessageName = fromEnum.Message.Name
 		}
-		if fromEnum.Rule == nil || fromEnum.Rule.Alias == nil {
+		if fromEnum.Rule == nil || len(fromEnum.Rule.Aliases) == 0 {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1042,19 +1044,21 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			)
 			return
 		}
-		fromEnumAliasName := fromEnum.Rule.Alias.FQDN()
-		if fromEnumAliasName != toEnumName {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the %q field`,
-						toEnumName, fromEnumName, toField.FQDN(),
+		for _, alias := range fromEnum.Rule.Aliases {
+			fromEnumAliasName := alias.FQDN()
+			if fromEnumAliasName != toEnumName {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(
+							`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the %q field`,
+							toEnumName, fromEnumName, toField.FQDN(),
+						),
+						source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).WithOption().Location(),
 					),
-					source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).WithOption().Location(),
-				),
-			)
+				)
+				return
+			}
 		}
-		return
 	}
 	if isDifferentType(fromType, toField.Type) {
 		ctx.addError(
@@ -1090,7 +1094,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			// assignment of the same type is okay.
 			return
 		}
-		if toMessage.Rule == nil || toMessage.Rule.Alias == nil {
+		if toMessage.Rule == nil || len(toMessage.Rule.Aliases) == 0 {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1102,8 +1106,15 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			)
 			return
 		}
-		toMessageAliasName := toMessage.Rule.Alias.FQDN()
-		if toMessageAliasName != fromMessageName {
+		var found bool
+		for _, alias := range toMessage.Rule.Aliases {
+			toMessageAliasName := alias.FQDN()
+			if toMessageAliasName == fromMessageName {
+				found = true
+				break
+			}
+		}
+		if !found {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1116,7 +1127,6 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			)
 			return
 		}
-		return
 	}
 	if fromType.Kind == types.Enum {
 		if fromType.Enum == nil || toType.Enum == nil {
@@ -1133,7 +1143,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 		if toEnum.Message != nil {
 			toEnumMessageName = toEnum.Message.Name
 		}
-		if toEnum.Rule == nil || toEnum.Rule.Alias == nil {
+		if toEnum.Rule == nil || len(toEnum.Rule.Aliases) == 0 {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1145,8 +1155,15 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			)
 			return
 		}
-		toEnumAliasName := toEnum.Rule.Alias.FQDN()
-		if toEnumAliasName != fromEnumName {
+		var found bool
+		for _, alias := range toEnum.Rule.Aliases {
+			toEnumAliasName := alias.FQDN()
+			if toEnumAliasName == fromEnumName {
+				found = true
+				break
+			}
+		}
+		if !found {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1156,8 +1173,8 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 					source.NewEnumBuilder(ctx.fileName(), toEnumMessageName, toEnum.Name).WithOption().Location(),
 				),
 			)
+			return
 		}
-		return
 	}
 	if isDifferentType(fromType, toField.Type) {
 		ctx.addError(
@@ -1223,29 +1240,38 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 			}),
 		},
 		CustomResolver: ruleDef.GetCustomResolver(),
-		Alias:          r.resolveMessageAlias(ctx, ruleDef.GetAlias(), builder),
+		Aliases:        r.resolveMessageAliases(ctx, ruleDef.GetAlias(), builder),
 	}
 }
 
-func (r *Resolver) resolveMessageAlias(ctx *context, aliasName string, builder *source.MessageOptionBuilder) *Message {
-	if aliasName == "" {
+func (r *Resolver) resolveMessageAliases(ctx *context, aliasNames []string, builder *source.MessageOptionBuilder) []*Message {
+	if len(aliasNames) == 0 {
 		return nil
 	}
-	if strings.Contains(aliasName, ".") {
-		pkg, err := r.lookupPackage(aliasName)
-		if err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					builder.WithAlias().Location(),
-				),
-			)
-			return nil
+	var ret []*Message
+	for _, aliasName := range aliasNames {
+		if strings.Contains(aliasName, ".") {
+			pkg, err := r.lookupPackage(aliasName)
+			if err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						builder.WithAlias().Location(),
+					),
+				)
+				return nil
+			}
+			name := r.trimPackage(pkg, aliasName)
+			if alias := r.resolveMessage(ctx, pkg, name, source.ToLazyMessageBuilder(builder, name)); alias != nil {
+				ret = append(ret, alias)
+			}
+		} else {
+			if alias := r.resolveMessage(ctx, ctx.file().Package, aliasName, source.ToLazyMessageBuilder(builder, aliasName)); alias != nil {
+				ret = append(ret, alias)
+			}
 		}
-		name := r.trimPackage(pkg, aliasName)
-		return r.resolveMessage(ctx, pkg, name, source.ToLazyMessageBuilder(builder, name))
 	}
-	return r.resolveMessage(ctx, ctx.file().Package, aliasName, source.ToLazyMessageBuilder(builder, aliasName))
+	return ret
 }
 
 func (r *Resolver) resolveVariableDefinitions(ctx *context, varDefs []*federation.VariableDefinition, builderFn func(idx int) *source.VariableDefinitionOptionBuilder) []*VariableDefinition {
@@ -1661,19 +1687,19 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 		if msg.Rule == nil {
 			return nil
 		}
-		if !msg.Rule.CustomResolver && msg.Rule.Alias == nil {
+		if !msg.Rule.CustomResolver && len(msg.Rule.Aliases) == 0 {
 			return nil
 		}
 		ret := &FieldRule{}
 		if msg.Rule.CustomResolver {
 			ret.MessageCustomResolver = true
 		}
-		if msg.Rule.Alias != nil {
-			alias := r.resolveFieldAlias(ctx, msg, field, "", builder)
-			if alias == nil {
+		for _, msgAlias := range msg.Rule.Aliases {
+			fieldAlias := r.resolveFieldAlias(ctx, msg, field, "", msgAlias, builder)
+			if fieldAlias == nil {
 				return nil
 			}
-			ret.Alias = alias
+			ret.Aliases = append(ret.Aliases, fieldAlias)
 		}
 		return ret
 	}
@@ -1692,10 +1718,27 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 		}
 		value = v
 	}
+	if ruleDef.GetAlias() != "" && (msg.Rule == nil || len(msg.Rule.Aliases) == 0) {
+		ctx.addError(
+			ErrWithLocation(
+				`use "alias" in "grpc.federation.field" option, but "alias" is not defined in "grpc.federation.message" option`,
+				builder.Location(),
+			),
+		)
+	}
+
+	var aliases []*Field
+	if msg.Rule != nil {
+		for _, msgAlias := range msg.Rule.Aliases {
+			if alias := r.resolveFieldAlias(ctx, msg, field, ruleDef.GetAlias(), msgAlias, builder); alias != nil {
+				aliases = append(aliases, alias)
+			}
+		}
+	}
 	return &FieldRule{
 		Value:          value,
 		CustomResolver: ruleDef.GetCustomResolver(),
-		Alias:          r.resolveFieldAlias(ctx, msg, field, ruleDef.GetAlias(), builder),
+		Aliases:        aliases,
 		Oneof:          oneof,
 	}
 }
@@ -1735,21 +1778,17 @@ func (r *Resolver) resolveFieldOneofRule(ctx *context, field *Field, def *federa
 	}
 }
 
-func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field *Field, builder *source.FieldBuilder) *Field {
-	if msg.Rule == nil {
+func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field *Field, alias *Message, builder *source.FieldBuilder) *Field {
+	if alias == nil {
 		return nil
 	}
-	if msg.Rule.Alias == nil {
-		return nil
-	}
-	msgAlias := msg.Rule.Alias
-	aliasField := msgAlias.Field(field.Name)
+	aliasField := alias.Field(field.Name)
 	if aliasField == nil {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
 					`specified "alias" in grpc.federation.message option, but %q field does not exist in %q message`,
-					field.Name, msgAlias.FQDN(),
+					field.Name, alias.FQDN(),
 				),
 				builder.Location(),
 			),
@@ -1765,7 +1804,7 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 				fmt.Sprintf(
 					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
 					msg.FQDN(), field.Name, field.Type.Kind.ToString(),
-					msgAlias.FQDN(), aliasField.Type.Kind.ToString(),
+					aliasField.Message.FQDN(), aliasField.Type.Kind.ToString(),
 				),
 				builder.Location(),
 			),
@@ -1775,25 +1814,15 @@ func (r *Resolver) resolveFieldRuleByAutoAlias(ctx *context, msg *Message, field
 	return aliasField
 }
 
-func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, fieldAlias string, builder *source.FieldBuilder) *Field {
+func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, fieldAlias string, alias *Message, builder *source.FieldBuilder) *Field {
 	if fieldAlias == "" {
-		return r.resolveFieldRuleByAutoAlias(ctx, msg, field, builder)
+		return r.resolveFieldRuleByAutoAlias(ctx, msg, field, alias, builder)
 	}
-	if msg.Rule == nil || msg.Rule.Alias == nil {
-		ctx.addError(
-			ErrWithLocation(
-				`use "alias" in "grpc.federation.field" option, but "alias" is not defined in "grpc.federation.message" option`,
-				builder.Location(),
-			),
-		)
-		return nil
-	}
-	msgAlias := msg.Rule.Alias
-	aliasField := msgAlias.Field(fieldAlias)
+	aliasField := alias.Field(fieldAlias)
 	if aliasField == nil {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`%q field does not exist in %q message`, fieldAlias, msgAlias.FQDN()),
+				fmt.Sprintf(`%q field does not exist in %q message`, fieldAlias, alias.FQDN()),
 				builder.Location(),
 			),
 		)
@@ -1808,7 +1837,7 @@ func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, f
 				fmt.Sprintf(
 					`The types of %q's %q field (%q) and %q's field (%q) are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself`,
 					msg.FQDN(), field.Name, field.Type.Kind.ToString(),
-					msgAlias.FQDN(), aliasField.Type.Kind.ToString(),
+					alias.FQDN(), aliasField.Type.Kind.ToString(),
 				),
 				builder.Location(),
 			),
@@ -1823,29 +1852,38 @@ func (r *Resolver) resolveEnumRule(ctx *context, ruleDef *federation.EnumRule) *
 		return nil
 	}
 	return &EnumRule{
-		Alias: r.resolveEnumAlias(ctx, ruleDef.GetAlias()),
+		Aliases: r.resolveEnumAliases(ctx, ruleDef.GetAlias()),
 	}
 }
 
-func (r *Resolver) resolveEnumAlias(ctx *context, aliasName string) *Enum {
-	if aliasName == "" {
+func (r *Resolver) resolveEnumAliases(ctx *context, aliasNames []string) []*Enum {
+	if len(aliasNames) == 0 {
 		return nil
 	}
-	if strings.Contains(aliasName, ".") {
-		pkg, err := r.lookupPackage(aliasName)
-		if err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithOption().Location(),
-				),
-			)
-			return nil
+	var ret []*Enum
+	for _, aliasName := range aliasNames {
+		if strings.Contains(aliasName, ".") {
+			pkg, err := r.lookupPackage(aliasName)
+			if err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithOption().Location(),
+					),
+				)
+				return nil
+			}
+			name := r.trimPackage(pkg, aliasName)
+			if alias := r.resolveEnum(ctx, pkg, name, source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), name)); alias != nil {
+				ret = append(ret, alias)
+			}
+		} else {
+			if alias := r.resolveEnum(ctx, ctx.file().Package, aliasName, source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), aliasName)); alias != nil {
+				ret = append(ret, alias)
+			}
 		}
-		name := r.trimPackage(pkg, aliasName)
-		return r.resolveEnum(ctx, pkg, name, source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), name))
 	}
-	return r.resolveEnum(ctx, ctx.file().Package, aliasName, source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), aliasName))
+	return ret
 }
 
 func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *EnumValue, ruleDef *federation.EnumValueRule) *EnumValueRule {
@@ -1853,76 +1891,87 @@ func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *Enu
 		if enum.Rule == nil {
 			return nil
 		}
-		if enum.Rule.Alias != nil {
-			return r.resolveEnumValueRuleByAutoAlias(ctx, enum, enumValue.Value)
+		ret := &EnumValueRule{}
+		for _, alias := range enum.Rule.Aliases {
+			enumValueAlias := r.resolveEnumValueAlias(ctx, enumValue.Value, "", alias)
+			if enumValueAlias == nil {
+				continue
+			}
+			ret.Aliases = append(ret.Aliases, &EnumValueAlias{
+				EnumAlias: alias,
+				Aliases:   []*EnumValue{enumValueAlias},
+			})
 		}
-		return nil
+		return ret
 	}
-	aliases := make([]*EnumValue, 0, len(ruleDef.GetAlias()))
-	for _, aliasName := range ruleDef.GetAlias() {
-		alias := r.resolveEnumValueAlias(ctx, enum, enumValue.Value, aliasName)
-		if alias == nil {
-			break
-		}
-		aliases = append(aliases, alias)
-	}
-	return &EnumValueRule{
-		Default: ruleDef.GetDefault(),
-		Aliases: aliases,
-	}
-}
-
-func (r *Resolver) resolveEnumValueRuleByAutoAlias(ctx *context, enum *Enum, enumValueName string) *EnumValueRule {
-	if enum.Rule == nil {
-		return nil
-	}
-	if enum.Rule.Alias == nil {
-		return nil
-	}
-	enumAlias := enum.Rule.Alias
-	enumValue := enumAlias.Value(enumValueName)
-	if enumValue == nil {
-		ctx.addError(
-			ErrWithLocation(
-				fmt.Sprintf(
-					`specified "alias" in grpc.federation.enum option, but %q value does not exist in %q enum`,
-					enumValueName, enumAlias.FQDN(),
-				),
-				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithValue(enumValueName).Location(),
-			),
-		)
-		return nil
-	}
-	return &EnumValueRule{Aliases: []*EnumValue{enumValue}}
-}
-
-func (r *Resolver) resolveEnumValueAlias(ctx *context, enum *Enum, enumValueName, enumValueAlias string) *EnumValue {
-	if enumValueAlias == "" {
-		return nil
-	}
-	if enum.Rule == nil || enum.Rule.Alias == nil {
+	if len(ruleDef.GetAlias()) != 0 && (enum.Rule == nil || len(enum.Rule.Aliases) == 0) {
 		ctx.addError(
 			ErrWithLocation(
 				`use "alias" in "grpc.federation.enum_value" option, but "alias" is not defined in "grpc.federation.enum" option`,
 				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).
-					WithValue(enumValueName).
+					WithValue(enumValue.Value).
 					WithOption().WithAlias().Location(),
 			),
 		)
 		return nil
 	}
-	enumAlias := enum.Rule.Alias
-	value := enumAlias.Value(enumValueAlias)
+
+	defaultValue := ruleDef.GetDefault()
+	var aliases []*EnumValueAlias
+	if enum.Rule != nil && !defaultValue {
+		for _, enumAlias := range enum.Rule.Aliases {
+			var enumValueAliases []*EnumValue
+			for _, aliasName := range ruleDef.GetAlias() {
+				alias := r.resolveEnumValueAlias(ctx, enumValue.Value, aliasName, enumAlias)
+				if alias == nil {
+					continue
+				}
+				enumValueAliases = append(enumValueAliases, alias)
+			}
+			aliases = append(aliases, &EnumValueAlias{
+				EnumAlias: enumAlias,
+				Aliases:   enumValueAliases,
+			})
+		}
+	}
+	return &EnumValueRule{
+		Default: defaultValue,
+		Aliases: aliases,
+	}
+}
+
+func (r *Resolver) resolveEnumValueAlias(ctx *context, enumValueName, enumValueAlias string, alias *Enum) *EnumValue {
+	if enumValueAlias == "" {
+		return r.resolveEnumValueRuleByAutoAlias(ctx, enumValueName, alias)
+	}
+	value := alias.Value(enumValueAlias)
 	if value == nil {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`%q value does not exist in %q enum`, enumValueAlias, enumAlias.FQDN()),
+				fmt.Sprintf(`%q value does not exist in %q enum`, enumValueAlias, alias.FQDN()),
 				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithValue(enumValueName).Location(),
 			),
 		)
 		return nil
 	}
 	return value
+}
+
+func (r *Resolver) resolveEnumValueRuleByAutoAlias(ctx *context, enumValueName string, alias *Enum) *EnumValue {
+	enumValue := alias.Value(enumValueName)
+	if enumValue == nil {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					`specified "alias" in grpc.federation.enum option, but %q value does not exist in %q enum`,
+					enumValueName, alias.FQDN(),
+				),
+				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithValue(enumValueName).Location(),
+			),
+		)
+		return nil
+	}
+	return enumValue
 }
 
 func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDescriptorProto, oneofs []*Oneof, builder *source.MessageBuilder) []*Field {

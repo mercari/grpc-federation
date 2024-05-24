@@ -42,7 +42,9 @@ message EnumRule {
   // The alias is the FQDN ( <package-name>.<enum-name> ) to the enum.
   // If this definition exists, type conversion is automatically performed before the enum value assignment operation.
   // If a enum with this option has a value that is not present in the enum specified by alias, and the alias option is not specified for that value, an error is occurred.
-  optional string alias = 1;
+  // You can specify multiple aliases. In that case, only values common to all aliases will be considered.
+  // Specifying a value that is not included in either alias will result in an error.
+  repeated string alias = 1;
 }
 
 message EnumValueRule {
@@ -92,7 +94,9 @@ message MessageRule {
   // The alias is the FQDN ( <package-name>.<message-name> ) to the message.
   // If this definition exists, type conversion is automatically performed before the field assignment operation.
   // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
-  optional string alias = 3;
+  // You can specify multiple aliases. In that case, only fields common to all aliases will be considered.
+  // Specifying a field that is not included in either alias will result in an error.
+  repeated string alias = 3;
 }
 
 // VariableDefinition represents variable definition.

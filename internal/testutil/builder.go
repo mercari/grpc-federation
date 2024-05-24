@@ -381,14 +381,14 @@ func (b *MessageBuilder) AddFieldWithAutoBind(name string, typ *resolver.Type, f
 	return b
 }
 
-func (b *MessageBuilder) AddFieldWithAlias(name string, typ *resolver.Type, field *resolver.Field) *MessageBuilder {
+func (b *MessageBuilder) AddFieldWithAlias(name string, typ *resolver.Type, fields ...*resolver.Field) *MessageBuilder {
 	b.msg.Fields = append(
 		b.msg.Fields,
 		&resolver.Field{
 			Name: name,
 			Type: typ,
 			Rule: &resolver.FieldRule{
-				Alias: field,
+				Aliases: fields,
 			},
 		},
 	)
@@ -464,7 +464,6 @@ func (b *EnumBuilder) AddValueWithDefault(value string) *EnumBuilder {
 		Value: value,
 		Rule: &resolver.EnumValueRule{
 			Default: true,
-			Aliases: []*resolver.EnumValue{},
 		},
 		Enum: b.enum,
 	})
@@ -475,16 +474,20 @@ func (b *EnumBuilder) AddValueWithAlias(value string, alias ...*resolver.EnumVal
 	b.enum.Values = append(b.enum.Values, &resolver.EnumValue{
 		Value: value,
 		Rule: &resolver.EnumValueRule{
-			Aliases: alias,
+			Aliases: []*resolver.EnumValueAlias{
+				{
+					Aliases: alias,
+				},
+			},
 		},
 		Enum: b.enum,
 	})
 	return b
 }
 
-func (b *EnumBuilder) WithAlias(alias *resolver.Enum) *EnumBuilder {
+func (b *EnumBuilder) WithAlias(aliases ...*resolver.Enum) *EnumBuilder {
 	b.enum.Rule = &resolver.EnumRule{
-		Alias: alias,
+		Aliases: aliases,
 	}
 	return b
 }
@@ -553,8 +556,8 @@ func (b *MessageRuleBuilder) SetCustomResolver(v bool) *MessageRuleBuilder {
 	return b
 }
 
-func (b *MessageRuleBuilder) SetAlias(alias *resolver.Message) *MessageRuleBuilder {
-	b.rule.Alias = alias
+func (b *MessageRuleBuilder) SetAlias(aliases ...*resolver.Message) *MessageRuleBuilder {
+	b.rule.Aliases = aliases
 	return b
 }
 
@@ -1383,8 +1386,8 @@ func (b *FieldRuleBuilder) SetMessageCustomResolver(v bool) *FieldRuleBuilder {
 	return b
 }
 
-func (b *FieldRuleBuilder) SetAlias(v *resolver.Field) *FieldRuleBuilder {
-	b.rule.Alias = v
+func (b *FieldRuleBuilder) SetAlias(v ...*resolver.Field) *FieldRuleBuilder {
+	b.rule.Aliases = v
 	return b
 }
 

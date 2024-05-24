@@ -140,7 +140,7 @@ message Message {
 message MessageRule {
   string message_argument_id = 1;
   bool custom_resolver = 2;
-  string alias_id = 3;
+  repeated string alias_ids = 3;
   VariableDefinitionSet def_set = 4;
 }
 
@@ -173,7 +173,7 @@ message FieldRule {
   Value value = 1;
   bool custom_resolver = 2;
   bool message_custom_resolver = 3;
-  string alias_id = 4;
+  repeated string alias_ids = 4;
   AutoBindField auto_bind_field = 5;
   FieldOneofRule oneof_rule = 6;
 }
@@ -573,11 +573,16 @@ message EnumValue {
 }
 
 message EnumRule {
-  string alias_id = 1;
+  repeated string alias_ids = 1;
 }
 
 message EnumValueRule {
   bool default = 1;
+  repeated EnumValueAlias aliases = 2;
+}
+
+message EnumValueAlias {
+  string enum_alias_id = 1;
   repeated string alias_ids = 2;
 }
 

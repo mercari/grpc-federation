@@ -101,7 +101,7 @@ type Enum struct {
 }
 
 type EnumRule struct {
-	Alias *Enum
+	Aliases []*Enum
 }
 
 type EnumValue struct {
@@ -112,13 +112,18 @@ type EnumValue struct {
 
 type EnumValueRule struct {
 	Default bool
-	Aliases []*EnumValue
+	Aliases []*EnumValueAlias
+}
+
+type EnumValueAlias struct {
+	EnumAlias *Enum
+	Aliases   []*EnumValue
 }
 
 type MessageRule struct {
 	MessageArgument *Message
 	CustomResolver  bool
-	Alias           *Message
+	Aliases         []*Message
 	DefSet          *VariableDefinitionSet
 }
 
@@ -302,8 +307,8 @@ type FieldRule struct {
 	CustomResolver bool
 	// MessageCustomResolver whether `custom_resolver = true` is set in grpc.federation.message option.
 	MessageCustomResolver bool
-	// Alias valid if `alias` is specified in grpc.federation.field option.
-	Alias *Field
+	// Aliases valid if `alias` is specified in grpc.federation.field option.
+	Aliases []*Field
 	// AutoBindField valid if `autobind = true` is specified in resolver.response of grpc.federation.message option.
 	AutoBindField *AutoBindField
 	// Oneof represents oneof for field option.
