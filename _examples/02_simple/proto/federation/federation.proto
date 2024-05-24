@@ -36,6 +36,7 @@ message GetPostResponse {
     def { name: "a" message { name: "A" } }
     def { name: "sorted_values" by: "[4, 1, 3, 2].sortAsc(v, v)" }
     def { name: "sorted_items" by: "[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)" }
+    def { name: "map_value" by : "{0: 0, 5: 500, 10: 1000}" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).string = "hello"];
@@ -53,6 +54,7 @@ message GetPostResponse {
   A a = 14 [(grpc.federation.field).by = "a"];
   repeated int32 sorted_values = 15 [(grpc.federation.field).by = "sorted_values"];
   repeated Item sorted_items = 16 [(grpc.federation.field).by = "sorted_items"];
+  map<int32, int32> map_value = 17 [(grpc.federation.field).by = "map_value"];
 }
 
 message A {

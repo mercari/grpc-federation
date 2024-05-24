@@ -51,6 +51,9 @@ func (t *Type) FQDN() string {
 		return repeated + t.OneofField.FQDN()
 	}
 	if t.Message != nil {
+		if t.Message.IsMapEntry {
+			return "map<" + t.Message.Fields[0].Type.FQDN() + ", " + t.Message.Fields[1].Type.FQDN() + ">"
+		}
 		return repeated + t.Message.FQDN()
 	}
 	if t.Enum != nil {

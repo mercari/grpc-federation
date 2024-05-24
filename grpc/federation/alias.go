@@ -43,6 +43,7 @@ var (
 	CELBytesType          = types.BytesType
 	CELObjectType         = cel.ObjectType
 	CELListType           = cel.ListType
+	CELMapType            = cel.MapType
 	NewCELListType        = types.NewListType
 	NewCELObjectType      = types.NewObjectType
 )

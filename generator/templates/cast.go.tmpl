@@ -108,3 +108,27 @@ switch from {
 	{{- end }}
 }
 {{- end }}
+
+{{- define "castMap" }}
+ret := {{ .ResponseType }}{}
+for k, v := range from {
+	{{- if .KeyRequiredCast }}
+	key, err := s.{{ .KeyCastName }}(k)
+	if err != nil {
+		return nil, err
+	}
+	{{- else }}
+	key := k
+	{{- end }}
+	{{- if .ValueRequiredCast }}
+	val, err := s.{{ .ValueCastName }}(v)
+	if err != nil {
+	return nil, err
+	}
+	{{- else }}
+	val := v
+	{{- end }}
+	ret[key] = val
+}
+return ret, nil
+{{- end }}

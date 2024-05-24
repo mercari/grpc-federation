@@ -844,6 +844,9 @@ func (f *File) toTypeText(t *resolver.Type) string {
 		f.pkgMap[t.Enum.GoPackage()] = struct{}{}
 		typ = f.enumTypeToText(t.Enum)
 	case types.Message:
+		if t.Message.IsMapEntry {
+			return fmt.Sprintf("map[%s]%s", f.toTypeText(t.Message.Fields[0].Type), f.toTypeText(t.Message.Fields[1].Type))
+		}
 		typ = f.messageTypeToText(t.Message)
 	default:
 		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind.ToString())
@@ -1627,6 +1630,11 @@ func (f *CastField) IsEnum() bool {
 	return f.fromType.Kind == types.Enum && f.toType.Kind == types.Enum
 }
 
+func (f *CastField) IsMap() bool {
+	return f.fromType.Kind == types.Message && f.fromType.Message.IsMapEntry &&
+		f.toType.Kind == types.Message && f.toType.Message.IsMapEntry
+}
+
 var (
 	castValidationNumberMap = map[string]bool{
 		types.Int64.ToString() + types.Int32.ToString():   true,
@@ -1872,6 +1880,28 @@ func (f *CastField) ToOneof() *CastOneof {
 		FieldName:    util.ToPublicGoVariable(toField.Name),
 		RequiredCast: requiredCast,
 		CastName:     castFuncName(fromType, toType),
+	}
+}
+
+type CastMap struct {
+	ResponseType      string
+	KeyRequiredCast   bool
+	KeyCastName       string
+	ValueRequiredCast bool
+	ValueCastName     string
+}
+
+func (f *CastField) ToMap() *CastMap {
+	fromKeyType := f.fromType.Message.Fields[0].Type
+	toKeyType := f.toType.Message.Fields[0].Type
+	fromValueType := f.fromType.Message.Fields[1].Type
+	toValueType := f.toType.Message.Fields[1].Type
+	return &CastMap{
+		ResponseType:      f.ResponseType(),
+		KeyRequiredCast:   requiredCast(fromKeyType, toKeyType),
+		KeyCastName:       castFuncName(fromKeyType, toKeyType),
+		ValueRequiredCast: requiredCast(fromValueType, toValueType),
+		ValueCastName:     castFuncName(fromValueType, toValueType),
 	}
 }
 
@@ -2744,6 +2774,9 @@ func toCELNativeType(t *resolver.Type) string {
 	case types.Bytes:
 		return "grpcfed.CELBytesType"
 	case types.Message:
+		if t.Message.IsMapEntry {
+			return fmt.Sprintf("grpcfed.CELMapType(%s, %s)", toCELNativeType(t.Message.Field("key").Type), toCELNativeType(t.Message.Field("value").Type))
+		}
 		return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.Message.FQDN())
 	default:
 		log.Fatalf("grpc-federation: specified unsupported type value %s", t.Kind.ToString())
@@ -3169,7 +3202,11 @@ func castName(typ *resolver.Type) string {
 	case typ.OneofField != nil:
 		ret += fullOneofName(typ.OneofField)
 	case typ.Kind == types.Message:
-		ret += fullMessageName(typ.Message)
+		if typ.Message.IsMapEntry {
+			ret = "map_" + castName(typ.Message.Fields[0].Type) + "_" + castName(typ.Message.Fields[1].Type)
+		} else {
+			ret += fullMessageName(typ.Message)
+		}
 	case typ.Kind == types.Enum:
 		ret += fullEnumName(typ.Enum)
 	default:

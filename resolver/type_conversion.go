@@ -31,7 +31,7 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 		toKey := toMap.Field("key")
 		fromValue := fromMap.Field("value")
 		toValue := toMap.Field("value")
-		var decls []*TypeConversionDecl
+		decls := []*TypeConversionDecl{decl}
 		if fromKey != nil && toKey != nil {
 			decls = append(decls, typeConversionDecls(fromKey.Type, toKey.Type, convertedFQDNMap)...)
 		}

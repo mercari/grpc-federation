@@ -524,8 +524,10 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) ({{ .ResponseType }}, error) {
 	{{- if .IsSlice }}
 	{{- template "castRepeated" .ToSlice }}
-		{{- else if .IsOneof }}
-		{{- template "castOneof" .ToOneof }}
+	{{- else if .IsMap }}
+	{{- template "castMap" .ToMap }}
+	{{- else if .IsOneof }}
+	{{- template "castOneof" .ToOneof }}
 	{{- else if .IsStruct }}
 	{{- template "castMessage" .ToStruct }}
 	{{- else if .IsEnumToNumber }}
