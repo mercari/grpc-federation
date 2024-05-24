@@ -2061,9 +2061,13 @@ func (r *Resolver) resolveType(ctx *context, typeName string, kind types.Kind, l
 		name := r.trimPackage(pkg, typeName)
 		enum = r.resolveEnum(ctx, pkg, name, source.NewEnumBuilder(ctx.fileName(), "", name))
 	}
+	repeated := label == descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+	if msg != nil && msg.IsMapEntry {
+		repeated = false
+	}
 	return &Type{
 		Kind:     kind,
-		Repeated: label == descriptorpb.FieldDescriptorProto_LABEL_REPEATED,
+		Repeated: repeated,
 		Message:  msg,
 		Enum:     enum,
 	}, nil

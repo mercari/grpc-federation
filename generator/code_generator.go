@@ -3181,6 +3181,9 @@ func requiredCast(from, to *resolver.Type) bool {
 		return false
 	}
 	if from.Kind == types.Message {
+		if from.Message.IsMapEntry && to.Message.IsMapEntry {
+			return requiredCast(from.Message.Fields[0].Type, to.Message.Fields[0].Type) || requiredCast(from.Message.Fields[1].Type, to.Message.Fields[1].Type)
+		}
 		return from.Message != to.Message
 	}
 	if from.Kind == types.Enum {

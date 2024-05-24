@@ -400,12 +400,17 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	headValue := from.GetHead()
 	bodyValue := from.GetBody()
 	dupBodyValue := from.GetBody()
+	countsValue, err := s.cast_map_int32_int32__to__map_int64_int64(from.GetCounts())
+	if err != nil {
+		return nil, err
+	}
 
 	return &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
 		Body:     bodyValue,
 		DupBody:  dupBodyValue,
+		Counts:   countsValue,
 	}, nil
 }
 
@@ -444,6 +449,28 @@ func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(
 		Title:   titleValue,
 		Content: contentValue,
 	}, nil
+}
+
+// cast_int32__to__int64 cast from "int32" to "int64".
+func (s *FederationService) cast_int32__to__int64(from int32) (int64, error) {
+	return int64(from), nil
+}
+
+// cast_map_int32_int32__to__map_int64_int64 cast from "map<int32, int32>" to "map<int64, int64>".
+func (s *FederationService) cast_map_int32_int32__to__map_int64_int64(from map[int32]int32) (map[int64]int64, error) {
+	ret := map[int64]int64{}
+	for k, v := range from {
+		key, err := s.cast_int32__to__int64(k)
+		if err != nil {
+			return nil, err
+		}
+		val, err := s.cast_int32__to__int64(v)
+		if err != nil {
+			return nil, err
+		}
+		ret[key] = val
+	}
+	return ret, nil
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
@@ -492,6 +519,7 @@ func (s *FederationService) logvalue_Org_Federation_PostContent(v *PostContent) 
 		slog.String("head", v.GetHead()),
 		slog.String("body", v.GetBody()),
 		slog.String("dup_body", v.GetDupBody()),
+		slog.Any("counts", s.logvalue_Org_Federation_PostContent_CountsEntry(v.GetCounts())),
 	)
 }
 
@@ -503,6 +531,17 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostC
 		return slog.StringValue("CATEGORY_B")
 	}
 	return slog.StringValue("")
+}
+
+func (s *FederationService) logvalue_Org_Federation_PostContent_CountsEntry(v map[int64]int64) slog.Value {
+	attrs := make([]slog.Attr, 0, len(v))
+	for key, value := range v {
+		attrs = append(attrs, slog.Attr{
+			Key:   grpcfed.ToLogAttrKey(key),
+			Value: slog.AnyValue(value),
+		})
+	}
+	return slog.GroupValue(attrs...)
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostData(v *PostData) slog.Value {

@@ -150,7 +150,7 @@ func TestSimpleAggregation(t *testing.T) {
 				AddFieldWithAutoBind("desc", resolver.StringRepeatedType, ref.Field(t, "org.user", "User", "desc")).
 				AddFieldWithAutoBind("main_item", ref.Type(t, "org.federation", "Item"), ref.Field(t, "org.user", "User", "main_item")).
 				AddFieldWithAutoBind("items", ref.RepeatedType(t, "org.federation", "Item"), ref.Field(t, "org.user", "User", "items")).
-				AddFieldWithTypeNameAndAutoBind(t, "profile", "ProfileEntry", true, ref.Field(t, "org.user", "User", "profile")).
+				AddFieldWithTypeNameAndAutoBind(t, "profile", "ProfileEntry", false, ref.Field(t, "org.user", "User", "profile")).
 				AddFieldWithTypeNameAndAutoBind(t, "attr_a", "AttrA", false, ref.Field(t, "org.user", "User", "attr_a")).
 				AddFieldWithTypeNameAndAutoBind(t, "b", "AttrB", false, ref.Field(t, "org.user", "User", "b")).
 				AddOneof(testutil.NewOneofBuilder("attr").AddFieldNames("attr_a", "b").Build(t)).
@@ -1506,6 +1506,13 @@ func TestAlias(t *testing.T) {
 						AddValueWithAlias("CATEGORY_B", ref.EnumValue(t, "org.post", "PostContent.Category", "CATEGORY_B")).
 						Build(t),
 				).
+				AddMessage(
+					testutil.NewMessageBuilder("CountsEntry").
+						SetIsMapEntry(true).
+						AddField("key", resolver.Int64Type).
+						AddField("value", resolver.Int64Type).
+						Build(t),
+				).
 				AddFieldWithTypeNameAndAlias(t, "category", "Category", false, ref.Field(t, "org.post", "PostContent", "category")).
 				AddFieldWithAlias("head", resolver.StringType, ref.Field(t, "org.post", "PostContent", "head")).
 				AddFieldWithAlias("body", resolver.StringType, ref.Field(t, "org.post", "PostContent", "body")).
@@ -1515,6 +1522,7 @@ func TestAlias(t *testing.T) {
 						SetAlias(ref.Message(t, "org.post", "PostContent")).
 						Build(t),
 				).
+				AddFieldWithTypeNameAndAlias(t, "counts", "CountsEntry", false, ref.Field(t, "org.post", "PostContent", "counts")).
 				Build(t),
 		).
 		AddMessage(
@@ -3737,7 +3745,7 @@ func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddField("desc", resolver.StringRepeatedType).
 				AddField("main_item", ref.Type(t, "org.user", "Item")).
 				AddField("items", ref.RepeatedType(t, "org.user", "Item")).
-				AddFieldWithTypeName(t, "profile", "ProfileEntry", true).
+				AddFieldWithTypeName(t, "profile", "ProfileEntry", false).
 				AddFieldWithTypeName(t, "attr_a", "AttrA", false).
 				AddFieldWithTypeName(t, "b", "AttrB", false).
 				AddOneof(testutil.NewOneofBuilder("attr").AddFieldNames("attr_a", "b").Build(t)).
@@ -3890,6 +3898,13 @@ func getNestedPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 		).
 		AddMessage(
 			testutil.NewMessageBuilder("PostContent").
+				AddMessage(
+					testutil.NewMessageBuilder("CountsEntry").
+						SetIsMapEntry(true).
+						AddField("key", resolver.Int32Type).
+						AddField("value", resolver.Int32Type).
+						Build(t),
+				).
 				AddEnum(
 					testutil.NewEnumBuilder("Category").
 						AddValue("CATEGORY_A").
@@ -3899,6 +3914,7 @@ func getNestedPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddFieldWithTypeName(t, "category", "Category", false).
 				AddField("head", resolver.StringType).
 				AddField("body", resolver.StringType).
+				AddFieldWithTypeName(t, "counts", "CountsEntry", false).
 				Build(t),
 		).
 		AddMessage(
