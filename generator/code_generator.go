@@ -1900,7 +1900,7 @@ func (m *Message) CustomResolverArguments() []*Argument {
 	return args
 }
 
-func (m *Message) ReturnFields() []*ReturnField {
+func (m *Message) ReturnFields() ([]*ReturnField, error) {
 	var returnFields []*ReturnField
 	for _, field := range m.Fields {
 		if field.Oneof != nil {
@@ -1921,16 +1921,24 @@ func (m *Message) ReturnFields() []*ReturnField {
 				returnFields = append(returnFields, m.celValueToReturnField(field, value.CEL))
 			}
 		case rule.AutoBindField != nil:
-			returnFields = append(returnFields, m.autoBindFieldToReturnField(field, rule.AutoBindField))
+			returnField, err := m.autoBindFieldToReturnField(field, rule.AutoBindField)
+			if err != nil {
+				return nil, err
+			}
+			returnFields = append(returnFields, returnField)
 		}
 	}
 	for _, oneof := range m.Oneofs {
-		returnFields = append(returnFields, m.oneofValueToReturnField(oneof))
+		returnField, err := m.oneofValueToReturnField(oneof)
+		if err != nil {
+			return nil, err
+		}
+		returnFields = append(returnFields, returnField)
 	}
-	return returnFields
+	return returnFields, nil
 }
 
-func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindField *resolver.AutoBindField) *ReturnField {
+func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindField *resolver.AutoBindField) (*ReturnField, error) {
 	var name string
 	if autoBindField.VariableDefinition != nil {
 		name = autoBindField.VariableDefinition.Name
@@ -1951,12 +1959,10 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 			}
 		}
 		if fromType == nil {
-			panic(
-				fmt.Sprintf(
-					"failed to autobind: expected message type is %q but it is not found from %q field",
-					autoBindField.Field.Message.FQDN(),
-					field.FQDN(),
-				),
+			return nil, fmt.Errorf(
+				"failed to autobind: expected message type is %q but it is not found from %q field",
+				autoBindField.Field.Message.FQDN(),
+				field.FQDN(),
 			)
 		}
 		toType := field.Type
@@ -1968,7 +1974,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		Value:        value,
 		CastValue:    castValue,
 		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
-	}
+	}, nil
 }
 
 func (m *Message) autoBindSourceType(autoBindField *resolver.AutoBindField, candidateType *resolver.Type) *resolver.Type {
@@ -2065,7 +2071,7 @@ func (m *Message) customResolverToReturnField(field *resolver.Field) *ReturnFiel
 	}
 }
 
-func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
+func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*ReturnField, error) {
 	var (
 		caseFields   []*OneofField
 		defaultField *OneofField
@@ -2077,7 +2083,10 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 		rule := field.Rule
 		switch {
 		case rule.AutoBindField != nil:
-			returnField := m.autoBindFieldToReturnField(field, rule.AutoBindField)
+			returnField, err := m.autoBindFieldToReturnField(field, rule.AutoBindField)
+			if err != nil {
+				return nil, err
+			}
 			caseFields = append(caseFields, &OneofField{
 				Condition: fmt.Sprintf("%s != nil", returnField.Value),
 				Name:      returnField.Name,
@@ -2155,7 +2164,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) *ReturnField {
 		IsOneofField:      true,
 		OneofCaseFields:   caseFields,
 		OneofDefaultField: defaultField,
-	}
+	}, nil
 }
 
 type VariableDefinitionGroup struct {
