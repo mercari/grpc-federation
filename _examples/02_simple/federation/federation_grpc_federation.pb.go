@@ -51,7 +51,7 @@ type Federation_GetPostResponseArgument struct {
 	FixedRand    *grpcfedcel.Rand
 	Id           string
 	Loc          *grpcfedcel.Location
-	MapValue     map[int64]int64
+	MapValue     map[int64]string
 	Post         *Post
 	RandSource   *grpcfedcel.Source
 	SortedItems  []*user.Item
@@ -520,7 +520,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			date          *timestamppb.Timestamp
 			fixed_rand    *grpcfedcel.Rand
 			loc           *grpcfedcel.Location
-			map_value     map[int64]int64
+			map_value     map[int64]string
 			post          *Post
 			rand_source   *grpcfedcel.Source
 			sorted_items  []*user.Item
@@ -612,17 +612,17 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		/*
 		   def {
 		     name: "map_value"
-		     by: "{0: 0, 5: 500, 10: 1000}"
+		     by: "{1: 'a', 2: 'b', 3: 'c'}"
 		   }
 		*/
-		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[map[int64]int64, *localValueType]{
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[map[int64]string, *localValueType]{
 			Name: "map_value",
-			Type: grpcfed.CELMapType(grpcfed.CELIntType, grpcfed.CELIntType),
-			Setter: func(value *localValueType, v map[int64]int64) error {
+			Type: grpcfed.CELMapType(grpcfed.CELIntType, grpcfed.CELStringType),
+			Setter: func(value *localValueType, v map[int64]string) error {
 				value.vars.map_value = v
 				return nil
 			},
-			By:                  "{0: 0, 5: 500, 10: 1000}",
+			By:                  "{1: 'a', 2: 'b', 3: 'c'}",
 			ByUseContextLibrary: false,
 			ByCacheIndex:        6,
 		}); err != nil {
@@ -1098,13 +1098,13 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		return nil, err
 	}
 	// (grpc.federation.field).by = "map_value"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[map[int64]int64]{
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[map[int64]string]{
 		Value:             value,
 		Expr:              "map_value",
 		UseContextLibrary: false,
 		CacheIndex:        30,
-		Setter: func(v map[int64]int64) error {
-			mapValueValue, err := s.cast_map_int64_int64__to__map_int32_int32(v)
+		Setter: func(v map[int64]string) error {
+			mapValueValue, err := s.cast_map_int64_string__to__map_int32_string(v)
 			if err != nil {
 				return err
 			}
@@ -1655,18 +1655,15 @@ func (s *FederationService) cast_int64__to__int32(from int64) (int32, error) {
 	return grpcfed.Int64ToInt32(from)
 }
 
-// cast_map_int64_int64__to__map_int32_int32 cast from "map<int64, int64>" to "map<int32, int32>".
-func (s *FederationService) cast_map_int64_int64__to__map_int32_int32(from map[int64]int64) (map[int32]int32, error) {
-	ret := map[int32]int32{}
+// cast_map_int64_string__to__map_int32_string cast from "map<int64, string>" to "map<int32, string>".
+func (s *FederationService) cast_map_int64_string__to__map_int32_string(from map[int64]string) (map[int32]string, error) {
+	ret := map[int32]string{}
 	for k, v := range from {
 		key, err := s.cast_int64__to__int32(k)
 		if err != nil {
 			return nil, err
 		}
-		val, err := s.cast_int64__to__int32(v)
-		if err != nil {
-			return nil, err
-		}
+		val := v
 		ret[key] = val
 	}
 	return ret, nil
@@ -1783,7 +1780,7 @@ func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *Feder
 	)
 }
 
-func (s *FederationService) logvalue_Federation_GetPostResponse_MapValueEntry(v map[int32]int32) slog.Value {
+func (s *FederationService) logvalue_Federation_GetPostResponse_MapValueEntry(v map[int32]string) slog.Value {
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{

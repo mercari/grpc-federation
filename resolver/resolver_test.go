@@ -363,6 +363,13 @@ func TestSimpleAggregation(t *testing.T) {
 		).
 		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponse").
+				AddMessage(
+					testutil.NewMessageBuilder("MapValueEntry").
+						SetIsMapEntry(true).
+						AddField("key", resolver.Int32Type).
+						AddField("value", resolver.StringType).
+						Build(t),
+				).
 				AddFieldWithRule(
 					"post",
 					ref.Type(t, "org.federation", "Post"),
@@ -390,6 +397,21 @@ func TestSimpleAggregation(t *testing.T) {
 						resolver.NewByValue("org.federation.Item.ItemType.value('ITEM_TYPE_1')", resolver.Int32Type),
 					).Build(t),
 				).
+				AddFieldWithTypeNameAndRule(
+					t,
+					"map_value",
+					"MapValueEntry",
+					false,
+					testutil.NewFieldRuleBuilder(
+						resolver.NewByValue("map_value')", resolver.NewMessageType(&resolver.Message{
+							IsMapEntry: true,
+							Fields: []*resolver.Field{
+								{Name: "key", Type: resolver.Int32Type},
+								{Name: "value", Type: resolver.StringType},
+							},
+						}, false)),
+					).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
@@ -415,12 +437,30 @@ func TestSimpleAggregation(t *testing.T) {
 								SetBy(testutil.NewCELValueBuilder("grpc.federation.uuid.newRandom()", resolver.NewCELStandardLibraryMessageType("uuid", "UUID")).Build(t)).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("map_value").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder(
+									"{1:'a', 2:'b', 3:'c'}",
+									resolver.NewMessageType(&resolver.Message{
+										IsMapEntry: true,
+										Fields: []*resolver.Field{
+											{Name: "key", Type: resolver.Int64Type},
+											{Name: "value", Type: resolver.StringType},
+										},
+									}, false)).
+									Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("map_value")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("uuid")).
 						Build(t),
@@ -1509,8 +1549,15 @@ func TestAlias(t *testing.T) {
 				AddMessage(
 					testutil.NewMessageBuilder("CountsEntry").
 						SetIsMapEntry(true).
-						AddField("key", resolver.Int64Type).
-						AddField("value", resolver.Int64Type).
+						AddField("key", resolver.Int32Type).
+						AddField("value", resolver.Int32Type).
+						Build(t),
+				).
+				AddMessage(
+					testutil.NewMessageBuilder("CastCountsEntry").
+						SetIsMapEntry(true).
+						AddField("key", resolver.Int32Type).
+						AddField("value", resolver.Int32Type).
 						Build(t),
 				).
 				AddFieldWithTypeNameAndAlias(t, "category", "Category", false, ref.Field(t, "org.post", "PostContent", "category")).
@@ -1523,6 +1570,7 @@ func TestAlias(t *testing.T) {
 						Build(t),
 				).
 				AddFieldWithTypeNameAndAlias(t, "counts", "CountsEntry", false, ref.Field(t, "org.post", "PostContent", "counts")).
+				AddFieldWithTypeNameAndAlias(t, "cast_counts", "CastCountsEntry", false, ref.Field(t, "org.post", "PostContent", "cast_counts")).
 				Build(t),
 		).
 		AddMessage(
@@ -3905,6 +3953,13 @@ func getNestedPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 						AddField("value", resolver.Int32Type).
 						Build(t),
 				).
+				AddMessage(
+					testutil.NewMessageBuilder("CastCountsEntry").
+						SetIsMapEntry(true).
+						AddField("key", resolver.Int64Type).
+						AddField("value", resolver.Int64Type).
+						Build(t),
+				).
 				AddEnum(
 					testutil.NewEnumBuilder("Category").
 						AddValue("CATEGORY_A").
@@ -3915,6 +3970,7 @@ func getNestedPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddField("head", resolver.StringType).
 				AddField("body", resolver.StringType).
 				AddFieldWithTypeName(t, "counts", "CountsEntry", false).
+				AddFieldWithTypeName(t, "cast_counts", "CastCountsEntry", false).
 				Build(t),
 		).
 		AddMessage(

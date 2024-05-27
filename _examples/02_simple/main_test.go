@@ -278,10 +278,10 @@ func TestFederation(t *testing.T) {
 				},
 			},
 		},
-		MapValue: map[int32]int32{
-			0:  0,
-			5:  500,
-			10: 1000,
+		MapValue: map[int32]string{
+			1: "a",
+			2: "b",
+			3: "c",
 		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},

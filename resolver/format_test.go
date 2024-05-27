@@ -34,6 +34,10 @@ func TestProtoFormat(t *testing.T) {
       name: "uuid"
       by: "grpc.federation.uuid.newRandom()"
     }
+    def {
+      name: "map_value"
+      by: "{1:'a', 2:'b', 3:'c'}"
+    }
   }`,
 				"Post": `
   option (grpc.federation.message) = {

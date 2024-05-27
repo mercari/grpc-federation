@@ -400,17 +400,19 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	headValue := from.GetHead()
 	bodyValue := from.GetBody()
 	dupBodyValue := from.GetBody()
-	countsValue, err := s.cast_map_int32_int32__to__map_int64_int64(from.GetCounts())
+	countsValue := from.GetCounts()
+	castCountsValue, err := s.cast_map_int64_int64__to__map_int32_int32(from.GetCastCounts())
 	if err != nil {
 		return nil, err
 	}
 
 	return &PostContent{
-		Category: categoryValue,
-		Head:     headValue,
-		Body:     bodyValue,
-		DupBody:  dupBodyValue,
-		Counts:   countsValue,
+		Category:   categoryValue,
+		Head:       headValue,
+		Body:       bodyValue,
+		DupBody:    dupBodyValue,
+		Counts:     countsValue,
+		CastCounts: castCountsValue,
 	}, nil
 }
 
@@ -451,20 +453,20 @@ func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(
 	}, nil
 }
 
-// cast_int32__to__int64 cast from "int32" to "int64".
-func (s *FederationService) cast_int32__to__int64(from int32) (int64, error) {
-	return int64(from), nil
+// cast_int64__to__int32 cast from "int64" to "int32".
+func (s *FederationService) cast_int64__to__int32(from int64) (int32, error) {
+	return grpcfed.Int64ToInt32(from)
 }
 
-// cast_map_int32_int32__to__map_int64_int64 cast from "map<int32, int32>" to "map<int64, int64>".
-func (s *FederationService) cast_map_int32_int32__to__map_int64_int64(from map[int32]int32) (map[int64]int64, error) {
-	ret := map[int64]int64{}
+// cast_map_int64_int64__to__map_int32_int32 cast from "map<int64, int64>" to "map<int32, int32>".
+func (s *FederationService) cast_map_int64_int64__to__map_int32_int32(from map[int64]int64) (map[int32]int32, error) {
+	ret := map[int32]int32{}
 	for k, v := range from {
-		key, err := s.cast_int32__to__int64(k)
+		key, err := s.cast_int64__to__int32(k)
 		if err != nil {
 			return nil, err
 		}
-		val, err := s.cast_int32__to__int64(v)
+		val, err := s.cast_int64__to__int32(v)
 		if err != nil {
 			return nil, err
 		}
@@ -520,7 +522,19 @@ func (s *FederationService) logvalue_Org_Federation_PostContent(v *PostContent) 
 		slog.String("body", v.GetBody()),
 		slog.String("dup_body", v.GetDupBody()),
 		slog.Any("counts", s.logvalue_Org_Federation_PostContent_CountsEntry(v.GetCounts())),
+		slog.Any("cast_counts", s.logvalue_Org_Federation_PostContent_CastCountsEntry(v.GetCastCounts())),
 	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_PostContent_CastCountsEntry(v map[int32]int32) slog.Value {
+	attrs := make([]slog.Attr, 0, len(v))
+	for key, value := range v {
+		attrs = append(attrs, slog.Attr{
+			Key:   grpcfed.ToLogAttrKey(key),
+			Value: slog.AnyValue(value),
+		})
+	}
+	return slog.GroupValue(attrs...)
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostContent_Category) slog.Value {
@@ -533,7 +547,7 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostC
 	return slog.StringValue("")
 }
 
-func (s *FederationService) logvalue_Org_Federation_PostContent_CountsEntry(v map[int64]int64) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_PostContent_CountsEntry(v map[int32]int32) slog.Value {
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{

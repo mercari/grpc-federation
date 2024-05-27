@@ -174,23 +174,23 @@ type GetPostResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Post              *Post           `protobuf:"bytes,1,opt,name=post,proto3" json:"post,omitempty"`
-	Str               string          `protobuf:"bytes,2,opt,name=str,proto3" json:"str,omitempty"`
-	Uuid              string          `protobuf:"bytes,3,opt,name=uuid,proto3" json:"uuid,omitempty"`
-	Loc               string          `protobuf:"bytes,4,opt,name=loc,proto3" json:"loc,omitempty"`
-	Value1            string          `protobuf:"bytes,5,opt,name=value1,proto3" json:"value1,omitempty"`
-	ItemTypeName      string          `protobuf:"bytes,6,opt,name=item_type_name,json=itemTypeName,proto3" json:"item_type_name,omitempty"`
-	LocationTypeName  string          `protobuf:"bytes,7,opt,name=location_type_name,json=locationTypeName,proto3" json:"location_type_name,omitempty"`
-	UserItemTypeName  string          `protobuf:"bytes,8,opt,name=user_item_type_name,json=userItemTypeName,proto3" json:"user_item_type_name,omitempty"`
-	ItemTypeValueEnum Item_ItemType   `protobuf:"varint,9,opt,name=item_type_value_enum,json=itemTypeValueEnum,proto3,enum=federation.Item_ItemType" json:"item_type_value_enum,omitempty"`
-	ItemTypeValueInt  int32           `protobuf:"varint,10,opt,name=item_type_value_int,json=itemTypeValueInt,proto3" json:"item_type_value_int,omitempty"`
-	ItemTypeValueCast Item_ItemType   `protobuf:"varint,11,opt,name=item_type_value_cast,json=itemTypeValueCast,proto3,enum=federation.Item_ItemType" json:"item_type_value_cast,omitempty"`
-	LocationTypeValue int32           `protobuf:"varint,12,opt,name=location_type_value,json=locationTypeValue,proto3" json:"location_type_value,omitempty"`
-	UserItemTypeValue int32           `protobuf:"varint,13,opt,name=user_item_type_value,json=userItemTypeValue,proto3" json:"user_item_type_value,omitempty"`
-	A                 *A              `protobuf:"bytes,14,opt,name=a,proto3" json:"a,omitempty"`
-	SortedValues      []int32         `protobuf:"varint,15,rep,packed,name=sorted_values,json=sortedValues,proto3" json:"sorted_values,omitempty"`
-	SortedItems       []*Item         `protobuf:"bytes,16,rep,name=sorted_items,json=sortedItems,proto3" json:"sorted_items,omitempty"`
-	MapValue          map[int32]int32 `protobuf:"bytes,17,rep,name=map_value,json=mapValue,proto3" json:"map_value,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	Post              *Post            `protobuf:"bytes,1,opt,name=post,proto3" json:"post,omitempty"`
+	Str               string           `protobuf:"bytes,2,opt,name=str,proto3" json:"str,omitempty"`
+	Uuid              string           `protobuf:"bytes,3,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Loc               string           `protobuf:"bytes,4,opt,name=loc,proto3" json:"loc,omitempty"`
+	Value1            string           `protobuf:"bytes,5,opt,name=value1,proto3" json:"value1,omitempty"`
+	ItemTypeName      string           `protobuf:"bytes,6,opt,name=item_type_name,json=itemTypeName,proto3" json:"item_type_name,omitempty"`
+	LocationTypeName  string           `protobuf:"bytes,7,opt,name=location_type_name,json=locationTypeName,proto3" json:"location_type_name,omitempty"`
+	UserItemTypeName  string           `protobuf:"bytes,8,opt,name=user_item_type_name,json=userItemTypeName,proto3" json:"user_item_type_name,omitempty"`
+	ItemTypeValueEnum Item_ItemType    `protobuf:"varint,9,opt,name=item_type_value_enum,json=itemTypeValueEnum,proto3,enum=federation.Item_ItemType" json:"item_type_value_enum,omitempty"`
+	ItemTypeValueInt  int32            `protobuf:"varint,10,opt,name=item_type_value_int,json=itemTypeValueInt,proto3" json:"item_type_value_int,omitempty"`
+	ItemTypeValueCast Item_ItemType    `protobuf:"varint,11,opt,name=item_type_value_cast,json=itemTypeValueCast,proto3,enum=federation.Item_ItemType" json:"item_type_value_cast,omitempty"`
+	LocationTypeValue int32            `protobuf:"varint,12,opt,name=location_type_value,json=locationTypeValue,proto3" json:"location_type_value,omitempty"`
+	UserItemTypeValue int32            `protobuf:"varint,13,opt,name=user_item_type_value,json=userItemTypeValue,proto3" json:"user_item_type_value,omitempty"`
+	A                 *A               `protobuf:"bytes,14,opt,name=a,proto3" json:"a,omitempty"`
+	SortedValues      []int32          `protobuf:"varint,15,rep,packed,name=sorted_values,json=sortedValues,proto3" json:"sorted_values,omitempty"`
+	SortedItems       []*Item          `protobuf:"bytes,16,rep,name=sorted_items,json=sortedItems,proto3" json:"sorted_items,omitempty"`
+	MapValue          map[int32]string `protobuf:"bytes,17,rep,name=map_value,json=mapValue,proto3" json:"map_value,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *GetPostResponse) Reset() {
@@ -337,7 +337,7 @@ func (x *GetPostResponse) GetSortedItems() []*Item {
 	return nil
 }
 
-func (x *GetPostResponse) GetMapValue() map[int32]int32 {
+func (x *GetPostResponse) GetMapValue() map[int32]string {
 	if x != nil {
 		return x.MapValue
 	}
@@ -1134,7 +1134,7 @@ var file_federation_federation_proto_rawDesc = []byte{
 	0x65, 0x1a, 0x3b, 0x0a, 0x0d, 0x4d, 0x61, 0x70, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x45, 0x6e, 0x74,
 	0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52,
 	0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x05, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x3a, 0x91,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x3a, 0x91,
 	0x05, 0x9a, 0x4a, 0x8d, 0x05, 0x0a, 0x1a, 0x0a, 0x04, 0x70, 0x6f, 0x73, 0x74, 0x6a, 0x12, 0x0a,
 	0x04, 0x50, 0x6f, 0x73, 0x74, 0x12, 0x0a, 0x0a, 0x02, 0x69, 0x64, 0x12, 0x04, 0x24, 0x2e, 0x69,
 	0x64, 0x0a, 0x59, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x65, 0x5a, 0x51, 0x67, 0x72, 0x70, 0x63, 0x2e,
@@ -1174,9 +1174,9 @@ var file_federation_federation_proto_rawDesc = []byte{
 	0x7b, 0x61, 0x64, 0x64, 0x72, 0x31, 0x3a, 0x27, 0x62, 0x27, 0x7d, 0x7d, 0x5d, 0x2e, 0x73, 0x6f,
 	0x72, 0x74, 0x44, 0x65, 0x73, 0x63, 0x28, 0x76, 0x2c, 0x20, 0x76, 0x2e, 0x6c, 0x6f, 0x63, 0x61,
 	0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x61, 0x64, 0x64, 0x72, 0x31, 0x29, 0x0a, 0x25, 0x0a, 0x09, 0x6d,
-	0x61, 0x70, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x5a, 0x18, 0x7b, 0x30, 0x3a, 0x20, 0x30, 0x2c,
-	0x20, 0x35, 0x3a, 0x20, 0x35, 0x30, 0x30, 0x2c, 0x20, 0x31, 0x30, 0x3a, 0x20, 0x31, 0x30, 0x30,
-	0x30, 0x7d, 0x22, 0x86, 0x02, 0x0a, 0x01, 0x41, 0x12, 0x25, 0x0a, 0x01, 0x62, 0x18, 0x01, 0x20,
+	0x61, 0x70, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x5a, 0x18, 0x7b, 0x31, 0x3a, 0x20, 0x27, 0x61,
+	0x27, 0x2c, 0x20, 0x32, 0x3a, 0x20, 0x27, 0x62, 0x27, 0x2c, 0x20, 0x33, 0x3a, 0x20, 0x27, 0x63,
+	0x27, 0x7d, 0x22, 0x86, 0x02, 0x0a, 0x01, 0x41, 0x12, 0x25, 0x0a, 0x01, 0x62, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x66, 0x65, 0x64, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
 	0x2e, 0x41, 0x2e, 0x42, 0x42, 0x06, 0x9a, 0x4a, 0x03, 0x12, 0x01, 0x62, 0x52, 0x01, 0x62, 0x1a,
 	0xc8, 0x01, 0x0a, 0x01, 0x42, 0x12, 0x2d, 0x0a, 0x03, 0x66, 0x6f, 0x6f, 0x18, 0x01, 0x20, 0x01,
