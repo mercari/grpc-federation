@@ -21,6 +21,9 @@ func (m *Message) FQDN() string {
 }
 
 func (f *Field) FQDN() string {
+	if f.Message == nil {
+		return f.Name
+	}
 	return fmt.Sprintf("%s.%s", f.Message.FQDN(), f.Name)
 }
 
