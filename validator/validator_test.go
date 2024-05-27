@@ -450,29 +450,32 @@ testdata/invalid_nested_message_name.proto:47:49: unknown type null_type is requ
                                                      ^
 `},
 		{file: "invalid_message_argument.proto", expected: `
-testdata/invalid_message_argument.proto:49:19: ERROR: <input>:1:11: type 'string' does not support field selection
+testdata/invalid_message_argument.proto:51:19: ERROR: <input>:1:11: type 'string' does not support field selection
  | __ARG__.id.invalid
  | ..........^
-49:              { by: "$.id.invalid" },
+51:              { by: "$.id.invalid" },
                        ^
-testdata/invalid_message_argument.proto:50:23: inline value is not message type
-50:              { inline: "post.id" },
+testdata/invalid_message_argument.proto:52:23: inline value is not message type
+52:              { inline: "post.id" },
                            ^
-testdata/invalid_message_argument.proto:51:19: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+testdata/invalid_message_argument.proto:53:19: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
  | ....
  | .^
-51:              { by: "...." },
+53:              { by: "...." },
                        ^
-testdata/invalid_message_argument.proto:52:23: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+testdata/invalid_message_argument.proto:54:23: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
  | ....
  | .^
-52:              { inline: "...." }
+54:              { inline: "...." }
                            ^
-testdata/invalid_message_argument.proto:70:36: ERROR: <input>:1:8: undefined field 'user_id'
+testdata/invalid_message_argument.proto:72:36: ERROR: <input>:1:8: undefined field 'user_id'
  | __ARG__.user_id
  | .......^
-70:          request { field: "id", by: "$.user_id" }
+72:          request { field: "id", by: "$.user_id" }
                                         ^
+testdata/invalid_message_argument.proto:87:14: "x" argument name is declared with a different type kind. found "string" and "bool" type
+87:          args { name: "x" by: "true" }
+                  ^
 `},
 		{file: "invalid_message_field_alias.proto", expected: `
 testdata/invalid_message_field_alias.proto:59:3: The types of "org.federation.PostData"'s "title" field ("int64") and "org.post.PostData"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself

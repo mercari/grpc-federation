@@ -40,6 +40,8 @@ type Org_Federation_ItemArgument struct {
 
 // Org_Federation_MArgument is argument for "org.federation.M" message.
 type Org_Federation_MArgument struct {
+	X uint64
+	Y user.Item_ItemType
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
@@ -59,6 +61,7 @@ type Org_Federation_UserArgument struct {
 	Title   string
 	User    *user.User
 	UserId  string
+	XDef2   *M
 }
 
 // Org_Federation_User_AgeArgument is custom resolver's argument for "age" field of "org.federation.User" message.
@@ -202,7 +205,10 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		"grpc.federation.private.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
-		"grpc.federation.private.MArgument": {},
+		"grpc.federation.private.MArgument": {
+			"x": grpcfed.NewCELFieldType(grpcfed.CELUintType, "X"),
+			"y": grpcfed.NewCELFieldType(grpcfed.CELIntType, "Y"),
+		},
 		"grpc.federation.private.PostArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
@@ -496,6 +502,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		     autobind: true
 		     message {
 		       name: "M"
+		       args: [
+		         { name: "x", by: "10" },
+		         { name: "y", by: "1" }
+		       ]
 		     }
 		   }
 		*/
@@ -508,6 +518,40 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &Org_Federation_MArgument{}
+				// { name: "x", by: "10" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+					Value:             value,
+					Expr:              "10",
+					UseContextLibrary: false,
+					CacheIndex:        7,
+					Setter: func(v int64) error {
+						xValue, err := s.cast_int64__to__uint64(v)
+						if err != nil {
+							return err
+						}
+						args.X = xValue
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				// { name: "y", by: "1" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+					Value:             value,
+					Expr:              "1",
+					UseContextLibrary: false,
+					CacheIndex:        8,
+					Setter: func(v int64) error {
+						yValue, err := s.cast_int64__to__Org_User_Item_ItemType(v)
+						if err != nil {
+							return err
+						}
+						args.Y = yValue
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
 				return s.resolve_Org_Federation_M(ctx, args)
 			},
 		}); err != nil {
@@ -543,7 +587,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					Value:             value,
 					Expr:              "$.id",
 					UseContextLibrary: false,
-					CacheIndex:        7,
+					CacheIndex:        9,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -560,7 +604,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 						Value:             value,
 						If:                "true",
 						UseContextLibrary: false,
-						CacheIndex:        8,
+						CacheIndex:        10,
 						BackOff:           b,
 						Body: func() (*post.GetPostResponse, error) {
 							return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
@@ -592,7 +636,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			},
 			By:                  "res.post",
 			ByUseContextLibrary: false,
-			ByCacheIndex:        9,
+			ByCacheIndex:        11,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -622,7 +666,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					Value:             value,
 					Expr:              "post",
 					UseContextLibrary: false,
-					CacheIndex:        10,
+					CacheIndex:        12,
 					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
@@ -693,7 +737,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		Value:             value,
 		Expr:              "user",
 		UseContextLibrary: false,
-		CacheIndex:        11,
+		CacheIndex:        13,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -718,8 +762,9 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			res  *user.GetUserResponse
-			user *user.User
+			_def2 *M
+			res   *user.GetUserResponse
+			user  *user.User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
@@ -728,95 +773,170 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
 		}
 	}()
-
-	// This section's codes are generated by the following proto definition.
+	// A tree view of message dependencies is shown below.
 	/*
-	   def {
-	     name: "res"
-	     call {
-	       method: "org.user.UserService/GetUser"
-	       request { field: "id", by: "$.user_id" }
-	     }
-	   }
+	        _def2 ─┐
+	   res ─┐      │
+	         user ─┤
 	*/
-	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.GetUserResponse, *localValueType]{
-		Name: "res",
-		Type: grpcfed.CELObjectType("org.user.GetUserResponse"),
-		Setter: func(value *localValueType, v *user.GetUserResponse) error {
-			value.vars.res = v
-			return nil
-		},
-		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &user.GetUserRequest{}
-			// { field: "id", by: "$.user_id" }
-			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
-				Value:             value,
-				Expr:              "$.user_id",
-				UseContextLibrary: false,
-				CacheIndex:        12,
-				Setter: func(v string) error {
-					args.Id = v
-					return nil
-				},
-			}); err != nil {
-				return nil, err
-			}
-			grpcfed.Logger(ctx).DebugContext(ctx, "call org.user.UserService/GetUser", slog.Any("org.user.GetUserRequest", s.logvalue_Org_User_GetUserRequest(args)))
-			return grpcfed.WithTimeout[user.GetUserResponse](ctx, "org.user.UserService/GetUser", 20000000000 /* 20s */, func(ctx context.Context) (*user.GetUserResponse, error) {
-				b := grpcfed.NewExponentialBackOff(&grpcfed.ExponentialBackOffConfig{
-					InitialInterval:     1000000000, /* 1s */
-					RandomizationFactor: 0.7,
-					Multiplier:          1.7,
-					MaxInterval:         30000000000, /* 30s */
-					MaxElapsedTime:      20000000000, /* 20s */
-				})
-				b = grpcfed.BackOffWithMaxRetries(b, 3)
-				b = grpcfed.BackOffWithContext(b, ctx)
-				return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[user.GetUserResponse]{
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "_def2"
+		     message {
+		       name: "M"
+		       args: [
+		         { name: "x", by: "uint(2)" },
+		         { name: "y", by: "org.user.Item.ItemType.value('ITEM_TYPE_2')" }
+		       ]
+		     }
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*M, *localValueType]{
+			Name: "_def2",
+			Type: grpcfed.CELObjectType("org.federation.M"),
+			Setter: func(value *localValueType, v *M) error {
+				value.vars._def2 = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &Org_Federation_MArgument{}
+				// { name: "x", by: "uint(2)" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
 					Value:             value,
-					If:                "error.code != google.rpc.Code.UNIMPLEMENTED",
+					Expr:              "uint(2)",
 					UseContextLibrary: false,
-					CacheIndex:        13,
-					BackOff:           b,
-					Body: func() (*user.GetUserResponse, error) {
-						return s.client.Org_User_UserServiceClient.GetUser(ctx, args)
+					CacheIndex:        14,
+					Setter: func(v uint64) error {
+						args.X = v
+						return nil
 					},
-				})
-			})
-		},
-	}); err != nil {
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_User_UserService_GetUser, err); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
+				}); err != nil {
+					return nil, err
+				}
+				// { name: "y", by: "org.user.Item.ItemType.value('ITEM_TYPE_2')" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
+					Value:             value,
+					Expr:              "org.user.Item.ItemType.value('ITEM_TYPE_2')",
+					UseContextLibrary: false,
+					CacheIndex:        15,
+					Setter: func(v user.Item_ItemType) error {
+						args.Y = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				return s.resolve_Org_Federation_M(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-	}
+		return nil, nil
+	})
 
-	// This section's codes are generated by the following proto definition.
-	/*
-	   def {
-	     name: "user"
-	     autobind: true
-	     by: "res.user"
-	   }
-	*/
-	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.User, *localValueType]{
-		Name: "user",
-		Type: grpcfed.CELObjectType("org.user.User"),
-		Setter: func(value *localValueType, v *user.User) error {
-			value.vars.user = v
-			return nil
-		},
-		By:                  "res.user",
-		ByUseContextLibrary: false,
-		ByCacheIndex:        14,
-	}); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "res"
+		     call {
+		       method: "org.user.UserService/GetUser"
+		       request { field: "id", by: "$.user_id" }
+		     }
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*user.GetUserResponse, *localValueType]{
+			Name: "res",
+			Type: grpcfed.CELObjectType("org.user.GetUserResponse"),
+			Setter: func(value *localValueType, v *user.GetUserResponse) error {
+				value.vars.res = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &user.GetUserRequest{}
+				// { field: "id", by: "$.user_id" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              "$.user_id",
+					UseContextLibrary: false,
+					CacheIndex:        16,
+					Setter: func(v string) error {
+						args.Id = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				grpcfed.Logger(ctx).DebugContext(ctx, "call org.user.UserService/GetUser", slog.Any("org.user.GetUserRequest", s.logvalue_Org_User_GetUserRequest(args)))
+				return grpcfed.WithTimeout[user.GetUserResponse](ctx, "org.user.UserService/GetUser", 20000000000 /* 20s */, func(ctx context.Context) (*user.GetUserResponse, error) {
+					b := grpcfed.NewExponentialBackOff(&grpcfed.ExponentialBackOffConfig{
+						InitialInterval:     1000000000, /* 1s */
+						RandomizationFactor: 0.7,
+						Multiplier:          1.7,
+						MaxInterval:         30000000000, /* 30s */
+						MaxElapsedTime:      20000000000, /* 20s */
+					})
+					b = grpcfed.BackOffWithMaxRetries(b, 3)
+					b = grpcfed.BackOffWithContext(b, ctx)
+					return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[user.GetUserResponse]{
+						Value:             value,
+						If:                "error.code != google.rpc.Code.UNIMPLEMENTED",
+						UseContextLibrary: false,
+						CacheIndex:        17,
+						BackOff:           b,
+						Body: func() (*user.GetUserResponse, error) {
+							return s.client.Org_User_UserServiceClient.GetUser(ctx, args)
+						},
+					})
+				})
+			},
+		}); err != nil {
+			if err := s.errorHandler(ctx1, FederationService_DependentMethod_Org_User_UserService_GetUser, err); err != nil {
+				grpcfed.RecordErrorToSpan(ctx1, err)
+				return nil, err
+			}
+		}
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "user"
+		     autobind: true
+		     by: "res.user"
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*user.User, *localValueType]{
+			Name: "user",
+			Type: grpcfed.CELObjectType("org.user.User"),
+			Setter: func(value *localValueType, v *user.User) error {
+				value.vars.user = v
+				return nil
+			},
+			By:                  "res.user",
+			ByUseContextLibrary: false,
+			ByCacheIndex:        18,
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.Res = value.vars.res
 	req.User = value.vars.user
+	req.XDef2 = value.vars._def2
 
 	// create a message value to be returned.
 	ret := &User{}
@@ -1010,9 +1130,19 @@ func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from
 	return &User_B{B: bValue}, nil
 }
 
+// cast_int64__to__Org_User_Item_ItemType cast from "int64" to "org.user.Item.ItemType".
+func (s *FederationService) cast_int64__to__Org_User_Item_ItemType(from int64) (user.Item_ItemType, error) {
+	return user.Item_ItemType(from), nil
+}
+
 // cast_int64__to__uint32 cast from "int64" to "uint32".
 func (s *FederationService) cast_int64__to__uint32(from int64) (uint32, error) {
 	return grpcfed.Int64ToUint32(from)
+}
+
+// cast_int64__to__uint64 cast from "int64" to "uint64".
+func (s *FederationService) cast_int64__to__uint64(from int64) (uint64, error) {
+	return grpcfed.Int64ToUint64(from)
 }
 
 // cast_repeated_Org_User_Item__to__repeated_Org_Federation_Item cast from "repeated org.user.Item" to "repeated org.federation.Item".
@@ -1097,7 +1227,10 @@ func (s *FederationService) logvalue_Org_Federation_MArgument(v *Org_Federation_
 	if v == nil {
 		return slog.GroupValue()
 	}
-	return slog.GroupValue()
+	return slog.GroupValue(
+		slog.Uint64("x", v.X),
+		slog.String("y", s.logvalue_Org_User_Item_ItemType(v.Y).String()),
+	)
 }
 
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
@@ -1278,6 +1411,18 @@ func (s *FederationService) logvalue_Org_User_GetUsersRequest(v *user.GetUsersRe
 	return slog.GroupValue(
 		slog.Any("ids", v.GetIds()),
 	)
+}
+
+func (s *FederationService) logvalue_Org_User_Item_ItemType(v user.Item_ItemType) slog.Value {
+	switch v {
+	case user.Item_ITEM_TYPE_1:
+		return slog.StringValue("ITEM_TYPE_1")
+	case user.Item_ITEM_TYPE_2:
+		return slog.StringValue("ITEM_TYPE_2")
+	case user.Item_ITEM_TYPE_3:
+		return slog.StringValue("ITEM_TYPE_3")
+	}
+	return slog.StringValue("")
 }
 
 func (s *FederationService) logvalue_repeated_Org_Federation_Item(v []*Item) slog.Value {

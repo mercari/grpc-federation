@@ -323,7 +323,8 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 			if varDef.Expr == nil {
 				continue
 			}
-			if varDef.Expr.Call != nil && varDef.Expr.Call.Request != nil {
+			switch {
+			case varDef.Expr.Call != nil && varDef.Expr.Call.Request != nil:
 				request := varDef.Expr.Call.Request
 				for _, arg := range request.Args {
 					if !request.Type.HasField(arg.Name) {
@@ -333,6 +334,25 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 					field := request.Type.Field(arg.Name)
 					toType := field.Type
 					decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
+				}
+			case varDef.Expr.Message != nil:
+				// For numeric types, the specification allows accepting them even if the type of the message argument differs.
+				// In such cases, since the actual message argument type may differ, additional type conversion is necessary.
+				msgExpr := varDef.Expr.Message
+				if msgExpr.Message != nil && msgExpr.Message.Rule != nil {
+					msgArg := msgExpr.Message.Rule.MessageArgument
+					for _, arg := range msgExpr.Args {
+						switch {
+						case arg.Name != "":
+							msgArgField := msgArg.Field(arg.Name)
+							decls = append(decls, typeConversionDecls(arg.Value.Type(), msgArgField.Type, convertedFQDNMap)...)
+						case arg.Value != nil && arg.Value.Inline:
+							for _, field := range arg.Value.CEL.Out.Message.Fields {
+								msgArgField := msgArg.Field(field.Name)
+								decls = append(decls, typeConversionDecls(field.Type, msgArgField.Type, convertedFQDNMap)...)
+							}
+						}
+					}
 				}
 			}
 		}
