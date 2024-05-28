@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+import "post.proto";
+import "nested_post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {};
+}
+
+message PostContent {
+  option (grpc.federation.message) = { alias: "org.post.PostContent" };
+
+  enum Category {
+    option (grpc.federation.enum) = { alias: "org.post.PostContent.Category" };
+
+    CATEGORY_A = 0;
+    CATEGORY_B = 1;
+  };
+
+  Category category = 1;
+  string head = 2;
+  string body = 3;
+  map<string, string> counts = 4;
+}

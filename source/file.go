@@ -943,6 +943,13 @@ func (f *File) nodeInfoByMessage(node *ast.MessageNode, msg *Message) *ast.NodeI
 					return f.nodeInfoByEnum(n, msg.Enum)
 				}
 			}
+		case *ast.MapFieldNode:
+			if msg.Field != nil {
+				if string(n.Name.AsIdentifier()) != msg.Field.Name {
+					continue
+				}
+				return f.nodeInfoByField(n, msg.Field)
+			}
 		}
 	}
 	return f.nodeInfo(node)
@@ -1496,7 +1503,7 @@ func (f *File) nodeInfoByArgument(list []*ast.MessageLiteralNode, arg *ArgumentO
 	return f.nodeInfo(literal)
 }
 
-func (f *File) nodeInfoByField(node *ast.FieldNode, field *Field) *ast.NodeInfo {
+func (f *File) nodeInfoByField(node ast.FieldDeclNode, field *Field) *ast.NodeInfo {
 	opts := node.GetOptions()
 	if field.Option != nil && opts != nil {
 		for _, opt := range opts.Options {
@@ -1506,8 +1513,8 @@ func (f *File) nodeInfoByField(node *ast.FieldNode, field *Field) *ast.NodeInfo 
 			return f.nodeInfoByFieldOption(opt, field.Option)
 		}
 	}
-	if field.Type && node.FldType != nil {
-		return f.nodeInfo(node.FldType)
+	if field.Type && node.FieldType() != nil {
+		return f.nodeInfo(node.FieldType())
 	}
 	return f.nodeInfo(node)
 }

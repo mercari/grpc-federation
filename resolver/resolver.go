@@ -976,8 +976,22 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 		if fromType.Message == nil || toType.Message == nil {
 			return
 		}
-		if fromType.Message.IsMapEntry {
-			// If it is a map entry, ignore it.
+		if fromType.Message.IsMapEntry && toType.Message.IsMapEntry {
+			for _, name := range []string{"key", "value"} {
+				fromMapType := fromType.Message.Field(name).Type
+				toMapType := toType.Message.Field(name).Type
+				if isDifferentType(fromMapType, toMapType) {
+					ctx.addError(
+						ErrWithLocation(
+							fmt.Sprintf(
+								`cannot convert type automatically: map %s type is %q but specified map %s type is %q`,
+								name, toMapType.Kind.ToString(), name, fromMapType.Kind.ToString(),
+							),
+							builder.Location(),
+						),
+					)
+				}
+			}
 			return
 		}
 		fromMessage := fromType.Message
@@ -1083,8 +1097,22 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 		if fromType.Message == nil || toType.Message == nil {
 			return
 		}
-		if fromType.Message.IsMapEntry {
-			// If it is a map entry, ignore it.
+		if fromType.Message.IsMapEntry && toType.Message.IsMapEntry {
+			for _, name := range []string{"key", "value"} {
+				fromMapType := fromType.Message.Field(name).Type
+				toMapType := toType.Message.Field(name).Type
+				if isDifferentType(fromMapType, toMapType) {
+					ctx.addError(
+						ErrWithLocation(
+							fmt.Sprintf(
+								`cannot convert type automatically: map %s type is %q but specified map %s type is %q`,
+								name, toMapType.Kind.ToString(), name, fromMapType.Kind.ToString(),
+							),
+							builder.Location(),
+						),
+					)
+				}
+			}
 			return
 		}
 		fromMessageName := fromType.Message.FQDN()

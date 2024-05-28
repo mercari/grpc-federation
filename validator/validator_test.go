@@ -578,6 +578,22 @@ ERROR: <input>:1:70: list(org.federation.User) is not comparable
 55:    repeated User invalid = 3 [(grpc.federation.field).by = "users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)"];
                                                                ^
 `},
+		{file: "invalid_message_map.proto", expected: `
+testdata/invalid_message_map.proto:22:3: cannot convert type automatically: map key type is "int32" but specified map key type is "string"
+22:    map<int32, int32> map_value = 1 [(grpc.federation.field).by = "map_value"];
+       ^
+testdata/invalid_message_map.proto:22:3: cannot convert type automatically: map value type is "int32" but specified map value type is "string"
+22:    map<int32, int32> map_value = 1 [(grpc.federation.field).by = "map_value"];
+       ^
+`},
+		{file: "invalid_message_map_alias.proto", expected: `
+testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically: map key type is "string" but specified map key type is "int32"
+37:    map<string, string> counts = 4;
+       ^
+testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically: map value type is "string" but specified map value type is "int32"
+37:    map<string, string> counts = 4;
+       ^
+`},
 	}
 	ctx := context.Background()
 	v := validator.New()
