@@ -13,7 +13,7 @@ lint:
 	@$(GOBIN)/grpc-federation-linter -Iproto -Iproto_deps ./proto/federation/federation.proto
 
 .PHONY: test
-test:
+test: build/wasm
 	go test -race ./ -count=1
 
 .PHONY: grpc-federation/generate

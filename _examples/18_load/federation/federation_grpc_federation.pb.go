@@ -122,6 +122,15 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 					Return:   grpcfed.CELStringType,
 					IsMethod: false,
 				},
+				{
+					Name: "example.account.get_id",
+					ID:   "example_account_get_id_string_string",
+					Args: []*grpcfed.CELTypeDeclare{
+						grpcfed.CELStringType,
+					},
+					Return:   grpcfed.CELStringType,
+					IsMethod: false,
+				},
 			},
 		})
 		if err != nil {

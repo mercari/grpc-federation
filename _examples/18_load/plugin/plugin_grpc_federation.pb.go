@@ -23,6 +23,7 @@ var (
 
 type AccountPlugin interface {
 	Example_Account_GetId(context.Context) (string, error)
+	Example_Account_GetId2(context.Context, string) (string, error)
 }
 
 func RegisterAccountPlugin(plug AccountPlugin) {
@@ -44,6 +45,7 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 				FederationVersion: "dev",
 				Functions: []string{
 					"example_account_get_id_string",
+					"example_account_get_id_string_string",
 				},
 			})
 			_, _ = os.Stdout.Write(append(b, '\n'))
@@ -78,6 +80,19 @@ func handleAccountPlugin(content []byte, plug AccountPlugin) (*grpcfed.CELPlugin
 			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
 		}
 		ret, err := plug.Example_Account_GetId(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return grpcfed.ToStringCELPluginResponse(ret)
+	case "example_account_get_id_string_string":
+		if len(req.GetArgs()) != 1 {
+			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
+		}
+		arg0, err := grpcfed.ToString(req.GetArgs()[0])
+		if err != nil {
+			return nil, err
+		}
+		ret, err := plug.Example_Account_GetId2(ctx, arg0)
 		if err != nil {
 			return nil, err
 		}

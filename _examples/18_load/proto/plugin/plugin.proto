@@ -13,6 +13,12 @@ option (grpc.federation.plugin).export = {
       name: "get_id"
       desc: "get id text from incoming metadata"
       return { type: "string" }
+    },
+    {
+      name: "get_id"
+      desc: "overload method for get_id"
+      args { name: "ext" type: "string" }
+      return { type: "string" }
     }
   ]
 };
