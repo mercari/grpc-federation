@@ -1,1 +1,4 @@
 grpc/federation
+*.wasm
+grpc-federation.yaml
+buf.gen.yaml

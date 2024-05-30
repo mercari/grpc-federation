@@ -4,7 +4,7 @@
 {{ $pluginFunctions := .PluginFunctions }}
 type {{ $pluginName }} interface {
 	{{- range $pluginFunctions }}
-	{{ .Name }}(context.Context, {{- range .Args }}{{ .Type }},{{- end }}) ({{- .Return.Type }}, error)
+	{{ .GoName }}(context.Context, {{- range .Args }}{{ .Type }},{{- end }}) ({{- .Return.Type }}, error)
 	{{- end }}
 }
 
@@ -70,7 +70,7 @@ func handle{{ $pluginName }}(content []byte, plug {{ $pluginName }}) (*grpcfed.C
 			return nil, err
 		}
 		{{- end }}
-		ret, err := plug.{{ .Name }}(ctx, {{- range $idx, $arg := .Args }}arg{{ $idx }},{{- end }})
+		ret, err := plug.{{ .GoName }}(ctx, {{- range $idx, $arg := .Args }}arg{{ $idx }},{{- end }})
 		if err != nil {
 			return nil, err
 		}

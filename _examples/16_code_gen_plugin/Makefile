@@ -5,8 +5,11 @@ PATH := $(GOBIN):$(PATH)
 JAEGER_IMAGE := jaegertracing/all-in-one:latest
 
 .PHONY: generate
-generate:
+generate: generate/config
 	$(GOBIN)/buf generate
+
+generate/config: build/wasm
+	go run ./cmd/config/main.go
 
 .PHONY: lint
 lint:
@@ -17,7 +20,7 @@ test:
 	go test -race ./ -count=1
 
 .PHONY: grpc-federation/generate
-grpc-federation/generate:
+grpc-federation/generate: generate/config
 	@$(GOBIN)/grpc-federation-generator ./proto/federation/federation.proto
 
 .PHONY: grpc-federation/watch

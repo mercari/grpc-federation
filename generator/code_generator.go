@@ -97,13 +97,26 @@ func (p *CELPlugin) Functions() []*CELFunction {
 type CELFunction struct {
 	file *File
 	*resolver.CELFunction
+	overloadIdx int
+}
+
+func (f *CELFunction) GoName() string {
+	funcName := f.CELFunction.Name
+	if f.overloadIdx != 0 {
+		funcName += fmt.Sprint(f.overloadIdx + 1)
+	}
+	if f.Receiver != nil {
+		return protoFQDNToPublicGoName(fmt.Sprintf("%s.%s", f.Receiver.FQDN(), funcName))
+	}
+	return protoFQDNToPublicGoName(funcName)
 }
 
 func (f *CELFunction) Name() string {
+	funcName := f.CELFunction.Name
 	if f.Receiver != nil {
-		return protoFQDNToPublicGoName(fmt.Sprintf("%s.%s", f.Receiver.FQDN(), f.CELFunction.Name))
+		return protoFQDNToPublicGoName(fmt.Sprintf("%s.%s", f.Receiver.FQDN(), funcName))
 	}
-	return protoFQDNToPublicGoName(f.CELFunction.Name)
+	return protoFQDNToPublicGoName(funcName)
 }
 
 func (f *CELFunction) IsMethod() bool {
@@ -230,11 +243,14 @@ func (r *CELFunctionReturn) Converter() string {
 
 func (p *CELPlugin) PluginFunctions() []*CELFunction {
 	ret := make([]*CELFunction, 0, len(p.CELPlugin.Functions))
+	overloadCount := make(map[string]int)
 	for _, fn := range p.CELPlugin.Functions {
 		ret = append(ret, &CELFunction{
 			file:        p.file,
 			CELFunction: fn,
+			overloadIdx: overloadCount[fn.Name],
 		})
+		overloadCount[fn.Name]++
 	}
 	return ret
 }
