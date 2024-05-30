@@ -999,23 +999,27 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			)
 			return
 		}
+		var found bool
 		for _, alias := range fromMessage.Rule.Aliases {
 			fromMessageAliasName := alias.FQDN()
-			if fromMessageAliasName != toMessageName {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(
-							`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the %q field`,
-							toMessageName, fromMessageName, toField.FQDN(),
-						),
-						source.NewMessageBuilder(fromMessage.File.Name, fromMessage.Name).
-							WithOption().WithAlias().Location(),
-					),
-				)
-				return
+			if fromMessageAliasName == toMessageName {
+				found = true
+				break
 			}
 		}
-		return
+		if !found {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the %q field`,
+						toMessageName, fromMessageName, toField.FQDN(),
+					),
+					source.NewMessageBuilder(fromMessage.File.Name, fromMessage.Name).
+						WithOption().WithAlias().Location(),
+				),
+			)
+			return
+		}
 	}
 	if toType.Kind == types.Enum {
 		if fromType.Enum == nil || toType.Enum == nil {
@@ -1044,20 +1048,25 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			)
 			return
 		}
+		var found bool
 		for _, alias := range fromEnum.Rule.Aliases {
 			fromEnumAliasName := alias.FQDN()
-			if fromEnumAliasName != toEnumName {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(
-							`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the %q field`,
-							toEnumName, fromEnumName, toField.FQDN(),
-						),
-						source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).WithOption().Location(),
-					),
-				)
-				return
+			if fromEnumAliasName == toEnumName {
+				found = true
+				break
 			}
+		}
+		if !found {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the %q field`,
+						toEnumName, fromEnumName, toField.FQDN(),
+					),
+					source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).WithOption().Location(),
+				),
+			)
+			return
 		}
 	}
 	if isDifferentType(fromType, toField.Type) {
