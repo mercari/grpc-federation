@@ -501,15 +501,15 @@ func TestCreatePost(t *testing.T) {
 			testutil.NewEnumBuilder("PostType").
 				WithAlias(ref.Enum(t, "org.post", "PostType")).
 				AddValueWithAlias(
-					"POST_TYPE_UNKNOWN",
+					"TYPE_UNKNOWN",
 					ref.EnumValue(t, "org.post", "PostType", "POST_TYPE_UNKNOWN"),
 				).
 				AddValueWithAlias(
-					"POST_TYPE_A",
+					"TYPE_A",
 					ref.EnumValue(t, "org.post", "PostType", "POST_TYPE_A"),
 				).
 				AddValueWithAlias(
-					"POST_TYPE_B",
+					"TYPE_B",
 					ref.EnumValue(t, "org.post", "PostType", "POST_TYPE_B"),
 				).
 				Build(t),

@@ -15,9 +15,9 @@ service FederationService {
 enum PostType {
   option (grpc.federation.enum).alias = "org.post.PostType";
 
-  POST_TYPE_UNKNOWN = 0;
-  POST_TYPE_A = 1;
-  POST_TYPE_B = 2;
+  TYPE_UNKNOWN = 0 [(grpc.federation.enum_value).alias = "POST_TYPE_UNKNOWN"];
+  TYPE_A = 1 [(grpc.federation.enum_value).alias = "POST_TYPE_A"];
+  TYPE_B = 2 [(grpc.federation.enum_value).alias = "POST_TYPE_B"];
 }
 
 message CreatePostRequest {
@@ -62,7 +62,7 @@ message CreatePost {
   string content = 2 [(grpc.federation.field).by = "$.content"];
   string user_id = 3 [(grpc.federation.field).by = "$.user_id"];
   PostType type = 4 [(grpc.federation.field).by = "$.type"];
-  PostType post_type = 5 [(grpc.federation.field).by = "org.federation.PostType.POST_TYPE_A"];
+  PostType post_type = 5 [(grpc.federation.field).by = "org.federation.PostType.TYPE_A"];
 }
 
 message Post {

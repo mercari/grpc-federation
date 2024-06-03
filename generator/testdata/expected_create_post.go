@@ -271,10 +271,10 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "org.federation.PostType.POST_TYPE_A"
+	// (grpc.federation.field).by = "org.federation.PostType.TYPE_A"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostType]{
 		Value:             value,
-		Expr:              "org.federation.PostType.POST_TYPE_A",
+		Expr:              "org.federation.PostType.TYPE_A",
 		UseContextLibrary: false,
 		CacheIndex:        5,
 		Setter: func(v PostType) error {
@@ -524,11 +524,11 @@ func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreateP
 // cast_Org_Federation_PostType__to__Org_Post_PostType cast from "org.federation.PostType" to "org.post.PostType".
 func (s *FederationService) cast_Org_Federation_PostType__to__Org_Post_PostType(from PostType) (post.PostType, error) {
 	switch from {
-	case PostType_POST_TYPE_UNKNOWN:
+	case PostType_TYPE_UNKNOWN:
 		return post.PostType_POST_TYPE_UNKNOWN, nil
-	case PostType_POST_TYPE_A:
+	case PostType_TYPE_A:
 		return post.PostType_POST_TYPE_A, nil
-	case PostType_POST_TYPE_B:
+	case PostType_TYPE_B:
 		return post.PostType_POST_TYPE_B, nil
 	default:
 		return 0, nil
@@ -624,12 +624,12 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 
 func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Value {
 	switch v {
-	case PostType_POST_TYPE_UNKNOWN:
-		return slog.StringValue("POST_TYPE_UNKNOWN")
-	case PostType_POST_TYPE_A:
-		return slog.StringValue("POST_TYPE_A")
-	case PostType_POST_TYPE_B:
-		return slog.StringValue("POST_TYPE_B")
+	case PostType_TYPE_UNKNOWN:
+		return slog.StringValue("TYPE_UNKNOWN")
+	case PostType_TYPE_A:
+		return slog.StringValue("TYPE_A")
+	case PostType_TYPE_B:
+		return slog.StringValue("TYPE_B")
 	}
 	return slog.StringValue("")
 }

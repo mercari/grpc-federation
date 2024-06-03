@@ -1687,15 +1687,15 @@ type CastEnumValue struct {
 	ToValue   string
 }
 
-func (f *CastField) ToEnum() *CastEnum {
+func (f *CastField) ToEnum() (*CastEnum, error) {
 	toEnum := f.toType.Enum
 	if toEnum.Rule != nil && len(toEnum.Rule.Aliases) != 0 {
-		return f.toEnumByAlias(toEnum, f.fromType.Enum)
+		return f.toEnumFromDepServiceToService(toEnum, f.fromType.Enum), nil
 	}
 	fromEnum := f.fromType.Enum
 	if fromEnum.Rule != nil && len(fromEnum.Rule.Aliases) != 0 {
 		// the type conversion is performed at the time of gRPC method call.
-		return f.toEnumByAlias(fromEnum, f.toType.Enum)
+		return f.toEnumFromServiceToDepService(fromEnum, f.toType.Enum)
 	}
 	toEnumName := toEnumValuePrefix(f.file, f.toType)
 	fromEnumName := toEnumValuePrefix(f.file, f.fromType)
@@ -1716,39 +1716,77 @@ func (f *CastField) ToEnum() *CastEnum {
 	return &CastEnum{
 		FromValues:   enumValues,
 		DefaultValue: "0",
-	}
+	}, nil
 }
 
-func (f *CastField) toEnumByAlias(enum, aliasEnum *resolver.Enum) *CastEnum {
-	toEnumName := toEnumValuePrefix(f.file, f.toType)
-	fromEnumName := toEnumValuePrefix(f.file, f.fromType)
+// toEnumFromDepServiceToService converts dependent service's enum type to our service's enum type.
+// alias is defined for dependent service.
+func (f *CastField) toEnumFromDepServiceToService(enum, depSvcEnum *resolver.Enum) *CastEnum {
 	var (
 		enumValues   []*CastEnumValue
 		defaultValue = "0"
 	)
+	svcEnumName := toEnumValuePrefix(f.file, f.toType)
+	depSvcEnumName := toEnumValuePrefix(f.file, f.fromType)
 	for _, value := range enum.Values {
 		if value.Rule == nil {
 			continue
 		}
 		for _, enumValueAlias := range value.Rule.Aliases {
-			if enumValueAlias.EnumAlias != aliasEnum {
+			if enumValueAlias.EnumAlias != depSvcEnum {
 				continue
 			}
 			for _, alias := range enumValueAlias.Aliases {
 				enumValues = append(enumValues, &CastEnumValue{
-					FromValue: toEnumValueText(fromEnumName, alias.Value),
-					ToValue:   toEnumValueText(toEnumName, value.Value),
+					FromValue: toEnumValueText(depSvcEnumName, alias.Value),
+					ToValue:   toEnumValueText(svcEnumName, value.Value),
 				})
 			}
 		}
 		if value.Rule.Default {
-			defaultValue = toEnumValueText(toEnumName, value.Value)
+			defaultValue = toEnumValueText(svcEnumName, value.Value)
 		}
 	}
 	return &CastEnum{
 		FromValues:   enumValues,
 		DefaultValue: defaultValue,
 	}
+}
+
+// toEnumFromServiceToDepService converts our service's enum type to dependent service's enum type.
+// alias is defined for dependent service.
+func (f *CastField) toEnumFromServiceToDepService(enum, depSvcEnum *resolver.Enum) (*CastEnum, error) {
+	var (
+		enumValues   []*CastEnumValue
+		defaultValue = "0"
+	)
+	depSvcEnumName := toEnumValuePrefix(f.file, f.toType)
+	svcEnumName := toEnumValuePrefix(f.file, f.fromType)
+	for _, value := range enum.Values {
+		if value.Rule == nil {
+			continue
+		}
+		for _, enumValueAlias := range value.Rule.Aliases {
+			if enumValueAlias.EnumAlias != depSvcEnum {
+				continue
+			}
+			if len(enumValueAlias.Aliases) != 1 {
+				return nil, fmt.Errorf("found multiple aliases are set. the conversion destination cannot be uniquely determined")
+			}
+			depEnumValue := enumValueAlias.Aliases[0]
+			enumValues = append(enumValues, &CastEnumValue{
+				FromValue: toEnumValueText(svcEnumName, value.Value),
+				ToValue:   toEnumValueText(depSvcEnumName, depEnumValue.Value),
+			})
+		}
+		if value.Rule.Default {
+			return nil, fmt.Errorf("found default alias is set. the conversion destination cannot be uniquely determined")
+		}
+	}
+	return &CastEnum{
+		FromValues:   enumValues,
+		DefaultValue: defaultValue,
+	}, nil
 }
 
 type CastSlice struct {
