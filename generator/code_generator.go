@@ -1822,7 +1822,11 @@ func (f *CastField) ToStruct() *CastStruct {
 		})
 	}
 
-	name := strings.Join(append(toMsg.ParentMessageNames(), toMsg.Name), "_")
+	var names []string
+	for _, n := range append(toMsg.ParentMessageNames(), toMsg.Name) {
+		names = append(names, util.ToPublicGoVariable(n))
+	}
+	name := strings.Join(names, "_")
 	if f.service.GoPackage().ImportPath != toMsg.GoPackage().ImportPath {
 		name = fmt.Sprintf("%s.%s", toMsg.GoPackage().Name, name)
 	}
@@ -1883,11 +1887,10 @@ func (f *CastField) ToOneof() *CastOneof {
 	fromType.OneofField = nil
 	toType.OneofField = nil
 	requiredCast := requiredCast(fromType, toType)
-	names := append(
-		msg.ParentMessageNames(),
-		msg.Name,
-		util.ToPublicGoVariable(toField.Name),
-	)
+	var names []string
+	for _, n := range append(msg.ParentMessageNames(), msg.Name, toField.Name) {
+		names = append(names, util.ToPublicGoVariable(n))
+	}
 	name := strings.Join(names, "_")
 	if toField.IsConflict() {
 		name += "_"
