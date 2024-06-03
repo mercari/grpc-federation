@@ -579,12 +579,18 @@ ERROR: <input>:1:70: list(org.federation.User) is not comparable
                                                                ^
 `},
 		{file: "invalid_message_map.proto", expected: `
-testdata/invalid_message_map.proto:22:3: cannot convert type automatically: map key type is "int32" but specified map key type is "string"
-22:    map<int32, int32> map_value = 1 [(grpc.federation.field).by = "map_value"];
+testdata/invalid_message_map.proto:30:3: cannot convert type automatically: map key type is "int32" but specified map key type is "string"
+30:    map<int32, int32> map_value = 1 [(grpc.federation.field).by = "map_value"];
        ^
-testdata/invalid_message_map.proto:22:3: cannot convert type automatically: map value type is "int32" but specified map value type is "string"
-22:    map<int32, int32> map_value = 1 [(grpc.federation.field).by = "map_value"];
+testdata/invalid_message_map.proto:30:3: cannot convert type automatically: map value type is "int32" but specified map value type is "string"
+30:    map<int32, int32> map_value = 1 [(grpc.federation.field).by = "map_value"];
        ^
+testdata/invalid_message_map.proto:40:19: cannot convert type automatically: map key type is "string" but specified map key type is "int64"
+40:            request { field: "ids", by: "$.ids" }
+                       ^
+testdata/invalid_message_map.proto:40:19: cannot convert type automatically: map value type is "string" but specified map value type is "int64"
+40:            request { field: "ids", by: "$.ids" }
+                       ^
 `},
 		{file: "invalid_message_map_alias.proto", expected: `
 testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically: map key type is "string" but specified map key type is "int32"

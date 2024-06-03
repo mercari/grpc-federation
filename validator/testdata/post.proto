@@ -7,6 +7,7 @@ option go_package = "example/post;post";
 service PostService {
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
   rpc GetPosts(GetPostsRequest) returns (GetPostsResponse) {};
+  rpc GetPostMap(GetPostMapRequest) returns (GetPostMapResponse) {};
 }
 
 message GetPostRequest {
@@ -23,6 +24,14 @@ message GetPostsRequest {
 
 message GetPostsResponse {
   repeated Post posts = 1;
+}
+
+message GetPostMapRequest {
+  map<string, string> ids = 1;
+}
+
+message GetPostMapResponse {
+  map<string, Post> posts = 1;
 }
 
 message Post {

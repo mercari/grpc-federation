@@ -13,6 +13,8 @@ import (
 	"github.com/google/cel-go/common/overloads"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -3352,30 +3354,7 @@ const privateProtoFile = "grpc/federation/private.proto"
 
 func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {
 	desc := arg.File.Desc
-	msg := &descriptorpb.DescriptorProto{
-		Name: proto.String(arg.Name),
-	}
-	for idx, field := range arg.Fields {
-		var typeName string
-		if field.Type.Message != nil {
-			typeName = field.Type.Message.FQDN()
-		}
-		if field.Type.Enum != nil {
-			typeName = field.Type.Enum.FQDN()
-		}
-		label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
-		if field.Type.Repeated {
-			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
-		}
-		kind := descriptorpb.FieldDescriptorProto_Type(field.Type.Kind)
-		msg.Field = append(msg.Field, &descriptorpb.FieldDescriptorProto{
-			Name:     proto.String(field.Name),
-			Number:   proto.Int32(int32(idx) + 1),
-			Type:     &kind,
-			TypeName: proto.String(typeName),
-			Label:    &label,
-		})
-	}
+	msg := messageArgumentDescriptor(arg)
 	var importedPrivateFile bool
 	for _, dep := range desc.GetDependency() {
 		if dep == privateProtoFile {
@@ -3395,6 +3374,47 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 		WeakDependency:   desc.WeakDependency,
 		MessageType:      []*descriptorpb.DescriptorProto{msg},
 	}
+}
+
+func messageArgumentDescriptor(arg *Message) *descriptorpb.DescriptorProto {
+	msg := &descriptorpb.DescriptorProto{
+		Name: proto.String(arg.Name),
+		Options: &descriptorpb.MessageOptions{
+			MapEntry: proto.Bool(arg.IsMapEntry),
+		},
+	}
+	for idx, field := range arg.Fields {
+		var (
+			typeName string
+			label    = descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+		)
+		if field.Type.Message != nil && field.Type.Message.IsMapEntry {
+			mp := messageArgumentDescriptor(field.Type.Message)
+			if mp.GetName() == "" {
+				mp.Name = proto.String(cases.Title(language.Und).String(field.Name) + "Entry")
+			}
+			msg.NestedType = append(msg.NestedType, mp)
+			typeName = arg.FQDN() + "." + mp.GetName()
+			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+		} else if field.Type.Message != nil {
+			typeName = field.Type.Message.FQDN()
+		}
+		if field.Type.Enum != nil {
+			typeName = field.Type.Enum.FQDN()
+		}
+		if field.Type.Repeated {
+			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+		}
+		kind := descriptorpb.FieldDescriptorProto_Type(field.Type.Kind)
+		msg.Field = append(msg.Field, &descriptorpb.FieldDescriptorProto{
+			Name:     proto.String(field.Name),
+			Number:   proto.Int32(int32(idx) + 1),
+			Type:     &kind,
+			TypeName: proto.String(typeName),
+			Label:    &label,
+		})
+	}
+	return msg
 }
 
 func (r *Resolver) resolveAutoBind(ctx *context, files []*File) {
