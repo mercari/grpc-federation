@@ -610,7 +610,7 @@ func (s *Service) OneofTypes() []*OneofType {
 }
 
 func (s *Service) ServiceName() string {
-	return s.Name
+	return util.ToPublicGoVariable(s.Name)
 }
 
 func (s *Service) PackageName() string {
@@ -898,7 +898,11 @@ func (f *File) messageTypeToText(msg *resolver.Message) string {
 		value := f.toTypeText(msg.Field("value").Type)
 		return fmt.Sprintf("map[%s]%s", key, value)
 	}
-	name := strings.Join(append(msg.ParentMessageNames(), msg.Name), "_")
+	var names []string
+	for _, name := range append(msg.ParentMessageNames(), msg.Name) {
+		names = append(names, util.ToPublicGoVariable(name))
+	}
+	name := strings.Join(names, "_")
 	if f.GoPackage.ImportPath == msg.GoPackage().ImportPath {
 		return fmt.Sprintf("*%s", name)
 	}
@@ -908,9 +912,13 @@ func (f *File) messageTypeToText(msg *resolver.Message) string {
 func (f *File) enumTypeToText(enum *resolver.Enum) string {
 	var name string
 	if enum.Message != nil {
-		name = strings.Join(append(enum.Message.ParentMessageNames(), enum.Message.Name, enum.Name), "_")
+		var names []string
+		for _, n := range append(enum.Message.ParentMessageNames(), enum.Message.Name, enum.Name) {
+			names = append(names, util.ToPublicGoVariable(n))
+		}
+		name = strings.Join(names, "_")
 	} else {
-		name = enum.Name
+		name = util.ToPublicGoVariable(enum.Name)
 	}
 	if f.GoPackage.ImportPath == enum.GoPackage().ImportPath {
 		return name
@@ -1328,6 +1336,10 @@ type Method struct {
 	*resolver.Method
 	Service *Service
 	file    *File
+}
+
+func (m *Method) Name() string {
+	return util.ToPublicGoVariable(m.Method.Name)
 }
 
 func (m *Method) ProtoFQDN() string {
@@ -2549,12 +2561,12 @@ func (m *LocalizedMessage) CELCacheIndex() int {
 }
 
 func (d *VariableDefinition) ServiceName() string {
-	return d.Service.Name
+	return util.ToPublicGoVariable(d.Service.Name)
 }
 
 func (d *VariableDefinition) DependentMethodName() string {
 	method := d.VariableDefinition.Expr.Call.Method
-	return fmt.Sprintf("%s_%s", fullServiceName(method.Service), method.Name)
+	return fmt.Sprintf("%s_%s", fullServiceName(method.Service), util.ToPublicGoVariable(method.Name))
 }
 
 func (d *VariableDefinition) RequestType() string {
@@ -2564,7 +2576,7 @@ func (d *VariableDefinition) RequestType() string {
 		request := expr.Call.Request
 		return fmt.Sprintf("%s.%s",
 			request.Type.GoPackage().Name,
-			request.Type.Name,
+			util.ToPublicGoVariable(request.Type.Name),
 		)
 	case expr.Message != nil:
 		msgName := fullMessageName(expr.Message.Message)
@@ -3115,9 +3127,13 @@ func toEnumValuePrefix(file *File, typ *resolver.Type) string {
 	enum := typ.Enum
 	var name string
 	if enum.Message != nil {
-		name = strings.Join(append(enum.Message.ParentMessageNames(), enum.Message.Name), "_")
+		var names []string
+		for _, n := range append(enum.Message.ParentMessageNames(), enum.Message.Name) {
+			names = append(names, util.ToPublicGoVariable(n))
+		}
+		name = strings.Join(names, "_")
 	} else {
-		name = enum.Name
+		name = util.ToPublicGoVariable(enum.Name)
 	}
 	if file.GoPackage.ImportPath == enum.GoPackage().ImportPath {
 		return name

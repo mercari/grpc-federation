@@ -19,89 +19,90 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	FederationService_GetPost_FullMethodName = "/federation.FederationService/GetPost"
+	FederationV2DevService_GetPostV2Dev_FullMethodName = "/federation.v2dev.FederationV2devService/GetPostV2dev"
 )
 
-// FederationServiceClient is the client API for FederationService service.
+// FederationV2DevServiceClient is the client API for FederationV2DevService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type FederationServiceClient interface {
-	GetPost(ctx context.Context, in *GetPostRequest, opts ...grpc.CallOption) (*GetPostResponse, error)
+type FederationV2DevServiceClient interface {
+	GetPostV2Dev(ctx context.Context, in *GetPostV2DevRequest, opts ...grpc.CallOption) (*GetPostV2DevResponse, error)
 }
 
-type federationServiceClient struct {
+type federationV2DevServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewFederationServiceClient(cc grpc.ClientConnInterface) FederationServiceClient {
-	return &federationServiceClient{cc}
+func NewFederationV2DevServiceClient(cc grpc.ClientConnInterface) FederationV2DevServiceClient {
+	return &federationV2DevServiceClient{cc}
 }
 
-func (c *federationServiceClient) GetPost(ctx context.Context, in *GetPostRequest, opts ...grpc.CallOption) (*GetPostResponse, error) {
-	out := new(GetPostResponse)
-	err := c.cc.Invoke(ctx, FederationService_GetPost_FullMethodName, in, out, opts...)
+func (c *federationV2DevServiceClient) GetPostV2Dev(ctx context.Context, in *GetPostV2DevRequest, opts ...grpc.CallOption) (*GetPostV2DevResponse, error) {
+	out := new(GetPostV2DevResponse)
+	err := c.cc.Invoke(ctx, FederationV2DevService_GetPostV2Dev_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// FederationServiceServer is the server API for FederationService service.
-// All implementations must embed UnimplementedFederationServiceServer
+// FederationV2DevServiceServer is the server API for FederationV2DevService service.
+// All implementations must embed UnimplementedFederationV2DevServiceServer
 // for forward compatibility
-type FederationServiceServer interface {
-	GetPost(context.Context, *GetPostRequest) (*GetPostResponse, error)
-	mustEmbedUnimplementedFederationServiceServer()
+type FederationV2DevServiceServer interface {
+	GetPostV2Dev(context.Context, *GetPostV2DevRequest) (*GetPostV2DevResponse, error)
+	mustEmbedUnimplementedFederationV2DevServiceServer()
 }
 
-// UnimplementedFederationServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedFederationServiceServer struct {
+// UnimplementedFederationV2DevServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedFederationV2DevServiceServer struct {
 }
 
-func (UnimplementedFederationServiceServer) GetPost(context.Context, *GetPostRequest) (*GetPostResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPost not implemented")
+func (UnimplementedFederationV2DevServiceServer) GetPostV2Dev(context.Context, *GetPostV2DevRequest) (*GetPostV2DevResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPostV2Dev not implemented")
 }
-func (UnimplementedFederationServiceServer) mustEmbedUnimplementedFederationServiceServer() {}
+func (UnimplementedFederationV2DevServiceServer) mustEmbedUnimplementedFederationV2DevServiceServer() {
+}
 
-// UnsafeFederationServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to FederationServiceServer will
+// UnsafeFederationV2DevServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to FederationV2DevServiceServer will
 // result in compilation errors.
-type UnsafeFederationServiceServer interface {
-	mustEmbedUnimplementedFederationServiceServer()
+type UnsafeFederationV2DevServiceServer interface {
+	mustEmbedUnimplementedFederationV2DevServiceServer()
 }
 
-func RegisterFederationServiceServer(s grpc.ServiceRegistrar, srv FederationServiceServer) {
-	s.RegisterService(&FederationService_ServiceDesc, srv)
+func RegisterFederationV2DevServiceServer(s grpc.ServiceRegistrar, srv FederationV2DevServiceServer) {
+	s.RegisterService(&FederationV2DevService_ServiceDesc, srv)
 }
 
-func _FederationService_GetPost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPostRequest)
+func _FederationV2DevService_GetPostV2Dev_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPostV2DevRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FederationServiceServer).GetPost(ctx, in)
+		return srv.(FederationV2DevServiceServer).GetPostV2Dev(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FederationService_GetPost_FullMethodName,
+		FullMethod: FederationV2DevService_GetPostV2Dev_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FederationServiceServer).GetPost(ctx, req.(*GetPostRequest))
+		return srv.(FederationV2DevServiceServer).GetPostV2Dev(ctx, req.(*GetPostV2DevRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// FederationService_ServiceDesc is the grpc.ServiceDesc for FederationService service.
+// FederationV2DevService_ServiceDesc is the grpc.ServiceDesc for FederationV2DevService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var FederationService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "federation.FederationService",
-	HandlerType: (*FederationServiceServer)(nil),
+var FederationV2DevService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "federation.v2dev.FederationV2devService",
+	HandlerType: (*FederationV2DevServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetPost",
-			Handler:    _FederationService_GetPost_Handler,
+			MethodName: "GetPostV2dev",
+			Handler:    _FederationV2DevService_GetPostV2Dev_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

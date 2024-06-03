@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package federation;
+package federation.v2dev;
 
 import "grpc/federation/federation.proto";
 import "post/post.proto";
@@ -8,29 +8,34 @@ import "user/user.proto";
 
 option go_package = "example/federation;federation";
 
-service FederationService {
+service FederationV2devService {
   option (grpc.federation.service) = {};
-  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+  rpc GetPostV2dev(GetPostV2devRequest) returns (GetPostV2devResponse) {};
 }
 
-message GetPostRequest {
+message GetPostV2devRequest {
   string id = 1;
 }
 
-message GetPostResponse {
+enum PostV2devType {
+  POST_V2_DEV_TYPE = 0;
+}
+
+message GetPostV2devResponse {
   option (grpc.federation.message) = {
     def {
       name: "post"
       message {
-        name: "Post"
+        name: "PostV2dev"
         args { name: "id", by: "$.id" }
       }
     }
   };
-  Post post = 1 [(grpc.federation.field).by = "post"];
+  PostV2dev post = 1 [(grpc.federation.field).by = "post"];
+  PostV2devType type = 2 [(grpc.federation.field).by = "federation.v2dev.PostV2devType.POST_V2_DEV_TYPE"];
 }
 
-message Post {
+message PostV2dev {
   option (grpc.federation.message) = {
     def [
       {

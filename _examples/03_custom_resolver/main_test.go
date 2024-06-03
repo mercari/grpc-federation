@@ -37,19 +37,18 @@ var (
 
 type clientConfig struct{}
 
-func (c *clientConfig) Post_PostServiceClient(cfg federation.FederationServiceClientConfig) (post.PostServiceClient, error) {
+func (c *clientConfig) Post_PostServiceClient(cfg federation.FederationV2DevServiceClientConfig) (post.PostServiceClient, error) {
 	return postClient, nil
 }
 
-func (c *clientConfig) User_UserServiceClient(cfg federation.FederationServiceClientConfig) (user.UserServiceClient, error) {
+func (c *clientConfig) User_UserServiceClient(cfg federation.FederationV2DevServiceClientConfig) (user.UserServiceClient, error) {
 	return userClient, nil
 }
 
 type Resolver struct {
-	federation.FederationServiceUnimplementedResolver
 }
 
-func (r *Resolver) Resolve_Federation_User(ctx context.Context, arg *federation.Federation_UserArgument) (*federation.User, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_User(ctx context.Context, arg *federation.Federation_V2Dev_UserArgument) (*federation.User, error) {
 	grpcfed.SetLogger(ctx, grpcfed.Logger(ctx).With(slog.String("foo", "hoge")))
 
 	return &federation.User{
@@ -58,20 +57,20 @@ func (r *Resolver) Resolve_Federation_User(ctx context.Context, arg *federation.
 	}, nil
 }
 
-func (r *Resolver) Resolve_Federation_Post_User(ctx context.Context, arg *federation.Federation_Post_UserArgument) (*federation.User, error) {
-	return arg.Federation_PostArgument.User, nil
+func (r *Resolver) Resolve_Federation_V2Dev_PostV2Dev_User(ctx context.Context, arg *federation.Federation_V2Dev_PostV2Dev_UserArgument) (*federation.User, error) {
+	return arg.Federation_V2Dev_PostV2DevArgument.User, nil
 }
 
-func (r *Resolver) Resolve_Federation_Unused(_ context.Context, _ *federation.Federation_UnusedArgument) (*federation.Unused, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_Unused(_ context.Context, _ *federation.Federation_V2Dev_UnusedArgument) (*federation.Unused, error) {
 	return &federation.Unused{}, nil
 }
 
-func (r *Resolver) Resolve_Federation_ForNameless(_ context.Context, _ *federation.Federation_ForNamelessArgument) (*federation.ForNameless, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_ForNameless(_ context.Context, _ *federation.Federation_V2Dev_ForNamelessArgument) (*federation.ForNameless, error) {
 	return &federation.ForNameless{}, nil
 }
 
-func (r *Resolver) Resolve_Federation_User_Name(ctx context.Context, arg *federation.Federation_User_NameArgument) (string, error) {
-	return arg.Federation_User.Name, nil
+func (r *Resolver) Resolve_Federation_V2Dev_User_Name(ctx context.Context, arg *federation.Federation_V2Dev_User_NameArgument) (string, error) {
+	return arg.Federation_V2Dev_User.Name, nil
 }
 
 type PostServer struct {
@@ -157,7 +156,7 @@ func TestFederation(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
-	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
+	federationServer, err := federation.NewFederationV2DevService(federation.FederationV2DevServiceConfig{
 		Client:   new(clientConfig),
 		Resolver: new(Resolver),
 		Logger:   logger,
@@ -170,9 +169,9 @@ func TestFederation(t *testing.T) {
 				slog.String("dependent-method", methodName),
 			)
 			switch methodName {
-			case federation.FederationService_DependentMethod_Post_PostService_GetPost:
+			case federation.FederationV2DevService_DependentMethod_Post_PostService_GetPost:
 				return nil
-			case federation.FederationService_DependentMethod_User_UserService_GetUser:
+			case federation.FederationV2DevService_DependentMethod_User_UserService_GetUser:
 				return err
 			}
 			return err
@@ -183,7 +182,7 @@ func TestFederation(t *testing.T) {
 	}
 	post.RegisterPostServiceServer(grpcServer, &PostServer{})
 	user.RegisterUserServiceServer(grpcServer, &UserServer{})
-	federation.RegisterFederationServiceServer(grpcServer, federationServer)
+	federation.RegisterFederationV2DevServiceServer(grpcServer, federationServer)
 
 	go func() {
 		if err := grpcServer.Serve(listener); err != nil {
@@ -191,21 +190,21 @@ func TestFederation(t *testing.T) {
 		}
 	}()
 
-	client := federation.NewFederationServiceClient(conn)
-	res, err := client.GetPost(ctx, &federation.GetPostRequest{
+	client := federation.NewFederationV2DevServiceClient(conn)
+	res, err := client.GetPostV2Dev(ctx, &federation.GetPostV2DevRequest{
 		Id: "foo",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(res, &federation.GetPostResponse{
-		Post: &federation.Post{
+	if diff := cmp.Diff(res, &federation.GetPostV2DevResponse{
+		Post: &federation.PostV2Dev{
 			User: &federation.User{
 				Id:   "anonymous_id",
 				Name: "anonymous",
 			},
 		},
-	}, cmpopts.IgnoreUnexported(federation.GetPostResponse{}, federation.Post{}, federation.User{})); diff != "" {
+	}, cmpopts.IgnoreUnexported(federation.GetPostV2DevResponse{}, federation.PostV2Dev{}, federation.User{})); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }
