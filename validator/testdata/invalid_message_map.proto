@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+import "post.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  map<int32, int32> ids = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "ids", by: "$.ids" }
+      }
+    }
+    def { name: "map_value" by: "{'a': 'aa', 'b': 'bb', 'c': 'cc'}" }
+  };
+  map<int32, int32> map_value = 1 [(grpc.federation.field).by = "map_value"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    def [
+      {
+        name: "res"
+        call {
+          method: "post.PostService/GetPostMap"
+          request { field: "ids", by: "$.ids" }
+          timeout: "10s"
+        }
+      }
+    ]
+  };
+}

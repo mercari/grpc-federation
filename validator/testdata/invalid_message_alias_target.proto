@@ -74,4 +74,5 @@ message PostContent {
   string head = 2;
   string body = 3;
   string dup_body = 4 [(grpc.federation.field).alias = "body"];
+  map<int32, int32> counts = 5;
 }

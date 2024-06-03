@@ -522,12 +522,14 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	headValue := from.GetHead()
 	bodyValue := from.GetBody()
 	dupBodyValue := from.GetBody()
+	countsValue := from.GetCounts()
 
 	return &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
 		Body:     bodyValue,
 		DupBody:  dupBodyValue,
+		Counts:   countsValue,
 	}, nil
 }
 
@@ -593,12 +595,14 @@ func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_Pos
 	headValue := from.GetHead()
 	bodyValue := from.GetBody()
 	dupBodyValue := from.GetBody()
+	countsValue := from.GetCounts()
 
 	return &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
 		Body:     bodyValue,
 		DupBody:  dupBodyValue,
+		Counts:   countsValue,
 	}, nil
 }
 
@@ -686,6 +690,7 @@ func (s *FederationService) logvalue_Org_Federation_PostContent(v *PostContent) 
 		slog.String("head", v.GetHead()),
 		slog.String("body", v.GetBody()),
 		slog.String("dup_body", v.GetDupBody()),
+		slog.Any("counts", s.logvalue_Org_Federation_PostContent_CountsEntry(v.GetCounts())),
 	)
 }
 
@@ -697,6 +702,17 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostC
 		return slog.StringValue("CATEGORY_B")
 	}
 	return slog.StringValue("")
+}
+
+func (s *FederationService) logvalue_Org_Federation_PostContent_CountsEntry(v map[int32]int32) slog.Value {
+	attrs := make([]slog.Attr, 0, len(v))
+	for key, value := range v {
+		attrs = append(attrs, slog.Attr{
+			Key:   grpcfed.ToLogAttrKey(key),
+			Value: slog.AnyValue(value),
+		})
+	}
+	return slog.GroupValue(attrs...)
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostData(v *PostData) slog.Value {

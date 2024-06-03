@@ -88,6 +88,9 @@ func toCELType(typ *Type) *cel.Type {
 		if typ.Message == nil {
 			return cel.NullType
 		}
+		if typ.Message.IsMapEntry {
+			return cel.MapType(toCELType(typ.Message.Fields[0].Type), toCELType(typ.Message.Fields[1].Type))
+		}
 		return cel.ObjectType(typ.Message.FQDN())
 	case types.Bytes:
 		return cel.BytesType

@@ -41,4 +41,6 @@ message PostContent {
   Category category = 1;
   string head = 2;
   string body = 3;
+  map<int32, int32> counts = 5;
+  map<int64, int64> cast_counts = 6;
 }
