@@ -521,6 +521,62 @@ testdata/nested_message_cyclic_dependency.proto:55:19: recursive definition: "C"
 55:              name: "A.B.C"
                        ^
 `},
+		{file: "invalid_wrapper_type_conversion.proto", expected: `
+testdata/invalid_wrapper_type_conversion.proto:20:3: cannot convert message to "double"
+20:    double double_value = 1 [(grpc.federation.field).by = "google.protobuf.DoubleValue{value: 1.23}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:21:3: cannot convert message to "float"
+21:    float float_value = 2 [(grpc.federation.field).by = "google.protobuf.FloatValue{value: 3.45}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:22:3: cannot convert message to "int64"
+22:    int64 i64_value = 3 [(grpc.federation.field).by = "google.protobuf.Int64Value{value: 1}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:23:3: cannot convert message to "uint64"
+23:    uint64 u64_value = 4 [(grpc.federation.field).by = "google.protobuf.UInt64Value{value: uint(2)}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:24:3: cannot convert message to "int32"
+24:    int32 i32_value = 5 [(grpc.federation.field).by = "google.protobuf.Int32Value{value: 3}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:25:3: cannot convert message to "uint32"
+25:    uint32 u32_value = 6 [(grpc.federation.field).by = "google.protobuf.UInt32Value{value: uint(4)}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:26:3: cannot convert message to "bool"
+26:    bool bool_value = 7 [(grpc.federation.field).by = "google.protobuf.BoolValue{value: true}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:27:3: cannot convert message to "string"
+27:    string string_value = 8 [(grpc.federation.field).by = "google.protobuf.StringValue{value: 'hello'}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:28:3: cannot convert message to "bytes"
+28:    bytes bytes_value = 9 [(grpc.federation.field).by = "google.protobuf.BytesValue{value: bytes('world')}"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:40:3: cannot convert type automatically: field type is "message" but specified value type is "double"
+40:    google.protobuf.DoubleValue double_wrapper_value2 = 19 [(grpc.federation.field).by = "1.23"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:41:3: cannot convert type automatically: field type is "message" but specified value type is "double"
+41:    google.protobuf.FloatValue float_wrapper_value2 = 20 [(grpc.federation.field).by = "3.45"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:42:3: cannot convert type automatically: field type is "message" but specified value type is "int64"
+42:    google.protobuf.Int64Value i64_wrapper_value2 = 21 [(grpc.federation.field).by = "1"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:43:3: cannot convert type automatically: field type is "message" but specified value type is "uint64"
+43:    google.protobuf.UInt64Value u64_wrapper_value2 = 22 [(grpc.federation.field).by = "uint(2)"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:44:3: cannot convert type automatically: field type is "message" but specified value type is "int64"
+44:    google.protobuf.Int32Value i32_wrapper_value2 = 23 [(grpc.federation.field).by = "3"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:45:3: cannot convert type automatically: field type is "message" but specified value type is "uint64"
+45:    google.protobuf.UInt32Value u32_wrapper_value2 = 24 [(grpc.federation.field).by = "uint(4)"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:46:3: cannot convert type automatically: field type is "message" but specified value type is "bool"
+46:    google.protobuf.BoolValue bool_wrapper_value2 = 25 [(grpc.federation.field).by = "true"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:47:3: cannot convert type automatically: field type is "message" but specified value type is "string"
+47:    google.protobuf.StringValue string_wrapper_value2 = 26 [(grpc.federation.field).by = "'hello'"];
+       ^
+testdata/invalid_wrapper_type_conversion.proto:48:3: cannot convert type automatically: field type is "message" but specified value type is "bytes"
+48:    google.protobuf.BytesValue bytes_wrapper_value2 = 27 [(grpc.federation.field).by = "bytes('world')"];
+       ^
+`},
 		{file: "invalid_validation_return_type.proto", expected: `
 testdata/invalid_validation_return_type.proto:48:17: if must always return a boolean value
 48:              if: "post.id"

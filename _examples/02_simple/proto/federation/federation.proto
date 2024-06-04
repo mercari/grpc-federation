@@ -3,6 +3,7 @@ syntax = "proto3";
 package federation;
 
 import "google/protobuf/any.proto";
+import "google/protobuf/wrappers.proto";
 import "grpc/federation/federation.proto";
 import "post/post.proto";
 import "user/user.proto";
@@ -55,6 +56,15 @@ message GetPostResponse {
   repeated int32 sorted_values = 15 [(grpc.federation.field).by = "sorted_values"];
   repeated Item sorted_items = 16 [(grpc.federation.field).by = "sorted_items"];
   map<int32, string> map_value = 17 [(grpc.federation.field).by = "map_value"];
+  google.protobuf.DoubleValue double_wrapper_value = 18 [(grpc.federation.field).by = "google.protobuf.DoubleValue{value: 1.23}"];
+  google.protobuf.FloatValue float_wrapper_value = 19 [(grpc.federation.field).by = "google.protobuf.FloatValue{value: 3.45}"];
+  google.protobuf.Int64Value i64_wrapper_value = 20 [(grpc.federation.field).by = "google.protobuf.Int64Value{value: 1}"];
+  google.protobuf.UInt64Value u64_wrapper_value = 21 [(grpc.federation.field).by = "google.protobuf.UInt64Value{value: uint(2)}"];
+  google.protobuf.Int32Value i32_wrapper_value = 22 [(grpc.federation.field).by = "google.protobuf.Int32Value{value: 3}"];
+  google.protobuf.UInt32Value u32_wrapper_value = 23 [(grpc.federation.field).by = "google.protobuf.UInt32Value{value: uint(4)}"];
+  google.protobuf.BoolValue bool_wrapper_value = 24 [(grpc.federation.field).by = "google.protobuf.BoolValue{value: true}"];
+  google.protobuf.StringValue string_wrapper_value = 25 [(grpc.federation.field).by = "google.protobuf.StringValue{value: 'hello'}"];
+  google.protobuf.BytesValue bytes_wrapper_value = 26 [(grpc.federation.field).by = "google.protobuf.BytesValue{value: bytes('world')}"];
 }
 
 message A {

@@ -384,6 +384,14 @@ func (t *Type) IsNumber() bool {
 	return false
 }
 
+func (t *Type) IsNumberWrapper() bool {
+	if t == nil {
+		return false
+	}
+	_, exists := WrapperNumberTypeMap[t.FQDN()]
+	return exists
+}
+
 type MethodCall struct {
 	Method  *Method
 	Request *Request

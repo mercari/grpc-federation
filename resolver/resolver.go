@@ -978,6 +978,10 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 		if fromType.Message == nil || toType.Message == nil {
 			return
 		}
+		if fromType.IsNumberWrapper() && toType.IsNumberWrapper() {
+			// If both are of the number type from google.protobuf.wrappers, they can be mutually converted.
+			return
+		}
 		if fromType.Message.IsMapEntry && toType.Message.IsMapEntry {
 			for _, name := range []string{"key", "value"} {
 				fromMapType := fromType.Message.Field(name).Type
@@ -1105,7 +1109,20 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 	}
 	toType := toField.Type
 	if fromType.Kind == types.Message {
+		if toType.Kind != types.Message {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(`cannot convert message to %q`, toType.Kind.ToString()),
+					builder.Location(),
+				),
+			)
+			return
+		}
 		if fromType.Message == nil || toType.Message == nil {
+			return
+		}
+		if fromType.IsNumberWrapper() && toType.IsNumberWrapper() {
+			// If both are of the number type from google.protobuf.wrappers, they can be mutually converted.
 			return
 		}
 		if fromType.Message.IsMapEntry && toType.Message.IsMapEntry {
@@ -3284,21 +3301,40 @@ func (r *Resolver) enumOperators() []cel.EnvOption {
 }
 
 func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
+	declTypeName := typ.DeclaredTypeName()
 	switch typ.Kind() {
 	case celtypes.BoolKind:
+		if declTypeName == "wrapper(bool)" {
+			return BoolValueType, nil
+		}
 		return BoolType, nil
 	case celtypes.BytesKind:
+		if declTypeName == "wrapper(bytes)" {
+			return BytesValueType, nil
+		}
 		return BytesType, nil
 	case celtypes.DoubleKind:
+		if declTypeName == "wrapper(double)" {
+			return DoubleValueType, nil
+		}
 		return DoubleType, nil
 	case celtypes.IntKind:
+		if declTypeName == "wrapper(int)" {
+			return Int64ValueType, nil
+		}
 		if enum, found := r.celRegistry.LookupEnum(typ); found {
 			return &Type{Kind: types.Enum, Enum: enum}, nil
 		}
 		return Int64Type, nil
 	case celtypes.UintKind:
+		if declTypeName == "wrapper(uint)" {
+			return Uint64ValueType, nil
+		}
 		return Uint64Type, nil
 	case celtypes.StringKind:
+		if declTypeName == "wrapper(string)" {
+			return StringValueType, nil
+		}
 		return StringType, nil
 	case celtypes.AnyKind:
 		return AnyType, nil

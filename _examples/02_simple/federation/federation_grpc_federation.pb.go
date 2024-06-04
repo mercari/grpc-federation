@@ -22,6 +22,7 @@ import (
 
 	post "example/post"
 	user "example/user"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var (
@@ -1115,6 +1116,168 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	// (grpc.federation.field).by = "google.protobuf.DoubleValue{value: 1.23}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.DoubleValue]{
+		Value:             value,
+		Expr:              "google.protobuf.DoubleValue{value: 1.23}",
+		UseContextLibrary: false,
+		CacheIndex:        31,
+		Setter: func(v *wrapperspb.DoubleValue) error {
+			doubleWrapperValueValue, err := s.cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_DoubleValue(v)
+			if err != nil {
+				return err
+			}
+			ret.DoubleWrapperValue = doubleWrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.FloatValue{value: 3.45}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.DoubleValue]{
+		Value:             value,
+		Expr:              "google.protobuf.FloatValue{value: 3.45}",
+		UseContextLibrary: false,
+		CacheIndex:        32,
+		Setter: func(v *wrapperspb.DoubleValue) error {
+			floatWrapperValueValue, err := s.cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_FloatValue(v)
+			if err != nil {
+				return err
+			}
+			ret.FloatWrapperValue = floatWrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.Int64Value{value: 1}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.Int64Value]{
+		Value:             value,
+		Expr:              "google.protobuf.Int64Value{value: 1}",
+		UseContextLibrary: false,
+		CacheIndex:        33,
+		Setter: func(v *wrapperspb.Int64Value) error {
+			i64WrapperValueValue, err := s.cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int64Value(v)
+			if err != nil {
+				return err
+			}
+			ret.I64WrapperValue = i64WrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.UInt64Value{value: uint(2)}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.UInt64Value]{
+		Value:             value,
+		Expr:              "google.protobuf.UInt64Value{value: uint(2)}",
+		UseContextLibrary: false,
+		CacheIndex:        34,
+		Setter: func(v *wrapperspb.UInt64Value) error {
+			u64WrapperValueValue, err := s.cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt64Value(v)
+			if err != nil {
+				return err
+			}
+			ret.U64WrapperValue = u64WrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.Int32Value{value: 3}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.Int64Value]{
+		Value:             value,
+		Expr:              "google.protobuf.Int32Value{value: 3}",
+		UseContextLibrary: false,
+		CacheIndex:        35,
+		Setter: func(v *wrapperspb.Int64Value) error {
+			i32WrapperValueValue, err := s.cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int32Value(v)
+			if err != nil {
+				return err
+			}
+			ret.I32WrapperValue = i32WrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.UInt32Value{value: uint(4)}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.UInt64Value]{
+		Value:             value,
+		Expr:              "google.protobuf.UInt32Value{value: uint(4)}",
+		UseContextLibrary: false,
+		CacheIndex:        36,
+		Setter: func(v *wrapperspb.UInt64Value) error {
+			u32WrapperValueValue, err := s.cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt32Value(v)
+			if err != nil {
+				return err
+			}
+			ret.U32WrapperValue = u32WrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.BoolValue{value: true}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.BoolValue]{
+		Value:             value,
+		Expr:              "google.protobuf.BoolValue{value: true}",
+		UseContextLibrary: false,
+		CacheIndex:        37,
+		Setter: func(v *wrapperspb.BoolValue) error {
+			boolWrapperValueValue, err := s.cast_Google_Protobuf_BoolValue__to__Google_Protobuf_BoolValue(v)
+			if err != nil {
+				return err
+			}
+			ret.BoolWrapperValue = boolWrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.StringValue{value: 'hello'}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.StringValue]{
+		Value:             value,
+		Expr:              "google.protobuf.StringValue{value: 'hello'}",
+		UseContextLibrary: false,
+		CacheIndex:        38,
+		Setter: func(v *wrapperspb.StringValue) error {
+			stringWrapperValueValue, err := s.cast_Google_Protobuf_StringValue__to__Google_Protobuf_StringValue(v)
+			if err != nil {
+				return err
+			}
+			ret.StringWrapperValue = stringWrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "google.protobuf.BytesValue{value: bytes('world')}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.BytesValue]{
+		Value:             value,
+		Expr:              "google.protobuf.BytesValue{value: bytes('world')}",
+		UseContextLibrary: false,
+		CacheIndex:        39,
+		Setter: func(v *wrapperspb.BytesValue) error {
+			bytesWrapperValueValue, err := s.cast_Google_Protobuf_BytesValue__to__Google_Protobuf_BytesValue(v)
+			if err != nil {
+				return err
+			}
+			ret.BytesWrapperValue = bytesWrapperValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetPostResponse", slog.Any("federation.GetPostResponse", s.logvalue_Federation_GetPostResponse(ret)))
 	return ret, nil
@@ -1165,7 +1328,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				Value:             value,
 				Expr:              "$.id",
 				UseContextLibrary: false,
-				CacheIndex:        31,
+				CacheIndex:        40,
 				Setter: func(v string) error {
 					args.Id = v
 					return nil
@@ -1182,7 +1345,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					Value:             value,
 					If:                "true",
 					UseContextLibrary: false,
-					CacheIndex:        32,
+					CacheIndex:        41,
 					BackOff:           b,
 					Body: func() (*post.GetPostResponse, error) {
 						return s.client.Post_PostServiceClient.GetPost(ctx, args)
@@ -1214,7 +1377,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		},
 		By:                  "res.post",
 		ByUseContextLibrary: false,
-		ByCacheIndex:        33,
+		ByCacheIndex:        42,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -1244,7 +1407,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				Value:             value,
 				Expr:              "post",
 				UseContextLibrary: false,
-				CacheIndex:        34,
+				CacheIndex:        43,
 				Setter: func(v *post.Post) error {
 					args.Id = v.GetId()
 					args.Title = v.GetTitle()
@@ -1279,7 +1442,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              "user",
 		UseContextLibrary: false,
-		CacheIndex:        35,
+		CacheIndex:        44,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -1340,7 +1503,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				Value:             value,
 				Expr:              "$.user_id",
 				UseContextLibrary: false,
-				CacheIndex:        36,
+				CacheIndex:        45,
 				Setter: func(v string) error {
 					args.Id = v
 					return nil
@@ -1353,7 +1516,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				Value:             value,
 				Expr:              "user.Item.ItemType.value('ITEM_TYPE_1')",
 				UseContextLibrary: false,
-				CacheIndex:        37,
+				CacheIndex:        46,
 				Setter: func(v user.Item_ItemType) error {
 					typeValue, err := s.cast_User_Item_ItemType__to__int32(v)
 					if err != nil {
@@ -1380,7 +1543,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 					Value:             value,
 					If:                "true",
 					UseContextLibrary: false,
-					CacheIndex:        38,
+					CacheIndex:        47,
 					BackOff:           b,
 					Body: func() (*user.GetUserResponse, error) {
 						return s.client.User_UserServiceClient.GetUser(ctx, args)
@@ -1412,7 +1575,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		},
 		By:                  "res.user",
 		ByUseContextLibrary: false,
-		ByCacheIndex:        39,
+		ByCacheIndex:        48,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -1462,6 +1625,132 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 // cast_Federation_Item_Location_LocationType__to__int32 cast from "federation.Item.Location.LocationType" to "int32".
 func (s *FederationService) cast_Federation_Item_Location_LocationType__to__int32(from Item_Location_LocationType) (int32, error) {
 	return int32(from), nil
+}
+
+// cast_Google_Protobuf_BoolValue__to__Google_Protobuf_BoolValue cast from "google.protobuf.BoolValue" to "google.protobuf.BoolValue".
+func (s *FederationService) cast_Google_Protobuf_BoolValue__to__Google_Protobuf_BoolValue(from *wrapperspb.BoolValue) (*wrapperspb.BoolValue, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue := from.GetValue()
+
+	return &wrapperspb.BoolValue{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_BytesValue__to__Google_Protobuf_BytesValue cast from "google.protobuf.BytesValue" to "google.protobuf.BytesValue".
+func (s *FederationService) cast_Google_Protobuf_BytesValue__to__Google_Protobuf_BytesValue(from *wrapperspb.BytesValue) (*wrapperspb.BytesValue, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue := from.GetValue()
+
+	return &wrapperspb.BytesValue{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_DoubleValue cast from "google.protobuf.DoubleValue" to "google.protobuf.DoubleValue".
+func (s *FederationService) cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_DoubleValue(from *wrapperspb.DoubleValue) (*wrapperspb.DoubleValue, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue := from.GetValue()
+
+	return &wrapperspb.DoubleValue{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_FloatValue cast from "google.protobuf.DoubleValue" to "google.protobuf.FloatValue".
+func (s *FederationService) cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_FloatValue(from *wrapperspb.DoubleValue) (*wrapperspb.FloatValue, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue, err := s.cast_float64__to__float32(from.GetValue())
+	if err != nil {
+		return nil, err
+	}
+
+	return &wrapperspb.FloatValue{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int32Value cast from "google.protobuf.Int64Value" to "google.protobuf.Int32Value".
+func (s *FederationService) cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int32Value(from *wrapperspb.Int64Value) (*wrapperspb.Int32Value, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue, err := s.cast_int64__to__int32(from.GetValue())
+	if err != nil {
+		return nil, err
+	}
+
+	return &wrapperspb.Int32Value{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int64Value cast from "google.protobuf.Int64Value" to "google.protobuf.Int64Value".
+func (s *FederationService) cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int64Value(from *wrapperspb.Int64Value) (*wrapperspb.Int64Value, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue := from.GetValue()
+
+	return &wrapperspb.Int64Value{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_StringValue__to__Google_Protobuf_StringValue cast from "google.protobuf.StringValue" to "google.protobuf.StringValue".
+func (s *FederationService) cast_Google_Protobuf_StringValue__to__Google_Protobuf_StringValue(from *wrapperspb.StringValue) (*wrapperspb.StringValue, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue := from.GetValue()
+
+	return &wrapperspb.StringValue{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt32Value cast from "google.protobuf.UInt64Value" to "google.protobuf.UInt32Value".
+func (s *FederationService) cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt32Value(from *wrapperspb.UInt64Value) (*wrapperspb.UInt32Value, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue, err := s.cast_uint64__to__uint32(from.GetValue())
+	if err != nil {
+		return nil, err
+	}
+
+	return &wrapperspb.UInt32Value{
+		Value: valueValue,
+	}, nil
+}
+
+// cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt64Value cast from "google.protobuf.UInt64Value" to "google.protobuf.UInt64Value".
+func (s *FederationService) cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt64Value(from *wrapperspb.UInt64Value) (*wrapperspb.UInt64Value, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	valueValue := from.GetValue()
+
+	return &wrapperspb.UInt64Value{
+		Value: valueValue,
+	}, nil
 }
 
 // cast_User_Item_ItemType__to__Federation_Item_ItemType cast from "user.Item.ItemType" to "federation.Item.ItemType".
@@ -1645,6 +1934,11 @@ func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.U
 	return &User_B{B: bValue}, nil
 }
 
+// cast_float64__to__float32 cast from "double" to "float".
+func (s *FederationService) cast_float64__to__float32(from float64) (float32, error) {
+	return float32(from), nil
+}
+
 // cast_int64__to__Federation_Item_ItemType cast from "int64" to "federation.Item.ItemType".
 func (s *FederationService) cast_int64__to__Federation_Item_ItemType(from int64) (Item_ItemType, error) {
 	return Item_ItemType(from), nil
@@ -1693,6 +1987,11 @@ func (s *FederationService) cast_repeated_int64__to__repeated_int32(from []int64
 		ret = append(ret, casted)
 	}
 	return ret, nil
+}
+
+// cast_uint64__to__uint32 cast from "uint64" to "uint32".
+func (s *FederationService) cast_uint64__to__uint32(from uint64) (uint32, error) {
+	return grpcfed.Uint64ToUint32(from)
 }
 
 func (s *FederationService) logvalue_Federation_A(v *A) slog.Value {
@@ -1768,6 +2067,15 @@ func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostRespon
 		slog.Any("sorted_values", v.GetSortedValues()),
 		slog.Any("sorted_items", s.logvalue_repeated_Federation_Item(v.GetSortedItems())),
 		slog.Any("map_value", s.logvalue_Federation_GetPostResponse_MapValueEntry(v.GetMapValue())),
+		slog.Any("double_wrapper_value", s.logvalue_Google_Protobuf_DoubleValue(v.GetDoubleWrapperValue())),
+		slog.Any("float_wrapper_value", s.logvalue_Google_Protobuf_FloatValue(v.GetFloatWrapperValue())),
+		slog.Any("i64_wrapper_value", s.logvalue_Google_Protobuf_Int64Value(v.GetI64WrapperValue())),
+		slog.Any("u64_wrapper_value", s.logvalue_Google_Protobuf_UInt64Value(v.GetU64WrapperValue())),
+		slog.Any("i32_wrapper_value", s.logvalue_Google_Protobuf_Int32Value(v.GetI32WrapperValue())),
+		slog.Any("u32_wrapper_value", s.logvalue_Google_Protobuf_UInt32Value(v.GetU32WrapperValue())),
+		slog.Any("bool_wrapper_value", s.logvalue_Google_Protobuf_BoolValue(v.GetBoolWrapperValue())),
+		slog.Any("string_wrapper_value", s.logvalue_Google_Protobuf_StringValue(v.GetStringWrapperValue())),
+		slog.Any("bytes_wrapper_value", s.logvalue_Google_Protobuf_BytesValue(v.GetBytesWrapperValue())),
 	)
 }
 
@@ -1940,6 +2248,87 @@ func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Valu
 	return slog.GroupValue(
 		slog.String("type_url", v.GetTypeUrl()),
 		slog.String("value", string(v.GetValue())),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_BoolValue(v *wrapperspb.BoolValue) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Bool("value", v.GetValue()),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_BytesValue(v *wrapperspb.BytesValue) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("value", string(v.GetValue())),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_DoubleValue(v *wrapperspb.DoubleValue) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Float64("value", v.GetValue()),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_FloatValue(v *wrapperspb.FloatValue) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Float64("value", float64(v.GetValue())),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_Int32Value(v *wrapperspb.Int32Value) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Int64("value", int64(v.GetValue())),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_Int64Value(v *wrapperspb.Int64Value) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Int64("value", v.GetValue()),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_StringValue(v *wrapperspb.StringValue) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("value", v.GetValue()),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_UInt32Value(v *wrapperspb.UInt32Value) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Uint64("value", uint64(v.GetValue())),
+	)
+}
+
+func (s *FederationService) logvalue_Google_Protobuf_UInt64Value(v *wrapperspb.UInt64Value) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Uint64("value", v.GetValue()),
 	)
 }
 
