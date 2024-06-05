@@ -204,7 +204,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name: "post",
+		Name: `post`,
 		Type: grpcfed.CELObjectType("federation.Post"),
 		Setter: func(value *localValueType, v *Post) error {
 			value.vars.post = v
@@ -215,7 +215,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			// { name: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.id",
+				Expr:              `$.id`,
 				UseContextLibrary: false,
 				CacheIndex:        1,
 				Setter: func(v string) error {
@@ -242,7 +242,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	// (grpc.federation.field).by = "post"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:             value,
-		Expr:              "post",
+		Expr:              `post`,
 		UseContextLibrary: false,
 		CacheIndex:        2,
 		Setter: func(v *Post) error {
@@ -289,7 +289,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-		Name: "res",
+		Name: `res`,
 		Type: grpcfed.CELObjectType("post.GetPostResponse"),
 		Setter: func(value *localValueType, v *post.GetPostResponse) error {
 			value.vars.res = v
@@ -300,7 +300,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			// { field: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.id",
+				Expr:              `$.id`,
 				UseContextLibrary: false,
 				CacheIndex:        3,
 				Setter: func(v string) error {
@@ -329,13 +329,13 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.Post, *localValueType]{
-		Name: "post",
+		Name: `post`,
 		Type: grpcfed.CELObjectType("post.Post"),
 		Setter: func(value *localValueType, v *post.Post) error {
 			value.vars.post = v
 			return nil
 		},
-		By:                  "res.post",
+		By:                  `res.post`,
 		ByUseContextLibrary: false,
 		ByCacheIndex:        4,
 	}); err != nil {

@@ -12,14 +12,14 @@ if _, err := func() (any, error) {
 {{- end }}
 if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 	Value: value,
-	Expr: "{{ $error.If.Expr }}",
+	Expr: `{{ $error.If.Expr }}`,
 	UseContextLibrary: {{ $error.If.UseContextLibrary }},
 	CacheIndex: {{ $error.CELCacheIndex }},
 	Body: func(value *localValueType) error {
 		{{- if $error.Message }}
 		errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 			Value: value,
-			Expr: "{{ $error.Message.Expr }}",
+			Expr: `{{ $error.Message.Expr }}`,
 			UseContextLibrary: {{ $error.Message.UseContextLibrary }},
 			OutType: reflect.TypeOf(""),
 			CacheIndex: {{ $error.CELCacheIndex }},
@@ -45,7 +45,7 @@ if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 		{{- end }}
 		if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 			Value: value,
-			Expr: "{{ .If.Expr }}",
+			Expr: `{{ .If.Expr }}`,
 			UseContextLibrary: {{ .If.UseContextLibrary }},
 			CacheIndex: {{ $error.CELCacheIndex }},
 			Body: func(value *localValueType) error {

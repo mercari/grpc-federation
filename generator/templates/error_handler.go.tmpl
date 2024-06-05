@@ -13,7 +13,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 	{{- end }}
 	if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 		Value: value,
-		Expr: "{{ .If.Expr }}",
+		Expr: `{{ .If.Expr }}`,
 		UseContextLibrary: {{ .If.UseContextLibrary }},
 		CacheIndex: {{ $def.CELCacheIndex }},
 		Body: func(value *localValueType) error {
@@ -29,7 +29,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 					value.vars.{{ $def.Key }} = v
 					return nil
 				},
-				By: "{{ .IgnoreAndResponse.Expr }}",
+				By: `{{ .IgnoreAndResponse.Expr }}`,
 				ByUseContextLibrary: {{ .IgnoreAndResponse.UseContextLibrary }},
 				ByCacheIndex: {{ $def.CELCacheIndex }},
 			}); err != nil {
@@ -42,7 +42,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			{{- if .Message }}
 			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 				Value: value,
-				Expr: "{{ .Message.Expr }}",
+				Expr: `{{ .Message.Expr }}`,
 				UseContextLibrary: {{ .Message.UseContextLibrary }},
 				OutType: reflect.TypeOf(""),
 				CacheIndex: {{ $def.CELCacheIndex }},
@@ -69,7 +69,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			{{- end }}
 			if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 				Value: value,
-				Expr: "{{ .If.Expr }}",
+				Expr: `{{ .If.Expr }}`,
 				UseContextLibrary: {{ .If.UseContextLibrary }},
 				CacheIndex: {{ $def.CELCacheIndex }},
 				Body: func(value *localValueType) error {
@@ -211,9 +211,9 @@ func(){
 if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFailureViolation{
 	{{- range .Violations }}
 	{
-		Type:    "{{ .Type.Expr }}",
-		Subject: "{{ .Subject.Expr }}",
-		Desc:    "{{ .Description.Expr }}",
+		Type:    `{{ .Type.Expr }}`,
+		Subject: `{{ .Subject.Expr }}`,
+		Desc:    `{{ .Description.Expr }}`,
 		TypeUseContextLibrary:    {{ .Type.UseContextLibrary }},
 		SubjectUseContextLibrary: {{ .Subject.UseContextLibrary }},
 		DescUseContextLibrary:    {{ .Description.UseContextLibrary }},
@@ -231,8 +231,8 @@ if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFail
 if detail := grpcfed.BadRequest(ctx, value, []*grpcfed.BadRequestFieldViolation{
 	{{- range .FieldViolations }}
 	{
-		Field: "{{ .Field.Expr }}",
-		Desc:  "{{ .Description.Expr }}",
+		Field: `{{ .Field.Expr }}`,
+		Desc:  `{{ .Description.Expr }}`,
 		FieldUseContextLibrary: {{ .Field.UseContextLibrary }},
 		DescUseContextLibrary: {{ .Description.UseContextLibrary }},
 		FieldCacheIndex: {{ .CELCacheIndex }},
@@ -248,7 +248,7 @@ if detail := grpcfed.BadRequest(ctx, value, []*grpcfed.BadRequestFieldViolation{
 if detail := grpcfed.LocalizedMessage(ctx, &grpcfed.LocalizedMessageParam{
 	Value: value,
 	Locale: "{{ .Locale }}",
-	Message: "{{ .Message.Expr }}",
+	Message: `{{ .Message.Expr }}`,
 	UseContextLibrary: {{ .Message.UseContextLibrary }},
 	CacheIndex: {{ .CELCacheIndex }},
 }); detail != nil {

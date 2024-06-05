@@ -217,13 +217,13 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[string, *localValueType]{
-			Name: "id_from_metadata",
+			Name: `id_from_metadata`,
 			Type: grpcfed.CELStringType,
 			Setter: func(value *localValueType, v string) error {
 				value.vars.id_from_metadata = v
 				return nil
 			},
-			By:                  "grpc.federation.metadata.incoming()['id'][0]",
+			By:                  `grpc.federation.metadata.incoming()['id'][0]`,
 			ByUseContextLibrary: true,
 			ByCacheIndex:        1,
 		}); err != nil {
@@ -243,13 +243,13 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[string, *localValueType]{
-			Name: "id_from_plugin",
+			Name: `id_from_plugin`,
 			Type: grpcfed.CELStringType,
 			Setter: func(value *localValueType, v string) error {
 				value.vars.id_from_plugin = v
 				return nil
 			},
-			By:                  "example.account.get_id()",
+			By:                  `example.account.get_id()`,
 			ByUseContextLibrary: true,
 			ByCacheIndex:        2,
 		}); err != nil {
@@ -274,7 +274,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// (grpc.federation.field).by = "id_from_plugin"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "id_from_plugin",
+		Expr:              `id_from_plugin`,
 		UseContextLibrary: false,
 		CacheIndex:        3,
 		Setter: func(v string) error {
@@ -288,7 +288,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// (grpc.federation.field).by = "id_from_metadata"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "id_from_metadata",
+		Expr:              `id_from_metadata`,
 		UseContextLibrary: false,
 		CacheIndex:        4,
 		Setter: func(v string) error {

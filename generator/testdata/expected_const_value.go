@@ -238,7 +238,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*content.GetContentResponse, *localValueType]{
-		Name: "res",
+		Name: `res`,
 		Type: grpcfed.CELObjectType("content.GetContentResponse"),
 		Setter: func(value *localValueType, v *content.GetContentResponse) error {
 			value.vars.res = v
@@ -286,7 +286,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			// { field: "by_field", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.id",
+				Expr:              `$.id`,
 				UseContextLibrary: false,
 				CacheIndex:        1,
 				Setter: func(v string) error {
@@ -314,13 +314,13 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*content.Content, *localValueType]{
-		Name: "content",
+		Name: `content`,
 		Type: grpcfed.CELObjectType("content.Content"),
 		Setter: func(value *localValueType, v *content.Content) error {
 			value.vars.content = v
 			return nil
 		},
-		By:                  "res.content",
+		By:                  `res.content`,
 		ByUseContextLibrary: false,
 		ByCacheIndex:        2,
 	}); err != nil {
@@ -339,7 +339,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// (grpc.federation.field).by = "content"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*content.Content]{
 		Value:             value,
-		Expr:              "content",
+		Expr:              `content`,
 		UseContextLibrary: false,
 		CacheIndex:        3,
 		Setter: func(v *content.Content) error {
@@ -357,7 +357,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// (grpc.federation.field).by = "content.int32_field + content.sint32_field"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:             value,
-		Expr:              "content.int32_field + content.sint32_field",
+		Expr:              `content.int32_field + content.sint32_field`,
 		UseContextLibrary: false,
 		CacheIndex:        4,
 		Setter: func(v int64) error {
