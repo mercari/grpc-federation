@@ -311,7 +311,10 @@ func TestFederation(t *testing.T) {
 		BoolWrapperValue: &wrapperspb.BoolValue{
 			Value: true,
 		},
-		Hello: "hello\nworld",
+		Hello:          "hello\nworld",
+		NullTimestamp:  nil,
+		NullTimestamp2: nil,
+		NullTimestamp3: nil,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},

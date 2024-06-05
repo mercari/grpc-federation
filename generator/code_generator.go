@@ -813,7 +813,7 @@ func toCELTypeDeclare(t *resolver.Type) string {
 }
 
 func (f *File) toTypeText(t *resolver.Type) string {
-	if t == nil {
+	if t == nil || t.IsNull {
 		return "any"
 	}
 	if t.OneofField != nil {
@@ -2828,6 +2828,9 @@ func toCELNativeType(t *resolver.Type) string {
 		cloned := t.Clone()
 		cloned.Repeated = false
 		return fmt.Sprintf("grpcfed.CELListType(%s)", toCELNativeType(cloned))
+	}
+	if t.IsNull {
+		return "grpcfed.CELNullType"
 	}
 	switch t.Kind {
 	case types.Double, types.Float:
