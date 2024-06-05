@@ -402,7 +402,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- range $oneofFields }}
 	oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 		Value: value,
-		Expr: "{{ .Expr }}",
+		Expr: `{{ .Expr }}`,
 		UseContextLibrary: {{ .ExprUseContextLibrary }},
 		OutType: reflect.TypeOf(true),
 		CacheIndex: {{ $msg.CELCacheIndex }},
@@ -420,7 +420,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- if .By }}
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
 			Value: value,
-			Expr: "{{ .By }}",
+			Expr: `{{ .By }}`,
 			UseContextLibrary: {{ .ByUseContextLibrary }},
 			CacheIndex: {{ $msg.CELCacheIndex }},
 			Setter: func(v {{ .Type }}) error {
@@ -455,7 +455,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 		{{- if $defaultOneofField.By }}
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $defaultOneofField.Type }}]{
 			Value: value,
-			Expr: "{{ $defaultOneofField.By }}",
+			Expr: `{{ $defaultOneofField.By }}`,
 			UseContextLibrary: {{ $defaultOneofField.ByUseContextLibrary }},
 			CacheIndex: {{ $msg.CELCacheIndex }},
 			Setter: func(v {{ $defaultOneofField.Type }}) error {
@@ -481,7 +481,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{ .ProtoComment }}
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
 		Value: value,
-		Expr: "{{ .CEL.Expr }}",
+		Expr: `{{ .CEL.Expr }}`,
 		UseContextLibrary: {{ .CEL.UseContextLibrary }},
 		CacheIndex: {{ $msg.CELCacheIndex }},
 		Setter: func(v {{ .Type }}) error {

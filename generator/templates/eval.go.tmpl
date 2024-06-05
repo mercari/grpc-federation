@@ -5,17 +5,17 @@
 {{- $mapResolver := $def.MapResolver -}}
 grpcfed.EvalDefMap({{ $ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapResolver.IteratorSourceType }}, *localValueType]{
 	{{- if $def.UseIf }}
-	If: "{{ $def.If }}",
+	If: `{{ $def.If }}`,
 	IfUseContextLibrary: {{ $def.IfUseContextLibrary }},
 	IfCacheIndex: {{ $def.CELCacheIndex }},
 	{{- end }}
-	Name:   "{{ $def.Key }}",
+	Name:   `{{ $def.Key }}`,
 	Type:   {{ $def.CELType }},
 	Setter: func(value *localValueType, v {{ $def.Type }}) error {
 		value.vars.{{ $def.Key }} = v
 		return nil
 	},
-	IteratorName: "{{ $mapResolver.IteratorName }}",
+	IteratorName: `{{ $mapResolver.IteratorName }}`,
 	IteratorType: {{ $mapResolver.IteratorCELType }},
 	IteratorSource: func(value *localValueType) []{{ $mapResolver.IteratorSourceType }}{ return {{ $mapResolver.IteratorSource }} },
 	Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
@@ -23,7 +23,7 @@ grpcfed.EvalDefMap({{ $ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapRes
 		{{- $by := $mapResolver.MapExpr.Expr.By }}
 		return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 			Value: value,
-			Expr: "{{ $by.Expr }}",
+			Expr: `{{ $by.Expr }}`,
 			UseContextLibrary: {{ $by.UseContextLibrary }},
 			OutType: reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}),
 			CacheIndex: {{ $def.CELCacheIndex }},
@@ -47,18 +47,18 @@ grpcfed.EvalDefMap({{ $ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapRes
 {{- else -}}
 grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
 	{{- if $def.UseIf }}
-	If: "{{ $def.If }}",
+	If: `{{ $def.If }}`,
 	IfUseContextLibrary: {{ $def.IfUseContextLibrary }},
 	IfCacheIndex: {{ $def.CELCacheIndex }},
 	{{- end }}
-	Name:   "{{ $def.Key }}",
+	Name:   `{{ $def.Key }}`,
 	Type:   {{ $def.CELType }},
 	Setter: func(value *localValueType, v {{ $def.Type }}) error {
 		value.vars.{{ $def.Key }} = v
 		return nil
 	},
 	{{- if $def.IsBy }}
-	By:     "{{ $def.By.Expr }}",
+	By:     `{{ $def.By.Expr }}`,
 	ByUseContextLibrary: {{ $def.By.UseContextLibrary }},
 	ByCacheIndex: {{ $def.CELCacheIndex }},
 	{{- else if $def.IsValidation }}
@@ -89,7 +89,7 @@ grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 			{{- template "retry" (map "Retry" $def.Retry) }}
 			return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ $def.ReturnType }}]{
 				Value: value,
-				If: "{{ $def.Retry.If.Expr }}",
+				If: `{{ $def.Retry.If.Expr }}`,
 				UseContextLibrary: {{ $def.Retry.If.UseContextLibrary }},
 				CacheIndex: {{ $def.CELCacheIndex }},
 				BackOff: b,
@@ -105,7 +105,7 @@ grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 		{{- template "retry" (map "Retry" $def.Retry) }}
 		return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ $def.ReturnType }}]{
 			Value: value,
-			If: "{{ $def.Retry.If.Expr }}",
+			If: `{{ $def.Retry.If.Expr }}`,
 			UseContextLibrary: {{ $def.Retry.If.UseContextLibrary }},
 			CacheIndex: {{ $def.CELCacheIndex }},
 			BackOff: b,
@@ -201,13 +201,13 @@ if err := eg.Wait(); err != nil {
 {{ $arg.ProtoComment }}
 if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 	Value: value,
-	Expr: "{{ $arg.If.Expr }}",
+	Expr: `{{ $arg.If.Expr }}`,
 	UseContextLibrary: {{ $arg.If.UseContextLibrary }},
 	CacheIndex: {{ $def.CELCacheIndex }},
 	Body: func(value *localValueType) error {
 		return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 			Value: value,
-			Expr: "{{ $arg.CEL.Expr }}",
+			Expr: `{{ $arg.CEL.Expr }}`,
 			UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
 			CacheIndex: {{ $def.CELCacheIndex }},
 			Setter: func(v {{ $arg.Type }}) error {
@@ -222,7 +222,7 @@ if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 {{ $arg.ProtoComment }}
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 	Value: value,
-	Expr: "{{ $arg.CEL.Expr }}",
+	Expr: `{{ $arg.CEL.Expr }}`,
 	UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
 	CacheIndex: {{ $def.CELCacheIndex }},
 	Setter: func(v {{ $arg.Type }}) error {
@@ -242,7 +242,7 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 	Value: value,
-	Expr: "{{ $arg.CEL.Expr }}",
+	Expr: `{{ $arg.CEL.Expr }}`,
 	UseContextLibrary: {{ $arg.CEL.UseContextLibrary }},
 	CacheIndex: {{ $def.CELCacheIndex }},
 	Setter: func(v {{ $arg.Type }}) error {

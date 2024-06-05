@@ -204,7 +204,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name: "p",
+		Name: `p`,
 		Type: grpcfed.CELObjectType("federation.Post"),
 		Setter: func(value *localValueType, v *Post) error {
 			value.vars.p = v
@@ -229,7 +229,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	// (grpc.federation.field).by = "p"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:             value,
-		Expr:              "p",
+		Expr:              `p`,
 		UseContextLibrary: false,
 		CacheIndex:        1,
 		Setter: func(v *Post) error {
@@ -286,13 +286,13 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[favorite.FavoriteType, *localValueType]{
-			Name: "favorite_value",
+			Name: `favorite_value`,
 			Type: grpcfed.CELIntType,
 			Setter: func(value *localValueType, v favorite.FavoriteType) error {
 				value.vars.favorite_value = v
 				return nil
 			},
-			By:                  "favorite.FavoriteType.value('TYPE1')",
+			By:                  `favorite.FavoriteType.value('TYPE1')`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        2,
 		}); err != nil {
@@ -308,13 +308,13 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[bool, *localValueType]{
-			Name: "cmp",
+			Name: `cmp`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
 				value.vars.cmp = v
 				return nil
 			},
-			By:                  "favorite_value == favorite.FavoriteType.TYPE1",
+			By:                  `favorite_value == favorite.FavoriteType.TYPE1`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        3,
 		}); err != nil {
@@ -334,13 +334,13 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[favorite.FavoriteType, *localValueType]{
-			Name: "favorite_value",
+			Name: `favorite_value`,
 			Type: grpcfed.CELIntType,
 			Setter: func(value *localValueType, v favorite.FavoriteType) error {
 				value.vars.favorite_value = v
 				return nil
 			},
-			By:                  "favorite.FavoriteType.value('TYPE1')",
+			By:                  `favorite.FavoriteType.value('TYPE1')`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        4,
 		}); err != nil {
@@ -359,7 +359,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Reaction, *localValueType]{
-			Name: "reaction",
+			Name: `reaction`,
 			Type: grpcfed.CELObjectType("federation.Reaction"),
 			Setter: func(value *localValueType, v *Reaction) error {
 				value.vars.reaction = v
@@ -370,7 +370,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				// { name: "v", by: "favorite_value" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 					Value:             value,
-					Expr:              "favorite_value",
+					Expr:              `favorite_value`,
 					UseContextLibrary: false,
 					CacheIndex:        5,
 					Setter: func(v favorite.FavoriteType) error {
@@ -405,7 +405,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
-			Name: "u",
+			Name: `u`,
 			Type: grpcfed.CELObjectType("federation.User"),
 			Setter: func(value *localValueType, v *User) error {
 				value.vars.u = v
@@ -445,7 +445,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	// (grpc.federation.field).by = "u"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:             value,
-		Expr:              "u",
+		Expr:              `u`,
 		UseContextLibrary: false,
 		CacheIndex:        6,
 		Setter: func(v *User) error {
@@ -459,7 +459,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	// (grpc.federation.field).by = "reaction"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Reaction]{
 		Value:             value,
-		Expr:              "reaction",
+		Expr:              `reaction`,
 		UseContextLibrary: false,
 		CacheIndex:        7,
 		Setter: func(v *Reaction) error {
@@ -473,7 +473,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	// (grpc.federation.field).by = "favorite_value"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 		Value:             value,
-		Expr:              "favorite_value",
+		Expr:              `favorite_value`,
 		UseContextLibrary: false,
 		CacheIndex:        8,
 		Setter: func(v favorite.FavoriteType) error {
@@ -491,7 +491,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	// (grpc.federation.field).by = "cmp"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:             value,
-		Expr:              "cmp",
+		Expr:              `cmp`,
 		UseContextLibrary: false,
 		CacheIndex:        9,
 		Setter: func(v bool) error {
@@ -534,13 +534,13 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
-		Name: "cmp",
+		Name: `cmp`,
 		Type: grpcfed.CELBoolType,
 		Setter: func(value *localValueType, v bool) error {
 			value.vars.cmp = v
 			return nil
 		},
-		By:                  "$.v == favorite.FavoriteType.TYPE1",
+		By:                  `$.v == favorite.FavoriteType.TYPE1`,
 		ByUseContextLibrary: false,
 		ByCacheIndex:        10,
 	}); err != nil {
@@ -558,7 +558,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	// (grpc.federation.field).by = "favorite.FavoriteType.TYPE1"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 		Value:             value,
-		Expr:              "favorite.FavoriteType.TYPE1",
+		Expr:              `favorite.FavoriteType.TYPE1`,
 		UseContextLibrary: false,
 		CacheIndex:        11,
 		Setter: func(v favorite.FavoriteType) error {
@@ -572,7 +572,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	// (grpc.federation.field).by = "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))",
+		Expr:              `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`,
 		UseContextLibrary: false,
 		CacheIndex:        12,
 		Setter: func(v string) error {
@@ -586,7 +586,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	// (grpc.federation.field).by = "cmp"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:             value,
-		Expr:              "cmp",
+		Expr:              `cmp`,
 		UseContextLibrary: false,
 		CacheIndex:        13,
 		Setter: func(v bool) error {
@@ -627,7 +627,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	// (grpc.federation.field).by = "$.id"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "$.id",
+		Expr:              `$.id`,
 		UseContextLibrary: false,
 		CacheIndex:        14,
 		Setter: func(v string) error {
@@ -641,7 +641,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	// (grpc.federation.field).by = "$.name"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "$.name",
+		Expr:              `$.name`,
 		UseContextLibrary: false,
 		CacheIndex:        15,
 		Setter: func(v string) error {
@@ -925,7 +925,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*User, *localValueType]{
-		Name: "u",
+		Name: `u`,
 		Type: grpcfed.CELObjectType("federation.User"),
 		Setter: func(value *localValueType, v *User) error {
 			value.vars.u = v
@@ -953,7 +953,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	// (grpc.federation.field).by = "u"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:             value,
-		Expr:              "u",
+		Expr:              `u`,
 		UseContextLibrary: false,
 		CacheIndex:        1,
 		Setter: func(v *User) error {
@@ -994,7 +994,7 @@ func (s *DebugService) resolve_Federation_User(ctx context.Context, req *Federat
 	// (grpc.federation.field).by = "$.id"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "$.id",
+		Expr:              `$.id`,
 		UseContextLibrary: false,
 		CacheIndex:        2,
 		Setter: func(v string) error {
@@ -1008,7 +1008,7 @@ func (s *DebugService) resolve_Federation_User(ctx context.Context, req *Federat
 	// (grpc.federation.field).by = "$.name"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "$.name",
+		Expr:              `$.name`,
 		UseContextLibrary: false,
 		CacheIndex:        3,
 		Setter: func(v string) error {

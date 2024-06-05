@@ -199,7 +199,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name: "post",
+		Name: `post`,
 		Type: grpcfed.CELObjectType("federation.Post"),
 		Setter: func(value *localValueType, v *Post) error {
 			value.vars.post = v
@@ -210,7 +210,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			// { name: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.id",
+				Expr:              `$.id`,
 				UseContextLibrary: false,
 				CacheIndex:        1,
 				Setter: func(v string) error {
@@ -264,7 +264,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-		Name: "_def0",
+		Name: `_def0`,
 		Type: grpcfed.CELObjectType("post.GetPostResponse"),
 		Setter: func(value *localValueType, v *post.GetPostResponse) error {
 			value.vars._def0 = v
@@ -275,7 +275,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			// { field: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.id",
+				Expr:              `$.id`,
 				UseContextLibrary: false,
 				CacheIndex:        2,
 				Setter: func(v string) error {
@@ -292,7 +292,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				b = grpcfed.BackOffWithContext(b, ctx)
 				return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[post.GetPostResponse]{
 					Value:             value,
-					If:                "error.code != google.rpc.Code.UNIMPLEMENTED",
+					If:                `error.code != google.rpc.Code.UNIMPLEMENTED`,
 					UseContextLibrary: false,
 					CacheIndex:        3,
 					BackOff:           b,

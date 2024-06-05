@@ -65,6 +65,7 @@ message GetPostResponse {
   google.protobuf.BoolValue bool_wrapper_value = 24 [(grpc.federation.field).by = "google.protobuf.BoolValue{value: true}"];
   google.protobuf.StringValue string_wrapper_value = 25 [(grpc.federation.field).by = "google.protobuf.StringValue{value: 'hello'}"];
   google.protobuf.BytesValue bytes_wrapper_value = 26 [(grpc.federation.field).by = "google.protobuf.BytesValue{value: bytes('world')}"];
+  string hello = 27 [(grpc.federation.field).by = "'hello\\nworld'"];
 }
 
 message A {

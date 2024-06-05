@@ -222,13 +222,13 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*pluginpb.Regexp, *localValueType]{
-		Name: "re",
+		Name: `re`,
 		Type: grpcfed.CELObjectType("example.regexp.Regexp"),
 		Setter: func(value *localValueType, v *pluginpb.Regexp) error {
 			value.vars.re = v
 			return nil
 		},
-		By:                  "example.regexp.compile($.expr)",
+		By:                  `example.regexp.compile($.expr)`,
 		ByUseContextLibrary: true,
 		ByCacheIndex:        1,
 	}); err != nil {
@@ -244,13 +244,13 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
-		Name: "matched",
+		Name: `matched`,
 		Type: grpcfed.CELBoolType,
 		Setter: func(value *localValueType, v bool) error {
 			value.vars.matched = v
 			return nil
 		},
-		By:                  "re.matchString($.target)",
+		By:                  `re.matchString($.target)`,
 		ByUseContextLibrary: true,
 		ByCacheIndex:        2,
 	}); err != nil {
@@ -269,7 +269,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	// (grpc.federation.field).by = "matched"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:             value,
-		Expr:              "matched",
+		Expr:              `matched`,
 		UseContextLibrary: false,
 		CacheIndex:        3,
 		Setter: func(v bool) error {

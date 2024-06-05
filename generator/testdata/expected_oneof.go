@@ -222,7 +222,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*UserSelection, *localValueType]{
-		Name: "sel",
+		Name: `sel`,
 		Type: grpcfed.CELObjectType("org.federation.UserSelection"),
 		Setter: func(value *localValueType, v *UserSelection) error {
 			value.vars.sel = v
@@ -249,7 +249,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// (grpc.federation.field).by = "sel.user"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:             value,
-		Expr:              "sel.user",
+		Expr:              `sel.user`,
 		UseContextLibrary: false,
 		CacheIndex:        1,
 		Setter: func(v *User) error {
@@ -316,7 +316,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.GetUserResponse, *localValueType]{
-		Name: "_def0",
+		Name: `_def0`,
 		Type: grpcfed.CELObjectType("org.user.GetUserResponse"),
 		Setter: func(value *localValueType, v *user.GetUserResponse) error {
 			value.vars._def0 = v
@@ -327,7 +327,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			// { field: "id", by: "$.user_id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.user_id",
+				Expr:              `$.user_id`,
 				UseContextLibrary: false,
 				CacheIndex:        2,
 				Setter: func(v string) error {
@@ -340,13 +340,13 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			// { field: "foo", by: "1", if: "false" }
 			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 				Value:             value,
-				Expr:              "false",
+				Expr:              `false`,
 				UseContextLibrary: false,
 				CacheIndex:        3,
 				Body: func(value *localValueType) error {
 					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 						Value:             value,
-						Expr:              "1",
+						Expr:              `1`,
 						UseContextLibrary: false,
 						CacheIndex:        4,
 						Setter: func(v int64) error {
@@ -363,13 +363,13 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			// { field: "bar", by: "'hello'", if: "true" }
 			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 				Value:             value,
-				Expr:              "true",
+				Expr:              `true`,
 				UseContextLibrary: false,
 				CacheIndex:        5,
 				Body: func(value *localValueType) error {
 					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 						Value:             value,
-						Expr:              "'hello'",
+						Expr:              `'hello'`,
 						UseContextLibrary: false,
 						CacheIndex:        6,
 						Setter: func(v string) error {
@@ -400,7 +400,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	// (grpc.federation.field).by = "$.user_id"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              "$.user_id",
+		Expr:              `$.user_id`,
 		UseContextLibrary: false,
 		CacheIndex:        7,
 		Setter: func(v string) error {
@@ -448,7 +448,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*M, *localValueType]{
-		Name: "m",
+		Name: `m`,
 		Type: grpcfed.CELObjectType("org.federation.M"),
 		Setter: func(value *localValueType, v *M) error {
 			value.vars.m = v
@@ -476,7 +476,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 
 	oneof_UserA, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 		Value:             value,
-		Expr:              "m.value == $.value",
+		Expr:              `m.value == $.value`,
 		UseContextLibrary: false,
 		OutType:           reflect.TypeOf(true),
 		CacheIndex:        8,
@@ -487,7 +487,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	}
 	oneof_UserB, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 		Value:             value,
-		Expr:              "m.value != $.value",
+		Expr:              `m.value != $.value`,
 		UseContextLibrary: false,
 		OutType:           reflect.TypeOf(true),
 		CacheIndex:        9,
@@ -510,7 +510,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*User, *localValueType]{
-			Name: "ua",
+			Name: `ua`,
 			Type: grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) error {
 				value.vars.ua = v
@@ -528,7 +528,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		}
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 			Value:             value,
-			Expr:              "ua",
+			Expr:              `ua`,
 			UseContextLibrary: false,
 			CacheIndex:        10,
 			Setter: func(v *User) error {
@@ -552,7 +552,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*User, *localValueType]{
-			Name: "ub",
+			Name: `ub`,
 			Type: grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) error {
 				value.vars.ub = v
@@ -570,7 +570,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		}
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 			Value:             value,
-			Expr:              "ub",
+			Expr:              `ub`,
 			UseContextLibrary: false,
 			CacheIndex:        11,
 			Setter: func(v *User) error {
@@ -594,7 +594,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*User, *localValueType]{
-			Name: "uc",
+			Name: `uc`,
 			Type: grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) error {
 				value.vars.uc = v
@@ -605,7 +605,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				// { name: "user_id", by: "$.value" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
-					Expr:              "$.value",
+					Expr:              `$.value`,
 					UseContextLibrary: false,
 					CacheIndex:        12,
 					Setter: func(v string) error {
@@ -623,7 +623,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		}
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 			Value:             value,
-			Expr:              "uc",
+			Expr:              `uc`,
 			UseContextLibrary: false,
 			CacheIndex:        13,
 			Setter: func(v *User) error {

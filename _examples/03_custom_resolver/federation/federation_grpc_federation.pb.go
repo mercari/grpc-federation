@@ -334,7 +334,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*PostV2Dev, *localValueType]{
-		Name: "post",
+		Name: `post`,
 		Type: grpcfed.CELObjectType("federation.v2dev.PostV2dev"),
 		Setter: func(value *localValueType, v *PostV2Dev) error {
 			value.vars.post = v
@@ -345,7 +345,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 			// { name: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.id",
+				Expr:              `$.id`,
 				UseContextLibrary: false,
 				CacheIndex:        1,
 				Setter: func(v string) error {
@@ -372,7 +372,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	// (grpc.federation.field).by = "post"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*PostV2Dev]{
 		Value:             value,
-		Expr:              "post",
+		Expr:              `post`,
 		UseContextLibrary: false,
 		CacheIndex:        2,
 		Setter: func(v *PostV2Dev) error {
@@ -386,7 +386,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	// (grpc.federation.field).by = "federation.v2dev.PostV2devType.POST_V2_DEV_TYPE"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostV2DevType]{
 		Value:             value,
-		Expr:              "federation.v2dev.PostV2devType.POST_V2_DEV_TYPE",
+		Expr:              `federation.v2dev.PostV2devType.POST_V2_DEV_TYPE`,
 		UseContextLibrary: false,
 		CacheIndex:        3,
 		Setter: func(v PostV2DevType) error {
@@ -447,7 +447,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*ForNameless, *localValueType]{
-			Name: "_def4",
+			Name: `_def4`,
 			Type: grpcfed.CELObjectType("federation.v2dev.ForNameless"),
 			Setter: func(value *localValueType, v *ForNameless) error {
 				value.vars._def4 = v
@@ -479,7 +479,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Unused, *localValueType]{
-			Name: "unused",
+			Name: `unused`,
 			Type: grpcfed.CELObjectType("federation.v2dev.Unused"),
 			Setter: func(value *localValueType, v *Unused) error {
 				value.vars.unused = v
@@ -511,7 +511,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-			Name: "res",
+			Name: `res`,
 			Type: grpcfed.CELObjectType("post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) error {
 				value.vars.res = v
@@ -522,7 +522,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				// { field: "id", by: "$.id" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
-					Expr:              "$.id",
+					Expr:              `$.id`,
 					UseContextLibrary: false,
 					CacheIndex:        4,
 					Setter: func(v string) error {
@@ -551,13 +551,13 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.Post, *localValueType]{
-			Name: "post",
+			Name: `post`,
 			Type: grpcfed.CELObjectType("post.Post"),
 			Setter: func(value *localValueType, v *post.Post) error {
 				value.vars.post = v
 				return nil
 			},
-			By:                  "res.post",
+			By:                  `res.post`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        5,
 		}); err != nil {
@@ -576,7 +576,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
-			Name: "user",
+			Name: `user`,
 			Type: grpcfed.CELObjectType("federation.v2dev.User"),
 			Setter: func(value *localValueType, v *User) error {
 				value.vars.user = v
@@ -587,7 +587,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				// { inline: "post" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post.Post]{
 					Value:             value,
-					Expr:              "post",
+					Expr:              `post`,
 					UseContextLibrary: false,
 					CacheIndex:        6,
 					Setter: func(v *post.Post) error {
@@ -695,7 +695,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.GetUserResponse, *localValueType]{
-		Name: "res",
+		Name: `res`,
 		Type: grpcfed.CELObjectType("user.GetUserResponse"),
 		Setter: func(value *localValueType, v *user.GetUserResponse) error {
 			value.vars.res = v
@@ -706,7 +706,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 			// { field: "id", by: "$.user_id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.user_id",
+				Expr:              `$.user_id`,
 				UseContextLibrary: false,
 				CacheIndex:        7,
 				Setter: func(v string) error {
@@ -734,13 +734,13 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*user.User, *localValueType]{
-		Name: "u",
+		Name: `u`,
 		Type: grpcfed.CELObjectType("user.User"),
 		Setter: func(value *localValueType, v *user.User) error {
 			value.vars.u = v
 			return nil
 		},
-		By:                  "res.user",
+		By:                  `res.user`,
 		ByUseContextLibrary: false,
 		ByCacheIndex:        8,
 	}); err != nil {

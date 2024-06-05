@@ -230,7 +230,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	   }
 	*/
 	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
-		Name: "post",
+		Name: `post`,
 		Type: grpcfed.CELObjectType("org.federation.Post"),
 		Setter: func(value *localValueType, v *Post) error {
 			value.vars.post = v
@@ -241,7 +241,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			// { name: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
-				Expr:              "$.id",
+				Expr:              `$.id`,
 				UseContextLibrary: false,
 				CacheIndex:        1,
 				Setter: func(v string) error {
@@ -268,7 +268,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	// (grpc.federation.field).by = "post"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:             value,
-		Expr:              "post",
+		Expr:              `post`,
 		UseContextLibrary: false,
 		CacheIndex:        2,
 		Setter: func(v *Post) error {
@@ -327,7 +327,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*postv2.GetPostResponse, *localValueType]{
-			Name: "res2",
+			Name: `res2`,
 			Type: grpcfed.CELObjectType("org.post.v2.GetPostResponse"),
 			Setter: func(value *localValueType, v *postv2.GetPostResponse) error {
 				value.vars.res2 = v
@@ -338,7 +338,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				// { field: "id", by: "$.id" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
-					Expr:              "$.id",
+					Expr:              `$.id`,
 					UseContextLibrary: false,
 					CacheIndex:        3,
 					Setter: func(v string) error {
@@ -366,13 +366,13 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*postv2.PostData, *localValueType]{
-			Name: "data2",
+			Name: `data2`,
 			Type: grpcfed.CELObjectType("org.post.v2.PostData"),
 			Setter: func(value *localValueType, v *postv2.PostData) error {
 				value.vars.data2 = v
 				return nil
 			},
-			By:                  "res2.post.data",
+			By:                  `res2.post.data`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        4,
 		}); err != nil {
@@ -395,7 +395,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-			Name: "res",
+			Name: `res`,
 			Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) error {
 				value.vars.res = v
@@ -406,7 +406,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				// { field: "id", by: "$.id" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
-					Expr:              "$.id",
+					Expr:              `$.id`,
 					UseContextLibrary: false,
 					CacheIndex:        5,
 					Setter: func(v string) error {
@@ -435,13 +435,13 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post.Post, *localValueType]{
-			Name: "post",
+			Name: `post`,
 			Type: grpcfed.CELObjectType("org.post.Post"),
 			Setter: func(value *localValueType, v *post.Post) error {
 				value.vars.post = v
 				return nil
 			},
-			By:                  "res.post",
+			By:                  `res.post`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        6,
 		}); err != nil {
@@ -477,7 +477,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	// (grpc.federation.field).by = "data2"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*postv2.PostData]{
 		Value:             value,
-		Expr:              "data2",
+		Expr:              `data2`,
 		UseContextLibrary: false,
 		CacheIndex:        7,
 		Setter: func(v *postv2.PostData) error {
