@@ -255,10 +255,11 @@ enum TypeKind {
 message Type {
   TypeKind kind = 1;
   bool repeated = 2;
+  bool is_null = 3;
   oneof ref {
-    string message_id = 3;
-    string enum_id = 4;
-    string oneof_field_id = 5;
+    string message_id = 4;
+    string enum_id = 5;
+    string oneof_field_id = 6;
   }
 }
 

@@ -4,6 +4,7 @@ package federation;
 
 import "google/protobuf/any.proto";
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
 import "grpc/federation/federation.proto";
 import "post/post.proto";
 import "user/user.proto";
@@ -38,6 +39,7 @@ message GetPostResponse {
     def { name: "sorted_values" by: "[4, 1, 3, 2].sortAsc(v, v)" }
     def { name: "sorted_items" by: "[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)" }
     def { name: "map_value" by : "{1: 'a', 2: 'b', 3: 'c'}" }
+    def { name: "null_value" by: "null" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).string = "hello"];
@@ -66,6 +68,9 @@ message GetPostResponse {
   google.protobuf.StringValue string_wrapper_value = 25 [(grpc.federation.field).by = "google.protobuf.StringValue{value: 'hello'}"];
   google.protobuf.BytesValue bytes_wrapper_value = 26 [(grpc.federation.field).by = "google.protobuf.BytesValue{value: bytes('world')}"];
   string hello = 27 [(grpc.federation.field).by = "'hello\\nworld'"];
+  google.protobuf.Timestamp null_timestamp = 28 [(grpc.federation.field).by = "null"];
+  google.protobuf.Timestamp null_timestamp2 = 29 [(grpc.federation.field).by = "null_value"];
+  google.protobuf.Timestamp null_timestamp3 = 30 [(grpc.federation.field).by = "true ? null : google.protobuf.Timestamp{}"];
 }
 
 message A {

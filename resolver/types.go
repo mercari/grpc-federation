@@ -348,6 +348,7 @@ type MessageDependencyGraphNode struct {
 
 type Type struct {
 	Kind       types.Kind
+	IsNull     bool
 	Repeated   bool
 	Message    *Message
 	Enum       *Enum
@@ -358,6 +359,7 @@ func (t *Type) Clone() *Type {
 	return &Type{
 		Kind:       t.Kind,
 		Repeated:   t.Repeated,
+		IsNull:     t.IsNull,
 		Message:    t.Message,
 		Enum:       t.Enum,
 		OneofField: t.OneofField,
@@ -484,6 +486,7 @@ var (
 	BytesType            = &Type{Kind: types.Bytes}
 	EnumType             = &Type{Kind: types.Enum}
 	EnvType              = &Type{Kind: types.String}
+	NullType             = &Type{IsNull: true}
 	DoubleRepeatedType   = &Type{Kind: types.Double, Repeated: true}
 	FloatRepeatedType    = &Type{Kind: types.Float, Repeated: true}
 	Int32RepeatedType    = &Type{Kind: types.Int32, Repeated: true}

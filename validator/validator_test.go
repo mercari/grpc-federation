@@ -425,9 +425,6 @@ testdata/invalid_message_name.proto:53:17: "post.Invalid" message does not exist
 testdata/invalid_message_name.proto:54:17: undefined message specified
 54:            name: "post.Invalid"
                      ^
-testdata/invalid_message_name.proto:63:47: unknown type null_type is required
-63:    User user = 4 [(grpc.federation.field).by = "user1"];
-                                                   ^
 `},
 		{file: "invalid_nested_message_name.proto", expected: `
 testdata/invalid_nested_message_name.proto:36:31: "federation.Invalid1" message does not exist
@@ -442,12 +439,12 @@ testdata/invalid_nested_message_name.proto:42:33: "federation.Invalid2" message 
 testdata/invalid_nested_message_name.proto:42:41: undefined message specified
 42:            { name: "c1" message: { name: "Invalid2" } }
                                              ^
-testdata/invalid_nested_message_name.proto:45:51: unknown type null_type is required
+testdata/invalid_nested_message_name.proto:45:7: cannot convert type automatically: field type is "string" but specified value type is "null"
 45:        string c1 = 1 [(grpc.federation.field).by = "c1"];
-                                                       ^
-testdata/invalid_nested_message_name.proto:47:49: unknown type null_type is required
+           ^
+testdata/invalid_nested_message_name.proto:47:5: cannot convert type automatically: field type is "string" but specified value type is "null"
 47:      string b1 = 1 [(grpc.federation.field).by = "b1"];
-                                                     ^
+         ^
 `},
 		{file: "invalid_message_argument.proto", expected: `
 testdata/invalid_message_argument.proto:51:19: ERROR: <input>:1:11: type 'string' does not support field selection

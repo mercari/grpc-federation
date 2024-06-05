@@ -3390,6 +3390,8 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 			return &Type{Kind: types.Enum, Enum: enum}, nil
 		}
 		return r.fromCELType(ctx, param)
+	case celtypes.NullTypeKind:
+		return NullType, nil
 	}
 
 	return nil, fmt.Errorf("unknown type %s is required", typ.TypeName())
@@ -3930,6 +3932,9 @@ func isDifferentType(from, to *Type) bool {
 		return false
 	}
 	if from.IsNumber() && to.IsNumber() {
+		return false
+	}
+	if from.IsNull && (to.Repeated || to.Kind == types.Message || to.Kind == types.Bytes) {
 		return false
 	}
 	return from.Kind != to.Kind

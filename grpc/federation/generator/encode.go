@@ -574,6 +574,7 @@ func (e *encoder) toType(t *resolver.Type) *plugin.Type {
 	ret := &plugin.Type{
 		Kind:     e.toTypeKind(t.Kind),
 		Repeated: t.Repeated,
+		IsNull:   t.IsNull,
 	}
 	switch {
 	case t.Message != nil:

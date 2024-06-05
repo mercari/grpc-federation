@@ -684,6 +684,12 @@ func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
 		}
 		out = opt.GetValue()
 	}
+	if _, ok := out.(celtypes.Null); ok {
+		if req.OutType == nil {
+			return nil, nil
+		}
+		return reflect.Zero(req.OutType).Interface(), nil
+	}
 	if req.OutType != nil {
 		return out.ConvertToNative(req.OutType)
 	}

@@ -89,7 +89,7 @@ func (k Kind) ToString() string {
 	case Sint64:
 		return "sint64"
 	}
-	return ""
+	return "null"
 }
 
 func ToKind(s string) Kind {

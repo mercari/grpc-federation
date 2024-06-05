@@ -14,6 +14,9 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 	if fromType == nil || toType == nil {
 		return nil
 	}
+	if fromType.IsNull || toType.IsNull {
+		return nil
+	}
 	if !requiredTypeConversion(fromType, toType) {
 		return nil
 	}

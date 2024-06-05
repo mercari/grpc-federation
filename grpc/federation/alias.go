@@ -44,6 +44,7 @@ var (
 	CELObjectType         = cel.ObjectType
 	CELListType           = cel.ListType
 	CELMapType            = cel.MapType
+	CELNullType           = cel.NullType
 	NewCELListType        = types.NewListType
 	NewCELObjectType      = types.NewObjectType
 )

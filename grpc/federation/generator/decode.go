@@ -1711,6 +1711,7 @@ func (d *decoder) toType(t *plugin.Type) (*resolver.Type, error) {
 	return &resolver.Type{
 		Kind:       d.toTypeKind(t.GetKind()),
 		Repeated:   t.GetRepeated(),
+		IsNull:     t.GetIsNull(),
 		Message:    msg,
 		Enum:       enum,
 		OneofField: oneofField,
