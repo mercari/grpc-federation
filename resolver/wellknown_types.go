@@ -1,10 +1,20 @@
 package resolver
 
 var (
-	AnyType       *Type
-	TimestampType *Type
-	DurationType  *Type
-	EmptyType     *Type
+	AnyType              *Type
+	TimestampType        *Type
+	DurationType         *Type
+	EmptyType            *Type
+	Int64ValueType       *Type
+	Int32ValueType       *Type
+	Uint64ValueType      *Type
+	Uint32ValueType      *Type
+	DoubleValueType      *Type
+	FloatValueType       *Type
+	BytesValueType       *Type
+	BoolValueType        *Type
+	StringValueType      *Type
+	WrapperNumberTypeMap map[string]struct{}
 )
 
 func init() {
@@ -25,5 +35,40 @@ func init() {
 		if msg := file.Message("Empty"); msg != nil {
 			EmptyType = NewMessageType(msg, false)
 		}
+		if msg := file.Message("Int64Value"); msg != nil {
+			Int64ValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("UInt64Value"); msg != nil {
+			Uint64ValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("Int32Value"); msg != nil {
+			Int32ValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("UInt32Value"); msg != nil {
+			Uint32ValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("BoolValue"); msg != nil {
+			BoolValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("BytesValue"); msg != nil {
+			BytesValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("FloatValue"); msg != nil {
+			FloatValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("DoubleValue"); msg != nil {
+			DoubleValueType = NewMessageType(msg, false)
+		}
+		if msg := file.Message("StringValue"); msg != nil {
+			StringValueType = NewMessageType(msg, false)
+		}
+	}
+	WrapperNumberTypeMap = map[string]struct{}{
+		Int64ValueType.FQDN():  {},
+		Uint64ValueType.FQDN(): {},
+		Int32ValueType.FQDN():  {},
+		Uint32ValueType.FQDN(): {},
+		DoubleValueType.FQDN(): {},
+		FloatValueType.FQDN():  {},
 	}
 }

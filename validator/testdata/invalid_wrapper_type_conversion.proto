@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package federation;
+
+import "google/protobuf/wrappers.proto";
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  double double_value = 1 [(grpc.federation.field).by = "google.protobuf.DoubleValue{value: 1.23}"];
+  float float_value = 2 [(grpc.federation.field).by = "google.protobuf.FloatValue{value: 3.45}"];
+  int64 i64_value = 3 [(grpc.federation.field).by = "google.protobuf.Int64Value{value: 1}"];
+  uint64 u64_value = 4 [(grpc.federation.field).by = "google.protobuf.UInt64Value{value: uint(2)}"];
+  int32 i32_value = 5 [(grpc.federation.field).by = "google.protobuf.Int32Value{value: 3}"];
+  uint32 u32_value = 6 [(grpc.federation.field).by = "google.protobuf.UInt32Value{value: uint(4)}"];
+  bool bool_value = 7 [(grpc.federation.field).by = "google.protobuf.BoolValue{value: true}"];
+  string string_value = 8 [(grpc.federation.field).by = "google.protobuf.StringValue{value: 'hello'}"];
+  bytes bytes_value = 9 [(grpc.federation.field).by = "google.protobuf.BytesValue{value: bytes('world')}"];
+
+  google.protobuf.DoubleValue double_wrapper_value = 10 [(grpc.federation.field).by = "google.protobuf.DoubleValue{value: 1.23}"];
+  google.protobuf.FloatValue float_wrapper_value = 11 [(grpc.federation.field).by = "google.protobuf.FloatValue{value: 3.45}"];
+  google.protobuf.Int64Value i64_wrapper_value = 12 [(grpc.federation.field).by = "google.protobuf.Int64Value{value: 1}"];
+  google.protobuf.UInt64Value u64_wrapper_value = 13 [(grpc.federation.field).by = "google.protobuf.UInt64Value{value: uint(2)}"];
+  google.protobuf.Int32Value i32_wrapper_value = 14 [(grpc.federation.field).by = "google.protobuf.Int32Value{value: 3}"];
+  google.protobuf.UInt32Value u32_wrapper_value = 15 [(grpc.federation.field).by = "google.protobuf.UInt32Value{value: uint(4)}"];
+  google.protobuf.BoolValue bool_wrapper_value = 16 [(grpc.federation.field).by = "google.protobuf.BoolValue{value: true}"];
+  google.protobuf.StringValue string_wrapper_value = 17 [(grpc.federation.field).by = "google.protobuf.StringValue{value: 'hello'}"];
+  google.protobuf.BytesValue bytes_wrapper_value = 18 [(grpc.federation.field).by = "google.protobuf.BytesValue{value: bytes('world')}"];
+
+  google.protobuf.DoubleValue double_wrapper_value2 = 19 [(grpc.federation.field).by = "1.23"];
+  google.protobuf.FloatValue float_wrapper_value2 = 20 [(grpc.federation.field).by = "3.45"];
+  google.protobuf.Int64Value i64_wrapper_value2 = 21 [(grpc.federation.field).by = "1"];
+  google.protobuf.UInt64Value u64_wrapper_value2 = 22 [(grpc.federation.field).by = "uint(2)"];
+  google.protobuf.Int32Value i32_wrapper_value2 = 23 [(grpc.federation.field).by = "3"];
+  google.protobuf.UInt32Value u32_wrapper_value2 = 24 [(grpc.federation.field).by = "uint(4)"];
+  google.protobuf.BoolValue bool_wrapper_value2 = 25 [(grpc.federation.field).by = "true"];
+  google.protobuf.StringValue string_wrapper_value2 = 26 [(grpc.federation.field).by = "'hello'"];
+  google.protobuf.BytesValue bytes_wrapper_value2 = 27 [(grpc.federation.field).by = "bytes('world')"];
+}

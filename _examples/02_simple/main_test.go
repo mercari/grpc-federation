@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"example/federation"
 	"example/post"
@@ -283,6 +284,33 @@ func TestFederation(t *testing.T) {
 			2: "b",
 			3: "c",
 		},
+		DoubleWrapperValue: &wrapperspb.DoubleValue{
+			Value: 1.23,
+		},
+		FloatWrapperValue: &wrapperspb.FloatValue{
+			Value: 3.45,
+		},
+		I64WrapperValue: &wrapperspb.Int64Value{
+			Value: 1,
+		},
+		U64WrapperValue: &wrapperspb.UInt64Value{
+			Value: 2,
+		},
+		I32WrapperValue: &wrapperspb.Int32Value{
+			Value: 3,
+		},
+		U32WrapperValue: &wrapperspb.UInt32Value{
+			Value: 4,
+		},
+		StringWrapperValue: &wrapperspb.StringValue{
+			Value: "hello",
+		},
+		BytesWrapperValue: &wrapperspb.BytesValue{
+			Value: []byte("world"),
+		},
+		BoolWrapperValue: &wrapperspb.BoolValue{
+			Value: true,
+		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
@@ -297,6 +325,15 @@ func TestFederation(t *testing.T) {
 		federation.A_B{},
 		federation.A_B_C{},
 		anypb.Any{},
+		wrapperspb.DoubleValue{},
+		wrapperspb.FloatValue{},
+		wrapperspb.Int64Value{},
+		wrapperspb.UInt64Value{},
+		wrapperspb.Int32Value{},
+		wrapperspb.UInt32Value{},
+		wrapperspb.StringValue{},
+		wrapperspb.BytesValue{},
+		wrapperspb.BoolValue{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
