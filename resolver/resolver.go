@@ -1947,18 +1947,9 @@ func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *Enu
 		if enum.Rule == nil {
 			return nil
 		}
-		ret := &EnumValueRule{}
-		for _, alias := range enum.Rule.Aliases {
-			enumValueAlias := r.resolveEnumValueAlias(ctx, enumValue.Value, "", alias)
-			if enumValueAlias == nil {
-				continue
-			}
-			ret.Aliases = append(ret.Aliases, &EnumValueAlias{
-				EnumAlias: alias,
-				Aliases:   []*EnumValue{enumValueAlias},
-			})
+		return &EnumValueRule{
+			Aliases: r.resolveEnumValueAlias(ctx, enumValue.Value, "", enum.Rule.Aliases),
 		}
-		return ret
 	}
 	if len(ruleDef.GetAlias()) != 0 && (enum.Rule == nil || len(enum.Rule.Aliases) == 0) {
 		ctx.addError(
@@ -1975,19 +1966,8 @@ func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *Enu
 	defaultValue := ruleDef.GetDefault()
 	var aliases []*EnumValueAlias
 	if enum.Rule != nil && !defaultValue {
-		for _, enumAlias := range enum.Rule.Aliases {
-			var enumValueAliases []*EnumValue
-			for _, aliasName := range ruleDef.GetAlias() {
-				alias := r.resolveEnumValueAlias(ctx, enumValue.Value, aliasName, enumAlias)
-				if alias == nil {
-					continue
-				}
-				enumValueAliases = append(enumValueAliases, alias)
-			}
-			aliases = append(aliases, &EnumValueAlias{
-				EnumAlias: enumAlias,
-				Aliases:   enumValueAliases,
-			})
+		for _, aliasName := range ruleDef.GetAlias() {
+			aliases = append(aliases, r.resolveEnumValueAlias(ctx, enumValue.Value, aliasName, enum.Rule.Aliases)...)
 		}
 	}
 	return &EnumValueRule{
@@ -1996,38 +1976,69 @@ func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *Enu
 	}
 }
 
-func (r *Resolver) resolveEnumValueAlias(ctx *context, enumValueName, enumValueAlias string, alias *Enum) *EnumValue {
+func (r *Resolver) resolveEnumValueAlias(ctx *context, enumValueName, enumValueAlias string, aliases []*Enum) []*EnumValueAlias {
 	if enumValueAlias == "" {
-		return r.resolveEnumValueRuleByAutoAlias(ctx, enumValueName, alias)
+		return r.resolveEnumValueRuleByAutoAlias(ctx, enumValueName, aliases)
 	}
-	value := alias.Value(enumValueAlias)
-	if value == nil {
+	aliasFQDNs := make([]string, 0, len(aliases))
+	var enumValueAliases []*EnumValueAlias
+	for _, alias := range aliases {
+		if value := alias.Value(enumValueAlias); value != nil {
+			enumValueAliases = append(enumValueAliases, &EnumValueAlias{
+				EnumAlias: alias,
+				Aliases:   []*EnumValue{value},
+			})
+		}
+		aliasFQDNs = append(aliasFQDNs, fmt.Sprintf("%q", alias.FQDN()))
+	}
+	if len(enumValueAliases) == 0 {
 		ctx.addError(
 			ErrWithLocation(
-				fmt.Sprintf(`%q value does not exist in %q enum`, enumValueAlias, alias.FQDN()),
+				fmt.Sprintf(`%q value does not exist in %s enum`, enumValueAlias, strings.Join(aliasFQDNs, ", ")),
 				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithValue(enumValueName).Location(),
 			),
 		)
 		return nil
 	}
-	return value
+
+	hasPrefix := strings.Contains(enumValueAlias, ".")
+	if !hasPrefix && len(enumValueAliases) != len(aliases) {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(`%q value must be present in all enums, but it is missing in %s enum`, enumValueAlias, strings.Join(aliasFQDNs, ", ")),
+				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithValue(enumValueName).Location(),
+			),
+		)
+		return nil
+	}
+	return enumValueAliases
 }
 
-func (r *Resolver) resolveEnumValueRuleByAutoAlias(ctx *context, enumValueName string, alias *Enum) *EnumValue {
-	enumValue := alias.Value(enumValueName)
-	if enumValue == nil {
+func (r *Resolver) resolveEnumValueRuleByAutoAlias(ctx *context, enumValueName string, aliases []*Enum) []*EnumValueAlias {
+	aliasFQDNs := make([]string, 0, len(aliases))
+	var enumValueAliases []*EnumValueAlias
+	for _, alias := range aliases {
+		if value := alias.Value(enumValueName); value != nil {
+			enumValueAliases = append(enumValueAliases, &EnumValueAlias{
+				EnumAlias: alias,
+				Aliases:   []*EnumValue{value},
+			})
+		}
+		aliasFQDNs = append(aliasFQDNs, fmt.Sprintf("%q", alias.FQDN()))
+	}
+	if len(enumValueAliases) != len(aliases) {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf(
-					`specified "alias" in grpc.federation.enum option, but %q value does not exist in %q enum`,
-					enumValueName, alias.FQDN(),
+					`specified "alias" in grpc.federation.enum option, but %q value does not exist in %s enum`,
+					enumValueName, strings.Join(aliasFQDNs, ", "),
 				),
 				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithValue(enumValueName).Location(),
 			),
 		)
 		return nil
 	}
-	return enumValue
+	return enumValueAliases
 }
 
 func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDescriptorProto, oneofs []*Oneof, builder *source.MessageBuilder) []*Field {

@@ -611,9 +611,9 @@ func (s *FederationService) cast_Org_Post_V2_PostDataType__to__Org_Federation_Po
 	switch from {
 	case postv2.PostDataType_POST_TYPE_A:
 		return PostType_POST_TYPE_FOO, nil
-	case postv2.PostDataType_POST_TYPE_B:
+	case postv2.PostDataType_POST_V2_TYPE_B:
 		return PostType_POST_TYPE_BAR, nil
-	case postv2.PostDataType_POST_TYPE_C:
+	case postv2.PostDataType_POST_V2_TYPE_C:
 		return PostType_POST_TYPE_BAR, nil
 	default:
 		return PostType_POST_TYPE_UNKNOWN, nil
