@@ -159,7 +159,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
-		Id: req.Id,
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)

@@ -172,7 +172,7 @@ func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse1(ctx, &Org_Federation_GetPostResponse1Argument{
-		Id: req.Id,
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -196,7 +196,7 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse2(ctx, &Org_Federation_GetPostResponse2Argument{
-		Id: req.Id,
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)

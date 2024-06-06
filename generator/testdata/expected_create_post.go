@@ -180,10 +180,10 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 		}
 	}()
 	res, err := s.resolve_Org_Federation_CreatePostResponse(ctx, &Org_Federation_CreatePostResponseArgument{
-		Title:   req.Title,
-		Content: req.Content,
-		UserId:  req.UserId,
-		Type:    req.Type,
+		Title:   req.GetTitle(),
+		Content: req.GetContent(),
+		UserId:  req.GetUserId(),
+		Type:    req.GetType(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
