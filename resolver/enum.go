@@ -1,10 +1,19 @@
 package resolver
 
+import "strings"
+
 func (e *Enum) HasValue(name string) bool {
 	return e.Value(name) != nil
 }
 
 func (e *Enum) Value(name string) *EnumValue {
+	if strings.Contains(name, ".") {
+		enumFQDNPrefix := e.FQDN() + "."
+		if !strings.HasPrefix(name, enumFQDNPrefix) {
+			return nil
+		}
+		name = strings.TrimPrefix(name, enumFQDNPrefix)
+	}
 	for _, value := range e.Values {
 		if value.Value == name {
 			return value

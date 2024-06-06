@@ -182,9 +182,15 @@ testdata/invalid_method.proto:58:36: ERROR: <input>:1:8: undefined field 'user_i
                                         ^
 `},
 		{file: "invalid_multi_alias.proto", expected: `
-testdata/invalid_multi_alias.proto:59:12: required specify alias = "org.post.v2.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
-59:      alias: [ "org.post.PostDataType" ]
-                ^
+testdata/invalid_multi_alias.proto:63:3: "POST_TYPE_A" value must be present in all enums, but it is missing in "org.post.PostDataType", "org.post.v2.PostDataType" enum
+63:    POST_TYPE_FOO = 1 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_A"] }];
+       ^
+testdata/invalid_multi_alias.proto:64:3: "org.post.v2.PostDataType.POST_TYPE_B" value does not exist in "org.post.PostDataType", "org.post.v2.PostDataType" enum
+64:    POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = { alias: ["org.post.v2.PostDataType.POST_TYPE_B", "POST_TYPE_C"] }];
+       ^
+testdata/invalid_multi_alias.proto:64:3: "POST_TYPE_C" value must be present in all enums, but it is missing in "org.post.PostDataType", "org.post.v2.PostDataType" enum
+64:    POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = { alias: ["org.post.v2.PostDataType.POST_TYPE_B", "POST_TYPE_C"] }];
+       ^
 testdata/invalid_multi_alias.proto:73:3: The types of "org.federation.PostData"'s "title" field ("string") and "org.post.v2.PostData"'s field ("int64") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
 73:    string title = 2;
        ^

@@ -23,8 +23,9 @@ message Post {
 
 enum PostDataType {
   POST_TYPE_A = 0;
-  POST_TYPE_B = 1;
-  POST_TYPE_C = 2;
+  POST_V2_TYPE_B = 1;
+  POST_V2_TYPE_C = 2;
+  POST_V2_TYPE_D = 3;
 }
   
 message PostData {

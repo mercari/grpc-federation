@@ -470,15 +470,18 @@ func (b *EnumBuilder) AddValueWithDefault(value string) *EnumBuilder {
 	return b
 }
 
-func (b *EnumBuilder) AddValueWithAlias(value string, alias ...*resolver.EnumValue) *EnumBuilder {
+func (b *EnumBuilder) AddValueWithAlias(value string, aliases ...*resolver.EnumValue) *EnumBuilder {
+	var enumValueAliases []*resolver.EnumValueAlias
+	for _, alias := range aliases {
+		enumValueAliases = append(enumValueAliases, &resolver.EnumValueAlias{
+			EnumAlias: alias.Enum,
+			Aliases:   []*resolver.EnumValue{alias},
+		})
+	}
 	b.enum.Values = append(b.enum.Values, &resolver.EnumValue{
 		Value: value,
 		Rule: &resolver.EnumValueRule{
-			Aliases: []*resolver.EnumValueAlias{
-				{
-					Aliases: alias,
-				},
-			},
+			Aliases: enumValueAliases,
 		},
 		Enum: b.enum,
 	})

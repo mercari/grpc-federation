@@ -72,7 +72,7 @@ func (s *PostV2Server) GetPost(ctx context.Context, req *postv2.GetPostRequest) 
 		Post: &postv2.Post{
 			Id: req.Id,
 			Data: &postv2.PostData{
-				Type:  postv2.PostDataType_POST_TYPE_C,
+				Type:  postv2.PostDataType_POST_V2_TYPE_C,
 				Title: "foo2",
 				Content: &postv2.PostContent{
 					Category: postv2.PostContent_CATEGORY_A,
