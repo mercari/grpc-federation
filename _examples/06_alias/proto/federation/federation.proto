@@ -33,9 +33,6 @@ message GetPostResponse {
   option (grpc.federation.message) = {
     def [
       {
-        name: "cond_a", by: "$.a"
-      },
-      {
         name: "post"
         message {
           name: "Post"
