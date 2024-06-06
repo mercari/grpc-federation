@@ -163,7 +163,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	}()
 	res, err := grpcfed.WithTimeout[GetPostResponse](ctx, "federation.FederationService/GetPost", 1000000000 /* 1s */, func(ctx context.Context) (*GetPostResponse, error) {
 		return s.resolve_Federation_GetPostResponse(ctx, &Federation_GetPostResponseArgument{
-			Id: req.Id,
+			Id: req.GetId(),
 		})
 	})
 	if err != nil {

@@ -10,6 +10,10 @@ service PostService {
 
 message GetPostRequest {
   string id = 1;
+  oneof condition {
+    PostConditionA a = 2;
+    PostConditionB b = 3;
+  }
 }
 
 message GetPostResponse {
@@ -44,3 +48,9 @@ message PostContent {
   map<int32, int32> counts = 5;
   map<int64, int64> cast_counts = 6;
 }
+
+message PostConditionA {
+  string prop = 1;
+}
+
+message PostConditionB {}

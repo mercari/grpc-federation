@@ -172,7 +172,7 @@ func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse1(ctx, &Org_Federation_GetPostResponse1Argument{
-		Id: req.Id,
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -196,7 +196,7 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse2(ctx, &Org_Federation_GetPostResponse2Argument{
-		Id: req.Id,
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -521,5 +521,23 @@ func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequ
 	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
+		slog.Any("a", s.logvalue_Org_Post_PostConditionA(v.GetA())),
+		slog.Any("b", s.logvalue_Org_Post_PostConditionB(v.GetB())),
 	)
+}
+
+func (s *FederationService) logvalue_Org_Post_PostConditionA(v *post.PostConditionA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("prop", v.GetProp()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_PostConditionB(v *post.PostConditionB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
 }

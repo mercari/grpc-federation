@@ -168,7 +168,7 @@ func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetRespon
 		}
 	}()
 	res, err := s.resolve_Federation_GetResponse(ctx, &Federation_GetResponseArgument{
-		Id: req.Id,
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)

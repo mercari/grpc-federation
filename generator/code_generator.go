@@ -510,9 +510,17 @@ func newTypeDeclaresWithMessage(file *File, msg *resolver.Message) []*Type {
 		if _, exists := fieldNameMap[fieldName]; exists {
 			continue
 		}
+		var typText string
+		if field.Type.OneofField != nil {
+			t := field.Type.OneofField.Type.Clone()
+			t.OneofField = nil
+			typText = file.toTypeText(t)
+		} else {
+			typText = file.toTypeText(field.Type)
+		}
 		typ.Fields = append(typ.Fields, &Field{
 			Name: fieldName,
-			Type: file.toTypeText(field.Type),
+			Type: typText,
 		})
 		fieldNameMap[fieldName] = struct{}{}
 	}
@@ -2993,7 +3001,11 @@ func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*A
 		argType = fromText
 		isRequiredCast = requiredCast(fromType, toType)
 		if isRequiredCast {
-			castFuncName := castFuncName(fromType, toType)
+			t := toType.Clone()
+			if oneofName != "" {
+				t.OneofField = nil
+			}
+			castFuncName := castFuncName(fromType, t)
 			argValue = fmt.Sprintf("s.%s(%s)", castFuncName, argValue)
 		}
 	case types.Enum:

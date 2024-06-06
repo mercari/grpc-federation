@@ -146,7 +146,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 	}()
 	res, err := grpcfed.WithTimeout[GetResponse](ctx, "org.federation.FederationService/Get", 10000000000 /* 10s */, func(ctx context.Context) (*GetResponse, error) {
 		return s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
-			Id: req.Id,
+			Id: req.GetId(),
 		})
 	})
 	if err != nil {

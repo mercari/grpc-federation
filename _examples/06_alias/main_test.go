@@ -148,6 +148,11 @@ func TestFederation(t *testing.T) {
 	client := federation.NewFederationServiceClient(conn)
 	res, err := client.GetPost(ctx, &federation.GetPostRequest{
 		Id: "foo",
+		Condition: &federation.GetPostRequest_A{
+			A: &federation.GetPostRequest_ConditionA{
+				Prop: "bar",
+			},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

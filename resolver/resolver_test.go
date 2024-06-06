@@ -1586,8 +1586,45 @@ func TestAlias(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("GetPostRequest").
+				AddField("id", resolver.StringType).
+				AddMessage(
+					testutil.NewMessageBuilder("ConditionA").
+						AddFieldWithAlias("prop", resolver.StringType, ref.Field(t, "org.post", "PostConditionA", "prop")).
+						SetRule(
+							testutil.NewMessageRuleBuilder().
+								SetAlias(ref.Message(t, "org.post", "PostConditionA")).
+								SetMessageArgument(
+									testutil.NewMessageBuilder("GetPostRequest_ConditionAArgument").
+										Build(t),
+								).
+								Build(t),
+						).
+						Build(t),
+				).
+				AddMessage(
+					testutil.NewMessageBuilder("ConditionB").
+						SetRule(
+							testutil.NewMessageRuleBuilder().
+								SetAlias(ref.Message(t, "org.post", "PostConditionB")).
+								SetMessageArgument(
+									testutil.NewMessageBuilder("GetPostRequest_ConditionBArgument").
+										Build(t),
+								).
+								Build(t),
+						).
+						Build(t),
+				).
+				AddFieldWithTypeName(t, "a", "ConditionA", false).
+				AddFieldWithTypeName(t, "b", "ConditionB", false).
+				AddOneof(testutil.NewOneofBuilder("condition").AddFieldNames("a", "b").Build(t)).
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("PostArgument").
 				AddField("id", resolver.StringType).
+				AddField("a", ref.Type(t, "org.federation", "GetPostRequest.ConditionA")).
+				AddField("b", ref.Type(t, "org.federation", "GetPostRequest.ConditionB")).
 				Build(t),
 		).
 		AddMessage(
@@ -1606,6 +1643,26 @@ func TestAlias(t *testing.T) {
 										SetRequest(
 											testutil.NewRequestBuilder().
 												AddField("id", resolver.StringType, testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												AddFieldWithIf(
+													"a",
+													ref.Type(t, "org.post", "PostConditionA"),
+													testutil.NewMessageArgumentValueBuilder(
+														ref.Type(t, "org.federation", "GetPostRequest.ConditionA"),
+														ref.Type(t, "org.federation", "GetPostRequest.ConditionA"),
+														"a",
+													).Build(t),
+													"$.a != null",
+												).
+												AddFieldWithIf(
+													"b",
+													ref.Type(t, "org.post", "PostConditionB"),
+													testutil.NewMessageArgumentValueBuilder(
+														ref.Type(t, "org.federation", "GetPostRequest.ConditionB"),
+														ref.Type(t, "org.federation", "GetPostRequest.ConditionB"),
+														"b",
+													).Build(t),
+													"$.b != null",
+												).
 												Build(t),
 										).
 										Build(t),
@@ -1637,13 +1694,10 @@ func TestAlias(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
-			testutil.NewMessageBuilder("GetPostRequest").
-				AddField("id", resolver.StringType).
-				Build(t),
-		).
-		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponseArgument").
 				AddField("id", resolver.StringType).
+				AddFieldWithOneof("a", ref.Type(t, "org.federation", "GetPostRequest.ConditionA"), testutil.NewOneofBuilder("condition").Build(t)).
+				AddFieldWithOneof("b", ref.Type(t, "org.federation", "GetPostRequest.ConditionB"), testutil.NewOneofBuilder("condition").Build(t)).
 				Build(t),
 		).
 		AddMessage(
@@ -1668,6 +1722,8 @@ func TestAlias(t *testing.T) {
 										SetArgs(
 											testutil.NewMessageDependencyArgumentBuilder().
 												Add("id", testutil.NewMessageArgumentValueBuilder(resolver.StringType, resolver.StringType, "id").Build(t)).
+												Add("a", testutil.NewMessageArgumentValueBuilder(ref.Type(t, "org.post", "PostConditionA"), ref.Type(t, "org.post", "PostConditionA"), "a").Build(t)).
+												Add("b", testutil.NewMessageArgumentValueBuilder(ref.Type(t, "org.post", "PostConditionB"), ref.Type(t, "org.post", "PostConditionB"), "b").Build(t)).
 												Build(t),
 										).
 										Build(t),
@@ -3987,8 +4043,20 @@ func getNestedPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("PostConditionA").
+				AddField("prop", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("PostConditionB").
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("GetPostRequest").
 				AddField("id", resolver.StringType).
+				AddField("a", ref.Type(t, "org.post", "PostConditionA")).
+				AddField("b", ref.Type(t, "org.post", "PostConditionB")).
+				AddOneof(testutil.NewOneofBuilder("condition").AddFieldNames("a", "b").Build(t)).
 				Build(t),
 		).
 		AddMessage(

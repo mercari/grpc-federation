@@ -320,6 +320,11 @@ func (b *MessageBuilder) AddField(name string, typ *resolver.Type) *MessageBuild
 	return b
 }
 
+func (b *MessageBuilder) AddFieldWithOneof(name string, typ *resolver.Type, oneof *resolver.Oneof) *MessageBuilder {
+	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ, Oneof: oneof})
+	return b
+}
+
 func (b *MessageBuilder) AddFieldWithSelfType(name string, isRepeated bool) *MessageBuilder {
 	typ := resolver.NewMessageType(b.msg, isRepeated)
 	b.msg.Fields = append(b.msg.Fields, &resolver.Field{Name: name, Type: typ})

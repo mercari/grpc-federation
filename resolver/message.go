@@ -333,6 +333,10 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 					fromType := arg.Value.Type()
 					field := request.Type.Field(arg.Name)
 					toType := field.Type
+					if toType.OneofField != nil {
+						toType = field.Type.OneofField.Type.Clone()
+						toType.OneofField = nil
+					}
 					decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
 				}
 			case varDef.Expr.Message != nil:

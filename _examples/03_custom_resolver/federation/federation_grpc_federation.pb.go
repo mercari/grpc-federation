@@ -274,7 +274,7 @@ func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV
 		}
 	}()
 	res, err := s.resolve_Federation_V2Dev_GetPostV2DevResponse(ctx, &Federation_V2Dev_GetPostV2DevResponseArgument{
-		Id: req.Id,
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)

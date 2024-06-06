@@ -25,14 +25,26 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_GetPostRequest_ConditionAArgument is argument for "org.federation.ConditionA" message.
+type Org_Federation_GetPostRequest_ConditionAArgument struct {
+}
+
+// Org_Federation_GetPostRequest_ConditionBArgument is argument for "org.federation.ConditionB" message.
+type Org_Federation_GetPostRequest_ConditionBArgument struct {
+}
+
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type Org_Federation_GetPostResponseArgument struct {
+	A    *GetPostRequest_ConditionA
+	B    *GetPostRequest_ConditionB
 	Id   string
 	Post *Post
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type Org_Federation_PostArgument struct {
+	A    *GetPostRequest_ConditionA
+	B    *GetPostRequest_ConditionB
 	Id   string
 	Post *post.Post
 	Res  *post.GetPostResponse
@@ -134,9 +146,13 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
 		"grpc.federation.private.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
+			"a":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionA"), "A"),
+			"b":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionB"), "B"),
 		},
 		"grpc.federation.private.PostArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
+			"a":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionA"), "A"),
+			"b":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionB"), "B"),
 		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
@@ -174,7 +190,9 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &Org_Federation_GetPostResponseArgument{
-		Id: req.Id,
+		Id: req.GetId(),
+		A:  req.GetA(),
+		B:  req.GetB(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -209,7 +227,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	     name: "post"
 	     message {
 	       name: "Post"
-	       args { name: "id", by: "$.id" }
+	       args: [
+	         { name: "id", by: "$.id" },
+	         { name: "a", by: "$.a" },
+	         { name: "b", by: "$.b" }
+	       ]
 	     }
 	   }
 	*/
@@ -235,6 +257,32 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			}); err != nil {
 				return nil, err
 			}
+			// { name: "a", by: "$.a" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionA]{
+				Value:             value,
+				Expr:              `$.a`,
+				UseContextLibrary: false,
+				CacheIndex:        2,
+				Setter: func(v *GetPostRequest_ConditionA) error {
+					args.A = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { name: "b", by: "$.b" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionB]{
+				Value:             value,
+				Expr:              `$.b`,
+				UseContextLibrary: false,
+				CacheIndex:        3,
+				Setter: func(v *GetPostRequest_ConditionB) error {
+					args.B = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
 			return s.resolve_Org_Federation_Post(ctx, args)
 		},
 	}); err != nil {
@@ -254,7 +302,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		Value:             value,
 		Expr:              `post`,
 		UseContextLibrary: false,
-		CacheIndex:        2,
+		CacheIndex:        4,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -294,7 +342,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	     name: "res"
 	     call {
 	       method: "org.post.PostService/GetPost"
-	       request { field: "id", by: "$.id" }
+	       request: [
+	         { field: "id", by: "$.id" },
+	         { field: "a", by: "$.a", if: "$.a != null" },
+	         { field: "b", by: "$.b", if: "$.b != null" }
+	       ]
 	     }
 	   }
 	*/
@@ -312,10 +364,64 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Value:             value,
 				Expr:              `$.id`,
 				UseContextLibrary: false,
-				CacheIndex:        3,
+				CacheIndex:        5,
 				Setter: func(v string) error {
 					args.Id = v
 					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "a", by: "$.a", if: "$.a != null" }
+			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+				Value:             value,
+				Expr:              `$.a != null`,
+				UseContextLibrary: false,
+				CacheIndex:        6,
+				Body: func(value *localValueType) error {
+					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionA]{
+						Value:             value,
+						Expr:              `$.a`,
+						UseContextLibrary: false,
+						CacheIndex:        7,
+						Setter: func(v *GetPostRequest_ConditionA) error {
+							aValue, err := s.cast_Org_Federation_GetPostRequest_ConditionA__to__Org_Post_PostConditionA(v)
+							if err != nil {
+								return err
+							}
+							args.Condition = &post.GetPostRequest_A{
+								A: aValue,
+							}
+							return nil
+						},
+					})
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "b", by: "$.b", if: "$.b != null" }
+			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+				Value:             value,
+				Expr:              `$.b != null`,
+				UseContextLibrary: false,
+				CacheIndex:        8,
+				Body: func(value *localValueType) error {
+					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionB]{
+						Value:             value,
+						Expr:              `$.b`,
+						UseContextLibrary: false,
+						CacheIndex:        9,
+						Setter: func(v *GetPostRequest_ConditionB) error {
+							bValue, err := s.cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB(v)
+							if err != nil {
+								return err
+							}
+							args.Condition = &post.GetPostRequest_B{
+								B: bValue,
+							}
+							return nil
+						},
+					})
 				},
 			}); err != nil {
 				return nil, err
@@ -347,7 +453,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		},
 		By:                  `res.post`,
 		ByUseContextLibrary: false,
-		ByCacheIndex:        4,
+		ByCacheIndex:        10,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -373,6 +479,28 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.Post", slog.Any("org.federation.Post", s.logvalue_Org_Federation_Post(ret)))
 	return ret, nil
+}
+
+// cast_Org_Federation_GetPostRequest_ConditionA__to__Org_Post_PostConditionA cast from "org.federation.GetPostRequest.ConditionA" to "org.post.PostConditionA".
+func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionA__to__Org_Post_PostConditionA(from *GetPostRequest_ConditionA) (*post.PostConditionA, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	propValue := from.GetProp()
+
+	return &post.PostConditionA{
+		Prop: propValue,
+	}, nil
+}
+
+// cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB cast from "org.federation.GetPostRequest.ConditionB" to "org.post.PostConditionB".
+func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB(from *GetPostRequest_ConditionB) (*post.PostConditionB, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	return &post.PostConditionB{}, nil
 }
 
 // cast_Org_Post_PostContent_Category__to__Org_Federation_PostContent_Category cast from "org.post.PostContent.Category" to "org.federation.PostContent.Category".
@@ -475,6 +603,22 @@ func (s *FederationService) cast_map_int64_int64__to__map_int32_int32(from map[i
 	return ret, nil
 }
 
+func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionA(v *GetPostRequest_ConditionA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("prop", v.GetProp()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionB(v *GetPostRequest_ConditionB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
+}
+
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
@@ -490,6 +634,8 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *O
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
+		slog.Any("a", s.logvalue_Org_Federation_GetPostRequest_ConditionA(v.A)),
+		slog.Any("b", s.logvalue_Org_Federation_GetPostRequest_ConditionB(v.B)),
 	)
 }
 
@@ -509,6 +655,8 @@ func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federati
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
+		slog.Any("a", s.logvalue_Org_Federation_GetPostRequest_ConditionA(v.A)),
+		slog.Any("b", s.logvalue_Org_Federation_GetPostRequest_ConditionB(v.B)),
 	)
 }
 
@@ -587,5 +735,23 @@ func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequ
 	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
+		slog.Any("a", s.logvalue_Org_Post_PostConditionA(v.GetA())),
+		slog.Any("b", s.logvalue_Org_Post_PostConditionB(v.GetB())),
 	)
+}
+
+func (s *FederationService) logvalue_Org_Post_PostConditionA(v *post.PostConditionA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("prop", v.GetProp()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_PostConditionB(v *post.PostConditionB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
 }
