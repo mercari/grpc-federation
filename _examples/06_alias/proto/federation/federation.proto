@@ -15,17 +15,38 @@ service FederationService {
 
 message GetPostRequest {
   string id = 1;
+
+  message ConditionA {
+    option (grpc.federation.message).alias = "org.post.PostConditionA";
+    string prop = 1;
+  }
+  message ConditionB {
+    option (grpc.federation.message).alias = "org.post.PostConditionB";
+  }
+  oneof condition {
+    ConditionA a = 2;
+    ConditionB condition_b = 3;
+  }
 }
 
 message GetPostResponse {
   option (grpc.federation.message) = {
-    def {
-      name: "post"
-      message {
-        name: "Post"
-        args { name: "id", by: "$.id" }
+    def [
+      {
+        name: "cond_a", by: "$.a"
+      },
+      {
+        name: "post"
+        message {
+          name: "Post"
+          args [
+            { name: "id", by: "$.id" },
+            { name: "a", by: "$.a" },
+            { name: "b", by: "$.condition_b" }
+          ]
+        }
       }
-    }
+    ]
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
 }
@@ -36,7 +57,11 @@ message Post {
       name: "res"
       call {
         method: "org.post.PostService/GetPost"
-        request { field: "id", by: "$.id" }
+        request [
+          { field: "id", by: "$.id" },
+          { field: "a", by: "$.a", if : "$.a != null" },
+          { field: "b", by: "$.b", if : "$.b != null" }
+        ]
       }
     }
     def { name: "post", by: "res.post", autobind: true }

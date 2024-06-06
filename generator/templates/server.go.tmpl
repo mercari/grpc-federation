@@ -300,14 +300,14 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	res, err := grpcfed.WithTimeout[{{ .ReturnTypeWithoutPtr }}](ctx, "{{ .ProtoFQDN }}", {{ .Timeout }}, func(ctx context.Context) ({{ .ReturnType }}, error) {
 		return s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}{
 			{{- range .ReturnTypeArguments }}
-			{{ . }}: req.{{ . }},
+			{{ . }}: req.Get{{ . }}(),
 			{{- end }}
 		})
 	})
 	{{- else }}
 	res, err := s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}{
 		{{- range .ReturnTypeArguments }}
-		{{ . }}: req.{{ . }},
+		{{ . }}: req.Get{{ . }}(),
 		{{- end }}
 	})
 	{{- end }}

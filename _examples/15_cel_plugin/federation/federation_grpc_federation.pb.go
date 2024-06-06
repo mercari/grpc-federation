@@ -183,8 +183,8 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 		}
 	}()
 	res, err := s.resolve_Org_Federation_IsMatchResponse(ctx, &Org_Federation_IsMatchResponseArgument{
-		Expr:   req.Expr,
-		Target: req.Target,
+		Expr:   req.GetExpr(),
+		Target: req.GetTarget(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
