@@ -521,5 +521,23 @@ func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequ
 	}
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
+		slog.Any("a", s.logvalue_Org_Post_PostConditionA(v.GetA())),
+		slog.Any("b", s.logvalue_Org_Post_PostConditionB(v.GetB())),
 	)
+}
+
+func (s *FederationService) logvalue_Org_Post_PostConditionA(v *post.PostConditionA) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("prop", v.GetProp()),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_PostConditionB(v *post.PostConditionB) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
 }

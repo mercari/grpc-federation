@@ -216,7 +216,11 @@ func TestProtoFormat(t *testing.T) {
       name: "post"
       message {
         name: "Post"
-        args { name: "id", by: "$.id" }
+        args: [
+          { name: "id", by: "$.id" },
+          { name: "a", by: "$.a" },
+          { name: "b", by: "$.b" }
+        ]
       }
     }
   }`,
@@ -226,7 +230,11 @@ func TestProtoFormat(t *testing.T) {
       name: "res"
       call {
         method: "org.post.PostService/GetPost"
-        request { field: "id", by: "$.id" }
+        request: [
+          { field: "id", by: "$.id" },
+          { field: "a", by: "$.a", if: "$.a != null" },
+          { field: "b", by: "$.b", if: "$.b != null" }
+        ]
       }
     }
     def {
