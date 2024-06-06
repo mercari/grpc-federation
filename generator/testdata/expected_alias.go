@@ -260,7 +260,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			// { name: "a", by: "$.a" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionA]{
 				Value:             value,
-				Expr:              "$.a",
+				Expr:              `$.a`,
 				UseContextLibrary: false,
 				CacheIndex:        2,
 				Setter: func(v *GetPostRequest_ConditionA) error {
@@ -273,7 +273,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			// { name: "b", by: "$.b" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionB]{
 				Value:             value,
-				Expr:              "$.b",
+				Expr:              `$.b`,
 				UseContextLibrary: false,
 				CacheIndex:        3,
 				Setter: func(v *GetPostRequest_ConditionB) error {
@@ -375,13 +375,13 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			// { field: "a", by: "$.a", if: "$.a != null" }
 			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 				Value:             value,
-				Expr:              "$.a != null",
+				Expr:              `$.a != null`,
 				UseContextLibrary: false,
 				CacheIndex:        6,
 				Body: func(value *localValueType) error {
 					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionA]{
 						Value:             value,
-						Expr:              "$.a",
+						Expr:              `$.a`,
 						UseContextLibrary: false,
 						CacheIndex:        7,
 						Setter: func(v *GetPostRequest_ConditionA) error {
@@ -402,13 +402,13 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			// { field: "b", by: "$.b", if: "$.b != null" }
 			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 				Value:             value,
-				Expr:              "$.b != null",
+				Expr:              `$.b != null`,
 				UseContextLibrary: false,
 				CacheIndex:        8,
 				Body: func(value *localValueType) error {
 					return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionB]{
 						Value:             value,
-						Expr:              "$.b",
+						Expr:              `$.b`,
 						UseContextLibrary: false,
 						CacheIndex:        9,
 						Setter: func(v *GetPostRequest_ConditionB) error {
