@@ -2,6 +2,7 @@ package validator_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,6 +14,7 @@ import (
 )
 
 func TestValidator(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		file     string
 		expected string
@@ -20,8 +22,8 @@ func TestValidator(t *testing.T) {
 		{file: "empty_response_field.proto", expected: `
 `},
 		{file: "different_message_argument_type.proto", expected: `
-testdata/different_message_argument_type.proto:28:14: "id" argument name is declared with a different type kind. found "string" and "int32" type
-28:          args { name: "id" int32: 1 }
+testdata/different_message_argument_type.proto:28:14: "id" argument name is declared with a different type kind. found "string" and "int64" type
+28:          args { name: "id" by: "1" }
                   ^
 `},
 		{file: "invalid_autobind.proto", expected: `
@@ -660,10 +662,12 @@ testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically
        ^
 `},
 	}
-	ctx := context.Background()
-	v := validator.New()
 	for _, test := range tests {
+		test := test
 		t.Run(test.file, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			v := validator.New()
 			path := filepath.Join("testdata", test.file)
 			f, err := os.ReadFile(path)
 			if err != nil {
@@ -680,7 +684,7 @@ testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically
 				}
 				return
 			}
-
+			fmt.Println(got)
 			if diff := cmp.Diff("\n"+got, test.expected); diff != "" {
 				t.Errorf("(-got, +want)\n%s", diff)
 			}

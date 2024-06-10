@@ -47,7 +47,7 @@ message Post {
       {
         message {
           name: "User"
-          args { name: "user_id", string: "foo" }
+          args { name: "user_id", by: "'foo'" }
         }
         autobind: true
       }

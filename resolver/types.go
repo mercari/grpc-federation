@@ -451,7 +451,6 @@ type Argument struct {
 type Value struct {
 	Inline bool
 	CEL    *CELValue
-	Const  *ConstValue
 }
 
 type CELValue struct {
@@ -459,11 +458,6 @@ type CELValue struct {
 	Out               *Type
 	CheckedExpr       *exprv1.CheckedExpr
 	UseContextLibrary bool
-}
-
-type ConstValue struct {
-	Type  *Type
-	Value interface{}
 }
 
 type EnvKey string

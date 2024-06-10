@@ -42,7 +42,7 @@ message GetPostResponse {
     def { name: "null_value" by: "null" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
-  string str = 2 [(grpc.federation.field).string = "hello"];
+  string str = 2 [(grpc.federation.field).by = "'hello'"];
   string uuid = 3 [(grpc.federation.field).by = "uuid.string()"];
   string loc = 4 [(grpc.federation.field).by = "loc.string()"];
   string value1 = 5 [(grpc.federation.field).by = "value1"];
@@ -77,8 +77,8 @@ message A {
   message B {
     option (grpc.federation.message) = {
       def [
-        { name: "foo" message: { name: "A.B.C" args { name: "type" string: "foo" } } },
-        { name: "bar" message: { name: "A.B.C" args { name: "type" string: "bar" } } }
+        { name: "foo" message: { name: "A.B.C" args { name: "type" by: "'foo'" } } },
+        { name: "bar" message: { name: "A.B.C" args { name: "type" by: "'bar'" } } }
       ]
     };
     message C {

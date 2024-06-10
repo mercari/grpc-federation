@@ -647,7 +647,20 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 	ret := &UserID{}
 
 	// field binding section.
-	ret.Value = "xxx" // (grpc.federation.field).string = "xxx"
+	// (grpc.federation.field).by = "'xxx'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'xxx'`,
+		UseContextLibrary: false,
+		CacheIndex:        7,
+		Setter: func(v string) error {
+			ret.Value = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.UserID", slog.Any("org.federation.UserID", s.logvalue_Org_Federation_UserID(ret)))
 	return ret, nil

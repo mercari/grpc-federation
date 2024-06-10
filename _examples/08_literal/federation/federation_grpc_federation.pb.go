@@ -197,42 +197,40 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	       method: "content.ContentService/GetContent"
 	       request: [
 	         { field: "by_field", by: "$.id" },
-	         { field: "double_field", double: 1.23 },
-	         { field: "doubles_field", doubles: [4.56, 7.89] },
-	         { field: "float_field", float: 4.56 },
-	         { field: "floats_field", floats: [7.89, 1.23] },
-	         { field: "int32_field", int32: -1 },
-	         { field: "int32s_field", int32s: [-2, -3] },
-	         { field: "int64_field", int64: -4 },
-	         { field: "int64s_field", int64s: [-5, -6] },
-	         { field: "uint32_field", uint32: 1 },
-	         { field: "uint32s_field", uint32s: [2, 3] },
-	         { field: "uint64_field", uint64: 4 },
-	         { field: "uint64s_field", uint64s: [5, 6] },
-	         { field: "sint32_field", sint32: -7 },
-	         { field: "sint32s_field", sint32s: [-8, -9] },
-	         { field: "sint64_field", sint64: -10 },
-	         { field: "sint64s_field", sint64s: [-11, -12] },
-	         { field: "fixed32_field", fixed32: 10 },
-	         { field: "fixed32s_field", fixed32s: [11, 12] },
-	         { field: "fixed64_field", fixed64: 13 },
-	         { field: "fixed64s_field", fixed64s: [14, 15] },
-	         { field: "sfixed32_field", sfixed32: -14 },
-	         { field: "sfixed32s_field", sfixed32s: [-15, -16] },
-	         { field: "sfixed64_field", sfixed64: -17 },
-	         { field: "sfixed64s_field", sfixed64s: [-18, -19] },
-	         { field: "bool_field", bool: true },
-	         { field: "bools_field", bools: [true, false] },
-	         { field: "string_field", string: "foo" },
-	         { field: "strings_field", strings: ["hello", "world"] },
-	         { field: "byte_string_field", byte_string: "foo" },
-	         { field: "byte_strings_field", byte_strings: ["foo", "bar"] },
-	         { field: "enum_field", enum: "content.CONTENT_TYPE_1" },
-	         { field: "enums_field", enums: ["content.CONTENT_TYPE_2", "content.CONTENT_TYPE_3"] },
-	         { field: "env_field", env: "foo" },
-	         { field: "envs_field", envs: ["foo", "bar"] },
-	         { field: "messages_field", messages: [{ name: "content.Content", fields: [] }, { name: "content.Content", fields: [] }] },
-	         { field: "message_field", message: { name: "content.Content", fields: [{ field: "bool_field", bool: true }, { field: "bools_field", bools: [true, false] }, { field: "byte_string_field", byte_string: "foo" }, { field: "byte_strings_field", byte_strings: ["foo", "bar"] }, { field: "double_field", double: 1.23 }, { field: "doubles_field", doubles: [4.56, 7.89] }, { field: "enum_field", enum: "content.CONTENT_TYPE_1" }, { field: "enums_field", enums: ["content.CONTENT_TYPE_2", "content.CONTENT_TYPE_3"] }, { field: "env_field", env: "foo" }, { field: "envs_field", envs: ["foo", "bar"] }, { field: "fixed32_field", fixed32: 10 }, { field: "fixed32s_field", fixed32s: [11, 12] }, { field: "fixed64_field", fixed64: 13 }, { field: "fixed64s_field", fixed64s: [14, 15] }, { field: "float_field", float: 4.56 }, { field: "floats_field", floats: [7.89, 1.23] }, { field: "int32_field", int32: -1 }, { field: "int32s_field", int32s: [-2, -3] }, { field: "int64_field", int64: -4 }, { field: "int64s_field", int64s: [-5, -6] }, { field: "messages_field", messages: [{ name: "content.Content", fields: [] }, { name: "content.Content", fields: [] }] }, { field: "sfixed32_field", sfixed32: -14 }, { field: "sfixed32s_field", sfixed32s: [-15, -16] }, { field: "sfixed64_field", sfixed64: -17 }, { field: "sfixed64s_field", sfixed64s: [-18, -19] }, { field: "sint32_field", sint32: -7 }, { field: "sint32s_field", sint32s: [-8, -9] }, { field: "sint64_field", sint64: -10 }, { field: "sint64s_field", sint64s: [-11, -12] }, { field: "string_field", string: "foo" }, { field: "strings_field", strings: ["hello", "world"] }, { field: "uint32_field", uint32: 1 }, { field: "uint32s_field", uint32s: [2, 3] }, { field: "uint64_field", uint64: 4 }, { field: "uint64s_field", uint64s: [5, 6] }] } }
+	         { field: "double_field", by: "1.23" },
+	         { field: "doubles_field", by: "[4.56, 7.89]" },
+	         { field: "float_field", by: "4.56" },
+	         { field: "floats_field", by: "[7.89, 1.23]" },
+	         { field: "int32_field", by: "-1" },
+	         { field: "int32s_field", by: "[-2, -3]" },
+	         { field: "int64_field", by: "-4" },
+	         { field: "int64s_field", by: "[-5, -6]" },
+	         { field: "uint32_field", by: "1u" },
+	         { field: "uint32s_field", by: "[2u, 3u]" },
+	         { field: "uint64_field", by: "4u" },
+	         { field: "uint64s_field", by: "[5u, 6u]" },
+	         { field: "sint32_field", by: "-7" },
+	         { field: "sint32s_field", by: "[-8, -9]" },
+	         { field: "sint64_field", by: "-10" },
+	         { field: "sint64s_field", by: "[-11, -12]" },
+	         { field: "fixed32_field", by: "10u" },
+	         { field: "fixed32s_field", by: "[11u, 12u]" },
+	         { field: "fixed64_field", by: "13u" },
+	         { field: "fixed64s_field", by: "[14u, 15u]" },
+	         { field: "sfixed32_field", by: "-14" },
+	         { field: "sfixed32s_field", by: "[-15, -16]" },
+	         { field: "sfixed64_field", by: "-17" },
+	         { field: "sfixed64s_field", by: "[-18, -19]" },
+	         { field: "bool_field", by: "true" },
+	         { field: "bools_field", by: "[true, false]" },
+	         { field: "string_field", by: "'foo'" },
+	         { field: "strings_field", by: "['hello', 'world']" },
+	         { field: "byte_string_field", by: "b'foo'" },
+	         { field: "byte_strings_field", by: "[b'foo', b'bar']" },
+	         { field: "enum_field", by: "content.ContentType.CONTENT_TYPE_1" },
+	         { field: "enums_field", by: "[content.ContentType.CONTENT_TYPE_2, content.ContentType.CONTENT_TYPE_3]" },
+	         { field: "message_field", by: "content.Content{double_field: 1.23, doubles_field: [4.56, 7.89]}" },
+	         { field: "messages_field", by: "[content.Content{}, content.Content{}]" }
 	       ]
 	     }
 	   }
@@ -245,44 +243,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &content.GetContentRequest{
-				DoubleField:      1.23,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { field: "double_field", double: 1.23 }
-				DoublesField:     []float64{4.56, 7.89},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // { field: "doubles_field", doubles: [4.56, 7.89] }
-				FloatField:       4.56,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { field: "float_field", float: 4.56 }
-				FloatsField:      []float32{7.89, 1.23},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // { field: "floats_field", floats: [7.89, 1.23] }
-				Int32Field:       -1,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     // { field: "int32_field", int32: -1 }
-				Int32SField:      []int32{-2, -3},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        // { field: "int32s_field", int32s: [-2, -3] }
-				Int64Field:       -4,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     // { field: "int64_field", int64: -4 }
-				Int64SField:      []int64{-5, -6},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        // { field: "int64s_field", int64s: [-5, -6] }
-				Uint32Field:      1,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      // { field: "uint32_field", uint32: 1 }
-				Uint32SField:     []uint32{2, 3},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         // { field: "uint32s_field", uint32s: [2, 3] }
-				Uint64Field:      4,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      // { field: "uint64_field", uint64: 4 }
-				Uint64SField:     []uint64{5, 6},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         // { field: "uint64s_field", uint64s: [5, 6] }
-				Sint32Field:      -7,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     // { field: "sint32_field", sint32: -7 }
-				Sint32SField:     []int32{-8, -9},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        // { field: "sint32s_field", sint32s: [-8, -9] }
-				Sint64Field:      -10,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // { field: "sint64_field", sint64: -10 }
-				Sint64SField:     []int64{-11, -12},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      // { field: "sint64s_field", sint64s: [-11, -12] }
-				Fixed32Field:     10,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     // { field: "fixed32_field", fixed32: 10 }
-				Fixed32SField:    []uint32{11, 12},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // { field: "fixed32s_field", fixed32s: [11, 12] }
-				Fixed64Field:     13,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     // { field: "fixed64_field", fixed64: 13 }
-				Fixed64SField:    []uint64{14, 15},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       // { field: "fixed64s_field", fixed64s: [14, 15] }
-				Sfixed32Field:    -14,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // { field: "sfixed32_field", sfixed32: -14 }
-				Sfixed32SField:   []int32{-15, -16},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      // { field: "sfixed32s_field", sfixed32s: [-15, -16] }
-				Sfixed64Field:    -17,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // { field: "sfixed64_field", sfixed64: -17 }
-				Sfixed64SField:   []int64{-18, -19},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      // { field: "sfixed64s_field", sfixed64s: [-18, -19] }
-				BoolField:        true,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { field: "bool_field", bool: true }
-				BoolsField:       []bool{true, false},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // { field: "bools_field", bools: [true, false] }
-				StringField:      "foo",                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // { field: "string_field", string: "foo" }
-				StringsField:     []string{"hello", "world"},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             // { field: "strings_field", strings: ["hello", "world"] }
-				ByteStringField:  []byte{102, 111, 111},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // { field: "byte_string_field", byte_string: "foo" }
-				ByteStringsField: [][]byte{[]byte{102, 111, 111}, []byte{98, 97, 114}},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   // { field: "byte_strings_field", byte_strings: ["foo", "bar"] }
-				EnumField:        content.ContentType_CONTENT_TYPE_1,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     // { field: "enum_field", enum: "content.CONTENT_TYPE_1" }
-				EnumsField:       []content.ContentType{content.ContentType_CONTENT_TYPE_2, content.ContentType_CONTENT_TYPE_3},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          // { field: "enums_field", enums: ["content.CONTENT_TYPE_2", "content.CONTENT_TYPE_3"] }
-				EnvField:         grpcfed.Getenv("foo"),                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  // { field: "env_field", env: "foo" }
-				EnvsField:        []string{grpcfed.Getenv("foo"), grpcfed.Getenv("bar")},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 // { field: "envs_field", envs: ["foo", "bar"] }
-				MessagesField:    []*content.Content{&content.Content{}, &content.Content{}},                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             // { field: "messages_field", messages: [{ name: "content.Content", fields: [] }, { name: "content.Content", fields: [] }] }
-				MessageField:     &content.Content{DoubleField: 1.23, DoublesField: []float64{4.56, 7.89}, FloatField: 4.56, FloatsField: []float32{7.89, 1.23}, Int32Field: -1, Int32SField: []int32{-2, -3}, Int64Field: -4, Int64SField: []int64{-5, -6}, Uint32Field: 1, Uint32SField: []uint32{2, 3}, Uint64Field: 4, Uint64SField: []uint64{5, 6}, Sint32Field: -7, Sint32SField: []int32{-8, -9}, Sint64Field: -10, Sint64SField: []int64{-11, -12}, Fixed32Field: 10, Fixed32SField: []uint32{11, 12}, Fixed64Field: 13, Fixed64SField: []uint64{14, 15}, Sfixed32Field: -14, Sfixed32SField: []int32{-15, -16}, Sfixed64Field: -17, Sfixed64SField: []int64{-18, -19}, BoolField: true, BoolsField: []bool{true, false}, StringField: "foo", StringsField: []string{"hello", "world"}, ByteStringField: []byte{102, 111, 111}, ByteStringsField: [][]byte{[]byte{102, 111, 111}, []byte{98, 97, 114}}, EnumField: content.ContentType_CONTENT_TYPE_1, EnumsField: []content.ContentType{content.ContentType_CONTENT_TYPE_2, content.ContentType_CONTENT_TYPE_3}, EnvField: grpcfed.Getenv("foo"), EnvsField: []string{grpcfed.Getenv("foo"), grpcfed.Getenv("bar")}, MessagesField: []*content.Content{&content.Content{}, &content.Content{}}}, // { field: "message_field", message: { name: "content.Content", fields: [{ field: "bool_field", bool: true }, { field: "bools_field", bools: [true, false] }, { field: "byte_string_field", byte_string: "foo" }, { field: "byte_strings_field", byte_strings: ["foo", "bar"] }, { field: "double_field", double: 1.23 }, { field: "doubles_field", doubles: [4.56, 7.89] }, { field: "enum_field", enum: "content.CONTENT_TYPE_1" }, { field: "enums_field", enums: ["content.CONTENT_TYPE_2", "content.CONTENT_TYPE_3"] }, { field: "env_field", env: "foo" }, { field: "envs_field", envs: ["foo", "bar"] }, { field: "fixed32_field", fixed32: 10 }, { field: "fixed32s_field", fixed32s: [11, 12] }, { field: "fixed64_field", fixed64: 13 }, { field: "fixed64s_field", fixed64s: [14, 15] }, { field: "float_field", float: 4.56 }, { field: "floats_field", floats: [7.89, 1.23] }, { field: "int32_field", int32: -1 }, { field: "int32s_field", int32s: [-2, -3] }, { field: "int64_field", int64: -4 }, { field: "int64s_field", int64s: [-5, -6] }, { field: "messages_field", messages: [{ name: "content.Content", fields: [] }, { name: "content.Content", fields: [] }] }, { field: "sfixed32_field", sfixed32: -14 }, { field: "sfixed32s_field", sfixed32s: [-15, -16] }, { field: "sfixed64_field", sfixed64: -17 }, { field: "sfixed64s_field", sfixed64s: [-18, -19] }, { field: "sint32_field", sint32: -7 }, { field: "sint32s_field", sint32s: [-8, -9] }, { field: "sint64_field", sint64: -10 }, { field: "sint64s_field", sint64s: [-11, -12] }, { field: "string_field", string: "foo" }, { field: "strings_field", strings: ["hello", "world"] }, { field: "uint32_field", uint32: 1 }, { field: "uint32s_field", uint32s: [2, 3] }, { field: "uint64_field", uint64: 4 }, { field: "uint64s_field", uint64s: [5, 6] }] } }
-			}
+			args := &content.GetContentRequest{}
 			// { field: "by_field", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
@@ -291,6 +252,448 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				CacheIndex:        1,
 				Setter: func(v string) error {
 					args.ByField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "double_field", by: "1.23" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
+				Value:             value,
+				Expr:              `1.23`,
+				UseContextLibrary: false,
+				CacheIndex:        2,
+				Setter: func(v float64) error {
+					args.DoubleField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "doubles_field", by: "[4.56, 7.89]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]float64]{
+				Value:             value,
+				Expr:              `[4.56, 7.89]`,
+				UseContextLibrary: false,
+				CacheIndex:        3,
+				Setter: func(v []float64) error {
+					args.DoublesField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "float_field", by: "4.56" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float32]{
+				Value:             value,
+				Expr:              `4.56`,
+				UseContextLibrary: false,
+				CacheIndex:        4,
+				Setter: func(v float32) error {
+					args.FloatField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "floats_field", by: "[7.89, 1.23]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]float32]{
+				Value:             value,
+				Expr:              `[7.89, 1.23]`,
+				UseContextLibrary: false,
+				CacheIndex:        5,
+				Setter: func(v []float32) error {
+					args.FloatsField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "int32_field", by: "-1" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int32]{
+				Value:             value,
+				Expr:              `-1`,
+				UseContextLibrary: false,
+				CacheIndex:        6,
+				Setter: func(v int32) error {
+					args.Int32Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "int32s_field", by: "[-2, -3]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int32]{
+				Value:             value,
+				Expr:              `[-2, -3]`,
+				UseContextLibrary: false,
+				CacheIndex:        7,
+				Setter: func(v []int32) error {
+					args.Int32SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "int64_field", by: "-4" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+				Value:             value,
+				Expr:              `-4`,
+				UseContextLibrary: false,
+				CacheIndex:        8,
+				Setter: func(v int64) error {
+					args.Int64Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "int64s_field", by: "[-5, -6]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
+				Value:             value,
+				Expr:              `[-5, -6]`,
+				UseContextLibrary: false,
+				CacheIndex:        9,
+				Setter: func(v []int64) error {
+					args.Int64SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "uint32_field", by: "1u" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint32]{
+				Value:             value,
+				Expr:              `1u`,
+				UseContextLibrary: false,
+				CacheIndex:        10,
+				Setter: func(v uint32) error {
+					args.Uint32Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "uint32s_field", by: "[2u, 3u]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]uint32]{
+				Value:             value,
+				Expr:              `[2u, 3u]`,
+				UseContextLibrary: false,
+				CacheIndex:        11,
+				Setter: func(v []uint32) error {
+					args.Uint32SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "uint64_field", by: "4u" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
+				Value:             value,
+				Expr:              `4u`,
+				UseContextLibrary: false,
+				CacheIndex:        12,
+				Setter: func(v uint64) error {
+					args.Uint64Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "uint64s_field", by: "[5u, 6u]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]uint64]{
+				Value:             value,
+				Expr:              `[5u, 6u]`,
+				UseContextLibrary: false,
+				CacheIndex:        13,
+				Setter: func(v []uint64) error {
+					args.Uint64SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sint32_field", by: "-7" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int32]{
+				Value:             value,
+				Expr:              `-7`,
+				UseContextLibrary: false,
+				CacheIndex:        14,
+				Setter: func(v int32) error {
+					args.Sint32Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sint32s_field", by: "[-8, -9]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int32]{
+				Value:             value,
+				Expr:              `[-8, -9]`,
+				UseContextLibrary: false,
+				CacheIndex:        15,
+				Setter: func(v []int32) error {
+					args.Sint32SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sint64_field", by: "-10" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+				Value:             value,
+				Expr:              `-10`,
+				UseContextLibrary: false,
+				CacheIndex:        16,
+				Setter: func(v int64) error {
+					args.Sint64Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sint64s_field", by: "[-11, -12]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
+				Value:             value,
+				Expr:              `[-11, -12]`,
+				UseContextLibrary: false,
+				CacheIndex:        17,
+				Setter: func(v []int64) error {
+					args.Sint64SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "fixed32_field", by: "10u" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint32]{
+				Value:             value,
+				Expr:              `10u`,
+				UseContextLibrary: false,
+				CacheIndex:        18,
+				Setter: func(v uint32) error {
+					args.Fixed32Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "fixed32s_field", by: "[11u, 12u]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]uint32]{
+				Value:             value,
+				Expr:              `[11u, 12u]`,
+				UseContextLibrary: false,
+				CacheIndex:        19,
+				Setter: func(v []uint32) error {
+					args.Fixed32SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "fixed64_field", by: "13u" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
+				Value:             value,
+				Expr:              `13u`,
+				UseContextLibrary: false,
+				CacheIndex:        20,
+				Setter: func(v uint64) error {
+					args.Fixed64Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "fixed64s_field", by: "[14u, 15u]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]uint64]{
+				Value:             value,
+				Expr:              `[14u, 15u]`,
+				UseContextLibrary: false,
+				CacheIndex:        21,
+				Setter: func(v []uint64) error {
+					args.Fixed64SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sfixed32_field", by: "-14" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int32]{
+				Value:             value,
+				Expr:              `-14`,
+				UseContextLibrary: false,
+				CacheIndex:        22,
+				Setter: func(v int32) error {
+					args.Sfixed32Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sfixed32s_field", by: "[-15, -16]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int32]{
+				Value:             value,
+				Expr:              `[-15, -16]`,
+				UseContextLibrary: false,
+				CacheIndex:        23,
+				Setter: func(v []int32) error {
+					args.Sfixed32SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sfixed64_field", by: "-17" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+				Value:             value,
+				Expr:              `-17`,
+				UseContextLibrary: false,
+				CacheIndex:        24,
+				Setter: func(v int64) error {
+					args.Sfixed64Field = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "sfixed64s_field", by: "[-18, -19]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
+				Value:             value,
+				Expr:              `[-18, -19]`,
+				UseContextLibrary: false,
+				CacheIndex:        25,
+				Setter: func(v []int64) error {
+					args.Sfixed64SField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "bool_field", by: "true" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
+				Value:             value,
+				Expr:              `true`,
+				UseContextLibrary: false,
+				CacheIndex:        26,
+				Setter: func(v bool) error {
+					args.BoolField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "bools_field", by: "[true, false]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]bool]{
+				Value:             value,
+				Expr:              `[true, false]`,
+				UseContextLibrary: false,
+				CacheIndex:        27,
+				Setter: func(v []bool) error {
+					args.BoolsField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "string_field", by: "'foo'" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+				Value:             value,
+				Expr:              `'foo'`,
+				UseContextLibrary: false,
+				CacheIndex:        28,
+				Setter: func(v string) error {
+					args.StringField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "strings_field", by: "['hello', 'world']" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
+				Value:             value,
+				Expr:              `['hello', 'world']`,
+				UseContextLibrary: false,
+				CacheIndex:        29,
+				Setter: func(v []string) error {
+					args.StringsField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "byte_string_field", by: "b'foo'" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]byte]{
+				Value:             value,
+				Expr:              `b'foo'`,
+				UseContextLibrary: false,
+				CacheIndex:        30,
+				Setter: func(v []byte) error {
+					args.ByteStringField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "byte_strings_field", by: "[b'foo', b'bar']" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[][]byte]{
+				Value:             value,
+				Expr:              `[b'foo', b'bar']`,
+				UseContextLibrary: false,
+				CacheIndex:        31,
+				Setter: func(v [][]byte) error {
+					args.ByteStringsField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "enum_field", by: "content.ContentType.CONTENT_TYPE_1" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[content.ContentType]{
+				Value:             value,
+				Expr:              `content.ContentType.CONTENT_TYPE_1`,
+				UseContextLibrary: false,
+				CacheIndex:        32,
+				Setter: func(v content.ContentType) error {
+					args.EnumField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "enums_field", by: "[content.ContentType.CONTENT_TYPE_2, content.ContentType.CONTENT_TYPE_3]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]content.ContentType]{
+				Value:             value,
+				Expr:              `[content.ContentType.CONTENT_TYPE_2, content.ContentType.CONTENT_TYPE_3]`,
+				UseContextLibrary: false,
+				CacheIndex:        33,
+				Setter: func(v []content.ContentType) error {
+					args.EnumsField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "message_field", by: "content.Content{double_field: 1.23, doubles_field: [4.56, 7.89]}" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*content.Content]{
+				Value:             value,
+				Expr:              `content.Content{double_field: 1.23, doubles_field: [4.56, 7.89]}`,
+				UseContextLibrary: false,
+				CacheIndex:        34,
+				Setter: func(v *content.Content) error {
+					args.MessageField = v
+					return nil
+				},
+			}); err != nil {
+				return nil, err
+			}
+			// { field: "messages_field", by: "[content.Content{}, content.Content{}]" }
+			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]*content.Content]{
+				Value:             value,
+				Expr:              `[content.Content{}, content.Content{}]`,
+				UseContextLibrary: false,
+				CacheIndex:        35,
+				Setter: func(v []*content.Content) error {
+					args.MessagesField = v
 					return nil
 				},
 			}); err != nil {
@@ -322,7 +725,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		},
 		By:                  `res.content`,
 		ByUseContextLibrary: false,
-		ByCacheIndex:        2,
+		ByCacheIndex:        36,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -341,7 +744,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Value:             value,
 		Expr:              `content`,
 		UseContextLibrary: false,
-		CacheIndex:        3,
+		CacheIndex:        37,
 		Setter: func(v *content.Content) error {
 			contentValue, err := s.cast_Content_Content__to__Org_Federation_Content(v)
 			if err != nil {
@@ -359,7 +762,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Value:             value,
 		Expr:              `content.int32_field + content.sint32_field`,
 		UseContextLibrary: false,
-		CacheIndex:        4,
+		CacheIndex:        38,
 		Setter: func(v int64) error {
 			ret.CelExpr = v
 			return nil
@@ -484,6 +887,26 @@ func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(fro
 	}, nil
 }
 
+// cast_float64__to__float32 cast from "double" to "float".
+func (s *FederationService) cast_float64__to__float32(from float64) (float32, error) {
+	return float32(from), nil
+}
+
+// cast_int64__to__Content_ContentType cast from "int64" to "content.ContentType".
+func (s *FederationService) cast_int64__to__Content_ContentType(from int64) (content.ContentType, error) {
+	return content.ContentType(from), nil
+}
+
+// cast_int64__to__int32 cast from "int64" to "sint32".
+func (s *FederationService) cast_int64__to__int32(from int64) (int32, error) {
+	return int32(from), nil
+}
+
+// cast_int64__to__int64 cast from "int64" to "sint64".
+func (s *FederationService) cast_int64__to__int64(from int64) (int64, error) {
+	return int64(from), nil
+}
+
 // cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType cast from "repeated content.ContentType" to "repeated org.federation.ContentType".
 func (s *FederationService) cast_repeated_Content_ContentType__to__repeated_Org_Federation_ContentType(from []content.ContentType) ([]ContentType, error) {
 	ret := make([]ContentType, 0, len(from))
@@ -508,6 +931,94 @@ func (s *FederationService) cast_repeated_Content_Content__to__repeated_Org_Fede
 		ret = append(ret, casted)
 	}
 	return ret, nil
+}
+
+// cast_repeated_float64__to__repeated_float32 cast from "repeated double" to "repeated float".
+func (s *FederationService) cast_repeated_float64__to__repeated_float32(from []float64) ([]float32, error) {
+	ret := make([]float32, 0, len(from))
+	for _, v := range from {
+		casted, err := s.cast_float64__to__float32(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
+	}
+	return ret, nil
+}
+
+// cast_repeated_int64__to__repeated_Content_ContentType cast from "repeated int64" to "repeated content.ContentType".
+func (s *FederationService) cast_repeated_int64__to__repeated_Content_ContentType(from []int64) ([]content.ContentType, error) {
+	ret := make([]content.ContentType, 0, len(from))
+	for _, v := range from {
+		casted, err := s.cast_int64__to__Content_ContentType(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
+	}
+	return ret, nil
+}
+
+// cast_repeated_int64__to__repeated_int32 cast from "repeated int64" to "repeated sint32".
+func (s *FederationService) cast_repeated_int64__to__repeated_int32(from []int64) ([]int32, error) {
+	ret := make([]int32, 0, len(from))
+	for _, v := range from {
+		casted, err := s.cast_int64__to__int32(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
+	}
+	return ret, nil
+}
+
+// cast_repeated_int64__to__repeated_int64 cast from "repeated int64" to "repeated sint64".
+func (s *FederationService) cast_repeated_int64__to__repeated_int64(from []int64) ([]int64, error) {
+	ret := make([]int64, 0, len(from))
+	for _, v := range from {
+		casted, err := s.cast_int64__to__int64(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
+	}
+	return ret, nil
+}
+
+// cast_repeated_uint64__to__repeated_uint32 cast from "repeated uint64" to "repeated uint32".
+func (s *FederationService) cast_repeated_uint64__to__repeated_uint32(from []uint64) ([]uint32, error) {
+	ret := make([]uint32, 0, len(from))
+	for _, v := range from {
+		casted, err := s.cast_uint64__to__uint32(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
+	}
+	return ret, nil
+}
+
+// cast_repeated_uint64__to__repeated_uint64 cast from "repeated uint64" to "repeated fixed64".
+func (s *FederationService) cast_repeated_uint64__to__repeated_uint64(from []uint64) ([]uint64, error) {
+	ret := make([]uint64, 0, len(from))
+	for _, v := range from {
+		casted, err := s.cast_uint64__to__uint64(v)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, casted)
+	}
+	return ret, nil
+}
+
+// cast_uint64__to__uint32 cast from "uint64" to "uint32".
+func (s *FederationService) cast_uint64__to__uint32(from uint64) (uint32, error) {
+	return grpcfed.Uint64ToUint32(from)
+}
+
+// cast_uint64__to__uint64 cast from "uint64" to "fixed64".
+func (s *FederationService) cast_uint64__to__uint64(from uint64) (uint64, error) {
+	return uint64(from), nil
 }
 
 func (s *FederationService) logvalue_Content_Content(v *content.Content) slog.Value {

@@ -20,7 +20,7 @@ message GetResponse {
       name: "sel"
       message {
         name: "UserSelection"
-        args { name: "value", string: "foo" }
+        args { name: "value", by: "'foo'" }
       }
     }
   };
@@ -42,7 +42,7 @@ message UserSelection {
           name: "ua"
           message {
             name: "User"
-            args { name: "user_id", string: "a" }
+            args { name: "user_id", by: "'a'" }
           }
         }
         by: "ua"
@@ -55,7 +55,7 @@ message UserSelection {
           name: "ub"
           message {
             name: "User"
-            args { name: "user_id", string: "b" }
+            args { name: "user_id", by: "'b'" }
           }
         }
         by: "ub"
@@ -69,7 +69,7 @@ message UserSelection {
           name: "uc"
           message {
             name: "User"
-            args { name: "user_id", string: "c" }
+            args { name: "user_id", by: "'c'" }
           }
         }
       }
@@ -82,7 +82,7 @@ message UserSelection {
           name: "ud"
           message {
             name: "User"
-            args { name: "user_id", string: "d" }
+            args { name: "user_id", by: "'d'" }
           }
         }
         by: "ud"
@@ -96,7 +96,7 @@ message UserSelection {
 }
 
 message M {
-  string value = 1 [(grpc.federation.field).string = "foo"];
+  string value = 1 [(grpc.federation.field).by = "'foo'"];
 }
 
 message User {

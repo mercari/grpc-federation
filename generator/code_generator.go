@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"go/format"
 	"log"
-	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -2022,11 +2020,7 @@ func (m *Message) ReturnFields() ([]*ReturnField, error) {
 			returnFields = append(returnFields, m.customResolverToReturnField(field))
 		case rule.Value != nil:
 			value := rule.Value
-			if value.Const != nil {
-				returnFields = append(returnFields, m.constValueToReturnField(field, value.Const))
-			} else {
-				returnFields = append(returnFields, m.celValueToReturnField(field, value.CEL))
-			}
+			returnFields = append(returnFields, m.celValueToReturnField(field, value.CEL))
 		case rule.AutoBindField != nil:
 			returnField, err := m.autoBindFieldToReturnField(field, rule.AutoBindField)
 			if err != nil {
@@ -2104,17 +2098,6 @@ func (m *Message) autoBindSourceType(autoBindField *resolver.AutoBindField, cand
 		return candidateType
 	default:
 		return candidateType
-	}
-}
-
-func (m *Message) constValueToReturnField(field *resolver.Field, constValue *resolver.ConstValue) *ReturnField {
-	return &ReturnField{
-		Name:  util.ToPublicGoVariable(field.Name),
-		Value: toGoConstValue(m.file, constValue.Type, constValue.Value),
-		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
-			Prefix:         "// ",
-			IndentSpaceNum: 2,
-		}),
 	}
 }
 
@@ -2898,21 +2881,6 @@ func (d *VariableDefinition) Arguments() []*Argument {
 	return arguments(d.Message.file, d.Expr)
 }
 
-func toValue(file *File, typ *resolver.Type, value *resolver.Value) string {
-	if value.Const != nil {
-		return toGoConstValue(file, value.Const.Type, value.Const.Value)
-	}
-	var selectors []string
-	selectors = append(selectors, "foo")
-	fromType := value.CEL.Out
-	toType := typ
-	if !requiredCast(fromType, toType) {
-		return strings.Join(selectors, ".")
-	}
-	castFuncName := castFuncName(fromType, toType)
-	return fmt.Sprintf("s.%s(%s)", castFuncName, strings.Join(selectors, "."))
-}
-
 func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 	var (
 		isRequestArgument bool
@@ -2946,15 +2914,6 @@ func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
 }
 
 func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*Argument {
-	if arg.Value.Const != nil {
-		return []*Argument{
-			{
-				Name:  util.ToPublicGoVariable(arg.Name),
-				Value: toGoConstValue(file, arg.Value.Const.Type, arg.Value.Const.Value),
-				If:    arg.If,
-			},
-		}
-	}
 	if arg.Value.CEL == nil {
 		return nil
 	}
@@ -3058,73 +3017,6 @@ func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*A
 			If:             arg.If,
 			RequiredCast:   isRequiredCast,
 		},
-	}
-}
-
-func toGoConstValue(file *File, typ *resolver.Type, value any) string {
-	if typ.Repeated {
-		rv := reflect.ValueOf(value)
-		length := rv.Len()
-		copied := *typ
-		copied.Repeated = false
-		var values []string
-		for i := 0; i < length; i++ {
-			values = append(values, toGoConstValue(file, &copied, rv.Index(i).Interface()))
-		}
-		return fmt.Sprintf("%s{%s}", file.toTypeText(typ), strings.Join(values, ","))
-	}
-	switch typ.Kind {
-	case types.Bool:
-		return fmt.Sprintf("%t", value)
-	case types.String:
-		if envKey, ok := value.(resolver.EnvKey); ok {
-			return fmt.Sprintf(`grpcfed.Getenv(%q)`, envKey)
-		}
-		return strconv.Quote(value.(string))
-	case types.Bytes:
-		b := value.([]byte)
-		byts := make([]string, 0, len(b))
-		for _, bb := range b {
-			byts = append(byts, fmt.Sprint(bb))
-		}
-		return fmt.Sprintf("[]byte{%s}", strings.Join(byts, ","))
-	case types.Enum:
-		enumValue := value.(*resolver.EnumValue)
-		prefix := toEnumValuePrefix(file, &resolver.Type{
-			Kind: types.Enum,
-			Enum: enumValue.Enum,
-		})
-		return toEnumValueText(prefix, enumValue.Value)
-	case types.Message:
-		mapV, ok := value.(map[string]*resolver.Value)
-		if !ok {
-			log.Fatalf("message const value must be map[string]*resolver.Value type. but %T", value)
-		}
-		if typ.Message == nil {
-			log.Fatal("message reference required")
-		}
-		var fields []string
-		for _, field := range typ.Message.Fields {
-			v, exists := mapV[field.Name]
-			if !exists {
-				continue
-			}
-			fields = append(
-				fields,
-				fmt.Sprintf(
-					"%s: %s",
-					util.ToPublicGoVariable(field.Name),
-					toValue(file, field.Type, v),
-				),
-			)
-		}
-		if file.GoPackage.ImportPath == typ.Message.GoPackage().ImportPath {
-			return fmt.Sprintf("&%s{%s}", typ.Message.Name, strings.Join(fields, ","))
-		}
-		return fmt.Sprintf("&%s.%s{%s}", typ.Message.GoPackage().Name, typ.Message.Name, strings.Join(fields, ","))
-	default:
-		// number value
-		return fmt.Sprint(value)
 	}
 }
 

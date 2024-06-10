@@ -36,8 +36,8 @@ message Post {
     name: "u"
     message {
       name: "User"
-      args { name: "id", string: "foo" }
-      args { name: "name", string: "bar" }
+      args { name: "id", by: "'foo'" }
+      args { name: "name", by: "'bar'" }
     }
   };
   option (grpc.federation.message).def = {
@@ -54,9 +54,9 @@ message Post {
     }
   };
 
-  string id = 1 [(grpc.federation.field).string = "post-id"];
-  string title = 2 [(grpc.federation.field).string = "title"];
-  string content = 3 [(grpc.federation.field).string = "content"];
+  string id = 1 [(grpc.federation.field).by = "'post-id'"];
+  string title = 2 [(grpc.federation.field).by = "'title'"];
+  string content = 3 [(grpc.federation.field).by = "'content'"];
   User user = 4 [(grpc.federation.field).by = "u"];
   Reaction reaction = 5 [(grpc.federation.field).by = "reaction"];
   MyFavoriteType favorite_value = 6 [(grpc.federation.field).by = "favorite_value"];
@@ -83,8 +83,8 @@ message GetStatusResponse {
     name: "u"
     message {
       name: "User"
-      args { name: "id", string: "xxxx" }
-      args { name: "name", string: "yyyy" }
+      args { name: "id", by: "'xxxx'" }
+      args { name: "name", by: "'yyyy'" }
     }
   };
 

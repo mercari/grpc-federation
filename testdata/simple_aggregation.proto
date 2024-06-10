@@ -33,7 +33,7 @@ message GetPostResponse {
     def { name: "map_value" by: "{1:'a', 2:'b', 3:'c'}" }
   };
   org.federation.Post post = 1 [(grpc.federation.field).by = "post"];
-  string const = 2 [(grpc.federation.field).string = "foo"];
+  string const = 2 [(grpc.federation.field).by = "'foo'"];
   string uuid = 3 [(grpc.federation.field).by = "uuid.string()"];
   string enum_name = 4 [(grpc.federation.field).by = "org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)"];
   int32 enum_value = 5 [(grpc.federation.field).by = "org.federation.Item.ItemType.value('ITEM_TYPE_1')"];
@@ -164,6 +164,6 @@ message Z {
 }
 
 message M {
-  string foo = 1 [(grpc.federation.field).string = "foo"];
-  int64 bar = 2 [(grpc.federation.field).int64 = 1];
+  string foo = 1 [(grpc.federation.field).by = "'foo'"];
+  int64 bar = 2 [(grpc.federation.field).by = "1"];
 }

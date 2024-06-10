@@ -274,7 +274,7 @@ message MyMessage {
       name: "res"
       call {
         method: "foopkg.FooService/GetFoo"
-        request { field: "field1", string: "abcd" }
+        request { field: "field1", by: "'abcd'" }
       }
     }
     // The type of "foo" variable is foo's field type of GetFoo's response type.
@@ -331,7 +331,7 @@ service FooService {
 ## (grpc.federation.message).def.call.request
 
 Specify the request parameters for the gRPC method.
-The `field` corresponds to the field name in the request message, and the `by` or `string` specifies which value is associated with the field.
+The `field` corresponds to the field name in the request message, and the `by` specifies which value is associated with the field.
 
 ### Example
 
@@ -348,7 +348,7 @@ message MyMessage {
       call {
         method: "foopkg.FooService/GetFoo"
         request: [
-          { field: "field1", string: "hello" }
+          { field: "field1", by: "'hello'" }
         ]
       }
     }
@@ -376,9 +376,6 @@ message GetFooRequest {
 | ----- | ---- | -------------------- |
 | [`field`](#grpcfederationmessagedefcallrequestfield) | string | required |
 | [`by`](#grpcfederationmessagedefcallrequestby) | [CEL](./cel.md) | optional |
-| [`string`](#grpcfederationmessagedefcallrequeststring) | string | optional |
-
-In addition to `string`, you can write literals for any data type supported by proto, such as `int64` or `bool` .
 
 ## (grpc.federation.message).def.call.request.field
 
@@ -388,10 +385,6 @@ The field name of the request message.
 
 `by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](./cel.md).
 You need to use `$.` to refer to the message argument.
-
-## (grpc.federation.message).def.call.request.string
-
-Use constant string value.
 
 ## (grpc.federation.message).def.call.timeout
 
@@ -833,8 +826,8 @@ message MyMessage {
         name: "Foo"
         // pass arguments to retrieve Foo message.
         args [
-          { name: "x" string: "xxxx" },
-          { name: "y" bool: true }
+          { name: "x" by: "'xxxx'" },
+          { name: "y" by: "true" }
         ]
       }
     }
@@ -857,9 +850,6 @@ message Foo {
 | [`name`](#grpcfederationmessagedefmessageargsname) | string | required |
 | [`by`](#grpcfederationmessagedefmessageargsby) | [CEL](./cel.md) | optional |
 | [`inline`](#grpcfederationmessagedefmessageargsinline) | [CEL](./cel.md) | optional |
-| [`string`](#grpcfederationmessagedefmessageargsstring) | string | optional |
-
-In addition to `string`, you can write literals for any data type supported by proto, such as `int64` or `bool` .
 
 ## (grpc.federation.message).def.message.args.name
 
@@ -876,10 +866,6 @@ You need to use `$.` to refer to the message argument.
 
 `inline` like `by`, it refers to the specified value and expands all fields beyond it.
 For this reason, the referenced value must always be of message type.
-
-## (grpc.federation.message).def.message.args.string
-
-`string` is constant string value.
 
 ## (grpc.federation.message).def.map
 
@@ -1041,7 +1027,7 @@ message MyMessage {
               name: "ErrorMessage",
               args {
                 name: "message",
-                string: "some message"
+                by: "'some message'"
               }
             }
             precondition_failure {
@@ -1130,7 +1116,6 @@ If a message with this option has a field that is not present in the message spe
 | [`oneof`](#grpcfederationfieldoneof) | FieldOneof | optional |
 | [`custom_resolver`](#grpcfederationfieldcustom_resolver) | bool | optional |
 | [`alias`](#grpcfederationfieldalias) | string | optional |
-| [`string`](#grpcfederationfieldstring) | string | optional |
 
 ## (grpc.federation.field).by
 
@@ -1177,8 +1162,6 @@ If there are any values retrieved by `grpc.federation.message` option, they are 
 `alias` can be used when `alias` is specified in `grpc.federation.message` option,
 and specifies the field name to be referenced among the messages specified in `alias` of message option.
 If the specified field has the same type or can be converted automatically, its value is assigned.
-
-## (grpc.federation.field).string
 
 # Message Argument
 

@@ -43,7 +43,7 @@ message AA {
 }
 
 message AB {
-  string name = 1 [(grpc.federation.field).string = "ab"];
+  string name = 1 [(grpc.federation.field).by = "'ab'"];
 }
 
 message AAA {
@@ -54,5 +54,5 @@ message AAA {
 }
 
 message B {
-  string name = 1 [(grpc.federation.field).string = "b"];
+  string name = 1 [(grpc.federation.field).by = "'b'"];
 }

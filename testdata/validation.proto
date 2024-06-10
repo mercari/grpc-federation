@@ -41,14 +41,14 @@ message GetPostResponse {
                   name: "CustomMessage",
                   args: {
                     name: "message",
-                    string: "message1"
+                    by: "'message1'"
                   }
                 },
                 {
                   name: "CustomMessage",
                   args: {
                     name: "message",
-                    string: "message2"
+                    by: "'message2'"
                   }
                 }
               ]
@@ -79,9 +79,9 @@ message GetPostResponse {
 }
 
 message Post {
-  string id = 1 [(grpc.federation.field).string = "some-id"];
-  string title = 2 [(grpc.federation.field).string = "some-title"];
-  string content = 3 [(grpc.federation.field).string = "some-content"];
+  string id = 1 [(grpc.federation.field).by = "'some-id'"];
+  string title = 2 [(grpc.federation.field).by = "'some-title'"];
+  string content = 3 [(grpc.federation.field).by = "'some-content'"];
 }
 
 message CustomMessage {

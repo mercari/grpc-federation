@@ -49,7 +49,7 @@ message UserID {
     def { message { name: "Sub" } }
   };
 
-  string value = 1 [(grpc.federation.field).string = "xxx"];
+  string value = 1 [(grpc.federation.field).by = "'xxx'"];
 }
 
 message Sub {
