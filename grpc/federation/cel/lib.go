@@ -36,6 +36,7 @@ type ContextualLibrary interface {
 
 func NewLibrary(typeAdapter types.Adapter) *Library {
 	mdLib := NewMetadataLibrary()
+	logLib := NewLogLibrary()
 	return &Library{
 		name: "grpc.federation.static",
 		subLibs: []cel.SingletonLibrary{
@@ -44,8 +45,9 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 			new(RandLibrary),
 			new(UUIDLibrary),
 			mdLib,
+			logLib,
 		},
-		ctxLibs: []ContextualLibrary{mdLib},
+		ctxLibs: []ContextualLibrary{mdLib, logLib},
 	}
 }
 
