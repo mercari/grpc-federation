@@ -2,7 +2,6 @@ package validator_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -684,7 +683,6 @@ testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically
 				}
 				return
 			}
-			fmt.Println(got)
 			if diff := cmp.Diff("\n"+got, test.expected); diff != "" {
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
