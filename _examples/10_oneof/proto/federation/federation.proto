@@ -20,7 +20,7 @@ message GetResponse {
       name: "sel"
       message {
         name: "UserSelection"
-        args { name: "value", string: "foo" }
+        args { name: "value", by: "'foo'" }
       }
     }
     def { name: "msg_sel" message { name: "MessageSelection" } }
@@ -39,7 +39,7 @@ message UserSelection {
           message {
             name: "User"
             args [
-             { name: "user_id", string: "a" },
+             { name: "user_id", by: "'a'" },
              { name: "foo" by: "0" },
              { name: "bar" by: "'hello'"}
             ]
@@ -57,7 +57,7 @@ message UserSelection {
           message {
             name: "User"
             args [
-              { name: "user_id", string: "b" },
+              { name: "user_id", by: "'b'" },
               { name: "foo" by: "0" },
               { name: "bar" by: "'hello'"}
             ]
@@ -111,7 +111,7 @@ message MessageSelection {
 }
 
 message M {
-  string value = 1 [(grpc.federation.field).string = "foo"];
+  string value = 1 [(grpc.federation.field).by = "'foo'"];
 }
 
 message User {

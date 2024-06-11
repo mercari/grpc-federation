@@ -362,7 +362,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		     autobind: true
 		     message {
 		       name: "User"
-		       args { name: "user_id", string: "foo" }
+		       args { name: "user_id", by: "'foo'" }
 		     }
 		   }
 		*/
@@ -374,8 +374,19 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_UserArgument{
-					UserId: "foo", // { name: "user_id", string: "foo" }
+				args := &Org_Federation_UserArgument{}
+				// { name: "user_id", by: "'foo'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              `'foo'`,
+					UseContextLibrary: false,
+					CacheIndex:        4,
+					Setter: func(v string) error {
+						args.UserId = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
 				}
 				return s.resolve_Org_Federation_User(ctx, args)
 			},
@@ -435,7 +446,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		Value:             value,
 		Expr:              `$.user_id`,
 		UseContextLibrary: false,
-		CacheIndex:        4,
+		CacheIndex:        5,
 		Setter: func(v string) error {
 			ret.Uid = v
 			return nil

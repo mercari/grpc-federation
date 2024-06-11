@@ -321,7 +321,20 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 	ret := &A{}
 
 	// field binding section.
-	ret.Name = "a" // (grpc.federation.field).string = "a"
+	// (grpc.federation.field).by = "'a'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'a'`,
+		UseContextLibrary: false,
+		CacheIndex:        1,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.A", slog.Any("org.federation.A", s.logvalue_Org_Federation_A(ret)))
 	return ret, nil
@@ -333,12 +346,36 @@ func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.AA", slog.Any("message_args", s.logvalue_Org_Federation_AAArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.AAArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &AA{}
 
 	// field binding section.
-	ret.Name = "aa" // (grpc.federation.field).string = "aa"
+	// (grpc.federation.field).by = "'aa'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'aa'`,
+		UseContextLibrary: false,
+		CacheIndex:        2,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.AA", slog.Any("org.federation.AA", s.logvalue_Org_Federation_AA(ret)))
 	return ret, nil
@@ -350,12 +387,36 @@ func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.AB", slog.Any("message_args", s.logvalue_Org_Federation_ABArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ABArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &AB{}
 
 	// field binding section.
-	ret.Name = "ab" // (grpc.federation.field).string = "ab"
+	// (grpc.federation.field).by = "'ab'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'ab'`,
+		UseContextLibrary: false,
+		CacheIndex:        3,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.AB", slog.Any("org.federation.AB", s.logvalue_Org_Federation_AB(ret)))
 	return ret, nil
@@ -367,12 +428,36 @@ func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.B", slog.Any("message_args", s.logvalue_Org_Federation_BArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.BArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &B{}
 
 	// field binding section.
-	ret.Name = "b" // (grpc.federation.field).string = "b"
+	// (grpc.federation.field).by = "'b'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'b'`,
+		UseContextLibrary: false,
+		CacheIndex:        4,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.B", slog.Any("org.federation.B", s.logvalue_Org_Federation_B(ret)))
 	return ret, nil
@@ -384,12 +469,36 @@ func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.C", slog.Any("message_args", s.logvalue_Org_Federation_CArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.CArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &C{}
 
 	// field binding section.
-	ret.Name = "c" // (grpc.federation.field).string = "c"
+	// (grpc.federation.field).by = "'c'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'c'`,
+		UseContextLibrary: false,
+		CacheIndex:        5,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.C", slog.Any("org.federation.C", s.logvalue_Org_Federation_C(ret)))
 	return ret, nil
@@ -401,12 +510,36 @@ func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.D", slog.Any("message_args", s.logvalue_Org_Federation_DArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.DArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &D{}
 
 	// field binding section.
-	ret.Name = "d" // (grpc.federation.field).string = "d"
+	// (grpc.federation.field).by = "'d'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'d'`,
+		UseContextLibrary: false,
+		CacheIndex:        6,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.D", slog.Any("org.federation.D", s.logvalue_Org_Federation_D(ret)))
 	return ret, nil
@@ -418,12 +551,36 @@ func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.E", slog.Any("message_args", s.logvalue_Org_Federation_EArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.EArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &E{}
 
 	// field binding section.
-	ret.Name = "e" // (grpc.federation.field).string = "e"
+	// (grpc.federation.field).by = "'e'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'e'`,
+		UseContextLibrary: false,
+		CacheIndex:        7,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.E", slog.Any("org.federation.E", s.logvalue_Org_Federation_E(ret)))
 	return ret, nil
@@ -435,12 +592,36 @@ func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.F", slog.Any("message_args", s.logvalue_Org_Federation_FArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.FArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &F{}
 
 	// field binding section.
-	ret.Name = "f" // (grpc.federation.field).string = "f"
+	// (grpc.federation.field).by = "'f'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'f'`,
+		UseContextLibrary: false,
+		CacheIndex:        8,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.F", slog.Any("org.federation.F", s.logvalue_Org_Federation_F(ret)))
 	return ret, nil
@@ -452,12 +633,36 @@ func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.G", slog.Any("message_args", s.logvalue_Org_Federation_GArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &G{}
 
 	// field binding section.
-	ret.Name = "g" // (grpc.federation.field).string = "g"
+	// (grpc.federation.field).by = "'g'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'g'`,
+		UseContextLibrary: false,
+		CacheIndex:        9,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.G", slog.Any("org.federation.G", s.logvalue_Org_Federation_G(ret)))
 	return ret, nil
@@ -564,7 +769,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							Value:             value,
 							Expr:              `a.name`,
 							UseContextLibrary: false,
-							CacheIndex:        1,
+							CacheIndex:        10,
 							Setter: func(v string) error {
 								args.A = v
 								return nil
@@ -631,7 +836,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							Value:             value,
 							Expr:              `b.name`,
 							UseContextLibrary: false,
-							CacheIndex:        2,
+							CacheIndex:        11,
 							Setter: func(v string) error {
 								args.B = v
 								return nil
@@ -678,7 +883,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						Value:             value,
 						Expr:              `c.name`,
 						UseContextLibrary: false,
-						CacheIndex:        3,
+						CacheIndex:        12,
 						Setter: func(v string) error {
 							args.C = v
 							return nil
@@ -691,7 +896,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						Value:             value,
 						Expr:              `d.name`,
 						UseContextLibrary: false,
-						CacheIndex:        4,
+						CacheIndex:        13,
 						Setter: func(v string) error {
 							args.D = v
 							return nil
@@ -760,7 +965,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							Value:             value,
 							Expr:              `a.name`,
 							UseContextLibrary: false,
-							CacheIndex:        5,
+							CacheIndex:        14,
 							Setter: func(v string) error {
 								args.A = v
 								return nil
@@ -827,7 +1032,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 							Value:             value,
 							Expr:              `b.name`,
 							UseContextLibrary: false,
-							CacheIndex:        6,
+							CacheIndex:        15,
 							Setter: func(v string) error {
 								args.B = v
 								return nil
@@ -874,7 +1079,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						Value:             value,
 						Expr:              `c.name`,
 						UseContextLibrary: false,
-						CacheIndex:        7,
+						CacheIndex:        16,
 						Setter: func(v string) error {
 							args.C = v
 							return nil
@@ -887,7 +1092,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						Value:             value,
 						Expr:              `d.name`,
 						UseContextLibrary: false,
-						CacheIndex:        8,
+						CacheIndex:        17,
 						Setter: func(v string) error {
 							args.D = v
 							return nil
@@ -963,7 +1168,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Value:             value,
 					Expr:              `e.name`,
 					UseContextLibrary: false,
-					CacheIndex:        9,
+					CacheIndex:        18,
 					Setter: func(v string) error {
 						args.E = v
 						return nil
@@ -976,7 +1181,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Value:             value,
 					Expr:              `f.name`,
 					UseContextLibrary: false,
-					CacheIndex:        10,
+					CacheIndex:        19,
 					Setter: func(v string) error {
 						args.F = v
 						return nil
@@ -989,7 +1194,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Value:             value,
 					Expr:              `g.name`,
 					UseContextLibrary: false,
-					CacheIndex:        11,
+					CacheIndex:        20,
 					Setter: func(v string) error {
 						args.G = v
 						return nil
@@ -1057,7 +1262,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					Value:             value,
 					Expr:              `i.name`,
 					UseContextLibrary: false,
-					CacheIndex:        12,
+					CacheIndex:        21,
 					Setter: func(v string) error {
 						args.I = v
 						return nil
@@ -1099,7 +1304,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Value:             value,
 		Expr:              `h.name`,
 		UseContextLibrary: false,
-		CacheIndex:        13,
+		CacheIndex:        22,
 		Setter: func(v string) error {
 			ret.Hname = v
 			return nil
@@ -1113,7 +1318,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		Value:             value,
 		Expr:              `j.name`,
 		UseContextLibrary: false,
-		CacheIndex:        14,
+		CacheIndex:        23,
 		Setter: func(v string) error {
 			ret.Jname = v
 			return nil
@@ -1133,12 +1338,36 @@ func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.H", slog.Any("message_args", s.logvalue_Org_Federation_HArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.HArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &H{}
 
 	// field binding section.
-	ret.Name = "h" // (grpc.federation.field).string = "h"
+	// (grpc.federation.field).by = "'h'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'h'`,
+		UseContextLibrary: false,
+		CacheIndex:        24,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.H", slog.Any("org.federation.H", s.logvalue_Org_Federation_H(ret)))
 	return ret, nil
@@ -1150,12 +1379,36 @@ func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.I", slog.Any("message_args", s.logvalue_Org_Federation_IArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.IArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &I{}
 
 	// field binding section.
-	ret.Name = "i" // (grpc.federation.field).string = "i"
+	// (grpc.federation.field).by = "'i'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'i'`,
+		UseContextLibrary: false,
+		CacheIndex:        25,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.I", slog.Any("org.federation.I", s.logvalue_Org_Federation_I(ret)))
 	return ret, nil
@@ -1167,12 +1420,36 @@ func (s *FederationService) resolve_Org_Federation_J(ctx context.Context, req *O
 	defer span.End()
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.J", slog.Any("message_args", s.logvalue_Org_Federation_JArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.JArgument", req)}
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
 
 	// create a message value to be returned.
 	ret := &J{}
 
 	// field binding section.
-	ret.Name = "j" // (grpc.federation.field).string = "j"
+	// (grpc.federation.field).by = "'j'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'j'`,
+		UseContextLibrary: false,
+		CacheIndex:        26,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.J", slog.Any("org.federation.J", s.logvalue_Org_Federation_J(ret)))
 	return ret, nil

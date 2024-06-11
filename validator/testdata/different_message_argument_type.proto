@@ -19,13 +19,13 @@ message GetResponse {
     def {
       message {
         name: "Foo"
-        args { name: "id" string: "foo" }
+        args { name: "id" by: "'foo'" }
       }
     }
     def {
       message {
         name: "Foo"
-        args { name: "id" int32: 1 }
+        args { name: "id" by: "1" }
       }
     }
   };

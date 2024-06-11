@@ -22,6 +22,7 @@ func TestGenerateAll(t *testing.T) {
 	const standardPluginNum = 3
 
 	t.Run("explicit_declare_standard_plugins", func(t *testing.T) {
+		t.Parallel()
 		content := `
 imports:
   - ../testdata
@@ -52,6 +53,7 @@ plugins:
 		}
 	})
 	t.Run("no_option", func(t *testing.T) {
+		t.Parallel()
 		content := `
 imports:
   - ../testdata
@@ -79,6 +81,7 @@ plugins:
 		}
 	})
 	t.Run("implicit_declare_standard_plugins", func(t *testing.T) {
+		t.Parallel()
 		content := `
 imports:
   - ../testdata
@@ -102,6 +105,7 @@ out: .
 		}
 	})
 	t.Run("additional_plugin", func(t *testing.T) {
+		t.Parallel()
 		content := `
 imports:
   - ../testdata

@@ -7,6 +7,7 @@ import (
 )
 
 func TestOutputFileResolver(t *testing.T) {
+	t.Parallel()
 	t.Run("paths=import", func(t *testing.T) {
 		r := resolver.NewOutputFilePathResolver(resolver.OutputFilePathConfig{
 			Mode:        resolver.ImportMode,

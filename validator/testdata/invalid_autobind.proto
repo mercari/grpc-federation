@@ -25,10 +25,10 @@ message GetResponse {
 }
 
 message A {
-  string id = 1 [(grpc.federation.field).string = "a-id"];
-  string name = 2 [(grpc.federation.field).string = "a-name"];
+  string id = 1 [(grpc.federation.field).by = "'a-id'"];
+  string name = 2 [(grpc.federation.field).by = "'a-name'"];
 }
 
 message B {
-  string id = 1 [(grpc.federation.field).string = "b-id"];
+  string id = 1 [(grpc.federation.field).by = "'b-id'"];
 }

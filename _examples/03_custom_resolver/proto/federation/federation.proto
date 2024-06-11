@@ -57,13 +57,13 @@ message PostV2dev {
         name: "unused"
         message {
           name: "Unused"
-          args { name: "foo", string: "foo" }
+          args { name: "foo", by: "'foo'" }
         }
       },
       { 
         message {
           name: "ForNameless"
-          args { name: "bar", string: "bar" }
+          args { name: "bar", by: "'bar'" }
         }
       } // without name
     ]

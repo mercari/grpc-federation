@@ -14,6 +14,7 @@ import (
 )
 
 func TestProtoFormat(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                     string
 		messageOptionToFormatMap map[string]string
@@ -325,6 +326,7 @@ func TestProtoFormat(t *testing.T) {
 }
 
 func TestValidationExpr_ProtoFormat(t *testing.T) {
+	t.Parallel()
 	expr := &resolver.ValidationExpr{
 		Name: "_validation0",
 		Error: &resolver.GRPCError{
@@ -365,6 +367,7 @@ func TestValidationExpr_ProtoFormat(t *testing.T) {
 }
 
 func TestGRPCError_ProtoFormat(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		desc     string
 		err      *resolver.GRPCError
@@ -426,6 +429,7 @@ func TestGRPCError_ProtoFormat(t *testing.T) {
 }
 
 func TestGRPCErrorDetails_ProtoFormat(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		desc     string
 		details  resolver.GRPCErrorDetails
@@ -481,6 +485,7 @@ func TestGRPCErrorDetails_ProtoFormat(t *testing.T) {
 }
 
 func TestGRPCErrorDetail_ProtoFormat(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		desc     string
 		detail   *resolver.GRPCErrorDetail
@@ -554,6 +559,7 @@ func TestGRPCErrorDetail_ProtoFormat(t *testing.T) {
 }
 
 func TestDependencyTreeFormat(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name                     string
 		messageOptionToFormatMap map[string]string

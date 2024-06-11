@@ -21,6 +21,7 @@ import (
 )
 
 func TestCodeGenerate(t *testing.T) {
+	t.Parallel()
 	tmpDir := filepath.Join(t.TempDir(), "grpc-federation")
 
 	tests := []string{
@@ -31,7 +32,6 @@ func TestCodeGenerate(t *testing.T) {
 		"async",
 		"alias",
 		"autobind",
-		"const_value",
 		"multi_user",
 		"resolver_overlaps",
 		"oneof",
@@ -41,7 +41,9 @@ func TestCodeGenerate(t *testing.T) {
 		"error_handler",
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test, func(t *testing.T) {
+			t.Parallel()
 			files := testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", test+".proto"))
 
 			var dependentFiles []string
@@ -204,6 +206,7 @@ func TestCodeGenerate(t *testing.T) {
 }
 
 func TestValidationError_GoGRPCStatusCode(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		desc     string
 		code     code.Code

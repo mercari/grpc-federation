@@ -442,7 +442,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		     name: "_def4"
 		     message {
 		       name: "ForNameless"
-		       args { name: "bar", string: "bar" }
+		       args { name: "bar", by: "'bar'" }
 		     }
 		   }
 		*/
@@ -454,8 +454,19 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_V2Dev_ForNamelessArgument{
-					Bar: "bar", // { name: "bar", string: "bar" }
+				args := &Federation_V2Dev_ForNamelessArgument{}
+				// { name: "bar", by: "'bar'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              `'bar'`,
+					UseContextLibrary: false,
+					CacheIndex:        4,
+					Setter: func(v string) error {
+						args.Bar = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
 				}
 				return s.resolve_Federation_V2Dev_ForNameless(ctx, args)
 			},
@@ -474,7 +485,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		     name: "unused"
 		     message {
 		       name: "Unused"
-		       args { name: "foo", string: "foo" }
+		       args { name: "foo", by: "'foo'" }
 		     }
 		   }
 		*/
@@ -486,8 +497,19 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_V2Dev_UnusedArgument{
-					Foo: "foo", // { name: "foo", string: "foo" }
+				args := &Federation_V2Dev_UnusedArgument{}
+				// { name: "foo", by: "'foo'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              `'foo'`,
+					UseContextLibrary: false,
+					CacheIndex:        5,
+					Setter: func(v string) error {
+						args.Foo = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
 				}
 				return s.resolve_Federation_V2Dev_Unused(ctx, args)
 			},
@@ -524,7 +546,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 					Value:             value,
 					Expr:              `$.id`,
 					UseContextLibrary: false,
-					CacheIndex:        4,
+					CacheIndex:        6,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -559,7 +581,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			},
 			By:                  `res.post`,
 			ByUseContextLibrary: false,
-			ByCacheIndex:        5,
+			ByCacheIndex:        7,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -589,7 +611,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 					Value:             value,
 					Expr:              `post`,
 					UseContextLibrary: false,
-					CacheIndex:        6,
+					CacheIndex:        8,
 					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
@@ -708,7 +730,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 				Value:             value,
 				Expr:              `$.user_id`,
 				UseContextLibrary: false,
-				CacheIndex:        7,
+				CacheIndex:        9,
 				Setter: func(v string) error {
 					args.Id = v
 					return nil
@@ -742,7 +764,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 		},
 		By:                  `res.user`,
 		ByUseContextLibrary: false,
-		ByCacheIndex:        8,
+		ByCacheIndex:        10,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

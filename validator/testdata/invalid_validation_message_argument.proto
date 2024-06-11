@@ -51,7 +51,7 @@ message Post {
                 name: "CustomMessage",
                 args: {
                   name: "wrong",
-                  string: "message1"
+                  by: "'message1'"
                 }
               }
             }

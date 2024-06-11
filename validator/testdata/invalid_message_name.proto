@@ -64,6 +64,6 @@ message Post {
 }
 
 message User {
-  string id = 1 [(grpc.federation.field).string = "id"];
-  string name = 2 [(grpc.federation.field).string = "name"];
+  string id = 1 [(grpc.federation.field).by = "'id'"];
+  string name = 2 [(grpc.federation.field).by = "'name'"];
 }

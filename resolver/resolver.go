@@ -1762,7 +1762,7 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 	oneof := r.resolveFieldOneofRule(ctx, field, ruleDef.GetOneof(), builder)
 	var value *Value
 	if oneof == nil {
-		v, err := r.resolveValue(ctx, fieldRuleToCommonValueDef(ruleDef))
+		v, err := r.resolveValue(fieldRuleToCommonValueDef(ruleDef))
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -2276,7 +2276,7 @@ func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*fe
 		} else {
 			argType = reqMsg.Field(fieldName).Type
 		}
-		value, err := r.resolveValue(ctx, methodRequestToCommonValueDef(req))
+		value, err := r.resolveValue(methodRequestToCommonValueDef(req))
 		if err != nil {
 			ctx.addError(ErrWithLocation(
 				err.Error(),
@@ -2306,7 +2306,7 @@ func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*fe
 }
 
 func (r *Resolver) resolveMessageExprArgument(ctx *context, argDef *federation.Argument, builder *source.ArgumentOptionBuilder) *Argument {
-	value, err := r.resolveValue(ctx, argumentToCommonValueDef(argDef))
+	value, err := r.resolveValue(argumentToCommonValueDef(argDef))
 	if err != nil {
 		switch {
 		case argDef.GetBy() != "":
@@ -2336,100 +2336,6 @@ func (r *Resolver) resolveMessageExprArgument(ctx *context, argDef *federation.A
 		Name:  name,
 		Value: value,
 	}
-}
-
-func (r *Resolver) resolveMessageConstValue(ctx *context, val *federation.MessageValue) (*Type, map[string]*Value, error) {
-	msgName := val.GetName()
-	t, err := r.resolveType(
-		ctx,
-		msgName,
-		types.Message,
-		descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	if t.Message == nil {
-		return nil, nil, fmt.Errorf(`%q message does not exist`, msgName)
-	}
-	fieldMap := map[string]*Value{}
-	for _, field := range val.GetFields() {
-		fieldName := field.GetField()
-		if !t.Message.HasField(fieldName) {
-			return nil, nil, fmt.Errorf(`%q field does not exist in %s message`, fieldName, msgName)
-		}
-		value, err := r.resolveValue(ctx, messageFieldValueToCommonValueDef(field))
-		if err != nil {
-			return nil, nil, err
-		}
-		fieldMap[field.GetField()] = value
-	}
-	return t, fieldMap, nil
-}
-
-func (r *Resolver) resolveEnumConstValue(ctx *context, enumValueName string) (*EnumValue, error) {
-	pkg, err := r.lookupPackageFromTypeName(ctx, enumValueName)
-	if err != nil {
-		return nil, err
-	}
-	return r.lookupEnumValue(enumValueName, pkg)
-}
-
-func (r *Resolver) lookupPackageFromTypeName(ctx *context, name string) (*Package, error) {
-	if strings.Contains(name, ".") {
-		p, err := r.lookupPackage(name)
-		if err == nil {
-			return p, nil
-		}
-	}
-	file := ctx.file()
-	if file == nil {
-		return nil, fmt.Errorf(`cannot find package from %q name`, name)
-	}
-	return file.Package, nil
-}
-
-func (r *Resolver) lookupEnumValue(name string, pkg *Package) (*EnumValue, error) {
-	valueName := r.trimPackage(pkg, name)
-	isGlobalEnumValue := !strings.Contains(valueName, ".")
-	if isGlobalEnumValue {
-		for _, file := range pkg.Files {
-			for _, enum := range file.Enums {
-				for _, value := range enum.Values {
-					if value.Value == valueName {
-						return value, nil
-					}
-				}
-			}
-		}
-	} else {
-		for _, file := range pkg.Files {
-			for _, msg := range file.Messages {
-				if value := r.lookupEnumValueFromMessage(name, msg); value != nil {
-					return value, nil
-				}
-			}
-		}
-	}
-	return nil, fmt.Errorf(`cannot find enum value from %q`, name)
-}
-
-func (r *Resolver) lookupEnumValueFromMessage(name string, msg *Message) *EnumValue {
-	msgName := strings.Join(append(msg.ParentMessageNames(), msg.Name), ".")
-	for _, enum := range msg.Enums {
-		for _, value := range enum.Values {
-			valueName := fmt.Sprintf("%s.%s", msgName, value.Value)
-			if valueName == name {
-				return value
-			}
-		}
-	}
-	for _, msg := range msg.NestedMessages {
-		if value := r.lookupEnumValueFromMessage(name, msg); value != nil {
-			return value
-		}
-	}
-	return nil
 }
 
 // resolveMessageArgument constructs message arguments using a dependency graph and assigns them to each message.
@@ -3531,48 +3437,12 @@ func (r *Resolver) resolveGRPCErrorMessageDependencies(ctx *context, msg *Messag
 	}
 }
 
-func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, error) {
+func (r *Resolver) resolveValue(def *commonValueDef) (*Value, error) {
 	const (
 		customResolverOpt = "custom_resolver"
 		aliasOpt          = "alias"
 		byOpt             = "by"
 		inlineOpt         = "inline"
-		doubleOpt         = "double"
-		doublesOpt        = "doubles"
-		floatOpt          = "float"
-		floatsOpt         = "floats"
-		int32Opt          = "int32"
-		int32sOpt         = "int32s"
-		int64Opt          = "int64"
-		int64sOpt         = "int64s"
-		uint32Opt         = "uint32"
-		uint32sOpt        = "uint32s"
-		uint64Opt         = "uint64"
-		uint64sOpt        = "uint64s"
-		sint32Opt         = "sint32"
-		sint32sOpt        = "sint32s"
-		sint64Opt         = "sint64"
-		sint64sOpt        = "sint64s"
-		fixed32Opt        = "fixed32"
-		fixed32sOpt       = "fixed32s"
-		fixed64Opt        = "fixed64"
-		fixed64sOpt       = "fixed64s"
-		sfixed32Opt       = "sfixed32"
-		sfixed32sOpt      = "sfixed32s"
-		sfixed64Opt       = "sfixed64"
-		sfixed64sOpt      = "sfixed64s"
-		boolOpt           = "bool"
-		boolsOpt          = "bools"
-		stringOpt         = "string"
-		stringsOpt        = "strings"
-		byteStringOpt     = "byte_string"
-		byteStringsOpt    = "byte_strings"
-		messageOpt        = "message"
-		messagesOpt       = "messages"
-		enumOpt           = "enum"
-		enumsOpt          = "enums"
-		envOpt            = "env"
-		envsOpt           = "envs"
 	)
 	var (
 		value    *Value
@@ -3591,195 +3461,6 @@ func (r *Resolver) resolveValue(ctx *context, def *commonValueDef) (*Value, erro
 	if def.Inline != nil {
 		value = &Value{Inline: true, CEL: &CELValue{Expr: def.GetInline()}}
 		optNames = append(optNames, inlineOpt)
-	}
-	if def.Double != nil {
-		value = NewDoubleValue(def.GetDouble())
-		optNames = append(optNames, doubleOpt)
-	}
-	if def.Doubles != nil {
-		value = NewDoublesValue(def.GetDoubles()...)
-		optNames = append(optNames, doublesOpt)
-	}
-	if def.Float != nil {
-		value = NewFloatValue(def.GetFloat())
-		optNames = append(optNames, floatOpt)
-	}
-	if def.Floats != nil {
-		value = NewFloatsValue(def.GetFloats()...)
-		optNames = append(optNames, floatsOpt)
-	}
-	if def.Int32 != nil {
-		value = NewInt32Value(def.GetInt32())
-		optNames = append(optNames, int32Opt)
-	}
-	if def.Int32S != nil {
-		value = NewInt32sValue(def.GetInt32S()...)
-		optNames = append(optNames, int32sOpt)
-	}
-	if def.Int64 != nil {
-		value = NewInt64Value(def.GetInt64())
-		optNames = append(optNames, int64Opt)
-	}
-	if def.Int64S != nil {
-		value = NewInt64sValue(def.GetInt64S()...)
-		optNames = append(optNames, int64sOpt)
-	}
-	if def.Uint32 != nil {
-		value = NewUint32Value(def.GetUint32())
-		optNames = append(optNames, uint32Opt)
-	}
-	if def.Uint32S != nil {
-		value = NewUint32sValue(def.GetUint32S()...)
-		optNames = append(optNames, uint32sOpt)
-	}
-	if def.Uint64 != nil {
-		value = NewUint64Value(def.GetUint64())
-		optNames = append(optNames, uint64Opt)
-	}
-	if def.Uint64S != nil {
-		value = NewUint64sValue(def.GetUint64S()...)
-		optNames = append(optNames, uint64sOpt)
-	}
-	if def.Sint32 != nil {
-		value = NewSint32Value(def.GetSint32())
-		optNames = append(optNames, sint32Opt)
-	}
-	if def.Sint32S != nil {
-		value = NewSint32sValue(def.GetSint32S()...)
-		optNames = append(optNames, sint32sOpt)
-	}
-	if def.Sint64 != nil {
-		value = NewSint64Value(def.GetSint64())
-		optNames = append(optNames, sint64Opt)
-	}
-	if def.Sint64S != nil {
-		value = NewSint64sValue(def.GetSint64S()...)
-		optNames = append(optNames, sint64sOpt)
-	}
-	if def.Fixed32 != nil {
-		value = NewFixed32Value(def.GetFixed32())
-		optNames = append(optNames, fixed32Opt)
-	}
-	if def.Fixed32S != nil {
-		value = NewFixed32sValue(def.GetFixed32S()...)
-		optNames = append(optNames, fixed32sOpt)
-	}
-	if def.Fixed64 != nil {
-		value = NewFixed64Value(def.GetFixed64())
-		optNames = append(optNames, fixed64Opt)
-	}
-	if def.Fixed64S != nil {
-		value = NewFixed64sValue(def.GetFixed64S()...)
-		optNames = append(optNames, fixed64sOpt)
-	}
-	if def.Sfixed32 != nil {
-		value = NewSfixed32Value(def.GetSfixed32())
-		optNames = append(optNames, sfixed32Opt)
-	}
-	if def.Sfixed32S != nil {
-		value = NewSfixed32sValue(def.GetSfixed32S()...)
-		optNames = append(optNames, sfixed32sOpt)
-	}
-	if def.Sfixed64 != nil {
-		value = NewSfixed64Value(def.GetSfixed64())
-		optNames = append(optNames, sfixed64Opt)
-	}
-	if def.Sfixed64S != nil {
-		value = NewSfixed64sValue(def.GetSfixed64S()...)
-		optNames = append(optNames, sfixed64sOpt)
-	}
-	if def.Bool != nil {
-		value = NewBoolValue(def.GetBool())
-		optNames = append(optNames, boolOpt)
-	}
-	if def.Bools != nil {
-		value = NewBoolsValue(def.GetBools()...)
-		optNames = append(optNames, boolsOpt)
-	}
-	if def.String != nil {
-		value = NewStringValue(def.GetString())
-		optNames = append(optNames, stringOpt)
-	}
-	if def.Strings != nil {
-		value = NewStringsValue(def.GetStrings()...)
-		optNames = append(optNames, stringsOpt)
-	}
-	if def.ByteString != nil {
-		value = NewByteStringValue(def.GetByteString())
-		optNames = append(optNames, byteStringOpt)
-	}
-	if def.ByteStrings != nil {
-		value = NewByteStringsValue(def.GetByteStrings()...)
-		optNames = append(optNames, byteStringsOpt)
-	}
-	if def.Message != nil {
-		typ, val, err := r.resolveMessageConstValue(ctx, def.GetMessage())
-		if err != nil {
-			return nil, err
-		}
-		value = NewMessageValue(typ, val)
-		optNames = append(optNames, messageOpt)
-	}
-	if def.Messages != nil {
-		var (
-			typ  *Type
-			vals []map[string]*Value
-		)
-		for _, msg := range def.GetMessages() {
-			t, val, err := r.resolveMessageConstValue(ctx, msg)
-			if err != nil {
-				return nil, err
-			}
-			if typ == nil {
-				typ = t
-			} else if typ.Message != t.Message {
-				return nil, fmt.Errorf(`"messages" value unsupported multiple message type`)
-			}
-			vals = append(vals, val)
-		}
-		typ.Repeated = true
-		value = NewMessagesValue(typ, vals...)
-		optNames = append(optNames, messagesOpt)
-	}
-	if def.Enum != nil {
-		enumValue, err := r.resolveEnumConstValue(ctx, def.GetEnum())
-		if err != nil {
-			return nil, err
-		}
-		value = NewEnumValue(enumValue)
-		optNames = append(optNames, enumOpt)
-	}
-	if def.Enums != nil {
-		var (
-			enumValues []*EnumValue
-			enum       *Enum
-		)
-		for _, enumName := range def.GetEnums() {
-			enumValue, err := r.resolveEnumConstValue(ctx, enumName)
-			if err != nil {
-				return nil, err
-			}
-			if enum == nil {
-				enum = enumValue.Enum
-			} else if enum != enumValue.Enum {
-				return nil, fmt.Errorf(`different enum values are used in enums: %q and %q`, enum.FQDN(), enumValue.Enum.FQDN())
-			}
-			enumValues = append(enumValues, enumValue)
-		}
-		value = NewEnumsValue(enumValues...)
-		optNames = append(optNames, enumsOpt)
-	}
-	if def.Env != nil {
-		value = NewEnvValue(EnvKey(def.GetEnv()))
-		optNames = append(optNames, envOpt)
-	}
-	if def.Envs != nil {
-		envKeys := make([]EnvKey, 0, len(def.GetEnvs()))
-		for _, key := range def.GetEnvs() {
-			envKeys = append(envKeys, EnvKey(key))
-		}
-		value = NewEnvsValue(envKeys...)
-		optNames = append(optNames, envsOpt)
 	}
 	if len(optNames) == 0 {
 		return nil, fmt.Errorf("value must be specified")

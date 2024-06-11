@@ -403,15 +403,11 @@ func (d *decoder) toValue(value *plugin.Value) (*resolver.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cel != nil {
-		ret.CEL = cel
-		return ret, nil
+	if cel == nil {
+		return nil, fmt.Errorf("failed to convert cel to value: %s", value.GetCel())
 	}
-	constValue, err := d.toConstValue(value.GetConst())
-	if err != nil {
-		return nil, err
-	}
-	return constValue, nil
+	ret.CEL = cel
+	return ret, nil
 }
 
 func (d *decoder) toCELValue(value *plugin.CELValue) (*resolver.CELValue, error) {
@@ -427,103 +423,6 @@ func (d *decoder) toCELValue(value *plugin.CELValue) (*resolver.CELValue, error)
 	}
 	ret.Out = out
 	return ret, nil
-}
-
-func (d *decoder) toConstValue(value *plugin.ConstValue) (*resolver.Value, error) {
-	if value == nil {
-		return nil, nil
-	}
-	switch {
-	case value.Double != nil:
-		return resolver.NewDoubleValue(value.GetDouble()), nil
-	case value.Doubles != nil:
-		return resolver.NewDoublesValue(value.GetDoubles()...), nil
-	case value.Float != nil:
-		return resolver.NewFloatValue(value.GetFloat()), nil
-	case value.Floats != nil:
-		return resolver.NewFloatsValue(value.GetFloats()...), nil
-	case value.Int32 != nil:
-		return resolver.NewInt32Value(value.GetInt32()), nil
-	case value.Int32S != nil:
-		return resolver.NewInt32sValue(value.GetInt32S()...), nil
-	case value.Int64 != nil:
-		return resolver.NewInt64Value(value.GetInt64()), nil
-	case value.Int64S != nil:
-		return resolver.NewInt64sValue(value.GetInt64S()...), nil
-	case value.Uint32 != nil:
-		return resolver.NewUint32Value(value.GetUint32()), nil
-	case value.Uint32S != nil:
-		return resolver.NewUint32sValue(value.GetUint32S()...), nil
-	case value.Uint64 != nil:
-		return resolver.NewUint64Value(value.GetUint64()), nil
-	case value.Uint64S != nil:
-		return resolver.NewUint64sValue(value.GetUint64S()...), nil
-	case value.Sint32 != nil:
-		return resolver.NewSint32Value(value.GetSint32()), nil
-	case value.Sint32S != nil:
-		return resolver.NewSint32sValue(value.GetSint32S()...), nil
-	case value.Sint64 != nil:
-		return resolver.NewSint64Value(value.GetSint64()), nil
-	case value.Sint64S != nil:
-		return resolver.NewSint64sValue(value.GetSint64S()...), nil
-	case value.Fixed32 != nil:
-		return resolver.NewFixed32Value(value.GetFixed32()), nil
-	case value.Fixed32S != nil:
-		return resolver.NewFixed32sValue(value.GetFixed32S()...), nil
-	case value.Fixed64 != nil:
-		return resolver.NewFixed64Value(value.GetFixed64()), nil
-	case value.Fixed64S != nil:
-		return resolver.NewFixed64sValue(value.GetFixed64S()...), nil
-	case value.Sfixed32 != nil:
-		return resolver.NewSfixed32Value(value.GetSfixed32()), nil
-	case value.Sfixed32S != nil:
-		return resolver.NewSfixed32sValue(value.GetSfixed32S()...), nil
-	case value.Sfixed64 != nil:
-		return resolver.NewSfixed64Value(value.GetSfixed64()), nil
-	case value.Sfixed64S != nil:
-		return resolver.NewSfixed64sValue(value.GetSfixed64S()...), nil
-	case value.Bool != nil:
-		return resolver.NewBoolValue(value.GetBool()), nil
-	case value.Bools != nil:
-		return resolver.NewBoolsValue(value.GetBools()...), nil
-	case value.String_ != nil:
-		return resolver.NewStringValue(value.GetString_()), nil
-	case value.Strings != nil:
-		return resolver.NewStringsValue(value.GetStrings()...), nil
-	case value.ByteString != nil:
-		return resolver.NewByteStringValue(value.GetByteString()), nil
-	case value.ByteStrings != nil:
-		return resolver.NewByteStringsValue(value.GetByteStrings()...), nil
-	case value.Message != nil:
-		return nil, nil
-	case value.Messages != nil:
-		return nil, nil
-	case value.Enum != nil:
-		enumValue, err := d.toEnumValue(value.GetEnum())
-		if err != nil {
-			return nil, err
-		}
-		return resolver.NewEnumValue(enumValue), nil
-	case value.Enums != nil:
-		var enumValues []*resolver.EnumValue
-		for _, id := range value.GetEnums() {
-			enumValue, err := d.toEnumValue(id)
-			if err != nil {
-				return nil, err
-			}
-			enumValues = append(enumValues, enumValue)
-		}
-		return resolver.NewEnumsValue(enumValues...), nil
-	case value.Env != nil:
-		return resolver.NewEnvValue(resolver.EnvKey(value.GetEnv())), nil
-	case value.Envs != nil:
-		var envKeys []resolver.EnvKey
-		for _, env := range value.GetEnvs() {
-			envKeys = append(envKeys, resolver.EnvKey(env))
-		}
-		return resolver.NewEnvsValue(envKeys...), nil
-	}
-	return nil, fmt.Errorf("unexpected const value type")
 }
 
 func (d *decoder) toAutoBindField(field *plugin.AutoBindField) (*resolver.AutoBindField, error) {

@@ -11,6 +11,7 @@ import (
 )
 
 func TestCandidates(t *testing.T) {
+	t.Parallel()
 	fooMethod := &Method{
 		Name: "Call",
 		Request: &Message{
