@@ -19,8 +19,6 @@ func Logger(ctx context.Context) *slog.Logger {
 	return log.Logger(ctx)
 }
 
-// SetLogger set logger instance for current context.
-// This is intended to be called from a custom resolver and is currently propagated to the current context and its children.
 func SetLogger(ctx context.Context, logger *slog.Logger) {
 	log.SetLogger(ctx, logger)
 }

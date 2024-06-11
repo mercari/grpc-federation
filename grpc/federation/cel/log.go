@@ -137,7 +137,7 @@ func (lib *LogLibrary) log(logFn func(ctx context.Context, msg string, args ...a
 }
 
 func (lib *LogLibrary) expandVal(arg ref.Val) any {
-	// Expand the lister or mapper type of value to output the actual value in the log
+	// Expand the lister and mapper type of value to output the actual value in the log
 	switch typ := arg.(type) {
 	case traits.Mapper:
 		o := map[string]any{}
