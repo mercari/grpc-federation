@@ -12,6 +12,7 @@ In addition to the standard CEL operations, the gRPC Federation supports a numbe
 - [grpc.federation.rand APIs](./cel/rand.md)
 - [grpc.federation.time APIs](./cel/time.md)
 - [grpc.federation.uuid APIs](./cel/uuid.md)
+- [grpc.federation.log APIs](./cel/log.md)
 
 ## Refer to the defined variable
 
