@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package swapi.starship;
+
+option go_package = "github.com/mercari/grpc-federation/demo/swapi/starship;starshippb";
+
+service StarshipService { 
+  rpc GetStarship(GetStarshipRequest) returns (GetStarshipReply) {}
+  rpc ListStarships(ListStarshipsRequest) returns (ListStarshipsReply) {}
+}
+
+// GetStarshipRequest.
+message GetStarshipRequest {
+  // starship id.
+  int64 id = 1;
+}
+
+// GetStarshipReply.
+message GetStarshipReply {
+  Starship starship = 1;
+}
+
+// ListStarshipsRequest.
+message ListStarshipsRequest {
+  repeated int64 ids = 1;
+}
+
+// ListStarshipsReply.
+message ListStarshipsReply {
+  repeated Starship starships = 1;
+}
+
+// Starship is a single transport craft that has hyperdrive capability.
+message Starship {
+  // starship id.
+  int64 id = 1;
+  // The name of this starship. The common name, such as "Death Star".
+  string name = 2;
+  // The model or official name of this starship.
+  // Such as "T-65 X-wing" or "DS-1 Orbital Battle Station".
+  string model = 3;
+  // The class of this starship, such as "Starfighter" or "Deep Space Mobile Battlestation".
+  string starship_class = 4;
+  // The manufacturer of this starship. Comma separated if more than one.
+  string manufacturer = 5;
+  // The cost of this starship new, in galactic credits.
+  string cost_in_credits = 6;
+  // The length of this starship in meters.
+  string length = 7;
+  // The number of personnel needed to run or pilot this starship.
+  string crew = 8;
+  // The number of non-essential people this starship can transport.
+  string passengers = 9;
+  // The maximum speed of this starship in the atmosphere.
+  // "N/A" if this starship is incapable of atmospheric flight.
+  string max_atmosphering_speed = 10;
+  // The class of this starships hyperdrive.
+  string hyperdrive_rating = 11;
+  // The Maximum number of Megalights this starship can travel in a standard hour.
+  // A "Megalight" is a standard unit of distance and has never been defined before within the Star Wars universe.
+  // This figure is only really useful for measuring the difference in speed of starships.
+  // We can assume it is similar to AU, the distance between our Sun (Sol) and Earth.
+  string mglt = 12;
+  // The maximum number of kilograms that this starship can transport.
+  string cargo_capacity = 13;
+  // The maximum length of time that this starship can provide consumables for its entire crew without having to resupply.
+  string consumables = 14;
+  // the hypermedia URL of this resource.
+  string url = 15;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 16;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 17;
+  // film ids.
+  repeated int64 film_ids = 18;
+  // pilot ids.
+  repeated int64 pilot_ids =19;
+}

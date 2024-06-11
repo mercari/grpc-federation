@@ -28,7 +28,7 @@ LDFLAGS := -w -s -X=grpc/federation.Version=$(VERSION)
 
 .PHONY: tools
 tools:
-	go install github.com/bufbuild/buf/cmd/buf@v1.30.1
+	go install github.com/bufbuild/buf/cmd/buf@v1.32.2
 	go install github.com/envoyproxy/protoc-gen-validate/cmd/protoc-gen-validate-go@v1.0.4
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0

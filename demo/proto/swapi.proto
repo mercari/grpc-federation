@@ -1,0 +1,763 @@
+syntax = "proto3";
+
+import "google/type/date.proto";
+import "grpc/federation/federation.proto";
+import "planet/planet.proto";
+import "film/film.proto";
+import "person/person.proto";
+import "vehicle/vehicle.proto";
+import "species/species.proto";
+import "starship/starship.proto";
+
+package swapi;
+
+option go_package = "github.com/mercari/grpc-federation/demo/swapi/swapi;swapipb";
+
+service SWAPI { 
+  option (grpc.federation.service) = {};
+
+  rpc GetPerson(GetPersonRequest) returns (GetPersonReply) {}
+  rpc ListPeople(ListPeopleRequest) returns (ListPeopleReply) {}
+  rpc GetFilm(GetFilmRequest) returns (GetFilmReply) {}
+  rpc ListFilms(ListFilmsRequest) returns (ListFilmsReply) {}
+  rpc GetStarship(GetStarshipRequest) returns (GetStarshipReply) {}
+  rpc ListStarships(ListStarshipsRequest) returns (ListStarshipsReply) {}
+  rpc GetSpecies(GetSpeciesRequest) returns (GetSpeciesReply) {}
+  rpc ListSpecies(ListSpeciesRequest) returns (ListSpeciesReply) {}
+  rpc GetVehicle(GetVehicleRequest) returns (GetVehicleReply) {}
+  rpc ListVehicles(ListVehiclesRequest) returns (ListVehiclesReply) {}
+  rpc GetPlanet(GetPlanetRequest) returns (GetPlanetReply) {}
+  rpc ListPlanets(ListPlanetsRequest) returns (ListPlanetsReply) {}
+}
+
+// GetPersonRequest.
+message GetPersonRequest {
+  // The persion id.
+  int64 id = 1;
+}
+
+// GetPersonReply.
+message GetPersonReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.person.PersonService/GetPerson"
+        request { field: "id" by: "$.id" }
+      }
+    }
+    def { name: "p" by: "res.person" }
+    def {
+      name: "f"
+      message {
+        name: "Films"
+        args { name: "ids" by: "p.film_ids" }
+      }
+    }
+    def {
+      name: "species"
+      message {
+        name: "SpeciesList"
+        args { name: "ids" by: "p.species_ids" }
+      }
+    }
+    def {
+      name: "starships"
+      message {
+        name: "Starships"
+        args { name: "ids" by: "p.starship_ids" }
+      }
+    }
+    def {
+      name: "v"
+      message {
+        name: "Vehicles"
+        args { name: "ids" by: "p.vehicle_ids" }
+      }
+    }
+  };
+
+  Person person = 1 [(grpc.federation.field).by = "p"];
+  // films.
+  repeated Film films = 2 [(grpc.federation.field).by = "f.films"];
+  // species.
+  repeated Species species = 3 [(grpc.federation.field).by = "species.species"];
+  // starships.
+  repeated Starship starships = 4 [(grpc.federation.field).by = "starships.starships"];
+  // vehicles.
+  repeated Vehicle vehicles = 5 [(grpc.federation.field).by = "v.vehicles"];
+}
+
+// ListPeopleRequest.
+message ListPeopleRequest {
+  repeated int64 ids = 1;
+}
+
+// ListPeopleReply.
+message ListPeopleReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "p"
+      message {
+        name: "People"
+        args { name: "ids" by: "$.ids" }
+      }
+    }
+  };
+
+  repeated Person people = 1 [(grpc.federation.field).by = "p.people"];
+}
+
+// GetFilmRequest.
+message GetFilmRequest {
+  // The film id.
+  int64 id = 1;
+}
+
+// GetFilmReply.
+message GetFilmReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.film.FilmService/GetFilm"
+        request { field: "id" by: "$.id" }
+      }
+    }
+    def { name: "f" by: "res.film" }
+    def {
+      name: "species"
+      message {
+        name: "SpeciesList"
+        args { name: "ids" by: "f.species_ids" }
+      }
+    }
+    def {
+      name: "starships"
+      message {
+        name: "Starships"
+        args { name: "ids" by: "f.starship_ids" }
+      }
+    }
+    def {
+      name: "v"
+      message {
+        name: "Vehicles"
+        args { name: "ids" by: "f.vehicle_ids" }
+      }
+    }
+    def {
+      name: "characters"
+      message {
+        name: "People"
+        args { name: "ids" by: "f.character_ids" }
+      }
+    }
+    def {
+      name: "planets"
+      message {
+        name: "Planets"
+        args { name: "ids" by: "f.planet_ids" }
+      }
+    }
+  };
+
+  Film film = 1 [(grpc.federation.field).by = "f"];
+  // species.
+  repeated Species species = 2 [(grpc.federation.field).by = "species.species"];
+  // starships.
+  repeated Starship starships = 3  [(grpc.federation.field).by = "starships.starships"];
+  // vehicles.
+  repeated Vehicle vehicles = 4 [(grpc.federation.field).by = "v.vehicles"];
+  // characters.
+  repeated Person characters = 5 [(grpc.federation.field).by = "characters.people"];
+  // planets.
+  repeated Planet planets = 6 [(grpc.federation.field).by = "planets.planets"];
+}
+
+// ListFilmsRequest.
+message ListFilmsRequest {
+  repeated int64 ids = 1;
+}
+
+// ListFilmsReply.
+message ListFilmsReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "f"
+      message {
+        name: "Films"
+        args { name: "ids" by: "$.ids" }
+      }
+    }
+  };
+
+  repeated Film films = 1 [(grpc.federation.field).by = "f.films"];
+}
+
+// GetVehicleRequest.
+message GetVehicleRequest {
+  // vehicle id.
+  int64 id = 1;
+}
+
+// GetVehicleReply.
+message GetVehicleReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.vehicle.VehicleService/GetVehicle"
+        request { field: "id" by: "$.id" }
+      }
+    }
+    def { name: "v" by: "res.vehicle" }
+    def {
+      name: "f"
+      message {
+        name: "Films"
+        args { name: "ids" by: "v.film_ids" }
+      }
+    }
+    def {
+      name: "p"
+      message {
+        name: "People"
+        args { name: "ids" by: "v.pilot_ids" }
+      }
+    }
+  };
+
+  Vehicle vehicle = 1 [(grpc.federation.field).by = "v"];
+  // films.
+  repeated Film films = 2 [(grpc.federation.field).by = "f.films"];
+  // pilots.
+  repeated Person pilots = 3 [(grpc.federation.field).by = "p.people"];
+}
+
+// ListVehiclesRequest.
+message ListVehiclesRequest {
+  repeated int64 ids = 1;
+}
+
+// ListVehiclesReply.
+message ListVehiclesReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "v"
+      message {
+        name: "Vehicles"
+        args { name: "ids" by: "$.ids" }
+      }
+    }
+  };
+
+  repeated Vehicle vehicles = 1 [(grpc.federation.field).by = "v.vehicles"];
+}
+
+// GetSpeciesRequest.
+message GetSpeciesRequest {
+  // species id.
+  int64 id = 1;
+}
+
+// GetSpeciesReply.
+message GetSpeciesReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.species.SpeciesService/GetSpecies"
+        request { field: "id" by: "$.id" }
+      }
+    }
+    def { name: "s" by: "res.species" }
+    def {
+      name: "f"
+      message {
+        name: "Films"
+        args { name: "ids" by: "s.film_ids" }
+      }
+    }
+    def {
+      name: "p"
+      message {
+        name: "People"
+        args { name: "ids" by: "s.person_ids" }
+      }
+    }
+  };
+
+  Species species = 1 [(grpc.federation.field).by = "s"];
+  // people.
+  repeated Person people = 2 [(grpc.federation.field).by = "p.people"];
+  // films.
+  repeated Film films = 3 [(grpc.federation.field).by = "f.films"];
+}
+
+// ListSpeciesRequest.
+message ListSpeciesRequest {
+  repeated int64 ids = 1;
+}
+
+// ListSpeciesReply.
+message ListSpeciesReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "s"
+      message {
+        name: "SpeciesList"
+        args { name: "ids" by: "$.ids" }
+      }
+    }
+  };
+
+  repeated Species species = 1 [(grpc.federation.field).by = "s.species"];
+}
+
+// GetStarshipRequest.
+message GetStarshipRequest {
+  // starship id.
+  int64 id = 1;
+}
+
+// GetStarshipReply.
+message GetStarshipReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.starship.StarshipService/GetStarship"
+        request { field: "id" by: "$.id" }
+      }
+    }
+    def { name: "s" by: "res.starship" }
+    def {
+      name: "f"
+      message {
+        name: "Films"
+        args { name: "ids" by: "s.film_ids" }
+      }
+    }
+    def {
+      name: "p"
+      message {
+        name: "People"
+        args { name: "ids" by: "s.pilot_ids" }
+      }
+    }
+  };
+
+  Starship starship = 1 [(grpc.federation.field).by = "s"];
+  // films.
+  repeated Film films = 2 [(grpc.federation.field).by = "f.films"];
+  // pilots.
+  repeated Person pilots = 3 [(grpc.federation.field).by = "p.people"];
+}
+
+// ListStarshipsRequest.
+message ListStarshipsRequest {
+  repeated int64 ids = 1;
+}
+
+// ListStarshipsReply.
+message ListStarshipsReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "s"
+      message {
+        name: "Starships"
+        args { name: "ids" by: "$.ids" }
+      }
+    }
+  };
+
+  repeated Starship starships = 1 [(grpc.federation.field).by = "s.starships"];
+}
+
+// GetPlanetRequest.
+message GetPlanetRequest {
+  // planet id.
+  int64 id = 1;
+}
+
+// GetPlanetReply.
+message GetPlanetReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.planet.PlanetService/GetPlanet"
+        request { field: "id" by: "$.id" }
+      }
+    }
+    def { name: "p" by: "res.planet" }
+    def {
+      name: "residents"
+      message {
+        name: "People"
+        args { name: "ids" by: "p.resident_ids" }
+      }
+    }
+    def {
+      name: "f"
+      message {
+        name: "Films"
+        args { name: "ids" by: "p.film_ids" }
+      }
+    }
+  };
+
+  Planet planet = 1 [(grpc.federation.field).by = "p"];
+  // the people that live on this planet.
+  repeated Person residents = 2 [(grpc.federation.field).by = "residents.people"];
+  // films.
+  repeated Film films = 3 [(grpc.federation.field).by = "f.films"];
+}
+
+// ListPlanetsRequest.
+message ListPlanetsRequest {
+  repeated int64 ids = 1;
+}
+
+// ListPlanetsReply.
+message ListPlanetsReply {
+  option (grpc.federation.message) = {
+    def {
+      name: "p"
+      message {
+        name: "Planets"
+        args { name: "ids" by: "$.ids" }
+      }
+    }
+  };
+
+  repeated Planet planets = 1 [(grpc.federation.field).by = "p.planets"];
+}
+
+// Person is an individual person or character within the Star Wars universe.
+message Person {
+  option (grpc.federation.message).alias = "swapi.person.Person";
+
+  // person id.
+  int64 id = 1;
+  // The name of this person.
+  string name = 2;
+  // The birth year of the person,
+  // using the in-universe standard of BBY or ABY
+  // - Before the Battle of Yavin or After the Battle of Yavin.
+  // The Battle of Yavin is a battle that occurs at the end of Star Wars episode IV: A New Hope.
+  string birth_year = 3;
+  // The eye color of this person.
+  // Will be "unknown" if not known or "n/a" if the person does not have an eye.
+  string eye_color = 4;
+  // The gender of this person.
+  // Either "Male", "Female" or "unknown", "n/a" if the person does not have a gender.
+  string gender = 5;
+  // The hair color of this person.
+  // Will be "unknown" if not known or "n/a" if the person does not have hair.
+  string hair_color = 6;
+  // The height of the person in centimeters.
+  string height = 7;
+  // The mass of the person in kilograms.
+  string mass = 8;
+  // The skin color of this person.
+  string skin_color = 9;
+  // The URL of a planet resource, a planet that this person was born on or inhabits.
+  string homeworld = 10;
+  // the hypermedia URL of this resource.
+  string url = 11;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 12;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 13;
+  // film ids.
+  repeated int64 film_ids = 14;
+  // species ids.
+  repeated int64 species_ids = 15;
+  // starship ids.
+  repeated int64 starship_ids = 16;
+  // vehicle ids.
+  repeated int64 vehicle_ids = 17;
+}
+
+message People {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.person.PersonService/ListPeople"
+        request { field: "ids" by: "$.ids" }
+      }
+    }
+  };
+  repeated Person people = 1 [(grpc.federation.field).by = "res.people"];  
+}
+
+// Film is a single film.
+message Film {
+  option (grpc.federation.message).alias = "swapi.film.Film";
+
+  // film id.
+  int64 id = 1;
+  // The title of this film.
+  string title = 2;
+  // The episode number of this film.
+  int32 episode_id = 3;
+  // The opening paragraphs at the beginning of this film.
+  string opening_crawl = 4;
+  // The name of the director of this film.
+  string director = 5;
+  // The name(s) of the producer(s) of this film. Comma separated.
+  string producer = 6;
+  // The ISO 8601 date format of film release at original creator country.
+  google.type.Date release_date = 7;
+  // the hypermedia URL of this resource.
+  string url = 8;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 9;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 10;
+  // species ids.
+  repeated int64 species_ids = 11;
+  // starship ids.
+  repeated int64 starship_ids = 12;
+  // vehicle ids.
+  repeated int64 vehicle_ids = 13;
+  // character ids.
+  repeated int64 character_ids = 14;
+  // planet ids.
+  repeated int64 planet_ids = 15;
+}
+
+message Films {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.film.FilmService/ListFilms"
+        request { field: "ids" by: "$.ids" }
+      }
+    }
+  };
+  repeated Film films = 1 [(grpc.federation.field).by = "res.films"];  
+}
+
+// Starship is a single transport craft that has hyperdrive capability.
+message Starship {
+  option (grpc.federation.message).alias =  "swapi.starship.Starship";
+
+  // starship id.
+  int64 id = 1;
+  // The name of this starship. The common name, such as "Death Star".
+  string name = 2;
+  // The model or official name of this starship.
+  // Such as "T-65 X-wing" or "DS-1 Orbital Battle Station".
+  string model = 3;
+  // The class of this starship, such as "Starfighter" or "Deep Space Mobile Battlestation".
+  string starship_class = 4;
+  // The manufacturer of this starship. Comma separated if more than one.
+  string manufacturer = 5;
+  // The cost of this starship new, in galactic credits.
+  string cost_in_credits = 6;
+  // The length of this starship in meters.
+  string length = 7;
+  // The number of personnel needed to run or pilot this starship.
+  string crew = 8;
+  // The number of non-essential people this starship can transport.
+  string passengers = 9;
+  // The maximum speed of this starship in the atmosphere.
+  // "N/A" if this starship is incapable of atmospheric flight.
+  string max_atmosphering_speed = 10;
+  // The class of this starships hyperdrive.
+  string hyperdrive_rating = 11;
+  // The Maximum number of Megalights this starship can travel in a standard hour.
+  // A "Megalight" is a standard unit of distance and has never been defined before within the Star Wars universe.
+  // This figure is only really useful for measuring the difference in speed of starships.
+  // We can assume it is similar to AU, the distance between our Sun (Sol) and Earth.
+  string mglt = 12;
+  // The maximum number of kilograms that this starship can transport.
+  string cargo_capacity = 13;
+  // The maximum length of time that this starship can provide consumables for its entire crew without having to resupply.
+  string consumables = 14;
+  // the hypermedia URL of this resource.
+  string url = 15;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 16;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 17;
+  // film ids.
+  repeated int64 film_ids = 18;
+  // pilot ids.
+  repeated int64 pilot_ids =19;
+}
+
+message Starships {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.starship.StarshipService/ListStarships"
+        request { field: "ids" by: "$.ids" }
+      }
+    }
+  };
+  repeated Starship starships = 1 [(grpc.federation.field).by = "res.starships"];
+}
+
+// Vehicle is a single transport craft that does not have hyperdrive capability..
+message Vehicle {
+  option (grpc.federation.message).alias = "swapi.vehicle.Vehicle";
+
+  // vehicle id.
+  int64 id = 1;
+  // The name of this vehicle. The common name, such as "Sand Crawler" or "Speeder bike".
+  string name = 2;
+  // The model or official name of this vehicle. Such as "All-Terrain Attack Transport".
+  string model = 3;
+  // The class of this vehicle, such as "Wheeled" or "Repulsorcraft".
+  string vehicle_class = 4;
+  // The manufacturer of this vehicle. Comma separated if more than one.
+  string manufacturer = 5;
+  // The length of this vehicle in meters.
+  string length = 6;
+  // The cost of this vehicle new, in Galactic Credits.
+  string cost_in_credits = 7;
+  // The number of personnel needed to run or pilot this vehicle.
+  string crew = 8;
+  // The number of non-essential people this vehicle can transport.
+  string passengers = 9;
+  // The maximum speed of this vehicle in the atmosphere.
+  string max_atmosphering_speed = 10;
+  // The maximum number of kilograms that this vehicle can transport.
+  string cargo_capacity = 11;
+  // The maximum length of time that this vehicle can provide consumables for its entire crew without having to resupply.
+  string consumables = 12;
+  // the hypermedia URL of this resource.
+  string url = 13;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 14;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 15;
+  // film ids.
+  repeated int64 film_ids = 16;
+  // pilot ids.
+  repeated int64 pilot_ids = 17;
+}
+
+message Vehicles {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.vehicle.VehicleService/ListVehicles"
+        request { field: "ids" by: "$.ids" }
+      }
+    }
+  };
+  repeated Vehicle vehicles = 1 [(grpc.federation.field).by = "res.vehicles"];
+}
+
+// Species is a type of person or character within the Star Wars Universe.
+message Species {
+ option (grpc.federation.message).alias = "swapi.species.Species";
+
+  // species id.
+  int64 id = 1;
+  // The name of this species.
+  string name = 2;
+  // The classification of this species, such as "mammal" or "reptile".
+  string classification = 3;
+  // The designation of this species, such as "sentient".
+  string designation = 4;
+  // The average height of this species in centimeters.
+  string average_height = 5;
+  // The average lifespan of this species in years.
+  string average_lifespan = 6;
+  // A comma-separated string of common eye colors for this species,
+  // "none" if this species does not typically have eyes.
+  string eye_colors = 7;
+  // A comma-separated string of common hair colors for this species,
+  // "none" if this species does not typically have hair.
+  string hair_colors = 8;
+  // A comma-separated string of common skin colors for this species,
+  // "none" if this species does not typically have skin.
+  string skin_colors = 9;
+  // The language commonly spoken by this species.
+  string language = 10;
+  // The URL of a planet resource, a planet that this species originates from.
+  string homeworld = 11;
+  // the hypermedia URL of this resource.
+  string url = 12;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 13;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 14;
+  // person ids.
+  repeated int64 person_ids = 15;
+  // film ids.
+  repeated int64 film_ids = 16;
+}
+
+message SpeciesList {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.species.SpeciesService/ListSpecies"
+        request { field: "ids" by: "$.ids" }
+      }
+    }
+  };
+  repeated Species species = 1 [(grpc.federation.field).by = "res.species"];
+}
+
+// Planet is a large mass, planet or planetoid in the Star Wars Universe, at the time of 0 ABY.
+message Planet {
+  option (grpc.federation.message).alias =  "swapi.planet.Planet";
+
+  // planet id.
+  int64 id = 1;
+  // The name of this planet.
+  string name = 2;
+  // The diameter of this planet in kilometers.
+  string diameter = 3;
+  // The number of standard hours it takes for this planet to complete a single rotation on its axis.
+  string rotation_period = 4;
+  // The number of standard days it takes for this planet to complete a single orbit of its local star.
+  string orbital_period = 5;
+  // A number denoting the gravity of this planet, where "1" is normal or 1 standard G.
+  // "2" is twice or 2 standard Gs. "0.5" is half or 0.5 standard Gs.
+  string gravity = 6;
+  // The average population of sentient beings inhabiting this planet.
+  string population = 7;
+  // The climate of this planet. Comma separated if diverse.
+  string climate = 8;
+  // The terrain of this planet. Comma separated if diverse.
+  string terrain = 9;
+  // The percentage of the planet surface that is naturally occurring water or bodies of water.
+  string surface_water = 10;
+  // the hypermedia URL of this resource.
+  string url = 11;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 12;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 13;
+  // the person that live on this planet ids.
+  repeated int64 resident_ids = 14;
+  // film ids.
+  repeated int64 film_ids = 15;
+}
+
+message Planets {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "swapi.planet.PlanetService/ListPlanets"
+        request { field: "ids" by: "$.ids" }
+      }
+    }
+  };
+  repeated Planet planets = 1 [(grpc.federation.field).by = "res.planets"];
+}
