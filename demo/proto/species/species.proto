@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package swapi.species;
+
+option go_package = "github.com/mercari/grpc-federation/demo/swapi/species;speciespb";
+
+service SpeciesService { 
+  rpc GetSpecies(GetSpeciesRequest) returns (GetSpeciesReply) {}
+  rpc ListSpecies(ListSpeciesRequest) returns (ListSpeciesReply) {}
+}
+
+// GetSpeciesRequest.
+message GetSpeciesRequest {
+  // species id.
+  int64 id = 1;
+}
+
+// GetSpeciesReply.
+message GetSpeciesReply {
+  Species species = 1;
+}
+
+// ListSpeciesRequest.
+message ListSpeciesRequest {
+  repeated int64 ids = 1;
+}
+
+// ListSpeciesReply.
+message ListSpeciesReply {
+  repeated Species species = 1;
+}
+
+// Species is a type of person or character within the Star Wars Universe.
+message Species {
+  // species id.
+  int64 id = 1;
+  // The name of this species.
+  string name = 2;
+  // The classification of this species, such as "mammal" or "reptile".
+  string classification = 3;
+  // The designation of this species, such as "sentient".
+  string designation = 4;
+  // The average height of this species in centimeters.
+  string average_height = 5;
+  // The average lifespan of this species in years.
+  string average_lifespan = 6;
+  // A comma-separated string of common eye colors for this species,
+  // "none" if this species does not typically have eyes.
+  string eye_colors = 7;
+  // A comma-separated string of common hair colors for this species,
+  // "none" if this species does not typically have hair.
+  string hair_colors = 8;
+  // A comma-separated string of common skin colors for this species,
+  // "none" if this species does not typically have skin.
+  string skin_colors = 9;
+  // The language commonly spoken by this species.
+  string language = 10;
+  // The URL of a planet resource, a planet that this species originates from.
+  string homeworld = 11;
+  // the hypermedia URL of this resource.
+  string url = 12;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 13;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 14;
+  // person ids.
+  repeated int64 person_ids = 15;
+  // film ids.
+  repeated int64 film_ids = 16;
+}

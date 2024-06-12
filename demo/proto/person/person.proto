@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package swapi.person;
+
+option go_package = "github.com/mercari/grpc-federation/demo/swapi/person;personpb";
+
+service PersonService { 
+  rpc GetPerson(GetPersonRequest) returns (GetPersonReply) {}
+  rpc ListPeople(ListPeopleRequest) returns (ListPeopleReply) {}
+}
+
+// GetPersonRequest.
+message GetPersonRequest {
+  // The persion id.
+  int64 id = 1;
+}
+
+// GetPersonReply.
+message GetPersonReply {
+  Person person = 1;
+}
+
+// ListPeopleRequest.
+message ListPeopleRequest {
+  repeated int64 ids = 1;
+}
+
+// ListPeopleReply.
+message ListPeopleReply {
+  repeated Person people = 1;
+}
+
+// Person is an individual person or character within the Star Wars universe.
+message Person {
+  // person id.
+  int64 id = 1;
+  // The name of this person.
+  string name = 2;
+  // The birth year of the person,
+  // using the in-universe standard of BBY or ABY
+  // - Before the Battle of Yavin or After the Battle of Yavin.
+  // The Battle of Yavin is a battle that occurs at the end of Star Wars episode IV: A New Hope.
+  string birth_year = 3;
+  // The eye color of this person.
+  // Will be "unknown" if not known or "n/a" if the person does not have an eye.
+  string eye_color = 4;
+  // The gender of this person.
+  // Either "Male", "Female" or "unknown", "n/a" if the person does not have a gender.
+  string gender = 5;
+  // The hair color of this person.
+  // Will be "unknown" if not known or "n/a" if the person does not have hair.
+  string hair_color = 6;
+  // The height of the person in centimeters.
+  string height = 7;
+  // The mass of the person in kilograms.
+  string mass = 8;
+  // The skin color of this person.
+  string skin_color = 9;
+  // The URL of a planet resource, a planet that this person was born on or inhabits.
+  string homeworld = 10;
+  // the hypermedia URL of this resource.
+  string url = 11;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 12;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 13;
+  // film ids.
+  repeated int64 film_ids = 14;
+  // species ids.
+  repeated int64 species_ids = 15;
+  // starship ids.
+  repeated int64 starship_ids = 16;
+  // vehicle ids.
+  repeated int64 vehicle_ids = 17;
+}

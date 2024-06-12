@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+import "google/type/date.proto";
+
+package swapi.film;
+
+option go_package = "github.com/mercari/grpc-federation/demo/swapi/film;filmpb";
+
+service FilmService { 
+  rpc GetFilm(GetFilmRequest) returns (GetFilmReply) {}
+  rpc ListFilms(ListFilmsRequest) returns (ListFilmsReply) {}
+}
+
+// GetFilmRequest.
+message GetFilmRequest {
+  // The film id.
+  int64 id = 1;
+}
+
+// GetFilmReply.
+message GetFilmReply {
+  Film film = 1;
+}
+
+// ListFilmsRequest.
+message ListFilmsRequest {
+  repeated int64 ids = 1;
+}
+
+// ListFilmsReply.
+message ListFilmsReply {
+  repeated Film films = 1;
+}
+
+// Film is a single film.
+message Film {
+  // film id.
+  int64 id = 1;
+  // The title of this film.
+  string title = 2;
+  // The episode number of this film.
+  int32 episode_id = 3;
+  // The opening paragraphs at the beginning of this film.
+  string opening_crawl = 4;
+  // The name of the director of this film.
+  string director = 5;
+  // The name(s) of the producer(s) of this film. Comma separated.
+  string producer = 6;
+  // The ISO 8601 date format of film release at original creator country.
+  google.type.Date release_date = 7;
+  // the hypermedia URL of this resource.
+  string url = 8;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 9;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 10;
+  // species ids.
+  repeated int64 species_ids = 11;
+  // starship ids.
+  repeated int64 starship_ids = 12;
+  // vehicle ids.
+  repeated int64 vehicle_ids = 13;
+  // character ids.
+  repeated int64 character_ids = 14;
+  // planet ids.
+  repeated int64 planet_ids = 15;
+}

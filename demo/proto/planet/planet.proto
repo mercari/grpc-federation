@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package swapi.planet;
+
+option go_package = "github.com/mercari/grpc-federation/demo/swapi/planet;planetpb";
+
+service PlanetService { 
+  rpc GetPlanet(GetPlanetRequest) returns (GetPlanetReply) {}
+  rpc ListPlanets(ListPlanetsRequest) returns (ListPlanetsReply) {}
+}
+
+// GetPlanetRequest.
+message GetPlanetRequest {
+  // planet id.
+  int64 id = 1;
+}
+
+// GetPlanetReply.
+message GetPlanetReply {
+  Planet planet = 1;
+}
+
+// ListPlanetsRequest.
+message ListPlanetsRequest {
+  repeated int64 ids = 1;
+}
+
+// ListPlanetsReply.
+message ListPlanetsReply {
+  repeated Planet planets = 1;
+}
+
+// Planet is a large mass, planet or planetoid in the Star Wars Universe, at the time of 0 ABY.
+message Planet {
+  // planet id.
+  int64 id = 1;
+  // The name of this planet.
+  string name = 2;
+  // The diameter of this planet in kilometers.
+  string diameter = 3;
+  // The number of standard hours it takes for this planet to complete a single rotation on its axis.
+  string rotation_period = 4;
+  // The number of standard days it takes for this planet to complete a single orbit of its local star.
+  string orbital_period = 5;
+  // A number denoting the gravity of this planet, where "1" is normal or 1 standard G.
+  // "2" is twice or 2 standard Gs. "0.5" is half or 0.5 standard Gs.
+  string gravity = 6;
+  // The average population of sentient beings inhabiting this planet.
+  string population = 7;
+  // The climate of this planet. Comma separated if diverse.
+  string climate = 8;
+  // The terrain of this planet. Comma separated if diverse.
+  string terrain = 9;
+  // The percentage of the planet surface that is naturally occurring water or bodies of water.
+  string surface_water = 10;
+  // the hypermedia URL of this resource.
+  string url = 11;
+  // the ISO 8601 date format of the time that this resource was created.
+  string created = 12;
+  // the ISO 8601 date format of the time that this resource was edited.
+  string edited = 13;
+  // the person that live on this planet ids.
+  repeated int64 resident_ids = 14;
+  // film ids.
+  repeated int64 film_ids = 15;
+}

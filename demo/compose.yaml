@@ -1,0 +1,66 @@
+services:
+  swapi:
+    image: ko.local/swapi:latest
+    platform: linux/amd64
+    container_name: swapi
+    ports:
+      - "3000:3000"
+    environment:
+      - GRPC_PORT=3000
+      - FILM_SERVICE_ENDPOINT=film:3000
+      - PERSON_SERVICE_ENDPOINT=person:3000
+      - PLANET_SERVICE_ENDPOINT=planet:3000
+      - SPECIES_SERVICE_ENDPOINT=species:3000
+      - STARSHIP_SERVICE_ENDPOINT=starship:3000
+      - VEHICLE_SERVICE_ENDPOINT=vehicle:3000
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://jaeger:4317
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "4000:16686"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  film:
+    image: ko.local/film:latest
+    platform: linux/amd64
+    container_name: film
+    environment:
+      - GRPC_PORT=3000
+
+  person:
+    image: ko.local/person:latest
+    platform: linux/amd64
+    container_name: person
+    environment:
+      - GRPC_PORT=3000
+
+  planet:
+    image: ko.local/planet:latest
+    platform: linux/amd64
+    container_name: planet
+    environment:
+      - GRPC_PORT=3000
+
+  species:
+    image: ko.local/species:latest
+    platform: linux/amd64
+    container_name: species
+    environment:
+      - GRPC_PORT=3000
+
+  starship:
+    image: ko.local/starship:latest
+    platform: linux/amd64
+    container_name: starship
+    environment:
+      - GRPC_PORT=3000
+
+  vehicle:
+    image: ko.local/vehicle:latest
+    platform: linux/amd64
+    container_name: vehicle
+    environment:
+      - GRPC_PORT=3000
