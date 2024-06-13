@@ -495,10 +495,10 @@ func TestSimpleAggregation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
@@ -745,10 +745,10 @@ func TestCreatePost(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
@@ -764,10 +764,10 @@ func TestMinimum(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
 	fb := testutil.NewFileBuilder(fileName)
@@ -845,10 +845,10 @@ func TestCustomResolver(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
 	fb := testutil.NewFileBuilder(fileName)
@@ -1070,10 +1070,10 @@ func TestAsync(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
 	fb := testutil.NewFileBuilder(fileName)
@@ -1518,10 +1518,10 @@ func TestAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
 	fb := testutil.NewFileBuilder(fileName)
@@ -1773,10 +1773,10 @@ func TestAutobind(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
 	fb := testutil.NewFileBuilder(fileName)
@@ -2162,10 +2162,10 @@ func TestMultiUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
@@ -2428,10 +2428,10 @@ func TestOneof(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
@@ -2447,10 +2447,10 @@ func TestValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 
 	fb := testutil.NewFileBuilder(fileName)
@@ -3001,10 +3001,10 @@ func TestMap(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
@@ -3274,10 +3274,10 @@ func TestCondition(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
@@ -3522,10 +3522,10 @@ func TestErrorHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(result.Files) != 1 {
-		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
 	}
 	if len(result.Files[0].Services) != 1 {
-		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)

@@ -173,7 +173,7 @@ func getPost(arg *PostArgument) *pb.Post {
 ```
 
 - `name: "p"`: It means to create a variable named `p`
-- `message {}`: It menas to get message instance
+- `message {}`: It means to get message instance
 - `name: "Post"`: It means to get `Post` message in `federation` package.
 - `args: {name: "pid", by: "$.id"}`: It means to retrieve the Post message, to pass as an argument a value whose name is `pid` and whose value is `$.id`.
 
