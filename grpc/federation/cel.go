@@ -119,7 +119,7 @@ func NewCELFieldType(typ *celtypes.Type, fieldName string) *celtypes.FieldType {
 		if rv.Kind() != reflect.Struct {
 			return false
 		}
-		return rv.FieldByName(fieldName).IsValid()
+		return !rv.FieldByName(fieldName).IsZero()
 	}
 	getFrom := func(v any, fieldName string) (any, error) {
 		rv := reflect.ValueOf(v)
