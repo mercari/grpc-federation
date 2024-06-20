@@ -9,7 +9,6 @@ import (
 
 type (
 	celCacheMapKey struct{}
-	envKey         struct{}
 )
 
 func WithLogger(ctx context.Context, logger *slog.Logger) context.Context {

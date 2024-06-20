@@ -1281,7 +1281,7 @@ func (r *Resolver) resolveEnv(ctx *context, def *federation.Env, builder *source
 
 	var vars []*EnvVar
 	if msgName := def.GetMessage(); msgName != "" {
-		builder := builder.WithMessage()
+		msgBuilder := builder.WithMessage()
 		var msg *Message
 		if strings.Contains(msgName, ".") {
 			pkg, err := r.lookupPackage(msgName)
@@ -1289,15 +1289,15 @@ func (r *Resolver) resolveEnv(ctx *context, def *federation.Env, builder *source
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						builder.Location(),
+						msgBuilder.Location(),
 					),
 				)
 				return nil
 			}
 			name := r.trimPackage(pkg, msgName)
-			msg = r.resolveMessage(ctx, pkg, name, source.ToLazyMessageBuilder(builder, name))
+			msg = r.resolveMessage(ctx, pkg, name, source.ToLazyMessageBuilder(msgBuilder, name))
 		} else {
-			msg = r.resolveMessage(ctx, ctx.file().Package, msgName, source.ToLazyMessageBuilder(builder, msgName))
+			msg = r.resolveMessage(ctx, ctx.file().Package, msgName, source.ToLazyMessageBuilder(msgBuilder, msgName))
 		}
 		if msg == nil {
 			return nil
@@ -1349,7 +1349,7 @@ func (r *Resolver) resolveEnvVar(ctx *context, def *federation.EnvVar, builder *
 		)
 		return nil
 	}
-	typ, err := r.resolveEnvType(ctx, envType, false)
+	typ, err := r.resolveEnvType(envType, false)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -1387,7 +1387,7 @@ func (r *Resolver) resolveEnvVarWithField(field *Field) *EnvVar {
 	}
 }
 
-func (r *Resolver) resolveEnvType(ctx *context, def *federation.EnvType, repeated bool) (*Type, error) {
+func (r *Resolver) resolveEnvType(def *federation.EnvType, repeated bool) (*Type, error) {
 	switch def.Type.(type) {
 	case *federation.EnvType_Kind:
 		switch def.GetKind() {
@@ -1423,14 +1423,14 @@ func (r *Resolver) resolveEnvType(ctx *context, def *federation.EnvType, repeate
 			return DurationType, nil
 		}
 	case *federation.EnvType_Repeated:
-		return r.resolveEnvType(ctx, def.GetRepeated(), true)
+		return r.resolveEnvType(def.GetRepeated(), true)
 	case *federation.EnvType_Map:
 		mapType := def.GetMap()
-		key, err := r.resolveEnvType(ctx, mapType.GetKey(), false)
+		key, err := r.resolveEnvType(mapType.GetKey(), false)
 		if err != nil {
 			return nil, err
 		}
-		value, err := r.resolveEnvType(ctx, mapType.GetValue(), false)
+		value, err := r.resolveEnvType(mapType.GetValue(), false)
 		if err != nil {
 			return nil, err
 		}

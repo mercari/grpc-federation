@@ -827,7 +827,7 @@ func (f *File) findEnvByPos(ctx *findContext, pos Position, node *ast.MessageLit
 	return nil
 }
 
-func (f *File) findEnvVarByPos(ctx *findContext, idx int, pos Position, node *ast.MessageLiteralNode) *Location {
+func (f *File) findEnvVarByPos(ctx *findContext, _ int, pos Position, node *ast.MessageLiteralNode) *Location {
 	for _, elem := range node.Elements {
 		optName := elem.Name.Name.AsIdentifier()
 		switch optName {

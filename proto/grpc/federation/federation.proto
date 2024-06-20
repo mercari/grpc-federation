@@ -88,17 +88,17 @@ message EnvVar {
 // EnvKind is primitive kind list.
 enum EnvKind {
   // UNKNOWN represents unexpected value.
-  UNKNOWN  = 0;
+  UNKNOWN = 0;
   // STRING is used to convert the input value to `string` type.
-  STRING   = 1;
+  STRING = 1;
   // BOOL is used to convert the input value to `bool` type.
-  BOOL     = 2;
+  BOOL = 2;
   // INT64 is used to convert the input value to `int64` type.
-  INT64    = 3;
+  INT64 = 3;
   // UINT64 is used to convert the input value to `uint64` type.
-  UINT64   = 4;
+  UINT64 = 4;
   // DOUBLE is used to convert the input value to `double` type.
-  DOUBLE   = 5;
+  DOUBLE = 5;
   // DURATION is used to convert the input value to the `google.protobuf.Duration` type.
   DURATION = 6;
 }
