@@ -126,10 +126,11 @@ type {{ $serviceName }}Env struct {
 	{{- end }}
 }
 
-type {{ $serviceName }}EnvKey struct{}
+type key{{ $serviceName }}Env struct{}
 
+// Get{{ $serviceName }}Env gets environment variables.
 func Get{{ $serviceName }}Env(ctx context.Context) *{{ $serviceName }}Env {
-	value := ctx.Value({{ $serviceName }}EnvKey{})
+	value := ctx.Value(key{{ $serviceName }}Env{})
 	if value == nil {
 		return nil
 	}
@@ -137,7 +138,7 @@ func Get{{ $serviceName }}Env(ctx context.Context) *{{ $serviceName }}Env {
 }
 
 func with{{ $serviceName }}Env(ctx context.Context, env *{{ $serviceName }}Env) context.Context {
-	return context.WithValue(ctx, {{ $serviceName }}EnvKey{}, env)
+	return context.WithValue(ctx, key{{ $serviceName }}Env{}, env)
 }
 {{- end }}
 

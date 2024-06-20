@@ -70,10 +70,11 @@ type InlineEnvServiceEnv struct {
 	Ddd float64                     `ignored:"true"`
 }
 
-type InlineEnvServiceEnvKey struct{}
+type keyInlineEnvServiceEnv struct{}
 
+// GetInlineEnvServiceEnv gets environment variables.
 func GetInlineEnvServiceEnv(ctx context.Context) *InlineEnvServiceEnv {
-	value := ctx.Value(InlineEnvServiceEnvKey{})
+	value := ctx.Value(keyInlineEnvServiceEnv{})
 	if value == nil {
 		return nil
 	}
@@ -81,7 +82,7 @@ func GetInlineEnvServiceEnv(ctx context.Context) *InlineEnvServiceEnv {
 }
 
 func withInlineEnvServiceEnv(ctx context.Context, env *InlineEnvServiceEnv) context.Context {
-	return context.WithValue(ctx, InlineEnvServiceEnvKey{}, env)
+	return context.WithValue(ctx, keyInlineEnvServiceEnv{}, env)
 }
 
 // InlineEnvServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -188,10 +189,11 @@ type RefEnvServiceEnv struct {
 	Ddd float64                     `ignored:"true"`
 }
 
-type RefEnvServiceEnvKey struct{}
+type keyRefEnvServiceEnv struct{}
 
+// GetRefEnvServiceEnv gets environment variables.
 func GetRefEnvServiceEnv(ctx context.Context) *RefEnvServiceEnv {
-	value := ctx.Value(RefEnvServiceEnvKey{})
+	value := ctx.Value(keyRefEnvServiceEnv{})
 	if value == nil {
 		return nil
 	}
@@ -199,7 +201,7 @@ func GetRefEnvServiceEnv(ctx context.Context) *RefEnvServiceEnv {
 }
 
 func withRefEnvServiceEnv(ctx context.Context, env *RefEnvServiceEnv) context.Context {
-	return context.WithValue(ctx, RefEnvServiceEnvKey{}, env)
+	return context.WithValue(ctx, keyRefEnvServiceEnv{}, env)
 }
 
 // RefEnvServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.

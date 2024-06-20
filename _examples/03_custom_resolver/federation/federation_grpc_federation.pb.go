@@ -139,10 +139,11 @@ type FederationV2DevServiceEnv struct {
 	D float64                     `ignored:"true"`
 }
 
-type FederationV2DevServiceEnvKey struct{}
+type keyFederationV2DevServiceEnv struct{}
 
+// GetFederationV2DevServiceEnv gets environment variables.
 func GetFederationV2DevServiceEnv(ctx context.Context) *FederationV2DevServiceEnv {
-	value := ctx.Value(FederationV2DevServiceEnvKey{})
+	value := ctx.Value(keyFederationV2DevServiceEnv{})
 	if value == nil {
 		return nil
 	}
@@ -150,7 +151,7 @@ func GetFederationV2DevServiceEnv(ctx context.Context) *FederationV2DevServiceEn
 }
 
 func withFederationV2DevServiceEnv(ctx context.Context, env *FederationV2DevServiceEnv) context.Context {
-	return context.WithValue(ctx, FederationV2DevServiceEnvKey{}, env)
+	return context.WithValue(ctx, keyFederationV2DevServiceEnv{}, env)
 }
 
 // FederationV2DevServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
