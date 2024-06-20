@@ -3582,7 +3582,7 @@ func TestEnv(t *testing.T) {
 								AddVar(
 									testutil.NewEnvVarBuilder().
 										SetName("ccc").
-										SetType(resolver.NewMapType(resolver.StringType, resolver.DurationType)).
+										SetType(resolver.NewMapTypeWithName("CccEntry", resolver.StringType, resolver.DurationType)).
 										SetOption(
 											testutil.NewEnvVarOptionBuilder().
 												SetRequired(true).
