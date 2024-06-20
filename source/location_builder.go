@@ -349,44 +349,136 @@ type ServiceOptionBuilder struct {
 	option func(*Location) *ServiceOption
 }
 
-func (b *ServiceOptionBuilder) WithDependencies(idx int) *ServiceDependencyOptionBuilder {
+func (b *ServiceOptionBuilder) WithEnv() *EnvBuilder {
 	root := b.root.Clone()
 	option := b.option(root)
-	option.Dependencies = &ServiceDependencyOption{Idx: idx}
-	return &ServiceDependencyOptionBuilder{
+	option.Env = &Env{}
+	return &EnvBuilder{
 		root: root,
-		option: func(loc *Location) *ServiceDependencyOption {
-			return b.option(loc).Dependencies
+		env: func(loc *Location) *Env {
+			return b.option(loc).Env
 		},
 	}
 }
 
-type ServiceDependencyOptionBuilder struct {
+type EnvBuilder struct {
+	root *Location
+	env  func(*Location) *Env
+}
+
+func (b *EnvBuilder) WithMessage() *EnvBuilder {
+	root := b.root.Clone()
+	env := b.env(root)
+	env.Message = true
+	return &EnvBuilder{
+		root: root,
+		env:  b.env,
+	}
+}
+
+func (b *EnvBuilder) WithVar(idx int) *EnvVarBuilder {
+	root := b.root.Clone()
+	env := b.env(root)
+	env.Var = &EnvVar{Idx: idx}
+	return &EnvVarBuilder{
+		root: root,
+		envVar: func(loc *Location) *EnvVar {
+			return b.env(root).Var
+		},
+	}
+}
+
+func (b *EnvBuilder) Location() *Location {
+	return b.root
+}
+
+type EnvVarBuilder struct {
 	root   *Location
-	option func(*Location) *ServiceDependencyOption
+	envVar func(*Location) *EnvVar
 }
 
-func (b *ServiceDependencyOptionBuilder) WithName() *ServiceDependencyOptionBuilder {
+func (b *EnvVarBuilder) WithName() *EnvVarBuilder {
 	root := b.root.Clone()
-	option := b.option(root)
-	option.Name = true
-	return &ServiceDependencyOptionBuilder{
+	envVar := b.envVar(root)
+	envVar.Name = true
+	return &EnvVarBuilder{
+		root:   root,
+		envVar: b.envVar,
+	}
+}
+
+func (b *EnvVarBuilder) WithType() *EnvVarBuilder {
+	root := b.root.Clone()
+	envVar := b.envVar(root)
+	envVar.Type = true
+	return &EnvVarBuilder{
+		root:   root,
+		envVar: b.envVar,
+	}
+}
+
+func (b *EnvVarBuilder) WithOption() *EnvVarOptionBuilder {
+	root := b.root.Clone()
+	envVar := b.envVar(root)
+	envVar.Option = &EnvVarOption{}
+	return &EnvVarOptionBuilder{
+		root: root,
+		option: func(loc *Location) *EnvVarOption {
+			return b.envVar(loc).Option
+		},
+	}
+}
+
+func (b *EnvVarBuilder) Location() *Location {
+	return b.root
+}
+
+type EnvVarOptionBuilder struct {
+	root   *Location
+	option func(*Location) *EnvVarOption
+}
+
+func (b *EnvVarOptionBuilder) WithAlternate() *EnvVarOptionBuilder {
+	root := b.root.Clone()
+	opt := b.option(root)
+	opt.Alternate = true
+	return &EnvVarOptionBuilder{
 		root:   root,
 		option: b.option,
 	}
 }
 
-func (b *ServiceDependencyOptionBuilder) WithService() *ServiceDependencyOptionBuilder {
+func (b *EnvVarOptionBuilder) WithDefault() *EnvVarOptionBuilder {
 	root := b.root.Clone()
-	option := b.option(root)
-	option.Service = true
-	return &ServiceDependencyOptionBuilder{
+	opt := b.option(root)
+	opt.Default = true
+	return &EnvVarOptionBuilder{
 		root:   root,
 		option: b.option,
 	}
 }
 
-func (b *ServiceDependencyOptionBuilder) Location() *Location {
+func (b *EnvVarOptionBuilder) WithRequired() *EnvVarOptionBuilder {
+	root := b.root.Clone()
+	opt := b.option(root)
+	opt.Required = true
+	return &EnvVarOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *EnvVarOptionBuilder) WithIgnored() *EnvVarOptionBuilder {
+	root := b.root.Clone()
+	opt := b.option(root)
+	opt.Ignored = true
+	return &EnvVarOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *EnvVarOptionBuilder) Location() *Location {
 	return b.root
 }
 

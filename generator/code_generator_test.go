@@ -39,6 +39,7 @@ func TestCodeGenerate(t *testing.T) {
 		"map",
 		"condition",
 		"error_handler",
+		"env",
 	}
 	for _, test := range tests {
 		test := test

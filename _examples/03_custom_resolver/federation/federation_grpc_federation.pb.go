@@ -11,12 +11,12 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
-	"runtime/debug"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	post "example/post"
 	user "example/user"
@@ -131,6 +131,28 @@ type FederationV2DevServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 type FederationV2DevServiceCELPluginConfig struct {
 }
 
+// FederationV2DevServiceEnv keeps the values read from environment variables.
+type FederationV2DevServiceEnv struct {
+	A string                      `default:"xxx"`
+	B []int64                     `envconfig:"yyy"`
+	C map[string]grpcfed.Duration `envconfig:"zzz" required:"true"`
+	D float64                     `ignored:"true"`
+}
+
+type FederationV2DevServiceEnvKey struct{}
+
+func GetFederationV2DevServiceEnv(ctx context.Context) *FederationV2DevServiceEnv {
+	value := ctx.Value(FederationV2DevServiceEnvKey{})
+	if value == nil {
+		return nil
+	}
+	return value.(*FederationV2DevServiceEnv)
+}
+
+func withFederationV2DevServiceEnv(ctx context.Context, env *FederationV2DevServiceEnv) context.Context {
+	return context.WithValue(ctx, FederationV2DevServiceEnvKey{}, env)
+}
+
 // FederationV2DevServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -185,9 +207,10 @@ type FederationV2DevService struct {
 	errorHandler  grpcfed.ErrorHandler
 	celCacheMap   *grpcfed.CELCacheMap
 	tracer        trace.Tracer
+	env           *FederationV2DevServiceEnv
 	resolver      FederationV2DevServiceResolver
 	celTypeHelper *grpcfed.CELTypeHelper
-	envOpts       []grpcfed.CELEnvOption
+	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
 	client        *FederationV2DevServiceDependentClientSet
 }
@@ -239,19 +262,31 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 			"content": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Content"),
 			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 		},
+		"grpc.federation.private.Env": {
+			"a": grpcfed.NewCELFieldType(grpcfed.CELStringType, "A"),
+			"b": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELIntType), "B"),
+			"c": grpcfed.NewCELFieldType(grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELDurationType), "C"),
+			"d": grpcfed.NewCELFieldType(grpcfed.CELDoubleType, "D"),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
-	var envOpts []grpcfed.CELEnvOption
-	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("federation.v2dev.PostV2devType", PostV2DevType_value, PostV2DevType_name)...)
+	var celEnvOpts []grpcfed.CELEnvOption
+	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.v2dev.PostV2devType", PostV2DevType_value, PostV2DevType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.CELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	var env FederationV2DevServiceEnv
+	if err := grpcfed.LoadEnv("", &env); err != nil {
+		return nil, err
+	}
 	return &FederationV2DevService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
-		envOpts:       envOpts,
+		celEnvOpts:    celEnvOpts,
 		celTypeHelper: celTypeHelper,
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("federation.v2dev.FederationV2devService"),
+		env:           &env,
 		resolver:      cfg.Resolver,
 		client: &FederationV2DevServiceDependentClientSet{
 			Post_PostServiceClient: Post_PostServiceClient,
@@ -264,12 +299,12 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV2DevRequest) (res *GetPostV2DevResponse, e error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.FederationV2devService/GetPostV2dev")
 	defer span.End()
-
+	ctx = withFederationV2DevServiceEnv(ctx, s.env)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
@@ -316,7 +351,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 			post *PostV2Dev
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetPostV2devResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetPostV2devResponseArgument", req)}
+	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -397,6 +433,52 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	// (grpc.federation.field).by = "grpc.federation.env.a"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `grpc.federation.env.a`,
+		UseContextLibrary: false,
+		CacheIndex:        4,
+		Setter: func(v string) error {
+			ret.EnvA = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "grpc.federation.env.b[1]"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:             value,
+		Expr:              `grpc.federation.env.b[1]`,
+		UseContextLibrary: false,
+		CacheIndex:        5,
+		Setter: func(v int64) error {
+			ret.EnvB = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "grpc.federation.env.c['z']"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*durationpb.Duration]{
+		Value:             value,
+		Expr:              `grpc.federation.env.c['z']`,
+		UseContextLibrary: false,
+		CacheIndex:        6,
+		Setter: func(v *durationpb.Duration) error {
+			envCValueValue, err := s.cast_Google_Protobuf_Duration__to__Google_Protobuf_Duration(v)
+			if err != nil {
+				return err
+			}
+			ret.EnvCValue = envCValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.v2dev.GetPostV2devResponse", slog.Any("federation.v2dev.GetPostV2devResponse", s.logvalue_Federation_V2Dev_GetPostV2DevResponse(ret)))
 	return ret, nil
@@ -418,7 +500,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			user   *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.PostV2devArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.PostV2devArgument", req)}
+	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -460,7 +543,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 					Value:             value,
 					Expr:              `'bar'`,
 					UseContextLibrary: false,
-					CacheIndex:        4,
+					CacheIndex:        7,
 					Setter: func(v string) error {
 						args.Bar = v
 						return nil
@@ -503,7 +586,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 					Value:             value,
 					Expr:              `'foo'`,
 					UseContextLibrary: false,
-					CacheIndex:        5,
+					CacheIndex:        8,
 					Setter: func(v string) error {
 						args.Foo = v
 						return nil
@@ -546,7 +629,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 					Value:             value,
 					Expr:              `$.id`,
 					UseContextLibrary: false,
-					CacheIndex:        6,
+					CacheIndex:        9,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -581,7 +664,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			},
 			By:                  `res.post`,
 			ByUseContextLibrary: false,
-			ByCacheIndex:        7,
+			ByCacheIndex:        10,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -611,7 +694,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 					Value:             value,
 					Expr:              `post`,
 					UseContextLibrary: false,
-					CacheIndex:        8,
+					CacheIndex:        11,
 					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
@@ -699,7 +782,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 			u   *user.User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
+	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -730,7 +814,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 				Value:             value,
 				Expr:              `$.user_id`,
 				UseContextLibrary: false,
-				CacheIndex:        9,
+				CacheIndex:        12,
 				Setter: func(v string) error {
 					args.Id = v
 					return nil
@@ -764,7 +848,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 		},
 		By:                  `res.user`,
 		ByUseContextLibrary: false,
-		ByCacheIndex:        10,
+		ByCacheIndex:        13,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -802,6 +886,21 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	return ret, nil
 }
 
+// cast_Google_Protobuf_Duration__to__Google_Protobuf_Duration cast from "google.protobuf.Duration" to "google.protobuf.Duration".
+func (s *FederationV2DevService) cast_Google_Protobuf_Duration__to__Google_Protobuf_Duration(from *durationpb.Duration) (*durationpb.Duration, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	secondsValue := from.GetSeconds()
+	nanosValue := from.GetNanos()
+
+	return &durationpb.Duration{
+		Seconds: secondsValue,
+		Nanos:   nanosValue,
+	}, nil
+}
+
 // cast_int64__to__Federation_V2Dev_PostV2DevType cast from "int64" to "federation.v2dev.PostV2devType".
 func (s *FederationV2DevService) cast_int64__to__Federation_V2Dev_PostV2DevType(from int64) (PostV2DevType, error) {
 	return PostV2DevType(from), nil
@@ -832,6 +931,9 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_GetPostV2DevResponse(
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Federation_V2Dev_PostV2Dev(v.GetPost())),
 		slog.String("type", s.logvalue_Federation_V2Dev_PostV2DevType(v.GetType()).String()),
+		slog.String("env_a", v.GetEnvA()),
+		slog.Int64("env_b", v.GetEnvB()),
+		slog.Any("env_c_value", s.logvalue_Google_Protobuf_Duration(v.GetEnvCValue())),
 	)
 }
 
@@ -910,6 +1012,16 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_UserArgument(v *Feder
 		slog.String("title", v.Title),
 		slog.String("content", v.Content),
 		slog.String("user_id", v.UserId),
+	)
+}
+
+func (s *FederationV2DevService) logvalue_Google_Protobuf_Duration(v *durationpb.Duration) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Int64("seconds", v.GetSeconds()),
+		slog.Int64("nanos", int64(v.GetNanos())),
 	)
 }
 

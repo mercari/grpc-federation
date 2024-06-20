@@ -745,11 +745,11 @@ func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string, builder 
 func (r *Resolver) resolveRule(ctx *context, files []*File) {
 	for _, file := range files {
 		ctx := ctx.withFile(file)
-		r.resolveServiceRules(ctx, file.Services)
 		r.resolveMessageRules(ctx, file.Messages, func(name string) *source.MessageBuilder {
 			return source.NewMessageBuilder(file.Name, name)
 		})
 		r.resolveEnumRules(ctx, file.Enums)
+		r.resolveServiceRules(ctx, file.Services)
 	}
 }
 
@@ -1256,11 +1256,199 @@ func (r *Resolver) resolveEnumRules(ctx *context, enums []*Enum) {
 	}
 }
 
-func (r *Resolver) resolveServiceRule(_ *context, def *federation.ServiceRule, _ *source.ServiceOptionBuilder) *ServiceRule {
+func (r *Resolver) resolveServiceRule(ctx *context, def *federation.ServiceRule, builder *source.ServiceOptionBuilder) *ServiceRule {
 	if def == nil {
 		return nil
 	}
-	return &ServiceRule{}
+	return &ServiceRule{
+		Env: r.resolveEnv(ctx, def.GetEnv(), builder.WithEnv()),
+	}
+}
+
+func (r *Resolver) resolveEnv(ctx *context, def *federation.Env, builder *source.EnvBuilder) *Env {
+	if def == nil {
+		return nil
+	}
+	if def.GetMessage() != "" && len(def.GetVar()) != 0 {
+		ctx.addError(
+			ErrWithLocation(
+				`"message" and "var" cannot be used simultaneously`,
+				builder.Location(),
+			),
+		)
+		return nil
+	}
+
+	var vars []*EnvVar
+	if msgName := def.GetMessage(); msgName != "" {
+		builder := builder.WithMessage()
+		var msg *Message
+		if strings.Contains(msgName, ".") {
+			pkg, err := r.lookupPackage(msgName)
+			if err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						builder.Location(),
+					),
+				)
+				return nil
+			}
+			name := r.trimPackage(pkg, msgName)
+			msg = r.resolveMessage(ctx, pkg, name, source.ToLazyMessageBuilder(builder, name))
+		} else {
+			msg = r.resolveMessage(ctx, ctx.file().Package, msgName, source.ToLazyMessageBuilder(builder, msgName))
+		}
+		if msg == nil {
+			return nil
+		}
+		for _, field := range msg.Fields {
+			vars = append(vars, r.resolveEnvVarWithField(field))
+		}
+	} else {
+		for idx, v := range def.GetVar() {
+			ev := r.resolveEnvVar(ctx, v, builder.WithVar(idx))
+			if ev == nil {
+				continue
+			}
+			vars = append(vars, ev)
+		}
+	}
+	return &Env{
+		Vars: vars,
+	}
+}
+
+func (r *Resolver) resolveEnvVar(ctx *context, def *federation.EnvVar, builder *source.EnvVarBuilder) *EnvVar {
+	name := def.GetName()
+	if name == "" {
+		ctx.addError(
+			ErrWithLocation(
+				`"name" is required`,
+				builder.WithName().Location(),
+			),
+		)
+		return nil
+	}
+	if err := r.validateName(name); err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithName().Location(),
+			),
+		)
+		return nil
+	}
+	envType := def.GetType()
+	if envType == nil {
+		ctx.addError(
+			ErrWithLocation(
+				`"type" is required`,
+				builder.WithType().Location(),
+			),
+		)
+		return nil
+	}
+	typ, err := r.resolveEnvType(ctx, envType, false)
+	if err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithType().Location(),
+			),
+		)
+		return nil
+	}
+	if typ.Message != nil && typ.Message.IsMapEntry {
+		mp := typ.Message
+		mp.Name = cases.Title(language.Und).String(name) + "Entry"
+		file := ctx.file()
+		copied := *file
+		copied.Package = &Package{Name: federation.PrivatePackageName}
+		mp.File = &copied
+		r.cachedMessageMap[mp.FQDN()] = mp
+	}
+	return &EnvVar{
+		Name:   name,
+		Type:   typ,
+		Option: r.resolveEnvVarOption(def.GetOption()),
+	}
+}
+
+func (r *Resolver) resolveEnvVarWithField(field *Field) *EnvVar {
+	var opt *EnvVarOption
+	if field.Rule != nil {
+		opt = field.Rule.Env
+	}
+	return &EnvVar{
+		Name:   field.Name,
+		Type:   field.Type,
+		Option: opt,
+	}
+}
+
+func (r *Resolver) resolveEnvType(ctx *context, def *federation.EnvType, repeated bool) (*Type, error) {
+	switch def.Type.(type) {
+	case *federation.EnvType_Kind:
+		switch def.GetKind() {
+		case federation.EnvKind_STRING:
+			if repeated {
+				return StringRepeatedType, nil
+			}
+			return StringType, nil
+		case federation.EnvKind_BOOL:
+			if repeated {
+				return BoolRepeatedType, nil
+			}
+			return BoolType, nil
+		case federation.EnvKind_INT64:
+			if repeated {
+				return Int64RepeatedType, nil
+			}
+			return Int64Type, nil
+		case federation.EnvKind_UINT64:
+			if repeated {
+				return Uint64RepeatedType, nil
+			}
+			return Uint64Type, nil
+		case federation.EnvKind_DOUBLE:
+			if repeated {
+				return DoubleRepeatedType, nil
+			}
+			return DoubleType, nil
+		case federation.EnvKind_DURATION:
+			if repeated {
+				return DurationRepeatedType, nil
+			}
+			return DurationType, nil
+		}
+	case *federation.EnvType_Repeated:
+		return r.resolveEnvType(ctx, def.GetRepeated(), true)
+	case *federation.EnvType_Map:
+		mapType := def.GetMap()
+		key, err := r.resolveEnvType(ctx, mapType.GetKey(), false)
+		if err != nil {
+			return nil, err
+		}
+		value, err := r.resolveEnvType(ctx, mapType.GetValue(), false)
+		if err != nil {
+			return nil, err
+		}
+		return NewMapType(key, value), nil
+	}
+	return nil, fmt.Errorf("failed to resolve env type")
+}
+
+func (r *Resolver) resolveEnvVarOption(def *federation.EnvVarOption) *EnvVarOption {
+	if def == nil {
+		return nil
+	}
+	return &EnvVarOption{
+		Alternate: def.GetAlternate(),
+		Default:   def.GetDefault(),
+		Required:  def.GetRequired(),
+		Ignored:   def.GetIgnored(),
+	}
 }
 
 func (r *Resolver) resolveMethodRule(ctx *context, def *federation.MethodRule, builder *source.MethodBuilder) *MethodRule {
@@ -1760,8 +1948,9 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 		return ret
 	}
 	oneof := r.resolveFieldOneofRule(ctx, field, ruleDef.GetOneof(), builder)
+	envOpt := r.resolveEnvVarOption(ruleDef.GetEnv())
 	var value *Value
-	if oneof == nil {
+	if oneof == nil && envOpt == nil {
 		v, err := r.resolveValue(fieldRuleToCommonValueDef(ruleDef))
 		if err != nil {
 			ctx.addError(
@@ -1796,6 +1985,7 @@ func (r *Resolver) resolveFieldRule(ctx *context, msg *Message, field *Field, ru
 		CustomResolver: ruleDef.GetCustomResolver(),
 		Aliases:        aliases,
 		Oneof:          oneof,
+		Env:            envOpt,
 	}
 }
 
@@ -3161,6 +3351,20 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CustomTypeProvider(r.celRegistry),
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 	}
+	for _, svc := range msg.File.Services {
+		if svc.Rule == nil {
+			continue
+		}
+		if svc.Rule.Env == nil {
+			continue
+		}
+		envMsg := envToMessage(msg.File, svc.Rule.Env)
+		fileDesc := envFileDescriptor(envMsg)
+		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+			return nil, err
+		}
+		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
+	}
 	envOpts = append(envOpts, r.enumAccessors()...)
 	envOpts = append(envOpts, r.enumOperators()...)
 	for _, plugin := range r.celPluginMap {
@@ -3268,13 +3472,7 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 		if err != nil {
 			return nil, err
 		}
-		return NewMessageType(&Message{
-			IsMapEntry: true,
-			Fields: []*Field{
-				{Name: "key", Type: mapKey},
-				{Name: "value", Type: mapValue},
-			},
-		}, false), nil
+		return NewMapType(mapKey, mapValue), nil
 	case celtypes.ListKind:
 		typ, err := r.fromCELType(ctx, typ.Parameters()[0])
 		if err != nil {
@@ -3314,11 +3512,14 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 	return nil, fmt.Errorf("unknown type %s is required", typ.TypeName())
 }
 
-const privateProtoFile = "grpc/federation/private.proto"
+const (
+	privateProtoFile  = "grpc/federation/private.proto"
+	durationProtoFile = "google/protobuf/duration.proto"
+)
 
 func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {
 	desc := arg.File.Desc
-	msg := messageArgumentDescriptor(arg)
+	msg := messageToDescriptor(arg)
 	var importedPrivateFile bool
 	for _, dep := range desc.GetDependency() {
 		if dep == privateProtoFile {
@@ -3340,25 +3541,75 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 	}
 }
 
-func messageArgumentDescriptor(arg *Message) *descriptorpb.DescriptorProto {
+func envToMessage(file *File, env *Env) *Message {
+	copied := *file
+	copied.Package = &Package{
+		Name: federation.PrivatePackageName,
+	}
+	msg := &Message{
+		File: &copied,
+		Name: "Env",
+	}
+	for _, v := range env.Vars {
+		msg.Fields = append(msg.Fields, &Field{
+			Name: v.Name,
+			Type: v.Type,
+		})
+	}
+	return msg
+}
+
+func envFileDescriptor(envMsg *Message) *descriptorpb.FileDescriptorProto {
+	msg := messageToDescriptor(envMsg)
+	desc := envMsg.File.Desc
+	var (
+		importedPrivateFile  bool
+		importedDurationFile bool
+	)
+	for _, dep := range desc.GetDependency() {
+		if dep == privateProtoFile {
+			importedPrivateFile = true
+		}
+		if dep == durationProtoFile {
+			importedDurationFile = true
+		}
+	}
+	deps := append(desc.GetDependency(), envMsg.File.Name)
+	if !importedPrivateFile {
+		deps = append(deps, privateProtoFile)
+	}
+	if !importedDurationFile {
+		deps = append(deps, durationProtoFile)
+	}
+	return &descriptorpb.FileDescriptorProto{
+		Name:             proto.String("env"),
+		Package:          proto.String(federation.PrivatePackageName),
+		Dependency:       deps,
+		PublicDependency: desc.PublicDependency,
+		WeakDependency:   desc.WeakDependency,
+		MessageType:      []*descriptorpb.DescriptorProto{msg},
+	}
+}
+
+func messageToDescriptor(m *Message) *descriptorpb.DescriptorProto {
 	msg := &descriptorpb.DescriptorProto{
-		Name: proto.String(arg.Name),
+		Name: proto.String(m.Name),
 		Options: &descriptorpb.MessageOptions{
-			MapEntry: proto.Bool(arg.IsMapEntry),
+			MapEntry: proto.Bool(m.IsMapEntry),
 		},
 	}
-	for idx, field := range arg.Fields {
+	for idx, field := range m.Fields {
 		var (
 			typeName string
 			label    = descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
 		)
 		if field.Type.Message != nil && field.Type.Message.IsMapEntry {
-			mp := messageArgumentDescriptor(field.Type.Message)
+			mp := messageToDescriptor(field.Type.Message)
 			if mp.GetName() == "" {
 				mp.Name = proto.String(cases.Title(language.Und).String(field.Name) + "Entry")
 			}
 			msg.NestedType = append(msg.NestedType, mp)
-			typeName = arg.FQDN() + "." + mp.GetName()
+			typeName = m.FQDN() + "." + mp.GetName()
 			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 		} else if field.Type.Message != nil {
 			typeName = field.Type.Message.FQDN()

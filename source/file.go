@@ -96,20 +96,19 @@ func (f *File) Imports() []string {
 }
 
 type findContext struct {
-	fileName         string
-	message          *Message
-	nestedMessage    *Message
-	enum             *Enum
-	enumValue        *EnumValue
-	service          *Service
-	method           *Method
-	field            *Field
-	fieldOption      *FieldOption
-	serviceDepOption *ServiceDependencyOption
-	messageOption    *MessageOption
-	enumOption       *EnumOption
-	enumValueOption  *EnumValueOption
-	def              *VariableDefinitionOption
+	fileName        string
+	message         *Message
+	nestedMessage   *Message
+	enum            *Enum
+	enumValue       *EnumValue
+	service         *Service
+	method          *Method
+	field           *Field
+	fieldOption     *FieldOption
+	messageOption   *MessageOption
+	enumOption      *EnumOption
+	enumValueOption *EnumValueOption
+	def             *VariableDefinitionOption
 }
 
 func (c *findContext) child() *findContext {
@@ -119,20 +118,19 @@ func (c *findContext) child() *findContext {
 		nestedMsg = msg.LastNestedMessage()
 	}
 	return &findContext{
-		fileName:         c.fileName,
-		message:          msg,
-		nestedMessage:    nestedMsg,
-		enum:             c.enum.Clone(),
-		enumValue:        c.enumValue.Clone(),
-		service:          c.service.Clone(),
-		method:           c.method.Clone(),
-		field:            c.field.Clone(),
-		fieldOption:      c.fieldOption.Clone(),
-		serviceDepOption: c.serviceDepOption.Clone(),
-		messageOption:    c.messageOption.Clone(),
-		enumOption:       c.enumOption.Clone(),
-		enumValueOption:  c.enumValueOption.Clone(),
-		def:              c.def.Clone(),
+		fileName:        c.fileName,
+		message:         msg,
+		nestedMessage:   nestedMsg,
+		enum:            c.enum.Clone(),
+		enumValue:       c.enumValue.Clone(),
+		service:         c.service.Clone(),
+		method:          c.method.Clone(),
+		field:           c.field.Clone(),
+		fieldOption:     c.fieldOption.Clone(),
+		messageOption:   c.messageOption.Clone(),
+		enumOption:      c.enumOption.Clone(),
+		enumValueOption: c.enumValueOption.Clone(),
+		def:             c.def.Clone(),
 	}
 }
 
@@ -140,11 +138,6 @@ func (f *File) buildLocation(ctx *findContext) *Location {
 	loc := &Location{FileName: ctx.fileName}
 	if ctx.service != nil {
 		loc.Service = ctx.service
-		if ctx.serviceDepOption != nil {
-			loc.Service.Option = &ServiceOption{
-				Dependencies: ctx.serviceDepOption,
-			}
-		}
 		if ctx.method != nil {
 			loc.Service.Method = ctx.method
 		}
@@ -788,6 +781,65 @@ func (f *File) findServiceByPos(ctx *findContext, pos Position, node *ast.Servic
 }
 
 func (f *File) findServiceOptionByPos(ctx *findContext, pos Position, node *ast.OptionNode) *Location {
+	switch n := node.Val.(type) {
+	case *ast.MessageLiteralNode:
+		for _, elem := range n.Elements {
+			optName := elem.Name.Name.AsIdentifier()
+			switch optName {
+			case "env":
+				value, ok := elem.Val.(*ast.MessageLiteralNode)
+				if !ok {
+					return nil
+				}
+				if found := f.findEnvByPos(ctx, pos, value); found != nil {
+					return found
+				}
+			}
+		}
+	}
+	if f.containsPos(node.Val, pos) {
+		return f.buildLocation(ctx)
+	}
+	return nil
+}
+
+func (f *File) findEnvByPos(ctx *findContext, pos Position, node *ast.MessageLiteralNode) *Location {
+	for idx, elem := range node.Elements {
+		optName := elem.Name.Name.AsIdentifier()
+		switch optName {
+		case "message":
+			if f.containsPos(elem.Val, pos) {
+				return f.buildLocation(ctx)
+			}
+		case "var":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			if found := f.findEnvVarByPos(ctx, idx, pos, value); found != nil {
+				return found
+			}
+		}
+	}
+	if f.containsPos(node, pos) {
+		return f.buildLocation(ctx)
+	}
+	return nil
+}
+
+func (f *File) findEnvVarByPos(ctx *findContext, idx int, pos Position, node *ast.MessageLiteralNode) *Location {
+	for _, elem := range node.Elements {
+		optName := elem.Name.Name.AsIdentifier()
+		switch optName {
+		case "name":
+			if f.containsPos(elem.Val, pos) {
+				return f.buildLocation(ctx)
+			}
+		}
+	}
+	if f.containsPos(node, pos) {
+		return f.buildLocation(ctx)
+	}
 	return nil
 }
 
@@ -1594,7 +1646,61 @@ func (f *File) nodeInfoByService(node *ast.ServiceNode, svc *Service) *ast.NodeI
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByServiceOption(node *ast.OptionNode, _ *ServiceOption) *ast.NodeInfo {
+func (f *File) nodeInfoByServiceOption(node *ast.OptionNode, opt *ServiceOption) *ast.NodeInfo {
+	switch n := node.Val.(type) {
+	case *ast.MessageLiteralNode:
+		for _, elem := range n.Elements {
+			fieldName := elem.Name.Name.AsIdentifier()
+			switch {
+			case opt.Env != nil && fieldName == "env":
+				value, ok := elem.Val.(*ast.MessageLiteralNode)
+				if !ok {
+					return nil
+				}
+				return f.nodeInfoByEnv(value, opt.Env)
+			}
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByEnv(node *ast.MessageLiteralNode, env *Env) *ast.NodeInfo {
+	var vars []*ast.MessageLiteralNode
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case env.Message && fieldName == "message":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case env.Var != nil && fieldName == "var":
+			vars = append(vars, f.getMessageListFromNode(elem.Val)...)
+		}
+	}
+	if len(vars) != 0 {
+		return f.nodeInfoByEnvVar(vars, env.Var)
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByEnvVar(list []*ast.MessageLiteralNode, v *EnvVar) *ast.NodeInfo {
+	if v.Idx >= len(list) {
+		return nil
+	}
+	node := list[v.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case v.Name && fieldName == "name":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
+	}
 	return f.nodeInfo(node)
 }
 

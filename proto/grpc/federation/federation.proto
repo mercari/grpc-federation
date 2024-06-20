@@ -61,17 +61,81 @@ message OneofRule {}
 
 // ServiceRule define gRPC Federation rules for the service.
 message ServiceRule {
-  // dependencies defines a unique name for all services on which federation service depends.
-  // The name will be used when creating the gRPC client.
-  repeated ServiceDependency dependencies = 1 [deprecated = true];
+  // env defines the environment variable.
+  Env env = 1;
 }
 
-// ServiceDependency assigns a uniquely determined name to the service.
-message ServiceDependency {
-  // name to be used when initializing the gRPC client.
-  optional string name = 1;
-  // service is the name of the dependent service.
-  string service = 2;
+// Env is used when setting environment variables.
+// There are two ways to configure it.
+message Env {
+  // var is used to directly list environment variables.
+  repeated EnvVar var = 1;
+  // message is used to reference an already defined Protocol Buffers' message for defining environment variables.
+  // If you want to set detailed options for the fields of the message, use the `env` option in FieldRule.
+  string message = 2;
+}
+
+// EnvVar represents an environment variable.
+message EnvVar {
+  // name is an environment variable name.
+  string name = 1;
+  // type is an environment variable type.
+  EnvType type = 2;
+  // option is an additional option for parsing environment variable.
+  optional EnvVarOption option = 3;
+}
+
+// EnvKind is primitive kind list.
+enum EnvKind {
+  // UNKNOWN represents unexpected value.
+  UNKNOWN  = 0;
+  // STRING is used to convert the input value to `string` type.
+  STRING   = 1;
+  // BOOL is used to convert the input value to `bool` type.
+  BOOL     = 2;
+  // INT64 is used to convert the input value to `int64` type.
+  INT64    = 3;
+  // UINT64 is used to convert the input value to `uint64` type.
+  UINT64   = 4;
+  // DOUBLE is used to convert the input value to `double` type.
+  DOUBLE   = 5;
+  // DURATION is used to convert the input value to the `google.protobuf.Duration` type.
+  DURATION = 6;
+}
+
+// EnvType represents type information for environment variable.
+message EnvType {
+  oneof type {
+    // kind is used when the type is a primitive type.
+    EnvKind kind = 1;
+    // repeated is used when the type is a repeated type.
+    EnvType repeated = 2;
+    // map is used when the type is a map type.
+    EnvMapType map = 3;
+  }
+}
+
+// EnvMapType represents map type.
+message EnvMapType {
+  // key represents map's key type.
+  EnvType key = 1;
+  // value represents map's value type.
+  EnvType value = 2;
+}
+
+// EnvVarOption represents additional option for environment variable.
+// The option work with the `envconfig` library in Go language.
+// For detailed specifications, please refer to the library's documentation ( https://pkg.go.dev/github.com/kelseyhightower/envconfig#section-readme ).
+message EnvVarOption {
+  // alternate use this option if you want to use an environment variable with a different name than the value specified in `EnvVar.name`.
+  optional string alternate = 1;
+  // default specify the value to use as a fallback if the specified environment variable is not found.
+  optional string default = 2;
+  // required require the environment variable to exist.
+  // If it does not exist, an error will occur at startup.
+  optional bool required = 3;
+  // ignored if ignored is true, it does nothing even if the environment variable exists.
+  optional bool ignored = 4;
 }
 
 message MethodRule {
@@ -354,6 +418,8 @@ message FieldRule {
   optional string alias = 3;
   // use to evaluate any one of fields. this field only available in oneof.
   FieldOneof oneof = 4;
+  // when defining an environment variable, use it for fields where you want to set additional options.
+  EnvVarOption env = 5;
 }
 
 // FieldOneof evaluate "messages" or other field only if expr is true and assign to the oneof field.

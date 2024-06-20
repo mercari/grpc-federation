@@ -50,6 +50,7 @@ type {{ .Name }} struct {
 {{- $types := .Types }}
 {{- $oneofTypes := .OneofTypes }}
 {{- $celPlugins := .CELPlugins }}
+{{- $env := .Env }}
 
 // {{ $serviceName }}Config configuration required to initialize the service that use GRPC Federation.
 type {{ $serviceName }}Config struct {
@@ -117,6 +118,29 @@ type {{ $serviceName }}CELPluginConfig struct {
 	{{- end }}
 }
 
+{{- if $env }}
+// {{ $serviceName }}Env keeps the values read from environment variables.
+type {{ $serviceName }}Env struct {
+	{{- range $env.Vars }}
+	{{ .Name }} {{ .Type }} {{- if .Tag }}`{{ .Tag }}`{{- end }}
+	{{- end }}
+}
+
+type {{ $serviceName }}EnvKey struct{}
+
+func Get{{ $serviceName }}Env(ctx context.Context) *{{ $serviceName }}Env {
+	value := ctx.Value({{ $serviceName }}EnvKey{})
+	if value == nil {
+		return nil
+	}
+	return value.(*{{ $serviceName }}Env)
+}
+
+func with{{ $serviceName }}Env(ctx context.Context, env *{{ $serviceName }}Env) context.Context {
+	return context.WithValue(ctx, {{ $serviceName }}EnvKey{}, env)
+}
+{{- end }}
+
 // {{ $serviceName }}UnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -149,11 +173,14 @@ type {{ $serviceName }} struct {
 	errorHandler grpcfed.ErrorHandler
 	celCacheMap *grpcfed.CELCacheMap
 	tracer trace.Tracer
+	{{- if $env }}
+	env *{{ $serviceName }}Env
+	{{- end }}
 	{{- if $customResolvers }}
 	resolver {{ $serviceName }}Resolver
 	{{- end }}
 	celTypeHelper *grpcfed.CELTypeHelper
-	envOpts []grpcfed.CELEnvOption
+	celEnvOpts []grpcfed.CELEnvOption
 	celPlugins []*grpcfedcel.CELPlugin
 	client *{{ $serviceName }}DependentClientSet
 }
@@ -214,12 +241,23 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 			),
 		},
 		{{- end }}
+
+		{{- if $env }}
+		"grpc.federation.private.Env": {
+			{{- range $env.Vars }}
+			"{{ .ProtoName }}": grpcfed.NewCELFieldType({{ .CELType }}, "{{ .Name }}"),
+			{{- end }}
+		},
+		{{- end }}
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
-	var envOpts []grpcfed.CELEnvOption
-	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	var celEnvOpts []grpcfed.CELEnvOption
+	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	{{- range $enums }}
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("{{ .ProtoName }}", {{ .GoName }}_value, {{ .GoName }}_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("{{ .ProtoName }}", {{ .GoName }}_value, {{ .GoName }}_name)...)
+	{{- end }}
+	{{- if $env }}
+	celEnvOpts = append(celEnvOpts, grpcfed.CELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
 	{{- end }}
 	{{- if $celPlugins }}
 	var celPlugins []*grpcfedcel.CELPlugin
@@ -259,14 +297,23 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		celPlugins = append(celPlugins, plugin)
 	}
 	{{- end }}
+	{{- if $env }}
+	var env {{ $serviceName }}Env
+	if err := grpcfed.LoadEnv("", &env); err != nil {
+		return nil, err
+	}
+	{{- end }}
 	return &{{ $serviceName }}{
 		cfg: cfg,
 		logger: logger,
 		errorHandler: errorHandler,
-		envOpts: envOpts,
+		celEnvOpts: celEnvOpts,
 		celTypeHelper: celTypeHelper,
 		celCacheMap: grpcfed.NewCELCacheMap(),
 		tracer: otel.Tracer("{{ .FQDN }}"),
+		{{- if $env }}
+		env: &env,
+		{{- end }}
 		{{- if $customResolvers }}
 		resolver: cfg.Resolver,
 		{{- end }}
@@ -288,11 +335,14 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
 	defer span.End()
 
+	{{- if $env }}
+	ctx = with{{ $serviceName }}Env(ctx, s.env)
+	{{- end }}
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
@@ -340,7 +390,10 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			{{- end }}
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "{{ .RequestProtoType }}", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "{{ .RequestProtoType }}", req)}
+	{{- if $env }}
+	value.AddEnv(s.env)
+	{{- end }}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())

@@ -74,6 +74,14 @@ testdata/invalid_enum_alias_target.proto:67:43: required specify alias = "org.po
 67:      option (grpc.federation.enum).alias = "org.post.FakePostContent.FakeCategory";
                                                ^
 `},
+		{file: "invalid_env.proto", expected: `
+testdata/invalid_env.proto:11:9: "message" and "var" cannot be used simultaneously
+11:      env {
+             ^
+testdata/invalid_env.proto:24:16: "org.federation.Invalid" message does not exist
+24:        message: "Invalid"
+                    ^
+`},
 		{file: "invalid_error_variable.proto", expected: `
 testdata/invalid_error_variable.proto:20:17: "error" is the reserved keyword. this name is not available
 20:      def { name: "error" by: "'foo'" }

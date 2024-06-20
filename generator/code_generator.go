@@ -284,6 +284,101 @@ func (s *Service) CELCacheIndex() int {
 	return s.celCacheIndex
 }
 
+func (s *Service) Env() *Env {
+	if s.Rule == nil {
+		return nil
+	}
+	if s.Rule.Env == nil {
+		return nil
+	}
+	return &Env{
+		Env:  s.Rule.Env,
+		file: s.file,
+	}
+}
+
+type Env struct {
+	*resolver.Env
+	file *File
+}
+
+func (e *Env) Vars() []*EnvVar {
+	ret := make([]*EnvVar, 0, len(e.Env.Vars))
+	for _, v := range e.Env.Vars {
+		ret = append(ret, &EnvVar{
+			EnvVar: v,
+			file:   e.file,
+		})
+	}
+	return ret
+}
+
+type EnvVar struct {
+	*resolver.EnvVar
+	file *File
+}
+
+func (v *EnvVar) Name() string {
+	return util.ToPublicGoVariable(v.EnvVar.Name)
+}
+
+func (v *EnvVar) ProtoName() string {
+	return v.EnvVar.Name
+}
+
+const durationPkg = "google.golang.org/protobuf/types/known/durationpb"
+
+func (v *EnvVar) CELType() string {
+	return toCELTypeDeclare(v.EnvVar.Type)
+}
+
+func (v *EnvVar) Type() string {
+	var existsDurationPkg bool
+	for pkg := range v.file.pkgMap {
+		if pkg.ImportPath == durationPkg {
+			existsDurationPkg = true
+			break
+		}
+	}
+
+	text := v.file.toTypeText(v.EnvVar.Type)
+
+	// Since it is not possible to read env values directly into *durationpb.Duration,
+	// replace it with the grpcfed.Duration type.
+	defer func() {
+		// If the duration type was not used previously, delete it to maintain consistency.
+		if !existsDurationPkg {
+			for pkg := range v.file.pkgMap {
+				if pkg.ImportPath == durationPkg {
+					delete(v.file.pkgMap, pkg)
+					break
+				}
+			}
+		}
+	}()
+	return strings.ReplaceAll(text, "*durationpb.", "grpcfed.")
+}
+
+func (v *EnvVar) Tag() string {
+	if v.EnvVar.Option == nil {
+		return ""
+	}
+	var opts []string
+	if v.EnvVar.Option.Alternate != "" {
+		opts = append(opts, fmt.Sprintf("envconfig:%q", v.EnvVar.Option.Alternate))
+	}
+	if v.EnvVar.Option.Default != "" {
+		opts = append(opts, fmt.Sprintf("default:%q", v.EnvVar.Option.Default))
+	}
+	if v.EnvVar.Option.Required {
+		opts = append(opts, `required:"true"`)
+	}
+	if v.EnvVar.Option.Ignored {
+		opts = append(opts, `ignored:"true"`)
+	}
+	return strings.Join(opts, " ")
+}
+
 type Import struct {
 	Path  string
 	Alias string
@@ -310,7 +405,6 @@ func (f *File) StandardImports() []*Import {
 		{Path: "os", Used: existsPluginDef},
 		{Path: "log/slog", Used: existsServiceDef},
 		{Path: "reflect", Used: true},
-		{Path: "runtime/debug", Used: existsServiceDef},
 	}
 	usedPkgs := make([]*Import, 0, len(pkgs))
 	for _, pkg := range pkgs {
@@ -412,6 +506,9 @@ func (f *File) Enums() []*Enum {
 		protoName := enum.FQDN()
 		// ignore standard library's enum.
 		if strings.HasPrefix(protoName, "google.") {
+			continue
+		}
+		if strings.HasPrefix(protoName, "grpc.federation.") {
 			continue
 		}
 		// f.enums contain all the enums defined in the package
@@ -813,6 +910,14 @@ func toCELTypeDeclare(t *resolver.Type) string {
 	case types.Bytes:
 		return "grpcfed.CELBytesType"
 	case types.Message:
+		if t.Message != nil && t.Message.IsMapEntry {
+			key := toCELTypeDeclare(t.Message.Fields[0].Type)
+			value := toCELTypeDeclare(t.Message.Fields[1].Type)
+			return fmt.Sprintf(`grpcfed.NewCELMapType(%s, %s)`, key, value)
+		}
+		if t == resolver.DurationType {
+			return "grpcfed.CELDurationType"
+		}
 		return fmt.Sprintf(`grpcfed.NewCELObjectType(%q)`, t.Message.FQDN())
 	}
 	return ""

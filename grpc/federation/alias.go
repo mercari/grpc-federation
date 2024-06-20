@@ -5,11 +5,14 @@ package federation
 import (
 	"context"
 	"os"
+	"runtime/debug"
 	"sync"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
+	"github.com/kelseyhightower/envconfig"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,14 +29,18 @@ type (
 	Code           = codes.Code
 	RWMutex        = sync.RWMutex
 	Status         = status.Status
+	Duration       = time.Duration
 )
 
 var (
+	StackTrace            = debug.Stack
+	LoadEnv               = envconfig.Process
 	Getenv                = os.Getenv
 	GRPCErrorf            = status.Errorf
 	NewGRPCStatus         = status.New
 	ErrorGroupWithContext = errgroup.WithContext
 	NewCELEnv             = cel.NewCustomEnv
+	CELVariable           = cel.Variable
 	CELLib                = cel.Lib
 	CELDoubleType         = types.DoubleType
 	CELIntType            = types.IntType
@@ -41,12 +48,14 @@ var (
 	CELBoolType           = types.BoolType
 	CELStringType         = types.StringType
 	CELBytesType          = types.BytesType
+	CELDurationType       = types.DurationType
 	CELObjectType         = cel.ObjectType
 	CELListType           = cel.ListType
 	CELMapType            = cel.MapType
 	CELNullType           = cel.NullType
 	NewCELListType        = types.NewListType
 	NewCELObjectType      = types.NewObjectType
+	NewCELMapType         = types.NewMapType
 )
 
 const (

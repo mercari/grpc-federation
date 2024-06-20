@@ -97,18 +97,41 @@ func (o *ServiceOption) Clone() *ServiceOption {
 		return nil
 	}
 	return &ServiceOption{
-		Dependencies: o.Dependencies.Clone(),
+		Env: o.Env.Clone(),
 	}
 }
 
-func (o *ServiceDependencyOption) Clone() *ServiceDependencyOption {
+func (e *Env) Clone() *Env {
+	if e == nil {
+		return nil
+	}
+	return &Env{
+		Message: e.Message,
+		Var:     e.Var.Clone(),
+	}
+}
+
+func (v *EnvVar) Clone() *EnvVar {
+	if v == nil {
+		return nil
+	}
+	return &EnvVar{
+		Idx:    v.Idx,
+		Name:   v.Name,
+		Type:   v.Type,
+		Option: v.Option.Clone(),
+	}
+}
+
+func (o *EnvVarOption) Clone() *EnvVarOption {
 	if o == nil {
 		return nil
 	}
-	return &ServiceDependencyOption{
-		Idx:     o.Idx,
-		Name:    o.Name,
-		Service: o.Service,
+	return &EnvVarOption{
+		Alternate: o.Alternate,
+		Default:   o.Default,
+		Required:  o.Required,
+		Ignored:   o.Ignored,
 	}
 }
 

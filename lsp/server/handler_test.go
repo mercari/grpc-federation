@@ -175,7 +175,7 @@ func TestHandler_Definition(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      29,
+						Line:      24,
 						Character: 15,
 					},
 				},
@@ -184,8 +184,8 @@ func TestHandler_Definition(t *testing.T) {
 				{
 					URI: mustTestdataAbs(t, "testdata/service.proto"),
 					Range: protocol.Range{
-						Start: protocol.Position{Line: 37, Character: 8},
-						End:   protocol.Position{Line: 37, Character: 12},
+						Start: protocol.Position{Line: 32, Character: 8},
+						End:   protocol.Position{Line: 32, Character: 12},
 					},
 				},
 			},
@@ -198,7 +198,7 @@ func TestHandler_Definition(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      43,
+						Line:      38,
 						Character: 19,
 					},
 				},
