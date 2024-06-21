@@ -58,14 +58,29 @@ type Method struct {
 
 // ServiceOption represents grpc.federation.service option location.
 type ServiceOption struct {
-	Dependencies *ServiceDependencyOption
+	Env *Env
 }
 
-// ServiceDependencyOption represents dependencies option of service option.
-type ServiceDependencyOption struct {
-	Idx     int
-	Name    bool
-	Service bool
+// Env represents grpc.federation.service.env location.
+type Env struct {
+	Message bool
+	Var     *EnvVar
+}
+
+// EnvVar represents grpc.federation.service.env.var location.
+type EnvVar struct {
+	Idx    int
+	Name   bool
+	Type   bool
+	Option *EnvVarOption
+}
+
+// EnvVarOption represents grpc.federation.service.env.var.option location.
+type EnvVarOption struct {
+	Alternate bool
+	Default   bool
+	Required  bool
+	Ignored   bool
 }
 
 // MethodOption represents grpc.federation.method option location.

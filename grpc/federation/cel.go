@@ -297,6 +297,10 @@ func NewLocalValue(ctx context.Context, celTypeHelper *CELTypeHelper, envOpts []
 	}
 }
 
+func (v *LocalValue) AddEnv(env any) {
+	v.setEvalValue("grpc.federation.env", env)
+}
+
 type localValue interface {
 	do(string, func() (any, error)) (any, error)
 	rlock()

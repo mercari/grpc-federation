@@ -3532,6 +3532,161 @@ func TestErrorHandler(t *testing.T) {
 	}
 }
 
+func TestEnv(t *testing.T) {
+	t.Parallel()
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "env.proto")
+	fb := testutil.NewFileBuilder(fileName)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("Env").
+				AddField("aaa", resolver.StringType).
+				AddField("bbb", resolver.Int64RepeatedType).
+				AddField("ccc", resolver.NewMapType(resolver.StringType, resolver.DurationType)).
+				AddField("ddd", resolver.DoubleType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("EnvArgument").
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("InlineEnvService").
+				SetRule(
+					testutil.NewServiceRuleBuilder().
+						SetEnv(
+							testutil.NewEnvBuilder().
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("aaa").
+										SetType(resolver.StringType).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetDefault("xxx").
+												Build(t),
+										).
+										Build(t),
+								).
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("bbb").
+										SetType(resolver.Int64RepeatedType).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetAlternate("yyy").
+												Build(t),
+										).
+										Build(t),
+								).
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("ccc").
+										SetType(resolver.NewMapTypeWithName("CccEntry", resolver.StringType, resolver.DurationType)).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetRequired(true).
+												SetAlternate("c").
+												Build(t),
+										).
+										Build(t),
+								).
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("ddd").
+										SetType(resolver.DoubleType).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetIgnored(true).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("RefEnvService").
+				SetRule(
+					testutil.NewServiceRuleBuilder().
+						SetEnv(
+							testutil.NewEnvBuilder().
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("aaa").
+										SetType(resolver.StringType).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetDefault("xxx").
+												Build(t),
+										).
+										Build(t),
+								).
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("bbb").
+										SetType(resolver.Int64RepeatedType).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetAlternate("yyy").
+												Build(t),
+										).
+										Build(t),
+								).
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("ccc").
+										SetType(resolver.NewMapTypeWithName("CccEntry", resolver.StringType, resolver.DurationType)).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetRequired(true).
+												SetAlternate("c").
+												Build(t),
+										).
+										Build(t),
+								).
+								AddVar(
+									testutil.NewEnvVarBuilder().
+										SetName("ddd").
+										SetType(resolver.DoubleType).
+										SetOption(
+											testutil.NewEnvVarOptionBuilder().
+												SetIgnored(true).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						Build(t),
+				).
+				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+
+	r := resolver.New(testutil.Compile(t, fileName))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+	}
+	if len(result.Files[0].Services) != 2 {
+		t.Fatalf("faield to get services. expected 2 but got %d", len(result.Files[0].Services))
+	}
+	if diff := cmp.Diff(result.Files[0].Services[0], federationFile.Services[0], testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+	if diff := cmp.Diff(result.Files[0].Services[1], federationFile.Services[1], testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
 func getUserProtoBuilder(t *testing.T) *testutil.FileBuilder {
 	ub := testutil.NewFileBuilder("user.proto")
 	ref := testutil.NewBuilderReferenceManager(ub)

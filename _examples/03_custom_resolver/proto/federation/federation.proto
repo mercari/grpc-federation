@@ -5,11 +5,44 @@ package federation.v2dev;
 import "grpc/federation/federation.proto";
 import "post/post.proto";
 import "user/user.proto";
+import "google/protobuf/duration.proto";
 
 option go_package = "example/federation;federation";
 
 service FederationV2devService {
-  option (grpc.federation.service) = {};
+  option (grpc.federation.service) = {
+    env {
+      var {
+        name: "a"
+        type { kind: STRING }
+        option {
+          default: "xxx"
+        }
+      }
+      var {
+        name: "b"
+        type { repeated { kind: INT64 } }
+        option {
+          alternate: "yyy"
+        }
+      }
+      var {
+        name: "c"
+        type { map { key { kind: STRING } value { kind: DURATION } } }
+        option {
+          required: true
+          alternate: "zzz"
+        }
+      }
+      var {
+        name: "d"
+        type { kind: DOUBLE }
+        option {
+          ignored: true
+        }
+      }
+    }    
+  };
   rpc GetPostV2dev(GetPostV2devRequest) returns (GetPostV2devResponse) {};
 }
 
@@ -33,6 +66,9 @@ message GetPostV2devResponse {
   };
   PostV2dev post = 1 [(grpc.federation.field).by = "post"];
   PostV2devType type = 2 [(grpc.federation.field).by = "federation.v2dev.PostV2devType.POST_V2_DEV_TYPE"];
+  string env_a = 3 [(grpc.federation.field).by = "grpc.federation.env.a"];
+  int64 env_b = 4 [(grpc.federation.field).by = "grpc.federation.env.b[1]"];
+  google.protobuf.Duration env_c_value = 5 [(grpc.federation.field).by = "grpc.federation.env.c['z']"];
 }
 
 message PostV2dev {

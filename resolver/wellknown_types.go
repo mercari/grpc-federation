@@ -4,6 +4,7 @@ var (
 	AnyType              *Type
 	TimestampType        *Type
 	DurationType         *Type
+	DurationRepeatedType *Type
 	EmptyType            *Type
 	Int64ValueType       *Type
 	Int32ValueType       *Type
@@ -31,6 +32,7 @@ func init() {
 		}
 		if msg := file.Message("Duration"); msg != nil {
 			DurationType = NewMessageType(msg, false)
+			DurationRepeatedType = NewMessageType(msg, true)
 		}
 		if msg := file.Message("Empty"); msg != nil {
 			EmptyType = NewMessageType(msg, false)

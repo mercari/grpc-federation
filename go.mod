@@ -11,6 +11,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/tetratelabs/wazero v1.7.0
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2

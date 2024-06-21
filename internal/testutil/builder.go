@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -278,12 +279,16 @@ func (b *MessageBuilder) AddMessage(msg *resolver.Message) *MessageBuilder {
 	return b
 }
 
+var addOneofMu sync.Mutex
+
 func (b *MessageBuilder) AddOneof(oneof *resolver.Oneof) *MessageBuilder {
 	for idx, oneofField := range oneof.Fields {
 		field := b.msg.Field(oneofField.Name)
 		oneof.Fields[idx] = field
 		field.Oneof = oneof
+		addOneofMu.Lock()
 		field.Type.OneofField = &resolver.OneofField{Field: field}
+		addOneofMu.Unlock()
 	}
 	b.msg.Oneofs = append(b.msg.Oneofs, oneof)
 	oneof.Message = b.msg
@@ -511,7 +516,10 @@ type ServiceBuilder struct {
 
 func NewServiceBuilder(name string) *ServiceBuilder {
 	return &ServiceBuilder{
-		svc: &resolver.Service{Name: name},
+		svc: &resolver.Service{
+			Name:    name,
+			Methods: []*resolver.Method{},
+		},
 	}
 }
 
@@ -1446,9 +1454,99 @@ func NewServiceRuleBuilder() *ServiceRuleBuilder {
 	}
 }
 
+func (b *ServiceRuleBuilder) SetEnv(env *resolver.Env) *ServiceRuleBuilder {
+	b.rule.Env = env
+	return b
+}
+
 func (b *ServiceRuleBuilder) Build(t *testing.T) *resolver.ServiceRule {
 	t.Helper()
 	return b.rule
+}
+
+type EnvBuilder struct {
+	env *resolver.Env
+}
+
+func NewEnvBuilder() *EnvBuilder {
+	return &EnvBuilder{
+		env: &resolver.Env{},
+	}
+}
+
+func (b *EnvBuilder) AddVar(v *resolver.EnvVar) *EnvBuilder {
+	b.env.Vars = append(b.env.Vars, v)
+	return b
+}
+
+func (b *EnvBuilder) Build(t *testing.T) *resolver.Env {
+	t.Helper()
+	return b.env
+}
+
+type EnvVarBuilder struct {
+	v *resolver.EnvVar
+}
+
+func NewEnvVarBuilder() *EnvVarBuilder {
+	return &EnvVarBuilder{
+		v: &resolver.EnvVar{},
+	}
+}
+
+func (b *EnvVarBuilder) SetName(name string) *EnvVarBuilder {
+	b.v.Name = name
+	return b
+}
+
+func (b *EnvVarBuilder) SetType(typ *resolver.Type) *EnvVarBuilder {
+	b.v.Type = typ
+	return b
+}
+
+func (b *EnvVarBuilder) SetOption(opt *resolver.EnvVarOption) *EnvVarBuilder {
+	b.v.Option = opt
+	return b
+}
+
+func (b *EnvVarBuilder) Build(t *testing.T) *resolver.EnvVar {
+	t.Helper()
+	return b.v
+}
+
+type EnvVarOptionBuilder struct {
+	opt *resolver.EnvVarOption
+}
+
+func NewEnvVarOptionBuilder() *EnvVarOptionBuilder {
+	return &EnvVarOptionBuilder{
+		opt: &resolver.EnvVarOption{},
+	}
+}
+
+func (b *EnvVarOptionBuilder) SetDefault(v string) *EnvVarOptionBuilder {
+	b.opt.Default = v
+	return b
+}
+
+func (b *EnvVarOptionBuilder) SetAlternate(v string) *EnvVarOptionBuilder {
+	b.opt.Alternate = v
+	return b
+}
+
+func (b *EnvVarOptionBuilder) SetRequired(v bool) *EnvVarOptionBuilder {
+	b.opt.Required = v
+	return b
+}
+
+func (b *EnvVarOptionBuilder) SetIgnored(v bool) *EnvVarOptionBuilder {
+	b.opt.Ignored = v
+	return b
+}
+
+func (b *EnvVarOptionBuilder) Build(t *testing.T) *resolver.EnvVarOption {
+	t.Helper()
+	return b.opt
 }
 
 type MethodRuleBuilder struct {

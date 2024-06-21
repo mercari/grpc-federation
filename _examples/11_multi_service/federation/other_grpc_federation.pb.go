@@ -11,7 +11,6 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
-	"runtime/debug"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -101,7 +100,7 @@ type OtherService struct {
 	tracer        trace.Tracer
 	resolver      OtherServiceResolver
 	celTypeHelper *grpcfed.CELTypeHelper
-	envOpts       []grpcfed.CELEnvOption
+	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
 	client        *OtherServiceDependentClientSet
 }
@@ -133,19 +132,19 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
-	var envOpts []grpcfed.CELEnvOption
-	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
+	var celEnvOpts []grpcfed.CELEnvOption
+	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
 	return &OtherService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
-		envOpts:       envOpts,
+		celEnvOpts:    celEnvOpts,
 		celTypeHelper: celTypeHelper,
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("federation.OtherService"),
@@ -158,12 +157,11 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
 	ctx, span := s.tracer.Start(ctx, "federation.OtherService/Get")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
@@ -190,7 +188,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 			p *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -261,7 +259,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *Federat
 			u              *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.PostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.PostArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -582,7 +580,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Fed
 			cmp bool
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ReactionArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.ReactionArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -676,7 +674,7 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *Federat
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())

@@ -19,6 +19,27 @@ func NewMessageType(msg *Message, repeated bool) *Type {
 	}
 }
 
+func NewMapType(key, value *Type) *Type {
+	return NewMessageType(&Message{
+		IsMapEntry: true,
+		Fields: []*Field{
+			{Name: "key", Type: key},
+			{Name: "value", Type: value},
+		},
+	}, false)
+}
+
+func NewMapTypeWithName(name string, key, value *Type) *Type {
+	return NewMessageType(&Message{
+		Name:       name,
+		IsMapEntry: true,
+		Fields: []*Field{
+			{Name: "key", Type: key},
+			{Name: "value", Type: value},
+		},
+	}, false)
+}
+
 func newMessageArgument(msg *Message) *Message {
 	file := *msg.File
 	file.Package = &Package{

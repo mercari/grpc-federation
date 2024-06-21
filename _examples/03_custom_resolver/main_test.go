@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -21,6 +23,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"example/federation"
 	"example/post"
@@ -50,6 +53,20 @@ type Resolver struct {
 
 func (r *Resolver) Resolve_Federation_V2Dev_User(ctx context.Context, arg *federation.Federation_V2Dev_UserArgument) (*federation.User, error) {
 	grpcfed.SetLogger(ctx, grpcfed.Logger(ctx).With(slog.String("foo", "hoge")))
+	env := federation.GetFederationV2DevServiceEnv(ctx)
+	if env.A != "xxx" {
+		return nil, fmt.Errorf("failed to get environement variable for A: %v", env.A)
+	}
+	if !reflect.DeepEqual(env.B, []int64{1, 2, 3, 4}) {
+		return nil, fmt.Errorf("failed to get environement variable for B: %v", env.B)
+	}
+	if len(env.C) != len(envCMap) {
+		return nil, fmt.Errorf("failed to get environement variable for C: %v", env.C)
+	}
+	if env.D != 0 {
+		return nil, fmt.Errorf("failed to get environement variable for D: %v", env.D)
+	}
+	grpcfed.Logger(ctx).Debug("print env variables", slog.Any("env", env))
 
 	return &federation.User{
 		Id:   arg.U.Id,
@@ -116,9 +133,35 @@ func dialer(ctx context.Context, address string) (net.Conn, error) {
 	return listener.Dial()
 }
 
+var envCMap map[string]grpcfed.Duration
+
+func init() {
+	x, err := time.ParseDuration("10h")
+	if err != nil {
+		panic(err)
+	}
+	y, err := time.ParseDuration("20m")
+	if err != nil {
+		panic(err)
+	}
+	z, err := time.ParseDuration("30s")
+	if err != nil {
+		panic(err)
+	}
+	envCMap = map[string]grpcfed.Duration{
+		"x": grpcfed.Duration(x),
+		"y": grpcfed.Duration(y),
+		"z": grpcfed.Duration(z),
+	}
+}
+
 func TestFederation(t *testing.T) {
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
+
+	t.Setenv("YYY", "1,2,3,4")
+	t.Setenv("ZZZ", "x:10h,y:20m,z:30s")
+	t.Setenv("d", "2.0")
 
 	if os.Getenv("ENABLE_JAEGER") != "" {
 		exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
@@ -204,7 +247,10 @@ func TestFederation(t *testing.T) {
 				Name: "anonymous",
 			},
 		},
-	}, cmpopts.IgnoreUnexported(federation.GetPostV2DevResponse{}, federation.PostV2Dev{}, federation.User{})); diff != "" {
+		EnvA:      "xxx",
+		EnvB:      2,
+		EnvCValue: durationpb.New(envCMap["z"]),
+	}, cmpopts.IgnoreUnexported(federation.GetPostV2DevResponse{}, federation.PostV2Dev{}, federation.User{}, durationpb.Duration{})); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }

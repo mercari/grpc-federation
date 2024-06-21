@@ -69,6 +69,24 @@ type Method struct {
 }
 
 type ServiceRule struct {
+	Env *Env
+}
+
+type Env struct {
+	Vars []*EnvVar
+}
+
+type EnvVar struct {
+	Name   string
+	Type   *Type
+	Option *EnvVarOption
+}
+
+type EnvVarOption struct {
+	Alternate string
+	Default   string
+	Required  bool
+	Ignored   bool
 }
 
 type ServiceDependency struct {
@@ -313,6 +331,8 @@ type FieldRule struct {
 	AutoBindField *AutoBindField
 	// Oneof represents oneof for field option.
 	Oneof *FieldOneofRule
+	// Env option for environment variable.
+	Env *EnvVarOption
 }
 
 // FieldOneofRule represents grpc.federation.field.oneof.

@@ -25,7 +25,7 @@ func TestCompletion(t *testing.T) {
 	t.Run("method", func(t *testing.T) {
 		// resolver.method value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 44,
+			Line: 39,
 			Col:  19,
 		})
 		if err != nil {
@@ -45,7 +45,7 @@ func TestCompletion(t *testing.T) {
 	t.Run("request.field", func(t *testing.T) {
 		// resolver.request.field value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 45,
+			Line: 40,
 			Col:  28,
 		})
 		if err != nil {
@@ -62,7 +62,7 @@ func TestCompletion(t *testing.T) {
 	t.Run("request.by", func(t *testing.T) {
 		// resolver.request.by value position os Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 45,
+			Line: 40,
 			Col:  38,
 		})
 		if err != nil {
@@ -79,7 +79,7 @@ func TestCompletion(t *testing.T) {
 	t.Run("filter response", func(t *testing.T) {
 		// resolver.response.field value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 48,
+			Line: 43,
 			Col:  28,
 		})
 		if err != nil {
@@ -97,7 +97,7 @@ func TestCompletion(t *testing.T) {
 	t.Run("message", func(t *testing.T) {
 		// def[2].message value position of Post in service.proto file
 		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 52,
+			Line: 47,
 			Col:  17,
 		})
 		if err != nil {

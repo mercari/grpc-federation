@@ -10,6 +10,181 @@ service MyService {
 }
 ```
 
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`env`](#grpcfederationserviceenv) | Env | optional |
+
+## (grpc.federation.service).env
+
+The definition of environment variables used by the service.
+The environment variables defined here can be accessed through the `Get<service-name>Env()` function in the custom resolver. They can also be used by accessing the `grpc.federation.env` variable in CEL expressions.
+`message` and `var` cannot be used simultaneously.
+
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`message`](#grpcfederationserviceenvmessage) | string | optional |
+| [`var`](#grpcfederationserviceenvvar) | repeated EnvVar | optional |
+
+## (grpc.federation.service).env.message
+
+If there is a message that represents a collection of environment variables, you can specify that message.
+
+### Example
+
+If the following environment variables exist, they can be interpreted and handled as an `Env` message.
+
+- `FOO=hello`
+- `BAR=1`
+
+```proto
+service MyService {
+  option (grpc.federation.service) = {
+    env { message: "Env" }
+  };
+}
+
+message Env {
+  string foo = 1;
+  int64 bar = 2;
+}
+```
+
+## (grpc.federation.service).env.var
+
+The definition of the environment variable.
+
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`name`](#grpcfederationserviceenvvarname) | string | required |
+| [`type`](#grpcfederationserviceenvvartype) | EnvType | required |
+| [`option`](#grpcfederationserviceenvvaroption) | EnvVarOption | optional |
+
+## (grpc.federation.service).env.var.name
+
+The name of the environment variable. It is case insensitive.
+
+## (grpc.federation.service).env.var.type
+
+This represents the types of environment variables.
+Available types include primitive types, their repeated types, and map types.
+
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`kind`](#grpcfederationserviceenvvartypekind) | EnvKind | optional |
+| [`repeated`](#grpcfederationserviceenvvartyperepeated) | EnvType | optional |
+| [`map`](#grpcfederationserviceenvvartypemap) | EnvMapType | optional |
+
+## (grpc.federation.service).env.var.type.kind
+
+It is used to represent the following primitive types.
+
+- `string`: `STRING`
+- `bool`: `BOOL`
+- `int64`: `INT64`
+- `uint64`: `UINT64`
+- `double`: `DOUBLE`
+- `google.protobuf.Duration`: `DURATION`
+
+### Example
+
+The following example represents the equivalent of the `int64` type.
+
+```proto
+service MyService {
+  option (grpc.federation.service) = {
+    env {
+      var {
+        name: "i64"
+        type { kind: INT64 }
+      }
+    }
+  };
+}
+```
+
+## (grpc.federation.service).env.var.type.repeated
+
+It is used to represent the `repeated` type.
+
+### Example
+
+The following example represents the equivalent of the `repeated string` type.
+
+```proto
+service MyService {
+  option (grpc.federation.service) = {
+    env {
+      var {
+        name: "repeated_value"
+        type {
+          repeated {
+            kind: STRING
+          }
+        }
+      }
+    }
+  };
+}
+```
+
+## (grpc.federation.service).env.var.type.map
+
+It is used to represent a map type, specifying `EnvType` values for both key and value.
+
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`key`](#grpcfederationserviceenvvartype) | EnvType | required |
+| [`value`](#grpcfederationserviceenvvartype) | EnvType | required |
+
+### Example
+
+The following example represents the equivalent of the `map<string, int64>` type.
+
+```proto
+service MyService {
+  option (grpc.federation.service) = {
+    env {
+      var {
+        name: "map"
+        type {
+          map {
+            key { kind: STRING }
+            value { kind: INT64 }
+          }
+        }
+      }
+    }
+  };
+}
+```
+
+## (grpc.federation.service).env.var.option
+
+These are options for modifying the behavior when reading environment variables.
+
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`alternate`](#grpcfederationserviceenvvaroptionalternate) | string | optional |
+| [`default`](#grpcfederationserviceenvvaroptiondefault) | string | optional |
+| [`required`](#grpcfederationserviceenvvaroptionrequired) | bool | optional |
+| [`ignored`](#grpcfederationserviceenvvaroptionignored) | bool | optional |
+
+## (grpc.federation.service).env.var.option.alternate
+
+If you want to refer to an environment variable by a different name than specified by `var.name`, use this option.
+
+## (grpc.federation.service).env.var.option.default
+
+If you have a value you want to specify in case the environment variable does not exist, use this option.
+
+## (grpc.federation.service).env.var.option.required
+
+Make the existence of the environment variable mandatory.
+
+## (grpc.federation.service).env.var.option.ignored
+
+No action is taken even if the environment variable exists.
+
 # grpc.federation.method
 
 | field | type | required or optional |

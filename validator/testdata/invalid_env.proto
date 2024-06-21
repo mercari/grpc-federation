@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service AService {
+  option (grpc.federation.service) = {
+    env {
+      message: "Env"
+      var {
+        name: "foo"
+        type { kind: STRING }
+      }
+    }
+  };
+}
+
+service BService {
+  option (grpc.federation.service) = {
+    env {
+      message: "Invalid"
+    }
+  };
+}
+
+message Env {
+  string foo = 1;
+}

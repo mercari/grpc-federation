@@ -11,7 +11,6 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
-	"runtime/debug"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -93,7 +92,7 @@ type FederationService struct {
 	tracer        trace.Tracer
 	resolver      FederationServiceResolver
 	celTypeHelper *grpcfed.CELTypeHelper
-	envOpts       []grpcfed.CELEnvOption
+	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
 	client        *FederationServiceDependentClientSet
 }
@@ -118,14 +117,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
-	var envOpts []grpcfed.CELEnvOption
-	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	envOpts = append(envOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
+	var celEnvOpts []grpcfed.CELEnvOption
+	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
 	return &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
-		envOpts:       envOpts,
+		celEnvOpts:    celEnvOpts,
 		celTypeHelper: celTypeHelper,
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("org.federation.FederationService"),
@@ -138,12 +137,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/GetPost")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
