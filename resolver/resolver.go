@@ -44,15 +44,17 @@ type Resolver struct {
 	fieldToRuleMap     map[*Field]*federation.FieldRule
 	oneofToRuleMap     map[*Oneof]*federation.OneofRule
 
-	cachedMessageMap map[string]*Message
-	cachedEnumMap    map[string]*Enum
-	cachedMethodMap  map[string]*Method
-	cachedServiceMap map[string]*Service
+	cachedMessageMap   map[string]*Message
+	cachedEnumMap      map[string]*Enum
+	cachedEnumValueMap map[string]*EnumValue
+	cachedMethodMap    map[string]*Method
+	cachedServiceMap   map[string]*Service
 }
 
 func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 	msgMap := make(map[string]*Message)
-	celRegistry := newCELRegistry(msgMap)
+	enumValueMap := make(map[string]*EnumValue)
+	celRegistry := newCELRegistry(msgMap, enumValueMap)
 	return &Resolver{
 		files:                      files,
 		celRegistry:                celRegistry,
@@ -71,10 +73,11 @@ func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
 		fieldToRuleMap:     make(map[*Field]*federation.FieldRule),
 		oneofToRuleMap:     make(map[*Oneof]*federation.OneofRule),
 
-		cachedMessageMap: msgMap,
-		cachedEnumMap:    make(map[string]*Enum),
-		cachedMethodMap:  make(map[string]*Method),
-		cachedServiceMap: make(map[string]*Service),
+		cachedMessageMap:   msgMap,
+		cachedEnumMap:      make(map[string]*Enum),
+		cachedEnumValueMap: enumValueMap,
+		cachedMethodMap:    make(map[string]*Method),
+		cachedServiceMap:   make(map[string]*Service),
 	}
 }
 
@@ -1103,12 +1106,26 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 	}
 }
 
+func (r *Resolver) validateBindFieldEnumSelectorType(ctx *context, enumSelector *Message, toField *Field, builder *source.FieldBuilder) {
+	for _, field := range enumSelector.Fields {
+		if field.Type.Kind == types.Message && field.Type.Message.IsEnumSelector() {
+			r.validateBindFieldEnumSelectorType(ctx, field.Type.Message, toField, builder)
+		} else {
+			r.validateBindFieldType(ctx, field.Type, toField, builder)
+		}
+	}
+}
+
 func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *Field, builder *source.FieldBuilder) {
 	if fromType == nil || toField == nil {
 		return
 	}
 	toType := toField.Type
 	if fromType.Kind == types.Message {
+		if fromType.Message.IsEnumSelector() && toType.Kind == types.Enum {
+			r.validateBindFieldEnumSelectorType(ctx, fromType.Message, toField, builder)
+			return
+		}
 		if toType.Kind != types.Message {
 			ctx.addError(
 				ErrWithLocation(
@@ -3306,11 +3323,26 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 		return fmt.Errorf("%q is a reserved keyword and cannot be used as a variable name", federation.MessageArgumentVariableName)
 	}
 	expr := strings.Replace(value.Expr, "$", federation.MessageArgumentVariableName, -1)
-	r.celRegistry.clearErrors()
+	r.celRegistry.clear()
 	ast, issues := env.Compile(expr)
 	if issues.Err() != nil {
 		return errors.Join(append(r.celRegistry.errors(), issues.Err())...)
 	}
+	if len(r.celRegistry.usedEnumValueMap) != 0 {
+		for value := range r.celRegistry.usedEnumValueMap {
+			expr = strings.ReplaceAll(
+				expr,
+				value.FQDN(),
+				fmt.Sprintf("%s.value('%s')", value.Enum.FQDN(), value.Value),
+			)
+		}
+		replacedAst, issues := env.Compile(expr)
+		if issues.Err() != nil {
+			return errors.Join(append(r.celRegistry.errors(), issues.Err())...)
+		}
+		ast = replacedAst
+	}
+
 	out, err := r.fromCELType(ctx, ast.OutputType())
 	if err != nil {
 		return err
@@ -3319,6 +3351,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	if err != nil {
 		return err
 	}
+
 	var useContextLib bool
 	for _, ref := range checkedExpr.GetReferenceMap() {
 		for _, overloadID := range ref.GetOverloadId() {
@@ -3400,6 +3433,9 @@ func (r *Resolver) enumAccessors() []cel.EnvOption {
 				),
 			),
 		)
+		for _, value := range enum.Values {
+			r.cachedEnumValueMap[value.FQDN()] = value
+		}
 	}
 	return ret
 }
@@ -3504,9 +3540,25 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 		if ok && param.Kind() == celtypes.IntKind {
 			return &Type{Kind: types.Enum, Enum: enum}, nil
 		}
+		if typ.TypeName() == grpcfedcel.EnumSelectorFQDN {
+			trueType, err := r.fromCELType(ctx, typ.Parameters()[0])
+			if err != nil {
+				return nil, err
+			}
+			falseType, err := r.fromCELType(ctx, typ.Parameters()[1])
+			if err != nil {
+				return nil, err
+			}
+			if (trueType.Enum == nil && trueType.FQDN() != grpcfedcel.EnumSelectorFQDN) || (falseType.Enum == nil && falseType.FQDN() != grpcfedcel.EnumSelectorFQDN) {
+				return nil, fmt.Errorf("cannot find enum type from enum selector")
+			}
+			return NewEnumSelectorType(trueType, falseType), nil
+		}
 		return r.fromCELType(ctx, param)
 	case celtypes.NullTypeKind:
 		return NullType, nil
+	case celtypes.DynKind:
+		return nil, fmt.Errorf("dyn type is unsupported")
 	}
 
 	return nil, fmt.Errorf("unknown type %s is required", typ.TypeName())

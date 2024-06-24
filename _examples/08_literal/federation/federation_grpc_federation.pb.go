@@ -890,11 +890,6 @@ func (s *FederationService) cast_float64__to__float32(from float64) (float32, er
 	return float32(from), nil
 }
 
-// cast_int64__to__Content_ContentType cast from "int64" to "content.ContentType".
-func (s *FederationService) cast_int64__to__Content_ContentType(from int64) (content.ContentType, error) {
-	return content.ContentType(from), nil
-}
-
 // cast_int64__to__int32 cast from "int64" to "sint32".
 func (s *FederationService) cast_int64__to__int32(from int64) (int32, error) {
 	return int32(from), nil
@@ -936,19 +931,6 @@ func (s *FederationService) cast_repeated_float64__to__repeated_float32(from []f
 	ret := make([]float32, 0, len(from))
 	for _, v := range from {
 		casted, err := s.cast_float64__to__float32(v)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, casted)
-	}
-	return ret, nil
-}
-
-// cast_repeated_int64__to__repeated_Content_ContentType cast from "repeated int64" to "repeated content.ContentType".
-func (s *FederationService) cast_repeated_int64__to__repeated_Content_ContentType(from []int64) ([]content.ContentType, error) {
-	ret := make([]content.ContentType, 0, len(from))
-	for _, v := range from {
-		casted, err := s.cast_int64__to__Content_ContentType(v)
 		if err != nil {
 			return nil, err
 		}

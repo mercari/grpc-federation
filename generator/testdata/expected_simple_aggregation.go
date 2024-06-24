@@ -1078,7 +1078,6 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		ret.Items = itemsValue
 	}
 	ret.Profile = value.vars.user.GetProfile() // { name: "user", autobind: true }
-
 	switch {
 	case value.vars.user.GetAttrA() != nil:
 

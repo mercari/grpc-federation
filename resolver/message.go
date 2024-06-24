@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
+	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/types"
 )
 
@@ -36,6 +37,26 @@ func NewMapTypeWithName(name string, key, value *Type) *Type {
 		Fields: []*Field{
 			{Name: "key", Type: key},
 			{Name: "value", Type: value},
+		},
+	}, false)
+}
+
+func NewEnumSelectorType(trueType, falseType *Type) *Type {
+	return NewMessageType(&Message{
+		File: &File{
+			Package: &Package{
+				Name: "grpc.federation.private",
+			},
+			GoPackage: &GoPackage{
+				Name:       "grpcfedcel",
+				ImportPath: "github.com/mercari/grpc-federation/grpc/federation/cel",
+				AliasName:  "grpcfedcel",
+			},
+		},
+		Name: "EnumSelector",
+		Fields: []*Field{
+			{Name: "true", Type: trueType},
+			{Name: "false", Type: falseType},
 		},
 	}, false)
 }
@@ -80,6 +101,10 @@ func (m *Message) HasRule() bool {
 		return true
 	}
 	return false
+}
+
+func (m *Message) IsEnumSelector() bool {
+	return m.FQDN() == grpcfedcel.EnumSelectorFQDN
 }
 
 func (m *Message) HasResolvers() bool {

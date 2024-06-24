@@ -178,6 +178,7 @@ func TestFederation(t *testing.T) {
 					DupBody: "bodybody2",
 				},
 			},
+			Type: federation.PostType_POST_TYPE_BAR,
 		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},

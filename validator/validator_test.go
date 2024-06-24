@@ -74,6 +74,13 @@ testdata/invalid_enum_alias_target.proto:67:43: required specify alias = "org.po
 67:      option (grpc.federation.enum).alias = "org.post.FakePostContent.FakeCategory";
                                                ^
 `},
+		{file: "invalid_enum_selector.proto", expected: `
+testdata/invalid_enum_selector.proto:20:15: ERROR: <input>:1:70: string type is unexpected
+ | grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, 'foo')
+ | .....................................................................^
+20:      def { by: "grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, 'foo')" }
+                   ^
+`},
 		{file: "invalid_env.proto", expected: `
 testdata/invalid_env.proto:11:9: "message" and "var" cannot be used simultaneously
 11:      env {

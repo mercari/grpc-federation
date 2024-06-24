@@ -10,22 +10,38 @@ import (
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/types"
 )
 
 type CELRegistry struct {
 	*celtypes.Registry
-	messageMap  map[string]*Message
-	enumTypeMap map[*celtypes.Type]*Enum
-	errs        []error
+	messageMap       map[string]*Message
+	enumTypeMap      map[*celtypes.Type]*Enum
+	enumValueMap     map[string]*EnumValue
+	usedEnumValueMap map[*EnumValue]struct{}
+	errs             []error
 }
 
-func (r *CELRegistry) clearErrors() {
+func (r *CELRegistry) clear() {
 	r.errs = r.errs[:0]
+	r.usedEnumValueMap = make(map[*EnumValue]struct{})
 }
 
 func (r *CELRegistry) errors() []error {
 	return r.errs
+}
+
+func (r *CELRegistry) EnumValue(enumName string) ref.Val {
+	value := r.Registry.EnumValue(enumName)
+	if !celtypes.IsError(value) {
+		enumValue, exists := r.enumValueMap[enumName]
+		if exists {
+			r.usedEnumValueMap[enumValue] = struct{}{}
+		}
+		return value
+	}
+	return value
 }
 
 func (r *CELRegistry) FindStructFieldType(structType, fieldName string) (*celtypes.FieldType, bool) {
@@ -91,6 +107,9 @@ func toCELType(typ *Type) *cel.Type {
 		if typ.Message.IsMapEntry {
 			return cel.MapType(toCELType(typ.Message.Fields[0].Type), toCELType(typ.Message.Fields[1].Type))
 		}
+		if typ.Message.IsEnumSelector() {
+			return toEnumSelectorCELType(typ.Message)
+		}
 		return cel.ObjectType(typ.Message.FQDN())
 	case types.Bytes:
 		return cel.BytesType
@@ -100,11 +119,19 @@ func toCELType(typ *Type) *cel.Type {
 	return cel.NullType
 }
 
-func newCELRegistry(messageMap map[string]*Message) *CELRegistry {
+func toEnumSelectorCELType(sel *Message) *cel.Type {
+	trueType := toCELType(sel.Fields[0].Type)
+	falseType := toCELType(sel.Fields[1].Type)
+	return celtypes.NewOpaqueType(grpcfedcel.EnumSelectorFQDN, trueType, falseType)
+}
+
+func newCELRegistry(messageMap map[string]*Message, enumValueMap map[string]*EnumValue) *CELRegistry {
 	return &CELRegistry{
-		Registry:    celtypes.NewEmptyRegistry(),
-		messageMap:  messageMap,
-		enumTypeMap: make(map[*celtypes.Type]*Enum),
+		Registry:         celtypes.NewEmptyRegistry(),
+		messageMap:       messageMap,
+		enumTypeMap:      make(map[*celtypes.Type]*Enum),
+		enumValueMap:     enumValueMap,
+		usedEnumValueMap: make(map[*EnumValue]struct{}),
 	}
 }
 

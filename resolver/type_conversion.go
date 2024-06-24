@@ -43,27 +43,50 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 		}
 		return decls
 	}
-	decls := []*TypeConversionDecl{{From: fromType, To: toType}}
+	decls := []*TypeConversionDecl{}
 	switch {
 	case fromType.Repeated:
+		decls = append(decls, &TypeConversionDecl{From: fromType, To: toType})
 		ft := fromType.Clone()
 		tt := toType.Clone()
 		ft.Repeated = false
 		tt.Repeated = false
 		decls = append(decls, typeConversionDecls(ft, tt, convertedFQDNMap)...)
 	case fromType.OneofField != nil:
+		decls = append(decls, &TypeConversionDecl{From: fromType, To: toType})
 		ft := fromType.Clone()
 		tt := toType.Clone()
 		ft.OneofField = nil
 		tt.OneofField = nil
 		decls = append(decls, typeConversionDecls(ft, tt, convertedFQDNMap)...)
 	case fromType.Kind == types.Message:
+		if fromType.Message.IsEnumSelector() && toType.Kind == types.Enum {
+			decls = append(decls, enumSelectorTypeConversionDecls(fromType.Message, toType, convertedFQDNMap)...)
+			return decls
+		}
+		decls = append(decls, &TypeConversionDecl{From: fromType, To: toType})
 		for _, field := range toType.Message.Fields {
 			fromField := fromType.Message.Field(field.Name)
 			if fromField == nil {
 				continue
 			}
 			decls = append(decls, typeConversionDecls(fromField.Type, field.Type, convertedFQDNMap)...)
+		}
+	default:
+		decls = append(decls, &TypeConversionDecl{From: fromType, To: toType})
+	}
+	return decls
+}
+
+func enumSelectorTypeConversionDecls(msg *Message, toType *Type, convertedFQDNMap map[string]struct{}) []*TypeConversionDecl {
+	var decls []*TypeConversionDecl
+	if msg.IsEnumSelector() {
+		for _, field := range msg.Fields {
+			if field.Type.Kind == types.Message && field.Type.Message.IsEnumSelector() {
+				decls = append(decls, enumSelectorTypeConversionDecls(field.Type.Message, toType, convertedFQDNMap)...)
+			} else {
+				decls = append(decls, typeConversionDecls(field.Type, toType, convertedFQDNMap)...)
+			}
 		}
 	}
 	return decls
