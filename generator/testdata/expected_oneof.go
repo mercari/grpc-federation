@@ -506,7 +506,6 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	ret := &UserSelection{}
 
 	// field binding section.
-
 	oneof_UserA, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 		Value:             value,
 		Expr:              `m.value == $.value`,

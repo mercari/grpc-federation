@@ -1657,30 +1657,68 @@ func (m *Message) DeclVariables() []*DeclVariable {
 }
 
 type ReturnField struct {
-	Name                  string
-	Value                 string
-	CastValue             string
-	IsCustomResolverField bool
-	IsOneofField          bool
-	CEL                   *resolver.CELValue
-	OneofCaseFields       []*OneofField
-	OneofDefaultField     *OneofField
-	ResolverName          string
-	RequestType           string
-	MessageName           string
-	MessageArgumentName   string
-	ProtoComment          string
-	ZeroValue             string
-	Type                  string
+	CustomResolver *CustomResolverReturnField
+	Oneof          *OneofReturnField
+	CEL            *CELReturnField
+	AutoBind       *AutoBindReturnField
 }
 
-func (r *ReturnField) HasFieldOneofRule() bool {
-	for _, field := range r.OneofCaseFields {
+type OneofReturnField struct {
+	Name              string
+	OneofCaseFields   []*OneofField
+	OneofDefaultField *OneofField
+}
+
+type CELReturnField struct {
+	CEL          *resolver.CELValue
+	SetterParam  *SetterParam
+	ProtoComment string
+	Type         string
+}
+
+type SetterParam struct {
+	Name         string
+	Value        string
+	RequiredCast bool
+	CastFunc     string
+	EnumSelector *EnumSelectorSetterParam
+}
+
+type EnumSelectorSetterParam struct {
+	Type                  string
+	RequiredCastTrueType  bool
+	RequiredCastFalseType bool
+	TrueType              string
+	FalseType             string
+	CastTrueTypeFunc      string
+	CastFalseTypeFunc     string
+	TrueEnumSelector      *EnumSelectorSetterParam
+	FalseEnumSelector     *EnumSelectorSetterParam
+}
+
+type CustomResolverReturnField struct {
+	Name                string
+	ResolverName        string
+	RequestType         string
+	MessageArgumentName string
+	MessageName         string
+}
+
+type AutoBindReturnField struct {
+	Name         string
+	Value        string
+	RequiredCast bool
+	CastFunc     string
+	ProtoComment string
+}
+
+func (f *OneofReturnField) HasFieldOneofRule() bool {
+	for _, field := range f.OneofCaseFields {
 		if field.FieldOneofRule != nil {
 			return true
 		}
 	}
-	if r.OneofDefaultField != nil && r.OneofDefaultField.FieldOneofRule != nil {
+	if f.OneofDefaultField != nil && f.OneofDefaultField.FieldOneofRule != nil {
 		return true
 	}
 	return false
@@ -1698,6 +1736,7 @@ type OneofField struct {
 	CastValue             string
 	Message               *Message
 	FieldOneofRule        *resolver.FieldOneofRule
+	SetterParam           *SetterParam
 }
 
 func (oneof *OneofField) VariableDefinitionSet() *VariableDefinitionSet {
@@ -2122,16 +2161,22 @@ func (m *Message) ReturnFields() ([]*ReturnField, error) {
 		rule := field.Rule
 		switch {
 		case rule.CustomResolver:
-			returnFields = append(returnFields, m.customResolverToReturnField(field))
+			returnFields = append(returnFields, &ReturnField{
+				CustomResolver: m.customResolverToReturnField(field),
+			})
 		case rule.Value != nil:
 			value := rule.Value
-			returnFields = append(returnFields, m.celValueToReturnField(field, value.CEL))
+			returnFields = append(returnFields, &ReturnField{
+				CEL: m.celValueToReturnField(field, value.CEL),
+			})
 		case rule.AutoBindField != nil:
-			returnField, err := m.autoBindFieldToReturnField(field, rule.AutoBindField)
+			autoBind, err := m.autoBindFieldToReturnField(field, rule.AutoBindField)
 			if err != nil {
 				return nil, err
 			}
-			returnFields = append(returnFields, returnField)
+			returnFields = append(returnFields, &ReturnField{
+				AutoBind: autoBind,
+			})
 		}
 	}
 	for _, oneof := range m.Oneofs {
@@ -2139,12 +2184,14 @@ func (m *Message) ReturnFields() ([]*ReturnField, error) {
 		if err != nil {
 			return nil, err
 		}
-		returnFields = append(returnFields, returnField)
+		returnFields = append(returnFields, &ReturnField{
+			Oneof: returnField,
+		})
 	}
 	return returnFields, nil
 }
 
-func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindField *resolver.AutoBindField) (*ReturnField, error) {
+func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindField *resolver.AutoBindField) (*AutoBindReturnField, error) {
 	var name string
 	if autoBindField.VariableDefinition != nil {
 		name = autoBindField.VariableDefinition.Name
@@ -2153,8 +2200,8 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	fieldName := util.ToPublicGoVariable(field.Name)
 
 	var (
-		value     = fmt.Sprintf("value.vars.%s.Get%s()", name, fieldName)
-		castValue string
+		value    = fmt.Sprintf("value.vars.%s.Get%s()", name, fieldName)
+		castFunc string
 	)
 	if field.RequiredTypeConversion() {
 		var fromType *resolver.Type
@@ -2171,14 +2218,13 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 				field.FQDN(),
 			)
 		}
-		toType := field.Type
-		castFuncName := castFuncName(fromType, toType)
-		castValue = fmt.Sprintf("s.%s(value.vars.%s.Get%s())", castFuncName, name, fieldName)
+		castFunc = castFuncName(fromType, field.Type)
 	}
-	return &ReturnField{
+	return &AutoBindReturnField{
 		Name:         fieldName,
 		Value:        value,
-		CastValue:    castValue,
+		RequiredCast: field.RequiredTypeConversion(),
+		CastFunc:     castFunc,
 		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
 	}, nil
 }
@@ -2206,67 +2252,90 @@ func (m *Message) autoBindSourceType(autoBindField *resolver.AutoBindField, cand
 	}
 }
 
-func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.CELValue) *ReturnField {
+func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.CELValue) *CELReturnField {
 	toType := field.Type
 	fromType := value.Out
+
+	enumSelectorSetterParam := m.createEnumSelectorParam(fromType.Message, toType)
 
 	toText := m.file.toTypeText(toType)
 	fromText := m.file.toTypeText(fromType)
 
 	var (
-		zeroValue string
-		typ       string
-		castValue string
+		typ          string
+		requiredCast bool
 	)
 	switch fromType.Kind {
 	case types.Message:
-		zeroValue = toMakeZeroValue(m.file, fromType)
 		typ = fromText
-		if field.RequiredTypeConversion() {
-			castFuncName := castFuncName(fromType, toType)
-			castValue = fmt.Sprintf("s.%s(v)", castFuncName)
-		}
+		requiredCast = field.RequiredTypeConversion()
 	case types.Enum:
-		zeroValue = toMakeZeroValue(m.file, fromType)
 		typ = fromText
-		if field.RequiredTypeConversion() {
-			castFuncName := castFuncName(fromType, toType)
-			castValue = fmt.Sprintf("s.%s(v)", castFuncName)
-		}
+		requiredCast = field.RequiredTypeConversion()
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
-		zeroValue = toMakeZeroValue(m.file, toType)
 		typ = toText
 	}
-	return &ReturnField{
-		Name:      util.ToPublicGoVariable(field.Name),
-		Value:     "v",
-		CastValue: castValue,
-		CEL:       value,
+	return &CELReturnField{
+		CEL: value,
 		ProtoComment: field.Rule.ProtoFormat(&resolver.ProtoFormatOption{
 			Prefix:         "// ",
 			IndentSpaceNum: 2,
 		}),
-		ZeroValue: zeroValue,
-		Type:      typ,
+		Type: typ,
+		SetterParam: &SetterParam{
+			Name:         util.ToPublicGoVariable(field.Name),
+			Value:        "v",
+			RequiredCast: requiredCast,
+			EnumSelector: enumSelectorSetterParam,
+			CastFunc:     castFuncName(fromType, toType),
+		},
 	}
 }
 
-func (m *Message) customResolverToReturnField(field *resolver.Field) *ReturnField {
+func (m *Message) createEnumSelectorParam(msg *resolver.Message, toType *resolver.Type) *EnumSelectorSetterParam {
+	if msg == nil {
+		return nil
+	}
+	if !msg.IsEnumSelector() {
+		return nil
+	}
+	ret := &EnumSelectorSetterParam{
+		Type: m.file.toTypeText(toType),
+	}
+	trueType := msg.Fields[0].Type
+	if trueType.Message != nil && trueType.Message.IsEnumSelector() {
+		ret.TrueEnumSelector = m.createEnumSelectorParam(trueType.Message, toType)
+	} else {
+		ret.RequiredCastTrueType = requiredCast(trueType, toType)
+		ret.TrueType = m.file.toTypeText(trueType)
+		ret.CastTrueTypeFunc = castFuncName(trueType, toType)
+	}
+	falseType := msg.Fields[1].Type
+	if falseType.Message != nil && falseType.Message.IsEnumSelector() {
+		ret.FalseEnumSelector = m.createEnumSelectorParam(falseType.Message, toType)
+	} else {
+		ret.RequiredCastFalseType = requiredCast(falseType, toType)
+		ret.FalseType = m.file.toTypeText(falseType)
+		ret.CastFalseTypeFunc = castFuncName(falseType, toType)
+	}
+	return ret
+}
+
+func (m *Message) customResolverToReturnField(field *resolver.Field) *CustomResolverReturnField {
 	msgName := fullMessageName(m.Message)
 	resolverName := fmt.Sprintf("Resolve_%s_%s", msgName, util.ToPublicGoVariable(field.Name))
 	requestType := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
-	return &ReturnField{
-		Name:                  util.ToPublicGoVariable(field.Name),
-		IsCustomResolverField: true,
-		ResolverName:          resolverName,
-		RequestType:           requestType,
-		MessageArgumentName:   fmt.Sprintf("%sArgument", msgName),
-		MessageName:           msgName,
+	return &CustomResolverReturnField{
+		Name:                util.ToPublicGoVariable(field.Name),
+		ResolverName:        resolverName,
+		RequestType:         requestType,
+		MessageArgumentName: fmt.Sprintf("%sArgument", msgName),
+		MessageName:         msgName,
 	}
 }
 
-func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*ReturnField, error) {
+func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnField, error) {
 	var (
 		caseFields   []*OneofField
 		defaultField *OneofField
@@ -2278,15 +2347,19 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*ReturnField, 
 		rule := field.Rule
 		switch {
 		case rule.AutoBindField != nil:
-			returnField, err := m.autoBindFieldToReturnField(field, rule.AutoBindField)
+			autoBind, err := m.autoBindFieldToReturnField(field, rule.AutoBindField)
 			if err != nil {
 				return nil, err
 			}
+			var castValue string
+			if autoBind.CastFunc != "" {
+				castValue = fmt.Sprintf("s.%s(%s)", autoBind.CastFunc, autoBind.Value)
+			}
 			caseFields = append(caseFields, &OneofField{
-				Condition: fmt.Sprintf("%s != nil", returnField.Value),
-				Name:      returnField.Name,
-				Value:     returnField.Value,
-				CastValue: returnField.CastValue,
+				Condition: fmt.Sprintf("%s != nil", autoBind.Value),
+				Name:      autoBind.Name,
+				Value:     autoBind.Value,
+				CastValue: castValue,
 			})
 		case rule.Oneof != nil:
 			// explicit binding with FieldOneofRule.
@@ -2302,21 +2375,22 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*ReturnField, 
 				typ       string
 				value     string
 				castValue string
+				castFunc  string
 			)
 			switch fromType.Kind {
 			case types.Message:
 				typ = m.file.toTypeText(fromType)
 				value = fmt.Sprintf("&%s{%s: v}", oneofTypeName, fieldName)
 				if requiredCast(fromType, toType) {
-					castFuncName := castFuncName(fromType, toType)
-					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFuncName)
+					castFunc = castFuncName(fromType, toType)
+					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
 				}
 			case types.Enum:
 				typ = "int64"
 				value = fmt.Sprintf("&%s{%s: %s(v)}", oneofTypeName, fieldName, m.file.toTypeText(fromType))
 				if requiredCast(fromType, toType) {
-					castFuncName := castFuncName(fromType, toType)
-					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFuncName)
+					castFunc = castFuncName(fromType, toType)
+					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
 				}
 			default:
 				// Since fromType is a primitive type, type conversion is possible on the CEL side.
@@ -2336,6 +2410,13 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*ReturnField, 
 					CastValue:           castValue,
 					FieldOneofRule:      rule.Oneof,
 					Message:             m,
+					SetterParam: &SetterParam{
+						Name:         util.ToPublicGoVariable(oneof.Name),
+						Value:        value,
+						EnumSelector: nil,
+						RequiredCast: castFunc != "",
+						CastFunc:     castFunc,
+					},
 				}
 			} else {
 				caseFields = append(caseFields, &OneofField{
@@ -2350,13 +2431,19 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*ReturnField, 
 					CastValue:             castValue,
 					FieldOneofRule:        rule.Oneof,
 					Message:               m,
+					SetterParam: &SetterParam{
+						Name:         util.ToPublicGoVariable(oneof.Name),
+						Value:        value,
+						EnumSelector: nil,
+						RequiredCast: castFunc != "",
+						CastFunc:     castFunc,
+					},
 				})
 			}
 		}
 	}
-	return &ReturnField{
+	return &OneofReturnField{
 		Name:              util.ToPublicGoVariable(oneof.Name),
-		IsOneofField:      true,
 		OneofCaseFields:   caseFields,
 		OneofDefaultField: defaultField,
 	}, nil
@@ -3298,7 +3385,7 @@ func castName(typ *resolver.Type) string {
 	case typ.Kind == types.Enum:
 		ret += fullEnumName(typ.Enum)
 	default:
-		ret += new(File).toTypeText(&resolver.Type{Kind: typ.Kind})
+		ret += new(File).toTypeText(&resolver.Type{Kind: typ.Kind, IsNull: typ.IsNull})
 	}
 	return ret
 }

@@ -24,3 +24,15 @@ message Error {
   repeated google.rpc.Help helps = 13;
   repeated google.rpc.LocalizedMessage localized_messages = 14;
 }
+
+message EnumSelector {
+  bool cond = 1;
+  oneof true {
+    int32 true_value = 2;
+    EnumSelector true_selector = 3;
+  }
+  oneof false {
+    int32 false_value = 4;
+    EnumSelector false_selector = 5;
+  }
+}

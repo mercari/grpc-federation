@@ -432,139 +432,14 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	// field binding section.
 	{{- end }}
 	{{- range $returnFields }}
-	{{- if .IsCustomResolverField }}
-	{
-		// (grpc.federation.field).custom_resolver = true
-		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
-		var err error
-		ret.{{ .Name }}, err = s.resolver.{{ .ResolverName }}(ctx, &{{ .RequestType }}{
-			{{ .MessageArgumentName }}: req,
-			{{- if $hasMsgCustomResolver }}
-			{{ .MessageName }}: ret,
-			{{- end }}
-		})
-		if err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
-		}
-	}
-	{{- else if .IsOneofField }}
-	{{ $name := .Name }}
-	{{ $oneofFields := .OneofCaseFields }}
-	{{- $defaultOneofField := .OneofDefaultField }}
-	{{- if .HasFieldOneofRule }}
-	{{- range $oneofFields }}
-	oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-		Value: value,
-		Expr: `{{ .Expr }}`,
-		UseContextLibrary: {{ .ExprUseContextLibrary }},
-		OutType: reflect.TypeOf(true),
-		CacheIndex: {{ $msg.CELCacheIndex }},
-	})
-	if err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-	{{- end }}
-	{{- end }}
-	switch {
-	{{- range $oneofFields }}
-	case {{ .Condition }}:
-		{{- template "evalDefSet" .VariableDefinitionSet }}
-		{{- if .By }}
-		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
-			Value: value,
-			Expr: `{{ .By }}`,
-			UseContextLibrary: {{ .ByUseContextLibrary }},
-			CacheIndex: {{ $msg.CELCacheIndex }},
-			Setter: func(v {{ .Type }}) error {
-				{{- if .CastValue }}
-				{{ toLocalVariable $name }}, err := {{ .CastValue }}
-				if err != nil {
-					return nil, err
-				}
-				ret.{{ $name }} = {{ toLocalVariable $name }}
-				{{- else }}
-				ret.{{ $name }} = {{ .Value }}
-				{{- end }}
-				return nil
-			},
-		}); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
-		}
-		{{- else if .CastValue }}
-		{{ toLocalVariable $name }}, err := {{ .CastValue }}
-		if err != nil {
-			return nil, err
-		}
-		ret.{{ $name }} = {{ toLocalVariable $name }}
-		{{- else }}
-		ret.{{ $name }} = {{ .Value }}
-		{{- end }}
-	{{- end }}
-	{{- if $defaultOneofField }}
-	default:
-		{{- template "evalDefSet" $defaultOneofField.VariableDefinitionSet }}
-		{{- if $defaultOneofField.By }}
-		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $defaultOneofField.Type }}]{
-			Value: value,
-			Expr: `{{ $defaultOneofField.By }}`,
-			UseContextLibrary: {{ $defaultOneofField.ByUseContextLibrary }},
-			CacheIndex: {{ $msg.CELCacheIndex }},
-			Setter: func(v {{ $defaultOneofField.Type }}) error {
-				{{- if $defaultOneofField.CastValue }}
-				{{ toLocalVariable $name }}, err := {{ $defaultOneofField.CastValue }}
-				if err != nil {
-					return err
-				}
-				ret.{{ $name }} = {{ toLocalVariable $name }}
-				{{- else }}
-				ret.{{ $name }} = {{ $defaultOneofField.Value }}
-				{{- end }}
-				return nil
-			},
-		}); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
-		}
-		{{- end }}
-	{{- end }}
-	}
+	{{- if .CustomResolver }}
+	{{- template "setReturnValueByFieldCustomResolver" (map "HasMsgCustomResolver" $hasMsgCustomResolver "Value" .CustomResolver) }}
+	{{- else if .Oneof }}
+	{{- template "setReturnValueByOneofFields" (map "Message" $msg "Value" .Oneof) }}
 	{{- else if .CEL }}
-	{{ .ProtoComment }}
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ .Type }}]{
-		Value: value,
-		Expr: `{{ .CEL.Expr }}`,
-		UseContextLibrary: {{ .CEL.UseContextLibrary }},
-		CacheIndex: {{ $msg.CELCacheIndex }},
-		Setter: func(v {{ .Type }}) error {
-			{{- if .CastValue }}
-			{{ toLocalVariable .Name }}, err := {{ .CastValue }}
-			if err != nil {
-				return err
-			}
-			ret.{{ .Name }} = {{ toLocalVariable .Name }}
-			{{- else }}
-			ret.{{ .Name }} = {{ .Value }}
-			{{- end }}
-			return nil
-		},
-	}); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-	{{- else if .CastValue }}
-	{
-		{{ toLocalVariable .Name }}, err := {{ .CastValue }} {{ .ProtoComment }}
-		if err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
-		}
-		ret.{{ .Name }} = {{ toLocalVariable .Name }}
-	}
+	{{- template "setReturnValueByCEL" (map "Message" $msg "Value" .CEL) }}
 	{{- else }}
-	ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
+	{{- template "setReturnValueByAutoBind" .AutoBind }}
 	{{- end }}
 	{{- end }}
 
@@ -647,3 +522,220 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 {{- end }}
 
 {{- template "plugin" .CELPlugins }}
+
+{{- define "setReturnValueByFieldCustomResolver" -}}
+{{- $hasMsgCustomResolver := .HasMsgCustomResolver }}
+{{- $value := .Value }}
+{
+	// (grpc.federation.field).custom_resolver = true
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
+	var err error
+	ret.{{ $value.Name }}, err = s.resolver.{{ $value.ResolverName }}(ctx, &{{ $value.RequestType }}{
+		{{ $value.MessageArgumentName }}: req,
+		{{- if $hasMsgCustomResolver }}
+		{{ $value.MessageName }}: ret,
+		{{- end }}
+	})
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+}
+{{- end }}
+
+{{- define "setReturnValueByOneofFields" }}
+{{- $msg := .Message }}
+{{- $value := .Value }}
+{{- $name := $value.Name }}
+{{- $oneofFields := $value.OneofCaseFields }}
+{{- $defaultOneofField := $value.OneofDefaultField }}
+{{- if $value.HasFieldOneofRule }}
+{{- range $oneofFields }}
+oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+	Value: value,
+	Expr: `{{ .Expr }}`,
+	UseContextLibrary: {{ .ExprUseContextLibrary }},
+	OutType: reflect.TypeOf(true),
+	CacheIndex: {{ $msg.CELCacheIndex }},
+})
+if err != nil {
+	grpcfed.RecordErrorToSpan(ctx, err)
+	return nil, err
+}
+{{- end }}
+{{- end }}
+switch {
+	{{- range $oneofFields }}
+case {{ .Condition }}:
+	{{- template "setReturnValueByOneofField" (map "Message" $msg "Name" $name "Value" . ) }}
+	{{- end }}
+	{{- if $defaultOneofField }}
+default:
+	{{- template "setReturnValueByOneofField" (map "Message" $msg "Value" $defaultOneofField ) }}
+	{{- end }}
+}
+{{- end }}
+
+{{- define "setReturnValueByOneofField" -}}
+{{- $msg := .Message }}
+{{- $value := .Value }}
+{{- $name := .Name }}
+{{- template "evalDefSet" $value.VariableDefinitionSet }}
+{{- if $value.By }}
+if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
+	Value: value,
+	Expr: `{{ $value.By }}`,
+	UseContextLibrary: {{ $value.ByUseContextLibrary }},
+	CacheIndex: {{ $msg.CELCacheIndex }},
+	Setter: func(v {{ $value.Type }}) error {
+		{{- template "setReturnValueBySetter" $value.SetterParam }}
+		return nil
+	},
+}); err != nil {
+	grpcfed.RecordErrorToSpan(ctx, err)
+	return nil, err
+}
+{{- else if $value.CastValue }}
+{{ toLocalVariable $name }}, err := {{ $value.CastValue }}
+if err != nil {
+	return nil, err
+}
+ret.{{ $name }} = {{ toLocalVariable $name }}
+{{- else }}
+ret.{{ $name }} = {{ $value.Value }}
+{{- end }}
+{{- end }}
+
+{{- define "setReturnValueByCEL" -}}
+{{- $msg := .Message }}
+{{- $value := .Value }}
+{{ $value.ProtoComment }}
+if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
+	Value: value,
+	Expr: `{{ $value.CEL.Expr }}`,
+	UseContextLibrary: {{ $value.CEL.UseContextLibrary }},
+	CacheIndex: {{ $msg.CELCacheIndex }},
+	Setter: func(v {{ $value.Type }}) error {
+		{{- template "setReturnValueBySetter" $value.SetterParam }}
+		return nil
+	},
+}); err != nil {
+	grpcfed.RecordErrorToSpan(ctx, err)
+	return nil, err
+}
+{{- end }}
+
+{{- define "setReturnValueByAutoBind" -}}
+{{- if .RequiredCast }}
+{
+	{{ toLocalVariable .Name }}, err := s.{{ .CastFunc }}({{ .Value }}) {{ .ProtoComment }}
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	ret.{{ .Name }} = {{ toLocalVariable .Name }}
+}
+{{- else }}
+ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
+{{- end }}
+{{- end }}
+
+{{- define "setReturnValueBySetter" -}}
+{{- $name := .Name }}
+{{- $v := .Value }}
+{{- $enumSelector := .EnumSelector }}
+{{- if $enumSelector }}
+{{- template "setReturnValueByEnumSelector" (map "Name" $name "EnumSelector" $enumSelector ) }}
+{{- else if .RequiredCast }}
+{{ toLocalVariable $name }}, err := s.{{ .CastFunc }}({{ $v }})
+if err != nil {
+	return err
+}
+ret.{{ $name }} = {{ toLocalVariable $name }}
+{{- else }}
+ret.{{ $name }} = {{ $v }}
+{{- end }}
+{{- end -}}
+
+{{- define "setReturnValueByEnumSelector" -}}
+{{- $name := .Name }}
+{{- $enumSelector := .EnumSelector }}
+var {{ toLocalVariable $name }} {{ $enumSelector.Type }}
+if v.GetCond() {
+	{{- if $enumSelector.TrueEnumSelector }}
+	if err := func(v *grpcfedcel.EnumSelector) error {
+		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.TrueEnumSelector ) }}
+		return nil
+	}(v.GetTrueSelector()); err != nil {
+		return err
+	}
+	{{- else if $enumSelector.RequiredCastTrueType }}
+	casted, err := s.{{ $enumSelector.CastTrueTypeFunc }}({{ $enumSelector.TrueType }}(v.GetTrueValue()))
+	if err != nil {
+		return err
+	}
+	{{ toLocalVariable $name }} = casted
+	{{- else }}
+	{{ toLocalVariable $name }} = {{ $enumSelector.TrueType }}(v.GetTrueValue())
+	{{- end }}
+} else {
+	{{- if $enumSelector.FalseEnumSelector }}
+	if err := func(v *grpcfedcel.EnumSelector) {
+		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.FalseEnumSelector ) }}
+		return nil
+	}(v.GetFalseSelector()); err != nil {
+		return err
+	}
+	{{- else if $enumSelector.RequiredCastFalseType }}
+	casted, err := s.{{ $enumSelector.CastFalseTypeFunc }}({{ $enumSelector.FalseType }}(v.GetFalseValue()))
+	if err != nil {
+		return err
+	}
+	{{ toLocalVariable $name }} = casted
+	{{- else }}
+	{{ toLocalVariable $name }} = {{ $enumSelector.FalseType }}(v.GetFalseValue())
+	{{- end }}
+}
+ret.{{ $name }} = {{ toLocalVariable $name }}
+
+{{- end -}}
+
+{{- define "setReturnValueByEnumSelectorRecursive" -}}
+{{- $name := .Name }}
+{{- $enumSelector := .EnumSelector }}
+if v.GetCond() {
+	{{- if $enumSelector.TrueEnumSelector }}
+	if err := func(v *grpcfedcel.EnumSelector) error {
+		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.TrueEnumSelector ) }}
+		return nil
+	}(v.GetTrueSelector()); err != nil {
+		return err
+	}
+	{{- else if $enumSelector.RequiredCastTrueType }}
+	casted, err := s.{{ $enumSelector.CastTrueTypeFunc }}({{ $enumSelector.TrueType }}(v.GetTrueValue()))
+	if err != nil {
+		return err
+	}
+	{{ toLocalVariable $name }} = casted
+	{{- else }}
+	{{ toLocalVariable $name }} = {{ $enumSelector.TrueType }}(v.GetTrueValue())
+	{{- end }}
+} else {
+	{{- if $enumSelector.FalseEnumSelector }}
+	if err := func(v *grpcfedcel.EnumSelector) {
+		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.FalseEnumSelector ) }}
+		return nil
+	}(v.GetFalseSelector()); err != nil {
+		return err
+	}
+	{{- else if $enumSelector.RequiredCastFalseType }}
+	casted, err := s.{{ $enumSelector.CastFalseTypeFunc }}({{ $enumSelector.FalseType }}(v.GetFalseValue()))
+	if err != nil {
+		return err
+	}
+	{{ toLocalVariable $name }} = casted
+	{{- else }}
+	{{ toLocalVariable $name }} = {{ $enumSelector.FalseType }}(v.GetFalseValue())
+	{{- end }}
+}
+{{- end -}}

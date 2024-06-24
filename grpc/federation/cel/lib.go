@@ -44,6 +44,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 			NewListLibrary(typeAdapter),
 			new(RandLibrary),
 			new(UUIDLibrary),
+			new(EnumLibrary),
 			mdLib,
 			logLib,
 		},
@@ -54,6 +55,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 func NewASTValidators() []cel.ASTValidator {
 	return []cel.ASTValidator{
 		NewListValidator(),
+		NewEnumValidator(),
 	}
 }
 

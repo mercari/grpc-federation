@@ -369,7 +369,6 @@ func (s *FederationService) resolve_Org_Federation_MessageSelection(ctx context.
 	ret := &MessageSelection{}
 
 	// field binding section.
-
 	oneof_MsgA, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 		Value:             value,
 		Expr:              `false`,
@@ -608,7 +607,6 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	ret := &UserSelection{}
 
 	// field binding section.
-
 	oneof_UserA, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 		Value:             value,
 		Expr:              `false`,

@@ -70,10 +70,13 @@ message Post {
       }
     }
     def { name: "data2", by: "res2.post.data" }
+    def { name: "data_type" by: "grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, org.post.v2.PostDataType.POST_V2_TYPE_B)" }
+    def { name: "data_type2" by: "grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.POST_V2_TYPE_C)" }
   };
   string id = 1;
   PostData data = 2;
   PostData data2 = 3 [(grpc.federation.field).by = "data2"];
+  PostType type = 4 [(grpc.federation.field).by = "data_type2"];
 }
 
 enum PostType {

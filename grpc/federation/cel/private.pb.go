@@ -174,6 +174,137 @@ func (x *Error) GetLocalizedMessages() []*errdetails.LocalizedMessage {
 	return nil
 }
 
+type EnumSelector struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Cond bool `protobuf:"varint,1,opt,name=cond,proto3" json:"cond,omitempty"`
+	// Types that are assignable to True:
+	//
+	//	*EnumSelector_TrueValue
+	//	*EnumSelector_TrueSelector
+	True isEnumSelector_True `protobuf_oneof:"true"`
+	// Types that are assignable to False:
+	//
+	//	*EnumSelector_FalseValue
+	//	*EnumSelector_FalseSelector
+	False isEnumSelector_False `protobuf_oneof:"false"`
+}
+
+func (x *EnumSelector) Reset() {
+	*x = EnumSelector{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_grpc_federation_private_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *EnumSelector) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnumSelector) ProtoMessage() {}
+
+func (x *EnumSelector) ProtoReflect() protoreflect.Message {
+	mi := &file_grpc_federation_private_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnumSelector.ProtoReflect.Descriptor instead.
+func (*EnumSelector) Descriptor() ([]byte, []int) {
+	return file_grpc_federation_private_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *EnumSelector) GetCond() bool {
+	if x != nil {
+		return x.Cond
+	}
+	return false
+}
+
+func (m *EnumSelector) GetTrue() isEnumSelector_True {
+	if m != nil {
+		return m.True
+	}
+	return nil
+}
+
+func (x *EnumSelector) GetTrueValue() int32 {
+	if x, ok := x.GetTrue().(*EnumSelector_TrueValue); ok {
+		return x.TrueValue
+	}
+	return 0
+}
+
+func (x *EnumSelector) GetTrueSelector() *EnumSelector {
+	if x, ok := x.GetTrue().(*EnumSelector_TrueSelector); ok {
+		return x.TrueSelector
+	}
+	return nil
+}
+
+func (m *EnumSelector) GetFalse() isEnumSelector_False {
+	if m != nil {
+		return m.False
+	}
+	return nil
+}
+
+func (x *EnumSelector) GetFalseValue() int32 {
+	if x, ok := x.GetFalse().(*EnumSelector_FalseValue); ok {
+		return x.FalseValue
+	}
+	return 0
+}
+
+func (x *EnumSelector) GetFalseSelector() *EnumSelector {
+	if x, ok := x.GetFalse().(*EnumSelector_FalseSelector); ok {
+		return x.FalseSelector
+	}
+	return nil
+}
+
+type isEnumSelector_True interface {
+	isEnumSelector_True()
+}
+
+type EnumSelector_TrueValue struct {
+	TrueValue int32 `protobuf:"varint,2,opt,name=true_value,json=trueValue,proto3,oneof"`
+}
+
+type EnumSelector_TrueSelector struct {
+	TrueSelector *EnumSelector `protobuf:"bytes,3,opt,name=true_selector,json=trueSelector,proto3,oneof"`
+}
+
+func (*EnumSelector_TrueValue) isEnumSelector_True() {}
+
+func (*EnumSelector_TrueSelector) isEnumSelector_True() {}
+
+type isEnumSelector_False interface {
+	isEnumSelector_False()
+}
+
+type EnumSelector_FalseValue struct {
+	FalseValue int32 `protobuf:"varint,4,opt,name=false_value,json=falseValue,proto3,oneof"`
+}
+
+type EnumSelector_FalseSelector struct {
+	FalseSelector *EnumSelector `protobuf:"bytes,5,opt,name=false_selector,json=falseSelector,proto3,oneof"`
+}
+
+func (*EnumSelector_FalseValue) isEnumSelector_False() {}
+
+func (*EnumSelector_FalseSelector) isEnumSelector_False() {}
+
 var File_grpc_federation_private_proto protoreflect.FileDescriptor
 
 var file_grpc_federation_private_proto_rawDesc = []byte{
@@ -232,12 +363,29 @@ var file_grpc_federation_private_proto_rawDesc = []byte{
 	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x18, 0x0e, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1c, 0x2e,
 	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x72, 0x70, 0x63, 0x2e, 0x4c, 0x6f, 0x63, 0x61, 0x6c,
 	0x69, 0x7a, 0x65, 0x64, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x11, 0x6c, 0x6f, 0x63,
-	0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x42, 0x3c,
-	0x5a, 0x3a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6d, 0x65, 0x72,
-	0x63, 0x61, 0x72, 0x69, 0x2f, 0x67, 0x72, 0x70, 0x63, 0x2d, 0x66, 0x65, 0x64, 0x65, 0x72, 0x61,
-	0x74, 0x69, 0x6f, 0x6e, 0x2f, 0x67, 0x72, 0x70, 0x63, 0x2f, 0x66, 0x65, 0x64, 0x65, 0x72, 0x61,
-	0x74, 0x69, 0x6f, 0x6e, 0x2f, 0x63, 0x65, 0x6c, 0x3b, 0x63, 0x65, 0x6c, 0x62, 0x06, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x6c, 0x69, 0x7a, 0x65, 0x64, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x22, 0x95,
+	0x02, 0x0a, 0x0c, 0x45, 0x6e, 0x75, 0x6d, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x12,
+	0x12, 0x0a, 0x04, 0x63, 0x6f, 0x6e, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x63,
+	0x6f, 0x6e, 0x64, 0x12, 0x1f, 0x0a, 0x0a, 0x74, 0x72, 0x75, 0x65, 0x5f, 0x76, 0x61, 0x6c, 0x75,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x48, 0x00, 0x52, 0x09, 0x74, 0x72, 0x75, 0x65, 0x56,
+	0x61, 0x6c, 0x75, 0x65, 0x12, 0x4c, 0x0a, 0x0d, 0x74, 0x72, 0x75, 0x65, 0x5f, 0x73, 0x65, 0x6c,
+	0x65, 0x63, 0x74, 0x6f, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e, 0x67, 0x72,
+	0x70, 0x63, 0x2e, 0x66, 0x65, 0x64, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x70, 0x72,
+	0x69, 0x76, 0x61, 0x74, 0x65, 0x2e, 0x45, 0x6e, 0x75, 0x6d, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74,
+	0x6f, 0x72, 0x48, 0x00, 0x52, 0x0c, 0x74, 0x72, 0x75, 0x65, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74,
+	0x6f, 0x72, 0x12, 0x21, 0x0a, 0x0b, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x5f, 0x76, 0x61, 0x6c, 0x75,
+	0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x48, 0x01, 0x52, 0x0a, 0x66, 0x61, 0x6c, 0x73, 0x65,
+	0x56, 0x61, 0x6c, 0x75, 0x65, 0x12, 0x4e, 0x0a, 0x0e, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x5f, 0x73,
+	0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25, 0x2e,
+	0x67, 0x72, 0x70, 0x63, 0x2e, 0x66, 0x65, 0x64, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2e,
+	0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65, 0x2e, 0x45, 0x6e, 0x75, 0x6d, 0x53, 0x65, 0x6c, 0x65,
+	0x63, 0x74, 0x6f, 0x72, 0x48, 0x01, 0x52, 0x0d, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x53, 0x65, 0x6c,
+	0x65, 0x63, 0x74, 0x6f, 0x72, 0x42, 0x06, 0x0a, 0x04, 0x74, 0x72, 0x75, 0x65, 0x42, 0x07, 0x0a,
+	0x05, 0x66, 0x61, 0x6c, 0x73, 0x65, 0x42, 0x3c, 0x5a, 0x3a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6d, 0x65, 0x72, 0x63, 0x61, 0x72, 0x69, 0x2f, 0x67, 0x72, 0x70,
+	0x63, 0x2d, 0x66, 0x65, 0x64, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2f, 0x67, 0x72, 0x70,
+	0x63, 0x2f, 0x66, 0x65, 0x64, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2f, 0x63, 0x65, 0x6c,
+	0x3b, 0x63, 0x65, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -252,39 +400,42 @@ func file_grpc_federation_private_proto_rawDescGZIP() []byte {
 	return file_grpc_federation_private_proto_rawDescData
 }
 
-var file_grpc_federation_private_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_grpc_federation_private_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_grpc_federation_private_proto_goTypes = []interface{}{
 	(*Error)(nil),                          // 0: grpc.federation.private.Error
-	(*anypb.Any)(nil),                      // 1: google.protobuf.Any
-	(*errdetails.ErrorInfo)(nil),           // 2: google.rpc.ErrorInfo
-	(*errdetails.RetryInfo)(nil),           // 3: google.rpc.RetryInfo
-	(*errdetails.DebugInfo)(nil),           // 4: google.rpc.DebugInfo
-	(*errdetails.QuotaFailure)(nil),        // 5: google.rpc.QuotaFailure
-	(*errdetails.PreconditionFailure)(nil), // 6: google.rpc.PreconditionFailure
-	(*errdetails.BadRequest)(nil),          // 7: google.rpc.BadRequest
-	(*errdetails.RequestInfo)(nil),         // 8: google.rpc.RequestInfo
-	(*errdetails.ResourceInfo)(nil),        // 9: google.rpc.ResourceInfo
-	(*errdetails.Help)(nil),                // 10: google.rpc.Help
-	(*errdetails.LocalizedMessage)(nil),    // 11: google.rpc.LocalizedMessage
+	(*EnumSelector)(nil),                   // 1: grpc.federation.private.EnumSelector
+	(*anypb.Any)(nil),                      // 2: google.protobuf.Any
+	(*errdetails.ErrorInfo)(nil),           // 3: google.rpc.ErrorInfo
+	(*errdetails.RetryInfo)(nil),           // 4: google.rpc.RetryInfo
+	(*errdetails.DebugInfo)(nil),           // 5: google.rpc.DebugInfo
+	(*errdetails.QuotaFailure)(nil),        // 6: google.rpc.QuotaFailure
+	(*errdetails.PreconditionFailure)(nil), // 7: google.rpc.PreconditionFailure
+	(*errdetails.BadRequest)(nil),          // 8: google.rpc.BadRequest
+	(*errdetails.RequestInfo)(nil),         // 9: google.rpc.RequestInfo
+	(*errdetails.ResourceInfo)(nil),        // 10: google.rpc.ResourceInfo
+	(*errdetails.Help)(nil),                // 11: google.rpc.Help
+	(*errdetails.LocalizedMessage)(nil),    // 12: google.rpc.LocalizedMessage
 }
 var file_grpc_federation_private_proto_depIdxs = []int32{
-	1,  // 0: grpc.federation.private.Error.details:type_name -> google.protobuf.Any
-	1,  // 1: grpc.federation.private.Error.custom_messages:type_name -> google.protobuf.Any
-	2,  // 2: grpc.federation.private.Error.error_info:type_name -> google.rpc.ErrorInfo
-	3,  // 3: grpc.federation.private.Error.retry_info:type_name -> google.rpc.RetryInfo
-	4,  // 4: grpc.federation.private.Error.debug_info:type_name -> google.rpc.DebugInfo
-	5,  // 5: grpc.federation.private.Error.quota_failures:type_name -> google.rpc.QuotaFailure
-	6,  // 6: grpc.federation.private.Error.precondition_failures:type_name -> google.rpc.PreconditionFailure
-	7,  // 7: grpc.federation.private.Error.bad_requests:type_name -> google.rpc.BadRequest
-	8,  // 8: grpc.federation.private.Error.request_info:type_name -> google.rpc.RequestInfo
-	9,  // 9: grpc.federation.private.Error.resource_info:type_name -> google.rpc.ResourceInfo
-	10, // 10: grpc.federation.private.Error.helps:type_name -> google.rpc.Help
-	11, // 11: grpc.federation.private.Error.localized_messages:type_name -> google.rpc.LocalizedMessage
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	2,  // 0: grpc.federation.private.Error.details:type_name -> google.protobuf.Any
+	2,  // 1: grpc.federation.private.Error.custom_messages:type_name -> google.protobuf.Any
+	3,  // 2: grpc.federation.private.Error.error_info:type_name -> google.rpc.ErrorInfo
+	4,  // 3: grpc.federation.private.Error.retry_info:type_name -> google.rpc.RetryInfo
+	5,  // 4: grpc.federation.private.Error.debug_info:type_name -> google.rpc.DebugInfo
+	6,  // 5: grpc.federation.private.Error.quota_failures:type_name -> google.rpc.QuotaFailure
+	7,  // 6: grpc.federation.private.Error.precondition_failures:type_name -> google.rpc.PreconditionFailure
+	8,  // 7: grpc.federation.private.Error.bad_requests:type_name -> google.rpc.BadRequest
+	9,  // 8: grpc.federation.private.Error.request_info:type_name -> google.rpc.RequestInfo
+	10, // 9: grpc.federation.private.Error.resource_info:type_name -> google.rpc.ResourceInfo
+	11, // 10: grpc.federation.private.Error.helps:type_name -> google.rpc.Help
+	12, // 11: grpc.federation.private.Error.localized_messages:type_name -> google.rpc.LocalizedMessage
+	1,  // 12: grpc.federation.private.EnumSelector.true_selector:type_name -> grpc.federation.private.EnumSelector
+	1,  // 13: grpc.federation.private.EnumSelector.false_selector:type_name -> grpc.federation.private.EnumSelector
+	14, // [14:14] is the sub-list for method output_type
+	14, // [14:14] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_grpc_federation_private_proto_init() }
@@ -305,6 +456,24 @@ func file_grpc_federation_private_proto_init() {
 				return nil
 			}
 		}
+		file_grpc_federation_private_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*EnumSelector); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+	}
+	file_grpc_federation_private_proto_msgTypes[1].OneofWrappers = []interface{}{
+		(*EnumSelector_TrueValue)(nil),
+		(*EnumSelector_TrueSelector)(nil),
+		(*EnumSelector_FalseValue)(nil),
+		(*EnumSelector_FalseSelector)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -312,7 +481,7 @@ func file_grpc_federation_private_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_grpc_federation_private_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
