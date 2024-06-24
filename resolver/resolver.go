@@ -3384,14 +3384,7 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CustomTypeProvider(r.celRegistry),
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 	}
-	for _, svc := range msg.File.Services {
-		if svc.Rule == nil {
-			continue
-		}
-		if svc.Rule.Env == nil {
-			continue
-		}
-		envMsg := envToMessage(msg.File, svc.Rule.Env)
+	if envMsg := r.getEnvMessage(msg); envMsg != nil {
 		fileDesc := envFileDescriptor(envMsg)
 		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
 			return nil, err
@@ -3411,6 +3404,31 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		return nil, err
 	}
 	return env, nil
+}
+
+func (r *Resolver) getEnvMessage(msg *Message) *Message {
+	if msg.File == nil {
+		return nil
+	}
+	if msg.File.Package == nil {
+		return nil
+	}
+	for _, file := range msg.File.Package.Files {
+		for _, svc := range file.Services {
+			if svc.Rule == nil {
+				continue
+			}
+			if svc.Rule.Env == nil {
+				continue
+			}
+			// It will be created using the Env definition of the first matched service.
+			// TODO: Since it might match multiple services,
+			// it's necessary to verify whether there are any fields in the Env that are not common among those services.
+			// Currently, it targets services that exist in the same package as the message.
+			return envToMessage(svc.File, svc.Rule.Env)
+		}
+	}
+	return nil
 }
 
 func (r *Resolver) enumAccessors() []cel.EnvOption {
