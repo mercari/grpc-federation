@@ -3544,6 +3544,12 @@ func (r *Resolver) enumAccessors() []cel.EnvOption {
 					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
 				),
 			),
+			cel.Function(
+				fmt.Sprintf("%s.from", enum.FQDN()),
+				cel.Overload(fmt.Sprintf("%s_from_int_enum", enum.FQDN()), []*cel.Type{cel.IntType}, celtypes.NewOpaqueType(enum.FQDN(), cel.IntType),
+					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
+				),
+			),
 		)
 		for _, value := range enum.Values {
 			r.cachedEnumValueMap[value.FQDN()] = value
