@@ -990,6 +990,9 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 		}
 		rule := field.Rule
 		if rule.Value != nil {
+			// If you are explicitly using CEL for field binding and the binding target uses multiple enum aliases,
+			// we must bind the value of the EnumSelector.
+			// Otherwise, an int type might be directly specified, making it unclear which enum it should be linked to.
 			if err := r.validateEnumMultipleAliases(rule.Value.Type(), field); err != nil {
 				ctx.addError(
 					ErrWithLocation(
