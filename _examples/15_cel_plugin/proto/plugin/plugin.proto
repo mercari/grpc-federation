@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package example.regexp;
 
-import "grpc/federation/plugin.proto";
+import "grpc/federation/federation.proto";
 
 option go_package = "example/plugin;pluginpb";
 
@@ -10,7 +10,7 @@ message Regexp {
   uint32 ptr = 1; // store raw pointer value.
 }
 
-option (grpc.federation.plugin).export = {
+option (grpc.federation.file).plugin.export = {
   name: "regexp"
   types: [
     {
@@ -22,13 +22,10 @@ option (grpc.federation.plugin).export = {
           desc: "matchString reports whether the string s contains any match of the regular expression"
           args {
             name: "s"
-            type: "string"
+            type { kind: STRING }
             desc: "target text"
           }
-          return {
-            type: "bool"
-            desc: "if matched, returns true"
-          }
+          return { kind: BOOL }
         }
       ]
     }
@@ -39,17 +36,17 @@ option (grpc.federation.plugin).export = {
       desc: "compile parses a regular expression and returns, if successful, a Regexp that can be used to match against text"
       args {
         name: "expr"
-        type: "string"
+        type { kind: STRING }
         desc: "a regular expression text"
       }
-      return { type: "Regexp" }
+      return { message: "Regexp" }
     }
   ]
   variables: [
     {
       name: "val"
       desc: "a variable for test"
-      type: "string"
+      type { kind: STRING }
     }
   ]
 };

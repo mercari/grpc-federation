@@ -308,7 +308,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[map[int64]string, *localValueType]{
 			Name: `map_value`,
-			Type: grpcfed.CELMapType(grpcfed.CELIntType, grpcfed.CELStringType),
+			Type: grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType),
 			Setter: func(value *localValueType, v map[int64]string) error {
 				value.vars.map_value = v
 				return nil

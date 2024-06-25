@@ -40,7 +40,7 @@ var (
 	NewGRPCStatus         = status.New
 	ErrorGroupWithContext = errgroup.WithContext
 	NewCELEnv             = cel.NewCustomEnv
-	CELVariable           = cel.Variable
+	NewCELVariable        = cel.Variable
 	CELLib                = cel.Lib
 	CELDoubleType         = types.DoubleType
 	CELIntType            = types.IntType
@@ -51,7 +51,6 @@ var (
 	CELDurationType       = types.DurationType
 	CELObjectType         = cel.ObjectType
 	CELListType           = cel.ListType
-	CELMapType            = cel.MapType
 	CELNullType           = cel.NullType
 	NewCELListType        = types.NewListType
 	NewCELObjectType      = types.NewObjectType
