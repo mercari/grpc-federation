@@ -440,7 +440,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		/*
 		   def {
 		     name: "data_type"
-		     by: "grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, org.post.v2.PostDataType.POST_V2_TYPE_B)"
+		     by: "grpc.federation.enum.select(true, org.post.PostDataType.value('POST_TYPE_B'), org.post.v2.PostDataType.value('POST_V2_TYPE_B'))"
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*grpcfedcel.EnumSelector, *localValueType]{
@@ -450,7 +450,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				value.vars.data_type = v
 				return nil
 			},
-			By:                  `grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, org.post.v2.PostDataType.POST_V2_TYPE_B)`,
+			By:                  `grpc.federation.enum.select(true, org.post.PostDataType.value('POST_TYPE_B'), org.post.v2.PostDataType.value('POST_V2_TYPE_B'))`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        7,
 		}); err != nil {
@@ -462,7 +462,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		/*
 		   def {
 		     name: "data_type2"
-		     by: "grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.POST_V2_TYPE_C)"
+		     by: "grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.value('POST_V2_TYPE_C'))"
 		   }
 		*/
 		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*grpcfedcel.EnumSelector, *localValueType]{
@@ -472,7 +472,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				value.vars.data_type2 = v
 				return nil
 			},
-			By:                  `grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.POST_V2_TYPE_C)`,
+			By:                  `grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.value('POST_V2_TYPE_C'))`,
 			ByUseContextLibrary: false,
 			ByCacheIndex:        8,
 		}); err != nil {

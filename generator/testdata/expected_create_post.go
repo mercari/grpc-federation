@@ -557,6 +557,11 @@ func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *po
 	}, nil
 }
 
+// cast_int64__to__Org_Federation_PostType cast from "int64" to "org.federation.PostType".
+func (s *FederationService) cast_int64__to__Org_Federation_PostType(from int64) (PostType, error) {
+	return PostType(from), nil
+}
+
 func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) slog.Value {
 	if v == nil {
 		return slog.GroupValue()

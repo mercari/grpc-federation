@@ -75,9 +75,9 @@ testdata/invalid_enum_alias_target.proto:67:43: required specify alias = "org.po
                                                ^
 `},
 		{file: "invalid_enum_selector.proto", expected: `
-testdata/invalid_enum_selector.proto:20:15: ERROR: <input>:1:70: string type is unexpected
+testdata/invalid_enum_selector.proto:20:15: ERROR: <input>:1:56: cannot specify an int type. if you are directly specifying an enum value, you need to explicitly use "pkg.EnumName.value('ENUM_VALUE')" function to use the enum type
  | grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, 'foo')
- | .....................................................................^
+ | .......................................................^
 20:      def { by: "grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, 'foo')" }
                    ^
 `},
