@@ -3454,6 +3454,10 @@ func (r *Resolver) getEnvMessage(msg *Message) *Message {
 			envSvcs = append(envSvcs, svc)
 		}
 	}
+
+	// If there are multiple services with env, we do not have a method to select one from them.
+	// Therefore, we proceed only when there is a single candidate service.
+	// Since validation for cases with multiple services is done elsewhere, we don't need to create an error here.
 	if len(envSvcs) != 1 {
 		return nil
 	}
