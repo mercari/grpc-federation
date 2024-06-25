@@ -19,7 +19,7 @@ func (e *Error) Error() string {
 	for _, err := range e.Errs {
 		errs = append(errs, err.Error())
 	}
-	return fmt.Sprintf("grpc-federation: %s", strings.Join(errs, ": "))
+	return fmt.Sprintf("grpc-federation: %s", strings.Join(errs, "\n"))
 }
 
 // LocationError holds error message with location.

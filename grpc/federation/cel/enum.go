@@ -107,7 +107,6 @@ func (v *enumValidator) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, 
 
 	candidateTypes := []*celtypes.Type{
 		celtypes.NewOpaqueType(EnumSelectorFQDN),
-		celtypes.IntType,
 		celtypes.NewOpaqueType("enum", celtypes.IntType),
 	}
 
@@ -182,6 +181,11 @@ func (v *enumValidator) validateType(got *celtypes.Type, candidates ...*celtypes
 		default:
 			return nil
 		}
+	}
+	if got.TypeName() == "int" {
+		return fmt.Errorf(
+			`cannot specify an int type. if you are directly specifying an enum value, you need to explicitly use "pkg.EnumName.value('ENUM_VALUE')" function to use the enum type`,
+		)
 	}
 	return fmt.Errorf("%s type is unexpected", got.TypeName())
 }

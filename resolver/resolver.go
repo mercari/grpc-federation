@@ -990,7 +990,19 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 		}
 		rule := field.Rule
 		if rule.Value != nil {
-			r.validateBindFieldType(ctx, rule.Value.Type(), field, builder)
+			// If you are explicitly using CEL for field binding and the binding target uses multiple enum aliases,
+			// we must bind the value of the EnumSelector.
+			// Otherwise, an int type might be directly specified, making it unclear which enum it should be linked to.
+			if err := r.validateEnumMultipleAliases(rule.Value.Type(), field); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						builder.Location(),
+					),
+				)
+			} else {
+				r.validateBindFieldType(ctx, rule.Value.Type(), field, builder)
+			}
 		}
 		for _, alias := range rule.Aliases {
 			r.validateBindFieldType(ctx, alias.Type, field, builder)
@@ -1290,6 +1302,27 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 		)
 		return
 	}
+}
+
+func (r *Resolver) validateEnumMultipleAliases(fromType *Type, toField *Field) error {
+	toType := toField.Type
+	if toType.Kind != types.Enum {
+		return nil
+	}
+	if toType.Enum == nil || toType.Enum.Rule == nil {
+		return nil
+	}
+	if len(toType.Enum.Rule.Aliases) <= 1 {
+		return nil
+	}
+
+	if fromType == nil {
+		return nil
+	}
+	if fromType.Kind == types.Message && fromType.Message != nil && fromType.Message.IsEnumSelector() {
+		return nil
+	}
+	return errors.New(`if multiple aliases are specified, you must use grpc.federation.enum.select function to bind`)
 }
 
 func (r *Resolver) resolveEnumRules(ctx *context, enums []*Enum) {
@@ -3356,20 +3389,6 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	ast, issues := env.Compile(expr)
 	if issues.Err() != nil {
 		return errors.Join(append(r.celRegistry.errors(), issues.Err())...)
-	}
-	if len(r.celRegistry.usedEnumValueMap) != 0 {
-		for value := range r.celRegistry.usedEnumValueMap {
-			expr = strings.ReplaceAll(
-				expr,
-				value.FQDN(),
-				fmt.Sprintf("%s.value('%s')", value.Enum.FQDN(), value.Value),
-			)
-		}
-		replacedAst, issues := env.Compile(expr)
-		if issues.Err() != nil {
-			return errors.Join(append(r.celRegistry.errors(), issues.Err())...)
-		}
-		ast = replacedAst
 	}
 
 	out, err := r.fromCELType(ctx, ast.OutputType())

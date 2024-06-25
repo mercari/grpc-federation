@@ -52,6 +52,7 @@ message Post {
   string id = 1;
   PostData data = 2;
   PostData data2 = 3 [(grpc.federation.field).by = "data2"];
+  PostType post_type = 4 [(grpc.federation.field).by = "org.post.PostDataType.POST_TYPE_A"];
 }
 
 enum PostType {
