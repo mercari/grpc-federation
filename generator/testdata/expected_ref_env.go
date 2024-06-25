@@ -127,7 +127,7 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	celEnvOpts = append(celEnvOpts, grpcfed.CELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
 	var env RefEnvServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err

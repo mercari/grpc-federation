@@ -9,6 +9,10 @@ import "grpc/federation/private.proto";
 
 option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
 
+extend google.protobuf.FileOptions {
+  FileRule file = 1187;
+}
+
 extend google.protobuf.ServiceOptions {
   ServiceRule service = 1187;
 }
@@ -35,6 +39,10 @@ extend google.protobuf.EnumValueOptions {
 
 extend google.protobuf.OneofOptions {
   OneofRule oneof = 1187;
+}
+
+message FileRule {
+  CELPlugin plugin = 1;
 }
 
 message EnumRule {
@@ -85,8 +93,8 @@ message EnvVar {
   optional EnvVarOption option = 3;
 }
 
-// EnvKind is primitive kind list.
-enum EnvKind {
+// TypeKind is primitive kind list.
+enum TypeKind {
   // UNKNOWN represents unexpected value.
   UNKNOWN = 0;
   // STRING is used to convert the input value to `string` type.
@@ -107,7 +115,7 @@ enum EnvKind {
 message EnvType {
   oneof type {
     // kind is used when the type is a primitive type.
-    EnvKind kind = 1;
+    TypeKind kind = 1;
     // repeated is used when the type is a repeated type.
     EnvType repeated = 2;
     // map is used when the type is a map type.
@@ -445,4 +453,94 @@ message FieldOneof {
   // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
   // Variables are already defined in MessageRule and FieldOneOf can be used.
   string by = 4;
+}
+
+// CELPlugin define schema of CEL plugin.
+message CELPlugin {
+  repeated CELPluginExport export = 1;
+}
+
+// CELPluginExport describe the schema to be exposed as a CEL plugin.
+message CELPluginExport {
+  // name is the plugin name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // types describe the message type you want to expose.
+  repeated CELReceiverType types = 3;
+  // functions describe the definition of the function you want to expose.
+  repeated CELFunction functions = 4;
+  // variables describe the definition of the variable you want to expose.
+  repeated CELVariable variables = 5;
+}
+
+// CELFunction represents the CEL function definition.
+message CELFunction {
+  // name is the function name.
+  string name = 1;
+  // desc is the description of function.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // args describe the definition of the function argument.
+  repeated CELFunctionArgument args = 3;
+  // return describe the definition of return type of function.
+  CELType return = 4;
+}
+
+// CELReceiverType represents methods tied to the message.
+message CELReceiverType {
+  // name is the message name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // methods describe the definition of the method for the message.
+  repeated CELFunction methods = 3;
+}
+
+// CELFunctionArgument represents the function argument.
+message CELFunctionArgument {
+  // name is the argument value name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // type is the argument type.
+  CELType type = 3;
+}
+
+// CELType represents type information for CEL plugin interface.
+message CELType {
+  oneof type {
+    // kind is used when the type is a primitive type.
+    TypeKind kind = 1;
+    // repeated is used when the type is a repeated type.
+    CELType repeated = 2;
+    // map is used when the type is a map type.
+    CELMapType map = 3;
+    // message is a fqdn to the message type.
+    string message = 4;
+    // enum is a fqdn to the enum type.
+    string enum = 5;
+  }
+}
+
+// CELMapType represents map type.
+message CELMapType {
+  // key represents map's key type.
+  CELType key = 1;
+  // value represents map's value type.
+  CELType value = 2;
+}
+
+// CELVariable represents CEL variable.
+message CELVariable {
+  // name is the variable name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // type is the variable type.
+  CELType type = 3;
 }

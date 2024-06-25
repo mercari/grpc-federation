@@ -258,7 +258,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("{{ .ProtoName }}", {{ .GoName }}_value, {{ .GoName }}_name)...)
 	{{- end }}
 	{{- if $env }}
-	celEnvOpts = append(celEnvOpts, grpcfed.CELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
 	{{- end }}
 	{{- if $celPlugins }}
 	var celPlugins []*grpcfedcel.CELPlugin

@@ -276,7 +276,7 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.v2dev.PostV2devType", PostV2DevType_value, PostV2DevType_name)...)
-	celEnvOpts = append(celEnvOpts, grpcfed.CELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
 	var env FederationV2DevServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err

@@ -2,23 +2,23 @@ syntax = "proto3";
 
 package example.account;
 
-import "grpc/federation/plugin.proto";
+import "grpc/federation/federation.proto";
 
 option go_package = "example/plugin;pluginpb";
 
-option (grpc.federation.plugin).export = {
+option (grpc.federation.file).plugin.export = {
   name: "account"
   functions: [
     {
       name: "get_id"
       desc: "get id text from incoming metadata"
-      return { type: "string" }
+      return { kind: STRING }
     },
     {
       name: "get_id"
       desc: "overload method for get_id"
-      args { name: "ext" type: "string" }
-      return { type: "string" }
+      args { name: "ext" type { kind: STRING } }
+      return { kind: STRING }
     }
   ]
 };

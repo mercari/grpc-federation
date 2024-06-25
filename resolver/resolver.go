@@ -21,7 +21,6 @@ import (
 
 	"github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
-	celplugin "github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
 	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/types"
 )
@@ -313,7 +312,7 @@ func (r *Resolver) validateMethodResponse(ctx *context, service *Service) {
 func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorProto, builder *source.LocationBuilder) *File {
 	file := r.defToFileMap[def]
 	ctx = ctx.withFile(file)
-	pluginRuleDef, err := getExtensionRule[*celplugin.PluginRule](def.GetOptions(), celplugin.E_Plugin)
+	fileDef, err := getExtensionRule[*federation.FileRule](def.GetOptions(), federation.E_File)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -322,8 +321,8 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 			),
 		)
 	}
-	if pluginRuleDef != nil {
-		for _, export := range pluginRuleDef.Export {
+	if fileDef != nil {
+		for _, export := range fileDef.GetPlugin().GetExport() {
 			if plugin := r.resolveCELPlugin(ctx, def, export, builder.WithExport(export.GetName())); plugin != nil {
 				file.CELPlugins = append(file.CELPlugins, plugin)
 			}
@@ -360,7 +359,7 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 	return file
 }
 
-func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDescriptorProto, def *celplugin.Export, builder *source.ExportBuilder) *CELPlugin {
+func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDescriptorProto, def *federation.CELPluginExport, builder *source.ExportBuilder) *CELPlugin {
 	if def == nil {
 		return nil
 	}
@@ -398,7 +397,7 @@ func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDesc
 	return plugin
 }
 
-func (r *Resolver) resolvePluginMethod(ctx *context, msg *Message, fn *celplugin.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
+func (r *Resolver) resolvePluginMethod(ctx *context, msg *Message, fn *federation.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
 	msgType := NewMessageType(msg, false)
 	pluginFunc := &CELFunction{
 		Name:     fn.GetName(),
@@ -412,7 +411,7 @@ func (r *Resolver) resolvePluginMethod(ctx *context, msg *Message, fn *celplugin
 	return pluginFunc
 }
 
-func (r *Resolver) resolvePluginGlobalFunction(ctx *context, pkgName string, fn *celplugin.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
+func (r *Resolver) resolvePluginGlobalFunction(ctx *context, pkgName string, fn *federation.CELFunction, builder *source.PluginFunctionBuilder) *CELFunction {
 	pluginFunc := &CELFunction{
 		Name: fmt.Sprintf("%s.%s", pkgName, fn.GetName()),
 	}
@@ -423,12 +422,12 @@ func (r *Resolver) resolvePluginGlobalFunction(ctx *context, pkgName string, fn 
 	return pluginFunc
 }
 
-func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []*celplugin.CELFunctionArgument, ret *celplugin.CELType, builder *source.PluginFunctionBuilder) ([]*Type, *Type) {
+func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []*federation.CELFunctionArgument, ret *federation.CELType, builder *source.PluginFunctionBuilder) ([]*Type, *Type) {
 	argTypes := r.resolvePluginFunctionArguments(ctx, args, builder)
 	if ret == nil {
 		return argTypes, nil
 	}
-	retType, err := r.resolvePluginFunctionType(ctx, ret.GetType(), ret.GetRepeated())
+	retType, err := r.resolvePluginType(ctx, ret, false)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -440,10 +439,10 @@ func (r *Resolver) resolvePluginFunctionArgumentsAndReturn(ctx *context, args []
 	return argTypes, retType
 }
 
-func (r *Resolver) resolvePluginFunctionArguments(ctx *context, args []*celplugin.CELFunctionArgument, builder *source.PluginFunctionBuilder) []*Type {
+func (r *Resolver) resolvePluginFunctionArguments(ctx *context, args []*federation.CELFunctionArgument, builder *source.PluginFunctionBuilder) []*Type {
 	var ret []*Type
 	for argIdx, arg := range args {
-		typ, err := r.resolvePluginFunctionType(ctx, arg.GetType(), arg.GetRepeated())
+		typ, err := r.resolvePluginType(ctx, arg.GetType(), false)
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -458,26 +457,69 @@ func (r *Resolver) resolvePluginFunctionArguments(ctx *context, args []*celplugi
 	return ret
 }
 
-func (r *Resolver) resolvePluginFunctionType(ctx *context, typeName string, repeated bool) (*Type, error) {
+func (r *Resolver) resolvePluginType(ctx *context, typ *federation.CELType, repeated bool) (*Type, error) {
 	var label descriptorpb.FieldDescriptorProto_Label
 	if repeated {
 		label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 	} else {
 		label = descriptorpb.FieldDescriptorProto_LABEL_REQUIRED
 	}
-	kind := types.ToKind(typeName)
-	if kind == types.Unknown {
-		// we want to avoid capturing errors when calling resolveType, so create a new context to bypass it.
+
+	switch typ.Type.(type) {
+	case *federation.CELType_Kind:
+		switch typ.GetKind() {
+		case federation.TypeKind_STRING:
+			if repeated {
+				return StringRepeatedType, nil
+			}
+			return StringType, nil
+		case federation.TypeKind_BOOL:
+			if repeated {
+				return BoolRepeatedType, nil
+			}
+			return BoolType, nil
+		case federation.TypeKind_INT64:
+			if repeated {
+				return Int64RepeatedType, nil
+			}
+			return Int64Type, nil
+		case federation.TypeKind_UINT64:
+			if repeated {
+				return Uint64RepeatedType, nil
+			}
+			return Uint64Type, nil
+		case federation.TypeKind_DOUBLE:
+			if repeated {
+				return DoubleRepeatedType, nil
+			}
+			return DoubleType, nil
+		case federation.TypeKind_DURATION:
+			if repeated {
+				return DurationRepeatedType, nil
+			}
+			return DurationType, nil
+		}
+	case *federation.CELType_Repeated:
+		return r.resolvePluginType(ctx, typ.GetRepeated(), true)
+	case *federation.CELType_Map:
+		mapType := typ.GetMap()
+		key, err := r.resolvePluginType(ctx, mapType.GetKey(), false)
+		if err != nil {
+			return nil, err
+		}
+		value, err := r.resolvePluginType(ctx, mapType.GetValue(), false)
+		if err != nil {
+			return nil, err
+		}
+		return NewMapType(key, value), nil
+	case *federation.CELType_Message:
 		ctx := newContext().withFile(ctx.file())
-		if typ, err := r.resolveType(ctx, typeName, types.Message, label); err == nil && typ.Message != nil {
-			return typ, nil
-		}
-		if typ, err := r.resolveType(ctx, typeName, types.Enum, label); err == nil && typ.Enum != nil {
-			return typ, nil
-		}
-		return nil, fmt.Errorf("unexpected type %s", typeName)
+		return r.resolveType(ctx, typ.GetMessage(), types.Message, label)
+	case *federation.CELType_Enum:
+		ctx := newContext().withFile(ctx.file())
+		return r.resolveType(ctx, typ.GetEnum(), types.Enum, label)
 	}
-	return r.resolveType(ctx, typeName, kind, label)
+	return nil, fmt.Errorf("failed to resolve plugin type")
 }
 
 func (r *Resolver) toPluginFunctionID(prefix string, t []*Type) string {
@@ -1470,32 +1512,32 @@ func (r *Resolver) resolveEnvType(def *federation.EnvType, repeated bool) (*Type
 	switch def.Type.(type) {
 	case *federation.EnvType_Kind:
 		switch def.GetKind() {
-		case federation.EnvKind_STRING:
+		case federation.TypeKind_STRING:
 			if repeated {
 				return StringRepeatedType, nil
 			}
 			return StringType, nil
-		case federation.EnvKind_BOOL:
+		case federation.TypeKind_BOOL:
 			if repeated {
 				return BoolRepeatedType, nil
 			}
 			return BoolType, nil
-		case federation.EnvKind_INT64:
+		case federation.TypeKind_INT64:
 			if repeated {
 				return Int64RepeatedType, nil
 			}
 			return Int64Type, nil
-		case federation.EnvKind_UINT64:
+		case federation.TypeKind_UINT64:
 			if repeated {
 				return Uint64RepeatedType, nil
 			}
 			return Uint64Type, nil
-		case federation.EnvKind_DOUBLE:
+		case federation.TypeKind_DOUBLE:
 			if repeated {
 				return DoubleRepeatedType, nil
 			}
 			return DoubleType, nil
-		case federation.EnvKind_DURATION:
+		case federation.TypeKind_DURATION:
 			if repeated {
 				return DurationRepeatedType, nil
 			}

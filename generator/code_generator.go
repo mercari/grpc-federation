@@ -3030,7 +3030,7 @@ func toCELNativeType(t *resolver.Type) string {
 		return "grpcfed.CELBytesType"
 	case types.Message:
 		if t.Message.IsMapEntry {
-			return fmt.Sprintf("grpcfed.CELMapType(%s, %s)", toCELNativeType(t.Message.Field("key").Type), toCELNativeType(t.Message.Field("value").Type))
+			return fmt.Sprintf("grpcfed.NewCELMapType(%s, %s)", toCELNativeType(t.Message.Field("key").Type), toCELNativeType(t.Message.Field("value").Type))
 		}
 		return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.Message.FQDN())
 	default:
