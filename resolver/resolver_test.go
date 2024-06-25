@@ -3532,9 +3532,9 @@ func TestErrorHandler(t *testing.T) {
 	}
 }
 
-func TestEnv(t *testing.T) {
+func TestInlineEnv(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "env.proto")
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "inline_env.proto")
 	fb := testutil.NewFileBuilder(fileName)
 
 	fb.SetPackage("org.federation").
@@ -3607,6 +3607,44 @@ func TestEnv(t *testing.T) {
 						Build(t),
 				).
 				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+
+	r := resolver.New(testutil.Compile(t, fileName))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
+	}
+	if len(result.Files[0].Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
+	}
+	if diff := cmp.Diff(result.Files[0].Services[0], federationFile.Services[0], testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
+func TestRefEnv(t *testing.T) {
+	t.Parallel()
+	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "ref_env.proto")
+	fb := testutil.NewFileBuilder(fileName)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("Env").
+				AddField("aaa", resolver.StringType).
+				AddField("bbb", resolver.Int64RepeatedType).
+				AddField("ccc", resolver.NewMapType(resolver.StringType, resolver.DurationType)).
+				AddField("ddd", resolver.DoubleType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("EnvArgument").
+				Build(t),
 		).
 		AddService(
 			testutil.NewServiceBuilder("RefEnvService").
@@ -3676,13 +3714,10 @@ func TestEnv(t *testing.T) {
 	if len(result.Files) != 1 {
 		t.Fatalf("faield to get files. expected 1 but got %d", len(result.Files))
 	}
-	if len(result.Files[0].Services) != 2 {
-		t.Fatalf("faield to get services. expected 2 but got %d", len(result.Files[0].Services))
+	if len(result.Files[0].Services) != 1 {
+		t.Fatalf("faield to get services. expected 1 but got %d", len(result.Files[0].Services))
 	}
 	if diff := cmp.Diff(result.Files[0].Services[0], federationFile.Services[0], testutil.ResolverCmpOpts()...); diff != "" {
-		t.Errorf("(-got, +want)\n%s", diff)
-	}
-	if diff := cmp.Diff(result.Files[0].Services[1], federationFile.Services[1], testutil.ResolverCmpOpts()...); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }

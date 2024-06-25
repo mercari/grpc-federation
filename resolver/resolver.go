@@ -757,10 +757,39 @@ func (r *Resolver) resolveRule(ctx *context, files []*File) {
 }
 
 func (r *Resolver) resolveServiceRules(ctx *context, svcs []*Service) {
+	pkgToSvcs := make(map[*Package][]*Service)
 	for _, svc := range svcs {
 		builder := source.NewServiceBuilder(ctx.fileName(), svc.Name)
 		svc.Rule = r.resolveServiceRule(ctx, r.serviceToRuleMap[svc], builder.WithOption())
 		r.resolveMethodRules(ctx, svc.Methods, builder)
+		pkgToSvcs[svc.Package()] = append(pkgToSvcs[svc.Package()], svc)
+	}
+	for pkg, svcs := range pkgToSvcs {
+		var envSvcs []*Service
+		for _, svc := range svcs {
+			if svc.Rule == nil {
+				continue
+			}
+			if svc.Rule.Env == nil {
+				continue
+			}
+			envSvcs = append(envSvcs, svc)
+		}
+		if len(envSvcs) <= 1 {
+			continue
+		}
+		for _, envSvc := range envSvcs {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`%q: multiple services within the same package (%q) cannot use the env option`,
+						envSvc.FQDN(),
+						pkg.Name,
+					),
+					source.NewServiceBuilder(envSvc.File.Name, envSvc.Name).WithOption().WithEnv().Location(),
+				),
+			)
+		}
 	}
 }
 
@@ -3413,6 +3442,7 @@ func (r *Resolver) getEnvMessage(msg *Message) *Message {
 	if msg.File.Package == nil {
 		return nil
 	}
+	var envSvcs []*Service
 	for _, file := range msg.File.Package.Files {
 		for _, svc := range file.Services {
 			if svc.Rule == nil {
@@ -3421,14 +3451,13 @@ func (r *Resolver) getEnvMessage(msg *Message) *Message {
 			if svc.Rule.Env == nil {
 				continue
 			}
-			// It will be created using the Env definition of the first matched service.
-			// TODO: Since it might match multiple services,
-			// it's necessary to verify whether there are any fields in the Env that are not common among those services.
-			// Currently, it targets services that exist in the same package as the message.
-			return envToMessage(svc.File, svc.Rule.Env)
+			envSvcs = append(envSvcs, svc)
 		}
 	}
-	return nil
+	if len(envSvcs) != 1 {
+		return nil
+	}
+	return envToMessage(envSvcs[0].File, envSvcs[0].Rule.Env)
 }
 
 func (r *Resolver) enumAccessors() []cel.EnvOption {
