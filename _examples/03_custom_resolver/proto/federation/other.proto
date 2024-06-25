@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package federation.v2dev;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+message Ref {
+  string a = 1 [(grpc.federation.field).by = "grpc.federation.env.a"];
+}

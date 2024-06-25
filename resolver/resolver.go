@@ -757,10 +757,39 @@ func (r *Resolver) resolveRule(ctx *context, files []*File) {
 }
 
 func (r *Resolver) resolveServiceRules(ctx *context, svcs []*Service) {
+	pkgToSvcs := make(map[*Package][]*Service)
 	for _, svc := range svcs {
 		builder := source.NewServiceBuilder(ctx.fileName(), svc.Name)
 		svc.Rule = r.resolveServiceRule(ctx, r.serviceToRuleMap[svc], builder.WithOption())
 		r.resolveMethodRules(ctx, svc.Methods, builder)
+		pkgToSvcs[svc.Package()] = append(pkgToSvcs[svc.Package()], svc)
+	}
+	for pkg, svcs := range pkgToSvcs {
+		var envSvcs []*Service
+		for _, svc := range svcs {
+			if svc.Rule == nil {
+				continue
+			}
+			if svc.Rule.Env == nil {
+				continue
+			}
+			envSvcs = append(envSvcs, svc)
+		}
+		if len(envSvcs) <= 1 {
+			continue
+		}
+		for _, envSvc := range envSvcs {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`%q: multiple services within the same package (%q) cannot use the env option`,
+						envSvc.FQDN(),
+						pkg.Name,
+					),
+					source.NewServiceBuilder(envSvc.File.Name, envSvc.Name).WithOption().WithEnv().Location(),
+				),
+			)
+		}
 	}
 }
 
@@ -3384,14 +3413,7 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CustomTypeProvider(r.celRegistry),
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 	}
-	for _, svc := range msg.File.Services {
-		if svc.Rule == nil {
-			continue
-		}
-		if svc.Rule.Env == nil {
-			continue
-		}
-		envMsg := envToMessage(msg.File, svc.Rule.Env)
+	if envMsg := r.getEnvMessage(msg); envMsg != nil {
 		fileDesc := envFileDescriptor(envMsg)
 		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
 			return nil, err
@@ -3411,6 +3433,35 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		return nil, err
 	}
 	return env, nil
+}
+
+func (r *Resolver) getEnvMessage(msg *Message) *Message {
+	if msg.File == nil {
+		return nil
+	}
+	if msg.File.Package == nil {
+		return nil
+	}
+	var envSvcs []*Service
+	for _, file := range msg.File.Package.Files {
+		for _, svc := range file.Services {
+			if svc.Rule == nil {
+				continue
+			}
+			if svc.Rule.Env == nil {
+				continue
+			}
+			envSvcs = append(envSvcs, svc)
+		}
+	}
+
+	// If there are multiple services with env, we do not have a method to select one from them.
+	// Therefore, we proceed only when there is a single candidate service.
+	// Since validation for cases with multiple services is done elsewhere, we don't need to create an error here.
+	if len(envSvcs) != 1 {
+		return nil
+	}
+	return envToMessage(envSvcs[0].File, envSvcs[0].Rule.Env)
 }
 
 func (r *Resolver) enumAccessors() []cel.EnvOption {

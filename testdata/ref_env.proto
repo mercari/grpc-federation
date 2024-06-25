@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "example/federation;federation";
+
+service RefEnvService {
+  option (grpc.federation.service) = {
+    env { message: "Env" }
+  };
+}
+  
+message Env {
+  string aaa = 1 [(grpc.federation.field).env.default = "xxx"];
+  repeated int64 bbb = 2 [(grpc.federation.field).env.alternate = "yyy"];
+  map<string, google.protobuf.Duration> ccc = 3 [(grpc.federation.field).env = {
+    required: true
+    alternate: "c"
+  }];
+  double ddd = 4 [(grpc.federation.field).env.ignored = true];
+}

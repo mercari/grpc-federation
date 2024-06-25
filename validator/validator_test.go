@@ -89,6 +89,14 @@ testdata/invalid_env.proto:24:16: "org.federation.Invalid" message does not exis
 24:        message: "Invalid"
                     ^
 `},
+		{file: "invalid_multiple_env.proto", expected: `
+testdata/invalid_multiple_env.proto:12:9: "org.federation.InlineEnvService": multiple services within the same package ("org.federation") cannot use the env option
+12:      env {
+             ^
+testdata/invalid_multiple_env.proto:48:9: "org.federation.RefEnvService": multiple services within the same package ("org.federation") cannot use the env option
+48:      env { message: "Env" }
+             ^
+`},
 		{file: "invalid_error_variable.proto", expected: `
 testdata/invalid_error_variable.proto:20:17: "error" is the reserved keyword. this name is not available
 20:      def { name: "error" by: "'foo'" }

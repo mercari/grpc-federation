@@ -6,6 +6,7 @@ import "grpc/federation/federation.proto";
 import "post/post.proto";
 import "user/user.proto";
 import "google/protobuf/duration.proto";
+import "federation/other.proto";
 
 option go_package = "example/federation;federation";
 
@@ -63,12 +64,14 @@ message GetPostV2devResponse {
         args { name: "id", by: "$.id" }
       }
     }
+    def { name: "r" message { name: "Ref" } }
   };
   PostV2dev post = 1 [(grpc.federation.field).by = "post"];
   PostV2devType type = 2 [(grpc.federation.field).by = "federation.v2dev.PostV2devType.POST_V2_DEV_TYPE"];
   string env_a = 3 [(grpc.federation.field).by = "grpc.federation.env.a"];
   int64 env_b = 4 [(grpc.federation.field).by = "grpc.federation.env.b[1]"];
   google.protobuf.Duration env_c_value = 5 [(grpc.federation.field).by = "grpc.federation.env.c['z']"];
+  Ref ref = 6 [(grpc.federation.field).by = "r"];
 }
 
 message PostV2dev {

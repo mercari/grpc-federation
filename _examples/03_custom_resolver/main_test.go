@@ -250,7 +250,14 @@ func TestFederation(t *testing.T) {
 		EnvA:      "xxx",
 		EnvB:      2,
 		EnvCValue: durationpb.New(envCMap["z"]),
-	}, cmpopts.IgnoreUnexported(federation.GetPostV2DevResponse{}, federation.PostV2Dev{}, federation.User{}, durationpb.Duration{})); diff != "" {
+		Ref:       &federation.Ref{A: "xxx"},
+	}, cmpopts.IgnoreUnexported(
+		federation.GetPostV2DevResponse{},
+		federation.PostV2Dev{},
+		federation.User{},
+		federation.Ref{},
+		durationpb.Duration{},
+	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }
