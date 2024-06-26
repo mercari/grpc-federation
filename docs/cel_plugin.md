@@ -15,7 +15,7 @@ syntax = "proto3";
 
 package example.regexp;
 
-import "grpc/federation/plugin.proto";
+import "grpc/federation/federation.proto";
 
 option go_package = "example/plugin;pluginpb";
 
@@ -23,7 +23,7 @@ message Regexp {
   uint64 ptr = 1; // store raw pointer value.
 }
 
-option (grpc.federation.plugin).export = {
+option (grpc.federation.file).plugin.export = {
   name: "regexp"
   types: [
     {
@@ -31,8 +31,8 @@ option (grpc.federation.plugin).export = {
       methods: [
         {
           name: "matchString"
-          args { type: "string" }
-          return { type: "bool" }
+          args { type { kind: STRING } }
+          return { kind: BOOL }
         }
       ]
     }
@@ -40,14 +40,14 @@ option (grpc.federation.plugin).export = {
   functions: [
     {
       name: "compile"
-      args { type: "string" }
-      return { type: "Regexp" }
+      args { type { kind: STRING } }
+      return { message: "Regexp" }
     }
   ]
 };
 ```
 
-`(grpc.federation.plugin).export` option is used to define the API. In this example, the plugin is named `regexp`.
+`(grpc.federation.file).plugin.export` option is used to define the API. In this example, the plugin is named `regexp`.
 
 The `regexp` plugin belongs to the `example.regexp` package. Also, this provides the `Regexp` message type and makes `matchString` available as a method on the `Regexp` message, and `compile` function is also added.
 
@@ -116,28 +116,28 @@ import (
 	"unsafe"
 )
 
-var _ pluginpb.RegexpPlugin = &plugin{}
+var _ pluginpb.RegexpPlugin = new(plugin)
 
 type plugin struct{}
 
 // For example.regexp.compile function.
-func (_ *plugin) Example_Regexp_Compile(expr string) (*pluginpb.Regexp, error) {
+func (_ *plugin) Example_Regexp_Compile(ctx context.Context, expr string) (*pluginpb.Regexp, error) {
 	re, err := regexp.Compile(expr)
 	if err != nil {
 		return nil, err
 	}
 	return &pluginpb.Regexp{
-		Ptr: uint64(uintptr(unsafe.Pointer(re))),
+		Ptr: uint32(uintptr(unsafe.Pointer(re))),
 	}, nil
 }
 
 // For example.regexp.Regexp.matchString method.
-func (_ *plugin) Example_Regexp_Regexp_MatchString(re *pluginpb.Regexp, s string) (bool, error) {
+func (_ *plugin) Example_Regexp_Regexp_MatchString(ctx context.Context, re *pluginpb.Regexp, s string) (bool, error) {
 	return (*regexp.Regexp)(unsafe.Pointer(uintptr(re.Ptr))).MatchString(s), nil
 }
 
 func main() {
-	pluginpb.RegisterRegexpPlugin(&plugin{})
+	pluginpb.RegisterRegexpPlugin(new(plugin))
 }
 ```
 

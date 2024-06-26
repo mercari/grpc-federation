@@ -106,6 +106,7 @@ For detailed information on each method, please refer to [Installation Documenta
 # Usage
 
 - [`Getting Started`](./docs/getting_started.md)
+- [`DEMO Application`](./demo/README.md)
 - [`Examples`](./_examples/)
 
 # Documents
