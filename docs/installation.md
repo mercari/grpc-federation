@@ -43,7 +43,7 @@ plugins:
     out: gen
     opt:
       - paths=source_relative
-  - plugin: buf.build/community/mercari-grpc-federation:v0.10.0
+  - plugin: buf.build/community/mercari-grpc-federation:v1.0.0
     out: gen
     opt:
       - paths=source_relative
