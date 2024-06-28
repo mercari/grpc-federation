@@ -208,6 +208,7 @@ func (s *FederationService) GetPosts(ctx context.Context, req *GetPostsRequest) 
 func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.Context, req *Org_Federation_GetPostsResponseArgument) (*GetPostsResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostsResponse")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetPostsResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetPostsResponseArgument(req)))
 	type localValueType struct {
@@ -292,6 +293,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, req *Org_Federation_PostsArgument) (*Posts, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Posts")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.Posts", slog.Any("message_args", s.logvalue_Org_Federation_PostsArgument(req)))
 	type localValueType struct {
@@ -755,6 +757,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 func (s *FederationService) resolve_Org_Federation_Posts_PostItem(ctx context.Context, req *Org_Federation_Posts_PostItemArgument) (*Posts_PostItem, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Posts.PostItem")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.Posts.PostItem", slog.Any("message_args", s.logvalue_Org_Federation_Posts_PostItemArgument(req)))
 	type localValueType struct {
@@ -796,6 +799,7 @@ func (s *FederationService) resolve_Org_Federation_Posts_PostItem(ctx context.Co
 func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.User")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
 	type localValueType struct {
