@@ -65,6 +65,138 @@ func (set *VariableDefinitionSet) MessageToDefsMap() map[*Message]VariableDefini
 	return ret
 }
 
+func (def *VariableDefinition) HasContextCELLibrary() bool {
+	if def == nil {
+		return false
+	}
+	if def.If != nil {
+		if def.If.UseContextLibrary {
+			return true
+		}
+	}
+	return def.Expr.HasContextCELLibrary()
+}
+
+func (e *VariableExpr) HasContextCELLibrary() bool {
+	if e == nil {
+		return false
+	}
+	switch {
+	case e.By != nil:
+		return e.By.UseContextLibrary
+	case e.Map != nil:
+		return e.Map.HasContextCELLibrary()
+	case e.Call != nil:
+		return e.Call.HasContextCELLibrary()
+	case e.Message != nil:
+		return e.Message.HasContextCELLibrary()
+	case e.Validation != nil:
+		return e.Validation.Error.HasContextCELLibrary()
+	}
+	return false
+}
+
+func (e *GRPCError) HasContextCELLibrary() bool {
+	if e.If.UseContextLibrary {
+		return true
+	}
+	for _, def := range e.DefSet.Definitions() {
+		if def.HasContextCELLibrary() {
+			return true
+		}
+	}
+	for _, detail := range e.Details {
+		if detail.HasContextCELLibrary() {
+			return true
+		}
+	}
+	return false
+}
+
+func (detail *GRPCErrorDetail) HasContextCELLibrary() bool {
+	if detail.If.UseContextLibrary {
+		return true
+	}
+	for _, def := range detail.DefSet.Definitions() {
+		if def.HasContextCELLibrary() {
+			return true
+		}
+	}
+	for _, def := range detail.Messages.Definitions() {
+		if def.HasContextCELLibrary() {
+			return true
+		}
+	}
+	for _, failure := range detail.PreconditionFailures {
+		for _, violation := range failure.Violations {
+			if violation.Type.UseContextLibrary {
+				return true
+			}
+			if violation.Subject.UseContextLibrary {
+				return true
+			}
+			if violation.Description.UseContextLibrary {
+				return true
+			}
+		}
+	}
+	for _, req := range detail.BadRequests {
+		for _, violation := range req.FieldViolations {
+			if violation.Field.UseContextLibrary {
+				return true
+			}
+			if violation.Description.UseContextLibrary {
+				return true
+			}
+		}
+	}
+	for _, msg := range detail.LocalizedMessages {
+		if msg.Message.UseContextLibrary {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *CallExpr) HasContextCELLibrary() bool {
+	if e == nil {
+		return false
+	}
+	for _, arg := range e.Request.Args {
+		if arg.Value.UseContextCELLibrary() {
+			return true
+		}
+	}
+	for _, grpcErr := range e.Errors {
+		if grpcErr.HasContextCELLibrary() {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *MapExpr) HasContextCELLibrary() bool {
+	if e == nil {
+		return false
+	}
+
+	return e.Expr.HasContextCELLibrary()
+}
+
+func (e *MapIteratorExpr) HasContextCELLibrary() bool {
+	if e == nil {
+		return false
+	}
+
+	switch {
+	case e.By != nil:
+		return e.By.UseContextLibrary
+	case e.Message != nil:
+		return e.Message.HasContextCELLibrary()
+	}
+	return false
+}
+
 func (def *VariableDefinition) MessageToDefsMap() map[*Message]VariableDefinitions {
 	if def.Expr == nil {
 		return nil

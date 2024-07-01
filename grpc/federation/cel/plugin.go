@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
@@ -140,6 +141,7 @@ type CELPluginInstance struct {
 	stdout           *io.PipeReader
 	instanceModErrCh chan error
 	closed           bool
+	mu               sync.Mutex
 }
 
 const PluginProtocolVersion = 1
@@ -194,7 +196,7 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 
 func (i *CELPluginInstance) write(cmd []byte) error {
 	if i.closed {
-		return errors.New("grpc-federation: plugin has already been closed")
+		return nil
 	}
 
 	writeCh := make(chan error)
@@ -204,6 +206,9 @@ func (i *CELPluginInstance) write(cmd []byte) error {
 	}()
 	select {
 	case err := <-i.instanceModErrCh:
+		// If the module instance is terminated,
+		// it is considered that the termination process has been completed.
+		i.closed = true
 		return err
 	case err := <-writeCh:
 		return err
@@ -211,6 +216,9 @@ func (i *CELPluginInstance) write(cmd []byte) error {
 }
 
 func (i *CELPluginInstance) Close(ctx context.Context) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	defer func() { i.closed = true }()
 	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
@@ -219,7 +227,9 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 }
 
 func (i *CELPluginInstance) Initialize(ctx context.Context) {
+	i.mu.Lock()
 	i.ctx = ctx
+	i.mu.Unlock()
 }
 
 func (i *CELPluginInstance) LibraryName() string {
@@ -231,6 +241,8 @@ func (i *CELPluginInstance) CompileOptions() []cel.EnvOption {
 	for _, fn := range i.functions {
 		fn := fn
 		bindFunc := cel.FunctionBinding(func(args ...ref.Val) ref.Val {
+			i.mu.Lock()
+			defer i.mu.Unlock()
 			md, ok := metadata.FromIncomingContext(i.ctx)
 			if !ok {
 				md = make(metadata.MD)

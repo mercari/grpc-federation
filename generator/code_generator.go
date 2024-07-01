@@ -1544,6 +1544,23 @@ func (m *Message) RequestProtoType() string {
 	return m.Message.Rule.MessageArgument.FQDN()
 }
 
+func (m *Message) HasContextCELLibrary() bool {
+	if m.Rule == nil {
+		return false
+	}
+	for _, group := range m.Message.VariableDefinitionGroups() {
+		for _, def := range group.VariableDefinitions() {
+			if def == nil {
+				continue
+			}
+			if def.HasContextCELLibrary() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (m *Message) CustomResolverName() string {
 	msg := fullMessageName(m.Message)
 	return fmt.Sprintf("Resolve_%s", msg)
