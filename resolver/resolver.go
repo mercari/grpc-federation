@@ -251,12 +251,23 @@ func (r *Resolver) resultFiles(allFiles []*File) []*File {
 }
 
 func (r *Resolver) allEnums(files []*File) []*Enum {
-	var enums []*Enum
+	enumMap := make(map[*Enum]struct{})
+	for _, enum := range r.cachedEnumMap {
+		enumMap[enum] = struct{}{}
+	}
 	for _, file := range files {
-		enums = append(enums, file.AllEnums()...)
-		for _, importFile := range file.ImportFiles {
-			enums = append(enums, importFile.AllEnums()...)
+		for _, enum := range file.AllEnums() {
+			enumMap[enum] = struct{}{}
 		}
+		for _, importFile := range file.ImportFiles {
+			for _, enum := range importFile.AllEnums() {
+				enumMap[enum] = struct{}{}
+			}
+		}
+	}
+	enums := make([]*Enum, 0, len(enumMap))
+	for enum := range enumMap {
+		enums = append(enums, enum)
 	}
 	sort.Slice(enums, func(i, j int) bool {
 		return enums[i].FQDN() < enums[j].FQDN()
