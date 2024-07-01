@@ -326,6 +326,7 @@ func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV
 func (s *FederationV2DevService) resolve_Federation_V2Dev_ForNameless(ctx context.Context, req *Federation_V2Dev_ForNamelessArgument) (*ForNameless, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.ForNameless")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.v2dev.ForNameless", slog.Any("message_args", s.logvalue_Federation_V2Dev_ForNamelessArgument(req)))
 
@@ -346,6 +347,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_ForNameless(ctx contex
 func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(ctx context.Context, req *Federation_V2Dev_GetPostV2DevResponseArgument) (*GetPostV2DevResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.GetPostV2devResponse")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.v2dev.GetPostV2devResponse", slog.Any("message_args", s.logvalue_Federation_V2Dev_GetPostV2DevResponseArgument(req)))
 	type localValueType struct {
@@ -550,6 +552,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.Context, req *Federation_V2Dev_PostV2DevArgument) (*PostV2Dev, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.PostV2dev")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.v2dev.PostV2dev", slog.Any("message_args", s.logvalue_Federation_V2Dev_PostV2DevArgument(req)))
 	type localValueType struct {
@@ -815,6 +818,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Context, req *Federation_V2Dev_RefArgument) (*Ref, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.Ref")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.v2dev.Ref", slog.Any("message_args", s.logvalue_Federation_V2Dev_RefArgument(req)))
 	type localValueType struct {
@@ -857,6 +861,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Contex
 func (s *FederationV2DevService) resolve_Federation_V2Dev_Unused(ctx context.Context, req *Federation_V2Dev_UnusedArgument) (*Unused, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.Unused")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.v2dev.Unused", slog.Any("message_args", s.logvalue_Federation_V2Dev_UnusedArgument(req)))
 
@@ -877,6 +882,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Unused(ctx context.Con
 func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Context, req *Federation_V2Dev_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.User")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.v2dev.User", slog.Any("message_args", s.logvalue_Federation_V2Dev_UserArgument(req)))
 	type localValueType struct {

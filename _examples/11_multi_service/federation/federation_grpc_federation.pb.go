@@ -177,6 +177,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Context, req *Federation_GetPostResponseArgument) (*GetPostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.GetPostResponse")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
 	type localValueType struct {
@@ -247,6 +248,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Federation_PostArgument) (*Post, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.Post")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
 	type localValueType struct {
@@ -571,6 +573,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req *Federation_ReactionArgument) (*Reaction, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.Reaction")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Reaction", slog.Any("message_args", s.logvalue_Federation_ReactionArgument(req)))
 	type localValueType struct {
@@ -666,6 +669,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
 	type localValueType struct {
@@ -955,6 +959,7 @@ func (s *DebugService) GetStatus(ctx context.Context, req *GetStatusRequest) (re
 func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context, req *Federation_GetStatusResponseArgument) (*GetStatusResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.GetStatusResponse")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetStatusResponse", slog.Any("message_args", s.logvalue_Federation_GetStatusResponseArgument(req)))
 	type localValueType struct {
@@ -1055,6 +1060,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 func (s *DebugService) resolve_Federation_User(ctx context.Context, req *Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.User")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
 	type localValueType struct {
