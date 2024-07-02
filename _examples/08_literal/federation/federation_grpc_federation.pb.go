@@ -181,7 +181,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			res     *content.GetContentResponse
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())

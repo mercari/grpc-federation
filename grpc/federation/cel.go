@@ -218,7 +218,7 @@ func EnumAccessorOptions(enumName string, nameToValue map[string]int32, valueToN
 		),
 		cel.Function(
 			fmt.Sprintf("%s.from", enumName),
-			cel.Overload(fmt.Sprintf("%[1]s_name_int_%[1]s", enumName), []*cel.Type{cel.IntType}, cel.IntType,
+			cel.Overload(fmt.Sprintf("%[1]s_name_int_%[1]s", enumName), []*cel.Type{cel.IntType}, celtypes.NewOpaqueType(enumName, cel.IntType),
 				cel.UnaryBinding(func(self ref.Val) ref.Val {
 					return self
 				}),
@@ -280,7 +280,7 @@ type LocalValue struct {
 	defaultLib         *grpcfedcel.Library
 }
 
-func NewLocalValue(ctx context.Context, celTypeHelper *CELTypeHelper, envOpts []cel.EnvOption, celPlugins []*grpcfedcel.CELPlugin, argName string, arg any) *LocalValue {
+func NewLocalValue(ctx context.Context, celTypeHelper *CELTypeHelper, envOpts []cel.EnvOption, celPlugins []*grpcfedcel.CELPlugin, hasContextCELLibrary bool, argName string, arg any) *LocalValue {
 	var newEnvOpts []cel.EnvOption
 	newEnvOpts = append(
 		append(newEnvOpts, envOpts...),
@@ -289,12 +289,13 @@ func NewLocalValue(ctx context.Context, celTypeHelper *CELTypeHelper, envOpts []
 	defaultLib := grpcfedcel.NewLibrary(celTypeHelper)
 	newEnvOpts = append(newEnvOpts, cel.Lib(defaultLib))
 	instances := make([]*grpcfedcel.CELPluginInstance, 0, len(celPlugins))
-	for _, plugin := range celPlugins {
-		instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
-		instances = append(instances, instance)
-		newEnvOpts = append(newEnvOpts, cel.Lib(instance))
+	if hasContextCELLibrary {
+		for _, plugin := range celPlugins {
+			instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+			instances = append(instances, instance)
+			newEnvOpts = append(newEnvOpts, cel.Lib(instance))
+		}
 	}
-
 	return &LocalValue{
 		envOpts: newEnvOpts,
 		evalValues: map[string]any{

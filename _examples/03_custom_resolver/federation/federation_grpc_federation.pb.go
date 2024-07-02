@@ -357,7 +357,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 			r    *Ref
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetPostV2devResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPostV2devResponseArgument", req)}
 	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
@@ -565,7 +565,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			user   *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.PostV2devArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.PostV2devArgument", req)}
 	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
@@ -826,7 +826,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Contex
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.RefArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.RefArgument", req)}
 	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
@@ -892,7 +892,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 			u   *user.User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.UserArgument", req)}
 	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {

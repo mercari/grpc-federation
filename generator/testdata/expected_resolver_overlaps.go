@@ -216,7 +216,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 			post *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetPostResponse1Argument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPostResponse1Argument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -301,7 +301,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 			post *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetPostResponse2Argument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPostResponse2Argument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -386,7 +386,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			res *post.GetPostResponse
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.PostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.PostArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())

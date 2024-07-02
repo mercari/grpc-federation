@@ -195,7 +195,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			post *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetPostResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPostResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -285,7 +285,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			users []*User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.PostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.PostArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -679,7 +679,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.UserArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())

@@ -392,7 +392,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 			{{- end }}
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "{{ .RequestProtoType }}", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, {{ .HasContextCELLibrary }}, "{{ .RequestProtoType }}", req)}
 	{{- if $env }}
 	value.AddEnv(s.env)
 	{{- end }}

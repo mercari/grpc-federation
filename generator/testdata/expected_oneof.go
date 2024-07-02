@@ -203,7 +203,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			sel *UserSelection
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.GetResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetResponseArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -287,7 +287,7 @@ func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *O
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.MArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.MArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -330,7 +330,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			_def0 *user.GetUserResponse
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.UserArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -468,7 +468,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			uc *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, "grpc.federation.private.UserSelectionArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.UserSelectionArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
