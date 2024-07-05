@@ -215,7 +215,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	type localValueType struct {
@@ -427,7 +427,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 func (s *FederationService) resolve_Org_Federation_Sub(ctx context.Context, req *Org_Federation_SubArgument) (*Sub, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Sub")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.Sub", slog.Any("message_args", s.logvalue_Org_Federation_SubArgument(req)))
 
@@ -448,7 +448,7 @@ func (s *FederationService) resolve_Org_Federation_Sub(ctx context.Context, req 
 func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.User")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.User", slog.Any("message_args", s.logvalue_Org_Federation_UserArgument(req)))
 	type localValueType struct {
@@ -542,7 +542,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		}); err != nil {
 			if err := s.errorHandler(ctx1, FederationService_DependentMethod_Org_User_UserService_GetUser, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -606,7 +606,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, req *Org_Federation_UserIDArgument) (*UserID, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.UserID")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.UserID", slog.Any("message_args", s.logvalue_Org_Federation_UserIDArgument(req)))
 	type localValueType struct {

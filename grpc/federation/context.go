@@ -11,12 +11,16 @@ type (
 	celCacheMapKey struct{}
 )
 
-func WithLogger(ctx context.Context, logger *slog.Logger) context.Context {
-	return log.WithLogger(ctx, logger)
+func WithLogger(ctx context.Context, logger *slog.Logger, attrs ...slog.Attr) context.Context {
+	return log.WithLogger(ctx, logger, attrs...)
 }
 
 func Logger(ctx context.Context) *slog.Logger {
 	return log.Logger(ctx)
+}
+
+func LogAttrs(ctx context.Context) []slog.Attr {
+	return log.Attrs(ctx)
 }
 
 func SetLogger(ctx context.Context, logger *slog.Logger) {

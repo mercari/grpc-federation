@@ -195,7 +195,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *Org_Federation_CreatePostArgument) (*CreatePost, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePost")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.CreatePost", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostArgument(req)))
 	type localValueType struct {
@@ -293,7 +293,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx context.Context, req *Org_Federation_CreatePostResponseArgument) (*CreatePostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePostResponse")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.CreatePostResponse", slog.Any("message_args", s.logvalue_Org_Federation_CreatePostResponseArgument(req)))
 	type localValueType struct {
@@ -436,7 +436,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	}); err != nil {
 		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_CreatePost, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 		}
 	}
 

@@ -48,6 +48,9 @@ message GetPostResponse {
       {
         validation {
           error: {
+            def [
+              { by: "grpc.federation.log.add({'validation3_attrs': true})" }
+            ]
             code: FAILED_PRECONDITION,
             message: "'validation3 failed!'",
             if: "$.id != 'correct-id'"

@@ -138,23 +138,23 @@ if handleErr != nil {
 	// If it fails during error handling, return the original error.
 	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, err
+		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
 	}
 } else if stat != nil {
 	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, stat.Err()); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, err
+		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
 	}
 } else {
 	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, err
+		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
 	}
 }
 {{- else }}
 if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 	grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-	return nil, err
+	return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
 }
 {{- end }}
 {{- else }}
