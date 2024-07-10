@@ -61,9 +61,6 @@ func NewErrorWithLogAttrs(err error, attrs []slog.Attr) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, &ErrorWithLogAttrs{}) {
-		return err
-	}
 	return &ErrorWithLogAttrs{
 		err:   err,
 		attrs: attrs,
