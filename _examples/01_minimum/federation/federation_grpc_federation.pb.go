@@ -157,7 +157,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Context, req *Federation_GetPostResponseArgument) (*GetPostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.GetPostResponse")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
 

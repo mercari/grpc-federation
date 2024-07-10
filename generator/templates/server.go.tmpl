@@ -380,7 +380,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .RequestType }}) (*{{ .ReturnType }}, error) {
 	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve {{ .ProtoFQDN }}", slog.Any("message_args", s.logvalue_{{ .RequestType }}(req)))
 	{{- if .IsDeclVariables }}

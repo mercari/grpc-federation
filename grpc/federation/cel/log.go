@@ -160,14 +160,13 @@ func (lib *LogLibrary) expandVal(arg ref.Val) any {
 
 func (lib *LogLibrary) add(value ref.Val) ref.Val {
 	args := value.(traits.Mapper)
-	var attrs []any
+	var attrs []slog.Attr
 	for it := args.Iterator(); it.HasNext() == types.True; {
 		k := it.Next()
 		v := args.Get(k)
 		attrs = append(attrs, slog.Any(fmt.Sprint(k.Value()), lib.expandVal(v)))
 	}
 
-	logger := log.Logger(lib.ctx)
-	log.SetLogger(lib.ctx, logger.With(attrs...))
+	log.AddAttrs(lib.ctx, attrs)
 	return types.True
 }

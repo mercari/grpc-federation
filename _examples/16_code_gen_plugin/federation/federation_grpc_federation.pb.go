@@ -159,7 +159,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 

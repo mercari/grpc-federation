@@ -193,7 +193,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 func (s *FederationService) resolve_Org_Federation_CustomMessage(ctx context.Context, req *Org_Federation_CustomMessageArgument) (*CustomMessage, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.CustomMessage")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.CustomMessage", slog.Any("message_args", s.logvalue_Org_Federation_CustomMessageArgument(req)))
 	type localValueType struct {
@@ -235,7 +235,7 @@ func (s *FederationService) resolve_Org_Federation_CustomMessage(ctx context.Con
 func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *Org_Federation_GetPostResponseArgument) (*GetPostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetPostResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponseArgument(req)))
 	type localValueType struct {
@@ -320,7 +320,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 func (s *FederationService) resolve_Org_Federation_LocalizedMessage(ctx context.Context, req *Org_Federation_LocalizedMessageArgument) (*LocalizedMessage, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.LocalizedMessage")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.LocalizedMessage", slog.Any("message_args", s.logvalue_Org_Federation_LocalizedMessageArgument(req)))
 	type localValueType struct {
@@ -362,7 +362,7 @@ func (s *FederationService) resolve_Org_Federation_LocalizedMessage(ctx context.
 func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req *Org_Federation_PostArgument) (*Post, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Post")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.Post", slog.Any("message_args", s.logvalue_Org_Federation_PostArgument(req)))
 	type localValueType struct {
@@ -659,17 +659,17 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			// If it fails during error handling, return the original error.
 			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 			}
 		} else if stat != nil {
 			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, stat.Err()); err != nil {
 				grpcfed.RecordErrorToSpan(ctx, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 			}
 		} else {
 			if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 			}
 		}
 	}

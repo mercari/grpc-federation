@@ -196,7 +196,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.Context, req *Org_Federation_IsMatchResponseArgument) (*IsMatchResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.IsMatchResponse")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.IsMatchResponse", slog.Any("message_args", s.logvalue_Org_Federation_IsMatchResponseArgument(req)))
 	type localValueType struct {

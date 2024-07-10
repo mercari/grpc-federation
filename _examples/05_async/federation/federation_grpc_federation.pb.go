@@ -231,7 +231,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *Org_Federation_AArgument) (*A, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.A")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.A", slog.Any("message_args", s.logvalue_Org_Federation_AArgument(req)))
 	type localValueType struct {
@@ -343,7 +343,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *Org_Federation_AAArgument) (*AA, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.AA")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.AA", slog.Any("message_args", s.logvalue_Org_Federation_AAArgument(req)))
 	type localValueType struct {
@@ -385,7 +385,7 @@ func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *
 func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *Org_Federation_ABArgument) (*AB, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.AB")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.AB", slog.Any("message_args", s.logvalue_Org_Federation_ABArgument(req)))
 	type localValueType struct {
@@ -427,7 +427,7 @@ func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *
 func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *Org_Federation_BArgument) (*B, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.B")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.B", slog.Any("message_args", s.logvalue_Org_Federation_BArgument(req)))
 	type localValueType struct {
@@ -469,7 +469,7 @@ func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *Org_Federation_CArgument) (*C, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.C")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.C", slog.Any("message_args", s.logvalue_Org_Federation_CArgument(req)))
 	type localValueType struct {
@@ -511,7 +511,7 @@ func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *Org_Federation_DArgument) (*D, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.D")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.D", slog.Any("message_args", s.logvalue_Org_Federation_DArgument(req)))
 	type localValueType struct {
@@ -553,7 +553,7 @@ func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *Org_Federation_EArgument) (*E, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.E")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.E", slog.Any("message_args", s.logvalue_Org_Federation_EArgument(req)))
 	type localValueType struct {
@@ -595,7 +595,7 @@ func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *Org_Federation_FArgument) (*F, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.F")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.F", slog.Any("message_args", s.logvalue_Org_Federation_FArgument(req)))
 	type localValueType struct {
@@ -637,7 +637,7 @@ func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *Org_Federation_GArgument) (*G, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.G")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.G", slog.Any("message_args", s.logvalue_Org_Federation_GArgument(req)))
 	type localValueType struct {
@@ -679,7 +679,7 @@ func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetResponseArgument(req)))
 	type localValueType struct {
@@ -1344,7 +1344,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *Org_Federation_HArgument) (*H, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.H")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.H", slog.Any("message_args", s.logvalue_Org_Federation_HArgument(req)))
 	type localValueType struct {
@@ -1386,7 +1386,7 @@ func (s *FederationService) resolve_Org_Federation_H(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *Org_Federation_IArgument) (*I, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.I")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.I", slog.Any("message_args", s.logvalue_Org_Federation_IArgument(req)))
 	type localValueType struct {
@@ -1428,7 +1428,7 @@ func (s *FederationService) resolve_Org_Federation_I(ctx context.Context, req *O
 func (s *FederationService) resolve_Org_Federation_J(ctx context.Context, req *Org_Federation_JArgument) (*J, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.J")
 	defer span.End()
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.J", slog.Any("message_args", s.logvalue_Org_Federation_JArgument(req)))
 	type localValueType struct {
