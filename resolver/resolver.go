@@ -3546,7 +3546,7 @@ func (r *Resolver) buildEnvMessage(msg *Message, svcMsgSet map[*Service]map[*Mes
 		typ := svcEnvVars[0].envVar.Type
 		var mismatch bool
 		for _, sev := range svcEnvVars[1:] {
-			if typ.Kind != sev.envVar.Type.Kind {
+			if !isExactlySameType(typ, sev.envVar.Type) {
 				mismatch = true
 				break
 			}
@@ -3554,11 +3554,16 @@ func (r *Resolver) buildEnvMessage(msg *Message, svcMsgSet map[*Service]map[*Mes
 		if mismatch {
 			var attrs []string
 			for _, sev := range svcEnvVars {
-				attrs = append(attrs, fmt.Sprintf("service: %s, type: %v", sev.svc.Name, sev.envVar.Type.Kind.ToString()))
+				attrs = append(attrs, fmt.Sprintf(
+					"service: %s, type: %v, repeated: %v",
+					sev.svc.Name,
+					sev.envVar.Type.Kind.ToString(),
+					sev.envVar.Type.Repeated),
+				)
 			}
 			// Fix the output order mainly for testing
 			sort.Strings(attrs)
-			errs = append(errs, fmt.Errorf("environment variable %s has different types across services: %s", envVarName, strings.Join(attrs, ", ")))
+			errs = append(errs, fmt.Errorf("environment variable %q has different types across services: %s", envVarName, strings.Join(attrs, ", ")))
 		}
 
 		envVars = append(envVars, svcEnvVars[0].envVar)
@@ -4096,6 +4101,40 @@ func isDifferentType(from, to *Type) bool {
 		return false
 	}
 	return from.Kind != to.Kind
+}
+
+func isExactlySameType(left, right *Type) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	if left.Kind != right.Kind {
+		return false
+	}
+	if left.Repeated != right.Repeated {
+		return false
+	}
+	if left.Message != nil || right.Message != nil {
+		if left.Message == nil || right.Message == nil {
+			return false
+		}
+		if len(left.Message.Fields) != len(right.Message.Fields) {
+			return false
+		}
+		lfMap := map[string]*Field{}
+		for _, lf := range left.Message.Fields {
+			lfMap[lf.Name] = lf
+		}
+		for _, rf := range right.Message.Fields {
+			lf, exist := lfMap[rf.Name]
+			if !exist {
+				return false
+			}
+			if !isExactlySameType(lf.Type, rf.Type) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func newMessageBuilderFromMessage(message *Message) *source.MessageBuilder {

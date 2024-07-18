@@ -11,7 +11,7 @@ service InlineEnvService {
   option (grpc.federation.service) = {
     env {
       var {
-        name: "name"
+        name: "aaa"
         type { kind: STRING }
       }
       var {
@@ -20,11 +20,15 @@ service InlineEnvService {
       }
       var {
         name: "ccc"
-        type { map { key { kind: STRING } value { kind: DURATION } } }
+        type { kind: INT64 }
       }
       var {
         name: "ddd"
-        type { kind: DOUBLE }
+        type { map { key { kind: STRING } value { kind: DURATION } } }
+      }
+      var {
+        name: "eee"
+        type { map { key { kind: STRING } value { kind: INT64 } } }
       }
     }
   };
@@ -39,10 +43,11 @@ service RefEnvService {
 }
 
 message Env {
-  int64 name = 1;
+  string aaa = 1;
   repeated int64 bbb = 2;
-  map<string, google.protobuf.Duration> ccc = 3;
-  double ddd = 4;
+  repeated int64 ccc = 3;
+  map<string, google.protobuf.Duration> ddd = 4;
+  map<string, google.protobuf.Duration> eee = 5;
 }
 
 message GetNameRequest {
