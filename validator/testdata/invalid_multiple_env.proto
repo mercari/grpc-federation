@@ -11,50 +11,43 @@ service InlineEnvService {
   option (grpc.federation.service) = {
     env {
       var {
-        name: "aaa"
+        name: "name"
         type { kind: STRING }
-        option {
-          default: "xxx"
-        }
       }
       var {
         name: "bbb"
         type { repeated { kind: INT64 } }
-        option {
-          alternate: "yyy"
-        }
       }
       var {
         name: "ccc"
         type { map { key { kind: STRING } value { kind: DURATION } } }
-        option {
-          required: true
-          alternate: "c"
-        }
       }
       var {
         name: "ddd"
         type { kind: DOUBLE }
-        option {
-          ignored: true
-        }
       }
     }
   };
+  rpc GetName(GetNameRequest) returns (GetNameResponse) {};
 }
 
 service RefEnvService {
   option (grpc.federation.service) = {
     env { message: "Env" }
   };
+  rpc GetName(GetNameRequest) returns (GetNameResponse) {};
 }
 
 message Env {
-  string aaa = 1 [(grpc.federation.field).env.default = "xxx"];
-  repeated int64 bbb = 2 [(grpc.federation.field).env.alternate = "yyy"];
-  map<string, google.protobuf.Duration> ccc = 3 [(grpc.federation.field).env = {
-    required: true
-    alternate: "c"
-  }];
-  double ddd = 4 [(grpc.federation.field).env.ignored = true];
+  int64 name = 1;
+  repeated int64 bbb = 2;
+  map<string, google.protobuf.Duration> ccc = 3;
+  double ddd = 4;
+}
+
+message GetNameRequest {
+}
+
+message GetNameResponse {
+  string name = 1 [(grpc.federation.field).by = "grpc.federation.env.name"];
 }

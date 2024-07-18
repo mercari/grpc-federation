@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	FederationService_GetPost_FullMethodName = "/federation.FederationService/GetPost"
+	FederationService_GetName_FullMethodName = "/federation.FederationService/GetName"
 )
 
 // FederationServiceClient is the client API for FederationService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FederationServiceClient interface {
 	GetPost(ctx context.Context, in *GetPostRequest, opts ...grpc.CallOption) (*GetPostResponse, error)
+	GetName(ctx context.Context, in *GetNameRequest, opts ...grpc.CallOption) (*GetNameResponse, error)
 }
 
 type federationServiceClient struct {
@@ -46,11 +48,21 @@ func (c *federationServiceClient) GetPost(ctx context.Context, in *GetPostReques
 	return out, nil
 }
 
+func (c *federationServiceClient) GetName(ctx context.Context, in *GetNameRequest, opts ...grpc.CallOption) (*GetNameResponse, error) {
+	out := new(GetNameResponse)
+	err := c.cc.Invoke(ctx, FederationService_GetName_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationServiceServer is the server API for FederationService service.
 // All implementations must embed UnimplementedFederationServiceServer
 // for forward compatibility
 type FederationServiceServer interface {
 	GetPost(context.Context, *GetPostRequest) (*GetPostResponse, error)
+	GetName(context.Context, *GetNameRequest) (*GetNameResponse, error)
 	mustEmbedUnimplementedFederationServiceServer()
 }
 
@@ -60,6 +72,9 @@ type UnimplementedFederationServiceServer struct {
 
 func (UnimplementedFederationServiceServer) GetPost(context.Context, *GetPostRequest) (*GetPostResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPost not implemented")
+}
+func (UnimplementedFederationServiceServer) GetName(context.Context, *GetNameRequest) (*GetNameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetName not implemented")
 }
 func (UnimplementedFederationServiceServer) mustEmbedUnimplementedFederationServiceServer() {}
 
@@ -92,6 +107,24 @@ func _FederationService_GetPost_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationService_GetName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationServiceServer).GetName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationService_GetName_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationServiceServer).GetName(ctx, req.(*GetNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationService_ServiceDesc is the grpc.ServiceDesc for FederationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +135,137 @@ var FederationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPost",
 			Handler:    _FederationService_GetPost_Handler,
+		},
+		{
+			MethodName: "GetName",
+			Handler:    _FederationService_GetName_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "federation/federation.proto",
+}
+
+const (
+	PrivateService_GetPost_FullMethodName = "/federation.PrivateService/GetPost"
+	PrivateService_GetName_FullMethodName = "/federation.PrivateService/GetName"
+)
+
+// PrivateServiceClient is the client API for PrivateService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type PrivateServiceClient interface {
+	GetPost(ctx context.Context, in *GetPostRequest, opts ...grpc.CallOption) (*GetPostResponse, error)
+	GetName(ctx context.Context, in *GetNameRequest, opts ...grpc.CallOption) (*GetNameResponse, error)
+}
+
+type privateServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewPrivateServiceClient(cc grpc.ClientConnInterface) PrivateServiceClient {
+	return &privateServiceClient{cc}
+}
+
+func (c *privateServiceClient) GetPost(ctx context.Context, in *GetPostRequest, opts ...grpc.CallOption) (*GetPostResponse, error) {
+	out := new(GetPostResponse)
+	err := c.cc.Invoke(ctx, PrivateService_GetPost_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *privateServiceClient) GetName(ctx context.Context, in *GetNameRequest, opts ...grpc.CallOption) (*GetNameResponse, error) {
+	out := new(GetNameResponse)
+	err := c.cc.Invoke(ctx, PrivateService_GetName_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PrivateServiceServer is the server API for PrivateService service.
+// All implementations must embed UnimplementedPrivateServiceServer
+// for forward compatibility
+type PrivateServiceServer interface {
+	GetPost(context.Context, *GetPostRequest) (*GetPostResponse, error)
+	GetName(context.Context, *GetNameRequest) (*GetNameResponse, error)
+	mustEmbedUnimplementedPrivateServiceServer()
+}
+
+// UnimplementedPrivateServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedPrivateServiceServer struct {
+}
+
+func (UnimplementedPrivateServiceServer) GetPost(context.Context, *GetPostRequest) (*GetPostResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPost not implemented")
+}
+func (UnimplementedPrivateServiceServer) GetName(context.Context, *GetNameRequest) (*GetNameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetName not implemented")
+}
+func (UnimplementedPrivateServiceServer) mustEmbedUnimplementedPrivateServiceServer() {}
+
+// UnsafePrivateServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PrivateServiceServer will
+// result in compilation errors.
+type UnsafePrivateServiceServer interface {
+	mustEmbedUnimplementedPrivateServiceServer()
+}
+
+func RegisterPrivateServiceServer(s grpc.ServiceRegistrar, srv PrivateServiceServer) {
+	s.RegisterService(&PrivateService_ServiceDesc, srv)
+}
+
+func _PrivateService_GetPost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPostRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PrivateServiceServer).GetPost(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PrivateService_GetPost_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PrivateServiceServer).GetPost(ctx, req.(*GetPostRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PrivateService_GetName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PrivateServiceServer).GetName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PrivateService_GetName_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PrivateServiceServer).GetName(ctx, req.(*GetNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// PrivateService_ServiceDesc is the grpc.ServiceDesc for PrivateService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var PrivateService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "federation.PrivateService",
+	HandlerType: (*PrivateServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetPost",
+			Handler:    _PrivateService_GetPost_Handler,
+		},
+		{
+			MethodName: "GetName",
+			Handler:    _PrivateService_GetName_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

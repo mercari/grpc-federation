@@ -25,6 +25,10 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Federation_GetNameResponseArgument is argument for "federation.GetNameResponse" message.
+type Federation_GetNameResponseArgument struct {
+}
+
 // Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
 type Federation_GetPostResponseArgument struct {
 	Id string
@@ -86,6 +90,27 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 type FederationServiceCELPluginConfig struct {
 }
 
+// FederationServiceEnv keeps the values read from environment variables.
+type FederationServiceEnv struct {
+	Name       string `default:"federation"`
+	Federation string
+}
+
+type keyFederationServiceEnv struct{}
+
+// GetFederationServiceEnv gets environment variables.
+func GetFederationServiceEnv(ctx context.Context) *FederationServiceEnv {
+	value := ctx.Value(keyFederationServiceEnv{})
+	if value == nil {
+		return nil
+	}
+	return value.(*FederationServiceEnv)
+}
+
+func withFederationServiceEnv(ctx context.Context, env *FederationServiceEnv) context.Context {
+	return context.WithValue(ctx, keyFederationServiceEnv{}, env)
+}
+
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -100,6 +125,7 @@ type FederationService struct {
 	errorHandler  grpcfed.ErrorHandler
 	celCacheMap   *grpcfed.CELCacheMap
 	tracer        trace.Tracer
+	env           *FederationServiceEnv
 	celTypeHelper *grpcfed.CELTypeHelper
 	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
@@ -117,6 +143,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
+		"grpc.federation.private.GetNameResponseArgument": {},
 		"grpc.federation.private.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
@@ -128,6 +155,10 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			"id":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 		},
+		"grpc.federation.private.Env": {
+			"name":       grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
+			"federation": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Federation"),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
@@ -135,6 +166,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	var env FederationServiceEnv
+	if err := grpcfed.LoadEnv("", &env); err != nil {
+		return nil, err
+	}
 	return &FederationService{
 		cfg:           cfg,
 		logger:        logger,
@@ -143,6 +179,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celTypeHelper: celTypeHelper,
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("federation.FederationService"),
+		env:           &env,
 		client:        &FederationServiceDependentClientSet{},
 	}, nil
 }
@@ -151,6 +188,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
 	ctx, span := s.tracer.Start(ctx, "federation.FederationService/GetPost")
 	defer span.End()
+	ctx = withFederationServiceEnv(ctx, s.env)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -170,6 +208,71 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	return res, nil
 }
 
+// GetName implements "federation.FederationService/GetName" method.
+func (s *FederationService) GetName(ctx context.Context, req *GetNameRequest) (res *GetNameResponse, e error) {
+	ctx, span := s.tracer.Start(ctx, "federation.FederationService/GetName")
+	defer span.End()
+	ctx = withFederationServiceEnv(ctx, s.env)
+	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	defer func() {
+		if r := recover(); r != nil {
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
+			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+	res, err := s.resolve_Federation_GetNameResponse(ctx, &Federation_GetNameResponseArgument{})
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		grpcfed.OutputErrorLog(ctx, err)
+		return nil, err
+	}
+	return res, nil
+}
+
+// resolve_Federation_GetNameResponse resolve "federation.GetNameResponse" message.
+func (s *FederationService) resolve_Federation_GetNameResponse(ctx context.Context, req *Federation_GetNameResponseArgument) (*GetNameResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "federation.GetNameResponse")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetNameResponse", slog.Any("message_args", s.logvalue_Federation_GetNameResponseArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetNameResponseArgument", req)}
+	value.AddEnv(s.env)
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
+
+	// create a message value to be returned.
+	ret := &GetNameResponse{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "grpc.federation.env.name"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `grpc.federation.env.name`,
+		UseContextLibrary: false,
+		CacheIndex:        1,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetNameResponse", slog.Any("federation.GetNameResponse", s.logvalue_Federation_GetNameResponse(ret)))
+	return ret, nil
+}
+
 // resolve_Federation_GetPostResponse resolve "federation.GetPostResponse" message.
 func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Context, req *Federation_GetPostResponseArgument) (*GetPostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.GetPostResponse")
@@ -184,6 +287,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPostResponseArgument", req)}
+	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -227,7 +331,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		Value:             value,
 		Expr:              `p`,
 		UseContextLibrary: false,
-		CacheIndex:        1,
+		CacheIndex:        2,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -258,6 +362,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.PostArgument", req)}
+	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -291,7 +396,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			},
 			By:                  `favorite.FavoriteType.value('TYPE1')`,
 			ByUseContextLibrary: false,
-			ByCacheIndex:        2,
+			ByCacheIndex:        3,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -313,7 +418,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			},
 			By:                  `favorite_value == favorite.FavoriteType.TYPE1`,
 			ByUseContextLibrary: false,
-			ByCacheIndex:        3,
+			ByCacheIndex:        4,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -339,7 +444,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			},
 			By:                  `favorite.FavoriteType.value('TYPE1')`,
 			ByUseContextLibrary: false,
-			ByCacheIndex:        4,
+			ByCacheIndex:        5,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -369,7 +474,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					Value:             value,
 					Expr:              `favorite_value`,
 					UseContextLibrary: false,
-					CacheIndex:        5,
+					CacheIndex:        6,
 					Setter: func(v favorite.FavoriteType) error {
 						args.V = v
 						return nil
@@ -415,7 +520,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					Value:             value,
 					Expr:              `'foo'`,
 					UseContextLibrary: false,
-					CacheIndex:        6,
+					CacheIndex:        7,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -428,7 +533,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					Value:             value,
 					Expr:              `'bar'`,
 					UseContextLibrary: false,
-					CacheIndex:        7,
+					CacheIndex:        8,
 					Setter: func(v string) error {
 						args.Name = v
 						return nil
@@ -464,7 +569,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `'post-id'`,
 		UseContextLibrary: false,
-		CacheIndex:        8,
+		CacheIndex:        9,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -478,7 +583,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `'title'`,
 		UseContextLibrary: false,
-		CacheIndex:        9,
+		CacheIndex:        10,
 		Setter: func(v string) error {
 			ret.Title = v
 			return nil
@@ -492,7 +597,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `'content'`,
 		UseContextLibrary: false,
-		CacheIndex:        10,
+		CacheIndex:        11,
 		Setter: func(v string) error {
 			ret.Content = v
 			return nil
@@ -506,7 +611,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `u`,
 		UseContextLibrary: false,
-		CacheIndex:        11,
+		CacheIndex:        12,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -520,7 +625,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `reaction`,
 		UseContextLibrary: false,
-		CacheIndex:        12,
+		CacheIndex:        13,
 		Setter: func(v *Reaction) error {
 			ret.Reaction = v
 			return nil
@@ -534,7 +639,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `favorite_value`,
 		UseContextLibrary: false,
-		CacheIndex:        13,
+		CacheIndex:        14,
 		Setter: func(v favorite.FavoriteType) error {
 			favoriteValueValue, err := s.cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(v)
 			if err != nil {
@@ -552,7 +657,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `cmp`,
 		UseContextLibrary: false,
-		CacheIndex:        14,
+		CacheIndex:        15,
 		Setter: func(v bool) error {
 			ret.Cmp = v
 			return nil
@@ -580,6 +685,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ReactionArgument", req)}
+	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -602,7 +708,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 		},
 		By:                  `$.v == favorite.FavoriteType.TYPE1`,
 		ByUseContextLibrary: false,
-		ByCacheIndex:        15,
+		ByCacheIndex:        16,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -620,7 +726,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 		Value:             value,
 		Expr:              `favorite.FavoriteType.TYPE1`,
 		UseContextLibrary: false,
-		CacheIndex:        16,
+		CacheIndex:        17,
 		Setter: func(v favorite.FavoriteType) error {
 			ret.FavoriteType = v
 			return nil
@@ -634,7 +740,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 		Value:             value,
 		Expr:              `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`,
 		UseContextLibrary: false,
-		CacheIndex:        17,
+		CacheIndex:        18,
 		Setter: func(v string) error {
 			ret.FavoriteTypeStr = v
 			return nil
@@ -648,7 +754,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 		Value:             value,
 		Expr:              `cmp`,
 		UseContextLibrary: false,
-		CacheIndex:        18,
+		CacheIndex:        19,
 		Setter: func(v bool) error {
 			ret.Cmp = v
 			return nil
@@ -675,6 +781,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.UserArgument", req)}
+	value.AddEnv(s.env)
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -690,7 +797,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `$.id`,
 		UseContextLibrary: false,
-		CacheIndex:        19,
+		CacheIndex:        20,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -704,7 +811,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		Value:             value,
 		Expr:              `$.name`,
 		UseContextLibrary: false,
-		CacheIndex:        20,
+		CacheIndex:        21,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -745,6 +852,22 @@ func (s *FederationService) logvalue_Favorite_FavoriteType(v favorite.FavoriteTy
 		return slog.StringValue("TYPE2")
 	}
 	return slog.StringValue("")
+}
+
+func (s *FederationService) logvalue_Federation_GetNameResponse(v *GetNameResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("name", v.GetName()),
+	)
+}
+
+func (s *FederationService) logvalue_Federation_GetNameResponseArgument(v *Federation_GetNameResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
@@ -828,6 +951,912 @@ func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_UserArgument(v *Federation_UserArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.Id),
+		slog.String("name", v.Name),
+	)
+}
+
+// PrivateServiceConfig configuration required to initialize the service that use GRPC Federation.
+type PrivateServiceConfig struct {
+	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
+	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
+	ErrorHandler grpcfed.ErrorHandler
+	// Logger sets the logger used to output Debug/Info/Error information.
+	Logger *slog.Logger
+}
+
+// PrivateServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
+type PrivateServiceClientFactory interface {
+}
+
+// PrivateServiceClientConfig helper to create gRPC client.
+// Hints for creating a gRPC Client.
+type PrivateServiceClientConfig struct {
+	// Service FQDN ( `<package-name>.<service-name>` ) of the service on Protocol Buffers.
+	Service string
+}
+
+// PrivateServiceDependentClientSet has a gRPC client for all services on which the federation service depends.
+// This is provided as an argument when implementing the custom resolver.
+type PrivateServiceDependentClientSet struct {
+}
+
+// PrivateServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
+type PrivateServiceResolver interface {
+}
+
+// PrivateServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
+type PrivateServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
+
+// PrivateServiceCELPluginConfig hints for loading a WebAssembly based plugin.
+type PrivateServiceCELPluginConfig struct {
+}
+
+// PrivateServiceEnv keeps the values read from environment variables.
+type PrivateServiceEnv struct {
+	Name    string `default:"private"`
+	Private string
+}
+
+type keyPrivateServiceEnv struct{}
+
+// GetPrivateServiceEnv gets environment variables.
+func GetPrivateServiceEnv(ctx context.Context) *PrivateServiceEnv {
+	value := ctx.Value(keyPrivateServiceEnv{})
+	if value == nil {
+		return nil
+	}
+	return value.(*PrivateServiceEnv)
+}
+
+func withPrivateServiceEnv(ctx context.Context, env *PrivateServiceEnv) context.Context {
+	return context.WithValue(ctx, keyPrivateServiceEnv{}, env)
+}
+
+// PrivateServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
+// An Unimplemented error is always returned.
+// This is intended for use when there are many Resolver interfaces that do not need to be implemented,
+// by embedding them in a resolver structure that you have created.
+type PrivateServiceUnimplementedResolver struct{}
+
+// PrivateService represents Federation Service.
+type PrivateService struct {
+	*UnimplementedPrivateServiceServer
+	cfg           PrivateServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	env           *PrivateServiceEnv
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *PrivateServiceDependentClientSet
+}
+
+// NewPrivateService creates PrivateService instance by PrivateServiceConfig.
+func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
+	logger := cfg.Logger
+	if logger == nil {
+		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
+	}
+	errorHandler := cfg.ErrorHandler
+	if errorHandler == nil {
+		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
+	}
+	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
+		"grpc.federation.private.GetNameResponseArgument": {},
+		"grpc.federation.private.GetPostResponseArgument": {
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
+		},
+		"grpc.federation.private.PostArgument": {},
+		"grpc.federation.private.ReactionArgument": {
+			"v": grpcfed.NewCELFieldType(grpcfed.CELIntType, "V"),
+		},
+		"grpc.federation.private.UserArgument": {
+			"id":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
+			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
+		},
+		"grpc.federation.private.Env": {
+			"name":    grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
+			"private": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Private"),
+		},
+	}
+	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	var celEnvOpts []grpcfed.CELEnvOption
+	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	var env PrivateServiceEnv
+	if err := grpcfed.LoadEnv("", &env); err != nil {
+		return nil, err
+	}
+	return &PrivateService{
+		cfg:           cfg,
+		logger:        logger,
+		errorHandler:  errorHandler,
+		celEnvOpts:    celEnvOpts,
+		celTypeHelper: celTypeHelper,
+		celCacheMap:   grpcfed.NewCELCacheMap(),
+		tracer:        otel.Tracer("federation.PrivateService"),
+		env:           &env,
+		client:        &PrivateServiceDependentClientSet{},
+	}, nil
+}
+
+// GetPost implements "federation.PrivateService/GetPost" method.
+func (s *PrivateService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
+	ctx, span := s.tracer.Start(ctx, "federation.PrivateService/GetPost")
+	defer span.End()
+	ctx = withPrivateServiceEnv(ctx, s.env)
+	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	defer func() {
+		if r := recover(); r != nil {
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
+			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+	res, err := s.resolve_Federation_GetPostResponse(ctx, &Federation_GetPostResponseArgument{
+		Id: req.GetId(),
+	})
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		grpcfed.OutputErrorLog(ctx, err)
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetName implements "federation.PrivateService/GetName" method.
+func (s *PrivateService) GetName(ctx context.Context, req *GetNameRequest) (res *GetNameResponse, e error) {
+	ctx, span := s.tracer.Start(ctx, "federation.PrivateService/GetName")
+	defer span.End()
+	ctx = withPrivateServiceEnv(ctx, s.env)
+	ctx = grpcfed.WithLogger(ctx, s.logger)
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	defer func() {
+		if r := recover(); r != nil {
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
+			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+	res, err := s.resolve_Federation_GetNameResponse(ctx, &Federation_GetNameResponseArgument{})
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		grpcfed.OutputErrorLog(ctx, err)
+		return nil, err
+	}
+	return res, nil
+}
+
+// resolve_Federation_GetNameResponse resolve "federation.GetNameResponse" message.
+func (s *PrivateService) resolve_Federation_GetNameResponse(ctx context.Context, req *Federation_GetNameResponseArgument) (*GetNameResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "federation.GetNameResponse")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetNameResponse", slog.Any("message_args", s.logvalue_Federation_GetNameResponseArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetNameResponseArgument", req)}
+	value.AddEnv(s.env)
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
+
+	// create a message value to be returned.
+	ret := &GetNameResponse{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "grpc.federation.env.name"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `grpc.federation.env.name`,
+		UseContextLibrary: false,
+		CacheIndex:        1,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetNameResponse", slog.Any("federation.GetNameResponse", s.logvalue_Federation_GetNameResponse(ret)))
+	return ret, nil
+}
+
+// resolve_Federation_GetPostResponse resolve "federation.GetPostResponse" message.
+func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context, req *Federation_GetPostResponseArgument) (*GetPostResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "federation.GetPostResponse")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.GetPostResponse", slog.Any("message_args", s.logvalue_Federation_GetPostResponseArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			p *Post
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPostResponseArgument", req)}
+	value.AddEnv(s.env)
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
+
+	// This section's codes are generated by the following proto definition.
+	/*
+	   def {
+	     name: "p"
+	     message {
+	       name: "Post"
+	     }
+	   }
+	*/
+	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*Post, *localValueType]{
+		Name: `p`,
+		Type: grpcfed.CELObjectType("federation.Post"),
+		Setter: func(value *localValueType, v *Post) error {
+			value.vars.p = v
+			return nil
+		},
+		Message: func(ctx context.Context, value *localValueType) (any, error) {
+			args := &Federation_PostArgument{}
+			return s.resolve_Federation_Post(ctx, args)
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.P = value.vars.p
+
+	// create a message value to be returned.
+	ret := &GetPostResponse{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "p"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
+		Value:             value,
+		Expr:              `p`,
+		UseContextLibrary: false,
+		CacheIndex:        2,
+		Setter: func(v *Post) error {
+			ret.Post = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.GetPostResponse", slog.Any("federation.GetPostResponse", s.logvalue_Federation_GetPostResponse(ret)))
+	return ret, nil
+}
+
+// resolve_Federation_Post resolve "federation.Post" message.
+func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Federation_PostArgument) (*Post, error) {
+	ctx, span := s.tracer.Start(ctx, "federation.Post")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Post", slog.Any("message_args", s.logvalue_Federation_PostArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			cmp            bool
+			favorite_value favorite.FavoriteType
+			reaction       *Reaction
+			u              *User
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.PostArgument", req)}
+	value.AddEnv(s.env)
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
+	// A tree view of message dependencies is shown below.
+	/*
+	   favorite_value ─┐
+	                        cmp ─┐
+	   favorite_value ─┐         │
+	                   reaction ─┤
+	                          u ─┤
+	*/
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "favorite_value"
+		     by: "favorite.FavoriteType.value('TYPE1')"
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[favorite.FavoriteType, *localValueType]{
+			Name: `favorite_value`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v favorite.FavoriteType) error {
+				value.vars.favorite_value = v
+				return nil
+			},
+			By:                  `favorite.FavoriteType.value('TYPE1')`,
+			ByUseContextLibrary: false,
+			ByCacheIndex:        3,
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "cmp"
+		     by: "favorite_value == favorite.FavoriteType.TYPE1"
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[bool, *localValueType]{
+			Name: `cmp`,
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.cmp = v
+				return nil
+			},
+			By:                  `favorite_value == favorite.FavoriteType.TYPE1`,
+			ByUseContextLibrary: false,
+			ByCacheIndex:        4,
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "favorite_value"
+		     by: "favorite.FavoriteType.value('TYPE1')"
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[favorite.FavoriteType, *localValueType]{
+			Name: `favorite_value`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v favorite.FavoriteType) error {
+				value.vars.favorite_value = v
+				return nil
+			},
+			By:                  `favorite.FavoriteType.value('TYPE1')`,
+			ByUseContextLibrary: false,
+			ByCacheIndex:        5,
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "reaction"
+		     message {
+		       name: "Reaction"
+		       args { name: "v", by: "favorite_value" }
+		     }
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*Reaction, *localValueType]{
+			Name: `reaction`,
+			Type: grpcfed.CELObjectType("federation.Reaction"),
+			Setter: func(value *localValueType, v *Reaction) error {
+				value.vars.reaction = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &Federation_ReactionArgument{}
+				// { name: "v", by: "favorite_value" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
+					Value:             value,
+					Expr:              `favorite_value`,
+					UseContextLibrary: false,
+					CacheIndex:        6,
+					Setter: func(v favorite.FavoriteType) error {
+						args.V = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				return s.resolve_Federation_Reaction(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+
+		// This section's codes are generated by the following proto definition.
+		/*
+		   def {
+		     name: "u"
+		     message {
+		       name: "User"
+		       args: [
+		         { name: "id", by: "'foo'" },
+		         { name: "name", by: "'bar'" }
+		       ]
+		     }
+		   }
+		*/
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*User, *localValueType]{
+			Name: `u`,
+			Type: grpcfed.CELObjectType("federation.User"),
+			Setter: func(value *localValueType, v *User) error {
+				value.vars.u = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &Federation_UserArgument{}
+				// { name: "id", by: "'foo'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              `'foo'`,
+					UseContextLibrary: false,
+					CacheIndex:        7,
+					Setter: func(v string) error {
+						args.Id = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				// { name: "name", by: "'bar'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:             value,
+					Expr:              `'bar'`,
+					UseContextLibrary: false,
+					CacheIndex:        8,
+					Setter: func(v string) error {
+						args.Name = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				return s.resolve_Federation_User(ctx, args)
+			},
+		}); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Cmp = value.vars.cmp
+	req.FavoriteValue = value.vars.favorite_value
+	req.Reaction = value.vars.reaction
+	req.U = value.vars.u
+
+	// create a message value to be returned.
+	ret := &Post{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "'post-id'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'post-id'`,
+		UseContextLibrary: false,
+		CacheIndex:        9,
+		Setter: func(v string) error {
+			ret.Id = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "'title'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'title'`,
+		UseContextLibrary: false,
+		CacheIndex:        10,
+		Setter: func(v string) error {
+			ret.Title = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "'content'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `'content'`,
+		UseContextLibrary: false,
+		CacheIndex:        11,
+		Setter: func(v string) error {
+			ret.Content = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "u"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
+		Value:             value,
+		Expr:              `u`,
+		UseContextLibrary: false,
+		CacheIndex:        12,
+		Setter: func(v *User) error {
+			ret.User = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "reaction"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Reaction]{
+		Value:             value,
+		Expr:              `reaction`,
+		UseContextLibrary: false,
+		CacheIndex:        13,
+		Setter: func(v *Reaction) error {
+			ret.Reaction = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "favorite_value"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
+		Value:             value,
+		Expr:              `favorite_value`,
+		UseContextLibrary: false,
+		CacheIndex:        14,
+		Setter: func(v favorite.FavoriteType) error {
+			favoriteValueValue, err := s.cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(v)
+			if err != nil {
+				return err
+			}
+			ret.FavoriteValue = favoriteValueValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "cmp"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
+		Value:             value,
+		Expr:              `cmp`,
+		UseContextLibrary: false,
+		CacheIndex:        15,
+		Setter: func(v bool) error {
+			ret.Cmp = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
+	return ret, nil
+}
+
+// resolve_Federation_Reaction resolve "federation.Reaction" message.
+func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *Federation_ReactionArgument) (*Reaction, error) {
+	ctx, span := s.tracer.Start(ctx, "federation.Reaction")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.Reaction", slog.Any("message_args", s.logvalue_Federation_ReactionArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			cmp bool
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ReactionArgument", req)}
+	value.AddEnv(s.env)
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
+
+	// This section's codes are generated by the following proto definition.
+	/*
+	   def {
+	     name: "cmp"
+	     by: "$.v == favorite.FavoriteType.TYPE1"
+	   }
+	*/
+	if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
+		Name: `cmp`,
+		Type: grpcfed.CELBoolType,
+		Setter: func(value *localValueType, v bool) error {
+			value.vars.cmp = v
+			return nil
+		},
+		By:                  `$.v == favorite.FavoriteType.TYPE1`,
+		ByUseContextLibrary: false,
+		ByCacheIndex:        16,
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.Cmp = value.vars.cmp
+
+	// create a message value to be returned.
+	ret := &Reaction{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "favorite.FavoriteType.TYPE1"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
+		Value:             value,
+		Expr:              `favorite.FavoriteType.TYPE1`,
+		UseContextLibrary: false,
+		CacheIndex:        17,
+		Setter: func(v favorite.FavoriteType) error {
+			ret.FavoriteType = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`,
+		UseContextLibrary: false,
+		CacheIndex:        18,
+		Setter: func(v string) error {
+			ret.FavoriteTypeStr = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "cmp"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
+		Value:             value,
+		Expr:              `cmp`,
+		UseContextLibrary: false,
+		CacheIndex:        19,
+		Setter: func(v bool) error {
+			ret.Cmp = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Reaction", slog.Any("federation.Reaction", s.logvalue_Federation_Reaction(ret)))
+	return ret, nil
+}
+
+// resolve_Federation_User resolve "federation.User" message.
+func (s *PrivateService) resolve_Federation_User(ctx context.Context, req *Federation_UserArgument) (*User, error) {
+	ctx, span := s.tracer.Start(ctx, "federation.User")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve federation.User", slog.Any("message_args", s.logvalue_Federation_UserArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.UserArgument", req)}
+	value.AddEnv(s.env)
+	defer func() {
+		if err := value.Close(ctx); err != nil {
+			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
+		}
+	}()
+
+	// create a message value to be returned.
+	ret := &User{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "$.id"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `$.id`,
+		UseContextLibrary: false,
+		CacheIndex:        20,
+		Setter: func(v string) error {
+			ret.Id = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "$.name"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:             value,
+		Expr:              `$.name`,
+		UseContextLibrary: false,
+		CacheIndex:        21,
+		Setter: func(v string) error {
+			ret.Name = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.User", slog.Any("federation.User", s.logvalue_Federation_User(ret)))
+	return ret, nil
+}
+
+// cast_Favorite_FavoriteType__to__Federation_MyFavoriteType cast from "favorite.FavoriteType" to "federation.MyFavoriteType".
+func (s *PrivateService) cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(from favorite.FavoriteType) (MyFavoriteType, error) {
+	switch from {
+	case favorite.FavoriteType_UNKNOWN:
+		return MyFavoriteType_UNKNOWN, nil
+	case favorite.FavoriteType_TYPE1:
+		return MyFavoriteType_TYPE1, nil
+	default:
+		return 0, nil
+	}
+}
+
+// cast_int64__to__Favorite_FavoriteType cast from "int64" to "favorite.FavoriteType".
+func (s *PrivateService) cast_int64__to__Favorite_FavoriteType(from int64) (favorite.FavoriteType, error) {
+	return favorite.FavoriteType(from), nil
+}
+
+func (s *PrivateService) logvalue_Favorite_FavoriteType(v favorite.FavoriteType) slog.Value {
+	switch v {
+	case favorite.FavoriteType_UNKNOWN:
+		return slog.StringValue("UNKNOWN")
+	case favorite.FavoriteType_TYPE1:
+		return slog.StringValue("TYPE1")
+	case favorite.FavoriteType_TYPE2:
+		return slog.StringValue("TYPE2")
+	}
+	return slog.StringValue("")
+}
+
+func (s *PrivateService) logvalue_Federation_GetNameResponse(v *GetNameResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("name", v.GetName()),
+	)
+}
+
+func (s *PrivateService) logvalue_Federation_GetNameResponseArgument(v *Federation_GetNameResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
+}
+
+func (s *PrivateService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Any("post", s.logvalue_Federation_Post(v.GetPost())),
+	)
+}
+
+func (s *PrivateService) logvalue_Federation_GetPostResponseArgument(v *Federation_GetPostResponseArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.Id),
+	)
+}
+
+func (s *PrivateService) logvalue_Federation_MyFavoriteType(v MyFavoriteType) slog.Value {
+	switch v {
+	case MyFavoriteType_UNKNOWN:
+		return slog.StringValue("UNKNOWN")
+	case MyFavoriteType_TYPE1:
+		return slog.StringValue("TYPE1")
+	}
+	return slog.StringValue("")
+}
+
+func (s *PrivateService) logvalue_Federation_Post(v *Post) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+		slog.String("title", v.GetTitle()),
+		slog.String("content", v.GetContent()),
+		slog.Any("user", s.logvalue_Federation_User(v.GetUser())),
+		slog.Any("reaction", s.logvalue_Federation_Reaction(v.GetReaction())),
+		slog.String("favorite_value", s.logvalue_Federation_MyFavoriteType(v.GetFavoriteValue()).String()),
+		slog.Bool("cmp", v.GetCmp()),
+	)
+}
+
+func (s *PrivateService) logvalue_Federation_PostArgument(v *Federation_PostArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
+}
+
+func (s *PrivateService) logvalue_Federation_Reaction(v *Reaction) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("favorite_type", s.logvalue_Favorite_FavoriteType(v.GetFavoriteType()).String()),
+		slog.String("favorite_type_str", v.GetFavoriteTypeStr()),
+		slog.Bool("cmp", v.GetCmp()),
+	)
+}
+
+func (s *PrivateService) logvalue_Federation_ReactionArgument(v *Federation_ReactionArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("v", s.logvalue_Favorite_FavoriteType(v.V).String()),
+	)
+}
+
+func (s *PrivateService) logvalue_Federation_User(v *User) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+		slog.String("name", v.GetName()),
+	)
+}
+
+func (s *PrivateService) logvalue_Federation_UserArgument(v *Federation_UserArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

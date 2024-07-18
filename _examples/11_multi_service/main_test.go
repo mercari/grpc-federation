@@ -68,8 +68,8 @@ func TestFederation(t *testing.T) {
 	}))
 	t.Run("federation", func(t *testing.T) {
 		var (
-			requestID = "foo"
-			expected  = &federation.GetPostResponse{
+			requestID           = "foo"
+			expectedGetPostResp = &federation.GetPostResponse{
 				Post: &federation.Post{
 					Id:      "post-id",
 					Title:   "title",
@@ -87,6 +87,9 @@ func TestFederation(t *testing.T) {
 					Cmp:           true,
 				},
 			}
+			expectedGetNameResp = &federation.GetNameResponse{
+				Name: "federation",
+			}
 		)
 
 		svc, err := federation.NewFederationService(federation.FederationServiceConfig{
@@ -95,13 +98,24 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, err := svc.GetPost(ctx, &federation.GetPostRequest{Id: requestID})
+		gotGetPostResp, err := svc.GetPost(ctx, &federation.GetPostRequest{Id: requestID})
 		if err != nil {
 			t.Fatal(err)
 		}
 		if diff := cmp.Diff(
-			got, expected,
+			gotGetPostResp, expectedGetPostResp,
 			cmpopts.IgnoreUnexported(federation.GetPostResponse{}, federation.Post{}, federation.User{}, federation.Reaction{}),
+		); diff != "" {
+			t.Errorf("(-got, +want)\n%s", diff)
+		}
+
+		gotGetNameResp, err := svc.GetName(ctx, &federation.GetNameRequest{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(
+			gotGetNameResp, expectedGetNameResp,
+			cmpopts.IgnoreUnexported(federation.GetNameResponse{}),
 		); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
@@ -126,6 +140,27 @@ func TestFederation(t *testing.T) {
 		if diff := cmp.Diff(
 			got, expected,
 			cmpopts.IgnoreUnexported(federation.GetStatusResponse{}, federation.User{}),
+		); diff != "" {
+			t.Errorf("(-got, +want)\n%s", diff)
+		}
+	})
+	t.Run("private", func(t *testing.T) {
+		expected := &federation.GetNameResponse{
+			Name: "private",
+		}
+		svc, err := federation.NewPrivateService(federation.PrivateServiceConfig{
+			Logger: logger,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := svc.GetName(ctx, &federation.GetNameRequest{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(
+			got, expected,
+			cmpopts.IgnoreUnexported(federation.GetNameResponse{}),
 		); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
