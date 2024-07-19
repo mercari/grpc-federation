@@ -19,7 +19,9 @@ service MyService {
 The definition of environment variables used by the service.
 The environment variables defined here can be accessed through the `Get<service-name>Env()` function in the custom resolver. They can also be used by accessing the `grpc.federation.env` variable in CEL expressions.
 When using `grpc.federation.env` to access environment variables, the message using the option must exist in the same package as the service that defines the `env` option.
-Also, multiple services within the same package cannot use the env option.
+
+Keep in mind that multiple services within the same package can use the `env` option. However, if a message is employed by multiple services with differing `env` options, that message can only access the set of environment variables that are common to those services.
+For instance, suppose ServiceA has two environment variables, `ENV_VAR1` and `ENV_VAR2`, while ServiceB has just one, `ENV_VAR1`. If both services reference `Message1`, users can only access `ENV_VAR1` from `Message1`, as ServiceB does not define `ENV_VAR2` in its environment options.
 
 `message` and `var` cannot be used simultaneously.
 
