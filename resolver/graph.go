@@ -45,6 +45,17 @@ func CreateAllMessageDependencyGraph(ctx *context, msgs []*Message) *AllMessageD
 	return graph
 }
 
+func (n *AllMessageDependencyGraphNode) childMessages() []*Message {
+	messages := []*Message{n.Message}
+	for _, child := range n.Children {
+		if child.Message.Rule == nil {
+			continue
+		}
+		messages = append(messages, child.childMessages()...)
+	}
+	return messages
+}
+
 type AllMessageDependencyGraphNodeReferenceBuilder struct {
 	msgToNode map[*Message]*AllMessageDependencyGraphNode
 	childMap  map[*AllMessageDependencyGraphNode]struct{}

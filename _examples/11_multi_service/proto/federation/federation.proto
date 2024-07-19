@@ -10,8 +10,43 @@ import "favorite/favorite.proto";
 option go_package = "example/federation;federation";
 
 service FederationService {
-  option (grpc.federation.service) = {};
+  option (grpc.federation.service) = {
+    env {
+      var {
+        name: "name"
+        type { kind: STRING }
+        option {
+          default: "federation"
+        }
+      }
+      var {
+        name: "federation"
+        type { kind: STRING }
+      }
+    }
+  };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+  rpc GetName(GetNameRequest) returns (GetNameResponse) {};
+}
+
+service PrivateService {
+  option (grpc.federation.service) = {
+    env {
+      var {
+        name: "name"
+        type { kind: STRING }
+        option {
+          default: "private"
+        }
+      }
+      var {
+        name: "private"
+        type { kind: STRING }
+      }
+    }
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+  rpc GetName(GetNameRequest) returns (GetNameResponse) {};
 }
 
 service DebugService {
@@ -73,6 +108,13 @@ enum MyFavoriteType {
 message User {
   string id = 1 [(grpc.federation.field).by = "$.id"];
   string name = 2 [(grpc.federation.field).by = "$.name"];
+}
+
+message GetNameRequest {
+}
+
+message GetNameResponse {
+  string name = 1 [(grpc.federation.field).by = "grpc.federation.env.name"];
 }
 
 message GetStatusRequest {

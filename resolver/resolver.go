@@ -817,33 +817,6 @@ func (r *Resolver) resolveServiceRules(ctx *context, svcs []*Service) {
 		r.resolveMethodRules(ctx, svc.Methods, builder)
 		pkgToSvcs[svc.Package()] = append(pkgToSvcs[svc.Package()], svc)
 	}
-	for pkg, svcs := range pkgToSvcs {
-		var envSvcs []*Service
-		for _, svc := range svcs {
-			if svc.Rule == nil {
-				continue
-			}
-			if svc.Rule.Env == nil {
-				continue
-			}
-			envSvcs = append(envSvcs, svc)
-		}
-		if len(envSvcs) <= 1 {
-			continue
-		}
-		for _, envSvc := range envSvcs {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						`%q: multiple services within the same package (%q) cannot use the env option`,
-						envSvc.FQDN(),
-						pkg.Name,
-					),
-					source.NewServiceBuilder(envSvc.File.Name, envSvc.Name).WithOption().WithEnv().Location(),
-				),
-			)
-		}
-	}
 }
 
 func (r *Resolver) resolveMethodRules(ctx *context, mtds []*Method, builder *source.ServiceBuilder) {
@@ -2668,9 +2641,28 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 		return
 	}
 
+	// Need to prepare the svcMsgSet first to build env messages.
+	// This is necessary because we need to know which messages are used by which services when creating the messages.
 	svcMsgSet := make(map[*Service]map[*Message]struct{})
 	for _, root := range graph.Roots {
 		// The root message is always the response message of the method.
+		resMsg := root.Message
+		// Store the messages to serviceMsgMap first to avoid inserting duplicated ones to Service.Messages
+		for _, svc := range r.cachedServiceMap {
+			if _, exists := svcMsgSet[svc]; !exists {
+				svcMsgSet[svc] = make(map[*Message]struct{})
+			}
+			// If the method of the service has not a response message, it is excluded.
+			if !svc.HasMessageInMethod(resMsg) {
+				continue
+			}
+			for _, msg := range root.childMessages() {
+				svcMsgSet[svc][msg] = struct{}{}
+			}
+		}
+	}
+
+	for _, root := range graph.Roots {
 		resMsg := root.Message
 
 		var msgArg *Message
@@ -2688,26 +2680,13 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 			// A non-response message may also become a root message.
 			// In such a case, the message argument field does not exist.
 			// However, since it is necessary to resolve the CEL reference, needs to call recursive message argument resolver.
-			_ = r.resolveMessageArgumentRecursive(ctx, root)
+			_ = r.resolveMessageArgumentRecursive(ctx, root, svcMsgSet)
 			continue
 		}
 
 		msgArg.Fields = append(msgArg.Fields, reqMsg.Fields...)
 		r.cachedMessageMap[msgArg.FQDN()] = msgArg
-
-		// Store the messages to serviceMsgMap first to avoid inserting duplicated ones to Service.Messages
-		for _, svc := range r.cachedServiceMap {
-			if _, exists := svcMsgSet[svc]; !exists {
-				svcMsgSet[svc] = make(map[*Message]struct{})
-			}
-			// If the method of the service has not a response message, it is excluded.
-			if !svc.HasMessageInMethod(resMsg) {
-				continue
-			}
-			for _, msg := range r.resolveMessageArgumentRecursive(ctx, root) {
-				svcMsgSet[svc][msg] = struct{}{}
-			}
-		}
+		r.resolveMessageArgumentRecursive(ctx, root, svcMsgSet)
 	}
 
 	for svc, msgSet := range svcMsgSet {
@@ -2727,7 +2706,11 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 	}
 }
 
-func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessageDependencyGraphNode) []*Message {
+func (r *Resolver) resolveMessageArgumentRecursive(
+	ctx *context,
+	node *AllMessageDependencyGraphNode,
+	svcMsgSet map[*Service]map[*Message]struct{},
+) []*Message {
 	msg := node.Message
 	builder := newMessageBuilderFromMessage(msg)
 	arg := msg.Rule.MessageArgument
@@ -2741,7 +2724,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		)
 		return nil
 	}
-	env, err := r.createCELEnv(msg)
+	env, err := r.createCELEnv(ctx, msg, svcMsgSet, builder)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -2786,7 +2769,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(ctx *context, node *AllMessag
 		for _, field := range depMsgArg.Fields {
 			field.Message = depMsgArg
 		}
-		m := r.resolveMessageArgumentRecursive(ctx, child)
+		m := r.resolveMessageArgumentRecursive(ctx, child, svcMsgSet)
 		msgs = append(msgs, m...)
 	}
 	return msgs
@@ -3476,7 +3459,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	return nil
 }
 
-func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
+func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
@@ -3485,7 +3468,8 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 		cel.CustomTypeProvider(r.celRegistry),
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 	}
-	if envMsg := r.getEnvMessage(msg); envMsg != nil {
+	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)
+	if envMsg != nil {
 		fileDesc := envFileDescriptor(envMsg)
 		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
 			return nil, err
@@ -3507,33 +3491,94 @@ func (r *Resolver) createCELEnv(msg *Message) (*cel.Env, error) {
 	return env, nil
 }
 
-func (r *Resolver) getEnvMessage(msg *Message) *Message {
+func (r *Resolver) buildEnvMessage(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) *Message {
 	if msg.File == nil {
 		return nil
 	}
 	if msg.File.Package == nil {
 		return nil
 	}
-	var envSvcs []*Service
-	for _, file := range msg.File.Package.Files {
-		for _, svc := range file.Services {
-			if svc.Rule == nil {
-				continue
+
+	// Examine all the services where the message is used and collect all the essential information
+	// to calculate the intersection set of each service's environment variables.
+	svcEnvVarMap := map[*Service]map[string]*EnvVar{}
+	envVarNameSet := map[string]struct{}{}
+	for svc, msgSet := range svcMsgSet {
+		if _, exists := msgSet[msg]; exists {
+			envVarMap := make(map[string]*EnvVar)
+			if svc.Rule != nil && svc.Rule.Env != nil {
+				for _, envVar := range svc.Rule.Env.Vars {
+					envVarMap[envVar.Name] = envVar
+					envVarNameSet[envVar.Name] = struct{}{}
+				}
 			}
-			if svc.Rule.Env == nil {
-				continue
-			}
-			envSvcs = append(envSvcs, svc)
+			svcEnvVarMap[svc] = envVarMap
 		}
 	}
 
-	// If there are multiple services with env, we do not have a method to select one from them.
-	// Therefore, we proceed only when there is a single candidate service.
-	// Since validation for cases with multiple services is done elsewhere, we don't need to create an error here.
-	if len(envSvcs) != 1 {
-		return nil
+	// Calculate the intersection set of each service's environment variables
+	var envVars []*EnvVar
+	var mismatchEnvVarNames []string
+	mismatchServiceNames := map[string][]string{}
+	for envVarName := range envVarNameSet {
+		omit := false
+		type svcEnvVar struct {
+			svc    *Service
+			envVar *EnvVar
+		}
+		var svcEnvVars []*svcEnvVar
+		for svc, envVarMap := range svcEnvVarMap {
+			envVar, exists := envVarMap[envVarName]
+			if !exists {
+				// The given envVar is not defined in the service, so just omit it from the intersection set
+				omit = true
+				break
+			}
+			svcEnvVars = append(svcEnvVars, &svcEnvVar{svc: svc, envVar: envVar})
+		}
+		if omit {
+			continue
+		}
+
+		// Check if all the envVar has the same type
+		typ := svcEnvVars[0].envVar.Type
+		var mismatch bool
+		for _, sev := range svcEnvVars[1:] {
+			if !isExactlySameType(typ, sev.envVar.Type) {
+				mismatch = true
+				break
+			}
+		}
+		if mismatch {
+			mismatchEnvVarNames = append(mismatchEnvVarNames, envVarName)
+			var serviceNames []string
+			for _, sev := range svcEnvVars {
+				serviceNames = append(serviceNames, sev.svc.Name)
+			}
+			// Fix the order for testing
+			sort.Strings(serviceNames)
+			mismatchServiceNames[envVarName] = serviceNames
+		}
+
+		envVars = append(envVars, svcEnvVars[0].envVar)
 	}
-	return envToMessage(envSvcs[0].File, envSvcs[0].Rule.Env)
+
+	// Fix the order for testing
+	sort.Strings(mismatchEnvVarNames)
+	for _, missingEnvVarName := range mismatchEnvVarNames {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					"environment variable %q has different types across services: %s",
+					missingEnvVarName,
+					strings.Join(mismatchServiceNames[missingEnvVarName], ", "),
+				),
+				builder.Location(),
+			),
+		)
+	}
+
+	return envVarsToMessage(msg.File, envVars)
 }
 
 func (r *Resolver) enumAccessors() []cel.EnvOption {
@@ -3722,7 +3767,7 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 	}
 }
 
-func envToMessage(file *File, env *Env) *Message {
+func envVarsToMessage(file *File, envVars []*EnvVar) *Message {
 	copied := *file
 	copied.Package = &Package{
 		Name: federation.PrivatePackageName,
@@ -3731,7 +3776,7 @@ func envToMessage(file *File, env *Env) *Message {
 		File: &copied,
 		Name: "Env",
 	}
-	for _, v := range env.Vars {
+	for _, v := range envVars {
 		msg.Fields = append(msg.Fields, &Field{
 			Name: v.Name,
 			Type: v.Type,
@@ -4062,6 +4107,40 @@ func isDifferentType(from, to *Type) bool {
 		return false
 	}
 	return from.Kind != to.Kind
+}
+
+func isExactlySameType(left, right *Type) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	if left.Kind != right.Kind {
+		return false
+	}
+	if left.Repeated != right.Repeated {
+		return false
+	}
+	if left.Message != nil || right.Message != nil {
+		if left.Message == nil || right.Message == nil {
+			return false
+		}
+		if len(left.Message.Fields) != len(right.Message.Fields) {
+			return false
+		}
+		lfMap := map[string]*Field{}
+		for _, lf := range left.Message.Fields {
+			lfMap[lf.Name] = lf
+		}
+		for _, rf := range right.Message.Fields {
+			lf, exists := lfMap[rf.Name]
+			if !exists {
+				return false
+			}
+			if !isExactlySameType(lf.Type, rf.Type) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func newMessageBuilderFromMessage(message *Message) *source.MessageBuilder {

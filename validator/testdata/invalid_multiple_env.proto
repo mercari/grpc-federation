@@ -13,48 +13,46 @@ service InlineEnvService {
       var {
         name: "aaa"
         type { kind: STRING }
-        option {
-          default: "xxx"
-        }
       }
       var {
         name: "bbb"
         type { repeated { kind: INT64 } }
-        option {
-          alternate: "yyy"
-        }
       }
       var {
         name: "ccc"
-        type { map { key { kind: STRING } value { kind: DURATION } } }
-        option {
-          required: true
-          alternate: "c"
-        }
+        type { kind: INT64 }
       }
       var {
         name: "ddd"
-        type { kind: DOUBLE }
-        option {
-          ignored: true
-        }
+        type { map { key { kind: STRING } value { kind: DURATION } } }
+      }
+      var {
+        name: "eee"
+        type { map { key { kind: STRING } value { kind: INT64 } } }
       }
     }
   };
+  rpc GetName(GetNameRequest) returns (GetNameResponse) {};
 }
 
 service RefEnvService {
   option (grpc.federation.service) = {
     env { message: "Env" }
   };
+  rpc GetName(GetNameRequest) returns (GetNameResponse) {};
 }
 
 message Env {
-  string aaa = 1 [(grpc.federation.field).env.default = "xxx"];
-  repeated int64 bbb = 2 [(grpc.federation.field).env.alternate = "yyy"];
-  map<string, google.protobuf.Duration> ccc = 3 [(grpc.federation.field).env = {
-    required: true
-    alternate: "c"
-  }];
-  double ddd = 4 [(grpc.federation.field).env.ignored = true];
+  string aaa = 1;
+  repeated int64 bbb = 2;
+  repeated int64 ccc = 3;
+  map<string, google.protobuf.Duration> ddd = 4;
+  map<string, google.protobuf.Duration> eee = 5;
+}
+
+message GetNameRequest {
+}
+
+message GetNameResponse {
+  string aaa = 1 [(grpc.federation.field).by = "grpc.federation.env.aaa"];
 }
