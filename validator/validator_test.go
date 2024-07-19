@@ -90,8 +90,10 @@ testdata/invalid_env.proto:24:16: "org.federation.Invalid" message does not exis
                     ^
 `},
 		{file: "invalid_multiple_env.proto", expected: `
-testdata/invalid_multiple_env.proto:56:1: environment variable "ccc" has different types across services: service: InlineEnvService, type: int64, repeated: false, service: RefEnvService, type: int64, repeated: true
-environment variable "eee" has different types across services: service: InlineEnvService, type: message, repeated: false, service: RefEnvService, type: message, repeated: false
+testdata/invalid_multiple_env.proto:56:1: environment variable "ccc" has different types across services: InlineEnvService, RefEnvService
+56:  message GetNameResponse {
+     ^
+testdata/invalid_multiple_env.proto:56:1: environment variable "eee" has different types across services: InlineEnvService, RefEnvService
 56:  message GetNameResponse {
      ^
 `},

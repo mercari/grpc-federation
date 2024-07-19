@@ -54,5 +54,5 @@ message GetNameRequest {
 }
 
 message GetNameResponse {
-  string name = 1 [(grpc.federation.field).by = "grpc.federation.env.name"];
+  string aaa = 1 [(grpc.federation.field).by = "grpc.federation.env.aaa"];
 }

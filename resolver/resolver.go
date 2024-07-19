@@ -2724,7 +2724,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(
 		)
 		return nil
 	}
-	env, err := r.createCELEnv(msg, svcMsgSet)
+	env, err := r.createCELEnv(ctx, msg, svcMsgSet, builder)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -3459,7 +3459,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	return nil
 }
 
-func (r *Resolver) createCELEnv(msg *Message, svcMsgSet map[*Service]map[*Message]struct{}) (*cel.Env, error) {
+func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
@@ -3468,10 +3468,7 @@ func (r *Resolver) createCELEnv(msg *Message, svcMsgSet map[*Service]map[*Messag
 		cel.CustomTypeProvider(r.celRegistry),
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 	}
-	envMsg, err := r.buildEnvMessage(msg, svcMsgSet)
-	if err != nil {
-		return nil, err
-	}
+	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)
 	if envMsg != nil {
 		fileDesc := envFileDescriptor(envMsg)
 		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
@@ -3494,12 +3491,12 @@ func (r *Resolver) createCELEnv(msg *Message, svcMsgSet map[*Service]map[*Messag
 	return env, nil
 }
 
-func (r *Resolver) buildEnvMessage(msg *Message, svcMsgSet map[*Service]map[*Message]struct{}) (*Message, error) {
+func (r *Resolver) buildEnvMessage(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) *Message {
 	if msg.File == nil {
-		return nil, nil
+		return nil
 	}
 	if msg.File.Package == nil {
-		return nil, nil
+		return nil
 	}
 
 	// Examine all the services where the message is used and collect all the essential information
@@ -3507,7 +3504,7 @@ func (r *Resolver) buildEnvMessage(msg *Message, svcMsgSet map[*Service]map[*Mes
 	svcEnvVarMap := map[*Service]map[string]*EnvVar{}
 	envVarNameSet := map[string]struct{}{}
 	for svc, msgSet := range svcMsgSet {
-		if _, exist := msgSet[msg]; exist {
+		if _, exists := msgSet[msg]; exists {
 			envVarMap := make(map[string]*EnvVar)
 			if svc.Rule != nil && svc.Rule.Env != nil {
 				for _, envVar := range svc.Rule.Env.Vars {
@@ -3521,7 +3518,8 @@ func (r *Resolver) buildEnvMessage(msg *Message, svcMsgSet map[*Service]map[*Mes
 
 	// Calculate the intersection set of each service's environment variables
 	var envVars []*EnvVar
-	var errs []error
+	var mismatchEnvVarNames []string
+	mismatchServiceNames := map[string][]string{}
 	for envVarName := range envVarNameSet {
 		omit := false
 		type svcEnvVar struct {
@@ -3530,8 +3528,8 @@ func (r *Resolver) buildEnvMessage(msg *Message, svcMsgSet map[*Service]map[*Mes
 		}
 		var svcEnvVars []*svcEnvVar
 		for svc, envVarMap := range svcEnvVarMap {
-			envVar, exist := envVarMap[envVarName]
-			if !exist {
+			envVar, exists := envVarMap[envVarName]
+			if !exists {
 				// The given envVar is not defined in the service, so just omit it from the intersection set
 				omit = true
 				break
@@ -3552,27 +3550,35 @@ func (r *Resolver) buildEnvMessage(msg *Message, svcMsgSet map[*Service]map[*Mes
 			}
 		}
 		if mismatch {
-			var attrs []string
+			mismatchEnvVarNames = append(mismatchEnvVarNames, envVarName)
+			var serviceNames []string
 			for _, sev := range svcEnvVars {
-				attrs = append(attrs, fmt.Sprintf(
-					"service: %s, type: %v, repeated: %v",
-					sev.svc.Name,
-					sev.envVar.Type.Kind.ToString(),
-					sev.envVar.Type.Repeated),
-				)
+				serviceNames = append(serviceNames, sev.svc.Name)
 			}
-			// Fix the output order mainly for testing
-			sort.Strings(attrs)
-			errs = append(errs, fmt.Errorf("environment variable %q has different types across services: %s", envVarName, strings.Join(attrs, ", ")))
+			// Fix the order for testing
+			sort.Strings(serviceNames)
+			mismatchServiceNames[envVarName] = serviceNames
 		}
 
 		envVars = append(envVars, svcEnvVars[0].envVar)
 	}
-	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
+
+	// Fix the order for testing
+	sort.Strings(mismatchEnvVarNames)
+	for _, missingEnvVarName := range mismatchEnvVarNames {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					"environment variable %q has different types across services: %s",
+					missingEnvVarName,
+					strings.Join(mismatchServiceNames[missingEnvVarName], ", "),
+				),
+				builder.Location(),
+			),
+		)
 	}
 
-	return envVarsToMessage(msg.File, envVars), nil
+	return envVarsToMessage(msg.File, envVars)
 }
 
 func (r *Resolver) enumAccessors() []cel.EnvOption {
@@ -4125,8 +4131,8 @@ func isExactlySameType(left, right *Type) bool {
 			lfMap[lf.Name] = lf
 		}
 		for _, rf := range right.Message.Fields {
-			lf, exist := lfMap[rf.Name]
-			if !exist {
+			lf, exists := lfMap[rf.Name]
+			if !exists {
 				return false
 			}
 			if !isExactlySameType(lf.Type, rf.Type) {
