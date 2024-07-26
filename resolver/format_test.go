@@ -293,7 +293,7 @@ func TestProtoFormat(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", test.name)))
+			r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", test.name)), nil)
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)
@@ -603,7 +603,7 @@ ab ─┤
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", test.name)))
+			r := resolver.New(testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", test.name)), nil)
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)

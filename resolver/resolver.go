@@ -1,8 +1,11 @@
 package resolver
 
 import (
+	pkgcontext "context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -19,6 +22,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"github.com/mercari/grpc-federation/compiler"
 	"github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/source"
@@ -27,6 +31,8 @@ import (
 
 type Resolver struct {
 	files                      []*descriptorpb.FileDescriptorProto
+	importPaths                []string
+	compiler                   *compiler.Compiler
 	celRegistry                *CELRegistry
 	defToFileMap               map[*descriptorpb.FileDescriptorProto]*File
 	fileNameToDefMap           map[string]*descriptorpb.FileDescriptorProto
@@ -50,12 +56,14 @@ type Resolver struct {
 	cachedServiceMap   map[string]*Service
 }
 
-func New(files []*descriptorpb.FileDescriptorProto) *Resolver {
+func New(files []*descriptorpb.FileDescriptorProto, importPaths []string) *Resolver {
 	msgMap := make(map[string]*Message)
 	enumValueMap := make(map[string]*EnumValue)
 	celRegistry := newCELRegistry(msgMap, enumValueMap)
 	return &Resolver{
 		files:                      files,
+		importPaths:                importPaths,
+		compiler:                   compiler.New(),
 		celRegistry:                celRegistry,
 		defToFileMap:               make(map[*descriptorpb.FileDescriptorProto]*File),
 		fileNameToDefMap:           make(map[string]*descriptorpb.FileDescriptorProto),
@@ -147,6 +155,9 @@ func (r *Resolver) Resolve() (*Result, error) {
 // This process must always be done at the beginning of the Resolve().
 func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descriptorpb.FileDescriptorProto) {
 	for _, fileDef := range files {
+		if _, exists := r.defToFileMap[fileDef]; exists {
+			continue
+		}
 		protoPackageName := fileDef.GetPackage()
 		pkg, exists := r.protoPackageNameToPackage[protoPackageName]
 		if !exists {
@@ -176,6 +187,97 @@ func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descrip
 		)
 		r.protoPackageNameToPackage[protoPackageName] = pkg
 	}
+
+	r.resolveFileImportRule(ctx, files)
+}
+
+func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.FileDescriptorProto) {
+	var newFileDefs []*descriptorpb.FileDescriptorProto
+	for _, fileDef := range files {
+		ruleDef, err := getExtensionRule[*federation.FileRule](fileDef.GetOptions(), federation.E_File)
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					source.NewLocationBuilder(fileDef.GetName()).Location(),
+				),
+			)
+			continue
+		}
+		if ruleDef == nil {
+			continue
+		}
+
+		for _, path := range ruleDef.GetImport() {
+			fileDefs, err := r.compileProto(path)
+			if err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						source.NewLocationBuilder(fileDef.GetName()).Location(),
+					),
+				)
+				continue
+			}
+			newFileDefs = append(newFileDefs, fileDefs...)
+			fileDef.Dependency = append(fileDef.Dependency, path)
+		}
+	}
+
+	if len(newFileDefs) == 0 {
+		return
+	}
+	r.resolvePackageAndFileReference(ctx, newFileDefs)
+
+	filesMap := map[string]struct{}{}
+	for _, fileDef := range files {
+		filesMap[fileDef.GetName()] = struct{}{}
+	}
+	for _, fileDef := range newFileDefs {
+		if _, exists := filesMap[fileDef.GetName()]; exists {
+			continue
+		}
+		r.files = append(r.files, fileDef)
+		filesMap[fileDef.GetName()] = struct{}{}
+	}
+}
+
+func (r *Resolver) compileProto(path string) ([]*descriptorpb.FileDescriptorProto, error) {
+	protoPath, err := r.findProto(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile proto: %w", err)
+	}
+	content, err := os.ReadFile(protoPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile proto: %w", err)
+	}
+	file, err := source.NewFile(protoPath, content)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create source file: %w", err)
+	}
+	fileDefs, err := r.compiler.Compile(pkgcontext.Background(), file, compiler.ImportPathOption(r.importPaths...))
+	if err != nil {
+		return nil, fmt.Errorf("failed to compile proto: %w", err)
+	}
+	return fileDefs, nil
+}
+
+func (r *Resolver) findProto(path string) (string, error) {
+	protoPaths := make([]string, 0, len(r.importPaths)+1)
+	for _, importPath := range r.importPaths {
+		protoPaths = append(protoPaths, filepath.Join(importPath, path))
+	}
+	protoPaths = append(protoPaths, path)
+
+	for _, protoPath := range protoPaths {
+		if _, err := os.Stat(protoPath); os.IsNotExist(err) {
+			continue
+		} else if err != nil {
+			return "", fmt.Errorf("failed to find proto: %w", err)
+		}
+		return protoPath, nil
+	}
+	return "", fmt.Errorf("failed to find proto: %s is not found", path)
 }
 
 // resolveFiles resolve all references except custom option.

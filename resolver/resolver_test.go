@@ -489,7 +489,7 @@ func TestSimpleAggregation(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -739,7 +739,7 @@ func TestCreatePost(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -758,7 +758,7 @@ func TestCreatePost(t *testing.T) {
 func TestMinimum(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "minimum.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -839,7 +839,7 @@ func TestMinimum(t *testing.T) {
 func TestCustomResolver(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "custom_resolver.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1064,7 +1064,7 @@ func TestCustomResolver(t *testing.T) {
 func TestAsync(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "async.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1512,7 +1512,7 @@ func TestAsync(t *testing.T) {
 func TestAlias(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "alias.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1767,7 +1767,7 @@ func TestAlias(t *testing.T) {
 func TestAutobind(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "autobind.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2156,7 +2156,7 @@ func TestMultiUser(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2422,7 +2422,7 @@ func TestOneof(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2441,7 +2441,7 @@ func TestOneof(t *testing.T) {
 func TestValidation(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "validation.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2995,7 +2995,7 @@ func TestMap(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -3268,7 +3268,7 @@ func TestCondition(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -3516,7 +3516,7 @@ func TestErrorHandler(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -3611,7 +3611,7 @@ func TestInlineEnv(t *testing.T) {
 
 	federationFile := fb.Build(t)
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -3706,7 +3706,7 @@ func TestRefEnv(t *testing.T) {
 
 	federationFile := fb.Build(t)
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), nil)
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)

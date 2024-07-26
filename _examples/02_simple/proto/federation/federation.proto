@@ -6,10 +6,12 @@ import "google/protobuf/any.proto";
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";
 import "grpc/federation/federation.proto";
-import "post/post.proto";
-import "user/user.proto";
 
 option go_package = "example/federation;federation";
+
+option (grpc.federation.file)= {
+  import: ["post/post.proto", "user/user.proto"]
+};
 
 service FederationService {
   option (grpc.federation.service) = {};

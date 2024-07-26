@@ -43,6 +43,7 @@ extend google.protobuf.OneofOptions {
 
 message FileRule {
   CELPlugin plugin = 1;
+  repeated string import = 2;
 }
 
 message EnumRule {

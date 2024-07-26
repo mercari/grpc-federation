@@ -61,7 +61,7 @@ func TestCodeGenerate(t *testing.T) {
 				}
 			}
 
-			r := resolver.New(files)
+			r := resolver.New(files, nil)
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)

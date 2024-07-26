@@ -596,7 +596,7 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 	relativePath := g.absPathToRelativePath[r.protoPath]
 	pathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 
-	result, err := resolver.New(r.req.GetProtoFile()).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(), opt.Path.ImportPaths).Resolve()
 	if err != nil {
 		return nil, err
 	}
@@ -621,7 +621,7 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 }
 
 func (g *Generator) createGRPCFederationFiles(r *PluginRequest) ([]*resolver.File, error) {
-	result, err := resolver.New(r.req.GetProtoFile()).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(), g.cfg.Imports).Resolve()
 	if err != nil {
 		return nil, err
 	}
@@ -638,7 +638,7 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 		return nil, err
 	}
 	outputPathResolver := resolver.NewOutputFilePathResolver(opt.Path)
-	result, err := resolver.New(req.GetProtoFile()).Resolve()
+	result, err := resolver.New(req.GetProtoFile(), opt.Path.ImportPaths).Resolve()
 	if err != nil {
 		return nil, err
 	}
@@ -775,6 +775,10 @@ func parseOpt(opt *CodeGeneratorOption, pat string) error {
 		}
 	case "plugins":
 		if err := parsePluginsOption(opt, partOpt.value); err != nil {
+			return err
+		}
+	case "import_paths":
+		if err := parseImportPathsOption(opt, partOpt.value); err != nil {
 			return err
 		}
 	default:
@@ -916,4 +920,9 @@ func splitOptPattern(opt string) (*partOption, error) {
 		kind:  parts[0],
 		value: parts[1],
 	}, nil
+}
+
+func parseImportPathsOption(opt *CodeGeneratorOption, value string) error {
+	opt.Path.ImportPaths = append(opt.Path.ImportPaths, value)
+	return nil
 }

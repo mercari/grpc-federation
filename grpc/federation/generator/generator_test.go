@@ -36,7 +36,7 @@ func TestRoundTrip(t *testing.T) {
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
 			files := testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", fmt.Sprintf("%s.proto", test)))
-			r := resolver.New(files)
+			r := resolver.New(files, nil)
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)
