@@ -19,7 +19,7 @@ var (
 )
 
 func init() {
-	files, err := New(nil, nil).ResolveWellknownFiles()
+	files, err := New(nil).ResolveWellknownFiles()
 	if err != nil {
 		panic(err)
 	}

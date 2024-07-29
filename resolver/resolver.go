@@ -56,13 +56,29 @@ type Resolver struct {
 	cachedServiceMap   map[string]*Service
 }
 
-func New(files []*descriptorpb.FileDescriptorProto, importPaths []string) *Resolver {
+type ResolverOption func(*resolverOption)
+
+type resolverOption struct {
+	ImportPaths []string
+}
+
+func WithImportPaths(importPaths []string) ResolverOption {
+	return func(o *resolverOption) {
+		o.ImportPaths = importPaths
+	}
+}
+
+func New(files []*descriptorpb.FileDescriptorProto, opts ...ResolverOption) *Resolver {
+	var opt resolverOption
+	for _, o := range opts {
+		o(&opt)
+	}
 	msgMap := make(map[string]*Message)
 	enumValueMap := make(map[string]*EnumValue)
 	celRegistry := newCELRegistry(msgMap, enumValueMap)
 	return &Resolver{
 		files:                      files,
-		importPaths:                importPaths,
+		importPaths:                opt.ImportPaths,
 		compiler:                   compiler.New(),
 		celRegistry:                celRegistry,
 		defToFileMap:               make(map[*descriptorpb.FileDescriptorProto]*File),
