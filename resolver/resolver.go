@@ -73,6 +73,8 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...ResolverOption) *Res
 	for _, o := range opts {
 		o(&opt)
 	}
+	// Resolving `grpc.federation.file.import` rule rewrites dependencies, so clones files to avoid affecting other processes.
+	files = cloneFileDefs(files)
 	msgMap := make(map[string]*Message)
 	enumValueMap := make(map[string]*EnumValue)
 	celRegistry := newCELRegistry(msgMap, enumValueMap)
@@ -102,6 +104,14 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...ResolverOption) *Res
 		cachedMethodMap:    make(map[string]*Method),
 		cachedServiceMap:   make(map[string]*Service),
 	}
+}
+
+func cloneFileDefs(files []*descriptorpb.FileDescriptorProto) []*descriptorpb.FileDescriptorProto {
+	o := make([]*descriptorpb.FileDescriptorProto, 0, len(files))
+	for _, fileDef := range files {
+		o = append(o, proto.Clone(fileDef).(*descriptorpb.FileDescriptorProto))
+	}
+	return o
 }
 
 // Result of resolver processing.
