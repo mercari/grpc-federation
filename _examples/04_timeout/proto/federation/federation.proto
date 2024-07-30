@@ -3,10 +3,13 @@ syntax = "proto3";
 package federation;
 
 import "grpc/federation/federation.proto";
-import "post/post.proto";
 import "google/protobuf/descriptor.proto";
 
 option go_package = "example/federation;federation";
+
+option (grpc.federation.file)= {
+  import: ["post/post.proto"]
+};
 
 extend google.protobuf.MethodOptions {
   Ext ext = 70001;

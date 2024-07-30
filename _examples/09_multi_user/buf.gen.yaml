@@ -10,4 +10,6 @@ plugins:
     opt: paths=source_relative
   - plugin: grpc-federation
     out: .
-    opt: paths=source_relative
+    opt:
+    - paths=source_relative
+    - import_paths=proto

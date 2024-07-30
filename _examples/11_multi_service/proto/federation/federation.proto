@@ -3,11 +3,13 @@ syntax = "proto3";
 package federation;
 
 import "grpc/federation/federation.proto";
-import "comment/comment.proto";
 import "federation/reaction.proto";
-import "favorite/favorite.proto";
 
 option go_package = "example/federation;federation";
+
+option (grpc.federation.file)= {
+  import: ["comment/comment.proto", "favorite/favorite.proto"]
+};
 
 service FederationService {
   option (grpc.federation.service) = {
