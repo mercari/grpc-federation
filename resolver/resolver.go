@@ -62,7 +62,7 @@ type resolverOption struct {
 	ImportPaths []string
 }
 
-func WithImportPaths(importPaths []string) ResolverOption {
+func WithImportPaths(importPaths ...string) ResolverOption {
 	return func(o *resolverOption) {
 		o.ImportPaths = importPaths
 	}
@@ -224,7 +224,14 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 			continue
 		}
 
+		depMap := map[string]struct{}{}
+		for _, dep := range fileDef.Dependency {
+			depMap[dep] = struct{}{}
+		}
 		for _, path := range ruleDef.GetImport() {
+			if _, exists := depMap[path]; exists {
+				continue
+			}
 			fileDefs, err := r.compileProto(path)
 			if err != nil {
 				ctx.addError(

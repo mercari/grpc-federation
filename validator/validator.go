@@ -72,7 +72,7 @@ func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...Val
 		}
 		return v.compilerErrorToValidationOutputs(compilerErr)
 	}
-	r := resolver.New(protos, resolver.WithImportPaths(v.importPaths))
+	r := resolver.New(protos, resolver.WithImportPaths(v.importPaths...))
 	result, err := r.Resolve()
 	var outs []*ValidationOutput
 	if result != nil {

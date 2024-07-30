@@ -86,11 +86,41 @@ func (f *File) Content() []byte {
 func (f *File) Imports() []string {
 	var imports []string
 	for _, decl := range f.fileNode.Decls {
-		importNode, ok := decl.(*ast.ImportNode)
-		if !ok {
-			continue
+		switch declNode := decl.(type) {
+		case *ast.ImportNode:
+			imports = append(imports, declNode.Name.AsString())
+		case *ast.OptionNode:
+			parts := make([]string, 0, len(declNode.Name.Parts))
+			for _, p := range declNode.Name.Parts {
+				parts = append(parts, string(p.Name.AsIdentifier()))
+			}
+			if !strings.HasPrefix(strings.Join(parts, "."), "grpc.federation.file") {
+				continue
+			}
+			switch val := declNode.GetValue().Value().(type) {
+			case string:
+				imports = append(imports, val)
+			case []*ast.MessageFieldNode:
+				var fieldNode *ast.MessageFieldNode
+				for _, v := range val {
+					if v.Name.Name.AsIdentifier() == "import" {
+						fieldNode = v
+						break
+					}
+				}
+				if fieldNode == nil {
+					continue
+				}
+				if valNodes, ok := fieldNode.Val.Value().([]ast.ValueNode); ok {
+					for _, valNode := range valNodes {
+						switch s := valNode.Value().(type) {
+						case string:
+							imports = append(imports, s)
+						}
+					}
+				}
+			}
 		}
-		imports = append(imports, importNode.Name.AsString())
 	}
 	return imports
 }

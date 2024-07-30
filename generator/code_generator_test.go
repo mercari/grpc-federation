@@ -46,7 +46,8 @@ func TestCodeGenerate(t *testing.T) {
 		test := test
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
-			files := testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", test+".proto"))
+			testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+			files := testutil.Compile(t, filepath.Join(testdataDir, test+".proto"))
 
 			var dependentFiles []string
 			for _, file := range files {
@@ -61,7 +62,7 @@ func TestCodeGenerate(t *testing.T) {
 				}
 			}
 
-			r := resolver.New(files)
+			r := resolver.New(files, resolver.WithImportPaths(testdataDir))
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)
@@ -106,7 +107,7 @@ func TestCodeGenerate(t *testing.T) {
 					Plugins: []*generator.PluginConfig{
 						{Plugin: "go", Opt: &generator.PluginOption{Opts: []string{"paths=import"}}},
 						{Plugin: "go-grpc", Opt: &generator.PluginOption{Opts: []string{"paths=import"}}},
-						{Plugin: "grpc-federation", Opt: &generator.PluginOption{Opts: []string{"paths=import"}}},
+						{Plugin: "grpc-federation", Opt: &generator.PluginOption{Opts: []string{"paths=import", fmt.Sprintf("import_paths=%s", filepath.Join("..", "testdata"))}}},
 					},
 				})
 				if err != nil {

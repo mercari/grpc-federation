@@ -16,7 +16,8 @@ import (
 
 func TestSimpleAggregation(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "simple_aggregation.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "simple_aggregation.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
@@ -489,7 +490,7 @@ func TestSimpleAggregation(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.WithImportPaths(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)

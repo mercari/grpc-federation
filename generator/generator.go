@@ -596,7 +596,7 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 	relativePath := g.absPathToRelativePath[r.protoPath]
 	pathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 
-	result, err := resolver.New(r.req.GetProtoFile(), resolver.WithImportPaths(opt.Path.ImportPaths)).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(), resolver.WithImportPaths(opt.Path.ImportPaths...)).Resolve()
 	if err != nil {
 		return nil, err
 	}
@@ -621,7 +621,7 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 }
 
 func (g *Generator) createGRPCFederationFiles(r *PluginRequest) ([]*resolver.File, error) {
-	result, err := resolver.New(r.req.GetProtoFile(), resolver.WithImportPaths(g.cfg.Imports)).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(), resolver.WithImportPaths(g.cfg.Imports...)).Resolve()
 	if err != nil {
 		return nil, err
 	}
@@ -638,7 +638,7 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 		return nil, err
 	}
 	outputPathResolver := resolver.NewOutputFilePathResolver(opt.Path)
-	result, err := resolver.New(req.GetProtoFile(), resolver.WithImportPaths(opt.Path.ImportPaths)).Resolve()
+	result, err := resolver.New(req.GetProtoFile(), resolver.WithImportPaths(opt.Path.ImportPaths...)).Resolve()
 	if err != nil {
 		return nil, err
 	}
