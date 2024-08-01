@@ -16,7 +16,8 @@ import (
 
 func TestSimpleAggregation(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "simple_aggregation.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "simple_aggregation.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
@@ -489,7 +490,7 @@ func TestSimpleAggregation(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -534,7 +535,8 @@ func TestSimpleAggregation(t *testing.T) {
 
 func TestCreatePost(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "create_post.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "create_post.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
@@ -739,7 +741,7 @@ func TestCreatePost(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -838,8 +840,9 @@ func TestMinimum(t *testing.T) {
 
 func TestCustomResolver(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "custom_resolver.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "custom_resolver.proto")
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1511,8 +1514,9 @@ func TestAsync(t *testing.T) {
 
 func TestAlias(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "alias.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "alias.proto")
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1766,8 +1770,9 @@ func TestAlias(t *testing.T) {
 
 func TestAutobind(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "autobind.proto")
-	r := resolver.New(testutil.Compile(t, fileName))
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "autobind.proto")
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -1941,7 +1946,8 @@ func TestAutobind(t *testing.T) {
 
 func TestMultiUser(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "multi_user.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "multi_user.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), fb)
 
@@ -2156,7 +2162,7 @@ func TestMultiUser(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2174,7 +2180,8 @@ func TestMultiUser(t *testing.T) {
 
 func TestOneof(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "oneof.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "oneof.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), fb)
 
@@ -2422,7 +2429,7 @@ func TestOneof(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -2657,7 +2664,8 @@ func TestValidation(t *testing.T) {
 
 func TestMap(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "map.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "map.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
 
@@ -2995,7 +3003,7 @@ func TestMap(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -3013,7 +3021,8 @@ func TestMap(t *testing.T) {
 
 func TestCondition(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "condition.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "condition.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getPostProtoBuilder(t), fb)
 
@@ -3268,7 +3277,7 @@ func TestCondition(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)
@@ -3286,7 +3295,8 @@ func TestCondition(t *testing.T) {
 
 func TestErrorHandler(t *testing.T) {
 	t.Parallel()
-	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "error_handler.proto")
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "error_handler.proto")
 	fb := testutil.NewFileBuilder(fileName)
 	ref := testutil.NewBuilderReferenceManager(getPostProtoBuilder(t), fb)
 
@@ -3516,7 +3526,7 @@ func TestErrorHandler(t *testing.T) {
 	federationFile := fb.Build(t)
 	federationService := federationFile.Services[0]
 
-	r := resolver.New(testutil.Compile(t, fileName))
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
 	result, err := r.Resolve()
 	if err != nil {
 		t.Fatal(err)

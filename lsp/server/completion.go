@@ -88,7 +88,7 @@ func (c *Completer) Completion(ctx context.Context, importPaths []string, path s
 	if err != nil {
 		return nil, nil, err
 	}
-	r := resolver.New(protos)
+	r := resolver.New(protos, resolver.ImportPathOption(importPaths...))
 	_, _ = r.Resolve()
 	loc := file.FindLocationByPos(pos)
 	if loc == nil {

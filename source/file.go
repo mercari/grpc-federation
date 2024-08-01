@@ -86,11 +86,27 @@ func (f *File) Content() []byte {
 func (f *File) Imports() []string {
 	var imports []string
 	for _, decl := range f.fileNode.Decls {
-		importNode, ok := decl.(*ast.ImportNode)
-		if !ok {
-			continue
+		switch declNode := decl.(type) {
+		case *ast.ImportNode:
+			imports = append(imports, declNode.Name.AsString())
 		}
-		imports = append(imports, importNode.Name.AsString())
+	}
+	return imports
+}
+
+// ImportsByImportRule returns import path defined in grpc.federation.file.import rule.
+func (f *File) ImportsByImportRule() []string {
+	var imports []string
+	for _, decl := range f.fileNode.Decls {
+		switch declNode := decl.(type) {
+		case *ast.OptionNode:
+			vals := f.optionValuesByImportRule(declNode)
+			for _, val := range vals {
+				if s, ok := val.Value().(string); ok {
+					imports = append(imports, s)
+				}
+			}
+		}
 	}
 	return imports
 }
@@ -918,6 +934,38 @@ func (f *File) optionName(node *ast.OptionNode) string {
 	return strings.Join(parts, ".")
 }
 
+func (f *File) optionValuesByImportRule(node *ast.OptionNode) []ast.ValueNode {
+	optName := f.optionName(node)
+	if !f.matchOption(optName, "grpc.federation.file") {
+		return nil
+	}
+
+	// option (grpc.federation.file).import = "example.proto";
+	if strings.HasSuffix(optName, ".import") {
+		return []ast.ValueNode{node.GetValue()}
+	}
+
+	// option (grpc.federation.file)= {
+	//   import: ["example.proto"]
+	// };
+	if fieldNodes, ok := node.GetValue().Value().([]*ast.MessageFieldNode); ok {
+		var fieldNode *ast.MessageFieldNode
+		for _, n := range fieldNodes {
+			if n.Name.Name.AsIdentifier() == "import" {
+				fieldNode = n
+				break
+			}
+		}
+		if fieldNode == nil {
+			return nil
+		}
+		if valueNodes, ok := fieldNode.Val.Value().([]ast.ValueNode); ok {
+			return valueNodes
+		}
+	}
+	return nil
+}
+
 // NodeInfoByLocation returns information about the node at the position specified by location in the AST of the Protocol Buffers.
 func (f *File) NodeInfoByLocation(loc *Location) *ast.NodeInfo {
 	if loc.FileName == "" {
@@ -935,6 +983,14 @@ func (f *File) NodeInfoByLocation(loc *Location) *ast.NodeInfo {
 		case *ast.OptionNode:
 			if f.matchOption(f.optionName(n), "go_package") && loc.GoPackage {
 				return f.nodeInfo(n.Val)
+			}
+			if f.matchOption(f.optionName(n), "grpc.federation.file") {
+				vals := f.optionValuesByImportRule(n)
+				for _, val := range vals {
+					if s, ok := val.Value().(string); ok && s == loc.ImportName {
+						return f.nodeInfo(val)
+					}
+				}
 			}
 		case *ast.MessageNode:
 			if loc.Message != nil {

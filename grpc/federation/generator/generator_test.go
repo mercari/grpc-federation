@@ -35,8 +35,9 @@ func TestRoundTrip(t *testing.T) {
 		test := test
 		t.Run(test, func(t *testing.T) {
 			t.Parallel()
-			files := testutil.Compile(t, filepath.Join(testutil.RepoRoot(), "testdata", fmt.Sprintf("%s.proto", test)))
-			r := resolver.New(files)
+			testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+			files := testutil.Compile(t, filepath.Join(testdataDir, fmt.Sprintf("%s.proto", test)))
+			r := resolver.New(files, resolver.ImportPathOption(testdataDir))
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)

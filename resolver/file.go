@@ -115,10 +115,7 @@ func (r *OutputFilePathResolver) sourceRelativeBasedOutputDir(fileName string) (
 	if r.cfg.FilePath != "" {
 		filePath = r.cfg.FilePath
 	}
-	relativePath, err := r.relativePath(filePath)
-	if err != nil {
-		return "", err
-	}
+	relativePath := r.relativePath(filePath)
 	return filepath.Dir(relativePath), nil
 }
 
@@ -147,10 +144,7 @@ func (r *OutputFilePathResolver) FileName(file *File) string {
 	return fmt.Sprintf("%s_grpc_federation.pb.go", strings.ToLower(baseName))
 }
 
-func (r *OutputFilePathResolver) relativePath(filePath string) (string, error) {
-	if len(r.cfg.ImportPaths) == 0 {
-		return filePath, nil
-	}
+func (r *OutputFilePathResolver) relativePath(filePath string) string {
 	for _, importPath := range r.cfg.ImportPaths {
 		rel, err := filepath.Rel(importPath, filePath)
 		if err != nil {
@@ -159,7 +153,7 @@ func (r *OutputFilePathResolver) relativePath(filePath string) (string, error) {
 		if strings.HasPrefix(rel, "..") {
 			continue
 		}
-		return rel, nil
+		return rel
 	}
-	return "", fmt.Errorf("grpc-federation: failed to find relative path from %s", filePath)
+	return filePath
 }

@@ -683,6 +683,31 @@ testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically
 37:    map<string, string> counts = 4;
        ^
 `},
+		{file: "invalid_file_import.proto", expected: `
+testdata/invalid_file_import.proto:10:12: unknown.proto: no such file or directory
+10:    import: ["unknown.proto"]
+                ^
+testdata/invalid_file_import.proto:40:17: "post" package does not exist
+40:          method: "post.PostService/GetPost"
+                     ^
+testdata/invalid_file_import.proto:44:29: ERROR: <input>:1:1: undeclared reference to 'res' (in container 'federation')
+ | res.post
+ | ^
+44:      def { name: "post", by: "res.post", autobind: true  }
+                                 ^
+testdata/invalid_file_import.proto:46:3: "id" field in "federation.Post" message needs to specify "grpc.federation.field" option
+46:    string id = 1;
+       ^
+testdata/invalid_file_import.proto:47:3: "title" field in "federation.Post" message needs to specify "grpc.federation.field" option
+47:    string title = 2;
+       ^
+testdata/invalid_file_import.proto:48:3: "content" field in "federation.Post" message needs to specify "grpc.federation.field" option
+48:    string content = 3;
+       ^
+testdata/invalid_file_import.proto:49:3: "user_id" field in "federation.Post" message needs to specify "grpc.federation.field" option
+49:    string user_id = 4;
+       ^
+`},
 	}
 	for _, test := range tests {
 		test := test

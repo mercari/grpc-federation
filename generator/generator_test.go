@@ -35,7 +35,9 @@ plugins:
   - plugin: go-grpc
     opt: paths=source_relative
   - plugin: grpc-federation
-    opt: paths=source_relative
+    opt: 
+    - paths=source_relative
+    - import_paths=../testdata
 `
 		cfg, err := generator.LoadConfigFromReader(strings.NewReader(content))
 		if err != nil {
@@ -64,6 +66,7 @@ plugins:
   - plugin: go
   - plugin: go-grpc
   - plugin: grpc-federation
+    opt: import_paths=../testdata
 `
 		cfg, err := generator.LoadConfigFromReader(strings.NewReader(content))
 		if err != nil {
@@ -88,6 +91,9 @@ imports:
 src:
   - ../testdata
 out: .
+plugins:
+  - plugin: grpc-federation
+    opt: import_paths=../testdata
 `
 		cfg, err := generator.LoadConfigFromReader(strings.NewReader(content))
 		if err != nil {
@@ -113,6 +119,8 @@ src:
   - ../testdata
 out: .
 plugins:
+  - plugin: grpc-federation
+    opt: import_paths=../testdata
   - plugin: validate-go
 `
 		cfg, err := generator.LoadConfigFromReader(strings.NewReader(content))
