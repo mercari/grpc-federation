@@ -3463,6 +3463,7 @@ func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Servi
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
+		cel.Container(msg.Package().Name),
 	}
 	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)
 	if envMsg != nil {

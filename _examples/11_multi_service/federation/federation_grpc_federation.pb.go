@@ -160,7 +160,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			"federation": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Federation"),
 		},
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)
@@ -1066,7 +1066,7 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 			"private": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Private"),
 		},
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)
@@ -1939,7 +1939,7 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 		},
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)

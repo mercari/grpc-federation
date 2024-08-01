@@ -25,6 +25,7 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+{{- $pkgName := .Package.Name }}
 {{- range .Types }}
 
 // {{ .Desc }}.
@@ -251,7 +252,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		},
 		{{- end }}
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	celTypeHelper := grpcfed.NewCELTypeHelper("{{ $pkgName }}", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	{{- range $enums }}

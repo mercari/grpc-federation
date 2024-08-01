@@ -131,7 +131,7 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 		},
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("comment.CommentType", comment.CommentType_value, comment.CommentType_name)...)

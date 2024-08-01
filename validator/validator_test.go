@@ -101,12 +101,12 @@ testdata/invalid_multiple_env.proto:56:1: environment variable "eee" has differe
 testdata/invalid_error_variable.proto:20:17: "error" is the reserved keyword. this name is not available
 20:      def { name: "error" by: "'foo'" }
                      ^
-testdata/invalid_error_variable.proto:21:25: ERROR: <input>:1:1: undeclared reference to 'error' (in container '')
+testdata/invalid_error_variable.proto:21:25: ERROR: <input>:1:1: undeclared reference to 'error' (in container 'org.federation')
  | error
  | ^
 21:      def { name: "e" by: "error" }
                              ^
-testdata/invalid_error_variable.proto:25:15: ERROR: <input>:1:1: undeclared reference to 'error' (in container '')
+testdata/invalid_error_variable.proto:25:15: ERROR: <input>:1:1: undeclared reference to 'error' (in container 'org.federation')
  | error.code == 0
  | ^
 25:            if: "error.code == 0"
@@ -116,7 +116,7 @@ testdata/invalid_error_variable.proto:25:15: ERROR: <input>:1:1: undeclared refe
 testdata/invalid_map_iterator_src_type.proto:40:13: map iterator's src value type must be repeated type
 40:          map {
                  ^
-testdata/invalid_map_iterator_src_type.proto:54:57: ERROR: <input>:1:1: undeclared reference to 'users' (in container '')
+testdata/invalid_map_iterator_src_type.proto:54:57: ERROR: <input>:1:1: undeclared reference to 'users' (in container 'org.federation')
  | users
  | ^
 54:    repeated User users = 4 [(grpc.federation.field).by = "users"];
@@ -131,7 +131,7 @@ testdata/invalid_map_iterator_src_type.proto:58:47: ERROR: <input>:1:8: undefine
 testdata/invalid_map_iterator_src.proto:36:13: "posts" variable is not defined
 36:          map {
                  ^
-testdata/invalid_map_iterator_src.proto:36:13: ERROR: <input>:1:1: undeclared reference to 'iter' (in container '')
+testdata/invalid_map_iterator_src.proto:36:13: ERROR: <input>:1:1: undeclared reference to 'iter' (in container 'org.federation')
  | iter.id
  | ^
 36:          map {
@@ -185,7 +185,7 @@ testdata/invalid_nested_message_field.proto:52:7: "body" field in "federation.A.
 testdata/invalid_method.proto:36:24: invalid method format. required format is "<package-name>.<service-name>/<method-name>" but specified ""
 36:        { call { method: "" } },
                             ^
-testdata/invalid_method.proto:41:26: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container '')
+testdata/invalid_method.proto:41:26: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container 'federation')
  | invalid
  | ^
 41:            args { inline: "invalid" }
@@ -272,7 +272,7 @@ testdata/invalid_oneof.proto:110:20: "bar" field is a oneof field, so you need t
                          ^
 `},
 		{file: "invalid_retry.proto", expected: `
-testdata/invalid_retry.proto:37:15: ERROR: <input>:1:1: undeclared reference to 'foo' (in container '')
+testdata/invalid_retry.proto:37:15: ERROR: <input>:1:1: undeclared reference to 'foo' (in container 'org.federation')
  | foo
  | ^
 37:            if: "foo"
@@ -420,12 +420,12 @@ testdata/missing_response_message_option.proto:18:1: "federation.GetPostResponse
      ^
 `},
 		{file: "invalid_method_response.proto", expected: `
-testdata/invalid_method_response.proto:42:27: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container '')
+testdata/invalid_method_response.proto:42:27: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container 'federation')
  | invalid
  | ^
 42:        { name: "post", by: "invalid", autobind: true  },
                                ^
-testdata/invalid_method_response.proto:47:26: ERROR: <input>:1:1: undeclared reference to 'post' (in container '')
+testdata/invalid_method_response.proto:47:26: ERROR: <input>:1:1: undeclared reference to 'post' (in container 'federation')
  | post
  | ^
 47:            args { inline: "post" }

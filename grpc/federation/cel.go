@@ -29,6 +29,7 @@ import (
 type CELTypeHelper struct {
 	*celtypes.Registry
 	structFieldMap map[string]map[string]*celtypes.FieldType
+	pkgName        string
 	mapMu          sync.RWMutex
 	mu             sync.Mutex
 }
@@ -184,7 +185,7 @@ func NewOneofSelectorFieldType(typ *celtypes.Type, fieldName string, oneofTypes 
 
 type CELTypeHelperFieldMap map[string]map[string]*celtypes.FieldType
 
-func NewCELTypeHelper(structFieldMap CELTypeHelperFieldMap) *CELTypeHelper {
+func NewCELTypeHelper(pkgName string, structFieldMap CELTypeHelperFieldMap) *CELTypeHelper {
 	celRegistry := celtypes.NewEmptyRegistry()
 	protoregistry.GlobalFiles.RangeFiles(func(f protoreflect.FileDescriptor) bool {
 		if err := celRegistry.RegisterDescriptor(f); err != nil {
@@ -195,6 +196,7 @@ func NewCELTypeHelper(structFieldMap CELTypeHelperFieldMap) *CELTypeHelper {
 	return &CELTypeHelper{
 		Registry:       celRegistry,
 		structFieldMap: structFieldMap,
+		pkgName:        pkgName,
 	}
 }
 
@@ -234,6 +236,7 @@ func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
 		cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
+		cel.Container(celHelper.pkgName),
 	}
 }
 

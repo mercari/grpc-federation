@@ -217,7 +217,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 		},
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.Item.ItemType", Item_ItemType_value, Item_ItemType_name)...)
@@ -1167,10 +1167,10 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "federation.Item.ItemType.name(federation.Item.ItemType.ITEM_TYPE_1)"
+	// (grpc.federation.field).by = "Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              `federation.Item.ItemType.name(federation.Item.ItemType.ITEM_TYPE_1)`,
+		Expr:              `Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)`,
 		UseContextLibrary: false,
 		CacheIndex:        29,
 		Setter: func(v string) error {
@@ -1181,10 +1181,10 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "federation.Item.Location.LocationType.name(federation.Item.Location.LocationType.LOCATION_TYPE_1)"
+	// (grpc.federation.field).by = "Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:             value,
-		Expr:              `federation.Item.Location.LocationType.name(federation.Item.Location.LocationType.LOCATION_TYPE_1)`,
+		Expr:              `Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)`,
 		UseContextLibrary: false,
 		CacheIndex:        30,
 		Setter: func(v string) error {
@@ -1259,10 +1259,10 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "federation.Item.Location.LocationType.value('LOCATION_TYPE_1')"
+	// (grpc.federation.field).by = "Item.Location.LocationType.value('LOCATION_TYPE_1')"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Item_Location_LocationType]{
 		Value:             value,
-		Expr:              `federation.Item.Location.LocationType.value('LOCATION_TYPE_1')`,
+		Expr:              `Item.Location.LocationType.value('LOCATION_TYPE_1')`,
 		UseContextLibrary: false,
 		CacheIndex:        35,
 		Setter: func(v Item_Location_LocationType) error {

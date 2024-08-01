@@ -224,7 +224,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		},
 		"grpc.federation.private.ZArgument": {},
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
+	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.Item.ItemType", Item_ItemType_value, Item_ItemType_name)...)
