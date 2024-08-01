@@ -43,6 +43,7 @@ extend google.protobuf.OneofOptions {
 
 message FileRule {
   CELPlugin plugin = 1;
+  // import can be used to resolve methods, messages, etc. that are referenced in gRPC Federation rules.
   repeated string import = 2;
 }
 

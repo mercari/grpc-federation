@@ -99,7 +99,8 @@ type FileRule struct {
 	unknownFields protoimpl.UnknownFields
 
 	Plugin *CELPlugin `protobuf:"bytes,1,opt,name=plugin,proto3" json:"plugin,omitempty"`
-	Import []string   `protobuf:"bytes,2,rep,name=import,proto3" json:"import,omitempty"`
+	// import can be used to resolve methods, messages, etc. that are referenced in gRPC Federation rules.
+	Import []string `protobuf:"bytes,2,rep,name=import,proto3" json:"import,omitempty"`
 }
 
 func (x *FileRule) Reset() {

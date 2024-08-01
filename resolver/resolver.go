@@ -242,7 +242,7 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 			if _, exists := depMap[path]; exists {
 				continue
 			}
-			fileDefs, err := r.compileProto(path)
+			fileDefs, err := r.compileProto(pkgcontext.Background(), path)
 			if err != nil {
 				ctx.addError(
 					ErrWithLocation(
@@ -275,22 +275,22 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 	}
 }
 
-func (r *Resolver) compileProto(path string) ([]*descriptorpb.FileDescriptorProto, error) {
+func (r *Resolver) compileProto(ctx pkgcontext.Context, path string) ([]*descriptorpb.FileDescriptorProto, error) {
 	protoPath, err := r.findProto(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile proto: %w", err)
+		return nil, err
 	}
 	content, err := os.ReadFile(protoPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile proto: %w", err)
+		return nil, err
 	}
 	file, err := source.NewFile(protoPath, content)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create source file: %w", err)
+		return nil, err
 	}
-	fileDefs, err := r.compiler.Compile(pkgcontext.Background(), file, compiler.ImportPathOption(r.importPaths...))
+	fileDefs, err := r.compiler.Compile(ctx, file, compiler.ImportPathOption(r.importPaths...))
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile proto: %w", err)
+		return nil, err
 	}
 	return fileDefs, nil
 }
@@ -306,11 +306,11 @@ func (r *Resolver) findProto(path string) (string, error) {
 		if _, err := os.Stat(protoPath); os.IsNotExist(err) {
 			continue
 		} else if err != nil {
-			return "", fmt.Errorf("failed to find proto: %w", err)
+			return "", err
 		}
 		return protoPath, nil
 	}
-	return "", fmt.Errorf("failed to find proto: %s is not found", path)
+	return "", fmt.Errorf("%s: no such file or directory", path)
 }
 
 // resolveFiles resolve all references except custom option.

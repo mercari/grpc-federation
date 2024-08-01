@@ -683,6 +683,9 @@ testdata/invalid_message_map_alias.proto:37:3: cannot convert type automatically
 37:    map<string, string> counts = 4;
        ^
 `},
+		{file: "invalid_file_import.proto", expected: `
+open unknown.proto: no such file or directory
+`},
 	}
 	for _, test := range tests {
 		test := test
