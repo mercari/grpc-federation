@@ -52,12 +52,16 @@ func ManualImportOption() ValidatorOption {
 	}
 }
 
-func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...ValidatorOption) []*ValidationOutput {
+func (v *Validator) applyOptions(opts ...ValidatorOption) {
 	v.pathToFileMap = map[string]*source.File{}
 	v.importPaths = []string{}
 	for _, opt := range opts {
 		opt(v)
 	}
+}
+
+func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...ValidatorOption) []*ValidationOutput {
+	v.applyOptions(opts...)
 	var compilerOpts []compiler.Option
 	compilerOpts = append(compilerOpts, compiler.ImportPathOption(v.importPaths...))
 	if v.manualImport {
@@ -74,6 +78,11 @@ func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...Val
 	}
 	r := resolver.New(protos, resolver.WithImportPaths(v.importPaths...))
 	result, err := r.Resolve()
+	return v.ToValidationOutputByResolverResult(result, err)
+}
+
+func (v *Validator) ToValidationOutputByResolverResult(result *resolver.Result, err error, opts ...ValidatorOption) []*ValidationOutput {
+	v.applyOptions(opts...)
 	var outs []*ValidationOutput
 	if result != nil {
 		outs = v.toValidationOutputByWarnings(result.Warnings)
