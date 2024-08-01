@@ -89,6 +89,16 @@ func (f *File) Imports() []string {
 		switch declNode := decl.(type) {
 		case *ast.ImportNode:
 			imports = append(imports, declNode.Name.AsString())
+		}
+	}
+	return imports
+}
+
+// ImportsByImportRule returns import path defined in grpc.federation.file.import rule.
+func (f *File) ImportsByImportRule() []string {
+	var imports []string
+	for _, decl := range f.fileNode.Decls {
+		switch declNode := decl.(type) {
 		case *ast.OptionNode:
 			vals := f.optionValuesByImportRule(declNode)
 			for _, val := range vals {
