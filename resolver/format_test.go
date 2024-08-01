@@ -294,7 +294,7 @@ func TestProtoFormat(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
-			r := resolver.New(testutil.Compile(t, filepath.Join(testdataDir, test.name)), resolver.WithImportPaths(testdataDir))
+			r := resolver.New(testutil.Compile(t, filepath.Join(testdataDir, test.name)), resolver.ImportPathOption(testdataDir))
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)

@@ -76,7 +76,7 @@ func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...Val
 		}
 		return v.compilerErrorToValidationOutputs(compilerErr)
 	}
-	r := resolver.New(protos, resolver.WithImportPaths(v.importPaths...))
+	r := resolver.New(protos, resolver.ImportPathOption(v.importPaths...))
 	result, err := r.Resolve()
 	return v.ToValidationOutputByResolverResult(result, err)
 }

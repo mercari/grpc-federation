@@ -62,7 +62,7 @@ func TestCodeGenerate(t *testing.T) {
 				}
 			}
 
-			r := resolver.New(files, resolver.WithImportPaths(testdataDir))
+			r := resolver.New(files, resolver.ImportPathOption(testdataDir))
 			result, err := r.Resolve()
 			if err != nil {
 				t.Fatal(err)

@@ -690,7 +690,7 @@ testdata/invalid_file_import.proto:10:12: unknown.proto: no such file or directo
 testdata/invalid_file_import.proto:40:17: "post" package does not exist
 40:          method: "post.PostService/GetPost"
                      ^
-testdata/invalid_file_import.proto:44:29: ERROR: <input>:1:1: undeclared reference to 'res' (in container '')
+testdata/invalid_file_import.proto:44:29: ERROR: <input>:1:1: undeclared reference to 'res' (in container 'federation')
  | res.post
  | ^
 44:      def { name: "post", by: "res.post", autobind: true  }
