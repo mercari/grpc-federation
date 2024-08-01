@@ -247,7 +247,7 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.NewLocationBuilder(fileDef.GetName()).Location(),
+						source.NewLocationBuilder(fileDef.GetName()).WithImportName(path).Location(),
 					),
 				)
 				continue

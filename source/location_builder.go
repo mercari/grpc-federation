@@ -38,6 +38,14 @@ func (b *LocationBuilder) WithGoPackage() *LocationBuilder {
 	}
 }
 
+func (b *LocationBuilder) WithImportName(name string) *LocationBuilder {
+	loc := b.location.Clone()
+	loc.ImportName = name
+	return &LocationBuilder{
+		location: loc,
+	}
+}
+
 func (b *LocationBuilder) WithExport(name string) *ExportBuilder {
 	root := b.location.Clone()
 	root.Export = &Export{Name: name}
