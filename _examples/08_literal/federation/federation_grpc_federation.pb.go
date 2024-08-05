@@ -24,10 +24,6 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Org_Federation_ContentArgument is argument for "org.federation.Content" message.
-type Org_Federation_ContentArgument struct {
-}
-
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
 type Org_Federation_GetResponseArgument struct {
 	Content *content.Content

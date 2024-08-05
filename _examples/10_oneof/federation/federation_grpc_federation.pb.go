@@ -30,10 +30,6 @@ type Org_Federation_GetResponseArgument struct {
 	Sel    *UserSelection
 }
 
-// Org_Federation_MArgument is argument for "org.federation.M" message.
-type Org_Federation_MArgument struct {
-}
-
 // Org_Federation_MessageSelectionArgument is argument for "org.federation.MessageSelection" message.
 type Org_Federation_MessageSelectionArgument struct {
 }

@@ -61,22 +61,6 @@ type Federation_GetPostResponseArgument struct {
 	Value1       string
 }
 
-// Federation_ItemArgument is argument for "federation.Item" message.
-type Federation_ItemArgument struct {
-}
-
-// Federation_Item_LocationArgument is argument for "federation.Location" message.
-type Federation_Item_LocationArgument struct {
-}
-
-// Federation_Item_Location_AddrAArgument is argument for "federation.AddrA" message.
-type Federation_Item_Location_AddrAArgument struct {
-}
-
-// Federation_Item_Location_AddrBArgument is argument for "federation.AddrB" message.
-type Federation_Item_Location_AddrBArgument struct {
-}
-
 // Federation_PostArgument is argument for "federation.Post" message.
 type Federation_PostArgument struct {
 	Id   string
@@ -93,14 +77,6 @@ type Federation_UserArgument struct {
 	Title   string
 	User    *user.User
 	UserId  string
-}
-
-// Federation_User_AttrAArgument is argument for "federation.AttrA" message.
-type Federation_User_AttrAArgument struct {
-}
-
-// Federation_User_AttrBArgument is argument for "federation.AttrB" message.
-type Federation_User_AttrBArgument struct {
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.

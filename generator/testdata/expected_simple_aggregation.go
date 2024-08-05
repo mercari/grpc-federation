@@ -34,18 +34,10 @@ type Org_Federation_GetPostResponseArgument struct {
 	Uuid     *grpcfedcel.UUID
 }
 
-// Org_Federation_ItemArgument is argument for "org.federation.Item" message.
-type Org_Federation_ItemArgument struct {
-}
-
 // Org_Federation_MArgument is argument for "org.federation.M" message.
 type Org_Federation_MArgument struct {
 	X uint64
 	Y user.Item_ItemType
-}
-
-// Org_Federation_NArgument is argument for "org.federation.N" message.
-type Org_Federation_NArgument struct {
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
@@ -71,14 +63,6 @@ type Org_Federation_UserArgument struct {
 // Org_Federation_User_AgeArgument is custom resolver's argument for "age" field of "org.federation.User" message.
 type Org_Federation_User_AgeArgument struct {
 	*Org_Federation_UserArgument
-}
-
-// Org_Federation_User_AttrAArgument is argument for "org.federation.AttrA" message.
-type Org_Federation_User_AttrAArgument struct {
-}
-
-// Org_Federation_User_AttrBArgument is argument for "org.federation.AttrB" message.
-type Org_Federation_User_AttrBArgument struct {
 }
 
 // Org_Federation_ZArgument is argument for "org.federation.Z" message.

@@ -22,10 +22,6 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Org_Federation_EnvArgument is argument for "org.federation.Env" message.
-type Org_Federation_EnvArgument struct {
-}
-
 // RefEnvServiceConfig configuration required to initialize the service that use GRPC Federation.
 type RefEnvServiceConfig struct {
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.

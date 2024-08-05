@@ -25,14 +25,6 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Org_Federation_GetPostRequest_ConditionAArgument is argument for "org.federation.ConditionA" message.
-type Org_Federation_GetPostRequest_ConditionAArgument struct {
-}
-
-// Org_Federation_GetPostRequest_ConditionBArgument is argument for "org.federation.ConditionB" message.
-type Org_Federation_GetPostRequest_ConditionBArgument struct {
-}
-
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type Org_Federation_GetPostResponseArgument struct {
 	A          *GetPostRequest_ConditionA
@@ -52,14 +44,6 @@ type Org_Federation_PostArgument struct {
 	Post      *post.Post
 	Res       *post.GetPostResponse
 	Res2      *postv2.GetPostResponse
-}
-
-// Org_Federation_PostContentArgument is argument for "org.federation.PostContent" message.
-type Org_Federation_PostContentArgument struct {
-}
-
-// Org_Federation_PostDataArgument is argument for "org.federation.PostData" message.
-type Org_Federation_PostDataArgument struct {
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.

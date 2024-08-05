@@ -129,7 +129,6 @@ func TestSimpleAggregation(t *testing.T) {
 						AddFieldWithAlias("foo", resolver.StringType, ref.Field(t, "org.user", "User.AttrA", "foo")).
 						SetRule(
 							testutil.NewMessageRuleBuilder().
-								SetMessageArgument(ref.Message(t, "org.federation", "User_AttrAArgument")).
 								SetAlias(ref.Message(t, "org.user", "User.AttrA")).
 								Build(t),
 						).
@@ -140,7 +139,6 @@ func TestSimpleAggregation(t *testing.T) {
 						AddFieldWithAlias("bar", resolver.BoolType, ref.Field(t, "org.user", "User.AttrB", "bar")).
 						SetRule(
 							testutil.NewMessageRuleBuilder().
-								SetMessageArgument(ref.Message(t, "org.federation", "User_AttrBArgument")).
 								SetAlias(ref.Message(t, "org.user", "User.AttrB")).
 								Build(t),
 						).
@@ -1605,10 +1603,6 @@ func TestAlias(t *testing.T) {
 						SetRule(
 							testutil.NewMessageRuleBuilder().
 								SetAlias(ref.Message(t, "org.post", "PostConditionA")).
-								SetMessageArgument(
-									testutil.NewMessageBuilder("GetPostRequest_ConditionAArgument").
-										Build(t),
-								).
 								Build(t),
 						).
 						Build(t),
@@ -1618,10 +1612,6 @@ func TestAlias(t *testing.T) {
 						SetRule(
 							testutil.NewMessageRuleBuilder().
 								SetAlias(ref.Message(t, "org.post", "PostConditionB")).
-								SetMessageArgument(
-									testutil.NewMessageBuilder("GetPostRequest_ConditionBArgument").
-										Build(t),
-								).
 								Build(t),
 						).
 						Build(t),

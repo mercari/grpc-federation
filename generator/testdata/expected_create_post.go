@@ -43,10 +43,6 @@ type Org_Federation_CreatePostResponseArgument struct {
 	UserId  string
 }
 
-// Org_Federation_PostArgument is argument for "org.federation.Post" message.
-type Org_Federation_PostArgument struct {
-}
-
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
 	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.

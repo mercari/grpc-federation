@@ -1132,6 +1132,11 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 	if msg.Rule == nil {
 		return
 	}
+	if msg.Rule.MessageArgument == nil {
+		// message argument does not exist because this message is not used from anywhere.
+		// In this case, validation step is skipped.
+		return
+	}
 	for _, field := range msg.Fields {
 		builder := builder.WithField(field.Name)
 		if !field.HasRule() {
@@ -2798,21 +2803,21 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 	}
 
 	for _, root := range graph.Roots {
-		resMsg := root.Message
-
-		var msgArg *Message
-		if resMsg.Rule.MessageArgument != nil {
-			msgArg = resMsg.Rule.MessageArgument
-		} else {
-			msgArg = newMessageArgument(resMsg)
-			resMsg.Rule.MessageArgument = msgArg
-		}
+		rootMsg := root.Message
 
 		// The message argument of the response message is the request message.
 		// Therefore, the request message is retrieved from the response message.
-		reqMsg := r.lookupRequestMessageFromResponseMessage(resMsg)
+		reqMsg := r.lookupRequestMessageFromResponseMessage(rootMsg)
 		if reqMsg == nil {
 			continue
+		}
+
+		var msgArg *Message
+		if rootMsg.Rule.MessageArgument != nil {
+			msgArg = rootMsg.Rule.MessageArgument
+		} else {
+			msgArg = newMessageArgument(rootMsg)
+			rootMsg.Rule.MessageArgument = msgArg
 		}
 
 		msgArg.Fields = append(msgArg.Fields, reqMsg.Fields...)
