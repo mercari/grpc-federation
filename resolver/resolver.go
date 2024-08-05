@@ -2812,6 +2812,10 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 		// Therefore, the request message is retrieved from the response message.
 		reqMsg := r.lookupRequestMessageFromResponseMessage(resMsg)
 		if reqMsg == nil {
+			// A non-response message may also become a root message.
+			// In such a case, the message argument field does not exist.
+			// However, since it is necessary to resolve the CEL reference, needs to call recursive message argument resolver.
+			_ = r.resolveMessageArgumentRecursive(ctx, root, svcMsgSet)
 			continue
 		}
 
