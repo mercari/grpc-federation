@@ -535,14 +535,6 @@ func newServiceTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 	return ret
 }
 
-func newTypeDeclares(file *File, msg *resolver.Message) []*Type {
-	ret := newTypeDeclaresWithMessage(file, msg)
-	for _, msg := range msg.NestedMessages {
-		ret = append(ret, newTypeDeclares(file, msg)...)
-	}
-	return ret
-}
-
 func newTypeDeclaresWithMessage(file *File, msg *resolver.Message) []*Type {
 	if !msg.HasRule() {
 		return nil
