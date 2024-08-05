@@ -169,9 +169,3 @@ message M {
   string foo = 1 [(grpc.federation.field).by = "'foo'"];
   int64 bar = 2 [(grpc.federation.field).by = "1"];
 }
-
-message N {
-  option (grpc.federation.message) = {
-    def { by: "$.foo" }
-  };
-}

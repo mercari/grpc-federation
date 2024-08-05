@@ -44,10 +44,6 @@ type Org_Federation_MArgument struct {
 	Y user.Item_ItemType
 }
 
-// Org_Federation_NArgument is argument for "org.federation.N" message.
-type Org_Federation_NArgument struct {
-}
-
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type Org_Federation_PostArgument struct {
 	Id   string

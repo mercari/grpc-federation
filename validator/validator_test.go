@@ -472,6 +472,9 @@ testdata/invalid_nested_message_name.proto:42:33: "federation.Invalid2" message 
 testdata/invalid_nested_message_name.proto:42:41: undefined message specified
 42:            { name: "c1" message: { name: "Invalid2" } }
                                              ^
+testdata/invalid_nested_message_name.proto:45:7: cannot convert type automatically: field type is "string" but specified value type is "null"
+45:        string c1 = 1 [(grpc.federation.field).by = "c1"];
+           ^
 testdata/invalid_nested_message_name.proto:47:5: cannot convert type automatically: field type is "string" but specified value type is "null"
 47:      string b1 = 1 [(grpc.federation.field).by = "b1"];
          ^
