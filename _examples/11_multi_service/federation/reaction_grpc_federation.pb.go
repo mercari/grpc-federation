@@ -8,16 +8,8 @@ package federation
 
 import (
 	"reflect"
-
-	favorite "example/favorite"
 )
 
 var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
-
-// Federation_ReactionArgument is argument for "federation.Reaction" message.
-type Federation_ReactionArgument struct {
-	Cmp bool
-	V   favorite.FavoriteType
-}

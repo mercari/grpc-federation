@@ -26,13 +26,13 @@ var (
 )
 
 // Org_Federation_GetPostsResponseArgument is argument for "org.federation.GetPostsResponse" message.
-type Org_Federation_GetPostsResponseArgument struct {
+type FederationService_Org_Federation_GetPostsResponseArgument struct {
 	Ids   []string
 	Posts *Posts
 }
 
 // Org_Federation_PostsArgument is argument for "org.federation.Posts" message.
-type Org_Federation_PostsArgument struct {
+type FederationService_Org_Federation_PostsArgument struct {
 	Ids     []string
 	Items   []*Posts_PostItem
 	PostIds []string
@@ -42,12 +42,12 @@ type Org_Federation_PostsArgument struct {
 }
 
 // Org_Federation_Posts_PostItemArgument is argument for "org.federation.PostItem" message.
-type Org_Federation_Posts_PostItemArgument struct {
+type FederationService_Org_Federation_Posts_PostItemArgument struct {
 	Id string
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
-type Org_Federation_UserArgument struct {
+type FederationService_Org_Federation_UserArgument struct {
 	Res    *user.GetUserResponse
 	User   *user.User
 	UserId string
@@ -93,7 +93,7 @@ type FederationServiceDependentClientSet struct {
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
 	// Resolve_Org_Federation_User implements resolver for "org.federation.User".
-	Resolve_Org_Federation_User(context.Context, *Org_Federation_UserArgument) (*User, error)
+	Resolve_Org_Federation_User(context.Context, *FederationService_Org_Federation_UserArgument) (*User, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -111,7 +111,7 @@ type FederationServiceUnimplementedResolver struct{}
 
 // Resolve_Org_Federation_User resolve "org.federation.User".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User(context.Context, *Org_Federation_UserArgument) (ret *User, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_User(context.Context, *FederationService_Org_Federation_UserArgument) (ret *User, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_User not implemented")
 	return
 }
@@ -212,7 +212,7 @@ func (s *FederationService) GetPosts(ctx context.Context, req *GetPostsRequest) 
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetPostsResponse(ctx, &Org_Federation_GetPostsResponseArgument{
+	res, err := s.resolve_Org_Federation_GetPostsResponse(ctx, &FederationService_Org_Federation_GetPostsResponseArgument{
 		Ids: req.GetIds(),
 	})
 	if err != nil {
@@ -224,7 +224,7 @@ func (s *FederationService) GetPosts(ctx context.Context, req *GetPostsRequest) 
 }
 
 // resolve_Org_Federation_GetPostsResponse resolve "org.federation.GetPostsResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.Context, req *Org_Federation_GetPostsResponseArgument) (*GetPostsResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.Context, req *FederationService_Org_Federation_GetPostsResponseArgument) (*GetPostsResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostsResponse")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -261,7 +261,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Org_Federation_PostsArgument{}
+			args := &FederationService_Org_Federation_PostsArgument{}
 			// { name: "post_ids", by: "$.ids" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 				Value:             value,
@@ -309,7 +309,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 }
 
 // resolve_Org_Federation_Posts resolve "org.federation.Posts" message.
-func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, req *Org_Federation_PostsArgument) (*Posts, error) {
+func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, req *FederationService_Org_Federation_PostsArgument) (*Posts, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Posts")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -543,7 +543,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			IteratorType:   grpcfed.CELObjectType("org.post.Post"),
 			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
-				args := &Org_Federation_Posts_PostItemArgument{}
+				args := &FederationService_Org_Federation_Posts_PostItemArgument{}
 				// { name: "id", by: "iter.id" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -659,7 +659,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			IteratorType:   grpcfed.CELObjectType("org.post.Post"),
 			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
-				args := &Org_Federation_UserArgument{}
+				args := &FederationService_Org_Federation_UserArgument{}
 				// { name: "user_id", by: "iter.user_id" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -773,7 +773,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 }
 
 // resolve_Org_Federation_Posts_PostItem resolve "org.federation.Posts.PostItem" message.
-func (s *FederationService) resolve_Org_Federation_Posts_PostItem(ctx context.Context, req *Org_Federation_Posts_PostItemArgument) (*Posts_PostItem, error) {
+func (s *FederationService) resolve_Org_Federation_Posts_PostItem(ctx context.Context, req *FederationService_Org_Federation_Posts_PostItemArgument) (*Posts_PostItem, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Posts.PostItem")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -815,7 +815,7 @@ func (s *FederationService) resolve_Org_Federation_Posts_PostItem(ctx context.Co
 }
 
 // resolve_Org_Federation_User resolve "org.federation.User" message.
-func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument) (*User, error) {
+func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *FederationService_Org_Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.User")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -926,7 +926,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostsResponse(v *GetPosts
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostsResponseArgument(v *Org_Federation_GetPostsResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostsResponseArgument(v *FederationService_Org_Federation_GetPostsResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -948,7 +948,7 @@ func (s *FederationService) logvalue_Org_Federation_Posts(v *Posts) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_PostsArgument(v *Org_Federation_PostsArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_PostsArgument(v *FederationService_Org_Federation_PostsArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -966,7 +966,7 @@ func (s *FederationService) logvalue_Org_Federation_Posts_PostItem(v *Posts_Post
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_Posts_PostItemArgument(v *Org_Federation_Posts_PostItemArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_Posts_PostItemArgument(v *FederationService_Org_Federation_Posts_PostItemArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -985,7 +985,7 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_UserArgument(v *FederationService_Org_Federation_UserArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

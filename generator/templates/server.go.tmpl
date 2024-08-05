@@ -26,21 +26,6 @@ var (
 )
 
 {{- $pkgName := .Package.Name }}
-{{- range .Types }}
-
-// {{ .Desc }}.
-type {{ .Name }} struct {
-	{{- range .Fields }}
-	{{- if .Name }}
-	{{ .Name }} {{ .Type }}
-	{{- else }}
-	{{ .Type }}
-	{{- end }}
-	{{- end }}
-}
-
-{{- end }}
-
 {{- $enums := .Enums }}
 
 {{- range .Services }}
@@ -52,6 +37,21 @@ type {{ .Name }} struct {
 {{- $oneofTypes := .OneofTypes }}
 {{- $celPlugins := .CELPlugins }}
 {{- $env := .Env }}
+
+{{- range $types }}
+
+// {{ .Desc }}.
+type {{ $serviceName }}_{{ .Name }} struct {
+	{{- range .Fields }}
+	{{- if .Name }}
+	{{ .Name }} {{ .Type }}
+	{{- else }}
+	*{{ $serviceName }}_{{ .Type }}
+	{{- end }}
+	{{- end }}
+}
+
+{{- end }}
 
 // {{ $serviceName }}Config configuration required to initialize the service that use GRPC Federation.
 type {{ $serviceName }}Config struct {
@@ -105,7 +105,7 @@ type {{ $serviceName }}DependentClientSet struct {
 type {{ $serviceName }}Resolver interface {
 	{{- range $customResolvers }}
 	// {{ .Name }} implements resolver for "{{ .ProtoFQDN }}".
-	{{ .Name }}(context.Context, *{{ .RequestType }}) ({{ .ReturnType }}, error)
+	{{ .Name }}(context.Context, *{{ $serviceName }}_{{ .RequestType }}) ({{ .ReturnType }}, error)
 	{{- end }}
 }
 
@@ -152,7 +152,7 @@ type {{ $serviceName }}UnimplementedResolver struct {}
 {{- range $customResolvers }}
 // {{ .Name }} resolve "{{ .ProtoFQDN }}".
 // This method always returns Unimplemented error.
-func ({{ $serviceName }}UnimplementedResolver) {{ .Name }}(context.Context, *{{ .RequestType }}) (ret {{ .ReturnType }}, e error) {
+func ({{ $serviceName }}UnimplementedResolver) {{ .Name }}(context.Context, *{{ $serviceName }}_{{ .RequestType }}) (ret {{ .ReturnType }}, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method {{ .Name }} not implemented")
 	return
 }
@@ -378,7 +378,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 {{- $hasCELValue := .HasCELValue }}
 {{ if .HasRule }}
 // {{ .ResolverName }} resolve "{{ .ProtoFQDN }}" message.
-func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .RequestType }}) (*{{ .ReturnType }}, error) {
+func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ $serviceName }}_{{ .RequestType }}) (*{{ .ReturnType }}, error) {
 	ctx, span := s.tracer.Start(ctx, "{{ .ProtoFQDN }}")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -435,7 +435,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ .R
 	{{- end }}
 	{{- range $returnFields }}
 	{{- if .CustomResolver }}
-	{{- template "setReturnValueByFieldCustomResolver" (map "HasMsgCustomResolver" $hasMsgCustomResolver "Value" .CustomResolver) }}
+	{{- template "setReturnValueByFieldCustomResolver" (map "HasMsgCustomResolver" $hasMsgCustomResolver "Value" .CustomResolver "ServiceName" $serviceName) }}
 	{{- else if .Oneof }}
 	{{- template "setReturnValueByOneofFields" (map "Message" $msg "Value" .Oneof) }}
 	{{- else if .CEL }}
@@ -532,8 +532,8 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 	// (grpc.federation.field).custom_resolver = true
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 	var err error
-	ret.{{ $value.Name }}, err = s.resolver.{{ $value.ResolverName }}(ctx, &{{ $value.RequestType }}{
-		{{ $value.MessageArgumentName }}: req,
+	ret.{{ $value.Name }}, err = s.resolver.{{ $value.ResolverName }}(ctx, &{{ .ServiceName }}_{{ $value.RequestType }}{
+		{{ .ServiceName }}_{{ $value.MessageArgumentName }}: req,
 		{{- if $hasMsgCustomResolver }}
 		{{ $value.MessageName }}: ret,
 		{{- end }}
