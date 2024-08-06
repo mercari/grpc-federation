@@ -119,7 +119,7 @@ type FederationServiceUnimplementedResolver struct{}
 
 // FederationService represents Federation Service.
 type FederationService struct {
-	*UnimplementedFederationServiceServer
+	UnimplementedFederationServiceServer
 	cfg           FederationServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler
@@ -1025,7 +1025,7 @@ type PrivateServiceUnimplementedResolver struct{}
 
 // PrivateService represents Federation Service.
 type PrivateService struct {
-	*UnimplementedPrivateServiceServer
+	UnimplementedPrivateServiceServer
 	cfg           PrivateServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler
@@ -1910,7 +1910,7 @@ type DebugServiceUnimplementedResolver struct{}
 
 // DebugService represents Federation Service.
 type DebugService struct {
-	*UnimplementedDebugServiceServer
+	UnimplementedDebugServiceServer
 	cfg           DebugServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler

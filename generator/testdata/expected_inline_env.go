@@ -89,7 +89,7 @@ type InlineEnvServiceUnimplementedResolver struct{}
 
 // InlineEnvService represents Federation Service.
 type InlineEnvService struct {
-	*UnimplementedInlineEnvServiceServer
+	UnimplementedInlineEnvServiceServer
 	cfg           InlineEnvServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler

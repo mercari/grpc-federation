@@ -93,7 +93,7 @@ type RefEnvServiceUnimplementedResolver struct{}
 
 // RefEnvService represents Federation Service.
 type RefEnvService struct {
-	*UnimplementedRefEnvServiceServer
+	UnimplementedRefEnvServiceServer
 	cfg           RefEnvServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler

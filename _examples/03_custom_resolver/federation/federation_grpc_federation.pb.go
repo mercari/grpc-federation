@@ -203,7 +203,7 @@ const (
 
 // FederationV2DevService represents Federation Service.
 type FederationV2DevService struct {
-	*UnimplementedFederationV2DevServiceServer
+	UnimplementedFederationV2DevServiceServer
 	cfg           FederationV2DevServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler

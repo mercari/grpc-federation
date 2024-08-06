@@ -169,7 +169,7 @@ const (
 
 // {{ $serviceName }} represents Federation Service.
 type {{ $serviceName }} struct {
-	*Unimplemented{{ $serviceName }}Server
+	Unimplemented{{ $serviceName }}Server
 	cfg {{ $serviceName }}Config
 	logger *slog.Logger
 	errorHandler grpcfed.ErrorHandler
