@@ -127,7 +127,7 @@ const (
 
 // FederationService represents Federation Service.
 type FederationService struct {
-	*UnimplementedFederationServiceServer
+	UnimplementedFederationServiceServer
 	cfg           FederationServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler

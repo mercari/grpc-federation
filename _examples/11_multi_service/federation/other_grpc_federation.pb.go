@@ -92,7 +92,7 @@ func (OtherServiceUnimplementedResolver) Resolve_Federation_GetResponse_Post(con
 
 // OtherService represents Federation Service.
 type OtherService struct {
-	*UnimplementedOtherServiceServer
+	UnimplementedOtherServiceServer
 	cfg           OtherServiceConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler

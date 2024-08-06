@@ -266,7 +266,7 @@ const (
 
 // SWAPI represents Federation Service.
 type SWAPI struct {
-	*UnimplementedSWAPIServer
+	UnimplementedSWAPIServer
 	cfg           SWAPIConfig
 	logger        *slog.Logger
 	errorHandler  grpcfed.ErrorHandler
