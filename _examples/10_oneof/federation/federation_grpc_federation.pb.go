@@ -25,28 +25,24 @@ var (
 )
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type Org_Federation_GetResponseArgument struct {
+type FederationService_Org_Federation_GetResponseArgument struct {
 	MsgSel *MessageSelection
 	Sel    *UserSelection
 }
 
-// Org_Federation_MArgument is argument for "org.federation.M" message.
-type Org_Federation_MArgument struct {
-}
-
 // Org_Federation_MessageSelectionArgument is argument for "org.federation.MessageSelection" message.
-type Org_Federation_MessageSelectionArgument struct {
+type FederationService_Org_Federation_MessageSelectionArgument struct {
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
-type Org_Federation_UserArgument struct {
+type FederationService_Org_Federation_UserArgument struct {
 	Bar    string
 	Foo    int64
 	UserId string
 }
 
 // Org_Federation_UserSelectionArgument is argument for "org.federation.UserSelection" message.
-type Org_Federation_UserSelectionArgument struct {
+type FederationService_Org_Federation_UserSelectionArgument struct {
 	Ua    *User
 	Ub    *User
 	Uc    *User
@@ -195,7 +191,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{})
+	res, err := s.resolve_Org_Federation_GetResponse(ctx, &FederationService_Org_Federation_GetResponseArgument{})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, err)
@@ -205,7 +201,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 }
 
 // resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *FederationService_Org_Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -250,7 +246,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_MessageSelectionArgument{}
+				args := &FederationService_Org_Federation_MessageSelectionArgument{}
 				return s.resolve_Org_Federation_MessageSelection(ctx, args)
 			},
 		}); err != nil {
@@ -280,7 +276,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_UserSelectionArgument{}
+				args := &FederationService_Org_Federation_UserSelectionArgument{}
 				// { name: "value", by: "'foo'" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -349,7 +345,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 }
 
 // resolve_Org_Federation_MessageSelection resolve "org.federation.MessageSelection" message.
-func (s *FederationService) resolve_Org_Federation_MessageSelection(ctx context.Context, req *Org_Federation_MessageSelectionArgument) (*MessageSelection, error) {
+func (s *FederationService) resolve_Org_Federation_MessageSelection(ctx context.Context, req *FederationService_Org_Federation_MessageSelectionArgument) (*MessageSelection, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.MessageSelection")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -446,7 +442,7 @@ func (s *FederationService) resolve_Org_Federation_MessageSelection(ctx context.
 }
 
 // resolve_Org_Federation_User resolve "org.federation.User" message.
-func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *Org_Federation_UserArgument) (*User, error) {
+func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req *FederationService_Org_Federation_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.User")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -581,7 +577,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 }
 
 // resolve_Org_Federation_UserSelection resolve "org.federation.UserSelection" message.
-func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Context, req *Org_Federation_UserSelectionArgument) (*UserSelection, error) {
+func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Context, req *FederationService_Org_Federation_UserSelectionArgument) (*UserSelection, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.UserSelection")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -658,7 +654,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_UserArgument{}
+				args := &FederationService_Org_Federation_UserArgument{}
 				// { name: "user_id", by: "'a'" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -741,7 +737,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_UserArgument{}
+				args := &FederationService_Org_Federation_UserArgument{}
 				// { name: "user_id", by: "'b'" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -824,7 +820,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Org_Federation_UserArgument{}
+				args := &FederationService_Org_Federation_UserArgument{}
 				// { name: "user_id", by: "$.value" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -899,7 +895,7 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *FederationService_Org_Federation_GetResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -917,7 +913,7 @@ func (s *FederationService) logvalue_Org_Federation_MessageSelection(v *MessageS
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_MessageSelectionArgument(v *Org_Federation_MessageSelectionArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_MessageSelectionArgument(v *FederationService_Org_Federation_MessageSelectionArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -933,7 +929,7 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_UserArgument(v *Org_Federation_UserArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_UserArgument(v *FederationService_Org_Federation_UserArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -955,7 +951,7 @@ func (s *FederationService) logvalue_Org_Federation_UserSelection(v *UserSelecti
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_UserSelectionArgument(v *Org_Federation_UserSelectionArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_UserSelectionArgument(v *FederationService_Org_Federation_UserSelectionArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

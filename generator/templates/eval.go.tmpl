@@ -30,7 +30,7 @@ grpcfed.EvalDefMap({{ $ctx }}, value, grpcfed.DefMap[{{ $def.Type }}, {{ $mapRes
 		})
 		{{- else if $mapResolver.IsMessage }}
 		{{- $arguments := $mapResolver.Arguments }}
-		args := &{{ $mapResolver.RequestType }}{
+		args := &{{ $mapResolver.Service.ServiceName }}_{{ $mapResolver.RequestType }}{
 			{{- range $arguments }}
 			{{- if not .CEL }}
 			{{ .Name }}: {{ .Value }}, {{ .ProtoComment }}

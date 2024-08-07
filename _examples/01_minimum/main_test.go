@@ -38,7 +38,7 @@ var (
 	}
 )
 
-func (r *Resolver) Resolve_Federation_GetPostResponse(ctx context.Context, arg *federation.Federation_GetPostResponseArgument) (*federation.GetPostResponse, error) {
+func (r *Resolver) Resolve_Federation_GetPostResponse(ctx context.Context, arg *federation.FederationService_Federation_GetPostResponseArgument) (*federation.GetPostResponse, error) {
 	return testResponse, nil
 }
 

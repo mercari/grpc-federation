@@ -524,21 +524,6 @@ func (f *File) Enums() []*Enum {
 	return ret
 }
 
-func (f *File) Types() Types {
-	return newFileTypeDeclares(f, f.Messages)
-}
-
-func newFileTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
-	var ret []*Type
-	for _, msg := range msgs {
-		ret = append(ret, newTypeDeclares(file, msg)...)
-	}
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].Name < ret[j].Name
-	})
-	return ret
-}
-
 func newServiceTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 	var ret []*Type
 	for _, msg := range msgs {
@@ -547,14 +532,6 @@ func newServiceTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 	sort.Slice(ret, func(i, j int) bool {
 		return ret[i].Name < ret[j].Name
 	})
-	return ret
-}
-
-func newTypeDeclares(file *File, msg *resolver.Message) []*Type {
-	ret := newTypeDeclaresWithMessage(file, msg)
-	for _, msg := range msg.NestedMessages {
-		ret = append(ret, newTypeDeclares(file, msg)...)
-	}
 	return ret
 }
 
@@ -626,7 +603,7 @@ func newTypeDeclaresWithMessage(file *File, msg *resolver.Message) []*Type {
 	declTypes := []*Type{typ}
 	for _, field := range msg.CustomResolverFields() {
 		typeName := fmt.Sprintf("%s_%sArgument", msgName, util.ToPublicGoVariable(field.Name))
-		fields := []*Field{{Type: fmt.Sprintf("*%s", argName)}}
+		fields := []*Field{{Type: argName}}
 		if msg.HasCustomResolver() {
 			fields = append(fields, &Field{
 				Name: msgName,
@@ -1179,7 +1156,7 @@ func (s *Service) setLogValueByMessageArgument(msg *resolver.Message) {
 	}
 	logValue := &LogValue{
 		Name:      name,
-		ValueType: "*" + protoFQDNToPublicGoName(arg.FQDN()),
+		ValueType: "*" + s.ServiceName() + "_" + protoFQDNToPublicGoName(arg.FQDN()),
 		Attrs:     make([]*LogValueAttr, 0, len(arg.Fields)),
 		Type:      resolver.NewMessageType(arg, false),
 	}
@@ -1481,7 +1458,7 @@ func (m *Method) ResolverName() string {
 
 func (m *Method) ArgumentName() string {
 	msg := fullMessageName(m.Response)
-	return fmt.Sprintf("%sArgument", msg)
+	return fmt.Sprintf("%s_%sArgument", m.Service.ServiceName(), msg)
 }
 
 func (m *Method) RequestType() string {
@@ -2851,7 +2828,7 @@ func (d *VariableDefinition) RequestType() string {
 		)
 	case expr.Message != nil:
 		msgName := fullMessageName(expr.Message.Message)
-		return fmt.Sprintf("%sArgument", msgName)
+		return fmt.Sprintf("%s_%sArgument", d.ServiceName(), msgName)
 	}
 	return ""
 }

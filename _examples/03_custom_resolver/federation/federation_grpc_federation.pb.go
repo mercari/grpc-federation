@@ -27,19 +27,19 @@ var (
 )
 
 // Federation_V2Dev_ForNamelessArgument is argument for "federation.v2dev.ForNameless" message.
-type Federation_V2Dev_ForNamelessArgument struct {
+type FederationV2DevService_Federation_V2Dev_ForNamelessArgument struct {
 	Bar string
 }
 
 // Federation_V2Dev_GetPostV2DevResponseArgument is argument for "federation.v2dev.GetPostV2devResponse" message.
-type Federation_V2Dev_GetPostV2DevResponseArgument struct {
+type FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument struct {
 	Id   string
 	Post *PostV2Dev
 	R    *Ref
 }
 
 // Federation_V2Dev_PostV2DevArgument is argument for "federation.v2dev.PostV2dev" message.
-type Federation_V2Dev_PostV2DevArgument struct {
+type FederationV2DevService_Federation_V2Dev_PostV2DevArgument struct {
 	Id     string
 	Post   *post.Post
 	Res    *post.GetPostResponse
@@ -49,17 +49,21 @@ type Federation_V2Dev_PostV2DevArgument struct {
 }
 
 // Federation_V2Dev_PostV2Dev_UserArgument is custom resolver's argument for "user" field of "federation.v2dev.PostV2dev" message.
-type Federation_V2Dev_PostV2Dev_UserArgument struct {
-	*Federation_V2Dev_PostV2DevArgument
+type FederationV2DevService_Federation_V2Dev_PostV2Dev_UserArgument struct {
+	*FederationV2DevService_Federation_V2Dev_PostV2DevArgument
+}
+
+// Federation_V2Dev_RefArgument is argument for "federation.v2dev.Ref" message.
+type FederationV2DevService_Federation_V2Dev_RefArgument struct {
 }
 
 // Federation_V2Dev_UnusedArgument is argument for "federation.v2dev.Unused" message.
-type Federation_V2Dev_UnusedArgument struct {
+type FederationV2DevService_Federation_V2Dev_UnusedArgument struct {
 	Foo string
 }
 
 // Federation_V2Dev_UserArgument is argument for "federation.v2dev.User" message.
-type Federation_V2Dev_UserArgument struct {
+type FederationV2DevService_Federation_V2Dev_UserArgument struct {
 	Content string
 	Id      string
 	Res     *user.GetUserResponse
@@ -69,8 +73,8 @@ type Federation_V2Dev_UserArgument struct {
 }
 
 // Federation_V2Dev_User_NameArgument is custom resolver's argument for "name" field of "federation.v2dev.User" message.
-type Federation_V2Dev_User_NameArgument struct {
-	*Federation_V2Dev_UserArgument
+type FederationV2DevService_Federation_V2Dev_User_NameArgument struct {
+	*FederationV2DevService_Federation_V2Dev_UserArgument
 	Federation_V2Dev_User *User
 }
 
@@ -114,15 +118,15 @@ type FederationV2DevServiceDependentClientSet struct {
 // FederationV2DevServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationV2DevServiceResolver interface {
 	// Resolve_Federation_V2Dev_ForNameless implements resolver for "federation.v2dev.ForNameless".
-	Resolve_Federation_V2Dev_ForNameless(context.Context, *Federation_V2Dev_ForNamelessArgument) (*ForNameless, error)
+	Resolve_Federation_V2Dev_ForNameless(context.Context, *FederationV2DevService_Federation_V2Dev_ForNamelessArgument) (*ForNameless, error)
 	// Resolve_Federation_V2Dev_PostV2Dev_User implements resolver for "federation.v2dev.PostV2dev.user".
-	Resolve_Federation_V2Dev_PostV2Dev_User(context.Context, *Federation_V2Dev_PostV2Dev_UserArgument) (*User, error)
+	Resolve_Federation_V2Dev_PostV2Dev_User(context.Context, *FederationV2DevService_Federation_V2Dev_PostV2Dev_UserArgument) (*User, error)
 	// Resolve_Federation_V2Dev_Unused implements resolver for "federation.v2dev.Unused".
-	Resolve_Federation_V2Dev_Unused(context.Context, *Federation_V2Dev_UnusedArgument) (*Unused, error)
+	Resolve_Federation_V2Dev_Unused(context.Context, *FederationV2DevService_Federation_V2Dev_UnusedArgument) (*Unused, error)
 	// Resolve_Federation_V2Dev_User implements resolver for "federation.v2dev.User".
-	Resolve_Federation_V2Dev_User(context.Context, *Federation_V2Dev_UserArgument) (*User, error)
+	Resolve_Federation_V2Dev_User(context.Context, *FederationV2DevService_Federation_V2Dev_UserArgument) (*User, error)
 	// Resolve_Federation_V2Dev_User_Name implements resolver for "federation.v2dev.User.name".
-	Resolve_Federation_V2Dev_User_Name(context.Context, *Federation_V2Dev_User_NameArgument) (string, error)
+	Resolve_Federation_V2Dev_User_Name(context.Context, *FederationV2DevService_Federation_V2Dev_User_NameArgument) (string, error)
 }
 
 // FederationV2DevServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -163,35 +167,35 @@ type FederationV2DevServiceUnimplementedResolver struct{}
 
 // Resolve_Federation_V2Dev_ForNameless resolve "federation.v2dev.ForNameless".
 // This method always returns Unimplemented error.
-func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_ForNameless(context.Context, *Federation_V2Dev_ForNamelessArgument) (ret *ForNameless, e error) {
+func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_ForNameless(context.Context, *FederationV2DevService_Federation_V2Dev_ForNamelessArgument) (ret *ForNameless, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_V2Dev_ForNameless not implemented")
 	return
 }
 
 // Resolve_Federation_V2Dev_PostV2Dev_User resolve "federation.v2dev.PostV2dev.user".
 // This method always returns Unimplemented error.
-func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_PostV2Dev_User(context.Context, *Federation_V2Dev_PostV2Dev_UserArgument) (ret *User, e error) {
+func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_PostV2Dev_User(context.Context, *FederationV2DevService_Federation_V2Dev_PostV2Dev_UserArgument) (ret *User, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_V2Dev_PostV2Dev_User not implemented")
 	return
 }
 
 // Resolve_Federation_V2Dev_Unused resolve "federation.v2dev.Unused".
 // This method always returns Unimplemented error.
-func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_Unused(context.Context, *Federation_V2Dev_UnusedArgument) (ret *Unused, e error) {
+func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_Unused(context.Context, *FederationV2DevService_Federation_V2Dev_UnusedArgument) (ret *Unused, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_V2Dev_Unused not implemented")
 	return
 }
 
 // Resolve_Federation_V2Dev_User resolve "federation.v2dev.User".
 // This method always returns Unimplemented error.
-func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_User(context.Context, *Federation_V2Dev_UserArgument) (ret *User, e error) {
+func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_User(context.Context, *FederationV2DevService_Federation_V2Dev_UserArgument) (ret *User, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_V2Dev_User not implemented")
 	return
 }
 
 // Resolve_Federation_V2Dev_User_Name resolve "federation.v2dev.User.name".
 // This method always returns Unimplemented error.
-func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_User_Name(context.Context, *Federation_V2Dev_User_NameArgument) (ret string, e error) {
+func (FederationV2DevServiceUnimplementedResolver) Resolve_Federation_V2Dev_User_Name(context.Context, *FederationV2DevService_Federation_V2Dev_User_NameArgument) (ret string, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Federation_V2Dev_User_Name not implemented")
 	return
 }
@@ -311,7 +315,7 @@ func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Federation_V2Dev_GetPostV2DevResponse(ctx, &Federation_V2Dev_GetPostV2DevResponseArgument{
+	res, err := s.resolve_Federation_V2Dev_GetPostV2DevResponse(ctx, &FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -323,7 +327,7 @@ func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV
 }
 
 // resolve_Federation_V2Dev_ForNameless resolve "federation.v2dev.ForNameless" message.
-func (s *FederationV2DevService) resolve_Federation_V2Dev_ForNameless(ctx context.Context, req *Federation_V2Dev_ForNamelessArgument) (*ForNameless, error) {
+func (s *FederationV2DevService) resolve_Federation_V2Dev_ForNameless(ctx context.Context, req *FederationV2DevService_Federation_V2Dev_ForNamelessArgument) (*ForNameless, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.ForNameless")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -344,7 +348,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_ForNameless(ctx contex
 }
 
 // resolve_Federation_V2Dev_GetPostV2DevResponse resolve "federation.v2dev.GetPostV2devResponse" message.
-func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(ctx context.Context, req *Federation_V2Dev_GetPostV2DevResponseArgument) (*GetPostV2DevResponse, error) {
+func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(ctx context.Context, req *FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument) (*GetPostV2DevResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.GetPostV2devResponse")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -391,7 +395,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_V2Dev_PostV2DevArgument{}
+				args := &FederationV2DevService_Federation_V2Dev_PostV2DevArgument{}
 				// { name: "id", by: "$.id" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -433,7 +437,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_V2Dev_RefArgument{}
+				args := &FederationV2DevService_Federation_V2Dev_RefArgument{}
 				return s.resolve_Federation_V2Dev_Ref(ctx, args)
 			},
 		}); err != nil {
@@ -549,7 +553,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 }
 
 // resolve_Federation_V2Dev_PostV2Dev resolve "federation.v2dev.PostV2dev" message.
-func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.Context, req *Federation_V2Dev_PostV2DevArgument) (*PostV2Dev, error) {
+func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.Context, req *FederationV2DevService_Federation_V2Dev_PostV2DevArgument) (*PostV2Dev, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.PostV2dev")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -602,7 +606,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_V2Dev_ForNamelessArgument{}
+				args := &FederationV2DevService_Federation_V2Dev_ForNamelessArgument{}
 				// { name: "bar", by: "'bar'" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -645,7 +649,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_V2Dev_UnusedArgument{}
+				args := &FederationV2DevService_Federation_V2Dev_UnusedArgument{}
 				// { name: "foo", by: "'foo'" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:             value,
@@ -753,7 +757,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Federation_V2Dev_UserArgument{}
+				args := &FederationV2DevService_Federation_V2Dev_UserArgument{}
 				// { inline: "post" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post.Post]{
 					Value:             value,
@@ -801,8 +805,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		// (grpc.federation.field).custom_resolver = true
 		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 		var err error
-		ret.User, err = s.resolver.Resolve_Federation_V2Dev_PostV2Dev_User(ctx, &Federation_V2Dev_PostV2Dev_UserArgument{
-			Federation_V2Dev_PostV2DevArgument: req,
+		ret.User, err = s.resolver.Resolve_Federation_V2Dev_PostV2Dev_User(ctx, &FederationV2DevService_Federation_V2Dev_PostV2Dev_UserArgument{
+			FederationV2DevService_Federation_V2Dev_PostV2DevArgument: req,
 		})
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
@@ -815,7 +819,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 }
 
 // resolve_Federation_V2Dev_Ref resolve "federation.v2dev.Ref" message.
-func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Context, req *Federation_V2Dev_RefArgument) (*Ref, error) {
+func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Context, req *FederationV2DevService_Federation_V2Dev_RefArgument) (*Ref, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.Ref")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -858,7 +862,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Contex
 }
 
 // resolve_Federation_V2Dev_Unused resolve "federation.v2dev.Unused" message.
-func (s *FederationV2DevService) resolve_Federation_V2Dev_Unused(ctx context.Context, req *Federation_V2Dev_UnusedArgument) (*Unused, error) {
+func (s *FederationV2DevService) resolve_Federation_V2Dev_Unused(ctx context.Context, req *FederationV2DevService_Federation_V2Dev_UnusedArgument) (*Unused, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.Unused")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -879,7 +883,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Unused(ctx context.Con
 }
 
 // resolve_Federation_V2Dev_User resolve "federation.v2dev.User" message.
-func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Context, req *Federation_V2Dev_UserArgument) (*User, error) {
+func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Context, req *FederationV2DevService_Federation_V2Dev_UserArgument) (*User, error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.User")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -982,9 +986,9 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 		// (grpc.federation.field).custom_resolver = true
 		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
 		var err error
-		ret.Name, err = s.resolver.Resolve_Federation_V2Dev_User_Name(ctx, &Federation_V2Dev_User_NameArgument{
-			Federation_V2Dev_UserArgument: req,
-			Federation_V2Dev_User:         ret,
+		ret.Name, err = s.resolver.Resolve_Federation_V2Dev_User_Name(ctx, &FederationV2DevService_Federation_V2Dev_User_NameArgument{
+			FederationV2DevService_Federation_V2Dev_UserArgument: req,
+			Federation_V2Dev_User:                                ret,
 		})
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
@@ -1025,7 +1029,7 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_ForNameless(v *ForNam
 	)
 }
 
-func (s *FederationV2DevService) logvalue_Federation_V2Dev_ForNamelessArgument(v *Federation_V2Dev_ForNamelessArgument) slog.Value {
+func (s *FederationV2DevService) logvalue_Federation_V2Dev_ForNamelessArgument(v *FederationV2DevService_Federation_V2Dev_ForNamelessArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1048,7 +1052,7 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_GetPostV2DevResponse(
 	)
 }
 
-func (s *FederationV2DevService) logvalue_Federation_V2Dev_GetPostV2DevResponseArgument(v *Federation_V2Dev_GetPostV2DevResponseArgument) slog.Value {
+func (s *FederationV2DevService) logvalue_Federation_V2Dev_GetPostV2DevResponseArgument(v *FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1069,7 +1073,7 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_PostV2Dev(v *PostV2De
 	)
 }
 
-func (s *FederationV2DevService) logvalue_Federation_V2Dev_PostV2DevArgument(v *Federation_V2Dev_PostV2DevArgument) slog.Value {
+func (s *FederationV2DevService) logvalue_Federation_V2Dev_PostV2DevArgument(v *FederationV2DevService_Federation_V2Dev_PostV2DevArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1095,7 +1099,7 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_Ref(v *Ref) slog.Valu
 	)
 }
 
-func (s *FederationV2DevService) logvalue_Federation_V2Dev_RefArgument(v *Federation_V2Dev_RefArgument) slog.Value {
+func (s *FederationV2DevService) logvalue_Federation_V2Dev_RefArgument(v *FederationV2DevService_Federation_V2Dev_RefArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1111,7 +1115,7 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_Unused(v *Unused) slo
 	)
 }
 
-func (s *FederationV2DevService) logvalue_Federation_V2Dev_UnusedArgument(v *Federation_V2Dev_UnusedArgument) slog.Value {
+func (s *FederationV2DevService) logvalue_Federation_V2Dev_UnusedArgument(v *FederationV2DevService_Federation_V2Dev_UnusedArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1130,7 +1134,7 @@ func (s *FederationV2DevService) logvalue_Federation_V2Dev_User(v *User) slog.Va
 	)
 }
 
-func (s *FederationV2DevService) logvalue_Federation_V2Dev_UserArgument(v *Federation_V2Dev_UserArgument) slog.Value {
+func (s *FederationV2DevService) logvalue_Federation_V2Dev_UserArgument(v *FederationV2DevService_Federation_V2Dev_UserArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

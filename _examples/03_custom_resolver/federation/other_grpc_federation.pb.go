@@ -13,7 +13,3 @@ import (
 var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
-
-// Federation_V2Dev_RefArgument is argument for "federation.v2dev.Ref" message.
-type Federation_V2Dev_RefArgument struct {
-}

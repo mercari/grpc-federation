@@ -51,7 +51,7 @@ func (c *clientConfig) User_UserServiceClient(cfg federation.FederationV2DevServ
 type Resolver struct {
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_User(ctx context.Context, arg *federation.Federation_V2Dev_UserArgument) (*federation.User, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_User(ctx context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_UserArgument) (*federation.User, error) {
 	grpcfed.SetLogger(ctx, grpcfed.Logger(ctx).With(slog.String("foo", "hoge")))
 	env := federation.GetFederationV2DevServiceEnv(ctx)
 	if env.A != "xxx" {
@@ -74,19 +74,19 @@ func (r *Resolver) Resolve_Federation_V2Dev_User(ctx context.Context, arg *feder
 	}, nil
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_PostV2Dev_User(ctx context.Context, arg *federation.Federation_V2Dev_PostV2Dev_UserArgument) (*federation.User, error) {
-	return arg.Federation_V2Dev_PostV2DevArgument.User, nil
+func (r *Resolver) Resolve_Federation_V2Dev_PostV2Dev_User(ctx context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_PostV2Dev_UserArgument) (*federation.User, error) {
+	return arg.User, nil
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_Unused(_ context.Context, _ *federation.Federation_V2Dev_UnusedArgument) (*federation.Unused, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_Unused(_ context.Context, _ *federation.FederationV2DevService_Federation_V2Dev_UnusedArgument) (*federation.Unused, error) {
 	return &federation.Unused{}, nil
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_ForNameless(_ context.Context, _ *federation.Federation_V2Dev_ForNamelessArgument) (*federation.ForNameless, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_ForNameless(_ context.Context, _ *federation.FederationV2DevService_Federation_V2Dev_ForNamelessArgument) (*federation.ForNameless, error) {
 	return &federation.ForNameless{}, nil
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_User_Name(ctx context.Context, arg *federation.Federation_V2Dev_User_NameArgument) (string, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_User_Name(ctx context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_User_NameArgument) (string, error) {
 	return arg.Federation_V2Dev_User.Name, nil
 }
 

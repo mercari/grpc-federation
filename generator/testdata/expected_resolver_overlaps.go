@@ -25,19 +25,19 @@ var (
 )
 
 // Org_Federation_GetPostResponse1Argument is argument for "org.federation.GetPostResponse1" message.
-type Org_Federation_GetPostResponse1Argument struct {
+type FederationService_Org_Federation_GetPostResponse1Argument struct {
 	Id   string
 	Post *Post
 }
 
 // Org_Federation_GetPostResponse2Argument is argument for "org.federation.GetPostResponse2" message.
-type Org_Federation_GetPostResponse2Argument struct {
+type FederationService_Org_Federation_GetPostResponse2Argument struct {
 	Id   string
 	Post *Post
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
-type Org_Federation_PostArgument struct {
+type FederationService_Org_Federation_PostArgument struct {
 	Id  string
 	Res *post.GetPostResponse
 }
@@ -169,7 +169,7 @@ func (s *FederationService) GetPost1(ctx context.Context, req *GetPostRequest) (
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetPostResponse1(ctx, &Org_Federation_GetPostResponse1Argument{
+	res, err := s.resolve_Org_Federation_GetPostResponse1(ctx, &FederationService_Org_Federation_GetPostResponse1Argument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -192,7 +192,7 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetPostResponse2(ctx, &Org_Federation_GetPostResponse2Argument{
+	res, err := s.resolve_Org_Federation_GetPostResponse2(ctx, &FederationService_Org_Federation_GetPostResponse2Argument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -204,7 +204,7 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPostRequest) (
 }
 
 // resolve_Org_Federation_GetPostResponse1 resolve "org.federation.GetPostResponse1" message.
-func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.Context, req *Org_Federation_GetPostResponse1Argument) (*GetPostResponse1, error) {
+func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.Context, req *FederationService_Org_Federation_GetPostResponse1Argument) (*GetPostResponse1, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse1")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -241,7 +241,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Org_Federation_PostArgument{}
+			args := &FederationService_Org_Federation_PostArgument{}
 			// { name: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
@@ -289,7 +289,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 }
 
 // resolve_Org_Federation_GetPostResponse2 resolve "org.federation.GetPostResponse2" message.
-func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.Context, req *Org_Federation_GetPostResponse2Argument) (*GetPostResponse2, error) {
+func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.Context, req *FederationService_Org_Federation_GetPostResponse2Argument) (*GetPostResponse2, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse2")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -326,7 +326,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Org_Federation_PostArgument{}
+			args := &FederationService_Org_Federation_PostArgument{}
 			// { name: "id", by: "$.id" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
@@ -374,7 +374,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 }
 
 // resolve_Org_Federation_Post resolve "org.federation.Post" message.
-func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req *Org_Federation_PostArgument) (*Post, error) {
+func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req *FederationService_Org_Federation_PostArgument) (*Post, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.Post")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -470,7 +470,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse1(v *GetPostR
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponse1Argument(v *Org_Federation_GetPostResponse1Argument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostResponse1Argument(v *FederationService_Org_Federation_GetPostResponse1Argument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -488,7 +488,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse2(v *GetPostR
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponse2Argument(v *Org_Federation_GetPostResponse2Argument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetPostResponse2Argument(v *FederationService_Org_Federation_GetPostResponse2Argument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -506,7 +506,7 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_PostArgument(v *Org_Federation_PostArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_PostArgument(v *FederationService_Org_Federation_PostArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

@@ -25,7 +25,7 @@ var (
 )
 
 // Org_Federation_IsMatchResponseArgument is argument for "org.federation.IsMatchResponse" message.
-type Org_Federation_IsMatchResponseArgument struct {
+type FederationService_Org_Federation_IsMatchResponseArgument struct {
 	Expr    string
 	Matched bool
 	Re      *pluginpb.Regexp
@@ -180,7 +180,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_IsMatchResponse(ctx, &Org_Federation_IsMatchResponseArgument{
+	res, err := s.resolve_Org_Federation_IsMatchResponse(ctx, &FederationService_Org_Federation_IsMatchResponseArgument{
 		Expr:   req.GetExpr(),
 		Target: req.GetTarget(),
 	})
@@ -193,7 +193,7 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 }
 
 // resolve_Org_Federation_IsMatchResponse resolve "org.federation.IsMatchResponse" message.
-func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.Context, req *Org_Federation_IsMatchResponseArgument) (*IsMatchResponse, error) {
+func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.Context, req *FederationService_Org_Federation_IsMatchResponseArgument) (*IsMatchResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.IsMatchResponse")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -293,7 +293,7 @@ func (s *FederationService) logvalue_Org_Federation_IsMatchResponse(v *IsMatchRe
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_IsMatchResponseArgument(v *Org_Federation_IsMatchResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_IsMatchResponseArgument(v *FederationService_Org_Federation_IsMatchResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

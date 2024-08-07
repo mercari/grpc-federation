@@ -23,7 +23,7 @@ var (
 )
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type Org_Federation_GetResponseArgument struct {
+type FederationService_Org_Federation_GetResponseArgument struct {
 	Id int64
 }
 
@@ -58,7 +58,7 @@ type FederationServiceDependentClientSet struct {
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
 	// Resolve_Org_Federation_GetResponse implements resolver for "org.federation.GetResponse".
-	Resolve_Org_Federation_GetResponse(context.Context, *Org_Federation_GetResponseArgument) (*GetResponse, error)
+	Resolve_Org_Federation_GetResponse(context.Context, *FederationService_Org_Federation_GetResponseArgument) (*GetResponse, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -76,7 +76,7 @@ type FederationServiceUnimplementedResolver struct{}
 
 // Resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetResponse(context.Context, *Org_Federation_GetResponseArgument) (ret *GetResponse, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetResponse(context.Context, *FederationService_Org_Federation_GetResponseArgument) (ret *GetResponse, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_GetResponse not implemented")
 	return
 }
@@ -143,7 +143,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 		}
 	}()
 	res, err := grpcfed.WithTimeout[GetResponse](ctx, "org.federation.FederationService/Get", 10000000000 /* 10s */, func(ctx context.Context) (*GetResponse, error) {
-		return s.resolve_Org_Federation_GetResponse(ctx, &Org_Federation_GetResponseArgument{
+		return s.resolve_Org_Federation_GetResponse(ctx, &FederationService_Org_Federation_GetResponseArgument{
 			Id: req.GetId(),
 		})
 	})
@@ -156,7 +156,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 }
 
 // resolve_Org_Federation_GetResponse resolve "org.federation.GetResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *Org_Federation_GetResponseArgument) (*GetResponse, error) {
+func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Context, req *FederationService_Org_Federation_GetResponseArgument) (*GetResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.GetResponse")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -185,7 +185,7 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Org_Federation_GetResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *FederationService_Org_Federation_GetResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

@@ -2815,6 +2815,7 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 			// A non-response message may also become a root message.
 			// In such a case, the message argument field does not exist.
 			// However, since it is necessary to resolve the CEL reference, needs to call recursive message argument resolver.
+			ctx := newContext().withFile(ctx.file()) // ignore if exists error.
 			_ = r.resolveMessageArgumentRecursive(ctx, root, svcMsgSet)
 			continue
 		}

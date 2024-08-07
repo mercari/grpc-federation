@@ -25,7 +25,7 @@ var (
 )
 
 // Org_Federation_CreatePostArgument is argument for "org.federation.CreatePost" message.
-type Org_Federation_CreatePostArgument struct {
+type FederationService_Org_Federation_CreatePostArgument struct {
 	Content string
 	Title   string
 	Type    PostType
@@ -33,7 +33,7 @@ type Org_Federation_CreatePostArgument struct {
 }
 
 // Org_Federation_CreatePostResponseArgument is argument for "org.federation.CreatePostResponse" message.
-type Org_Federation_CreatePostResponseArgument struct {
+type FederationService_Org_Federation_CreatePostResponseArgument struct {
 	Content string
 	Cp      *CreatePost
 	P       *post.Post
@@ -41,10 +41,6 @@ type Org_Federation_CreatePostResponseArgument struct {
 	Title   string
 	Type    PostType
 	UserId  string
-}
-
-// Org_Federation_PostArgument is argument for "org.federation.Post" message.
-type Org_Federation_PostArgument struct {
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -177,7 +173,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Org_Federation_CreatePostResponse(ctx, &Org_Federation_CreatePostResponseArgument{
+	res, err := s.resolve_Org_Federation_CreatePostResponse(ctx, &FederationService_Org_Federation_CreatePostResponseArgument{
 		Title:   req.GetTitle(),
 		Content: req.GetContent(),
 		UserId:  req.GetUserId(),
@@ -192,7 +188,7 @@ func (s *FederationService) CreatePost(ctx context.Context, req *CreatePostReque
 }
 
 // resolve_Org_Federation_CreatePost resolve "org.federation.CreatePost" message.
-func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *Org_Federation_CreatePostArgument) (*CreatePost, error) {
+func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Context, req *FederationService_Org_Federation_CreatePostArgument) (*CreatePost, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePost")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -290,7 +286,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePost(ctx context.Contex
 }
 
 // resolve_Org_Federation_CreatePostResponse resolve "org.federation.CreatePostResponse" message.
-func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx context.Context, req *Org_Federation_CreatePostResponseArgument) (*CreatePostResponse, error) {
+func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx context.Context, req *FederationService_Org_Federation_CreatePostResponseArgument) (*CreatePostResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.CreatePostResponse")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
@@ -334,7 +330,7 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Org_Federation_CreatePostArgument{}
+			args := &FederationService_Org_Federation_CreatePostArgument{}
 			// { name: "title", by: "$.title" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 				Value:             value,
@@ -577,7 +573,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePost(v *CreatePost) sl
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *Org_Federation_CreatePostArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_CreatePostArgument(v *FederationService_Org_Federation_CreatePostArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -598,7 +594,7 @@ func (s *FederationService) logvalue_Org_Federation_CreatePostResponse(v *Create
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v *Org_Federation_CreatePostResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_CreatePostResponseArgument(v *FederationService_Org_Federation_CreatePostResponseArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
