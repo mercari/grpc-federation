@@ -3159,6 +3159,15 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		iter := expr.Map.Iterator
 		mapBuilder := builder.WithMap()
 		if iter != nil && iter.Name != "" && iter.Source != nil {
+			if iter.Source.Expr == nil || iter.Source.Expr.Type == nil {
+				ctx.addError(
+					ErrWithLocation(
+						`map iterator's src value type could not be determined`,
+						mapBuilder.WithIteratorSource().Location(),
+					),
+				)
+				return
+			}
 			if !iter.Source.Expr.Type.Repeated {
 				ctx.addError(
 					ErrWithLocation(
