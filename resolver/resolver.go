@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -266,11 +267,13 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 	for _, fileDef := range files {
 		filesMap[fileDef.GetName()] = struct{}{}
 	}
+	// Place import files before the source file
+	slices.Reverse(newFileDefs)
 	for _, fileDef := range newFileDefs {
 		if _, exists := filesMap[fileDef.GetName()]; exists {
 			continue
 		}
-		r.files = append(r.files, fileDef)
+		r.files = append([]*descriptorpb.FileDescriptorProto{fileDef}, r.files...)
 		filesMap[fileDef.GetName()] = struct{}{}
 	}
 }
