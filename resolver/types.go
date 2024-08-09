@@ -260,6 +260,7 @@ type GRPCErrorDetails []*GRPCErrorDetail
 type GRPCErrorDetail struct {
 	If                   *CELValue
 	DefSet               *VariableDefinitionSet
+	By                   []*CELValue
 	Messages             *VariableDefinitionSet
 	PreconditionFailures []*PreconditionFailure
 	BadRequests          []*BadRequest

@@ -43,6 +43,11 @@ message Post {
             ignore_and_response: "post.GetPostResponse{}"
           }
           error {
+            details {
+              by: "1"
+            }
+          }
+          error {
             ignore_and_response: "10"
           }
         }

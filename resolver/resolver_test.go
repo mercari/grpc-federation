@@ -3390,6 +3390,8 @@ func TestErrorHandler(t *testing.T) {
 																).
 																Build(t),
 														).
+														AddBy(testutil.NewCELValueBuilder("org.post.Post{id: 'foo'}", ref.Type(t, "org.post", "Post")).Build(t)).
+														AddBy(testutil.NewCELValueBuilder("org.post.CreatePost{title: 'bar'}", ref.Type(t, "org.post", "CreatePost")).Build(t)).
 														AddMessage(
 															testutil.NewVariableDefinitionBuilder().
 																SetName("_def0_err_detail0_msg0").

@@ -756,6 +756,14 @@ func (e *encoder) toConcurrentVariableDefinitionGroup(g *resolver.ConcurrentVari
 	return ret
 }
 
+func (e *encoder) toCELValues(v []*resolver.CELValue) []*plugin.CELValue {
+	ret := make([]*plugin.CELValue, 0, len(v))
+	for _, vv := range v {
+		ret = append(ret, e.toCELValue(vv))
+	}
+	return ret
+}
+
 func (e *encoder) toCELValue(v *resolver.CELValue) *plugin.CELValue {
 	if v == nil {
 		return nil
@@ -983,6 +991,7 @@ func (e *encoder) toGRPCErrorDetail(detail *resolver.GRPCErrorDetail) *plugin.GR
 	ret := &plugin.GRPCErrorDetail{}
 	ret.DefSet = e.toVariableDefinitionSet(detail.DefSet)
 	ret.If = e.toCELValue(detail.If)
+	ret.By = e.toCELValues(detail.By)
 	ret.PreconditionFailures = e.toPreconditionFailures(detail.PreconditionFailures)
 	ret.BadRequests = e.toBadRequests(detail.BadRequests)
 	ret.LocalizedMessages = e.toLocalizedMessages(detail.LocalizedMessages)

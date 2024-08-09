@@ -1187,6 +1187,7 @@ Either `if` or `details` must be specified. The other error detail types will be
 | field                                                                                        | type                                    | required or optional |
 |----------------------------------------------------------------------------------------------|-----------------------------------------|----------------------|
 | [`if`](#grpcfederationmessagedefvalidationerrordetailsif)                                    | [CEL](./cel.md)                                     | required             |
+| [`by`](#grpcfederationmessagedefvalidationerrordetailsby)                                    | repeated [CEL](./cel.md)                         | optional             |
 | [`message`](#grpcfederationmessagedefvalidationerrordetailsmessage)                          | repeated MessageExpr                    | optional             |
 | [`precondition_failure`](#grpcfederationmessagedefvalidationerrordetailspreconditionfailure) | repeated google.rpc.PreconditionFailure | optional             |
 | [`bad_request`](#grpcfederationmessagedefvalidationerrordetailsbadrequest)                   | repeated google.rpc.BadRequest          | optional             |
@@ -1203,6 +1204,7 @@ message MyMessage {
           message: "MyMessage validation failed",
           details {
             if: "$.id == 'wrong'",
+            by: "pkg.Message{field: value}"
             message {
               name: "ErrorMessage",
               args {
@@ -1239,6 +1241,10 @@ message MyMessage {
 ## (grpc.federation.message).def.validation.error.details.if
 
 `if` specifies validation rule in [CEL](./cel.md). If the condition is true, the validation returns an error with the specified details.
+
+## (grpc.federation.message).def.validation.error.details.by
+
+`by` specify a message in [CEL](./cel.md) to express the details of the error.
 
 ## (grpc.federation.message).def.validation.error.details.message
 

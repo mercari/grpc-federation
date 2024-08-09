@@ -145,6 +145,16 @@ func TestFederation(t *testing.T) {
 		if s.Message() != `this is custom error message` {
 			t.Fatalf("got unexpected error: %v", err)
 		}
+		var detailNum int
+		for _, detail := range s.Details() {
+			if _, ok := detail.(protoadapt.MessageV1); !ok {
+				t.Fatalf("failed to get proto message from error details: %T", detail)
+			}
+			detailNum++
+		}
+		if detailNum != 4 {
+			t.Fatalf("failed to get error details. got detail num: %d", detailNum)
+		}
 	})
 	t.Run("ignore error and response", func(t *testing.T) {
 		st := status.New(codes.Unimplemented, "unimplemented error")

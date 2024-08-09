@@ -410,6 +410,24 @@ func (d *decoder) toValue(value *plugin.Value) (*resolver.Value, error) {
 	return ret, nil
 }
 
+func (d *decoder) toCELValues(values []*plugin.CELValue) ([]*resolver.CELValue, error) {
+	if values == nil {
+		return nil, nil
+	}
+	ret := make([]*resolver.CELValue, 0, len(values))
+	for _, value := range values {
+		v, err := d.toCELValue(value)
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret, nil
+}
+
 func (d *decoder) toCELValue(value *plugin.CELValue) (*resolver.CELValue, error) {
 	if value == nil {
 		return nil, nil
@@ -1071,6 +1089,10 @@ func (d *decoder) toGRPCErrorDetail(detail *plugin.GRPCErrorDetail) (*resolver.G
 	if err != nil {
 		return nil, err
 	}
+	by, err := d.toCELValues(detail.GetBy())
+	if err != nil {
+		return nil, err
+	}
 	msgs, err := d.toVariableDefinitionSet(detail.GetMessages())
 	if err != nil {
 		return nil, err
@@ -1089,6 +1111,7 @@ func (d *decoder) toGRPCErrorDetail(detail *plugin.GRPCErrorDetail) (*resolver.G
 	}
 	ret.DefSet = defSet
 	ret.If = ifValue
+	ret.By = by
 	ret.Messages = msgs
 	ret.PreconditionFailures = preconditionFailures
 	ret.BadRequests = badRequests

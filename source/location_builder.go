@@ -1265,6 +1265,16 @@ func (b *GRPCErrorDetailOptionBuilder) WithIf() *GRPCErrorDetailOptionBuilder {
 	}
 }
 
+func (b *GRPCErrorDetailOptionBuilder) WithBy() *GRPCErrorDetailOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &GRPCErrorDetailOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
 func (b *GRPCErrorDetailOptionBuilder) WithPreconditionFailure(i1, i2 int, fieldName string) *GRPCErrorDetailOptionBuilder {
 	root := b.root.Clone()
 	option := b.option(root)

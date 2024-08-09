@@ -1038,6 +1038,11 @@ func (b *GRPCErrorDetailBuilder) AddDef(v *resolver.VariableDefinition) *GRPCErr
 	return b
 }
 
+func (b *GRPCErrorDetailBuilder) AddBy(v *resolver.CELValue) *GRPCErrorDetailBuilder {
+	b.detail.By = append(b.detail.By, v)
+	return b
+}
+
 func (b *GRPCErrorDetailBuilder) AddMessage(v *resolver.VariableDefinition) *GRPCErrorDetailBuilder {
 	b.detail.Messages.Defs = append(b.detail.Messages.Defs, v)
 	return b

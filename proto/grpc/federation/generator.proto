@@ -360,6 +360,7 @@ message GRPCErrorDetail {
   repeated PreconditionFailure precondition_failures = 4;
   repeated BadRequest bad_requests = 5;
   repeated LocalizedMessage localized_messages = 6;
+  repeated CELValue by = 7;
 }
 
 message PreconditionFailure {
