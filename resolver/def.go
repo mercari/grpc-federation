@@ -375,6 +375,9 @@ func (detail *GRPCErrorDetail) ReferenceNames() []string {
 	for _, def := range detail.Messages.Definitions() {
 		names = append(names, def.ReferenceNames()...)
 	}
+	for _, by := range detail.By {
+		names = append(names, by.ReferenceNames()...)
+	}
 	for _, failure := range detail.PreconditionFailures {
 		for _, violation := range failure.Violations {
 			names = append(names, violation.Type.ReferenceNames()...)
