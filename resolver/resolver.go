@@ -2045,6 +2045,10 @@ func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.G
 	for idx, detail := range details {
 		ctx := ctx.withErrDetailIndex(idx)
 		builder := builder.WithDetail(idx)
+		var byValues []*CELValue
+		for _, by := range detail.GetBy() {
+			byValues = append(byValues, &CELValue{Expr: by})
+		}
 		result = append(result, &GRPCErrorDetail{
 			If: r.resolveGRPCErrorIf(detail.GetIf()),
 			DefSet: &VariableDefinitionSet{
@@ -2052,6 +2056,7 @@ func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.G
 					return builder.WithDef(idx)
 				}),
 			},
+			By: byValues,
 			Messages: &VariableDefinitionSet{
 				Defs: r.resolveGRPCDetailMessages(ctx, detail.GetMessage(), func(idx int) *source.VariableDefinitionOptionBuilder {
 					return builder.WithMessage(idx)
@@ -3421,6 +3426,24 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 				builder.WithIf().Location(),
 			),
 		)
+	}
+	for _, by := range detail.By {
+		if err := r.resolveCELValue(ctx, env, by); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithBy().Location(),
+				),
+			)
+		}
+		if by.Out != nil && by.Out.Kind != types.Message {
+			ctx.addError(
+				ErrWithLocation(
+					`"by" must always return a message value`,
+					builder.WithBy().Location(),
+				),
+			)
+		}
 	}
 	for idx, def := range detail.Messages.Definitions() {
 		env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithDef(idx))

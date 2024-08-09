@@ -271,6 +271,7 @@ type GRPCErrorDetailOption struct {
 	Idx                 int
 	Def                 *VariableDefinitionOption
 	If                  bool
+	By                  bool
 	Message             *VariableDefinitionOption
 	PreconditionFailure *GRPCErrorDetailPreconditionFailureOption
 	BadRequest          *GRPCErrorDetailBadRequestOption

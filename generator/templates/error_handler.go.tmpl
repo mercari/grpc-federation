@@ -92,6 +92,24 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 					{{- end }}
 					{{- end }}
 
+					{{- range .By }}
+					{
+						detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+							Value: value,
+							Expr: `{{ .Expr }}`,
+							UseContextLibrary: {{ .UseContextLibrary }},
+							OutType: reflect.TypeOf({{ .Type }}),
+							CacheIndex: {{ $def.CELCacheIndex }},
+						})
+						if err != nil {
+							grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
+						}
+						if detail != nil {
+							details = append(details, detail.(grpcfed.ProtoMessage))
+						}
+					}
+					{{- end }}
+
 					{{- range .PreconditionFailures }}
 					{{- template "preconditionFailure" . }}
 					{{- end }}

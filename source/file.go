@@ -1470,6 +1470,12 @@ func (f *File) nodeInfoByGRPCErrorDetail(list []*ast.MessageLiteralNode, detail 
 				return nil
 			}
 			return f.nodeInfo(value)
+		case detail.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
 		case detail.Message != nil && fieldName == "message":
 			messages = append(messages, f.getMessageListFromNode(elem.Val)...)
 		case detail.PreconditionFailure != nil && fieldName == "precondition_failure":

@@ -318,6 +318,8 @@ message GRPCErrorDetail {
   repeated google.rpc.Help help = 12;
   // localized_message provides a localized error message that is safe to return to the user.
   repeated google.rpc.LocalizedMessage localized_message = 13;
+  // by specify a message in CEL to express the details of the error.
+  repeated string by = 14;
 }
 
 // Validation represents a validation rule against variables defined within the current scope.

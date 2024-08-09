@@ -40,8 +40,11 @@ testdata/invalid_call_error_handler.proto:42:21: cannot set both "ignore" and "i
 testdata/invalid_call_error_handler.proto:43:34: cannot set both "ignore" and "ignore_and_response"
 43:              ignore_and_response: "post.GetPostResponse{}"
                                       ^
-testdata/invalid_call_error_handler.proto:46:34: value must be "post.GetPostResponse" type
-46:              ignore_and_response: "10"
+testdata/invalid_call_error_handler.proto:47:19: "by" must always return a message value
+47:                by: "1"
+                       ^
+testdata/invalid_call_error_handler.proto:51:34: value must be "post.GetPostResponse" type
+51:              ignore_and_response: "10"
                                       ^
 `},
 		{file: "invalid_condition_type.proto", expected: `

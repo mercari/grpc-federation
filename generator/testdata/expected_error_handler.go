@@ -563,6 +563,36 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 							}); detail != nil {
 								details = append(details, detail)
 							}
+							{
+								detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+									Value:             value,
+									Expr:              `org.post.Post{id: 'foo'}`,
+									UseContextLibrary: false,
+									OutType:           reflect.TypeOf((*post.Post)(nil)),
+									CacheIndex:        13,
+								})
+								if err != nil {
+									grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+								}
+								if detail != nil {
+									details = append(details, detail.(grpcfed.ProtoMessage))
+								}
+							}
+							{
+								detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+									Value:             value,
+									Expr:              `org.post.CreatePost{title: 'bar'}`,
+									UseContextLibrary: false,
+									OutType:           reflect.TypeOf((*post.CreatePost)(nil)),
+									CacheIndex:        14,
+								})
+								if err != nil {
+									grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+								}
+								if detail != nil {
+									details = append(details, detail.(grpcfed.ProtoMessage))
+								}
+							}
 							if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFailureViolation{
 								{
 									Type:                     `'some-type'`,
@@ -571,9 +601,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 									TypeUseContextLibrary:    false,
 									SubjectUseContextLibrary: false,
 									DescUseContextLibrary:    false,
-									TypeCacheIndex:           13,
-									SubjectCacheIndex:        14,
-									DescCacheIndex:           15,
+									TypeCacheIndex:           15,
+									SubjectCacheIndex:        16,
+									DescCacheIndex:           17,
 								},
 							}); detail != nil {
 								details = append(details, detail)
@@ -583,7 +613,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 								Locale:            "en-US",
 								Message:           `localized_msg.value`,
 								UseContextLibrary: false,
-								CacheIndex:        16,
+								CacheIndex:        18,
 							}); detail != nil {
 								details = append(details, detail)
 							}
@@ -612,7 +642,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Value:             value,
 				Expr:              `error.code == google.rpc.Code.UNIMPLEMENTED`,
 				UseContextLibrary: false,
-				CacheIndex:        17,
+				CacheIndex:        19,
 				Body: func(value *localValueType) error {
 					stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
 					if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
@@ -624,7 +654,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 						},
 						By:                  `org.post.GetPostResponse{post: org.post.Post{id: 'anonymous', title: 'none'}}`,
 						ByUseContextLibrary: false,
-						ByCacheIndex:        18,
+						ByCacheIndex:        20,
 					}); err != nil {
 						grpcfed.Logger(ctx).ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
 						return nil
@@ -641,7 +671,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				Value:             value,
 				Expr:              `true`,
 				UseContextLibrary: false,
-				CacheIndex:        19,
+				CacheIndex:        21,
 				Body: func(value *localValueType) error {
 					stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
 					return nil
@@ -691,7 +721,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		},
 		By:                  `res.post`,
 		ByUseContextLibrary: false,
-		ByCacheIndex:        20,
+		ByCacheIndex:        22,
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

@@ -2716,6 +2716,24 @@ func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
 	}
 }
 
+type GRPCErrorDetailBy struct {
+	Expr              string
+	Type              string
+	UseContextLibrary bool
+}
+
+func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
+	ret := make([]*GRPCErrorDetailBy, 0, len(detail.GRPCErrorDetail.By))
+	for _, by := range detail.GRPCErrorDetail.By {
+		ret = append(ret, &GRPCErrorDetailBy{
+			Expr:              by.Expr,
+			Type:              toMakeZeroValue(detail.msg.file, by.Out),
+			UseContextLibrary: by.UseContextLibrary,
+		})
+	}
+	return ret
+}
+
 func (detail *GRPCErrorDetail) PreconditionFailures() []*PreconditionFailure {
 	ret := make([]*PreconditionFailure, 0, len(detail.GRPCErrorDetail.PreconditionFailures))
 	for _, pf := range detail.GRPCErrorDetail.PreconditionFailures {

@@ -48,6 +48,7 @@ message Post {
             details {
               def { name: "localized_msg" message { name: "LocalizedMessage" args { name: "value" by: "id" } } }
               message { name: "CustomMessage" args { name: "msg" by: "id" } }
+              by: [ "org.post.Post{id: 'foo'}", "org.post.CreatePost{title: 'bar'}" ]
               precondition_failure {
                 violations {
                   type: "'some-type'"
