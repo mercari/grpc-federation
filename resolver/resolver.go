@@ -3656,7 +3656,7 @@ func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Servi
 	}
 	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)
 	if envMsg != nil {
-		fileDesc := envFileDescriptor(envMsg)
+		fileDesc := envFileDescriptor(envMsg, msg)
 		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
 			return nil, err
 		}
@@ -3764,7 +3764,7 @@ func (r *Resolver) buildEnvMessage(ctx *context, msg *Message, svcMsgSet map[*Se
 		)
 	}
 
-	return envVarsToMessage(msg.File, envVars)
+	return envVarsToMessage(msg, envVars)
 }
 
 func (r *Resolver) enumAccessors() []cel.EnvOption {
@@ -3953,25 +3953,25 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 	}
 }
 
-func envVarsToMessage(file *File, envVars []*EnvVar) *Message {
-	copied := *file
+func envVarsToMessage(msg *Message, envVars []*EnvVar) *Message {
+	copied := *msg.File
 	copied.Package = &Package{
 		Name: federation.PrivatePackageName,
 	}
-	msg := &Message{
+	envMsg := &Message{
 		File: &copied,
-		Name: "Env",
+		Name: msg.Name + "Env",
 	}
 	for _, v := range envVars {
-		msg.Fields = append(msg.Fields, &Field{
+		envMsg.Fields = append(envMsg.Fields, &Field{
 			Name: v.Name,
 			Type: v.Type,
 		})
 	}
-	return msg
+	return envMsg
 }
 
-func envFileDescriptor(envMsg *Message) *descriptorpb.FileDescriptorProto {
+func envFileDescriptor(envMsg, baseMsg *Message) *descriptorpb.FileDescriptorProto {
 	msg := messageToDescriptor(envMsg)
 	desc := envMsg.File.Desc
 	var (
@@ -3994,7 +3994,7 @@ func envFileDescriptor(envMsg *Message) *descriptorpb.FileDescriptorProto {
 		deps = append(deps, durationProtoFile)
 	}
 	return &descriptorpb.FileDescriptorProto{
-		Name:             proto.String("env"),
+		Name:             proto.String(strings.Replace(baseMsg.FQDN(), ".", "_", -1)),
 		Package:          proto.String(federation.PrivatePackageName),
 		Dependency:       deps,
 		PublicDependency: desc.PublicDependency,
