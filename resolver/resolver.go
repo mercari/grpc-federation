@@ -155,6 +155,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 	ctx := newContext()
 
 	r.resolvePackageAndFileReference(ctx, r.files)
+	r.resolveFileImportRule(ctx, r.files)
 
 	files := r.resolveFiles(ctx)
 
@@ -214,12 +215,40 @@ func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descrip
 		)
 		r.protoPackageNameToPackage[protoPackageName] = pkg
 	}
-
-	r.resolveFileImportRule(ctx, files)
 }
 
 func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.FileDescriptorProto) {
-	var newFileDefs []*descriptorpb.FileDescriptorProto
+	importFileDefs := r.resolveFileImportRuleRecursive(ctx, files)
+
+	newFileDefs := make([]*descriptorpb.FileDescriptorProto, 0, len(importFileDefs))
+	importFileDefsMap := map[string]struct{}{}
+	for _, f := range importFileDefs {
+		if _, exists := importFileDefsMap[f.GetName()]; exists {
+			continue
+		}
+		importFileDefsMap[f.GetName()] = struct{}{}
+		newFileDefs = append(newFileDefs, f)
+	}
+
+	r.resolvePackageAndFileReference(ctx, newFileDefs)
+
+	filesMap := map[string]struct{}{}
+	for _, fileDef := range r.files {
+		filesMap[fileDef.GetName()] = struct{}{}
+	}
+	// Place import files before the source file
+	slices.Reverse(newFileDefs)
+	for _, fileDef := range newFileDefs {
+		if _, exists := filesMap[fileDef.GetName()]; exists {
+			continue
+		}
+		r.files = append([]*descriptorpb.FileDescriptorProto{fileDef}, r.files...)
+		filesMap[fileDef.GetName()] = struct{}{}
+	}
+}
+
+func (r *Resolver) resolveFileImportRuleRecursive(ctx *context, files []*descriptorpb.FileDescriptorProto) []*descriptorpb.FileDescriptorProto {
+	var importFileDefs []*descriptorpb.FileDescriptorProto
 	for _, fileDef := range files {
 		ruleDef, err := getExtensionRule[*federation.FileRule](fileDef.GetOptions(), federation.E_File)
 		if err != nil {
@@ -253,29 +282,14 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 				)
 				continue
 			}
-			newFileDefs = append(newFileDefs, fileDefs...)
+			importFileDefs = append(importFileDefs, fileDefs...)
 			fileDef.Dependency = append(fileDef.Dependency, path)
 		}
 	}
-
-	if len(newFileDefs) == 0 {
-		return
+	if len(importFileDefs) == 0 {
+		return nil
 	}
-	r.resolvePackageAndFileReference(ctx, newFileDefs)
-
-	filesMap := map[string]struct{}{}
-	for _, fileDef := range files {
-		filesMap[fileDef.GetName()] = struct{}{}
-	}
-	// Place import files before the source file
-	slices.Reverse(newFileDefs)
-	for _, fileDef := range newFileDefs {
-		if _, exists := filesMap[fileDef.GetName()]; exists {
-			continue
-		}
-		r.files = append([]*descriptorpb.FileDescriptorProto{fileDef}, r.files...)
-		filesMap[fileDef.GetName()] = struct{}{}
-	}
+	return append(importFileDefs, r.resolveFileImportRuleRecursive(ctx, importFileDefs)...)
 }
 
 func (r *Resolver) compileProto(ctx pkgcontext.Context, path string) ([]*descriptorpb.FileDescriptorProto, error) {
