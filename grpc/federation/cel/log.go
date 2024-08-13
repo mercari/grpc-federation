@@ -23,9 +23,7 @@ const (
 	logAddFunc   = "grpc.federation.log.add"
 )
 
-type LogLibrary struct {
-	ctx context.Context
-}
+type LogLibrary struct{}
 
 func NewLogLibrary() *LogLibrary {
 	return &LogLibrary{}
@@ -35,59 +33,64 @@ func (lib *LogLibrary) LibraryName() string {
 	return packageName(LogPackageName)
 }
 
-func (lib *LogLibrary) Initialize(ctx context.Context) {
-	lib.ctx = ctx
-}
-
 func (lib *LogLibrary) CompileOptions() []cel.EnvOption {
 	opts := []cel.EnvOption{
 		cel.OptionalTypes(),
-		cel.Function(logDebugFunc,
-			cel.Overload("grpc_federation_log_debug",
+	}
+	for _, funcOpts := range [][]cel.EnvOption{
+		BindFunction(
+			logInfoFunc,
+			OverloadFunc("grpc_federation_log_info",
 				[]*cel.Type{cel.StringType}, cel.BoolType,
-				cel.FunctionBinding(lib.debug),
+				lib.info,
 			),
-			cel.Overload("grpc_federation_log_debug_args",
+			OverloadFunc("grpc_federation_log_info_args",
 				[]*cel.Type{cel.StringType, cel.MapType(cel.StringType, cel.DynType)}, cel.BoolType,
-				cel.FunctionBinding(lib.debug),
+				lib.info,
 			),
 		),
-		cel.Function(logInfoFunc,
-			cel.Overload("grpc_federation_log_info",
+		BindFunction(
+			logDebugFunc,
+			OverloadFunc("grpc_federation_log_debug",
 				[]*cel.Type{cel.StringType}, cel.BoolType,
-				cel.FunctionBinding(lib.info),
+				lib.debug,
 			),
-			cel.Overload("grpc_federation_log_info_args",
+			OverloadFunc("grpc_federation_log_debug_args",
 				[]*cel.Type{cel.StringType, cel.MapType(cel.StringType, cel.DynType)}, cel.BoolType,
-				cel.FunctionBinding(lib.info),
+				lib.debug,
 			),
 		),
-		cel.Function(logWarnFunc,
-			cel.Overload("grpc_federation_log_warn",
+		BindFunction(
+			logWarnFunc,
+			OverloadFunc("grpc_federation_log_warn",
 				[]*cel.Type{cel.StringType}, cel.BoolType,
-				cel.FunctionBinding(lib.warn),
+				lib.warn,
 			),
-			cel.Overload("grpc_federation_log_warn_args",
+			OverloadFunc("grpc_federation_log_warn_args",
 				[]*cel.Type{cel.StringType, cel.MapType(cel.StringType, cel.DynType)}, cel.BoolType,
-				cel.FunctionBinding(lib.warn),
+				lib.warn,
 			),
 		),
-		cel.Function(logErrorFunc,
-			cel.Overload("grpc_federation_log_error",
+		BindFunction(
+			logErrorFunc,
+			OverloadFunc("grpc_federation_log_error",
 				[]*cel.Type{cel.StringType}, cel.BoolType,
-				cel.FunctionBinding(lib.error),
+				lib.error,
 			),
-			cel.Overload("grpc_federation_log_error_args",
+			OverloadFunc("grpc_federation_log_error_args",
 				[]*cel.Type{cel.StringType, cel.MapType(cel.StringType, cel.DynType)}, cel.BoolType,
-				cel.FunctionBinding(lib.error),
+				lib.error,
 			),
 		),
-		cel.Function(logAddFunc,
-			cel.Overload("grpc_federation_log_add",
+		BindFunction(
+			logAddFunc,
+			OverloadFunc("grpc_federation_log_add",
 				[]*cel.Type{cel.MapType(cel.StringType, cel.DynType)}, cel.BoolType,
-				cel.UnaryBinding(lib.add),
+				lib.add,
 			),
 		),
+	} {
+		opts = append(opts, funcOpts...)
 	}
 	return opts
 }
@@ -96,31 +99,31 @@ func (lib *LogLibrary) ProgramOptions() []cel.ProgramOption {
 	return []cel.ProgramOption{}
 }
 
-func (lib *LogLibrary) debug(values ...ref.Val) ref.Val {
-	logger := log.Logger(lib.ctx)
-	return lib.log(logger.DebugContext, values...)
+func (lib *LogLibrary) debug(ctx context.Context, values ...ref.Val) ref.Val {
+	logger := log.Logger(ctx)
+	return lib.log(ctx, logger.DebugContext, values...)
 }
 
-func (lib *LogLibrary) info(values ...ref.Val) ref.Val {
-	logger := log.Logger(lib.ctx)
-	return lib.log(logger.InfoContext, values...)
+func (lib *LogLibrary) info(ctx context.Context, values ...ref.Val) ref.Val {
+	logger := log.Logger(ctx)
+	return lib.log(ctx, logger.InfoContext, values...)
 }
 
-func (lib *LogLibrary) warn(values ...ref.Val) ref.Val {
-	logger := log.Logger(lib.ctx)
-	return lib.log(logger.WarnContext, values...)
+func (lib *LogLibrary) warn(ctx context.Context, values ...ref.Val) ref.Val {
+	logger := log.Logger(ctx)
+	return lib.log(ctx, logger.WarnContext, values...)
 }
 
-func (lib *LogLibrary) error(values ...ref.Val) ref.Val {
-	logger := log.Logger(lib.ctx)
-	return lib.log(logger.ErrorContext, values...)
+func (lib *LogLibrary) error(ctx context.Context, values ...ref.Val) ref.Val {
+	logger := log.Logger(ctx)
+	return lib.log(ctx, logger.ErrorContext, values...)
 }
 
-func (lib *LogLibrary) log(logFn func(ctx context.Context, msg string, args ...any), values ...ref.Val) ref.Val {
+func (lib *LogLibrary) log(ctx context.Context, logFn func(ctx context.Context, msg string, args ...any), values ...ref.Val) ref.Val {
 	switch len(values) {
 	case 1:
 		msg := values[0]
-		logFn(lib.ctx, fmt.Sprint(msg.Value()))
+		logFn(ctx, fmt.Sprint(msg.Value()))
 	case 2:
 		msg := values[0]
 		args := values[1].(traits.Mapper)
@@ -131,7 +134,7 @@ func (lib *LogLibrary) log(logFn func(ctx context.Context, msg string, args ...a
 			v := args.Get(k)
 			attrs = append(attrs, slog.Any(fmt.Sprint(k.Value()), lib.expandVal(v)))
 		}
-		logFn(lib.ctx, fmt.Sprint(msg.Value()), attrs...)
+		logFn(ctx, fmt.Sprint(msg.Value()), attrs...)
 	}
 	return types.True
 }
@@ -158,7 +161,8 @@ func (lib *LogLibrary) expandVal(arg ref.Val) any {
 	return arg.Value()
 }
 
-func (lib *LogLibrary) add(value ref.Val) ref.Val {
+func (lib *LogLibrary) add(ctx context.Context, values ...ref.Val) ref.Val {
+	value := values[0]
 	args := value.(traits.Mapper)
 	var attrs []slog.Attr
 	for it := args.Iterator(); it.HasNext() == types.True; {
@@ -167,6 +171,6 @@ func (lib *LogLibrary) add(value ref.Val) ref.Val {
 		attrs = append(attrs, slog.Any(fmt.Sprint(k.Value()), lib.expandVal(v)))
 	}
 
-	log.AddAttrs(lib.ctx, attrs)
+	log.AddAttrs(ctx, attrs)
 	return types.True
 }

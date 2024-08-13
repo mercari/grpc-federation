@@ -1,6 +1,7 @@
 package cel
 
 import (
+	"context"
 	"math/rand"
 	"reflect"
 
@@ -86,144 +87,147 @@ func createRandID(name string) string {
 }
 
 func (lib *RandLibrary) CompileOptions() []cel.EnvOption {
-	opts := []cel.EnvOption{
+	var opts []cel.EnvOption
+	for _, funcOpts := range [][]cel.EnvOption{
 		// Source functions
-		cel.Function(
+		BindFunction(
 			createRandName("newSource"),
-			cel.Overload(createRandID("new_source_int_source"), []*cel.Type{cel.IntType}, SourceType,
-				cel.UnaryBinding(func(seed ref.Val) ref.Val {
+			OverloadFunc(createRandID("new_source_int_source"), []*cel.Type{cel.IntType}, SourceType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return &Source{
-						Source: rand.NewSource(int64(seed.(types.Int))),
+						Source: rand.NewSource(int64(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"int63",
-			cel.MemberOverload(createRandID("int63_source_int"), []*cel.Type{SourceType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("int63_source_int"), SourceType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(*Source).Int63())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"seed",
-			cel.MemberOverload(createRandID("seed_source_int"), []*cel.Type{SourceType, cel.IntType}, cel.BoolType,
-				cel.BinaryBinding(func(self, seed ref.Val) ref.Val {
-					self.(*Source).Seed(int64(seed.(types.Int)))
+			MemberOverloadFunc(createRandID("seed_source_int"), SourceType, []*cel.Type{cel.IntType}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					self.(*Source).Seed(int64(args[0].(types.Int)))
 					return types.True
-				}),
+				},
 			),
 		),
 
 		// Rand functions
-		cel.Function(
+		BindFunction(
 			createRandName("new"),
-			cel.Overload(createRandID("new_source_rand"), []*cel.Type{SourceType}, RandType,
-				cel.UnaryBinding(func(source ref.Val) ref.Val {
+			OverloadFunc(createRandID("new_source_rand"), []*cel.Type{SourceType}, RandType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return &Rand{
-						Rand: rand.New(source.(*Source)), //nolint:gosec
+						Rand: rand.New(args[0].(*Source)), //nolint:gosec
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"expFloat64",
-			cel.MemberOverload(createRandID("exp_float64_rand_double"), []*cel.Type{RandType}, cel.DoubleType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("exp_float64_rand_double"), RandType, []*cel.Type{}, cel.DoubleType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Double(self.(*Rand).ExpFloat64())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"float32",
-			cel.MemberOverload(createRandID("float32_rand_double"), []*cel.Type{RandType}, cel.DoubleType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("float32_rand_double"), RandType, []*cel.Type{}, cel.DoubleType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Double(self.(*Rand).Float32())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"float64",
-			cel.MemberOverload(createRandID("float64_rand_double"), []*cel.Type{RandType}, cel.DoubleType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("float64_rand_double"), RandType, []*cel.Type{}, cel.DoubleType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Double(self.(*Rand).Float64())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"int",
-			cel.MemberOverload(createRandID("int_rand_int"), []*cel.Type{RandType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("int_rand_int"), RandType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(*Rand).Int())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"int31",
-			cel.MemberOverload(createRandID("int31_rand_int"), []*cel.Type{RandType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("int31_rand_int"), RandType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(*Rand).Int31())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"int31n",
-			cel.MemberOverload(createRandID("int31n_rand_int"), []*cel.Type{RandType, cel.IntType}, cel.IntType,
-				cel.BinaryBinding(func(self, n ref.Val) ref.Val {
-					return types.Int(self.(*Rand).Int31n(int32(n.(types.Int))))
-				}),
+			MemberOverloadFunc(createRandID("int31n_rand_int"), RandType, []*cel.Type{cel.IntType}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.Int(self.(*Rand).Int31n(int32(args[0].(types.Int))))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"int63",
-			cel.MemberOverload(createRandID("int63_rand_int"), []*cel.Type{RandType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("int63_rand_int"), RandType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(*Rand).Int63())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"int63n",
-			cel.MemberOverload(createRandID("int63n_rand_int"), []*cel.Type{RandType, cel.IntType}, cel.IntType,
-				cel.BinaryBinding(func(self, n ref.Val) ref.Val {
-					return types.Int(self.(*Rand).Int63n(int64(n.(types.Int))))
-				}),
+			MemberOverloadFunc(createRandID("int63n_rand_int"), RandType, []*cel.Type{cel.IntType}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.Int(self.(*Rand).Int63n(int64(args[0].(types.Int))))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"intn",
-			cel.MemberOverload(createRandID("intn_rand_int"), []*cel.Type{RandType, cel.IntType}, cel.IntType,
-				cel.BinaryBinding(func(self, n ref.Val) ref.Val {
-					return types.Int(self.(*Rand).Intn(int(n.(types.Int))))
-				}),
+			MemberOverloadFunc(createRandID("intn_rand_int"), RandType, []*cel.Type{cel.IntType}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.Int(self.(*Rand).Intn(int(args[0].(types.Int))))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"normFloat64",
-			cel.MemberOverload(createRandID("norm_float64_rand_double"), []*cel.Type{RandType}, cel.DoubleType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("norm_float64_rand_double"), RandType, []*cel.Type{}, cel.DoubleType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Double(self.(*Rand).NormFloat64())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"seed",
-			cel.MemberOverload(createRandID("seed_rand_int_bool"), []*cel.Type{RandType, cel.IntType}, cel.BoolType,
-				cel.BinaryBinding(func(self, seed ref.Val) ref.Val {
-					self.(*Rand).Seed(int64(seed.(types.Int)))
+			MemberOverloadFunc(createRandID("seed_rand_int_bool"), RandType, []*cel.Type{cel.IntType}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					self.(*Rand).Seed(int64(args[0].(types.Int)))
 					return types.True
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"uint32",
-			cel.MemberOverload(createRandID("uint32_rand_uint"), []*cel.Type{RandType}, cel.UintType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("uint32_rand_uint"), RandType, []*cel.Type{}, cel.UintType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Uint(self.(*Rand).Uint32())
-				}),
+				},
 			),
 		),
+	} {
+		opts = append(opts, funcOpts...)
 	}
 	return opts
 }

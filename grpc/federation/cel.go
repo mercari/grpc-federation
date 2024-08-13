@@ -232,10 +232,12 @@ func EnumAccessorOptions(enumName string, nameToValue map[string]int32, valueToN
 func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 	return []cel.EnvOption{
 		cel.StdLib(),
+		cel.Lib(grpcfedcel.NewLibrary(celHelper)),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),
 		cel.CustomTypeProvider(celHelper.TypeProvider()),
 		cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
+		cel.Variable(ContextVariableName, cel.ObjectType(ContextTypeName)),
 		cel.Container(celHelper.pkgName),
 	}
 }
@@ -275,37 +277,21 @@ func (m *CELCacheMap) set(index int, cache *CELCache) {
 }
 
 type LocalValue struct {
-	sg                 singleflight.Group
-	mu                 sync.RWMutex
-	envOpts            []cel.EnvOption
-	evalValues         map[string]any
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	defaultLib         *grpcfedcel.Library
+	sg         singleflight.Group
+	mu         sync.RWMutex
+	envOpts    []cel.EnvOption
+	evalValues map[string]any
 }
 
-func NewLocalValue(ctx context.Context, celTypeHelper *CELTypeHelper, envOpts []cel.EnvOption, celPlugins []*grpcfedcel.CELPlugin, hasContextCELLibrary bool, argName string, arg any) *LocalValue {
+func NewLocalValue(ctx context.Context, envOpts []cel.EnvOption, argName string, arg any) *LocalValue {
 	var newEnvOpts []cel.EnvOption
 	newEnvOpts = append(
 		append(newEnvOpts, envOpts...),
 		cel.Variable(MessageArgumentVariableName, cel.ObjectType(argName)),
 	)
-	defaultLib := grpcfedcel.NewLibrary(celTypeHelper)
-	newEnvOpts = append(newEnvOpts, cel.Lib(defaultLib))
-	instances := make([]*grpcfedcel.CELPluginInstance, 0, len(celPlugins))
-	if hasContextCELLibrary {
-		for _, plugin := range celPlugins {
-			instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
-			instances = append(instances, instance)
-			newEnvOpts = append(newEnvOpts, cel.Lib(instance))
-		}
-	}
 	return &LocalValue{
-		envOpts: newEnvOpts,
-		evalValues: map[string]any{
-			MessageArgumentVariableName: arg,
-		},
-		celPluginInstances: instances,
-		defaultLib:         defaultLib,
+		envOpts:    newEnvOpts,
+		evalValues: map[string]any{MessageArgumentVariableName: arg},
 	}
 }
 
@@ -320,11 +306,9 @@ type localValue interface {
 	lock()
 	unlock()
 	getEnvOpts() []cel.EnvOption
-	getEvalValues() map[string]any
+	getEvalValues(context.Context) map[string]any
 	setEnvOptValue(string, *cel.Type)
 	setEvalValue(string, any)
-	getCELPluginInstances() []*grpcfedcel.CELPluginInstance
-	getDefaultLib() *grpcfedcel.Library
 }
 
 func (v *LocalValue) do(name string, cb func() (any, error)) (any, error) {
@@ -352,8 +336,12 @@ func (v *LocalValue) getEnvOpts() []cel.EnvOption {
 	return v.envOpts
 }
 
-func (v *LocalValue) getEvalValues() map[string]any {
-	return v.evalValues
+func (v *LocalValue) getEvalValues(ctx context.Context) map[string]any {
+	ret := map[string]any{ContextVariableName: grpcfedcel.NewContextValue(ctx)}
+	for k, v := range v.evalValues {
+		ret[k] = v
+	}
+	return ret
 }
 
 func (v *LocalValue) setEnvOptValue(name string, typ *cel.Type) {
@@ -365,27 +353,6 @@ func (v *LocalValue) setEnvOptValue(name string, typ *cel.Type) {
 
 func (v *LocalValue) setEvalValue(name string, value any) {
 	v.evalValues[name] = value
-}
-
-func (v *LocalValue) getCELPluginInstances() []*grpcfedcel.CELPluginInstance {
-	return v.celPluginInstances
-}
-
-func (v *LocalValue) getDefaultLib() *grpcfedcel.Library {
-	return v.defaultLib
-}
-
-func (v *LocalValue) Close(ctx context.Context) error {
-	var errs []error
-	for _, instance := range v.celPluginInstances {
-		if err := instance.Close(ctx); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	if len(errs) != 0 {
-		return errors.Join(errs...)
-	}
-	return nil
 }
 
 type MapIteratorValue struct {
@@ -418,8 +385,12 @@ func (v *MapIteratorValue) getEnvOpts() []cel.EnvOption {
 	return v.envOpts
 }
 
-func (v *MapIteratorValue) getEvalValues() map[string]any {
-	return v.evalValues
+func (v *MapIteratorValue) getEvalValues(ctx context.Context) map[string]any {
+	ret := map[string]any{ContextVariableName: grpcfedcel.NewContextValue(ctx)}
+	for k, v := range v.evalValues {
+		ret[k] = v
+	}
+	return ret
 }
 
 func (v *MapIteratorValue) setEnvOptValue(name string, typ *cel.Type) {
@@ -433,40 +404,29 @@ func (v *MapIteratorValue) setEvalValue(name string, value any) {
 	v.evalValues[name] = value
 }
 
-func (v *MapIteratorValue) getCELPluginInstances() []*grpcfedcel.CELPluginInstance {
-	return v.localValue.getCELPluginInstances()
-}
-
-func (v *MapIteratorValue) getDefaultLib() *grpcfedcel.Library {
-	return v.localValue.getDefaultLib()
-}
-
 type Def[T any, U localValue] struct {
-	If                  string
-	Name                string
-	Type                *cel.Type
-	Setter              func(U, T) error
-	By                  string
-	IfUseContextLibrary bool
-	ByUseContextLibrary bool
-	IfCacheIndex        int
-	ByCacheIndex        int
-	Message             func(context.Context, U) (any, error)
-	Validation          func(context.Context, U) error
+	If           string
+	Name         string
+	Type         *cel.Type
+	Setter       func(U, T) error
+	By           string
+	IfCacheIndex int
+	ByCacheIndex int
+	Message      func(context.Context, U) (any, error)
+	Validation   func(context.Context, U) error
 }
 
 type DefMap[T any, U any, V localValue] struct {
-	If                  string
-	IfUseContextLibrary bool
-	IfCacheIndex        int
-	Name                string
-	Type                *cel.Type
-	Setter              func(V, T) error
-	IteratorName        string
-	IteratorType        *cel.Type
-	IteratorSource      func(V) []U
-	Iterator            func(context.Context, *MapIteratorValue) (any, error)
-	outType             T
+	If             string
+	IfCacheIndex   int
+	Name           string
+	Type           *cel.Type
+	Setter         func(V, T) error
+	IteratorName   string
+	IteratorType   *cel.Type
+	IteratorSource func(V) []U
+	Iterator       func(context.Context, *MapIteratorValue) (any, error)
+	outType        T
 }
 
 func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) error {
@@ -478,11 +438,10 @@ func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 	)
 	if def.If != "" {
 		c, err := EvalCEL(ctx, &EvalCELRequest{
-			Value:             value,
-			Expr:              def.If,
-			UseContextLibrary: def.IfUseContextLibrary,
-			OutType:           reflect.TypeOf(false),
-			CacheIndex:        def.IfCacheIndex,
+			Value:      value,
+			Expr:       def.If,
+			OutType:    reflect.TypeOf(false),
+			CacheIndex: def.IfCacheIndex,
 		})
 		if err != nil {
 			return err
@@ -497,11 +456,10 @@ func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 			switch {
 			case def.By != "":
 				return EvalCEL(ctx, &EvalCELRequest{
-					Value:             value,
-					Expr:              def.By,
-					UseContextLibrary: def.ByUseContextLibrary,
-					OutType:           reflect.TypeOf(v),
-					CacheIndex:        def.ByCacheIndex,
+					Value:      value,
+					Expr:       def.By,
+					OutType:    reflect.TypeOf(v),
+					CacheIndex: def.ByCacheIndex,
 				})
 			case def.Message != nil:
 				return def.Message(ctx, value)
@@ -549,11 +507,10 @@ func EvalDefMap[T any, U any, V localValue](ctx context.Context, value V, def De
 	)
 	if def.If != "" {
 		c, err := EvalCEL(ctx, &EvalCELRequest{
-			Value:             value,
-			Expr:              def.If,
-			UseContextLibrary: def.IfUseContextLibrary,
-			OutType:           reflect.TypeOf(false),
-			CacheIndex:        def.IfCacheIndex,
+			Value:      value,
+			Expr:       def.If,
+			OutType:    reflect.TypeOf(false),
+			CacheIndex: def.IfCacheIndex,
 		})
 		if err != nil {
 			return err
@@ -613,7 +570,7 @@ func evalMap[T localValue, U any](
 		evalValues: make(map[string]any),
 	}
 	envOpts := value.getEnvOpts()
-	for k, v := range value.getEvalValues() {
+	for k, v := range value.getEvalValues(ctx) {
 		iterValue.evalValues[k] = v
 	}
 	src := srcFunc(value)
@@ -633,20 +590,18 @@ func evalMap[T localValue, U any](
 }
 
 type IfParam[T localValue] struct {
-	Value             T
-	Expr              string
-	UseContextLibrary bool
-	CacheIndex        int
-	Body              func(T) error
+	Value      T
+	Expr       string
+	CacheIndex int
+	Body       func(T) error
 }
 
 func If[T localValue](ctx context.Context, param *IfParam[T]) error {
 	cond, err := EvalCEL(ctx, &EvalCELRequest{
-		Value:             param.Value,
-		Expr:              param.Expr,
-		UseContextLibrary: param.UseContextLibrary,
-		OutType:           reflect.TypeOf(false),
-		CacheIndex:        param.CacheIndex,
+		Value:      param.Value,
+		Expr:       param.Expr,
+		OutType:    reflect.TypeOf(false),
+		CacheIndex: param.CacheIndex,
 	})
 	if err != nil {
 		return err
@@ -658,11 +613,10 @@ func If[T localValue](ctx context.Context, param *IfParam[T]) error {
 }
 
 type EvalCELRequest struct {
-	Value             localValue
-	Expr              string
-	UseContextLibrary bool
-	OutType           reflect.Type
-	CacheIndex        int
+	Value      localValue
+	Expr       string
+	OutType    reflect.Type
+	CacheIndex int
 }
 
 func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
@@ -676,20 +630,11 @@ func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
 		return nil, ErrCELCacheIndex
 	}
 
-	if req.UseContextLibrary {
-		for _, instance := range req.Value.getCELPluginInstances() {
-			instance.Initialize(ctx)
-		}
-		for _, ctxlib := range req.Value.getDefaultLib().ContextualLibraries() {
-			ctxlib.Initialize(ctx)
-		}
-	}
-
 	program, err := createCELProgram(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	out, _, err := program.ContextEval(ctx, req.Value.getEvalValues())
+	out, _, err := program.ContextEval(ctx, req.Value.getEvalValues(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -713,10 +658,8 @@ func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
 }
 
 func createCELProgram(ctx context.Context, req *EvalCELRequest) (cel.Program, error) {
-	if !req.UseContextLibrary {
-		if program := getCELProgramCache(ctx, req.CacheIndex); program != nil {
-			return program, nil
-		}
+	if program := getCELProgramCache(ctx, req.CacheIndex); program != nil {
+		return program, nil
 	}
 
 	env, err := NewCELEnv(req.Value.getEnvOpts()...)
@@ -732,26 +675,15 @@ func createCELProgram(ctx context.Context, req *EvalCELRequest) (cel.Program, er
 		return nil, err
 	}
 
-	if !req.UseContextLibrary {
-		setCELProgramCache(ctx, req.CacheIndex, program)
-	}
+	setCELProgramCache(ctx, req.CacheIndex, program)
 	return program, nil
 }
 
 func createCELAst(ctx context.Context, req *EvalCELRequest, env *cel.Env) (*cel.Ast, error) {
-	if req.UseContextLibrary {
-		if ast := getCELAstCache(ctx, req.CacheIndex); ast != nil {
-			return ast, nil
-		}
-	}
 	expr := strings.Replace(req.Expr, "$", MessageArgumentVariableName, -1)
 	ast, iss := env.Compile(expr)
 	if iss.Err() != nil {
 		return nil, iss.Err()
-	}
-
-	if req.UseContextLibrary {
-		setCELAstCache(ctx, req.CacheIndex, ast)
 	}
 	return ast, nil
 }
@@ -841,21 +773,19 @@ func SetGRPCError(ctx context.Context, value localValue, err error) {
 }
 
 type SetCELValueParam[T any] struct {
-	Value             localValue
-	Expr              string
-	UseContextLibrary bool
-	CacheIndex        int
-	Setter            func(T) error
+	Value      localValue
+	Expr       string
+	CacheIndex int
+	Setter     func(T) error
 }
 
 func SetCELValue[T any](ctx context.Context, param *SetCELValueParam[T]) error {
 	var typ T
 	out, err := EvalCEL(ctx, &EvalCELRequest{
-		Value:             param.Value,
-		Expr:              param.Expr,
-		UseContextLibrary: param.UseContextLibrary,
-		OutType:           reflect.TypeOf(typ),
-		CacheIndex:        param.CacheIndex,
+		Value:      param.Value,
+		Expr:       param.Expr,
+		OutType:    reflect.TypeOf(typ),
+		CacheIndex: param.CacheIndex,
 	})
 	if err != nil {
 		return err

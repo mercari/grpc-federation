@@ -1,6 +1,7 @@
 package cel_test
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -251,6 +252,7 @@ func TestRand(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			env, err := cel.NewEnv(
+				cel.Variable(cellib.ContextVariableName, cel.ObjectType(cellib.ContextTypeName)),
 				cel.Lib(new(cellib.RandLibrary)),
 				cel.Lib(new(cellib.TimeLibrary)),
 			)
@@ -265,7 +267,11 @@ func TestRand(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			out, _, err := program.Eval(test.args)
+			args := map[string]any{cellib.ContextVariableName: cellib.NewContextValue(context.Background())}
+			for k, v := range test.args {
+				args[k] = v
+			}
+			out, _, err := program.Eval(args)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -288,15 +288,12 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		if err != nil {
 			return nil, err
 		}
-		if err := func() error {
-			ctx := context.Background()
-			instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
-			defer instance.Close(ctx)
-			return instance.ValidatePlugin(ctx)
-		}(); err != nil {
+		ctx := context.Background()
+		instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}
-		celPlugins = append(celPlugins, plugin)
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
 	}
 	{{- end }}
 	{{- if $env }}
@@ -393,15 +390,10 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ $s
 			{{- end }}
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, {{ .HasContextCELLibrary }}, "{{ .RequestProtoType }}", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "{{ .RequestProtoType }}", req)}
 	{{- if $env }}
 	value.AddEnv(s.env)
 	{{- end }}
-	defer func() {
-		if err := value.Close(ctx); err != nil {
-			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
-		}
-	}()
 	{{- end }}
 	{{- template "evalDefSet" .VariableDefinitionSet }}
 
@@ -556,7 +548,6 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 	Value: value,
 	Expr: `{{ .Expr }}`,
-	UseContextLibrary: {{ .ExprUseContextLibrary }},
 	OutType: reflect.TypeOf(true),
 	CacheIndex: {{ $msg.CELCacheIndex }},
 })
@@ -587,7 +578,6 @@ default:
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.By }}`,
-	UseContextLibrary: {{ $value.ByUseContextLibrary }},
 	CacheIndex: {{ $msg.CELCacheIndex }},
 	Setter: func(v {{ $value.Type }}) error {
 		{{- template "setReturnValueBySetter" $value.SetterParam }}
@@ -615,7 +605,6 @@ ret.{{ $name }} = {{ $value.Value }}
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.CEL.Expr }}`,
-	UseContextLibrary: {{ $value.CEL.UseContextLibrary }},
 	CacheIndex: {{ $msg.CELCacheIndex }},
 	Setter: func(v {{ $value.Type }}) error {
 		{{- template "setReturnValueBySetter" $value.SetterParam }}

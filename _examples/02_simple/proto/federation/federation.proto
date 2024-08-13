@@ -42,7 +42,7 @@ message GetPostResponse {
     def { name: "sorted_items" by: "[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)" }
     def { name: "map_value" by : "{1: 'a', 2: 'b', 3: 'c'}" }
     def { name: "null_value" by: "null" }
-    def { by: "grpc.federation.log.info('output federation log', {'post_message': post})" },
+    def { by: "grpc.federation.log.info('output federation log', {'post_message': post})" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).by = "'hello'"];

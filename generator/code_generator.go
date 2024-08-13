@@ -1521,23 +1521,6 @@ func (m *Message) RequestProtoType() string {
 	return m.Message.Rule.MessageArgument.FQDN()
 }
 
-func (m *Message) HasContextCELLibrary() bool {
-	if m.Rule == nil {
-		return false
-	}
-	for _, group := range m.Message.VariableDefinitionGroups() {
-		for _, def := range group.VariableDefinitions() {
-			if def == nil {
-				continue
-			}
-			if def.HasContextCELLibrary() {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (m *Message) CustomResolverName() string {
 	msg := fullMessageName(m.Message)
 	return fmt.Sprintf("Resolve_%s", msg)
@@ -1719,18 +1702,16 @@ func (f *OneofReturnField) HasFieldOneofRule() bool {
 }
 
 type OneofField struct {
-	ExprUseContextLibrary bool
-	ByUseContextLibrary   bool
-	Expr                  string
-	By                    string
-	Type                  string
-	Condition             string
-	Name                  string
-	Value                 string
-	CastValue             string
-	Message               *Message
-	FieldOneofRule        *resolver.FieldOneofRule
-	SetterParam           *SetterParam
+	Expr           string
+	By             string
+	Type           string
+	Condition      string
+	Name           string
+	Value          string
+	CastValue      string
+	Message        *Message
+	FieldOneofRule *resolver.FieldOneofRule
+	SetterParam    *SetterParam
 }
 
 func (oneof *OneofField) VariableDefinitionSet() *VariableDefinitionSet {
@@ -2395,15 +2376,14 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 			}
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
-					ByUseContextLibrary: rule.Oneof.By.UseContextLibrary,
-					By:                  rule.Oneof.By.Expr,
-					Type:                typ,
-					Condition:           fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
-					Name:                fieldName,
-					Value:               value,
-					CastValue:           castValue,
-					FieldOneofRule:      rule.Oneof,
-					Message:             m,
+					By:             rule.Oneof.By.Expr,
+					Type:           typ,
+					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
+					Name:           fieldName,
+					Value:          value,
+					CastValue:      castValue,
+					FieldOneofRule: rule.Oneof,
+					Message:        m,
 					SetterParam: &SetterParam{
 						Name:         util.ToPublicGoVariable(oneof.Name),
 						Value:        value,
@@ -2414,17 +2394,15 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 				}
 			} else {
 				caseFields = append(caseFields, &OneofField{
-					ExprUseContextLibrary: rule.Oneof.If.UseContextLibrary,
-					ByUseContextLibrary:   rule.Oneof.By.UseContextLibrary,
-					Expr:                  rule.Oneof.If.Expr,
-					By:                    rule.Oneof.By.Expr,
-					Type:                  typ,
-					Condition:             fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
-					Name:                  fieldName,
-					Value:                 value,
-					CastValue:             castValue,
-					FieldOneofRule:        rule.Oneof,
-					Message:               m,
+					Expr:           rule.Oneof.If.Expr,
+					By:             rule.Oneof.By.Expr,
+					Type:           typ,
+					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
+					Name:           fieldName,
+					Value:          value,
+					CastValue:      castValue,
+					FieldOneofRule: rule.Oneof,
+					Message:        m,
 					SetterParam: &SetterParam{
 						Name:         util.ToPublicGoVariable(oneof.Name),
 						Value:        value,
@@ -2537,10 +2515,6 @@ func (d *VariableDefinition) UseIf() bool {
 
 func (d *VariableDefinition) If() string {
 	return d.VariableDefinition.If.Expr
-}
-
-func (d *VariableDefinition) IfUseContextLibrary() bool {
-	return d.VariableDefinition.If.UseContextLibrary
 }
 
 func (d *VariableDefinition) UseTimeout() bool {
@@ -2717,18 +2691,16 @@ func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
 }
 
 type GRPCErrorDetailBy struct {
-	Expr              string
-	Type              string
-	UseContextLibrary bool
+	Expr string
+	Type string
 }
 
 func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
 	ret := make([]*GRPCErrorDetailBy, 0, len(detail.GRPCErrorDetail.By))
 	for _, by := range detail.GRPCErrorDetail.By {
 		ret = append(ret, &GRPCErrorDetailBy{
-			Expr:              by.Expr,
-			Type:              toMakeZeroValue(detail.msg.file, by.Out),
-			UseContextLibrary: by.UseContextLibrary,
+			Expr: by.Expr,
+			Type: toMakeZeroValue(detail.msg.file, by.Out),
 		})
 	}
 	return ret

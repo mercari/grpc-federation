@@ -165,8 +165,10 @@ func TestLog(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var output bytes.Buffer
 			lib := cellib.NewLogLibrary()
-			lib.Initialize(test.ctx(&output))
-			env, err := cel.NewEnv(cel.Lib(lib))
+			env, err := cel.NewEnv(
+				cel.Variable(cellib.ContextVariableName, cel.ObjectType(cellib.ContextTypeName)),
+				cel.Lib(lib),
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -178,7 +180,7 @@ func TestLog(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, _, err = program.Eval(map[string]any{})
+			_, _, err = program.Eval(map[string]any{cellib.ContextVariableName: cellib.NewContextValue(test.ctx(&output))})
 			if err != nil {
 				t.Fatal(err)
 			}

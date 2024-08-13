@@ -89,7 +89,6 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		protoPackageNameToFileDefs: make(map[string][]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToPackage:  make(map[string]*Package),
 		celPluginMap:               make(map[string]*CELPlugin),
-		ctxOverloadIDPrefixes:      grpcfedcel.NewLibrary(celRegistry).ContextOverloadIDPrefixes(),
 
 		serviceToRuleMap:   make(map[*Service]*federation.ServiceRule),
 		methodToRuleMap:    make(map[*Method]*federation.MethodRule),
@@ -3609,6 +3608,9 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	r.celRegistry.clear()
 	ast, issues := env.Compile(expr)
 	if issues.Err() != nil {
+		for _, err := range issues.Errors() {
+			r.removeContextArgumentFromErrorText(err)
+		}
 		return errors.Join(append(r.celRegistry.errors(), issues.Err())...)
 	}
 
@@ -3621,27 +3623,14 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 		return err
 	}
 
-	var useContextLib bool
-	for _, ref := range checkedExpr.GetReferenceMap() {
-		for _, overloadID := range ref.GetOverloadId() {
-			for _, prefix := range r.ctxOverloadIDPrefixes {
-				if strings.HasPrefix(overloadID, prefix) {
-					useContextLib = true
-				}
-			}
-			for _, plugin := range r.celPluginMap {
-				for _, fn := range plugin.Functions {
-					if strings.HasPrefix(overloadID, fn.ID) {
-						useContextLib = true
-					}
-				}
-			}
-		}
-	}
-	value.UseContextLibrary = useContextLib
 	value.Out = out
 	value.CheckedExpr = checkedExpr
 	return nil
+}
+
+func (r *Resolver) removeContextArgumentFromErrorText(err *cel.Error) {
+	err.Message = strings.Replace(err.Message, federation.ContextTypeName+", ", "", -1)
+	err.Message = strings.Replace(err.Message, federation.ContextTypeName, "", -1)
 }
 
 func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
@@ -3652,6 +3641,7 @@ func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Servi
 		cel.CustomTypeAdapter(r.celRegistry),
 		cel.CustomTypeProvider(r.celRegistry),
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
+		cel.Variable(federation.ContextVariableName, cel.ObjectType(federation.ContextTypeName)),
 		cel.Container(msg.Package().Name),
 	}
 	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)

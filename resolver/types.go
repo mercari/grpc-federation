@@ -475,10 +475,9 @@ type Value struct {
 }
 
 type CELValue struct {
-	Expr              string
-	Out               *Type
-	CheckedExpr       *exprv1.CheckedExpr
-	UseContextLibrary bool
+	Expr        string
+	Out         *Type
+	CheckedExpr *exprv1.CheckedExpr
 }
 
 type EnvKey string
