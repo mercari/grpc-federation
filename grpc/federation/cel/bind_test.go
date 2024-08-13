@@ -146,5 +146,4 @@ func TestBind(t *testing.T) {
 			}
 		})
 	}
-
 }

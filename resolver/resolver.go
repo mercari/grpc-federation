@@ -40,7 +40,6 @@ type Resolver struct {
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
 	celPluginMap               map[string]*CELPlugin
-	ctxOverloadIDPrefixes      []string
 
 	serviceToRuleMap   map[*Service]*federation.ServiceRule
 	methodToRuleMap    map[*Method]*federation.MethodRule

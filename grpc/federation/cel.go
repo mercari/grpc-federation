@@ -245,7 +245,6 @@ func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 // CELCache used to speed up CEL evaluation from the second time onward.
 // cel.Program cannot be reused to evaluate contextual libraries or plugins, so cel.Ast is reused to speed up the process.
 type CELCache struct {
-	ast     *cel.Ast    // cache for contextual libraries or plugins.
 	program cel.Program // cache for simple expressions.
 }
 
@@ -666,7 +665,7 @@ func createCELProgram(ctx context.Context, req *EvalCELRequest) (cel.Program, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cel env: %w", err)
 	}
-	ast, err := createCELAst(ctx, req, env)
+	ast, err := createCELAst(req, env)
 	if err != nil {
 		return nil, err
 	}
@@ -679,26 +678,13 @@ func createCELProgram(ctx context.Context, req *EvalCELRequest) (cel.Program, er
 	return program, nil
 }
 
-func createCELAst(ctx context.Context, req *EvalCELRequest, env *cel.Env) (*cel.Ast, error) {
+func createCELAst(req *EvalCELRequest, env *cel.Env) (*cel.Ast, error) {
 	expr := strings.Replace(req.Expr, "$", MessageArgumentVariableName, -1)
 	ast, iss := env.Compile(expr)
 	if iss.Err() != nil {
 		return nil, iss.Err()
 	}
 	return ast, nil
-}
-
-func getCELAstCache(ctx context.Context, cacheIndex int) *cel.Ast {
-	celCacheMap := getCELCacheMap(ctx)
-	cache := celCacheMap.get(cacheIndex)
-	if cache == nil {
-		return nil
-	}
-	return cache.ast
-}
-
-func setCELAstCache(ctx context.Context, cacheIndex int, ast *cel.Ast) {
-	getCELCacheMap(ctx).set(cacheIndex, &CELCache{ast: ast})
 }
 
 func getCELProgramCache(ctx context.Context, cacheIndex int) cel.Program {

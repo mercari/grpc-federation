@@ -133,7 +133,6 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 }
 
 type CELPluginInstance struct {
-	ctx              context.Context
 	name             string
 	functions        []*CELFunction
 	celRegistry      *types.Registry
