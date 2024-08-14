@@ -3,7 +3,7 @@ module github.com/mercari/grpc-federation/demo
 go 1.21.9
 
 require (
-	github.com/mercari/grpc-federation v0.17.6
+	github.com/mercari/grpc-federation v1.2.1
 	github.com/peterhellberg/swapi v0.0.0-20230222134402-c0bd79f5129c
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.27.0
@@ -22,6 +22,7 @@ require (
 	github.com/google/cel-go v0.20.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
+	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tetratelabs/wazero v1.7.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.27.0 // indirect

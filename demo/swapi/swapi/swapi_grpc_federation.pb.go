@@ -11,7 +11,6 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
-	"runtime/debug"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -31,18 +30,14 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Swapi_FilmArgument is argument for "swapi.Film" message.
-type Swapi_FilmArgument struct {
-}
-
 // Swapi_FilmsArgument is argument for "swapi.Films" message.
-type Swapi_FilmsArgument struct {
+type SWAPI_Swapi_FilmsArgument struct {
 	Ids []int64
 	Res *filmpb.ListFilmsReply
 }
 
 // Swapi_GetFilmReplyArgument is argument for "swapi.GetFilmReply" message.
-type Swapi_GetFilmReplyArgument struct {
+type SWAPI_Swapi_GetFilmReplyArgument struct {
 	Characters *People
 	F          *filmpb.Film
 	Id         int64
@@ -54,7 +49,7 @@ type Swapi_GetFilmReplyArgument struct {
 }
 
 // Swapi_GetPersonReplyArgument is argument for "swapi.GetPersonReply" message.
-type Swapi_GetPersonReplyArgument struct {
+type SWAPI_Swapi_GetPersonReplyArgument struct {
 	F         *Films
 	Id        int64
 	P         *personpb.Person
@@ -65,7 +60,7 @@ type Swapi_GetPersonReplyArgument struct {
 }
 
 // Swapi_GetPlanetReplyArgument is argument for "swapi.GetPlanetReply" message.
-type Swapi_GetPlanetReplyArgument struct {
+type SWAPI_Swapi_GetPlanetReplyArgument struct {
 	F         *Films
 	Id        int64
 	P         *planetpb.Planet
@@ -74,7 +69,7 @@ type Swapi_GetPlanetReplyArgument struct {
 }
 
 // Swapi_GetSpeciesReplyArgument is argument for "swapi.GetSpeciesReply" message.
-type Swapi_GetSpeciesReplyArgument struct {
+type SWAPI_Swapi_GetSpeciesReplyArgument struct {
 	F   *Films
 	Id  int64
 	P   *People
@@ -83,7 +78,7 @@ type Swapi_GetSpeciesReplyArgument struct {
 }
 
 // Swapi_GetStarshipReplyArgument is argument for "swapi.GetStarshipReply" message.
-type Swapi_GetStarshipReplyArgument struct {
+type SWAPI_Swapi_GetStarshipReplyArgument struct {
 	F   *Films
 	Id  int64
 	P   *People
@@ -92,7 +87,7 @@ type Swapi_GetStarshipReplyArgument struct {
 }
 
 // Swapi_GetVehicleReplyArgument is argument for "swapi.GetVehicleReply" message.
-type Swapi_GetVehicleReplyArgument struct {
+type SWAPI_Swapi_GetVehicleReplyArgument struct {
 	F   *Films
 	Id  int64
 	P   *People
@@ -101,87 +96,67 @@ type Swapi_GetVehicleReplyArgument struct {
 }
 
 // Swapi_ListFilmsReplyArgument is argument for "swapi.ListFilmsReply" message.
-type Swapi_ListFilmsReplyArgument struct {
+type SWAPI_Swapi_ListFilmsReplyArgument struct {
 	F   *Films
 	Ids []int64
 }
 
 // Swapi_ListPeopleReplyArgument is argument for "swapi.ListPeopleReply" message.
-type Swapi_ListPeopleReplyArgument struct {
+type SWAPI_Swapi_ListPeopleReplyArgument struct {
 	Ids []int64
 	P   *People
 }
 
 // Swapi_ListPlanetsReplyArgument is argument for "swapi.ListPlanetsReply" message.
-type Swapi_ListPlanetsReplyArgument struct {
+type SWAPI_Swapi_ListPlanetsReplyArgument struct {
 	Ids []int64
 	P   *Planets
 }
 
 // Swapi_ListSpeciesReplyArgument is argument for "swapi.ListSpeciesReply" message.
-type Swapi_ListSpeciesReplyArgument struct {
+type SWAPI_Swapi_ListSpeciesReplyArgument struct {
 	Ids []int64
 	S   *SpeciesList
 }
 
 // Swapi_ListStarshipsReplyArgument is argument for "swapi.ListStarshipsReply" message.
-type Swapi_ListStarshipsReplyArgument struct {
+type SWAPI_Swapi_ListStarshipsReplyArgument struct {
 	Ids []int64
 	S   *Starships
 }
 
 // Swapi_ListVehiclesReplyArgument is argument for "swapi.ListVehiclesReply" message.
-type Swapi_ListVehiclesReplyArgument struct {
+type SWAPI_Swapi_ListVehiclesReplyArgument struct {
 	Ids []int64
 	V   *Vehicles
 }
 
 // Swapi_PeopleArgument is argument for "swapi.People" message.
-type Swapi_PeopleArgument struct {
+type SWAPI_Swapi_PeopleArgument struct {
 	Ids []int64
 	Res *personpb.ListPeopleReply
 }
 
-// Swapi_PersonArgument is argument for "swapi.Person" message.
-type Swapi_PersonArgument struct {
-}
-
-// Swapi_PlanetArgument is argument for "swapi.Planet" message.
-type Swapi_PlanetArgument struct {
-}
-
 // Swapi_PlanetsArgument is argument for "swapi.Planets" message.
-type Swapi_PlanetsArgument struct {
+type SWAPI_Swapi_PlanetsArgument struct {
 	Ids []int64
 	Res *planetpb.ListPlanetsReply
 }
 
-// Swapi_SpeciesArgument is argument for "swapi.Species" message.
-type Swapi_SpeciesArgument struct {
-}
-
 // Swapi_SpeciesListArgument is argument for "swapi.SpeciesList" message.
-type Swapi_SpeciesListArgument struct {
+type SWAPI_Swapi_SpeciesListArgument struct {
 	Ids []int64
 	Res *speciespb.ListSpeciesReply
 }
 
-// Swapi_StarshipArgument is argument for "swapi.Starship" message.
-type Swapi_StarshipArgument struct {
-}
-
 // Swapi_StarshipsArgument is argument for "swapi.Starships" message.
-type Swapi_StarshipsArgument struct {
+type SWAPI_Swapi_StarshipsArgument struct {
 	Ids []int64
 	Res *starshippb.ListStarshipsReply
 }
 
-// Swapi_VehicleArgument is argument for "swapi.Vehicle" message.
-type Swapi_VehicleArgument struct {
-}
-
 // Swapi_VehiclesArgument is argument for "swapi.Vehicles" message.
-type Swapi_VehiclesArgument struct {
+type SWAPI_Swapi_VehiclesArgument struct {
 	Ids []int64
 	Res *vehiclepb.ListVehiclesReply
 }
@@ -273,7 +248,7 @@ type SWAPI struct {
 	celCacheMap   *grpcfed.CELCacheMap
 	tracer        trace.Tracer
 	celTypeHelper *grpcfed.CELTypeHelper
-	envOpts       []grpcfed.CELEnvOption
+	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
 	client        *SWAPIDependentClientSet
 }
@@ -383,14 +358,14 @@ func NewSWAPI(cfg SWAPIConfig) (*SWAPI, error) {
 			"ids": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELIntType), "Ids"),
 		},
 	}
-	celTypeHelper := grpcfed.NewCELTypeHelper(celTypeHelperFieldMap)
-	var envOpts []grpcfed.CELEnvOption
-	envOpts = append(envOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celTypeHelper := grpcfed.NewCELTypeHelper("swapi", celTypeHelperFieldMap)
+	var celEnvOpts []grpcfed.CELEnvOption
+	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	return &SWAPI{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
-		envOpts:       envOpts,
+		celEnvOpts:    celEnvOpts,
 		celTypeHelper: celTypeHelper,
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("swapi.SWAPI"),
@@ -409,16 +384,15 @@ func NewSWAPI(cfg SWAPIConfig) (*SWAPI, error) {
 func (s *SWAPI) GetPerson(ctx context.Context, req *GetPersonRequest) (res *GetPersonReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/GetPerson")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_GetPersonReply(ctx, &Swapi_GetPersonReplyArgument{
+	res, err := s.resolve_Swapi_GetPersonReply(ctx, &SWAPI_Swapi_GetPersonReplyArgument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -433,16 +407,15 @@ func (s *SWAPI) GetPerson(ctx context.Context, req *GetPersonRequest) (res *GetP
 func (s *SWAPI) ListPeople(ctx context.Context, req *ListPeopleRequest) (res *ListPeopleReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/ListPeople")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_ListPeopleReply(ctx, &Swapi_ListPeopleReplyArgument{
+	res, err := s.resolve_Swapi_ListPeopleReply(ctx, &SWAPI_Swapi_ListPeopleReplyArgument{
 		Ids: req.GetIds(),
 	})
 	if err != nil {
@@ -457,16 +430,15 @@ func (s *SWAPI) ListPeople(ctx context.Context, req *ListPeopleRequest) (res *Li
 func (s *SWAPI) GetFilm(ctx context.Context, req *GetFilmRequest) (res *GetFilmReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/GetFilm")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_GetFilmReply(ctx, &Swapi_GetFilmReplyArgument{
+	res, err := s.resolve_Swapi_GetFilmReply(ctx, &SWAPI_Swapi_GetFilmReplyArgument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -481,16 +453,15 @@ func (s *SWAPI) GetFilm(ctx context.Context, req *GetFilmRequest) (res *GetFilmR
 func (s *SWAPI) ListFilms(ctx context.Context, req *ListFilmsRequest) (res *ListFilmsReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/ListFilms")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_ListFilmsReply(ctx, &Swapi_ListFilmsReplyArgument{
+	res, err := s.resolve_Swapi_ListFilmsReply(ctx, &SWAPI_Swapi_ListFilmsReplyArgument{
 		Ids: req.GetIds(),
 	})
 	if err != nil {
@@ -505,16 +476,15 @@ func (s *SWAPI) ListFilms(ctx context.Context, req *ListFilmsRequest) (res *List
 func (s *SWAPI) GetStarship(ctx context.Context, req *GetStarshipRequest) (res *GetStarshipReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/GetStarship")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_GetStarshipReply(ctx, &Swapi_GetStarshipReplyArgument{
+	res, err := s.resolve_Swapi_GetStarshipReply(ctx, &SWAPI_Swapi_GetStarshipReplyArgument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -529,16 +499,15 @@ func (s *SWAPI) GetStarship(ctx context.Context, req *GetStarshipRequest) (res *
 func (s *SWAPI) ListStarships(ctx context.Context, req *ListStarshipsRequest) (res *ListStarshipsReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/ListStarships")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_ListStarshipsReply(ctx, &Swapi_ListStarshipsReplyArgument{
+	res, err := s.resolve_Swapi_ListStarshipsReply(ctx, &SWAPI_Swapi_ListStarshipsReplyArgument{
 		Ids: req.GetIds(),
 	})
 	if err != nil {
@@ -553,16 +522,15 @@ func (s *SWAPI) ListStarships(ctx context.Context, req *ListStarshipsRequest) (r
 func (s *SWAPI) GetSpecies(ctx context.Context, req *GetSpeciesRequest) (res *GetSpeciesReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/GetSpecies")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_GetSpeciesReply(ctx, &Swapi_GetSpeciesReplyArgument{
+	res, err := s.resolve_Swapi_GetSpeciesReply(ctx, &SWAPI_Swapi_GetSpeciesReplyArgument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -577,16 +545,15 @@ func (s *SWAPI) GetSpecies(ctx context.Context, req *GetSpeciesRequest) (res *Ge
 func (s *SWAPI) ListSpecies(ctx context.Context, req *ListSpeciesRequest) (res *ListSpeciesReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/ListSpecies")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_ListSpeciesReply(ctx, &Swapi_ListSpeciesReplyArgument{
+	res, err := s.resolve_Swapi_ListSpeciesReply(ctx, &SWAPI_Swapi_ListSpeciesReplyArgument{
 		Ids: req.GetIds(),
 	})
 	if err != nil {
@@ -601,16 +568,15 @@ func (s *SWAPI) ListSpecies(ctx context.Context, req *ListSpeciesRequest) (res *
 func (s *SWAPI) GetVehicle(ctx context.Context, req *GetVehicleRequest) (res *GetVehicleReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/GetVehicle")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_GetVehicleReply(ctx, &Swapi_GetVehicleReplyArgument{
+	res, err := s.resolve_Swapi_GetVehicleReply(ctx, &SWAPI_Swapi_GetVehicleReplyArgument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -625,16 +591,15 @@ func (s *SWAPI) GetVehicle(ctx context.Context, req *GetVehicleRequest) (res *Ge
 func (s *SWAPI) ListVehicles(ctx context.Context, req *ListVehiclesRequest) (res *ListVehiclesReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/ListVehicles")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_ListVehiclesReply(ctx, &Swapi_ListVehiclesReplyArgument{
+	res, err := s.resolve_Swapi_ListVehiclesReply(ctx, &SWAPI_Swapi_ListVehiclesReplyArgument{
 		Ids: req.GetIds(),
 	})
 	if err != nil {
@@ -649,16 +614,15 @@ func (s *SWAPI) ListVehicles(ctx context.Context, req *ListVehiclesRequest) (res
 func (s *SWAPI) GetPlanet(ctx context.Context, req *GetPlanetRequest) (res *GetPlanetReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/GetPlanet")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_GetPlanetReply(ctx, &Swapi_GetPlanetReplyArgument{
+	res, err := s.resolve_Swapi_GetPlanetReply(ctx, &SWAPI_Swapi_GetPlanetReplyArgument{
 		Id: req.GetId(),
 	})
 	if err != nil {
@@ -673,16 +637,15 @@ func (s *SWAPI) GetPlanet(ctx context.Context, req *GetPlanetRequest) (res *GetP
 func (s *SWAPI) ListPlanets(ctx context.Context, req *ListPlanetsRequest) (res *ListPlanetsReply, e error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SWAPI/ListPlanets")
 	defer span.End()
-
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
 		if r := recover(); r != nil {
-			e = grpcfed.RecoverError(r, debug.Stack())
+			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-	res, err := s.resolve_Swapi_ListPlanetsReply(ctx, &Swapi_ListPlanetsReplyArgument{
+	res, err := s.resolve_Swapi_ListPlanetsReply(ctx, &SWAPI_Swapi_ListPlanetsReplyArgument{
 		Ids: req.GetIds(),
 	})
 	if err != nil {
@@ -694,9 +657,10 @@ func (s *SWAPI) ListPlanets(ctx context.Context, req *ListPlanetsRequest) (res *
 }
 
 // resolve_Swapi_Films resolve "swapi.Films" message.
-func (s *SWAPI) resolve_Swapi_Films(ctx context.Context, req *Swapi_FilmsArgument) (*Films, error) {
+func (s *SWAPI) resolve_Swapi_Films(ctx context.Context, req *SWAPI_Swapi_FilmsArgument) (*Films, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.Films")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.Films", slog.Any("message_args", s.logvalue_Swapi_FilmsArgument(req)))
 	type localValueType struct {
@@ -705,7 +669,7 @@ func (s *SWAPI) resolve_Swapi_Films(ctx context.Context, req *Swapi_FilmsArgumen
 			res *filmpb.ListFilmsReply
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.FilmsArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.FilmsArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -750,7 +714,7 @@ func (s *SWAPI) resolve_Swapi_Films(ctx context.Context, req *Swapi_FilmsArgumen
 	}); err != nil {
 		if err := s.errorHandler(ctx, SWAPI_DependentMethod_Swapi_Film_FilmService_ListFilms, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 		}
 	}
 
@@ -785,9 +749,10 @@ func (s *SWAPI) resolve_Swapi_Films(ctx context.Context, req *Swapi_FilmsArgumen
 }
 
 // resolve_Swapi_GetFilmReply resolve "swapi.GetFilmReply" message.
-func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFilmReplyArgument) (*GetFilmReply, error) {
+func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *SWAPI_Swapi_GetFilmReplyArgument) (*GetFilmReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.GetFilmReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.GetFilmReply", slog.Any("message_args", s.logvalue_Swapi_GetFilmReplyArgument(req)))
 	type localValueType struct {
@@ -802,7 +767,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 			v          *Vehicles
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetFilmReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetFilmReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -868,7 +833,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Film_FilmService_GetFilm, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -912,7 +877,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_PeopleArgument{}
+				args := &SWAPI_Swapi_PeopleArgument{}
 				// { name: "ids", by: "f.character_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -975,7 +940,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Film_FilmService_GetFilm, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1019,7 +984,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_PlanetsArgument{}
+				args := &SWAPI_Swapi_PlanetsArgument{}
 				// { name: "ids", by: "f.planet_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -1082,7 +1047,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Film_FilmService_GetFilm, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1126,7 +1091,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_SpeciesListArgument{}
+				args := &SWAPI_Swapi_SpeciesListArgument{}
 				// { name: "ids", by: "f.species_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -1189,7 +1154,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Film_FilmService_GetFilm, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1233,7 +1198,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_StarshipsArgument{}
+				args := &SWAPI_Swapi_StarshipsArgument{}
 				// { name: "ids", by: "f.starship_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -1296,7 +1261,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Film_FilmService_GetFilm, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1340,7 +1305,7 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_VehiclesArgument{}
+				args := &SWAPI_Swapi_VehiclesArgument{}
 				// { name: "ids", by: "f.vehicle_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -1474,9 +1439,10 @@ func (s *SWAPI) resolve_Swapi_GetFilmReply(ctx context.Context, req *Swapi_GetFi
 }
 
 // resolve_Swapi_GetPersonReply resolve "swapi.GetPersonReply" message.
-func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_GetPersonReplyArgument) (*GetPersonReply, error) {
+func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *SWAPI_Swapi_GetPersonReplyArgument) (*GetPersonReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.GetPersonReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.GetPersonReply", slog.Any("message_args", s.logvalue_Swapi_GetPersonReplyArgument(req)))
 	type localValueType struct {
@@ -1490,7 +1456,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 			v         *Vehicles
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetPersonReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPersonReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -1553,7 +1519,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Person_PersonService_GetPerson, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1597,7 +1563,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_FilmsArgument{}
+				args := &SWAPI_Swapi_FilmsArgument{}
 				// { name: "ids", by: "p.film_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -1660,7 +1626,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Person_PersonService_GetPerson, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1704,7 +1670,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_SpeciesListArgument{}
+				args := &SWAPI_Swapi_SpeciesListArgument{}
 				// { name: "ids", by: "p.species_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -1767,7 +1733,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Person_PersonService_GetPerson, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1811,7 +1777,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_StarshipsArgument{}
+				args := &SWAPI_Swapi_StarshipsArgument{}
 				// { name: "ids", by: "p.starship_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -1874,7 +1840,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Person_PersonService_GetPerson, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -1918,7 +1884,7 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_VehiclesArgument{}
+				args := &SWAPI_Swapi_VehiclesArgument{}
 				// { name: "ids", by: "p.vehicle_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -2037,9 +2003,10 @@ func (s *SWAPI) resolve_Swapi_GetPersonReply(ctx context.Context, req *Swapi_Get
 }
 
 // resolve_Swapi_GetPlanetReply resolve "swapi.GetPlanetReply" message.
-func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *Swapi_GetPlanetReplyArgument) (*GetPlanetReply, error) {
+func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *SWAPI_Swapi_GetPlanetReplyArgument) (*GetPlanetReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.GetPlanetReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.GetPlanetReply", slog.Any("message_args", s.logvalue_Swapi_GetPlanetReplyArgument(req)))
 	type localValueType struct {
@@ -2051,7 +2018,7 @@ func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *Swapi_Get
 			residents *People
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetPlanetReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetPlanetReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -2108,7 +2075,7 @@ func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *Swapi_Get
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Planet_PlanetService_GetPlanet, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -2152,7 +2119,7 @@ func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *Swapi_Get
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_FilmsArgument{}
+				args := &SWAPI_Swapi_FilmsArgument{}
 				// { name: "ids", by: "p.film_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -2215,7 +2182,7 @@ func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *Swapi_Get
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Planet_PlanetService_GetPlanet, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -2259,7 +2226,7 @@ func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *Swapi_Get
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_PeopleArgument{}
+				args := &SWAPI_Swapi_PeopleArgument{}
 				// { name: "ids", by: "p.resident_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -2348,9 +2315,10 @@ func (s *SWAPI) resolve_Swapi_GetPlanetReply(ctx context.Context, req *Swapi_Get
 }
 
 // resolve_Swapi_GetSpeciesReply resolve "swapi.GetSpeciesReply" message.
-func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *Swapi_GetSpeciesReplyArgument) (*GetSpeciesReply, error) {
+func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *SWAPI_Swapi_GetSpeciesReplyArgument) (*GetSpeciesReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.GetSpeciesReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.GetSpeciesReply", slog.Any("message_args", s.logvalue_Swapi_GetSpeciesReplyArgument(req)))
 	type localValueType struct {
@@ -2362,7 +2330,7 @@ func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *Swapi_Ge
 			s   *speciespb.Species
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetSpeciesReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetSpeciesReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -2419,7 +2387,7 @@ func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *Swapi_Ge
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Species_SpeciesService_GetSpecies, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -2463,7 +2431,7 @@ func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *Swapi_Ge
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_FilmsArgument{}
+				args := &SWAPI_Swapi_FilmsArgument{}
 				// { name: "ids", by: "s.film_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -2526,7 +2494,7 @@ func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *Swapi_Ge
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Species_SpeciesService_GetSpecies, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -2570,7 +2538,7 @@ func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *Swapi_Ge
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_PeopleArgument{}
+				args := &SWAPI_Swapi_PeopleArgument{}
 				// { name: "ids", by: "s.person_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -2659,9 +2627,10 @@ func (s *SWAPI) resolve_Swapi_GetSpeciesReply(ctx context.Context, req *Swapi_Ge
 }
 
 // resolve_Swapi_GetStarshipReply resolve "swapi.GetStarshipReply" message.
-func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *Swapi_GetStarshipReplyArgument) (*GetStarshipReply, error) {
+func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *SWAPI_Swapi_GetStarshipReplyArgument) (*GetStarshipReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.GetStarshipReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.GetStarshipReply", slog.Any("message_args", s.logvalue_Swapi_GetStarshipReplyArgument(req)))
 	type localValueType struct {
@@ -2673,7 +2642,7 @@ func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *Swapi_G
 			s   *starshippb.Starship
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetStarshipReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetStarshipReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -2730,7 +2699,7 @@ func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *Swapi_G
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Starship_StarshipService_GetStarship, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -2774,7 +2743,7 @@ func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *Swapi_G
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_FilmsArgument{}
+				args := &SWAPI_Swapi_FilmsArgument{}
 				// { name: "ids", by: "s.film_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -2837,7 +2806,7 @@ func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *Swapi_G
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Starship_StarshipService_GetStarship, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -2881,7 +2850,7 @@ func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *Swapi_G
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_PeopleArgument{}
+				args := &SWAPI_Swapi_PeopleArgument{}
 				// { name: "ids", by: "s.pilot_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -2970,9 +2939,10 @@ func (s *SWAPI) resolve_Swapi_GetStarshipReply(ctx context.Context, req *Swapi_G
 }
 
 // resolve_Swapi_GetVehicleReply resolve "swapi.GetVehicleReply" message.
-func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *Swapi_GetVehicleReplyArgument) (*GetVehicleReply, error) {
+func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *SWAPI_Swapi_GetVehicleReplyArgument) (*GetVehicleReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.GetVehicleReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.GetVehicleReply", slog.Any("message_args", s.logvalue_Swapi_GetVehicleReplyArgument(req)))
 	type localValueType struct {
@@ -2984,7 +2954,7 @@ func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *Swapi_Ge
 			v   *vehiclepb.Vehicle
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.GetVehicleReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.GetVehicleReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3041,7 +3011,7 @@ func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *Swapi_Ge
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Vehicle_VehicleService_GetVehicle, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -3085,7 +3055,7 @@ func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *Swapi_Ge
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_FilmsArgument{}
+				args := &SWAPI_Swapi_FilmsArgument{}
 				// { name: "ids", by: "v.film_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -3148,7 +3118,7 @@ func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *Swapi_Ge
 		}); err != nil {
 			if err := s.errorHandler(ctx1, SWAPI_DependentMethod_Swapi_Vehicle_VehicleService_GetVehicle, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, err
+				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -3192,7 +3162,7 @@ func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *Swapi_Ge
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &Swapi_PeopleArgument{}
+				args := &SWAPI_Swapi_PeopleArgument{}
 				// { name: "ids", by: "v.pilot_ids" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 					Value:             value,
@@ -3281,9 +3251,10 @@ func (s *SWAPI) resolve_Swapi_GetVehicleReply(ctx context.Context, req *Swapi_Ge
 }
 
 // resolve_Swapi_ListFilmsReply resolve "swapi.ListFilmsReply" message.
-func (s *SWAPI) resolve_Swapi_ListFilmsReply(ctx context.Context, req *Swapi_ListFilmsReplyArgument) (*ListFilmsReply, error) {
+func (s *SWAPI) resolve_Swapi_ListFilmsReply(ctx context.Context, req *SWAPI_Swapi_ListFilmsReplyArgument) (*ListFilmsReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.ListFilmsReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.ListFilmsReply", slog.Any("message_args", s.logvalue_Swapi_ListFilmsReplyArgument(req)))
 	type localValueType struct {
@@ -3292,7 +3263,7 @@ func (s *SWAPI) resolve_Swapi_ListFilmsReply(ctx context.Context, req *Swapi_Lis
 			f *Films
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ListFilmsReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ListFilmsReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3317,7 +3288,7 @@ func (s *SWAPI) resolve_Swapi_ListFilmsReply(ctx context.Context, req *Swapi_Lis
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Swapi_FilmsArgument{}
+			args := &SWAPI_Swapi_FilmsArgument{}
 			// { name: "ids", by: "$.ids" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 				Value:             value,
@@ -3365,9 +3336,10 @@ func (s *SWAPI) resolve_Swapi_ListFilmsReply(ctx context.Context, req *Swapi_Lis
 }
 
 // resolve_Swapi_ListPeopleReply resolve "swapi.ListPeopleReply" message.
-func (s *SWAPI) resolve_Swapi_ListPeopleReply(ctx context.Context, req *Swapi_ListPeopleReplyArgument) (*ListPeopleReply, error) {
+func (s *SWAPI) resolve_Swapi_ListPeopleReply(ctx context.Context, req *SWAPI_Swapi_ListPeopleReplyArgument) (*ListPeopleReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.ListPeopleReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.ListPeopleReply", slog.Any("message_args", s.logvalue_Swapi_ListPeopleReplyArgument(req)))
 	type localValueType struct {
@@ -3376,7 +3348,7 @@ func (s *SWAPI) resolve_Swapi_ListPeopleReply(ctx context.Context, req *Swapi_Li
 			p *People
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ListPeopleReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ListPeopleReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3401,7 +3373,7 @@ func (s *SWAPI) resolve_Swapi_ListPeopleReply(ctx context.Context, req *Swapi_Li
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Swapi_PeopleArgument{}
+			args := &SWAPI_Swapi_PeopleArgument{}
 			// { name: "ids", by: "$.ids" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 				Value:             value,
@@ -3449,9 +3421,10 @@ func (s *SWAPI) resolve_Swapi_ListPeopleReply(ctx context.Context, req *Swapi_Li
 }
 
 // resolve_Swapi_ListPlanetsReply resolve "swapi.ListPlanetsReply" message.
-func (s *SWAPI) resolve_Swapi_ListPlanetsReply(ctx context.Context, req *Swapi_ListPlanetsReplyArgument) (*ListPlanetsReply, error) {
+func (s *SWAPI) resolve_Swapi_ListPlanetsReply(ctx context.Context, req *SWAPI_Swapi_ListPlanetsReplyArgument) (*ListPlanetsReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.ListPlanetsReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.ListPlanetsReply", slog.Any("message_args", s.logvalue_Swapi_ListPlanetsReplyArgument(req)))
 	type localValueType struct {
@@ -3460,7 +3433,7 @@ func (s *SWAPI) resolve_Swapi_ListPlanetsReply(ctx context.Context, req *Swapi_L
 			p *Planets
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ListPlanetsReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ListPlanetsReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3485,7 +3458,7 @@ func (s *SWAPI) resolve_Swapi_ListPlanetsReply(ctx context.Context, req *Swapi_L
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Swapi_PlanetsArgument{}
+			args := &SWAPI_Swapi_PlanetsArgument{}
 			// { name: "ids", by: "$.ids" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 				Value:             value,
@@ -3533,9 +3506,10 @@ func (s *SWAPI) resolve_Swapi_ListPlanetsReply(ctx context.Context, req *Swapi_L
 }
 
 // resolve_Swapi_ListSpeciesReply resolve "swapi.ListSpeciesReply" message.
-func (s *SWAPI) resolve_Swapi_ListSpeciesReply(ctx context.Context, req *Swapi_ListSpeciesReplyArgument) (*ListSpeciesReply, error) {
+func (s *SWAPI) resolve_Swapi_ListSpeciesReply(ctx context.Context, req *SWAPI_Swapi_ListSpeciesReplyArgument) (*ListSpeciesReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.ListSpeciesReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.ListSpeciesReply", slog.Any("message_args", s.logvalue_Swapi_ListSpeciesReplyArgument(req)))
 	type localValueType struct {
@@ -3544,7 +3518,7 @@ func (s *SWAPI) resolve_Swapi_ListSpeciesReply(ctx context.Context, req *Swapi_L
 			s *SpeciesList
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ListSpeciesReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ListSpeciesReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3569,7 +3543,7 @@ func (s *SWAPI) resolve_Swapi_ListSpeciesReply(ctx context.Context, req *Swapi_L
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Swapi_SpeciesListArgument{}
+			args := &SWAPI_Swapi_SpeciesListArgument{}
 			// { name: "ids", by: "$.ids" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 				Value:             value,
@@ -3617,9 +3591,10 @@ func (s *SWAPI) resolve_Swapi_ListSpeciesReply(ctx context.Context, req *Swapi_L
 }
 
 // resolve_Swapi_ListStarshipsReply resolve "swapi.ListStarshipsReply" message.
-func (s *SWAPI) resolve_Swapi_ListStarshipsReply(ctx context.Context, req *Swapi_ListStarshipsReplyArgument) (*ListStarshipsReply, error) {
+func (s *SWAPI) resolve_Swapi_ListStarshipsReply(ctx context.Context, req *SWAPI_Swapi_ListStarshipsReplyArgument) (*ListStarshipsReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.ListStarshipsReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.ListStarshipsReply", slog.Any("message_args", s.logvalue_Swapi_ListStarshipsReplyArgument(req)))
 	type localValueType struct {
@@ -3628,7 +3603,7 @@ func (s *SWAPI) resolve_Swapi_ListStarshipsReply(ctx context.Context, req *Swapi
 			s *Starships
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ListStarshipsReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ListStarshipsReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3653,7 +3628,7 @@ func (s *SWAPI) resolve_Swapi_ListStarshipsReply(ctx context.Context, req *Swapi
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Swapi_StarshipsArgument{}
+			args := &SWAPI_Swapi_StarshipsArgument{}
 			// { name: "ids", by: "$.ids" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 				Value:             value,
@@ -3701,9 +3676,10 @@ func (s *SWAPI) resolve_Swapi_ListStarshipsReply(ctx context.Context, req *Swapi
 }
 
 // resolve_Swapi_ListVehiclesReply resolve "swapi.ListVehiclesReply" message.
-func (s *SWAPI) resolve_Swapi_ListVehiclesReply(ctx context.Context, req *Swapi_ListVehiclesReplyArgument) (*ListVehiclesReply, error) {
+func (s *SWAPI) resolve_Swapi_ListVehiclesReply(ctx context.Context, req *SWAPI_Swapi_ListVehiclesReplyArgument) (*ListVehiclesReply, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.ListVehiclesReply")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.ListVehiclesReply", slog.Any("message_args", s.logvalue_Swapi_ListVehiclesReplyArgument(req)))
 	type localValueType struct {
@@ -3712,7 +3688,7 @@ func (s *SWAPI) resolve_Swapi_ListVehiclesReply(ctx context.Context, req *Swapi_
 			v *Vehicles
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.ListVehiclesReplyArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.ListVehiclesReplyArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3737,7 +3713,7 @@ func (s *SWAPI) resolve_Swapi_ListVehiclesReply(ctx context.Context, req *Swapi_
 			return nil
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
-			args := &Swapi_VehiclesArgument{}
+			args := &SWAPI_Swapi_VehiclesArgument{}
 			// { name: "ids", by: "$.ids" }
 			if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 				Value:             value,
@@ -3785,9 +3761,10 @@ func (s *SWAPI) resolve_Swapi_ListVehiclesReply(ctx context.Context, req *Swapi_
 }
 
 // resolve_Swapi_People resolve "swapi.People" message.
-func (s *SWAPI) resolve_Swapi_People(ctx context.Context, req *Swapi_PeopleArgument) (*People, error) {
+func (s *SWAPI) resolve_Swapi_People(ctx context.Context, req *SWAPI_Swapi_PeopleArgument) (*People, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.People")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.People", slog.Any("message_args", s.logvalue_Swapi_PeopleArgument(req)))
 	type localValueType struct {
@@ -3796,7 +3773,7 @@ func (s *SWAPI) resolve_Swapi_People(ctx context.Context, req *Swapi_PeopleArgum
 			res *personpb.ListPeopleReply
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.PeopleArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.PeopleArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3841,7 +3818,7 @@ func (s *SWAPI) resolve_Swapi_People(ctx context.Context, req *Swapi_PeopleArgum
 	}); err != nil {
 		if err := s.errorHandler(ctx, SWAPI_DependentMethod_Swapi_Person_PersonService_ListPeople, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 		}
 	}
 
@@ -3876,9 +3853,10 @@ func (s *SWAPI) resolve_Swapi_People(ctx context.Context, req *Swapi_PeopleArgum
 }
 
 // resolve_Swapi_Planets resolve "swapi.Planets" message.
-func (s *SWAPI) resolve_Swapi_Planets(ctx context.Context, req *Swapi_PlanetsArgument) (*Planets, error) {
+func (s *SWAPI) resolve_Swapi_Planets(ctx context.Context, req *SWAPI_Swapi_PlanetsArgument) (*Planets, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.Planets")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.Planets", slog.Any("message_args", s.logvalue_Swapi_PlanetsArgument(req)))
 	type localValueType struct {
@@ -3887,7 +3865,7 @@ func (s *SWAPI) resolve_Swapi_Planets(ctx context.Context, req *Swapi_PlanetsArg
 			res *planetpb.ListPlanetsReply
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.PlanetsArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.PlanetsArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -3932,7 +3910,7 @@ func (s *SWAPI) resolve_Swapi_Planets(ctx context.Context, req *Swapi_PlanetsArg
 	}); err != nil {
 		if err := s.errorHandler(ctx, SWAPI_DependentMethod_Swapi_Planet_PlanetService_ListPlanets, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 		}
 	}
 
@@ -3967,9 +3945,10 @@ func (s *SWAPI) resolve_Swapi_Planets(ctx context.Context, req *Swapi_PlanetsArg
 }
 
 // resolve_Swapi_SpeciesList resolve "swapi.SpeciesList" message.
-func (s *SWAPI) resolve_Swapi_SpeciesList(ctx context.Context, req *Swapi_SpeciesListArgument) (*SpeciesList, error) {
+func (s *SWAPI) resolve_Swapi_SpeciesList(ctx context.Context, req *SWAPI_Swapi_SpeciesListArgument) (*SpeciesList, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.SpeciesList")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.SpeciesList", slog.Any("message_args", s.logvalue_Swapi_SpeciesListArgument(req)))
 	type localValueType struct {
@@ -3978,7 +3957,7 @@ func (s *SWAPI) resolve_Swapi_SpeciesList(ctx context.Context, req *Swapi_Specie
 			res *speciespb.ListSpeciesReply
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.SpeciesListArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.SpeciesListArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -4023,7 +4002,7 @@ func (s *SWAPI) resolve_Swapi_SpeciesList(ctx context.Context, req *Swapi_Specie
 	}); err != nil {
 		if err := s.errorHandler(ctx, SWAPI_DependentMethod_Swapi_Species_SpeciesService_ListSpecies, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 		}
 	}
 
@@ -4058,9 +4037,10 @@ func (s *SWAPI) resolve_Swapi_SpeciesList(ctx context.Context, req *Swapi_Specie
 }
 
 // resolve_Swapi_Starships resolve "swapi.Starships" message.
-func (s *SWAPI) resolve_Swapi_Starships(ctx context.Context, req *Swapi_StarshipsArgument) (*Starships, error) {
+func (s *SWAPI) resolve_Swapi_Starships(ctx context.Context, req *SWAPI_Swapi_StarshipsArgument) (*Starships, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.Starships")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.Starships", slog.Any("message_args", s.logvalue_Swapi_StarshipsArgument(req)))
 	type localValueType struct {
@@ -4069,7 +4049,7 @@ func (s *SWAPI) resolve_Swapi_Starships(ctx context.Context, req *Swapi_Starship
 			res *starshippb.ListStarshipsReply
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.StarshipsArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.StarshipsArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -4114,7 +4094,7 @@ func (s *SWAPI) resolve_Swapi_Starships(ctx context.Context, req *Swapi_Starship
 	}); err != nil {
 		if err := s.errorHandler(ctx, SWAPI_DependentMethod_Swapi_Starship_StarshipService_ListStarships, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 		}
 	}
 
@@ -4149,9 +4129,10 @@ func (s *SWAPI) resolve_Swapi_Starships(ctx context.Context, req *Swapi_Starship
 }
 
 // resolve_Swapi_Vehicles resolve "swapi.Vehicles" message.
-func (s *SWAPI) resolve_Swapi_Vehicles(ctx context.Context, req *Swapi_VehiclesArgument) (*Vehicles, error) {
+func (s *SWAPI) resolve_Swapi_Vehicles(ctx context.Context, req *SWAPI_Swapi_VehiclesArgument) (*Vehicles, error) {
 	ctx, span := s.tracer.Start(ctx, "swapi.Vehicles")
 	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolve swapi.Vehicles", slog.Any("message_args", s.logvalue_Swapi_VehiclesArgument(req)))
 	type localValueType struct {
@@ -4160,7 +4141,7 @@ func (s *SWAPI) resolve_Swapi_Vehicles(ctx context.Context, req *Swapi_VehiclesA
 			res *vehiclepb.ListVehiclesReply
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.envOpts, s.celPlugins, "grpc.federation.private.VehiclesArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, false, "grpc.federation.private.VehiclesArgument", req)}
 	defer func() {
 		if err := value.Close(ctx); err != nil {
 			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
@@ -4205,7 +4186,7 @@ func (s *SWAPI) resolve_Swapi_Vehicles(ctx context.Context, req *Swapi_VehiclesA
 	}); err != nil {
 		if err := s.errorHandler(ctx, SWAPI_DependentMethod_Swapi_Vehicle_VehicleService_ListVehicles, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, err
+			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 		}
 	}
 
@@ -4642,7 +4623,7 @@ func (s *SWAPI) logvalue_Swapi_Films(v *Films) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_FilmsArgument(v *Swapi_FilmsArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_FilmsArgument(v *SWAPI_Swapi_FilmsArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4665,7 +4646,7 @@ func (s *SWAPI) logvalue_Swapi_GetFilmReply(v *GetFilmReply) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_GetFilmReplyArgument(v *Swapi_GetFilmReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_GetFilmReplyArgument(v *SWAPI_Swapi_GetFilmReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4687,7 +4668,7 @@ func (s *SWAPI) logvalue_Swapi_GetPersonReply(v *GetPersonReply) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_GetPersonReplyArgument(v *Swapi_GetPersonReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_GetPersonReplyArgument(v *SWAPI_Swapi_GetPersonReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4707,7 +4688,7 @@ func (s *SWAPI) logvalue_Swapi_GetPlanetReply(v *GetPlanetReply) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_GetPlanetReplyArgument(v *Swapi_GetPlanetReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_GetPlanetReplyArgument(v *SWAPI_Swapi_GetPlanetReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4727,7 +4708,7 @@ func (s *SWAPI) logvalue_Swapi_GetSpeciesReply(v *GetSpeciesReply) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_GetSpeciesReplyArgument(v *Swapi_GetSpeciesReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_GetSpeciesReplyArgument(v *SWAPI_Swapi_GetSpeciesReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4747,7 +4728,7 @@ func (s *SWAPI) logvalue_Swapi_GetStarshipReply(v *GetStarshipReply) slog.Value 
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_GetStarshipReplyArgument(v *Swapi_GetStarshipReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_GetStarshipReplyArgument(v *SWAPI_Swapi_GetStarshipReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4767,7 +4748,7 @@ func (s *SWAPI) logvalue_Swapi_GetVehicleReply(v *GetVehicleReply) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_GetVehicleReplyArgument(v *Swapi_GetVehicleReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_GetVehicleReplyArgument(v *SWAPI_Swapi_GetVehicleReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4785,7 +4766,7 @@ func (s *SWAPI) logvalue_Swapi_ListFilmsReply(v *ListFilmsReply) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_ListFilmsReplyArgument(v *Swapi_ListFilmsReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_ListFilmsReplyArgument(v *SWAPI_Swapi_ListFilmsReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4803,7 +4784,7 @@ func (s *SWAPI) logvalue_Swapi_ListPeopleReply(v *ListPeopleReply) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_ListPeopleReplyArgument(v *Swapi_ListPeopleReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_ListPeopleReplyArgument(v *SWAPI_Swapi_ListPeopleReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4821,7 +4802,7 @@ func (s *SWAPI) logvalue_Swapi_ListPlanetsReply(v *ListPlanetsReply) slog.Value 
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_ListPlanetsReplyArgument(v *Swapi_ListPlanetsReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_ListPlanetsReplyArgument(v *SWAPI_Swapi_ListPlanetsReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4839,7 +4820,7 @@ func (s *SWAPI) logvalue_Swapi_ListSpeciesReply(v *ListSpeciesReply) slog.Value 
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_ListSpeciesReplyArgument(v *Swapi_ListSpeciesReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_ListSpeciesReplyArgument(v *SWAPI_Swapi_ListSpeciesReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4857,7 +4838,7 @@ func (s *SWAPI) logvalue_Swapi_ListStarshipsReply(v *ListStarshipsReply) slog.Va
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_ListStarshipsReplyArgument(v *Swapi_ListStarshipsReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_ListStarshipsReplyArgument(v *SWAPI_Swapi_ListStarshipsReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4875,7 +4856,7 @@ func (s *SWAPI) logvalue_Swapi_ListVehiclesReply(v *ListVehiclesReply) slog.Valu
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_ListVehiclesReplyArgument(v *Swapi_ListVehiclesReplyArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_ListVehiclesReplyArgument(v *SWAPI_Swapi_ListVehiclesReplyArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4893,7 +4874,7 @@ func (s *SWAPI) logvalue_Swapi_People(v *People) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_PeopleArgument(v *Swapi_PeopleArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_PeopleArgument(v *SWAPI_Swapi_PeopleArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -4995,7 +4976,7 @@ func (s *SWAPI) logvalue_Swapi_Planets(v *Planets) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_PlanetsArgument(v *Swapi_PlanetsArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_PlanetsArgument(v *SWAPI_Swapi_PlanetsArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -5037,7 +5018,7 @@ func (s *SWAPI) logvalue_Swapi_SpeciesList(v *SpeciesList) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_SpeciesListArgument(v *Swapi_SpeciesListArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_SpeciesListArgument(v *SWAPI_Swapi_SpeciesListArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -5118,7 +5099,7 @@ func (s *SWAPI) logvalue_Swapi_Starships(v *Starships) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_StarshipsArgument(v *Swapi_StarshipsArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_StarshipsArgument(v *SWAPI_Swapi_StarshipsArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -5179,7 +5160,7 @@ func (s *SWAPI) logvalue_Swapi_Vehicles(v *Vehicles) slog.Value {
 	)
 }
 
-func (s *SWAPI) logvalue_Swapi_VehiclesArgument(v *Swapi_VehiclesArgument) slog.Value {
+func (s *SWAPI) logvalue_Swapi_VehiclesArgument(v *SWAPI_Swapi_VehiclesArgument) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}
