@@ -1,6 +1,7 @@
 package cel
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -26,36 +27,39 @@ func (lib *EnumLibrary) CompileOptions() []cel.EnvOption {
 	typeT := celtypes.NewTypeParamType("T")
 	typeU := celtypes.NewTypeParamType("U")
 	enumSelector := celtypes.NewOpaqueType(EnumSelectorFQDN, typeT, typeU)
-	opts := []cel.EnvOption{
-		cel.Function("grpc.federation.enum.select",
-			cel.Overload("grpc_federation_enum_select",
+	var opts []cel.EnvOption
+	for _, funcOpts := range [][]cel.EnvOption{
+		BindFunction("grpc.federation.enum.select",
+			OverloadFunc("grpc_federation_enum_select",
 				[]*cel.Type{cel.BoolType, typeT, typeU}, enumSelector,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					ret := &EnumSelector{
-						Cond: bool(values[0].(celtypes.Bool)),
+						Cond: bool(args[0].(celtypes.Bool)),
 					}
-					if sel, ok := values[1].(*EnumSelector); ok {
+					if sel, ok := args[1].(*EnumSelector); ok {
 						ret.True = &EnumSelector_TrueSelector{
 							TrueSelector: sel,
 						}
 					} else {
 						ret.True = &EnumSelector_TrueValue{
-							TrueValue: int32(values[1].(celtypes.Int)),
+							TrueValue: int32(args[1].(celtypes.Int)),
 						}
 					}
-					if sel, ok := values[2].(*EnumSelector); ok {
+					if sel, ok := args[2].(*EnumSelector); ok {
 						ret.False = &EnumSelector_FalseSelector{
 							FalseSelector: sel,
 						}
 					} else {
 						ret.False = &EnumSelector_FalseValue{
-							FalseValue: int32(values[2].(celtypes.Int)),
+							FalseValue: int32(args[2].(celtypes.Int)),
 						}
 					}
 					return ret
-				}),
+				},
 			),
 		),
+	} {
+		opts = append(opts, funcOpts...)
 	}
 	return opts
 }
@@ -111,8 +115,10 @@ func (v *enumValidator) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, 
 	}
 
 	for _, call := range funcCalls {
-		expr1 := v.getArgExpr(call, 1)
-		expr2 := v.getArgExpr(call, 2)
+		// first argument ( index zero ) is context.Context type.
+		// second argument ( index one ) is bool type.
+		expr1 := v.getArgExpr(call, 2)
+		expr2 := v.getArgExpr(call, 3)
 		if expr1 == nil || expr2 == nil {
 			continue
 		}

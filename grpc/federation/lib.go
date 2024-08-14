@@ -81,12 +81,11 @@ func NewExponentialBackOff(cfg *ExponentialBackOffConfig) *BackOff {
 }
 
 type RetryParam[T any] struct {
-	Value             localValue
-	If                string
-	UseContextLibrary bool
-	CacheIndex        int
-	BackOff           *BackOff
-	Body              func() (*T, error)
+	Value      localValue
+	If         string
+	CacheIndex int
+	BackOff    *BackOff
+	Body       func() (*T, error)
 }
 
 func WithRetry[T any](ctx context.Context, param *RetryParam[T]) (*T, error) {
