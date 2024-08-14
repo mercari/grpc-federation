@@ -1,6 +1,7 @@
 package cel
 
 import (
+	"context"
 	"reflect"
 	"time"
 
@@ -185,598 +186,601 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 			types.IntType,
 			types.Int(time.Hour),
 		),
-		cel.Function(
+	}
+	for _, funcOpts := range [][]cel.EnvOption{
+		BindFunction(
 			createTimeName("LOCAL"),
-			cel.Overload(createTimeID("local_location"), []*cel.Type{}, LocationType,
-				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+			OverloadFunc(createTimeID("local_location"), []*cel.Type{}, LocationType,
+				func(_ context.Context, _ ...ref.Val) ref.Val {
 					return &Location{Location: time.Local}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("UTC"),
-			cel.Overload(createTimeID("utc_location"), []*cel.Type{}, LocationType,
-				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+			OverloadFunc(createTimeID("utc_location"), []*cel.Type{}, LocationType,
+				func(_ context.Context, _ ...ref.Val) ref.Val {
 					return &Location{Location: time.UTC}
-				}),
+				},
 			),
 		),
 
 		// Duration functions
-		cel.Function(
+		BindFunction(
 			createTimeName("toDuration"),
-			cel.Overload(createTimeID("to_duration_int_duration"), []*cel.Type{cel.IntType}, cel.DurationType,
-				cel.UnaryBinding(func(v ref.Val) ref.Val {
-					return types.Duration{Duration: time.Duration(v.(types.Int))}
-				}),
+			OverloadFunc(createTimeID("to_duration_int_duration"), []*cel.Type{cel.IntType}, cel.DurationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Duration{Duration: time.Duration(args[0].(types.Int))}
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("parseDuration"),
-			cel.Overload(createTimeID("parse_duration_string_duration"), []*cel.Type{cel.StringType}, cel.DurationType,
-				cel.UnaryBinding(func(s ref.Val) ref.Val {
-					d, err := time.ParseDuration(string(s.(types.String)))
+			OverloadFunc(createTimeID("parse_duration_string_duration"), []*cel.Type{cel.StringType}, cel.DurationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					d, err := time.ParseDuration(string(args[0].(types.String)))
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
 					return types.Duration{Duration: d}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("since"),
-			cel.Overload(createTimeID("since_timestamp_duration"), []*cel.Type{cel.TimestampType}, cel.DurationType,
-				cel.UnaryBinding(func(t ref.Val) ref.Val {
+			OverloadFunc(createTimeID("since_timestamp_duration"), []*cel.Type{cel.TimestampType}, cel.DurationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Duration{
-						Duration: time.Since(t.(types.Timestamp).Time),
+						Duration: time.Since(args[0].(types.Timestamp).Time),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("until"),
-			cel.Overload(createTimeID("until_timestamp_duration"), []*cel.Type{cel.TimestampType}, cel.DurationType,
-				cel.UnaryBinding(func(t ref.Val) ref.Val {
+			OverloadFunc(createTimeID("until_timestamp_duration"), []*cel.Type{cel.TimestampType}, cel.DurationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Duration{
-						Duration: time.Until(t.(types.Timestamp).Time),
+						Duration: time.Until(args[0].(types.Timestamp).Time),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"abs",
-			cel.MemberOverload(createTimeID("abs_duration_duration"), []*cel.Type{cel.DurationType}, cel.DurationType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("abs_duration_duration"), cel.DurationType, []*cel.Type{}, cel.DurationType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Duration{
 						Duration: self.(types.Duration).Duration.Abs(),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"hours",
-			cel.MemberOverload(createTimeID("hours_duration_double"), []*cel.Type{cel.DurationType}, cel.DoubleType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("hours_duration_double"), cel.DurationType, []*cel.Type{}, cel.DoubleType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Double(self.(types.Duration).Duration.Hours())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"microseconds",
-			cel.MemberOverload(createTimeID("microseconds_duration_int"), []*cel.Type{cel.DurationType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("microseconds_duration_int"), cel.DurationType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Duration).Duration.Microseconds())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"milliseconds",
-			cel.MemberOverload(createTimeID("milliseconds_duration_int"), []*cel.Type{cel.DurationType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("milliseconds_duration_int"), cel.DurationType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Duration).Duration.Milliseconds())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"minutes",
-			cel.MemberOverload(createTimeID("minutes_duration_int"), []*cel.Type{cel.DurationType}, cel.DoubleType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("minutes_duration_int"), cel.DurationType, []*cel.Type{}, cel.DoubleType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Double(self.(types.Duration).Duration.Minutes())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"nanoseconds",
-			cel.MemberOverload(createTimeID("nanoseconds_duration_int"), []*cel.Type{cel.DurationType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("nanoseconds_duration_int"), cel.DurationType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Duration).Duration.Nanoseconds())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"round",
-			cel.MemberOverload(createTimeID("round_duration_int_duration"), []*cel.Type{cel.DurationType, cel.IntType}, cel.DurationType,
-				cel.BinaryBinding(func(self, m ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("round_duration_int_duration"), cel.DurationType, []*cel.Type{cel.IntType}, cel.DurationType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Duration{
-						Duration: self.(types.Duration).Duration.Round(time.Duration(m.(types.Int))),
+						Duration: self.(types.Duration).Duration.Round(time.Duration(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
-			cel.MemberOverload(createTimeID("round_duration_duration_duration"), []*cel.Type{cel.DurationType, cel.DurationType}, cel.DurationType,
-				cel.BinaryBinding(func(self, m ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("round_duration_duration_duration"), cel.DurationType, []*cel.Type{cel.DurationType}, cel.DurationType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Duration{
-						Duration: self.(types.Duration).Duration.Round(m.(types.Duration).Duration),
+						Duration: self.(types.Duration).Duration.Round(args[0].(types.Duration).Duration),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"seconds",
-			cel.MemberOverload(createTimeID("seconds_duration_int"), []*cel.Type{cel.DurationType}, cel.DoubleType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("seconds_duration_int"), cel.DurationType, []*cel.Type{}, cel.DoubleType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Double(self.(types.Duration).Duration.Seconds())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"string",
-			cel.MemberOverload(createTimeID("string_duration_string"), []*cel.Type{cel.DurationType}, cel.StringType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("string_duration_string"), cel.DurationType, []*cel.Type{}, cel.StringType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.String(self.(types.Duration).Duration.String())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"truncate",
-			cel.MemberOverload(createTimeID("truncate_duration_int_duration"), []*cel.Type{cel.DurationType, cel.IntType}, cel.DurationType,
-				cel.BinaryBinding(func(self, m ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("truncate_duration_int_duration"), cel.DurationType, []*cel.Type{cel.IntType}, cel.DurationType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Duration{
-						Duration: self.(types.Duration).Duration.Truncate(time.Duration(m.(types.Int))),
+						Duration: self.(types.Duration).Duration.Truncate(time.Duration(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
-			cel.MemberOverload(createTimeID("truncate_duration_duration_duration"), []*cel.Type{cel.DurationType, cel.DurationType}, cel.DurationType,
-				cel.BinaryBinding(func(self, m ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("truncate_duration_duration_duration"), cel.DurationType, []*cel.Type{cel.DurationType}, cel.DurationType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Duration{
-						Duration: self.(types.Duration).Duration.Truncate(m.(types.Duration).Duration),
+						Duration: self.(types.Duration).Duration.Truncate(args[0].(types.Duration).Duration),
 					}
-				}),
+				},
 			),
 		),
 
 		// Location functions
-		cel.Function(
+		BindFunction(
 			createTimeName("fixedZone"),
-			cel.Overload(createTimeID("fixed_zone_string_int_location"), []*cel.Type{cel.StringType, cel.IntType}, LocationType,
-				cel.BinaryBinding(func(name, offset ref.Val) ref.Val {
-					loc := time.FixedZone(string(name.(types.String)), int(offset.(types.Int)))
+			OverloadFunc(createTimeID("fixed_zone_string_int_location"), []*cel.Type{cel.StringType, cel.IntType}, LocationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					loc := time.FixedZone(string(args[0].(types.String)), int(args[1].(types.Int)))
 					return &Location{loc}
-				}),
+				},
 			),
-			cel.Overload(createTimeID("fixed_zone_string_double_location"), []*cel.Type{cel.StringType, cel.DoubleType}, LocationType,
-				cel.BinaryBinding(func(name, offset ref.Val) ref.Val {
-					loc := time.FixedZone(string(name.(types.String)), int(offset.(types.Double)))
+			OverloadFunc(createTimeID("fixed_zone_string_double_location"), []*cel.Type{cel.StringType, cel.DoubleType}, LocationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					loc := time.FixedZone(string(args[0].(types.String)), int(args[1].(types.Double)))
 					return &Location{loc}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("loadLocation"),
-			cel.Overload(createTimeID("load_location_string_location"), []*cel.Type{cel.StringType}, LocationType,
-				cel.UnaryBinding(func(name ref.Val) ref.Val {
-					loc, err := time.LoadLocation(string(name.(types.String)))
+			OverloadFunc(createTimeID("load_location_string_location"), []*cel.Type{cel.StringType}, LocationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					loc, err := time.LoadLocation(string(args[0].(types.String)))
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
 					return &Location{loc}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("loadLocationFromTZData"),
-			cel.Overload(createTimeID("load_location_from_tz_data_string_bytes_location"), []*cel.Type{cel.StringType, cel.BytesType}, LocationType,
-				cel.BinaryBinding(func(name, data ref.Val) ref.Val {
-					loc, err := time.LoadLocationFromTZData(string(name.(types.String)), []byte(data.(types.Bytes)))
+			OverloadFunc(createTimeID("load_location_from_tz_data_string_bytes_location"), []*cel.Type{cel.StringType, cel.BytesType}, LocationType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					loc, err := time.LoadLocationFromTZData(string(args[0].(types.String)), []byte(args[1].(types.Bytes)))
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
 					return &Location{loc}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"string",
-			cel.MemberOverload(createTimeID("string_location_string"), []*cel.Type{LocationType}, cel.StringType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("string_location_string"), LocationType, []*cel.Type{}, cel.StringType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.String(self.(*Location).String())
-				}),
+				},
 			),
 		),
 
 		// Timestamp functions
-		cel.Function(
+		BindFunction(
 			createTimeName("date"),
-			cel.Overload(
+			OverloadFunc(
 				createTimeID("date_int_int_int_int_int_int_int_location_timestamp"),
 				[]*cel.Type{cel.IntType, cel.IntType, cel.IntType, cel.IntType, cel.IntType, cel.IntType, cel.IntType, LocationType},
 				cel.TimestampType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Timestamp{
 						Time: time.Date(
-							int(values[0].(types.Int)),
-							time.Month(values[1].(types.Int)),
-							int(values[2].(types.Int)),
-							int(values[3].(types.Int)),
-							int(values[4].(types.Int)),
-							int(values[5].(types.Int)),
-							int(values[6].(types.Int)),
-							values[7].(*Location).Location,
+							int(args[0].(types.Int)),
+							time.Month(args[1].(types.Int)),
+							int(args[2].(types.Int)),
+							int(args[3].(types.Int)),
+							int(args[4].(types.Int)),
+							int(args[5].(types.Int)),
+							int(args[6].(types.Int)),
+							args[7].(*Location).Location,
 						),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("now"),
-			cel.Overload(createTimeID("now_timestamp"), nil, cel.TimestampType,
-				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+			OverloadFunc(createTimeID("now_timestamp"), nil, cel.TimestampType,
+				func(_ context.Context, _ ...ref.Val) ref.Val {
 					return types.Timestamp{Time: time.Now()}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("parse"),
-			cel.Overload(createTimeID("parse_string_string_timestamp"), []*cel.Type{cel.StringType, cel.StringType}, cel.TimestampType,
-				cel.BinaryBinding(func(layout, value ref.Val) ref.Val {
-					t, err := time.Parse(string(layout.(types.String)), string(value.(types.String)))
+			OverloadFunc(createTimeID("parse_string_string_timestamp"), []*cel.Type{cel.StringType, cel.StringType}, cel.TimestampType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					t, err := time.Parse(string(args[0].(types.String)), string(args[1].(types.String)))
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
 					return types.Timestamp{Time: t}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("parseInLocation"),
-			cel.Overload(createTimeID("parse_in_location_string_string_location_timestamp"), []*cel.Type{cel.StringType, cel.StringType, LocationType}, cel.TimestampType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					t, err := time.ParseInLocation(string(values[0].(types.String)), string(values[1].(types.String)), values[2].(*Location).Location)
+			OverloadFunc(createTimeID("parse_in_location_string_string_location_timestamp"), []*cel.Type{cel.StringType, cel.StringType, LocationType}, cel.TimestampType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					t, err := time.ParseInLocation(string(args[0].(types.String)), string(args[1].(types.String)), args[2].(*Location).Location)
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
 					return types.Timestamp{Time: t}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("unix"),
-			cel.Overload(createTimeID("unix_int_int_timestamp"), []*cel.Type{cel.IntType, cel.IntType}, cel.TimestampType,
-				cel.BinaryBinding(func(sec, nsec ref.Val) ref.Val {
+			OverloadFunc(createTimeID("unix_int_int_timestamp"), []*cel.Type{cel.IntType, cel.IntType}, cel.TimestampType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: time.Unix(int64(sec.(types.Int)), int64(nsec.(types.Int))),
+						Time: time.Unix(int64(args[0].(types.Int)), int64(args[1].(types.Int))),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("unixMicro"),
-			cel.Overload(createTimeID("unix_micro_int_timestamp"), []*cel.Type{cel.IntType}, cel.TimestampType,
-				cel.UnaryBinding(func(usec ref.Val) ref.Val {
+			OverloadFunc(createTimeID("unix_micro_int_timestamp"), []*cel.Type{cel.IntType}, cel.TimestampType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: time.UnixMicro(int64(usec.(types.Int))),
+						Time: time.UnixMicro(int64(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createTimeName("unixMilli"),
-			cel.Overload(createTimeID("unix_milli_int_timestamp"), []*cel.Type{cel.IntType}, cel.TimestampType,
-				cel.UnaryBinding(func(msec ref.Val) ref.Val {
+			OverloadFunc(createTimeID("unix_milli_int_timestamp"), []*cel.Type{cel.IntType}, cel.TimestampType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: time.UnixMilli(int64(msec.(types.Int))),
+						Time: time.UnixMilli(int64(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"add",
-			cel.MemberOverload(createTimeID("add_timestamp_int_timestamp"), []*cel.Type{cel.TimestampType, cel.IntType}, cel.TimestampType,
-				cel.BinaryBinding(func(self, d ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("add_timestamp_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Add(time.Duration(d.(types.Int))),
+						Time: self.(types.Timestamp).Time.Add(time.Duration(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
-			cel.MemberOverload(createTimeID("add_timestamp_duration_timestamp"), []*cel.Type{cel.TimestampType, cel.DurationType}, cel.TimestampType,
-				cel.BinaryBinding(func(self, d ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("add_timestamp_duration_timestamp"), cel.TimestampType, []*cel.Type{cel.DurationType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Add(d.(types.Duration).Duration),
+						Time: self.(types.Timestamp).Time.Add(args[0].(types.Duration).Duration),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"addDate",
-			cel.MemberOverload(createTimeID("add_date_timestamp_int_int_int_timestamp"), []*cel.Type{cel.TimestampType, cel.IntType, cel.IntType, cel.IntType}, cel.TimestampType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					self := values[0].(types.Timestamp)
+			MemberOverloadFunc(createTimeID("add_date_timestamp_int_int_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType, cel.IntType, cel.IntType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.AddDate(int(values[1].(types.Int)), int(values[2].(types.Int)), int(values[3].(types.Int))),
+						Time: self.(types.Timestamp).Time.AddDate(int(args[0].(types.Int)), int(args[1].(types.Int)), int(args[2].(types.Int))),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"after",
-			cel.MemberOverload(createTimeID("after_timestamp_timestamp_bool"), []*cel.Type{cel.TimestampType, cel.TimestampType}, cel.BoolType,
-				cel.BinaryBinding(func(self, u ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.After(u.(types.Timestamp).Time))
-				}),
+			MemberOverloadFunc(createTimeID("after_timestamp_timestamp_bool"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.Bool(self.(types.Timestamp).Time.After(args[0].(types.Timestamp).Time))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"appendFormat",
-			cel.MemberOverload(createTimeID("append_format_timestamp_string_string_bytes"), []*cel.Type{cel.TimestampType, cel.StringType, cel.StringType}, cel.BytesType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("append_format_timestamp_string_string_bytes"), cel.TimestampType, []*cel.Type{cel.StringType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Bytes(
-						values[0].(types.Timestamp).Time.AppendFormat(
-							[]byte(values[1].(types.String)),
-							string(values[2].(types.String)),
+						self.(types.Timestamp).Time.AppendFormat(
+							[]byte(args[0].(types.String)),
+							string(args[1].(types.String)),
 						),
 					)
-				}),
+				},
 			),
-			cel.MemberOverload(createTimeID("append_format_timestamp_bytes_string_bytes"), []*cel.Type{cel.TimestampType, cel.BytesType, cel.StringType}, cel.BytesType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("append_format_timestamp_bytes_string_bytes"), cel.TimestampType, []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Bytes(
-						values[0].(types.Timestamp).Time.AppendFormat(
-							[]byte(values[1].(types.Bytes)),
-							string(values[2].(types.String)),
+						self.(types.Timestamp).Time.AppendFormat(
+							[]byte(args[0].(types.Bytes)),
+							string(args[1].(types.String)),
 						),
 					)
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"before",
-			cel.MemberOverload(createTimeID("before_timestamp_timestamp_bool"), []*cel.Type{cel.TimestampType, cel.TimestampType}, cel.BoolType,
-				cel.BinaryBinding(func(self, u ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.Before(u.(types.Timestamp).Time))
-				}),
+			MemberOverloadFunc(createTimeID("before_timestamp_timestamp_bool"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.Bool(self.(types.Timestamp).Time.Before(args[0].(types.Timestamp).Time))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"compare",
-			cel.MemberOverload(createTimeID("compare_timestamp_timestamp_int"), []*cel.Type{cel.TimestampType, cel.TimestampType}, cel.IntType,
-				cel.BinaryBinding(func(self, u ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Compare(u.(types.Timestamp).Time))
-				}),
+			MemberOverloadFunc(createTimeID("compare_timestamp_timestamp_int"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.Int(self.(types.Timestamp).Time.Compare(args[0].(types.Timestamp).Time))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"day",
-			cel.MemberOverload(createTimeID("day_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("day_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Day())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"equal",
-			cel.MemberOverload(createTimeID("equal_timestamp_timestamp_bool"), []*cel.Type{cel.TimestampType, cel.TimestampType}, cel.BoolType,
-				cel.BinaryBinding(func(self, u ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.Equal(u.(types.Timestamp).Time))
-				}),
+			MemberOverloadFunc(createTimeID("equal_timestamp_timestamp_bool"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.Bool(self.(types.Timestamp).Time.Equal(args[0].(types.Timestamp).Time))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"format",
-			cel.MemberOverload(createTimeID("format_timestamp_string_string"), []*cel.Type{cel.TimestampType, cel.StringType}, cel.StringType,
-				cel.BinaryBinding(func(self, layout ref.Val) ref.Val {
-					return types.String(self.(types.Timestamp).Time.Format(string(layout.(types.String))))
-				}),
+			MemberOverloadFunc(createTimeID("format_timestamp_string_string"), cel.TimestampType, []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return types.String(self.(types.Timestamp).Time.Format(string(args[0].(types.String))))
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"hour",
-			cel.MemberOverload(createTimeID("hour_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("hour_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Hour())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"withLocation",
-			cel.MemberOverload(createTimeID("with_location_timestamp_location_timestamp"), []*cel.Type{cel.TimestampType, LocationType}, cel.TimestampType,
-				cel.BinaryBinding(func(self, loc ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("with_location_timestamp_location_timestamp"), cel.TimestampType, []*cel.Type{LocationType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.In(loc.(*Location).Location),
+						Time: self.(types.Timestamp).Time.In(args[0].(*Location).Location),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"isDST",
-			cel.MemberOverload(createTimeID("is_dst_timestamp_bool"), []*cel.Type{cel.TimestampType}, cel.BoolType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("is_dst_timestamp_bool"), cel.TimestampType, []*cel.Type{}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Bool(self.(types.Timestamp).Time.IsDST())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"isZero",
-			cel.MemberOverload(createTimeID("is_zero_timestamp_bool"), []*cel.Type{cel.TimestampType}, cel.BoolType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("is_zero_timestamp_bool"), cel.TimestampType, []*cel.Type{}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Bool(self.(types.Timestamp).Time.IsZero())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"local",
-			cel.MemberOverload(createTimeID("local_timestamp_timestamp"), []*cel.Type{cel.TimestampType}, cel.TimestampType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("local_timestamp_timestamp"), cel.TimestampType, []*cel.Type{}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
 						Time: self.(types.Timestamp).Time.Local(),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"location",
-			cel.MemberOverload(createTimeID("location_timestamp_location"), []*cel.Type{cel.TimestampType}, LocationType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("location_timestamp_location"), cel.TimestampType, []*cel.Type{}, LocationType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return &Location{Location: self.(types.Timestamp).Time.Location()}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"minute",
-			cel.MemberOverload(createTimeID("minute_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("minute_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Minute())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"month",
-			cel.MemberOverload(createTimeID("month_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("month_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Month())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"nanosecond",
-			cel.MemberOverload(createTimeID("nanosecond_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("nanosecond_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Nanosecond())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"round",
-			cel.MemberOverload(createTimeID("round_timestamp_int_timestamp"), []*cel.Type{cel.TimestampType, cel.IntType}, cel.TimestampType,
-				cel.BinaryBinding(func(self, d ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("round_timestamp_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Round(time.Duration(d.(types.Int))),
+						Time: self.(types.Timestamp).Time.Round(time.Duration(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
-			cel.MemberOverload(createTimeID("round_timestamp_duration_timestamp"), []*cel.Type{cel.TimestampType, cel.DurationType}, cel.TimestampType,
-				cel.BinaryBinding(func(self, d ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("round_timestamp_duration_timestamp"), cel.TimestampType, []*cel.Type{cel.DurationType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Round(d.(types.Duration).Duration),
+						Time: self.(types.Timestamp).Time.Round(args[0].(types.Duration).Duration),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"second",
-			cel.MemberOverload(createTimeID("second_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("second_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Second())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"string",
-			cel.MemberOverload(createTimeID("string_timestamp_string"), []*cel.Type{cel.TimestampType}, cel.StringType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("string_timestamp_string"), cel.TimestampType, []*cel.Type{}, cel.StringType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.String(self.(types.Timestamp).Time.String())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"sub",
-			cel.MemberOverload(createTimeID("sub_timestamp_timestamp_duration"), []*cel.Type{cel.TimestampType, cel.TimestampType}, cel.DurationType,
-				cel.BinaryBinding(func(self, u ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("sub_timestamp_timestamp_duration"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.DurationType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Duration{
-						Duration: self.(types.Timestamp).Time.Sub(u.(types.Timestamp).Time),
+						Duration: self.(types.Timestamp).Time.Sub(args[0].(types.Timestamp).Time),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"truncate",
-			cel.MemberOverload(createTimeID("truncate_timestamp_int_timestamp"), []*cel.Type{cel.TimestampType, cel.IntType}, cel.TimestampType,
-				cel.BinaryBinding(func(self, d ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("truncate_timestamp_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Truncate(time.Duration(d.(types.Int))),
+						Time: self.(types.Timestamp).Time.Truncate(time.Duration(args[0].(types.Int))),
 					}
-				}),
+				},
 			),
-			cel.MemberOverload(createTimeID("truncate_timestamp_duration_timestamp"), []*cel.Type{cel.TimestampType, cel.DurationType}, cel.TimestampType,
-				cel.BinaryBinding(func(self, d ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("truncate_timestamp_duration_timestamp"), cel.TimestampType, []*cel.Type{cel.DurationType}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Truncate(d.(types.Duration).Duration),
+						Time: self.(types.Timestamp).Time.Truncate(args[0].(types.Duration).Duration),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"utc",
-			cel.MemberOverload(createTimeID("utc_timestamp_timestamp"), []*cel.Type{cel.TimestampType}, cel.TimestampType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("utc_timestamp_timestamp"), cel.TimestampType, []*cel.Type{}, cel.TimestampType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Timestamp{Time: self.(types.Timestamp).Time.UTC()}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"unix",
-			cel.MemberOverload(createTimeID("unix_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("unix_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Unix())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"unixMicro",
-			cel.MemberOverload(createTimeID("unix_micro_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("unix_micro_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.UnixMicro())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"unixMilli",
-			cel.MemberOverload(createTimeID("unix_milli_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("unix_milli_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.UnixMilli())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"unixNano",
-			cel.MemberOverload(createTimeID("unix_nano_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("unix_nano_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.UnixNano())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"weekday",
-			cel.MemberOverload(createTimeID("weekday_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("weekday_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Weekday())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"year",
-			cel.MemberOverload(createTimeID("year_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("year_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.Year())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"yearDay",
-			cel.MemberOverload(createTimeID("year_day_timestamp_int"), []*cel.Type{cel.TimestampType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createTimeID("year_day_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(types.Timestamp).Time.YearDay())
-				}),
+				},
 			),
 		),
+	} {
+		opts = append(opts, funcOpts...)
 	}
 	return opts
 }

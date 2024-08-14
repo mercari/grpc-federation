@@ -1,6 +1,7 @@
 package cel
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/google/cel-go/cel"
@@ -58,90 +59,93 @@ func createUUIDID(name string) string {
 }
 
 func (lib *UUIDLibrary) CompileOptions() []cel.EnvOption {
-	opts := []cel.EnvOption{
+	var opts []cel.EnvOption
+	for _, funcOpts := range [][]cel.EnvOption{
 		// UUID functions
-		cel.Function(
+		BindFunction(
 			createUUIDName("new"),
-			cel.Overload(createUUIDID("new_uuid"), []*cel.Type{}, UUIDType,
-				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+			OverloadFunc(createUUIDID("new_uuid"), []*cel.Type{}, UUIDType,
+				func(_ context.Context, _ ...ref.Val) ref.Val {
 					return &UUID{
 						UUID: uuid.New(),
 					}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createUUIDName("newRandom"),
-			cel.Overload(createUUIDID("new_random_uuid"), []*cel.Type{}, UUIDType,
-				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+			OverloadFunc(createUUIDID("new_random_uuid"), []*cel.Type{}, UUIDType,
+				func(_ context.Context, _ ...ref.Val) ref.Val {
 					id, err := uuid.NewRandom()
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
 					return &UUID{UUID: id}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindFunction(
 			createUUIDName("newRandomFromRand"),
-			cel.Overload(createUUIDID("new_random_from_rand_uuid"), []*cel.Type{RandType}, UUIDType,
-				cel.UnaryBinding(func(rand ref.Val) ref.Val {
-					id, err := uuid.NewRandomFromReader(rand.(*Rand))
+			OverloadFunc(createUUIDID("new_random_from_rand_uuid"), []*cel.Type{RandType}, UUIDType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					id, err := uuid.NewRandomFromReader(args[0].(*Rand))
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
 					return &UUID{UUID: id}
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"domain",
-			cel.MemberOverload(createRandID("domain_uuid_string"), []*cel.Type{UUIDType}, cel.UintType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("domain_uuid_string"), UUIDType, []*cel.Type{}, cel.UintType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Uint(self.(*UUID).Domain())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"id",
-			cel.MemberOverload(createRandID("id_uuid_string"), []*cel.Type{UUIDType}, cel.UintType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("id_uuid_string"), UUIDType, []*cel.Type{}, cel.UintType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Uint(self.(*UUID).ID())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"time",
-			cel.MemberOverload(createRandID("time_uuid_int"), []*cel.Type{UUIDType}, cel.IntType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("time_uuid_int"), UUIDType, []*cel.Type{}, cel.IntType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Int(self.(*UUID).Time())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"urn",
-			cel.MemberOverload(createRandID("urn_uuid_string"), []*cel.Type{UUIDType}, cel.StringType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("urn_uuid_string"), UUIDType, []*cel.Type{}, cel.StringType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.String(self.(*UUID).URN())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"string",
-			cel.MemberOverload(createRandID("string_uuid_string"), []*cel.Type{UUIDType}, cel.StringType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("string_uuid_string"), UUIDType, []*cel.Type{}, cel.StringType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.String(self.(*UUID).String())
-				}),
+				},
 			),
 		),
-		cel.Function(
+		BindMemberFunction(
 			"version",
-			cel.MemberOverload(createRandID("version_uuid_uint"), []*cel.Type{UUIDType}, cel.UintType,
-				cel.UnaryBinding(func(self ref.Val) ref.Val {
+			MemberOverloadFunc(createRandID("version_uuid_uint"), UUIDType, []*cel.Type{}, cel.UintType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					return types.Uint(self.(*UUID).Version())
-				}),
+				},
 			),
 		),
+	} {
+		opts = append(opts, funcOpts...)
 	}
 	return opts
 }

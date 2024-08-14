@@ -21,13 +21,6 @@ func (v *Value) ReferenceNames() []string {
 	return v.CEL.ReferenceNames()
 }
 
-func (v *Value) UseContextCELLibrary() bool {
-	if v == nil {
-		return false
-	}
-	return v.CEL.UseContextLibrary
-}
-
 func (v *CELValue) ReferenceNames() []string {
 	if v == nil {
 		return nil

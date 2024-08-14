@@ -135,15 +135,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		if err != nil {
 			return nil, err
 		}
-		if err := func() error {
-			ctx := context.Background()
-			instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
-			defer instance.Close(ctx)
-			return instance.ValidatePlugin(ctx)
-		}(); err != nil {
+		ctx := context.Background()
+		instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}
-		celPlugins = append(celPlugins, plugin)
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
 	}
 	return &FederationService{
 		cfg:           cfg,
@@ -193,12 +190,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			id_from_plugin   string
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celTypeHelper, s.celEnvOpts, s.celPlugins, true, "grpc.federation.private.GetResponseArgument", req)}
-	defer func() {
-		if err := value.Close(ctx); err != nil {
-			grpcfed.Logger(ctx).ErrorContext(ctx, err.Error())
-		}
-	}()
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
 	// A tree view of message dependencies is shown below.
 	/*
 	   id_from_metadata ─┐
@@ -222,9 +214,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				value.vars.id_from_metadata = v
 				return nil
 			},
-			By:                  `grpc.federation.metadata.incoming()['id'][0]`,
-			ByUseContextLibrary: true,
-			ByCacheIndex:        1,
+			By:           `grpc.federation.metadata.incoming()['id'][0]`,
+			ByCacheIndex: 1,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -248,9 +239,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				value.vars.id_from_plugin = v
 				return nil
 			},
-			By:                  `example.account.get_id()`,
-			ByUseContextLibrary: true,
-			ByCacheIndex:        2,
+			By:           `example.account.get_id()`,
+			ByCacheIndex: 2,
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -272,10 +262,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	// field binding section.
 	// (grpc.federation.field).by = "id_from_plugin"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
-		Value:             value,
-		Expr:              `id_from_plugin`,
-		UseContextLibrary: false,
-		CacheIndex:        3,
+		Value:      value,
+		Expr:       `id_from_plugin`,
+		CacheIndex: 3,
 		Setter: func(v string) error {
 			ret.IdFromPlugin = v
 			return nil
@@ -286,10 +275,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 	// (grpc.federation.field).by = "id_from_metadata"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
-		Value:             value,
-		Expr:              `id_from_metadata`,
-		UseContextLibrary: false,
-		CacheIndex:        4,
+		Value:      value,
+		Expr:       `id_from_metadata`,
+		CacheIndex: 4,
 		Setter: func(v string) error {
 			ret.IdFromMetadata = v
 			return nil

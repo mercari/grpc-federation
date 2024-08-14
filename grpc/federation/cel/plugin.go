@@ -133,7 +133,6 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 }
 
 type CELPluginInstance struct {
-	ctx              context.Context
 	name             string
 	functions        []*CELFunction
 	celRegistry      *types.Registry
@@ -226,12 +225,6 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	return nil
 }
 
-func (i *CELPluginInstance) Initialize(ctx context.Context) {
-	i.mu.Lock()
-	i.ctx = ctx
-	i.mu.Unlock()
-}
-
 func (i *CELPluginInstance) LibraryName() string {
 	return i.name
 }
@@ -240,22 +233,33 @@ func (i *CELPluginInstance) CompileOptions() []cel.EnvOption {
 	var opts []cel.EnvOption
 	for _, fn := range i.functions {
 		fn := fn
-		bindFunc := cel.FunctionBinding(func(args ...ref.Val) ref.Val {
-			i.mu.Lock()
-			defer i.mu.Unlock()
-			md, ok := metadata.FromIncomingContext(i.ctx)
-			if !ok {
-				md = make(metadata.MD)
-			}
-			return i.Call(i.ctx, fn, md, args...)
-		})
-		var overload cel.FunctionOpt
 		if fn.IsMethod {
-			overload = cel.MemberOverload(fn.ID, fn.Args, fn.Return, bindFunc)
+			opts = append(opts,
+				BindMemberFunction(
+					fn.Name,
+					MemberOverloadFunc(fn.ID, fn.Args[0], fn.Args[1:], fn.Return, func(ctx context.Context, self ref.Val, args ...ref.Val) ref.Val {
+						md, ok := metadata.FromIncomingContext(ctx)
+						if !ok {
+							md = make(metadata.MD)
+						}
+						return i.Call(ctx, fn, md, append([]ref.Val{self}, args...)...)
+					}),
+				)...,
+			)
 		} else {
-			overload = cel.Overload(fn.ID, fn.Args, fn.Return, bindFunc)
+			opts = append(opts,
+				BindFunction(
+					fn.Name,
+					OverloadFunc(fn.ID, fn.Args, fn.Return, func(ctx context.Context, args ...ref.Val) ref.Val {
+						md, ok := metadata.FromIncomingContext(ctx)
+						if !ok {
+							md = make(metadata.MD)
+						}
+						return i.Call(ctx, fn, md, args...)
+					}),
+				)...,
+			)
 		}
-		opts = append(opts, cel.Function(fn.Name, overload))
 	}
 	return opts
 }

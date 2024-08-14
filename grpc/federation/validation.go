@@ -10,17 +10,14 @@ import (
 )
 
 type PreconditionFailureViolation struct {
-	Type                  string
-	TypeUseContextLibrary bool
-	TypeCacheIndex        int
+	Type           string
+	TypeCacheIndex int
 
-	Subject                  string
-	SubjectUseContextLibrary bool
-	SubjectCacheIndex        int
+	Subject           string
+	SubjectCacheIndex int
 
-	Desc                  string
-	DescUseContextLibrary bool
-	DescCacheIndex        int
+	Desc           string
+	DescCacheIndex int
 }
 
 func PreconditionFailure(ctx context.Context, value localValue, violations []*PreconditionFailureViolation) *errdetails.PreconditionFailure {
@@ -29,11 +26,10 @@ func PreconditionFailure(ctx context.Context, value localValue, violations []*Pr
 	ret := &errdetails.PreconditionFailure{}
 	for idx, violation := range violations {
 		typ, err := EvalCEL(ctx, &EvalCELRequest{
-			Value:             value,
-			Expr:              violation.Type,
-			UseContextLibrary: violation.TypeUseContextLibrary,
-			OutType:           reflect.TypeOf(""),
-			CacheIndex:        violation.TypeCacheIndex,
+			Value:      value,
+			Expr:       violation.Type,
+			OutType:    reflect.TypeOf(""),
+			CacheIndex: violation.TypeCacheIndex,
 		})
 		if err != nil {
 			logger.ErrorContext(
@@ -45,11 +41,10 @@ func PreconditionFailure(ctx context.Context, value localValue, violations []*Pr
 			continue
 		}
 		subject, err := EvalCEL(ctx, &EvalCELRequest{
-			Value:             value,
-			Expr:              violation.Subject,
-			UseContextLibrary: violation.SubjectUseContextLibrary,
-			OutType:           reflect.TypeOf(""),
-			CacheIndex:        violation.SubjectCacheIndex,
+			Value:      value,
+			Expr:       violation.Subject,
+			OutType:    reflect.TypeOf(""),
+			CacheIndex: violation.SubjectCacheIndex,
 		})
 		if err != nil {
 			logger.ErrorContext(
@@ -61,11 +56,10 @@ func PreconditionFailure(ctx context.Context, value localValue, violations []*Pr
 			continue
 		}
 		desc, err := EvalCEL(ctx, &EvalCELRequest{
-			Value:             value,
-			Expr:              violation.Desc,
-			UseContextLibrary: violation.DescUseContextLibrary,
-			OutType:           reflect.TypeOf(""),
-			CacheIndex:        violation.DescCacheIndex,
+			Value:      value,
+			Expr:       violation.Desc,
+			OutType:    reflect.TypeOf(""),
+			CacheIndex: violation.DescCacheIndex,
 		})
 		if err != nil {
 			logger.ErrorContext(
@@ -89,13 +83,11 @@ func PreconditionFailure(ctx context.Context, value localValue, violations []*Pr
 }
 
 type BadRequestFieldViolation struct {
-	Field                  string
-	FieldUseContextLibrary bool
-	FieldCacheIndex        int
+	Field           string
+	FieldCacheIndex int
 
-	Desc                  string
-	DescUseContextLibrary bool
-	DescCacheIndex        int
+	Desc           string
+	DescCacheIndex int
 }
 
 func BadRequest(ctx context.Context, value localValue, violations []*BadRequestFieldViolation) *errdetails.BadRequest {
@@ -105,11 +97,10 @@ func BadRequest(ctx context.Context, value localValue, violations []*BadRequestF
 
 	for idx, violation := range violations {
 		field, err := EvalCEL(ctx, &EvalCELRequest{
-			Value:             value,
-			Expr:              violation.Field,
-			UseContextLibrary: violation.FieldUseContextLibrary,
-			OutType:           reflect.TypeOf(""),
-			CacheIndex:        violation.FieldCacheIndex,
+			Value:      value,
+			Expr:       violation.Field,
+			OutType:    reflect.TypeOf(""),
+			CacheIndex: violation.FieldCacheIndex,
 		})
 		if err != nil {
 			logger.ErrorContext(
@@ -121,11 +112,10 @@ func BadRequest(ctx context.Context, value localValue, violations []*BadRequestF
 			continue
 		}
 		desc, err := EvalCEL(ctx, &EvalCELRequest{
-			Value:             value,
-			Expr:              violation.Desc,
-			UseContextLibrary: violation.DescUseContextLibrary,
-			OutType:           reflect.TypeOf(""),
-			CacheIndex:        violation.DescCacheIndex,
+			Value:      value,
+			Expr:       violation.Desc,
+			OutType:    reflect.TypeOf(""),
+			CacheIndex: violation.DescCacheIndex,
 		})
 		if err != nil {
 			logger.ErrorContext(
@@ -148,22 +138,20 @@ func BadRequest(ctx context.Context, value localValue, violations []*BadRequestF
 }
 
 type LocalizedMessageParam struct {
-	Value             localValue
-	Locale            string
-	Message           string
-	UseContextLibrary bool
-	CacheIndex        int
+	Value      localValue
+	Locale     string
+	Message    string
+	CacheIndex int
 }
 
 func LocalizedMessage(ctx context.Context, param *LocalizedMessageParam) *errdetails.LocalizedMessage {
 	logger := Logger(ctx)
 
 	message, err := EvalCEL(ctx, &EvalCELRequest{
-		Value:             param.Value,
-		Expr:              param.Message,
-		UseContextLibrary: param.UseContextLibrary,
-		OutType:           reflect.TypeOf(""),
-		CacheIndex:        param.CacheIndex,
+		Value:      param.Value,
+		Expr:       param.Message,
+		OutType:    reflect.TypeOf(""),
+		CacheIndex: param.CacheIndex,
 	})
 	if err != nil {
 		logger.ErrorContext(ctx, "failed evaluating LocalizedMessage message", slog.String("error", err.Error()))
@@ -186,11 +174,10 @@ func CustomMessage(ctx context.Context, param *CustomMessageParam) protoadapt.Me
 	logger := Logger(ctx)
 
 	msg, err := EvalCEL(ctx, &EvalCELRequest{
-		Value:             param.Value,
-		Expr:              param.MessageValueName,
-		UseContextLibrary: false,
-		OutType:           reflect.TypeOf(protoadapt.MessageV1(nil)),
-		CacheIndex:        param.CacheIndex,
+		Value:      param.Value,
+		Expr:       param.MessageValueName,
+		OutType:    reflect.TypeOf(protoadapt.MessageV1(nil)),
+		CacheIndex: param.CacheIndex,
 	})
 	if err != nil {
 		logger.ErrorContext(

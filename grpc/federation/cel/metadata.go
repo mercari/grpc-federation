@@ -15,16 +15,10 @@ func NewMetadataLibrary() *MetadataLibrary {
 	return &MetadataLibrary{}
 }
 
-type MetadataLibrary struct {
-	ctx context.Context
-}
+type MetadataLibrary struct{}
 
 func (lib *MetadataLibrary) LibraryName() string {
 	return packageName(MetadataPackageName)
-}
-
-func (lib *MetadataLibrary) Initialize(ctx context.Context) {
-	lib.ctx = ctx
 }
 
 func createMetadata(name string) string {
@@ -36,13 +30,15 @@ func createMetadataID(name string) string {
 }
 
 func (lib *MetadataLibrary) CompileOptions() []cel.EnvOption {
-	opts := []cel.EnvOption{
-		cel.Function(
+	var opts []cel.EnvOption
+	for _, funcOpts := range [][]cel.EnvOption{
+		BindFunction(
 			createMetadata("incoming"),
-			cel.Overload(createMetadataID("incoming_map_string_list_string"), []*cel.Type{}, types.NewMapType(types.StringType, types.NewListType(types.StringType)),
-				cel.FunctionBinding(func(_ ...ref.Val) ref.Val {
+			OverloadFunc(createMetadataID("incoming_map_string_list_string"),
+				[]*cel.Type{}, types.NewMapType(types.StringType, types.NewListType(types.StringType)),
+				func(ctx context.Context, _ ...ref.Val) ref.Val {
 					refMap := make(map[ref.Val]ref.Val)
-					md, ok := metadata.FromIncomingContext(lib.ctx)
+					md, ok := metadata.FromIncomingContext(ctx)
 					if !ok {
 						return types.NewRefValMap(types.DefaultTypeAdapter, refMap)
 					}
@@ -51,9 +47,11 @@ func (lib *MetadataLibrary) CompileOptions() []cel.EnvOption {
 						refMap[types.String(k)] = types.NewStringList(types.DefaultTypeAdapter, vs)
 					}
 					return types.NewRefValMap(types.DefaultTypeAdapter, refMap)
-				}),
+				},
 			),
 		),
+	} {
+		opts = append(opts, funcOpts...)
 	}
 	return opts
 }

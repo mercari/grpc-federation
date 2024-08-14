@@ -8,6 +8,6 @@ plugins:
   - plugin: buf.build/grpc/go:v1.4.0
     out: .
     opt: module=github.com/mercari/grpc-federation/demo
-  - plugin: buf.build/community/mercari-grpc-federation:v0.17.6
+  - plugin: buf.build/community/mercari-grpc-federation:v1.2.1
     out: .
     opt: module=github.com/mercari/grpc-federation/demo

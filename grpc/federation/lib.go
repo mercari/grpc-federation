@@ -81,12 +81,11 @@ func NewExponentialBackOff(cfg *ExponentialBackOffConfig) *BackOff {
 }
 
 type RetryParam[T any] struct {
-	Value             localValue
-	If                string
-	UseContextLibrary bool
-	CacheIndex        int
-	BackOff           *BackOff
-	Body              func() (*T, error)
+	Value      localValue
+	If         string
+	CacheIndex int
+	BackOff    *BackOff
+	Body       func() (*T, error)
 }
 
 func WithRetry[T any](ctx context.Context, param *RetryParam[T]) (*T, error) {
@@ -96,11 +95,10 @@ func WithRetry[T any](ctx context.Context, param *RetryParam[T]) (*T, error) {
 		if err != nil {
 			SetGRPCError(ctx, param.Value, err)
 			cond, evalErr := EvalCEL(ctx, &EvalCELRequest{
-				Value:             param.Value,
-				Expr:              param.If,
-				UseContextLibrary: param.UseContextLibrary,
-				OutType:           reflect.TypeOf(false),
-				CacheIndex:        param.CacheIndex,
+				Value:      param.Value,
+				Expr:       param.If,
+				OutType:    reflect.TypeOf(false),
+				CacheIndex: param.CacheIndex,
 			})
 			if evalErr != nil {
 				return backoff.Permanent(evalErr)

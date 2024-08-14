@@ -253,15 +253,6 @@ func (e *MessageExpr) ReferenceNames() []string {
 	return refNames
 }
 
-func (e *MessageExpr) HasContextCELLibrary() bool {
-	for _, arg := range e.Args {
-		if arg.Value.UseContextCELLibrary() {
-			return true
-		}
-	}
-	return false
-}
-
 func (m *Message) ReferenceNames() []string {
 	if m.Rule == nil {
 		return nil

@@ -1,7 +1,6 @@
 package cel
 
 import (
-	"context"
 	"strings"
 
 	"github.com/google/cel-go/cel"
@@ -11,27 +10,6 @@ import (
 type Library struct {
 	name    string
 	subLibs []cel.SingletonLibrary
-	ctxLibs []ContextualLibrary
-}
-
-func (lib *Library) ContextualLibraries() []ContextualLibrary {
-	if lib == nil {
-		return nil
-	}
-	return lib.ctxLibs
-}
-
-func (lib *Library) ContextOverloadIDPrefixes() []string {
-	var ret []string
-	for _, ctxlib := range lib.ctxLibs {
-		ret = append(ret, strings.ReplaceAll(ctxlib.LibraryName(), ".", "_"))
-	}
-	return ret
-}
-
-type ContextualLibrary interface {
-	LibraryName() string
-	Initialize(context.Context)
 }
 
 func NewLibrary(typeAdapter types.Adapter) *Library {
@@ -48,7 +26,6 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 			mdLib,
 			logLib,
 		},
-		ctxLibs: []ContextualLibrary{mdLib, logLib},
 	}
 }
 
