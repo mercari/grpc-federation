@@ -2625,12 +2625,12 @@ func TestValidation(t *testing.T) {
 						).
 						AddVariableDefinitionGroup(
 							testutil.NewVariableDefinitionGroupBuilder().
-								AddStart(testutil.NewVariableDefinitionGroupByName("post")).
-								SetEnd(testutil.NewVariableDefinition("_def1")).
-								Build(t),
-						).
-						AddVariableDefinitionGroup(
-							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(
+									testutil.NewVariableDefinitionGroupBuilder().
+										AddStart(testutil.NewVariableDefinitionGroupByName("post")).
+										SetEnd(testutil.NewVariableDefinition("_def1")).
+										Build(t),
+								).
 								AddStart(testutil.NewVariableDefinitionGroupByName("post")).
 								SetEnd(testutil.NewVariableDefinition("_def2")).
 								Build(t),
