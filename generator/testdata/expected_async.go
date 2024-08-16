@@ -269,7 +269,11 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *F
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &FederationService_Org_Federation_AAArgument{}
-				return s.resolve_Org_Federation_AA(ctx, args)
+				ret, err := s.resolve_Org_Federation_AA(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
@@ -298,7 +302,11 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *F
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &FederationService_Org_Federation_ABArgument{}
-				return s.resolve_Org_Federation_AB(ctx, args)
+				ret, err := s.resolve_Org_Federation_AB(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
@@ -687,7 +695,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_AArgument{}
-						return s.resolve_Org_Federation_A(ctx, args)
+						ret, err := s.resolve_Org_Federation_A(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -725,7 +737,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						}); err != nil {
 							return nil, err
 						}
-						return s.resolve_Org_Federation_C(ctx, args)
+						ret, err := s.resolve_Org_Federation_C(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -753,7 +769,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_BArgument{}
-						return s.resolve_Org_Federation_B(ctx, args)
+						ret, err := s.resolve_Org_Federation_B(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -791,7 +811,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						}); err != nil {
 							return nil, err
 						}
-						return s.resolve_Org_Federation_D(ctx, args)
+						ret, err := s.resolve_Org_Federation_D(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -849,7 +873,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}); err != nil {
 						return nil, err
 					}
-					return s.resolve_Org_Federation_E(ctx, args)
+					ret, err := s.resolve_Org_Federation_E(ctx, args)
+					if err != nil {
+						return nil, err
+					}
+					return ret, nil
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -879,7 +907,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_AArgument{}
-						return s.resolve_Org_Federation_A(ctx, args)
+						ret, err := s.resolve_Org_Federation_A(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -917,7 +949,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						}); err != nil {
 							return nil, err
 						}
-						return s.resolve_Org_Federation_C(ctx, args)
+						ret, err := s.resolve_Org_Federation_C(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -945,7 +981,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_BArgument{}
-						return s.resolve_Org_Federation_B(ctx, args)
+						ret, err := s.resolve_Org_Federation_B(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -983,7 +1023,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 						}); err != nil {
 							return nil, err
 						}
-						return s.resolve_Org_Federation_D(ctx, args)
+						ret, err := s.resolve_Org_Federation_D(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -1041,7 +1085,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 					}); err != nil {
 						return nil, err
 					}
-					return s.resolve_Org_Federation_F(ctx, args)
+					ret, err := s.resolve_Org_Federation_F(ctx, args)
+					if err != nil {
+						return nil, err
+					}
+					return ret, nil
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -1069,7 +1117,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				},
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &FederationService_Org_Federation_GArgument{}
-					return s.resolve_Org_Federation_G(ctx, args)
+					ret, err := s.resolve_Org_Federation_G(ctx, args)
+					if err != nil {
+						return nil, err
+					}
+					return ret, nil
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -1140,7 +1192,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Org_Federation_H(ctx, args)
+				ret, err := s.resolve_Org_Federation_H(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
@@ -1169,7 +1225,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &FederationService_Org_Federation_IArgument{}
-				return s.resolve_Org_Federation_I(ctx, args)
+				ret, err := s.resolve_Org_Federation_I(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
@@ -1207,7 +1267,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Org_Federation_J(ctx, args)
+				ret, err := s.resolve_Org_Federation_J(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)

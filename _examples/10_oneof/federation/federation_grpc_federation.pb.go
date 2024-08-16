@@ -242,7 +242,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &FederationService_Org_Federation_MessageSelectionArgument{}
-				return s.resolve_Org_Federation_MessageSelection(ctx, args)
+				ret, err := s.resolve_Org_Federation_MessageSelection(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
@@ -284,7 +288,11 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Org_Federation_UserSelection(ctx, args)
+				ret, err := s.resolve_Org_Federation_UserSelection(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
@@ -516,13 +524,17 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				return nil, err
 			}
 			grpcfed.Logger(ctx).DebugContext(ctx, "call user.UserService/GetUser", slog.Any("user.GetUserRequest", s.logvalue_User_GetUserRequest(args)))
-			return s.client.User_UserServiceClient.GetUser(ctx, args)
+			ret, err := s.client.User_UserServiceClient.GetUser(ctx, args)
+			if err != nil {
+				if err := s.errorHandler(ctx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
+					return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+				}
+			}
+			return ret, nil
 		},
 	}); err != nil {
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
-		}
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
 	}
 
 	// create a message value to be returned.
@@ -655,7 +667,11 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Org_Federation_User(ctx, args)
+				ret, err := s.resolve_Org_Federation_User(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
@@ -734,7 +750,11 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Org_Federation_User(ctx, args)
+				ret, err := s.resolve_Org_Federation_User(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
@@ -813,7 +833,11 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Org_Federation_User(ctx, args)
+				ret, err := s.resolve_Org_Federation_User(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)

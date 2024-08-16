@@ -1,17 +1,16 @@
 {{- define "errorHandler" }}
-{{- $ctx := .Ctx }}
 {{- $def := .Definition }}
 {{- if $def.HasErrorHandler }}
 {{- $grpcErrors := $def.GRPCErrors }}
 {{- if $grpcErrors }}
-grpcfed.SetGRPCError({{ $ctx }}, value, err)
+grpcfed.SetGRPCError(ctx, value, err)
 stat, handleErr := func() (*grpcfed.Status, error) {
 	var stat *grpcfed.Status
 	{{- range $grpcErrors }}
 	{{- if .VariableDefinitionSet }}
 	{{- template "evalDefSet" .VariableDefinitionSet }}
 	{{- end }}
-	if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
+	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 		Value: value,
 		Expr: `{{ .If.Expr }}`,
 		CacheIndex: {{ $def.CELCacheIndex }},
@@ -21,17 +20,17 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			return nil
 			{{- else if .IgnoreAndResponse }}
 			stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-			if err := grpcfed.IgnoreAndResponse({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
+			if err := grpcfed.IgnoreAndResponse(ctx, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
 				Name: "{{ $def.Key }}",
 				Type: {{ $def.CELType }},
 				Setter: func(value *localValueType, v {{ $def.Type }}) error {
-					value.vars.{{ $def.Key }} = v
+					ret = v // assign customized response to the result value.
 					return nil
 				},
 				By: `{{ .IgnoreAndResponse.Expr }}`,
 				ByCacheIndex: {{ $def.CELCacheIndex }},
 			}); err != nil {
-				grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed to set response when ignored", slog.String("error", err.Error()))
+				grpcfed.Logger(ctx).ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
 				return nil
 			}
 			return nil
@@ -64,7 +63,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 				return err
 			}
 			{{- end }}
-			if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
+			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 				Value: value,
 				Expr: `{{ .If.Expr }}`,
 				CacheIndex: {{ $def.CELCacheIndex }},
@@ -77,7 +76,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 						return err
 					}
 					{{- range $idx, $def := .MessageSet.Definitions }}
-					if detail := grpcfed.CustomMessage({{ $ctx }}, &grpcfed.CustomMessageParam{
+					if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
 						Value: value,
 						MessageValueName: "{{ $def.Name }}",
 						CacheIndex: {{ $def.CELCacheIndex }},
@@ -97,7 +96,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 							CacheIndex: {{ $def.CELCacheIndex }},
 						})
 						if err != nil {
-							grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
+							grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
 						}
 						if detail != nil {
 							details = append(details, detail.(grpcfed.ProtoMessage))
@@ -126,7 +125,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage)
 			statusWithDetails, err := status.WithDetails(details...)
 			if err != nil {
-				grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed setting error details", slog.String("error", err.Error()))
+				grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
 				stat = status
 			} else {
 				stat = statusWithDetails
@@ -147,31 +146,26 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 	return nil, nil
 }()
 if handleErr != nil {
-	grpcfed.Logger({{ $ctx }}).ErrorContext({{ $ctx }}, "failed to handle error", slog.String("error", handleErr.Error()))
+	grpcfed.Logger(ctx).ErrorContext(ctx, "failed to handle error", slog.String("error", handleErr.Error()))
 	// If it fails during error handling, return the original error.
-	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
-		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+	if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
+		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 	}
 } else if stat != nil {
-	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, stat.Err()); err != nil {
-		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+	if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, stat.Err()); err != nil {
+		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 	}
 } else {
-	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
-		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+	if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
+		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 	}
 }
 {{- else }}
-if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
-	grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-	return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
+	return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
 }
 {{- end }}
 {{- else }}
-grpcfed.RecordErrorToSpan({{ $ctx }}, err)
 return nil, err
 {{- end }}
 {{- end }}

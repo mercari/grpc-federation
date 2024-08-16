@@ -226,7 +226,11 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 		},
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
 			args := &OtherService_Federation_PostArgument{}
-			return s.resolve_Federation_Post(ctx, args)
+			ret, err := s.resolve_Federation_Post(ctx, args)
+			if err != nil {
+				return nil, err
+			}
+			return ret, nil
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -384,7 +388,11 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Federation_Reaction(ctx, args)
+				ret, err := s.resolve_Federation_Reaction(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
@@ -441,7 +449,11 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Federation_User(ctx, args)
+				ret, err := s.resolve_Federation_User(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)

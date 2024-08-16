@@ -249,7 +249,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 			}); err != nil {
 				return nil, err
 			}
-			return s.resolve_Org_Federation_Post(ctx, args)
+			ret, err := s.resolve_Org_Federation_Post(ctx, args)
+			if err != nil {
+				return nil, err
+			}
+			return ret, nil
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -327,7 +331,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 			}); err != nil {
 				return nil, err
 			}
-			return s.resolve_Org_Federation_Post(ctx, args)
+			ret, err := s.resolve_Org_Federation_Post(ctx, args)
+			if err != nil {
+				return nil, err
+			}
+			return ret, nil
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -406,13 +414,17 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				return nil, err
 			}
 			grpcfed.Logger(ctx).DebugContext(ctx, "call org.post.PostService/GetPost", slog.Any("org.post.GetPostRequest", s.logvalue_Org_Post_GetPostRequest(args)))
-			return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
+			ret, err := s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
+			if err != nil {
+				if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
+					return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+				}
+			}
+			return ret, nil
 		},
 	}); err != nil {
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
-		}
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.

@@ -349,7 +349,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				},
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &FederationService_Org_Federation_PostArgument{}
-					return s.resolve_Org_Federation_Post(ctx, args)
+					ret, err := s.resolve_Org_Federation_Post(ctx, args)
+					if err != nil {
+						return nil, err
+					}
+					return ret, nil
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -429,7 +433,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_PostArgument{}
-						return s.resolve_Org_Federation_Post(ctx, args)
+						ret, err := s.resolve_Org_Federation_Post(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -507,7 +515,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_PostArgument{}
-						return s.resolve_Org_Federation_Post(ctx, args)
+						ret, err := s.resolve_Org_Federation_Post(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -592,7 +604,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_PostArgument{}
-						return s.resolve_Org_Federation_Post(ctx, args)
+						ret, err := s.resolve_Org_Federation_Post(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -672,7 +688,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						},
 						Message: func(ctx context.Context, value *localValueType) (any, error) {
 							args := &FederationService_Org_Federation_PostArgument{}
-							return s.resolve_Org_Federation_Post(ctx, args)
+							ret, err := s.resolve_Org_Federation_Post(ctx, args)
+							if err != nil {
+								return nil, err
+							}
+							return ret, nil
 						},
 					}); err != nil {
 						grpcfed.RecordErrorToSpan(ctx4, err)
@@ -750,7 +770,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						},
 						Message: func(ctx context.Context, value *localValueType) (any, error) {
 							args := &FederationService_Org_Federation_PostArgument{}
-							return s.resolve_Org_Federation_Post(ctx, args)
+							ret, err := s.resolve_Org_Federation_Post(ctx, args)
+							if err != nil {
+								return nil, err
+							}
+							return ret, nil
 						},
 					}); err != nil {
 						grpcfed.RecordErrorToSpan(ctx4, err)
@@ -833,7 +857,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					},
 					Message: func(ctx context.Context, value *localValueType) (any, error) {
 						args := &FederationService_Org_Federation_PostArgument{}
-						return s.resolve_Org_Federation_Post(ctx, args)
+						ret, err := s.resolve_Org_Federation_Post(ctx, args)
+						if err != nil {
+							return nil, err
+						}
+						return ret, nil
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -965,7 +993,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 													}); err != nil {
 														return nil, err
 													}
-													return s.resolve_Org_Federation_CustomMessage(ctx, args)
+													ret, err := s.resolve_Org_Federation_CustomMessage(ctx, args)
+													if err != nil {
+														return nil, err
+													}
+													return ret, nil
 												},
 											}); err != nil {
 												grpcfed.RecordErrorToSpan(ctx1, err)
@@ -1007,7 +1039,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 													}); err != nil {
 														return nil, err
 													}
-													return s.resolve_Org_Federation_CustomMessage(ctx, args)
+													ret, err := s.resolve_Org_Federation_CustomMessage(ctx, args)
+													if err != nil {
+														return nil, err
+													}
+													return ret, nil
 												},
 											}); err != nil {
 												grpcfed.RecordErrorToSpan(ctx1, err)
@@ -1115,7 +1151,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				},
 				Message: func(ctx context.Context, value *localValueType) (any, error) {
 					args := &FederationService_Org_Federation_PostArgument{}
-					return s.resolve_Org_Federation_Post(ctx, args)
+					ret, err := s.resolve_Org_Federation_Post(ctx, args)
+					if err != nil {
+						return nil, err
+					}
+					return ret, nil
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -1238,7 +1278,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				}); err != nil {
 					return nil, err
 				}
-				return s.resolve_Org_Federation_CustomHandlerMessage(ctx, args)
+				ret, err := s.resolve_Org_Federation_CustomHandlerMessage(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
