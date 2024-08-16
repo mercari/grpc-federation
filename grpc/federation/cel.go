@@ -277,9 +277,20 @@ func (m *CELCacheMap) set(index int, cache *CELCache) {
 
 type LocalValue struct {
 	sg         singleflight.Group
+	sgCache    *singleflightCache
 	mu         sync.RWMutex
 	envOpts    []cel.EnvOption
 	evalValues map[string]any
+}
+
+type singleflightCache struct {
+	mu        sync.RWMutex
+	resultMap map[string]*singleflightCacheResult
+}
+
+type singleflightCacheResult struct {
+	result any
+	err    error
 }
 
 func NewLocalValue(ctx context.Context, envOpts []cel.EnvOption, argName string, arg any) *LocalValue {
@@ -289,6 +300,9 @@ func NewLocalValue(ctx context.Context, envOpts []cel.EnvOption, argName string,
 		cel.Variable(MessageArgumentVariableName, cel.ObjectType(argName)),
 	)
 	return &LocalValue{
+		sgCache: &singleflightCache{
+			resultMap: make(map[string]*singleflightCacheResult),
+		},
 		envOpts:    newEnvOpts,
 		evalValues: map[string]any{MessageArgumentVariableName: arg},
 	}
@@ -311,7 +325,22 @@ type localValue interface {
 }
 
 func (v *LocalValue) do(name string, cb func() (any, error)) (any, error) {
-	ret, err, _ := v.sg.Do(name, cb)
+	v.sgCache.mu.RLock()
+	if cache, exists := v.sgCache.resultMap[name]; exists {
+		v.sgCache.mu.RUnlock()
+		return cache.result, cache.err
+	}
+	v.sgCache.mu.RUnlock()
+	ret, err, _ := v.sg.Do(name, func() (any, error) {
+		ret, err := cb()
+		v.sgCache.mu.Lock()
+		v.sgCache.resultMap[name] = &singleflightCacheResult{
+			result: ret,
+			err:    err,
+		}
+		v.sgCache.mu.Unlock()
+		return ret, err
+	})
 	return ret, err
 }
 
@@ -429,6 +458,18 @@ type DefMap[T any, U any, V localValue] struct {
 }
 
 func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) error {
+	_, err := value.do(def.Name, func() (any, error) {
+		return nil, evalDef(ctx, value, def)
+	})
+	return err
+}
+
+func IgnoreAndResponse[T any, U localValue](ctx context.Context, value U, def Def[T, U]) error {
+	// doesn't use cache to create response variable by same name key.
+	return evalDef(ctx, value, def)
+}
+
+func evalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) error {
 	var (
 		v    T
 		errs []error
@@ -451,7 +492,7 @@ func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 	}
 
 	if cond {
-		ret, runErr := value.do(name, func() (any, error) {
+		ret, runErr := func() (any, error) {
 			switch {
 			case def.By != "":
 				return EvalCEL(ctx, &EvalCELRequest{
@@ -472,7 +513,7 @@ func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 				}
 			}
 			return nil, nil
-		})
+		}()
 		if ret != nil {
 			v = ret.(T)
 		}
@@ -498,6 +539,14 @@ func EvalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 }
 
 func EvalDefMap[T any, U any, V localValue](ctx context.Context, value V, def DefMap[T, U, V]) error {
+	_, err := value.do(def.Name, func() (any, error) {
+		err := evalDefMap(ctx, value, def)
+		return nil, err
+	})
+	return err
+}
+
+func evalDefMap[T any, U any, V localValue](ctx context.Context, value V, def DefMap[T, U, V]) error {
 	var (
 		v    T
 		errs []error
@@ -520,17 +569,15 @@ func EvalDefMap[T any, U any, V localValue](ctx context.Context, value V, def De
 	}
 
 	if cond {
-		ret, runErr := value.do(name, func() (any, error) {
-			return evalMap(
-				ctx,
-				value,
-				def.IteratorName,
-				def.IteratorType,
-				def.IteratorSource,
-				reflect.TypeOf(def.outType),
-				def.Iterator,
-			)
-		})
+		ret, runErr := evalMap(
+			ctx,
+			value,
+			def.IteratorName,
+			def.IteratorType,
+			def.IteratorSource,
+			reflect.TypeOf(def.outType),
+			def.Iterator,
+		)
 		if ret != nil {
 			v = ret.(T)
 		}
