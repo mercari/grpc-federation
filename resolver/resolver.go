@@ -2027,9 +2027,15 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 		}
 		ignoreAndResponse = &CELValue{Expr: res}
 	}
+	for idx, errDef := range def.GetDef() {
+		if errDef.GetName() == "" {
+			name := fmt.Sprintf("_def%d_def%d", ctx.defIndex(), idx)
+			errDef.Name = &name
+		}
+	}
 	return &GRPCError{
 		DefSet: &VariableDefinitionSet{
-			Defs: r.resolveVariableDefinitions(ctx, def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+			Defs: r.resolveVariableDefinitions(ctx.withIgnoreNameValidation(), def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 				return builder.WithDef(idx)
 			}),
 		},
@@ -2061,10 +2067,16 @@ func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.G
 		for _, by := range detail.GetBy() {
 			byValues = append(byValues, &CELValue{Expr: by})
 		}
+		for idx, errDetailDef := range detail.GetDef() {
+			if errDetailDef.GetName() == "" {
+				name := fmt.Sprintf("_def%d_err_detail%d_def%d", ctx.defIndex(), ctx.errDetailIndex(), idx)
+				errDetailDef.Name = &name
+			}
+		}
 		result = append(result, &GRPCErrorDetail{
 			If: r.resolveGRPCErrorIf(detail.GetIf()),
 			DefSet: &VariableDefinitionSet{
-				Defs: r.resolveVariableDefinitions(ctx, detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+				Defs: r.resolveVariableDefinitions(ctx.withIgnoreNameValidation(), detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 					return builder.WithDef(idx)
 				}),
 			},
