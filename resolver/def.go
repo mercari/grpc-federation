@@ -135,6 +135,13 @@ func (set *VariableDefinitionSet) MessageExprs() []*MessageExpr {
 	return ret
 }
 
+func (def *VariableDefinition) IsValidation() bool {
+	if def.Expr == nil {
+		return false
+	}
+	return def.Expr.Validation != nil
+}
+
 func (def *VariableDefinition) MessageExprs() []*MessageExpr {
 	if def.Expr == nil {
 		return nil

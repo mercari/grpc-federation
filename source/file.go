@@ -1418,7 +1418,10 @@ func (f *File) nodeInfoByGRPCError(list []*ast.MessageLiteralNode, opt *GRPCErro
 		return nil
 	}
 	node := list[opt.Idx]
-	var errDetails []*ast.MessageLiteralNode
+	var (
+		defs       []*ast.MessageLiteralNode
+		errDetails []*ast.MessageLiteralNode
+	)
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
@@ -1440,9 +1443,14 @@ func (f *File) nodeInfoByGRPCError(list []*ast.MessageLiteralNode, opt *GRPCErro
 				return nil
 			}
 			return f.nodeInfo(value)
+		case opt.Def != nil && fieldName == "def":
+			defs = append(defs, f.getMessageListFromNode(elem.Val)...)
 		case opt.Detail != nil && fieldName == "details":
 			errDetails = append(errDetails, f.getMessageListFromNode(elem.Val)...)
 		}
+	}
+	if len(defs) != 0 {
+		return f.nodeInfoByDef(defs, opt.Def)
 	}
 	if len(errDetails) != 0 {
 		return f.nodeInfoByGRPCErrorDetail(errDetails, opt.Detail)
@@ -1456,6 +1464,7 @@ func (f *File) nodeInfoByGRPCErrorDetail(list []*ast.MessageLiteralNode, detail 
 	}
 	node := list[detail.Idx]
 	var (
+		defs                 []*ast.MessageLiteralNode
 		messages             []*ast.MessageLiteralNode
 		preconditionFailures []*ast.MessageLiteralNode
 		badRequests          []*ast.MessageLiteralNode
@@ -1464,6 +1473,8 @@ func (f *File) nodeInfoByGRPCErrorDetail(list []*ast.MessageLiteralNode, detail 
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
+		case detail.Def != nil && fieldName == "def":
+			defs = append(defs, f.getMessageListFromNode(elem.Val)...)
 		case detail.If && fieldName == "if":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
@@ -1485,6 +1496,9 @@ func (f *File) nodeInfoByGRPCErrorDetail(list []*ast.MessageLiteralNode, detail 
 		case detail.LocalizedMessage != nil && fieldName == "localized_message":
 			localizedMessages = append(localizedMessages, f.getMessageListFromNode(elem.Val)...)
 		}
+	}
+	if len(defs) != 0 {
+		return f.nodeInfoByDef(defs, detail.Def)
 	}
 	if len(messages) != 0 {
 		return f.nodeInfoByDef(messages, detail.Message)

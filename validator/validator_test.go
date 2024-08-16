@@ -25,6 +25,23 @@ testdata/different_message_argument_type.proto:28:14: "id" argument name is decl
 28:          args { name: "id" by: "1" }
                   ^
 `},
+		{file: "duplicated_variable_name.proto", expected: `
+testdata/duplicated_variable_name.proto:25:25: found duplicated variable name "a"
+25:              def { name: "a" by: "1" }
+                             ^
+testdata/duplicated_variable_name.proto:27:27: found duplicated variable name "a"
+27:                def { name: "a" by: "2" }
+                               ^
+testdata/duplicated_variable_name.proto:36:25: found duplicated variable name "a"
+36:              def { name: "a" by: "3" }
+                             ^
+testdata/duplicated_variable_name.proto:38:27: found duplicated variable name "a"
+38:                def { name: "a" by: "4" }
+                               ^
+testdata/duplicated_variable_name.proto:48:19: found duplicated variable name "a"
+48:        def { name: "a" by: "5" }
+                       ^
+`},
 		{file: "invalid_autobind.proto", expected: `
 testdata/invalid_autobind.proto:23:3: "id" field found multiple times in the message specified by autobind. since it is not possible to determine one, please use "grpc.federation.field" to explicitly bind it. found message names are "a" name at def and "b" name at def
 23:    string id = 1;

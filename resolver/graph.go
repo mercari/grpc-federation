@@ -298,59 +298,21 @@ func newMessageDependencyGraphNode(baseMsg *Message, def *VariableDefinition) *M
 // Also, it creates VariableDefinitionGroups value and set it to VariableDefinitionSet.
 // If a circular reference occurs, add an error to context.
 func setupVariableDefinitionSet(ctx *context, baseMsg *Message, defSet *VariableDefinitionSet) {
-	// Maps a variable name to the MessageDependencyGraphNode which returns the variable
-	nameToNode := make(map[string]*MessageDependencyGraphNode)
-
-	var rootDefNodes []*MessageDependencyGraphNode
+	var nodes []*MessageDependencyGraphNode
 	for _, varDef := range defSet.Definitions() {
-		varDefNode := newMessageDependencyGraphNode(baseMsg, varDef)
-		if varDef.Name != "" {
-			nameToNode[varDef.Name] = varDefNode
-		}
-
-		refs := varDef.ReferenceNames()
-		if len(refs) == 0 {
-			rootDefNodes = append(rootDefNodes, varDefNode)
-			continue
-		}
-		if varDefNode == nil {
-			continue
-		}
-		var iterName string
-		if varDef.Expr.Map != nil && varDef.Expr.Map.Iterator != nil {
-			iterName = varDef.Expr.Map.Iterator.Name
-		}
-		for _, ref := range refs {
-			if ref == iterName {
-				continue
-			}
-
-			node, exists := nameToNode[ref]
-			if !exists {
-				// not found name in current scope.
-				continue
-			}
-			if _, exists := node.ChildrenMap[varDefNode]; !exists {
-				node.Children = append(node.Children, varDefNode)
-				node.ChildrenMap[varDefNode] = struct{}{}
-			}
-			if _, exists := varDefNode.ParentMap[node]; !exists {
-				varDefNode.Parent = append(varDefNode.Parent, node)
-				varDefNode.ParentMap[node] = struct{}{}
-			}
-		}
+		node := newMessageDependencyGraphNode(baseMsg, varDef)
+		nodes = append(nodes, node)
 	}
 
+	setupVariableDependencyByReferenceName(nodes)
+	setupVariableDependencyByValidation(nodes)
+
 	var roots []*MessageDependencyGraphNode
-	for _, node := range nameToNode {
+	for _, node := range nodes {
 		if len(node.Parent) == 0 {
 			roots = append(roots, node)
 		}
 	}
-	roots = append(roots, rootDefNodes...)
-	sort.Slice(roots, func(i, j int) bool {
-		return roots[i].FQDN() < roots[j].FQDN()
-	})
 	if len(roots) == 0 {
 		return
 	}
@@ -362,6 +324,68 @@ func setupVariableDefinitionSet(ctx *context, baseMsg *Message, defSet *Variable
 	}
 	defSet.Graph = graph
 	defSet.Groups = graph.VariableDefinitionGroups()
+}
+
+func setupVariableDependencyByReferenceName(nodes []*MessageDependencyGraphNode) {
+	nameToNode := make(map[string]*MessageDependencyGraphNode)
+	for _, node := range nodes {
+		def := node.VariableDefinition
+		if def.Name != "" {
+			nameToNode[def.Name] = node
+		}
+
+		refs := def.ReferenceNames()
+		if len(refs) == 0 {
+			continue
+		}
+		var iterName string
+		if def.Expr.Map != nil && def.Expr.Map.Iterator != nil {
+			iterName = def.Expr.Map.Iterator.Name
+		}
+		for _, ref := range refs {
+			if ref == iterName {
+				continue
+			}
+
+			refNode, exists := nameToNode[ref]
+			if !exists {
+				// not found name in current scope.
+				continue
+			}
+			if _, exists := refNode.ChildrenMap[node]; !exists {
+				refNode.Children = append(refNode.Children, node)
+				refNode.ChildrenMap[node] = struct{}{}
+			}
+			if _, exists := node.ParentMap[refNode]; !exists {
+				node.Parent = append(node.Parent, refNode)
+				node.ParentMap[refNode] = struct{}{}
+			}
+		}
+	}
+}
+
+func setupVariableDependencyByValidation(nodes []*MessageDependencyGraphNode) {
+	if len(nodes) == 0 {
+		return
+	}
+	for idx, node := range nodes {
+		if !node.VariableDefinition.IsValidation() {
+			continue
+		}
+		validationNode := node
+		for i := idx + 1; i < len(nodes); i++ {
+			if _, exists := validationNode.ChildrenMap[nodes[i]]; !exists {
+				validationNode.Children = append(validationNode.Children, nodes[i])
+				validationNode.ChildrenMap[nodes[i]] = struct{}{}
+			}
+			if _, exists := nodes[i].ParentMap[validationNode]; !exists {
+				nodes[i].Parent = append(nodes[i].Parent, validationNode)
+				nodes[i].ParentMap[validationNode] = struct{}{}
+			}
+		}
+		break
+	}
+	setupVariableDependencyByValidation(nodes[1:])
 }
 
 func validateMessageGraph(graph *MessageDependencyGraph) *LocationError {

@@ -1139,7 +1139,70 @@ func (r *Resolver) validateMessages(ctx *context, msgs []*Message) {
 		ctx := ctx.withFile(msg.File).withMessage(msg)
 		mb := newMessageBuilderFromMessage(msg)
 		r.validateMessageFields(ctx, msg, mb)
+		r.validateDuplicatedVariableName(ctx, msg, mb)
 		// Don't have to check msg.NestedMessages since r.allMessages(files) already includes nested messages
+	}
+}
+
+func (r *Resolver) validateDuplicatedVariableName(ctx *context, msg *Message, builder *source.MessageBuilder) {
+	if msg.Rule == nil {
+		return
+	}
+	optBuilder := builder.WithOption()
+	nameMap := make(map[string]struct{})
+	for idx, def := range msg.Rule.DefSet.Definitions() {
+		r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, optBuilder.WithDef(idx))
+	}
+	for _, field := range msg.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		builder := builder.WithField(field.Name).WithOption().WithOneOf()
+		for idx, def := range field.Rule.Oneof.DefSet.Definitions() {
+			r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(idx))
+		}
+	}
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithDef(ctx *context, nameMap map[string]struct{}, def *VariableDefinition, builder *source.VariableDefinitionOptionBuilder) {
+	if def.Expr == nil {
+		return
+	}
+	if def.Name != "" {
+		if _, exists := nameMap[def.Name]; exists {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf("found duplicated variable name %q", def.Name),
+					builder.WithName().Location(),
+				),
+			)
+		}
+	}
+	nameMap[def.Name] = struct{}{}
+	expr := def.Expr
+	switch {
+	case expr.Call != nil:
+		builder := builder.WithCall()
+		for idx, grpcErr := range expr.Call.Errors {
+			r.validateDuplicatedVariableNameWithGRPCError(ctx, nameMap, grpcErr, builder.WithError(idx))
+		}
+	case expr.Validation != nil:
+		r.validateDuplicatedVariableNameWithGRPCError(ctx, nameMap, expr.Validation.Error, builder.WithValidation().WithError())
+	}
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithGRPCError(ctx *context, nameMap map[string]struct{}, grpcErr *GRPCError, builder *source.GRPCErrorOptionBuilder) {
+	for idx, def := range grpcErr.DefSet.Definitions() {
+		r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(idx))
+	}
+	for detailIdx, detail := range grpcErr.Details {
+		builder := builder.WithDetail(detailIdx)
+		for defIdx, def := range detail.DefSet.Definitions() {
+			r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(defIdx))
+		}
 	}
 }
 
@@ -2027,9 +2090,15 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 		}
 		ignoreAndResponse = &CELValue{Expr: res}
 	}
+	for idx, errDef := range def.GetDef() {
+		if errDef.GetName() == "" {
+			name := fmt.Sprintf("_def%d_def%d", ctx.defIndex(), idx)
+			errDef.Name = &name
+		}
+	}
 	return &GRPCError{
 		DefSet: &VariableDefinitionSet{
-			Defs: r.resolveVariableDefinitions(ctx, def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+			Defs: r.resolveVariableDefinitions(ctx.withIgnoreNameValidation(), def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 				return builder.WithDef(idx)
 			}),
 		},
@@ -2061,10 +2130,16 @@ func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.G
 		for _, by := range detail.GetBy() {
 			byValues = append(byValues, &CELValue{Expr: by})
 		}
+		for idx, errDetailDef := range detail.GetDef() {
+			if errDetailDef.GetName() == "" {
+				name := fmt.Sprintf("_def%d_err_detail%d_def%d", ctx.defIndex(), ctx.errDetailIndex(), idx)
+				errDetailDef.Name = &name
+			}
+		}
 		result = append(result, &GRPCErrorDetail{
 			If: r.resolveGRPCErrorIf(detail.GetIf()),
 			DefSet: &VariableDefinitionSet{
-				Defs: r.resolveVariableDefinitions(ctx, detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+				Defs: r.resolveVariableDefinitions(ctx.withIgnoreNameValidation(), detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 					return builder.WithDef(idx)
 				}),
 			},

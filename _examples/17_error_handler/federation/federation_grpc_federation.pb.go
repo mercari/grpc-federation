@@ -592,7 +592,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				CacheIndex: 18,
 				Body: func(value *localValueType) error {
 					stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-					if err := grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
+					if err := grpcfed.IgnoreAndResponse(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
 						Name: "res",
 						Type: grpcfed.CELObjectType("post.GetPostResponse"),
 						Setter: func(value *localValueType, v *post.GetPostResponse) error {

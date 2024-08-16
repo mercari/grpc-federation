@@ -21,7 +21,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 			return nil
 			{{- else if .IgnoreAndResponse }}
 			stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-			if err := grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
+			if err := grpcfed.IgnoreAndResponse({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
 				Name: "{{ $def.Key }}",
 				Type: {{ $def.CELType }},
 				Setter: func(value *localValueType, v {{ $def.Type }}) error {
