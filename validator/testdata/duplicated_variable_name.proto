@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+import "echo.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    def [
+      { name: "a" by: "0" },
+      {
+        validation {
+          name: "a"
+          error {
+            def { name: "a" by: "1" }
+            details {
+              def { name: "a" by: "2" }
+            }
+          }
+        }
+      },
+      {
+        call {
+          method: "echo.EchoService/Echo"
+          error {
+            def { name: "a" by: "3" }
+            details {
+              def { name: "a" by: "4" }
+            }
+          }
+        }
+      }
+    ]
+  };
+  oneof o {
+    string foo = 1 [(grpc.federation.field).oneof = {
+      default: true
+      def { name: "a" by: "5" }
+      by: "'foo'"
+    }];
+  }
+}
