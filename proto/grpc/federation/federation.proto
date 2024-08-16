@@ -289,6 +289,23 @@ message GRPCError {
   // The evaluation value of CEL must always be the same as the response message type.
   // `ignore` and `ignore_and_response` cannot be specified same.
   optional string ignore_and_response = 7;
+  // LogLevel is the importance or severity of a log event.
+  enum LogLevel {
+    // UNKNOWN represents unexpected value.
+    UNKNOWN = 0;
+    // DEBUG is used for detailed information that is useful during development and debugging.
+    DEBUG = 1;
+    // INFO logs are used to provide information about the normal functioning of the application.
+    INFO = 2;
+    // WARN signifies a potential problem or warning that does not necessarily stop the program from working but may lead to issues in the future.
+    WARN = 3;
+    // ERROR indicates a serious issue that has caused a failure in the application.
+    ERROR = 4;
+  }
+  // log_level can be configured to output logs as any log level.
+  // If DEBUG is specified for the log_level, logs are output as debug logs.
+  // default value is ERROR.
+  optional LogLevel log_level = 8;
 }
 
 message GRPCErrorDetail {

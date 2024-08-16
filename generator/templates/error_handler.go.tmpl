@@ -5,9 +5,14 @@
 {{- $grpcErrors := $def.GRPCErrors }}
 {{- if $grpcErrors }}
 grpcfed.SetGRPCError({{ $ctx }}, value, err)
-stat, handleErr := func() (*grpcfed.Status, error) {
+type localStatusType struct {
+	status *grpcfed.Status
+	logLevel slog.Level
+}
+stat, handleErr := func() (*localStatusType, error) {
 	var stat *grpcfed.Status
 	{{- range $grpcErrors }}
+	{{- $logLevel := .LogLevelValue }}
 	{{- if .VariableDefinitionSet }}
 	{{- template "evalDefSet" .VariableDefinitionSet }}
 	{{- end }}
@@ -141,7 +146,7 @@ stat, handleErr := func() (*grpcfed.Status, error) {
 		return nil, err
 	}
 	if stat != nil {
-		return stat, nil
+		return &localStatusType{status: stat, logLevel: {{ $logLevel }}}, nil
 	}
 	{{- end }}
 	return nil, nil
@@ -151,23 +156,23 @@ if handleErr != nil {
 	// If it fails during error handling, return the original error.
 	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+		return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs({{ $ctx }}))
 	}
 } else if stat != nil {
-	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, stat.Err()); err != nil {
+	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, stat.status.Err()); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+		return nil, grpcfed.NewErrorWithLogAttrs(err, stat.logLevel, grpcfed.LogAttrs({{ $ctx }}))
 	}
 } else {
 	if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 		grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-		return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+		return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs({{ $ctx }}))
 	}
 }
 {{- else }}
 if err := s.errorHandler({{ $ctx }}, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 	grpcfed.RecordErrorToSpan({{ $ctx }}, err)
-	return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs({{ $ctx }}))
+	return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs({{ $ctx }}))
 }
 {{- end }}
 {{- else }}

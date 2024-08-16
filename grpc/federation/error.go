@@ -10,8 +10,6 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	grpcstatus "google.golang.org/grpc/status"
-
-	"github.com/mercari/grpc-federation/grpc/federation/log"
 )
 
 // ErrorHandler Federation Service often needs to convert errors received from downstream services.
@@ -42,6 +40,7 @@ func GoWithRecover(eg *errgroup.Group, fn func() (any, error)) {
 
 type ErrorWithLogAttrs struct {
 	err   error
+	level slog.Level
 	attrs []slog.Attr
 }
 
@@ -57,12 +56,13 @@ func (e *ErrorWithLogAttrs) GRPCStatus() *grpcstatus.Status {
 	return grpcstatus.Convert(e.err)
 }
 
-func NewErrorWithLogAttrs(err error, attrs []slog.Attr) error {
+func NewErrorWithLogAttrs(err error, level slog.Level, attrs []slog.Attr) error {
 	if err == nil {
 		return nil
 	}
 	return &ErrorWithLogAttrs{
 		err:   err,
+		level: level,
 		attrs: attrs,
 	}
 }
@@ -73,17 +73,19 @@ func OutputErrorLog(ctx context.Context, err error) {
 	}
 	logger := Logger(ctx)
 
-	var logArgs []any
+	logLevel := slog.LevelError
+	var logArgs []slog.Attr
 	var errWithAttrs *ErrorWithLogAttrs
 	if errors.As(err, &errWithAttrs) {
-		logArgs = log.AttrsToArgs(errWithAttrs.attrs)
+		logLevel = errWithAttrs.level
+		logArgs = errWithAttrs.attrs
 	}
 	if status, ok := grpcstatus.FromError(err); ok {
 		logArgs = append(logArgs, slog.Group("grpc_status",
 			slog.String("code", status.Code().String()),
 			slog.Any("details", status.Details()),
 		))
-		logger.ErrorContext(ctx, status.Message(), logArgs...)
+		logger.LogAttrs(ctx, logLevel, status.Message(), logArgs...)
 		return
 	}
 	var recoveredErr *RecoveredError

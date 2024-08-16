@@ -3,6 +3,7 @@ package testutil
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
 	"testing"
@@ -945,6 +946,7 @@ func NewGRPCErrorBuilder() *GRPCErrorBuilder {
 				Expr: "true",
 				Out:  resolver.BoolType,
 			},
+			LogLevel: slog.LevelError,
 		},
 	}
 }
@@ -1000,6 +1002,11 @@ func (b *GRPCErrorBuilder) SetIgnoreAndResponse(v string, typ *resolver.Type) *G
 
 func (b *GRPCErrorBuilder) AddDetail(v *resolver.GRPCErrorDetail) *GRPCErrorBuilder {
 	b.err.Details = append(b.err.Details, v)
+	return b
+}
+
+func (b *GRPCErrorBuilder) SetLogLevel(level slog.Level) *GRPCErrorBuilder {
+	b.err.LogLevel = level
 	return b
 }
 
