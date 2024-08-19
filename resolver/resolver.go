@@ -4,6 +4,7 @@ import (
 	pkgcontext "context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -2108,7 +2109,20 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 		Details:           r.resolveGRPCErrorDetails(ctx, def.GetDetails(), builder),
 		Ignore:            def.GetIgnore(),
 		IgnoreAndResponse: ignoreAndResponse,
+		LogLevel:          r.resolveGRPCErrorLogLevel(def.GetLogLevel()),
 	}
+}
+
+func (r *Resolver) resolveGRPCErrorLogLevel(l federation.GRPCError_LogLevel) slog.Level {
+	switch l {
+	case federation.GRPCError_DEBUG:
+		return slog.LevelDebug
+	case federation.GRPCError_INFO:
+		return slog.LevelInfo
+	case federation.GRPCError_WARN:
+		return slog.LevelWarn
+	}
+	return slog.LevelError
 }
 
 func (r *Resolver) resolveGRPCErrorIf(expr string) *CELValue {

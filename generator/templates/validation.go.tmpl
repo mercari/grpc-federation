@@ -98,5 +98,5 @@ if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 }); err != nil {
 	return err
 }
-return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs({{ $ctx }}))
+return grpcfed.NewErrorWithLogAttrs(stat.Err(), {{ $error.LogLevelValue }}, grpcfed.LogAttrs({{ $ctx }}))
 {{- end }}

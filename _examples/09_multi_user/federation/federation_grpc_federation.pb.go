@@ -525,7 +525,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		}); err != nil {
 			if err := s.errorHandler(ctx1, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
+				return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx1))
 			}
 		}
 

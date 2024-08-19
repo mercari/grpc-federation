@@ -1552,7 +1552,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	}); err != nil {
 		if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+			return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 		}
 	}
 
@@ -1740,7 +1740,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	}); err != nil {
 		if err := s.errorHandler(ctx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+			return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 		}
 	}
 

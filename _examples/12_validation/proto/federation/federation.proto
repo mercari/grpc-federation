@@ -48,6 +48,7 @@ message GetPostResponse {
       {
         validation {
           error: {
+            log_level: WARN
             def [
               { by: "grpc.federation.log.add({'validation3_attrs': true})" }
             ]

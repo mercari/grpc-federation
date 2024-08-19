@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"log/slog"
 	"time"
 
 	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
@@ -253,6 +254,7 @@ type GRPCError struct {
 	Details           GRPCErrorDetails
 	Ignore            bool
 	IgnoreAndResponse *CELValue
+	LogLevel          slog.Level
 }
 
 type GRPCErrorDetails []*GRPCErrorDetail

@@ -402,7 +402,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	}); err != nil {
 		if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_User_UserService_GetUser, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+			return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 		}
 	}
 

@@ -692,7 +692,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 		}); err != nil {
 			if err := s.errorHandler(ctx1, FederationV2DevService_DependentMethod_Post_PostService_GetPost, err); err != nil {
 				grpcfed.RecordErrorToSpan(ctx1, err)
-				return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx1))
+				return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx1))
 			}
 		}
 
@@ -908,7 +908,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	}); err != nil {
 		if err := s.errorHandler(ctx, FederationV2DevService_DependentMethod_User_UserService_GetUser, err); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+			return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 		}
 	}
 
