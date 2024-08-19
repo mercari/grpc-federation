@@ -355,7 +355,6 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				ret, err := s.client.Post_PostServiceClient.GetPosts(ctx, args)
 				if err != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPosts, err); err != nil {
-						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				}
@@ -462,7 +461,6 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				ret, err := s.client.Post_PostServiceClient.GetPosts(ctx, args)
 				if err != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPosts, err); err != nil {
-						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				}
@@ -580,7 +578,6 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 				ret, err := s.client.Post_PostServiceClient.GetPosts(ctx, args)
 				if err != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPosts, err); err != nil {
-						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				}
@@ -833,7 +830,6 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			ret, err := s.client.User_UserServiceClient.GetUser(ctx, args)
 			if err != nil {
 				if err := s.errorHandler(ctx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 				}
 			}

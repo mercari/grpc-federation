@@ -658,7 +658,6 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			ret, err := s.client.Content_ContentServiceClient.GetContent(ctx, args)
 			if err != nil {
 				if err := s.errorHandler(ctx, FederationService_DependentMethod_Content_ContentService_GetContent, err); err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 				}
 			}

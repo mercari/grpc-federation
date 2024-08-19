@@ -414,7 +414,6 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 			ret, err := s.client.Org_Post_PostServiceClient.CreatePost(ctx, args)
 			if err != nil {
 				if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_CreatePost, err); err != nil {
-					grpcfed.RecordErrorToSpan(ctx, err)
 					return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 				}
 			}

@@ -663,17 +663,14 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					grpcfed.Logger(ctx).ErrorContext(ctx, "failed to handle error", slog.String("error", handleErr.Error()))
 					// If it fails during error handling, return the original error.
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
-						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				} else if stat != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, stat.status.Err()); err != nil {
-						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, grpcfed.NewErrorWithLogAttrs(err, stat.logLevel, grpcfed.LogAttrs(ctx))
 					}
 				} else {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
-						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				}
