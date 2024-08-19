@@ -15,5 +15,5 @@ jobs:
           lint: false
           breaking: false
           pr_comment: false
-          buf_token: ${{ secrets.BUF_TOKEN }}
+          token: ${{ secrets.BUF_TOKEN }}
           input: proto
