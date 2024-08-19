@@ -80,7 +80,7 @@ grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 		grpcfed.Logger(ctx).DebugContext(ctx, "call {{ $def.MethodFQDN }}", slog.Any("{{ $def.RequestTypeFQDN }}", s.logvalue_{{ $def.LogValueRequestType }}(args)))
 		{{- end }}
 		{{- if $def.UseTimeout }}
-		return grpcfed.WithTimeout[{{ $def.ReturnType }}](ctx, "{{ $def.MethodFQDN }}", {{ $def.Timeout }}, func(ctx context.Context) (*{{ $def.ReturnType }}, error) {
+		ret, err := grpcfed.WithTimeout[{{ $def.ReturnType }}](ctx, "{{ $def.MethodFQDN }}", {{ $def.Timeout }}, func(ctx context.Context) (*{{ $def.ReturnType }}, error) {
 			{{- if $def.UseRetry }}
 			{{- template "retry" (map "Retry" $def.Retry) }}
 			return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ $def.ReturnType }}]{
@@ -98,7 +98,7 @@ grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 		})
 		{{- else if $def.UseRetry }}
 		{{- template "retry" (map "Retry" $def.Retry) }}
-		return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ $def.ReturnType }}]{
+		ret, err := grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ $def.ReturnType }}]{
 			Value: value,
 			If: `{{ $def.Retry.If.Expr }}`,
 			CacheIndex: {{ $def.CELCacheIndex }},
@@ -108,8 +108,12 @@ grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 			},
 		})
 		{{- else }}
-		return s.{{ $def.Caller }}(ctx, args)
+		ret, err := s.{{ $def.Caller }}(ctx, args)
 		{{- end }}
+		if err != nil {
+			{{- template "errorHandler" (map "Definition" $def) }}
+		}
+		return ret, nil
 	},
 	{{- end }}
 })
@@ -122,7 +126,8 @@ grpcfed.EvalDef({{ $ctx }}, value, grpcfed.Def[{{ $def.Type }}, *localValueType]
 {{ .Definition.ProtoComment }}
 */
 if err := {{- template "evalDef" (map "Ctx" .Ctx "Definition" .Definition) -}}; err != nil {
-	{{- template "errorHandler" (map "Ctx" .Ctx "Definition" .Definition) }}
+	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
+	return nil, err
 }
 {{- end }}
 

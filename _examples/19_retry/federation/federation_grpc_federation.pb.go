@@ -213,7 +213,11 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			}); err != nil {
 				return nil, err
 			}
-			return s.resolve_Federation_Post(ctx, args)
+			ret, err := s.resolve_Federation_Post(ctx, args)
+			if err != nil {
+				return nil, err
+			}
+			return ret, nil
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -274,7 +278,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				return nil, err
 			}
 			grpcfed.Logger(ctx).DebugContext(ctx, "call post.PostService/GetPost", slog.Any("post.GetPostRequest", s.logvalue_Post_GetPostRequest(args)))
-			return grpcfed.WithTimeout[post.GetPostResponse](ctx, "post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
+			ret, err := grpcfed.WithTimeout[post.GetPostResponse](ctx, "post.PostService/GetPost", 10000000000 /* 10s */, func(ctx context.Context) (*post.GetPostResponse, error) {
 				b := grpcfed.NewConstantBackOff(30000000) /* 30ms */
 				b = grpcfed.BackOffWithMaxRetries(b, 3)
 				b = grpcfed.BackOffWithContext(b, ctx)
@@ -288,12 +292,17 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					},
 				})
 			})
+			if err != nil {
+				if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
+					grpcfed.RecordErrorToSpan(ctx, err)
+					return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
+				}
+			}
+			return ret, nil
 		},
 	}); err != nil {
-		if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
-			grpcfed.RecordErrorToSpan(ctx, err)
-			return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
-		}
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
 	}
 
 	// create a message value to be returned.

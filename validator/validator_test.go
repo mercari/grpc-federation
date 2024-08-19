@@ -571,6 +571,26 @@ testdata/nested_message_cyclic_dependency.proto:55:19: recursive definition: "C"
 55:              name: "A.B.C"
                        ^
 `},
+		{file: "invalid_variable_name.proto", expected: `
+testdata/invalid_variable_name.proto:20:15: "_def0" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
+20:        { name: "_def0" by: "0" },
+                   ^
+testdata/invalid_variable_name.proto:24:25: "_def1" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
+24:              def { name: "_def1" by: "1" }
+                             ^
+testdata/invalid_variable_name.proto:26:27: "_def2" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
+26:                def { name: "_def2" by: "2" }
+                               ^
+testdata/invalid_variable_name.proto:35:25: "_def3" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
+35:              def { name: "_def3" by: "3" }
+                             ^
+testdata/invalid_variable_name.proto:37:27: "_def4" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
+37:                def { name: "_def4" by: "4" }
+                               ^
+testdata/invalid_variable_name.proto:47:19: "_def5" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
+47:        def { name: "_def5" by: "5" }
+                       ^
+`},
 		{file: "invalid_wrapper_type_conversion.proto", expected: `
 testdata/invalid_wrapper_type_conversion.proto:20:3: cannot convert message to "double"
 20:    double double_value = 1 [(grpc.federation.field).by = "google.protobuf.DoubleValue{value: 1.23}"];

@@ -1796,6 +1796,22 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 	if ruleDef == nil {
 		return
 	}
+	for idx, def := range ruleDef.GetDef() {
+		name := def.GetName()
+		if name == "" {
+			n := fmt.Sprintf("_def%d", idx)
+			def.Name = &n
+		} else {
+			if err := r.validateName(name); err != nil {
+				empty := ""
+				def.Name = &empty
+				ctx.addError(ErrWithLocation(
+					err.Error(),
+					builder.WithDef(idx).WithName().Location(),
+				))
+			}
+		}
+	}
 	msg.Rule = &MessageRule{
 		DefSet: &VariableDefinitionSet{
 			Defs: r.resolveVariableDefinitions(ctx, ruleDef.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
@@ -1857,28 +1873,12 @@ func (r *Resolver) resolveVariableDefinition(ctx *context, varDef *federation.Va
 	}
 	return &VariableDefinition{
 		Idx:      ctx.defIndex(),
-		Name:     r.resolveVariableName(ctx, varDef.GetName(), builder),
+		Name:     varDef.GetName(),
 		If:       ifValue,
 		AutoBind: varDef.GetAutobind(),
 		Expr:     r.resolveVariableExpr(ctx, varDef, builder),
 		builder:  builder,
 	}
-}
-
-func (r *Resolver) resolveVariableName(ctx *context, name string, builder *source.VariableDefinitionOptionBuilder) string {
-	if !ctx.ignoreNameValidation {
-		if err := r.validateName(name); err != nil {
-			ctx.addError(ErrWithLocation(
-				err.Error(),
-				builder.WithName().Location(),
-			))
-			return ""
-		}
-	}
-	if name != "" {
-		return name
-	}
-	return fmt.Sprintf("_def%d", ctx.defIndex())
 }
 
 func (r *Resolver) resolveVariableExpr(ctx *context, varDef *federation.VariableDefinition, builder *source.VariableDefinitionOptionBuilder) *VariableExpr {
@@ -2092,14 +2092,24 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 		ignoreAndResponse = &CELValue{Expr: res}
 	}
 	for idx, errDef := range def.GetDef() {
-		if errDef.GetName() == "" {
-			name := fmt.Sprintf("_def%d_def%d", ctx.defIndex(), idx)
-			errDef.Name = &name
+		name := errDef.GetName()
+		if name == "" {
+			n := fmt.Sprintf("_def%d_def%d", ctx.defIndex(), idx)
+			errDef.Name = &n
+		} else {
+			if err := r.validateName(name); err != nil {
+				empty := ""
+				errDef.Name = &empty
+				ctx.addError(ErrWithLocation(
+					err.Error(),
+					builder.WithDef(idx).WithName().Location(),
+				))
+			}
 		}
 	}
 	return &GRPCError{
 		DefSet: &VariableDefinitionSet{
-			Defs: r.resolveVariableDefinitions(ctx.withIgnoreNameValidation(), def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+			Defs: r.resolveVariableDefinitions(ctx, def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 				return builder.WithDef(idx)
 			}),
 		},
@@ -2145,15 +2155,25 @@ func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.G
 			byValues = append(byValues, &CELValue{Expr: by})
 		}
 		for idx, errDetailDef := range detail.GetDef() {
-			if errDetailDef.GetName() == "" {
-				name := fmt.Sprintf("_def%d_err_detail%d_def%d", ctx.defIndex(), ctx.errDetailIndex(), idx)
-				errDetailDef.Name = &name
+			name := errDetailDef.GetName()
+			if name == "" {
+				n := fmt.Sprintf("_def%d_err_detail%d_def%d", ctx.defIndex(), ctx.errDetailIndex(), idx)
+				errDetailDef.Name = &n
+			} else {
+				if err := r.validateName(name); err != nil {
+					empty := ""
+					errDetailDef.Name = &empty
+					ctx.addError(ErrWithLocation(
+						err.Error(),
+						builder.WithDef(idx).WithName().Location(),
+					))
+				}
 			}
 		}
 		result = append(result, &GRPCErrorDetail{
 			If: r.resolveGRPCErrorIf(detail.GetIf()),
 			DefSet: &VariableDefinitionSet{
-				Defs: r.resolveVariableDefinitions(ctx.withIgnoreNameValidation(), detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+				Defs: r.resolveVariableDefinitions(ctx, detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 					return builder.WithDef(idx)
 				}),
 			},
@@ -2185,7 +2205,6 @@ func (r *Resolver) resolveGRPCDetailMessages(ctx *context, messages []*federatio
 			},
 		})
 	}
-	ctx = ctx.withIgnoreNameValidation()
 	defs := make([]*VariableDefinition, 0, len(msgs))
 	for _, def := range r.resolveVariableDefinitions(ctx, msgs, builderFn) {
 		def.Used = true
@@ -2361,12 +2380,29 @@ func (r *Resolver) resolveFieldOneofRule(ctx *context, field *Field, def *federa
 	if b := def.GetBy(); b != "" {
 		by = &CELValue{Expr: b}
 	}
+	oneofBuilder := builder.WithOption().WithOneOf()
+	for idx, oneofDef := range def.GetDef() {
+		name := oneofDef.GetName()
+		if name == "" {
+			n := fmt.Sprintf("_oneof_def%d", idx)
+			oneofDef.Name = &n
+		} else {
+			if err := r.validateName(name); err != nil {
+				empty := ""
+				oneofDef.Name = &empty
+				ctx.addError(ErrWithLocation(
+					err.Error(),
+					oneofBuilder.WithDef(idx).WithName().Location(),
+				))
+			}
+		}
+	}
 	return &FieldOneofRule{
 		If:      ifValue,
 		Default: def.GetDefault(),
 		DefSet: &VariableDefinitionSet{
 			Defs: r.resolveVariableDefinitions(ctx, def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
-				return builder.WithOption().WithOneOf().WithDef(idx)
+				return oneofBuilder.WithDef(idx)
 			}),
 		},
 		By: by,
