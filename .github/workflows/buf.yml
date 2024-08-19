@@ -9,8 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: bufbuild/buf-setup-action@v1
-      - uses: bufbuild/buf-push-action@v1
+      - uses: bufbuild/buf-action@v1
         with:
+          format: false
+          lint: false
+          breaking: false
+          pr_comment: false
           buf_token: ${{ secrets.BUF_TOKEN }}
           input: proto
