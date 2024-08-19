@@ -543,7 +543,6 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				ret, err := s.client.User_UserServiceClient.GetUser(ctx, args)
 				if err != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_User_UserService_GetUser, err); err != nil {
-						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				}

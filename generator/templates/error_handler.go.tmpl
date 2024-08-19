@@ -154,23 +154,19 @@ if handleErr != nil {
 	grpcfed.Logger(ctx).ErrorContext(ctx, "failed to handle error", slog.String("error", handleErr.Error()))
 	// If it fails during error handling, return the original error.
 	if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 	}
 } else if stat != nil {
 	if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, stat.status.Err()); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, grpcfed.NewErrorWithLogAttrs(err, stat.logLevel, grpcfed.LogAttrs(ctx))
 	}
 } else {
 	if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 	}
 }
 {{- else }}
 if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
-	grpcfed.RecordErrorToSpan(ctx, err)
 	return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 }
 {{- end }}
