@@ -379,7 +379,8 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				ret, err := s.client.Org_Post_V2_PostServiceClient.GetPost(ctx, args)
 				if err != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_V2_PostService_GetPost, err); err != nil {
-						return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+						grpcfed.RecordErrorToSpan(ctx, err)
+						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				}
 				return ret, nil
@@ -549,7 +550,8 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				ret, err := s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
 				if err != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Org_Post_PostService_GetPost, err); err != nil {
-						return nil, grpcfed.NewErrorWithLogAttrs(err, grpcfed.LogAttrs(ctx))
+						grpcfed.RecordErrorToSpan(ctx, err)
+						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 					}
 				}
 				return ret, nil

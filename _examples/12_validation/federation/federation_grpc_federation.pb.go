@@ -226,7 +226,7 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 			}); err != nil {
 				return err
 			}
-			return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx))
+			return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx))
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -403,7 +403,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					}); err != nil {
 						return err
 					}
-					return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx2))
+					return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx2))
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -487,7 +487,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						}); err != nil {
 							return err
 						}
-						return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx3))
+						return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx3))
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -574,7 +574,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					}); err != nil {
 						return err
 					}
-					return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx2))
+					return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx2))
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -658,7 +658,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						}); err != nil {
 							return err
 						}
-						return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx3))
+						return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx3))
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -742,7 +742,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 							}); err != nil {
 								return err
 							}
-							return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx4))
+							return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx4))
 						},
 					}); err != nil {
 						grpcfed.RecordErrorToSpan(ctx4, err)
@@ -829,7 +829,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						}); err != nil {
 							return err
 						}
-						return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx3))
+						return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx3))
 					},
 				}); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
@@ -1123,7 +1123,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					}); err != nil {
 						return err
 					}
-					return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx2))
+					return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelWarn, grpcfed.LogAttrs(ctx2))
 				},
 			}); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
@@ -1236,7 +1236,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				}); err != nil {
 					return err
 				}
-				return grpcfed.NewErrorWithLogAttrs(stat.Err(), grpcfed.LogAttrs(ctx1))
+				return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx1))
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)

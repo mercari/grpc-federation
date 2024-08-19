@@ -190,4 +190,20 @@ func TestFederation(t *testing.T) {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
 	})
+	t.Run("custom log level", func(t *testing.T) {
+		st := status.New(codes.InvalidArgument, "failed to create post message")
+		getPostError = st.Err()
+
+		_, err := client.GetPost(ctx, &federation.GetPostRequest{Id: "y"})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		s, ok := status.FromError(err)
+		if !ok {
+			t.Fatalf("failed to extract gRPC Status from the error: %v", err)
+		}
+		if s.Message() != `this is custom log level` {
+			t.Fatalf("got unexpected error: %v", err)
+		}
+	})
 }

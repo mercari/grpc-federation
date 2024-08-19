@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/format"
 	"log"
+	"log/slog"
 	"sort"
 	"strings"
 	"text/template"
@@ -2627,6 +2628,18 @@ func (e *GRPCError) GoGRPCStatusCode() string {
 		titles = append(titles, cases.Title(language.Und).String(part))
 	}
 	return strings.Join(titles, "") + "Code"
+}
+
+func (e *GRPCError) LogLevelValue() string {
+	switch e.LogLevel {
+	case slog.LevelDebug:
+		return "slog.LevelDebug"
+	case slog.LevelInfo:
+		return "slog.LevelInfo"
+	case slog.LevelWarn:
+		return "slog.LevelWarn"
+	}
+	return "slog.LevelError"
 }
 
 func (e *GRPCError) VariableDefinitionSet() *VariableDefinitionSet {

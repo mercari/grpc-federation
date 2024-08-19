@@ -63,6 +63,12 @@ message Post {
             }
           }
           error {
+            log_level: WARN
+            if: "error.code == google.rpc.Code.INVALID_ARGUMENT"
+            code: INVALID_ARGUMENT
+            message: "'this is custom log level'"
+          }
+          error {
             if: "error.code == google.rpc.Code.UNIMPLEMENTED"
             ignore_and_response: "post.GetPostResponse{post: post.Post{id: 'anonymous'}}"
           }

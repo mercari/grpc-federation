@@ -32,6 +32,7 @@ message GetPostResponse {
       {
         validation {
           error {
+            log_level: WARN
             code: FAILED_PRECONDITION
             message: "'validation message 2'"
             details {

@@ -1,6 +1,7 @@
 package resolver_test
 
 import (
+	"log/slog"
 	"path/filepath"
 	"strconv"
 	"testing"
@@ -2550,6 +2551,7 @@ func TestValidation(t *testing.T) {
 									testutil.NewValidationExprBuilder().
 										SetError(
 											testutil.NewGRPCErrorBuilder().
+												SetLogLevel(slog.LevelWarn).
 												SetCode(code.Code_FAILED_PRECONDITION).
 												SetMessage("'validation message 2'").
 												AddDetail(
