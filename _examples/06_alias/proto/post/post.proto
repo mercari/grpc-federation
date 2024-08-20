@@ -55,3 +55,7 @@ message PostConditionA {
 }
 
 message PostConditionB {}
+
+message M {
+  string x = 1;
+}

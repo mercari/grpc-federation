@@ -665,6 +665,23 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	// (grpc.federation.field).by = "M{x: 'xxx'}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*M]{
+		Value:      value,
+		Expr:       `M{x: 'xxx'}`,
+		CacheIndex: 17,
+		Setter: func(v *M) error {
+			mValue, err := s.cast_Org_Federation_M__to__Org_Post_M(v)
+			if err != nil {
+				return err
+			}
+			ret.M = mValue
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.Post", slog.Any("org.federation.Post", s.logvalue_Org_Federation_Post(ret)))
 	return ret, nil
@@ -690,6 +707,19 @@ func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionB__to__O
 	}
 
 	return &post.PostConditionB{}, nil
+}
+
+// cast_Org_Federation_M__to__Org_Post_M cast from "org.federation.M" to "org.post.M".
+func (s *FederationService) cast_Org_Federation_M__to__Org_Post_M(from *M) (*post.M, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	xValue := from.GetX()
+
+	return &post.M{
+		X: xValue,
+	}, nil
 }
 
 // cast_Org_Post_PostContent_Category__to__Org_Federation_PostContent_Category cast from "org.post.PostContent.Category" to "org.federation.PostContent.Category".
@@ -883,6 +913,7 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 		slog.Any("data", s.logvalue_Org_Federation_PostData(v.GetData())),
 		slog.Any("data2", s.logvalue_Org_Federation_PostData(v.GetData2())),
 		slog.String("type", s.logvalue_Org_Federation_PostType(v.GetType()).String()),
+		slog.Any("m", s.logvalue_Org_Post_M(v.GetM())),
 	)
 }
 
@@ -962,6 +993,15 @@ func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequ
 		slog.String("id", v.GetId()),
 		slog.Any("a", s.logvalue_Org_Post_PostConditionA(v.GetA())),
 		slog.Any("b", s.logvalue_Org_Post_PostConditionB(v.GetB())),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Post_M(v *post.M) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("x", v.GetX()),
 	)
 }
 

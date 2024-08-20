@@ -178,6 +178,7 @@ func TestFederation(t *testing.T) {
 					DupBody: "bodybody2",
 				},
 			},
+			M:    &post.M{X: "xxx"},
 			Type: federation.PostType_POST_TYPE_BAR,
 		},
 	}, cmpopts.IgnoreUnexported(
@@ -185,6 +186,7 @@ func TestFederation(t *testing.T) {
 		federation.Post{},
 		federation.PostData{},
 		federation.PostContent{},
+		post.M{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
