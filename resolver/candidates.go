@@ -71,7 +71,7 @@ func (c ValueCandidates) Filter(typ *Type) ValueCandidates {
 
 func (r *Resolver) Candidates(loc *source.Location) []string {
 	for _, file := range r.files {
-		if strings.HasSuffix(file.GetName(), loc.FileName) {
+		if strings.HasSuffix(loc.FileName, file.GetName()) {
 			protoPkgName := file.GetPackage()
 			switch {
 			case loc.Message != nil:

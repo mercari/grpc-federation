@@ -36,7 +36,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  47,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Service: &source.Service{
 					Name: "FederationService",
 					Method: &source.Method{
@@ -54,7 +54,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  16,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Service: &source.Service{
 					Name: "FederationService",
 					Method: &source.Method{
@@ -72,7 +72,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  20,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
@@ -92,7 +92,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  29,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
@@ -114,7 +114,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  39,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
@@ -136,7 +136,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  47,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Field: &source.Field{
@@ -154,7 +154,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  15,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
@@ -176,7 +176,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  24,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
@@ -198,7 +198,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  34,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "GetPostResponse",
 					Option: &source.MessageOption{
@@ -220,7 +220,7 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				Col:  26,
 			},
 			expected: &source.Location{
-				FileName: "service.proto",
+				FileName: "testdata/service.proto",
 				Message: &source.Message{
 					Name: "Post",
 					Option: &source.MessageOption{
