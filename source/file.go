@@ -200,7 +200,7 @@ func (f *File) buildLocation(ctx *findContext) *Location {
 
 // FindLocationByPos returns the corresponding location information from the position in the source code.
 func (f *File) FindLocationByPos(pos Position) *Location {
-	ctx := &findContext{fileName: f.fileNode.Name()}
+	ctx := &findContext{fileName: f.Path()}
 	for _, decl := range f.fileNode.Decls {
 		ctx := ctx.child()
 		switch n := decl.(type) {
