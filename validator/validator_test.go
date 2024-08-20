@@ -87,12 +87,12 @@ testdata/invalid_go_package.proto:9:21: go_package option "a;b;c;d" is invalid
                         ^
 `},
 		{file: "invalid_enum_alias_target.proto", expected: `
-testdata/invalid_enum_alias_target.proto:48:41: required specify alias = "org.post.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
-48:    option (grpc.federation.enum).alias = "org.post.FakePostDataType";
-                                             ^
-testdata/invalid_enum_alias_target.proto:67:43: required specify alias = "org.post.PostContent.Category" in grpc.federation.enum option for the "org.federation.PostContent.Category" type to automatically assign a value to the "PostContent.category" field via autobind
-67:      option (grpc.federation.enum).alias = "org.post.FakePostContent.FakeCategory";
-                                               ^
+testdata/invalid_enum_alias_target.proto:47:1: required specify alias = "org.post.PostDataType" in grpc.federation.enum option for the "org.federation.PostType" type to automatically assign a value to the "PostData.type" field via autobind
+47:  enum PostType {
+     ^
+testdata/invalid_enum_alias_target.proto:66:3: required specify alias = "org.post.PostContent.Category" in grpc.federation.enum option for the "org.federation.PostContent.Category" type to automatically assign a value to the "PostContent.category" field via autobind
+66:    enum Category {
+       ^
 `},
 		{file: "invalid_enum_selector.proto", expected: `
 testdata/invalid_enum_selector.proto:20:15: ERROR: <input>:1:56: cannot specify an int type. if you are directly specifying an enum value, you need to explicitly use "pkg.EnumName.value('ENUM_VALUE')" function to use the enum type
@@ -163,9 +163,9 @@ testdata/invalid_map_iterator_src.proto:54:47: ERROR: <input>:1:8: undefined fie
                                                    ^
 `},
 		{file: "invalid_message_alias_target.proto", expected: `
-testdata/invalid_message_alias_target.proto:56:44: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
-56:    option (grpc.federation.message).alias = "org.post.FakePostData";
-                                                ^
+testdata/invalid_message_alias_target.proto:44:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
+44:    PostData data = 4;
+       ^
 `},
 		{file: "invalid_message_alias.proto", expected: `
 testdata/invalid_message_alias.proto:44:3: required specify alias = "org.post.PostData" in grpc.federation.message option for the "org.federation.PostData" type to automatically assign a value to the "Post.data" field via autobind
@@ -244,15 +244,15 @@ testdata/invalid_multi_alias.proto:74:3: The types of "org.federation.PostData"'
 testdata/invalid_multi_alias.proto:74:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
 74:    string title = 2;
        ^
+testdata/invalid_multi_alias.proto:75:3: required specify alias = "org.post.v2.PostContent" in grpc.federation.message option for the "org.federation.PostContent" type to automatically assign a value to the "PostData.content" field via autobind
+75:    PostContent content = 3;
+       ^
 testdata/invalid_multi_alias.proto:76:3: specified "alias" in grpc.federation.message option, but "dummy" field does not exist in "org.post.PostData" message
 76:    int64 dummy = 4;
        ^
 testdata/invalid_multi_alias.proto:76:3: "dummy" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
 76:    int64 dummy = 4;
        ^
-testdata/invalid_multi_alias.proto:81:12: required specify alias = "org.post.v2.PostContent" in grpc.federation.message option for the "org.federation.PostContent" type to automatically assign a value to the "PostData.content" field via autobind
-81:      alias: [ "org.post.PostContent" ]
-                ^
 `},
 		{file: "invalid_oneof_selection.proto", expected: `
 testdata/invalid_oneof_selection.proto:26:47: "org.federation.UserSelection" type has "user" as oneof name, but "user" has a difference type and cannot be accessed directly, so "user" becomes an undefined field

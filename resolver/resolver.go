@@ -1286,12 +1286,13 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 		}
 		fromMessage := fromType.Message
 		fromMessageName := fromType.Message.FQDN()
-		toMessageName := toType.Message.FQDN()
+		toMessage := toType.Message
+		toMessageName := toMessage.FQDN()
 		if fromMessageName == toMessageName {
 			// assignment of the same type is okay.
 			return
 		}
-		if fromMessage.Rule == nil || len(fromMessage.Rule.Aliases) == 0 {
+		if !r.findMessageAliasName(fromMessage, toMessage) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1303,35 +1304,15 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			)
 			return
 		}
-		var found bool
-		for _, alias := range fromMessage.Rule.Aliases {
-			fromMessageAliasName := alias.FQDN()
-			if fromMessageAliasName == toMessageName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the %q field`,
-						toMessageName, fromMessageName, toField.FQDN(),
-					),
-					source.NewMessageBuilder(fromMessage.File.Name, fromMessage.Name).
-						WithOption().WithAlias().Location(),
-				),
-			)
-			return
-		}
 	}
 	if toType.Kind == types.Enum {
 		if fromType.Enum == nil || toType.Enum == nil {
 			return
 		}
 		fromEnum := fromType.Enum
+		toEnum := toType.Enum
 		fromEnumName := fromEnum.FQDN()
-		toEnumName := toType.Enum.FQDN()
+		toEnumName := toEnum.FQDN()
 		if fromEnumName == toEnumName {
 			// assignment of the same type is okay.
 			return
@@ -1340,7 +1321,7 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 		if fromEnum.Message != nil {
 			fromEnumMessageName = fromEnum.Message.Name
 		}
-		if fromEnum.Rule == nil || len(fromEnum.Rule.Aliases) == 0 {
+		if !r.findEnumAliasName(fromEnum, toEnum) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1348,26 +1329,6 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 						toEnumName, fromEnumName, toField.FQDN(),
 					),
 					source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).Location(),
-				),
-			)
-			return
-		}
-		var found bool
-		for _, alias := range fromEnum.Rule.Aliases {
-			fromEnumAliasName := alias.FQDN()
-			if fromEnumAliasName == toEnumName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the %q field`,
-						toEnumName, fromEnumName, toField.FQDN(),
-					),
-					source.NewEnumBuilder(ctx.fileName(), fromEnumMessageName, fromEnum.Name).WithOption().Location(),
 				),
 			)
 			return
@@ -1385,6 +1346,52 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 		)
 		return
 	}
+}
+
+func (r *Resolver) findMessageAliasName(from, to *Message) bool {
+	fromName := from.FQDN()
+	toName := to.FQDN()
+
+	if from.Rule != nil {
+		for _, alias := range from.Rule.Aliases {
+			fromAliasName := alias.FQDN()
+			if fromAliasName == toName {
+				return true
+			}
+		}
+	}
+	if to.Rule != nil {
+		for _, alias := range to.Rule.Aliases {
+			toAliasName := alias.FQDN()
+			if toAliasName == fromName {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (r *Resolver) findEnumAliasName(from, to *Enum) bool {
+	fromName := from.FQDN()
+	toName := to.FQDN()
+
+	if from.Rule != nil {
+		for _, alias := range from.Rule.Aliases {
+			fromAliasName := alias.FQDN()
+			if fromAliasName == toName {
+				return true
+			}
+		}
+	}
+	if to.Rule != nil {
+		for _, alias := range to.Rule.Aliases {
+			toAliasName := alias.FQDN()
+			if toAliasName == fromName {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (r *Resolver) validateBindFieldEnumSelectorType(ctx *context, enumSelector *Message, toField *Field, builder *source.FieldBuilder) {
@@ -1441,14 +1448,15 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			}
 			return
 		}
-		fromMessageName := fromType.Message.FQDN()
+		fromMessage := fromType.Message
+		fromMessageName := fromMessage.FQDN()
 		toMessage := toType.Message
 		toMessageName := toMessage.FQDN()
 		if fromMessageName == toMessageName {
 			// assignment of the same type is okay.
 			return
 		}
-		if toMessage.Rule == nil || len(toMessage.Rule.Aliases) == 0 {
+		if !r.findMessageAliasName(fromMessage, toMessage) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1460,44 +1468,24 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			)
 			return
 		}
-		var found bool
-		for _, alias := range toMessage.Rule.Aliases {
-			toMessageAliasName := alias.FQDN()
-			if toMessageAliasName == fromMessageName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						`required specify alias = %q in grpc.federation.message option for the %q type to automatically assign a value to the "%s.%s" field via autobind`,
-						fromMessageName, toMessageName, ctx.messageName(), toField.Name,
-					),
-					source.NewMessageBuilder(toMessage.File.Name, toMessage.Name).
-						WithOption().WithAlias().Location(),
-				),
-			)
-			return
-		}
 	}
 	if fromType.Kind == types.Enum {
 		if fromType.Enum == nil || toType.Enum == nil {
 			return
 		}
-		fromEnumName := fromType.Enum.FQDN()
+		fromEnum := fromType.Enum
+		fromEnumName := fromEnum.FQDN()
 		toEnum := toType.Enum
 		toEnumName := toEnum.FQDN()
-		if toEnumName == fromEnumName {
-			// assignment of the same type is okay.
-			return
-		}
 		var toEnumMessageName string
 		if toEnum.Message != nil {
 			toEnumMessageName = toEnum.Message.Name
 		}
-		if toEnum.Rule == nil || len(toEnum.Rule.Aliases) == 0 {
+		if toEnumName == fromEnumName {
+			// assignment of the same type is okay.
+			return
+		}
+		if !r.findEnumAliasName(fromEnum, toEnum) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1505,26 +1493,6 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 						fromEnumName, toEnumName, ctx.messageName(), toField.Name,
 					),
 					source.NewEnumBuilder(ctx.fileName(), toEnumMessageName, toEnum.Name).Location(),
-				),
-			)
-			return
-		}
-		var found bool
-		for _, alias := range toEnum.Rule.Aliases {
-			toEnumAliasName := alias.FQDN()
-			if toEnumAliasName == fromEnumName {
-				found = true
-				break
-			}
-		}
-		if !found {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value to the "%s.%s" field via autobind`,
-						fromEnumName, toEnumName, ctx.messageName(), toField.Name,
-					),
-					source.NewEnumBuilder(ctx.fileName(), toEnumMessageName, toEnum.Name).WithOption().Location(),
 				),
 			)
 			return

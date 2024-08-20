@@ -3,11 +3,12 @@ syntax = "proto3";
 package org.federation;
 
 import "grpc/federation/federation.proto";
+import "post/post.proto";
 
 option go_package = "example/federation;federation";
 
 option (grpc.federation.file)= {
-  import: ["post/post.proto", "post/v2/post.proto"]
+  import: ["post/v2/post.proto"]
 };
 
 service FederationService {
@@ -79,6 +80,7 @@ message Post {
   PostData data = 2;
   PostData data2 = 3 [(grpc.federation.field).by = "data2"];
   PostType type = 4 [(grpc.federation.field).by = "data_type2"];
+  org.post.M m = 5 [(grpc.federation.field).by = "M{x: 'xxx'}"];
 }
 
 enum PostType {
@@ -127,4 +129,10 @@ message PostContent {
   string body = 3;
   string dup_body = 4 [(grpc.federation.field).alias = "body"];
   map<int32, int32> counts = 5;
+}
+
+message M {
+  option (grpc.federation.message).alias = "org.post.M";
+
+  string x = 1;
 }
