@@ -4008,22 +4008,31 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 
 const (
 	privateProtoFile  = "grpc/federation/private.proto"
+	timeProtoFile     = "grpc/federation/time.proto"
 	durationProtoFile = "google/protobuf/duration.proto"
 )
 
 func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorProto {
 	desc := arg.File.Desc
 	msg := messageToDescriptor(arg)
-	var importedPrivateFile bool
+	var (
+		importedPrivateFile bool
+		importedTimeFile    bool
+	)
 	for _, dep := range desc.GetDependency() {
-		if dep == privateProtoFile {
+		switch dep {
+		case privateProtoFile:
 			importedPrivateFile = true
-			break
+		case timeProtoFile:
+			importedTimeFile = true
 		}
 	}
 	deps := append(desc.GetDependency(), arg.File.Name)
 	if !importedPrivateFile {
 		deps = append(deps, privateProtoFile)
+	}
+	if !importedTimeFile {
+		deps = append(deps, timeProtoFile)
 	}
 	return &descriptorpb.FileDescriptorProto{
 		Name:             proto.String(arg.Name),
