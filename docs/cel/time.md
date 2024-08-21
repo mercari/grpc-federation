@@ -58,6 +58,10 @@ The API for this package was created based on Go's [`time`](https://pkg.go.dev/t
 - [`loadLocationFromTZData`](#loadlocationfromtzdata)
 - [`Location.string`](#locationstring)
 
+## google.protobuf.Timestamp
+
+- [`asTime`](#asTime)
+  
 ## Time
 
 - [`date`](#date)
@@ -112,6 +116,22 @@ FYI: https://pkg.go.dev/time#Duration
 A `Location` maps time instants to the zone in use at that time. Typically, the Location represents the collection of time offsets in use in a geographical area. For many Locations the time offset varies depending on whether daylight savings time is in use at the time instant.
 
 FYI: https://pkg.go.dev/time#Location
+
+## google.protobuf.Timestamp
+
+## asTime
+
+`asTime` converts google.protobuf.Timestamp value to grpc.federation.time.Time value.
+
+### Parameters
+
+`asTime() Time`
+
+### Examples
+
+```cel
+googl.protobuf.Timestamp{}.asTime() //=> grpc.federation.time.Time{timestamp: google.protobuf.Timestamp{}}
+```
 
 ## Time
 
