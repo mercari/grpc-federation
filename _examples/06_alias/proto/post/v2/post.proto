@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package org.post.v2;
 
-option go_package = "example/post/v2;postv2";
+option go_package = "example/post/v2;post";
 
 service PostService {
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};

@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	post "example/post"
-	postv2 "example/post/v2"
+	post1 "example/post/v2"
 )
 
 var (
@@ -37,13 +37,13 @@ type FederationService_Org_Federation_GetPostResponseArgument struct {
 type FederationService_Org_Federation_PostArgument struct {
 	A         *GetPostRequest_ConditionA
 	B         *GetPostRequest_ConditionB
-	Data2     *postv2.PostData
+	Data2     *post1.PostData
 	DataType  *grpcfedcel.EnumSelector
 	DataType2 *grpcfedcel.EnumSelector
 	Id        string
 	Post      *post.Post
 	Res       *post.GetPostResponse
-	Res2      *postv2.GetPostResponse
+	Res2      *post1.GetPostResponse
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -63,7 +63,7 @@ type FederationServiceClientFactory interface {
 	// Org_Post_PostServiceClient create a gRPC Client to be used to call methods in org.post.PostService.
 	Org_Post_PostServiceClient(FederationServiceClientConfig) (post.PostServiceClient, error)
 	// Org_Post_V2_PostServiceClient create a gRPC Client to be used to call methods in org.post.v2.PostService.
-	Org_Post_V2_PostServiceClient(FederationServiceClientConfig) (postv2.PostServiceClient, error)
+	Org_Post_V2_PostServiceClient(FederationServiceClientConfig) (post1.PostServiceClient, error)
 }
 
 // FederationServiceClientConfig helper to create gRPC client.
@@ -77,7 +77,7 @@ type FederationServiceClientConfig struct {
 // This is provided as an argument when implementing the custom resolver.
 type FederationServiceDependentClientSet struct {
 	Org_Post_PostServiceClient    post.PostServiceClient
-	Org_Post_V2_PostServiceClient postv2.PostServiceClient
+	Org_Post_V2_PostServiceClient post1.PostServiceClient
 }
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
@@ -160,8 +160,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostContent.Category", post.PostContent_Category_value, post.PostContent_Category_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostDataType", post.PostDataType_value, post.PostDataType_name)...)
-	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostContent.Category", postv2.PostContent_Category_value, postv2.PostContent_Category_name)...)
-	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostDataType", postv2.PostDataType_value, postv2.PostDataType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostContent.Category", post1.PostContent_Category_value, post1.PostContent_Category_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostDataType", post1.PostDataType_value, post1.PostDataType_name)...)
 	return &FederationService{
 		cfg:           cfg,
 		logger:        logger,
@@ -322,12 +322,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			data2      *postv2.PostData
+			data2      *post1.PostData
 			data_type  *grpcfedcel.EnumSelector
 			data_type2 *grpcfedcel.EnumSelector
 			post       *post.Post
 			res        *post.GetPostResponse
-			res2       *postv2.GetPostResponse
+			res2       *post1.GetPostResponse
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
@@ -354,15 +354,15 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		     }
 		   }
 		*/
-		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*postv2.GetPostResponse, *localValueType]{
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post1.GetPostResponse, *localValueType]{
 			Name: `res2`,
 			Type: grpcfed.CELObjectType("org.post.v2.GetPostResponse"),
-			Setter: func(value *localValueType, v *postv2.GetPostResponse) error {
+			Setter: func(value *localValueType, v *post1.GetPostResponse) error {
 				value.vars.res2 = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
-				args := &postv2.GetPostRequest{}
+				args := &post1.GetPostRequest{}
 				// { field: "id", by: "$.id" }
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
@@ -396,10 +396,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		     by: "res2.post.data"
 		   }
 		*/
-		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*postv2.PostData, *localValueType]{
+		if err := grpcfed.EvalDef(ctx1, value, grpcfed.Def[*post1.PostData, *localValueType]{
 			Name: `data2`,
 			Type: grpcfed.CELObjectType("org.post.v2.PostData"),
-			Setter: func(value *localValueType, v *postv2.PostData) error {
+			Setter: func(value *localValueType, v *post1.PostData) error {
 				value.vars.data2 = v
 				return nil
 			},
@@ -609,11 +609,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		ret.Data = dataValue
 	}
 	// (grpc.federation.field).by = "data2"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*postv2.PostData]{
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post1.PostData]{
 		Value:      value,
 		Expr:       `data2`,
 		CacheIndex: 15,
-		Setter: func(v *postv2.PostData) error {
+		Setter: func(v *post1.PostData) error {
 			data2Value, err := s.cast_Org_Post_V2_PostData__to__Org_Federation_PostData(v)
 			if err != nil {
 				return err
@@ -641,7 +641,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 						}
 						typeValue = casted
 					} else {
-						casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(postv2.PostDataType(v.GetFalseValue()))
+						casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
 						if err != nil {
 							return err
 						}
@@ -652,7 +652,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					return err
 				}
 			} else {
-				casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(postv2.PostDataType(v.GetFalseValue()))
+				casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
 				if err != nil {
 					return err
 				}
@@ -796,11 +796,11 @@ func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(
 }
 
 // cast_Org_Post_V2_PostContent_Category__to__Org_Federation_PostContent_Category cast from "org.post.v2.PostContent.Category" to "org.federation.PostContent.Category".
-func (s *FederationService) cast_Org_Post_V2_PostContent_Category__to__Org_Federation_PostContent_Category(from postv2.PostContent_Category) (PostContent_Category, error) {
+func (s *FederationService) cast_Org_Post_V2_PostContent_Category__to__Org_Federation_PostContent_Category(from post1.PostContent_Category) (PostContent_Category, error) {
 	switch from {
-	case postv2.PostContent_CATEGORY_A:
+	case post1.PostContent_CATEGORY_A:
 		return PostContent_CATEGORY_A, nil
-	case postv2.PostContent_CATEGORY_B:
+	case post1.PostContent_CATEGORY_B:
 		return PostContent_CATEGORY_B, nil
 	default:
 		return 0, nil
@@ -808,7 +808,7 @@ func (s *FederationService) cast_Org_Post_V2_PostContent_Category__to__Org_Feder
 }
 
 // cast_Org_Post_V2_PostContent__to__Org_Federation_PostContent cast from "org.post.v2.PostContent" to "org.federation.PostContent".
-func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_PostContent(from *postv2.PostContent) (*PostContent, error) {
+func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_PostContent(from *post1.PostContent) (*PostContent, error) {
 	if from == nil {
 		return nil, nil
 	}
@@ -832,13 +832,13 @@ func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_Pos
 }
 
 // cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType cast from "org.post.v2.PostDataType" to "org.federation.PostType".
-func (s *FederationService) cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(from postv2.PostDataType) (PostType, error) {
+func (s *FederationService) cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(from post1.PostDataType) (PostType, error) {
 	switch from {
-	case postv2.PostDataType_POST_TYPE_A:
+	case post1.PostDataType_POST_TYPE_A:
 		return PostType_POST_TYPE_FOO, nil
-	case postv2.PostDataType_POST_V2_TYPE_B:
+	case post1.PostDataType_POST_V2_TYPE_B:
 		return PostType_POST_TYPE_BAR, nil
-	case postv2.PostDataType_POST_V2_TYPE_C:
+	case post1.PostDataType_POST_V2_TYPE_C:
 		return PostType_POST_TYPE_BAR, nil
 	default:
 		return PostType_POST_TYPE_UNKNOWN, nil
@@ -846,7 +846,7 @@ func (s *FederationService) cast_Org_Post_V2_PostDataType__to__Org_Federation_Po
 }
 
 // cast_Org_Post_V2_PostData__to__Org_Federation_PostData cast from "org.post.v2.PostData" to "org.federation.PostData".
-func (s *FederationService) cast_Org_Post_V2_PostData__to__Org_Federation_PostData(from *postv2.PostData) (*PostData, error) {
+func (s *FederationService) cast_Org_Post_V2_PostData__to__Org_Federation_PostData(from *post1.PostData) (*PostData, error) {
 	if from == nil {
 		return nil, nil
 	}
@@ -1021,7 +1021,7 @@ func (s *FederationService) logvalue_Org_Post_PostConditionB(v *post.PostConditi
 	return slog.GroupValue()
 }
 
-func (s *FederationService) logvalue_Org_Post_V2_GetPostRequest(v *postv2.GetPostRequest) slog.Value {
+func (s *FederationService) logvalue_Org_Post_V2_GetPostRequest(v *post1.GetPostRequest) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
 	}

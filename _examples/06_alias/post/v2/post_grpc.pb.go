@@ -4,7 +4,7 @@
 // - protoc             (unknown)
 // source: post/v2/post.proto
 
-package postv2
+package post
 
 import (
 	context "context"
