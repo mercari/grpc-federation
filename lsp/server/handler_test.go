@@ -110,7 +110,7 @@ func TestHandler_DidChange(t *testing.T) {
 			)
 			client := protocol.ClientDispatcher(conn, zap.NewNop())
 
-			handler := server.NewHandler(client, &bytes.Buffer{}, nil)
+			handler := server.NewHandler(client, &bytes.Buffer{}, []string{"testdata"})
 
 			err := handler.DidChange(context.Background(), tc.params)
 			if err != nil {

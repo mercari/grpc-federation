@@ -61,6 +61,14 @@ func ErrWithLocation(msg string, loc *source.Location) *LocationError {
 	}
 }
 
+// WarnWithLocation creates Warnings instance from message and location.
+func WarnWithLocation(msg string, loc *source.Location) *Warning {
+	return &Warning{
+		Location: loc,
+		Message:  msg,
+	}
+}
+
 type errorBuilder struct {
 	errs []error
 }

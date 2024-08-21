@@ -639,9 +639,11 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	}
 	outputPathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 	result, err := resolver.New(req.GetProtoFile(), resolver.ImportPathOption(opt.Path.ImportPaths...)).Resolve()
-	outs := validator.New().ToValidationOutputByResolverResult(result, err, validator.ImportPathOption(opt.Path.ImportPaths...))
-	if validator.ExistsError(outs) {
-		return nil, errors.New(validator.Format(outs))
+	if outs := validator.New().ToValidationOutputByResolverResult(result, err, validator.ImportPathOption(opt.Path.ImportPaths...)); len(outs) > 0 {
+		if validator.ExistsError(outs) {
+			return nil, errors.New(validator.Format(outs))
+		}
+		fmt.Fprint(os.Stderr, validator.Format(outs))
 	}
 
 	var outDir string

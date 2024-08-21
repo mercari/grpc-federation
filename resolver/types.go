@@ -54,6 +54,7 @@ type GoPackage struct {
 type Service struct {
 	File        *File
 	Name        string
+	Desc        *descriptorpb.ServiceDescriptorProto
 	Methods     []*Method
 	Rule        *ServiceRule
 	Messages    []*Message
@@ -64,6 +65,7 @@ type Service struct {
 type Method struct {
 	Service  *Service
 	Name     string
+	Desc     *descriptorpb.MethodDescriptorProto
 	Request  *Message
 	Response *Message
 	Rule     *MethodRule
@@ -102,6 +104,7 @@ type MethodRule struct {
 type Message struct {
 	File           *File
 	Name           string
+	Desc           *descriptorpb.DescriptorProto
 	IsMapEntry     bool
 	ParentMessage  *Message
 	NestedMessages []*Message
@@ -306,6 +309,7 @@ type Oneof struct {
 
 type Field struct {
 	Name    string
+	Desc    *descriptorpb.FieldDescriptorProto
 	Type    *Type
 	Oneof   *Oneof
 	Rule    *FieldRule

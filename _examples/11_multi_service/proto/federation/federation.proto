@@ -7,8 +7,8 @@ import "federation/reaction.proto";
 
 option go_package = "example/federation;federation";
 
-option (grpc.federation.file)= {
-  import: ["comment/comment.proto", "favorite/favorite.proto"]
+option (grpc.federation.file) = {
+  import: ["favorite/favorite.proto"]
 };
 
 service FederationService {
