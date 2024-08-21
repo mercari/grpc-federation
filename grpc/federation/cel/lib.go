@@ -18,7 +18,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 	return &Library{
 		name: "grpc.federation.static",
 		subLibs: []cel.SingletonLibrary{
-			new(TimeLibrary),
+			NewTimeLibrary(typeAdapter),
 			NewListLibrary(typeAdapter),
 			new(RandLibrary),
 			new(UUIDLibrary),

@@ -249,12 +249,16 @@ func TestRand(t *testing.T) {
 			},
 		},
 	}
+	reg, err := types.NewRegistry(new(cellib.Time), new(cellib.Location))
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			env, err := cel.NewEnv(
 				cel.Variable(cellib.ContextVariableName, cel.ObjectType(cellib.ContextTypeName)),
 				cel.Lib(new(cellib.RandLibrary)),
-				cel.Lib(new(cellib.TimeLibrary)),
+				cel.Lib(cellib.NewTimeLibrary(reg)),
 			)
 			if err != nil {
 				t.Fatal(err)

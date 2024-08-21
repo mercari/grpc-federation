@@ -2,48 +2,50 @@ package cel
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-var (
-	LocationType = types.NewObjectType(createTimeName("Location"))
-)
-
-type Location struct {
-	*time.Location
-}
-
-func (loc *Location) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	return loc, nil
-}
-
-func (loc *Location) ConvertToType(typeValue ref.Type) ref.Val {
-	return types.NewErr("grpc.federation.time: location type conversion does not support")
-}
-
-func (loc *Location) Equal(other ref.Val) ref.Val {
-	if o, ok := other.(*Location); ok {
-		return types.Bool(loc.String() == o.String())
-	}
-	return types.False
-}
-
-func (loc *Location) Type() ref.Type {
-	return LocationType
-}
-
-func (loc *Location) Value() any {
-	return loc
-}
 
 const TimePackageName = "time"
 
+var (
+	TimeType     = cel.ObjectType("grpc.federation.time.Time")
+	LocationType = cel.ObjectType("grpc.federation.time.Location")
+)
+
+func (x *Time) GoTime() (time.Time, error) {
+	loc, err := x.GetLoc().GoLocation()
+	if err != nil {
+		return time.Time{}, err
+	}
+	return x.GetTimestamp().AsTime().In(loc), nil
+}
+
+func (x *Location) GoLocation() (*time.Location, error) {
+	if x.GetOffset() != 0 {
+		return time.FixedZone(x.GetName(), int(x.GetOffset())), nil
+	}
+	loc, err := time.LoadLocation(x.GetName())
+	if err != nil {
+		return nil, err
+	}
+	return loc, nil
+}
+
+var _ cel.SingletonLibrary = new(TimeLibrary)
+
 type TimeLibrary struct {
+	typeAdapter types.Adapter
+}
+
+func NewTimeLibrary(typeAdapter types.Adapter) *TimeLibrary {
+	return &TimeLibrary{
+		typeAdapter: typeAdapter,
+	}
 }
 
 func (lib *TimeLibrary) LibraryName() string {
@@ -56,6 +58,25 @@ func createTimeName(name string) string {
 
 func createTimeID(name string) string {
 	return createID(TimePackageName, name)
+}
+
+func (lib *TimeLibrary) refToGoTimeValue(v ref.Val) (time.Time, error) {
+	return v.Value().(*Time).GoTime()
+}
+
+func (lib *TimeLibrary) toTimeValue(v time.Time) ref.Val {
+	name, offset := v.Zone()
+	return lib.typeAdapter.NativeToValue(&Time{
+		Timestamp: timestamppb.New(v),
+		Loc: &Location{
+			Name:   name,
+			Offset: int64(offset),
+		},
+	})
+}
+
+func (lib *TimeLibrary) toLocationValue(name string, offset int) ref.Val {
+	return lib.typeAdapter.NativeToValue(&Location{Name: name, Offset: int64(offset)})
 }
 
 func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
@@ -192,7 +213,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 			createTimeName("LOCAL"),
 			OverloadFunc(createTimeID("local_location"), []*cel.Type{}, LocationType,
 				func(_ context.Context, _ ...ref.Val) ref.Val {
-					return &Location{Location: time.Local}
+					return lib.toLocationValue(time.Local.String(), 0)
 				},
 			),
 		),
@@ -200,7 +221,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 			createTimeName("UTC"),
 			OverloadFunc(createTimeID("utc_location"), []*cel.Type{}, LocationType,
 				func(_ context.Context, _ ...ref.Val) ref.Val {
-					return &Location{Location: time.UTC}
+					return lib.toLocationValue(time.UTC.String(), 0)
 				},
 			),
 		),
@@ -228,20 +249,28 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 		),
 		BindFunction(
 			createTimeName("since"),
-			OverloadFunc(createTimeID("since_timestamp_duration"), []*cel.Type{cel.TimestampType}, cel.DurationType,
+			OverloadFunc(createTimeID("since_timestamp_duration"), []*cel.Type{TimeType}, cel.DurationType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
+					v, err := lib.refToGoTimeValue(args[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
 					return types.Duration{
-						Duration: time.Since(args[0].(types.Timestamp).Time),
+						Duration: time.Since(v),
 					}
 				},
 			),
 		),
 		BindFunction(
 			createTimeName("until"),
-			OverloadFunc(createTimeID("until_timestamp_duration"), []*cel.Type{cel.TimestampType}, cel.DurationType,
+			OverloadFunc(createTimeID("until_timestamp_duration"), []*cel.Type{TimeType}, cel.DurationType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
+					v, err := lib.refToGoTimeValue(args[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
 					return types.Duration{
-						Duration: time.Until(args[0].(types.Timestamp).Time),
+						Duration: time.Until(v),
 					}
 				},
 			),
@@ -352,14 +381,12 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 			createTimeName("fixedZone"),
 			OverloadFunc(createTimeID("fixed_zone_string_int_location"), []*cel.Type{cel.StringType, cel.IntType}, LocationType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					loc := time.FixedZone(string(args[0].(types.String)), int(args[1].(types.Int)))
-					return &Location{loc}
+					return lib.toLocationValue(string(args[0].(types.String)), int(args[1].(types.Int)))
 				},
 			),
 			OverloadFunc(createTimeID("fixed_zone_string_double_location"), []*cel.Type{cel.StringType, cel.DoubleType}, LocationType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					loc := time.FixedZone(string(args[0].(types.String)), int(args[1].(types.Double)))
-					return &Location{loc}
+					return lib.toLocationValue(string(args[0].(types.String)), int(args[1].(types.Double)))
 				},
 			),
 		),
@@ -371,7 +398,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
-					return &Location{loc}
+					return lib.toLocationValue(loc.String(), 0)
 				},
 			),
 		),
@@ -383,7 +410,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
-					return &Location{loc}
+					return lib.toLocationValue(loc.String(), 0)
 				},
 			),
 		),
@@ -391,21 +418,39 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 			"string",
 			MemberOverloadFunc(createTimeID("string_location_string"), LocationType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.String(self.(*Location).String())
+					loc, err := self.Value().(*Location).GoLocation()
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.String(loc.String())
 				},
 			),
 		),
 
 		// Timestamp functions
+		BindMemberFunction(
+			"asTime",
+			MemberOverloadFunc(createTimeID("asTime_timestamp_int_time"), cel.TimestampType, []*cel.Type{}, TimeType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					return lib.toTimeValue(self.(*types.Timestamp).Time)
+				},
+			),
+		),
+
+		// Time functions
 		BindFunction(
 			createTimeName("date"),
 			OverloadFunc(
-				createTimeID("date_int_int_int_int_int_int_int_location_timestamp"),
+				createTimeID("date_int_int_int_int_int_int_int_location_time"),
 				[]*cel.Type{cel.IntType, cel.IntType, cel.IntType, cel.IntType, cel.IntType, cel.IntType, cel.IntType, LocationType},
-				cel.TimestampType,
+				TimeType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: time.Date(
+					loc, err := args[7].Value().(*Location).GoLocation()
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return lib.toTimeValue(
+						time.Date(
 							int(args[0].(types.Int)),
 							time.Month(args[1].(types.Int)),
 							int(args[2].(types.Int)),
@@ -413,125 +458,151 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 							int(args[4].(types.Int)),
 							int(args[5].(types.Int)),
 							int(args[6].(types.Int)),
-							args[7].(*Location).Location,
+							loc,
 						),
-					}
+					)
 				},
 			),
 		),
 		BindFunction(
 			createTimeName("now"),
-			OverloadFunc(createTimeID("now_timestamp"), nil, cel.TimestampType,
+			OverloadFunc(createTimeID("now_time"), nil, TimeType,
 				func(_ context.Context, _ ...ref.Val) ref.Val {
-					return types.Timestamp{Time: time.Now()}
+					return lib.toTimeValue(time.Now())
 				},
 			),
 		),
 		BindFunction(
 			createTimeName("parse"),
-			OverloadFunc(createTimeID("parse_string_string_timestamp"), []*cel.Type{cel.StringType, cel.StringType}, cel.TimestampType,
+			OverloadFunc(createTimeID("parse_string_string_time"), []*cel.Type{cel.StringType, cel.StringType}, TimeType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					t, err := time.Parse(string(args[0].(types.String)), string(args[1].(types.String)))
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
-					return types.Timestamp{Time: t}
+					return lib.toTimeValue(t)
 				},
 			),
 		),
 		BindFunction(
 			createTimeName("parseInLocation"),
-			OverloadFunc(createTimeID("parse_in_location_string_string_location_timestamp"), []*cel.Type{cel.StringType, cel.StringType, LocationType}, cel.TimestampType,
+			OverloadFunc(createTimeID("parse_in_location_string_string_location_time"), []*cel.Type{cel.StringType, cel.StringType, LocationType}, TimeType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					t, err := time.ParseInLocation(string(args[0].(types.String)), string(args[1].(types.String)), args[2].(*Location).Location)
+					loc, err := args[2].Value().(*Location).GoLocation()
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
-					return types.Timestamp{Time: t}
+					t, err := time.ParseInLocation(string(args[0].(types.String)), string(args[1].(types.String)), loc)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return lib.toTimeValue(t)
 				},
 			),
 		),
 		BindFunction(
 			createTimeName("unix"),
-			OverloadFunc(createTimeID("unix_int_int_timestamp"), []*cel.Type{cel.IntType, cel.IntType}, cel.TimestampType,
+			OverloadFunc(createTimeID("unix_int_int_time"), []*cel.Type{cel.IntType, cel.IntType}, TimeType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: time.Unix(int64(args[0].(types.Int)), int64(args[1].(types.Int))),
-					}
+					return lib.toTimeValue(time.Unix(int64(args[0].(types.Int)), int64(args[1].(types.Int))))
 				},
 			),
 		),
 		BindFunction(
 			createTimeName("unixMicro"),
-			OverloadFunc(createTimeID("unix_micro_int_timestamp"), []*cel.Type{cel.IntType}, cel.TimestampType,
+			OverloadFunc(createTimeID("unix_micro_int_time"), []*cel.Type{cel.IntType}, TimeType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: time.UnixMicro(int64(args[0].(types.Int))),
-					}
+					return lib.toTimeValue(time.UnixMicro(int64(args[0].(types.Int))))
 				},
 			),
 		),
 		BindFunction(
 			createTimeName("unixMilli"),
-			OverloadFunc(createTimeID("unix_milli_int_timestamp"), []*cel.Type{cel.IntType}, cel.TimestampType,
+			OverloadFunc(createTimeID("unix_milli_int_time"), []*cel.Type{cel.IntType}, TimeType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: time.UnixMilli(int64(args[0].(types.Int))),
-					}
+					return lib.toTimeValue(time.UnixMilli(int64(args[0].(types.Int))))
 				},
 			),
 		),
 		BindMemberFunction(
 			"add",
-			MemberOverloadFunc(createTimeID("add_timestamp_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("add_time_int_time"), TimeType, []*cel.Type{cel.IntType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Add(time.Duration(args[0].(types.Int))),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(
+						v.Add(time.Duration(args[0].(types.Int))),
+					)
 				},
 			),
-			MemberOverloadFunc(createTimeID("add_timestamp_duration_timestamp"), cel.TimestampType, []*cel.Type{cel.DurationType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("add_time_duration_time"), TimeType, []*cel.Type{cel.DurationType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Add(args[0].(types.Duration).Duration),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(
+						v.Add(args[0].(types.Duration).Duration),
+					)
 				},
 			),
 		),
 		BindMemberFunction(
 			"addDate",
-			MemberOverloadFunc(createTimeID("add_date_timestamp_int_int_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType, cel.IntType, cel.IntType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("add_date_time_int_int_int_time"), TimeType, []*cel.Type{cel.IntType, cel.IntType, cel.IntType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.AddDate(int(args[0].(types.Int)), int(args[1].(types.Int)), int(args[2].(types.Int))),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(
+						v.AddDate(int(args[0].(types.Int)), int(args[1].(types.Int)), int(args[2].(types.Int))),
+					)
 				},
 			),
 		),
 		BindMemberFunction(
 			"after",
-			MemberOverloadFunc(createTimeID("after_timestamp_timestamp_bool"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.BoolType,
+			MemberOverloadFunc(createTimeID("after_time_time_bool"), TimeType, []*cel.Type{TimeType}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.After(args[0].(types.Timestamp).Time))
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					a0, err := lib.refToGoTimeValue(args[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Bool(v.After(a0))
 				},
 			),
 		),
 		BindMemberFunction(
 			"appendFormat",
-			MemberOverloadFunc(createTimeID("append_format_timestamp_string_string_bytes"), cel.TimestampType, []*cel.Type{cel.StringType, cel.StringType}, cel.BytesType,
+			MemberOverloadFunc(createTimeID("append_format_time_string_string_bytes"), TimeType, []*cel.Type{cel.StringType, cel.StringType}, cel.BytesType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
 					return types.Bytes(
-						self.(types.Timestamp).Time.AppendFormat(
+						v.AppendFormat(
 							[]byte(args[0].(types.String)),
 							string(args[1].(types.String)),
 						),
 					)
 				},
 			),
-			MemberOverloadFunc(createTimeID("append_format_timestamp_bytes_string_bytes"), cel.TimestampType, []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+			MemberOverloadFunc(createTimeID("append_format_time_bytes_string_bytes"), TimeType, []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
 					return types.Bytes(
-						self.(types.Timestamp).Time.AppendFormat(
+						v.AppendFormat(
 							[]byte(args[0].(types.Bytes)),
 							string(args[1].(types.String)),
 						),
@@ -541,241 +612,366 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 		),
 		BindMemberFunction(
 			"before",
-			MemberOverloadFunc(createTimeID("before_timestamp_timestamp_bool"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.BoolType,
+			MemberOverloadFunc(createTimeID("before_time_time_bool"), TimeType, []*cel.Type{TimeType}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.Before(args[0].(types.Timestamp).Time))
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					a0, err := lib.refToGoTimeValue(args[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Bool(v.Before(a0))
 				},
 			),
 		),
 		BindMemberFunction(
 			"compare",
-			MemberOverloadFunc(createTimeID("compare_timestamp_timestamp_int"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.IntType,
+			MemberOverloadFunc(createTimeID("compare_time_time_int"), TimeType, []*cel.Type{TimeType}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Compare(args[0].(types.Timestamp).Time))
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					a0, err := lib.refToGoTimeValue(args[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Compare(a0))
 				},
 			),
 		),
 		BindMemberFunction(
 			"day",
-			MemberOverloadFunc(createTimeID("day_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("day_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Day())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Day())
 				},
 			),
 		),
 		BindMemberFunction(
 			"equal",
-			MemberOverloadFunc(createTimeID("equal_timestamp_timestamp_bool"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.BoolType,
+			MemberOverloadFunc(createTimeID("equal_time_time_bool"), TimeType, []*cel.Type{TimeType}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.Equal(args[0].(types.Timestamp).Time))
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					a0, err := lib.refToGoTimeValue(args[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Bool(v.Equal(a0))
 				},
 			),
 		),
 		BindMemberFunction(
 			"format",
-			MemberOverloadFunc(createTimeID("format_timestamp_string_string"), cel.TimestampType, []*cel.Type{cel.StringType}, cel.StringType,
+			MemberOverloadFunc(createTimeID("format_time_string_string"), TimeType, []*cel.Type{cel.StringType}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.String(self.(types.Timestamp).Time.Format(string(args[0].(types.String))))
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.String(v.Format(string(args[0].(types.String))))
 				},
 			),
 		),
 		BindMemberFunction(
 			"hour",
-			MemberOverloadFunc(createTimeID("hour_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("hour_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Hour())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Hour())
 				},
 			),
 		),
 		BindMemberFunction(
 			"withLocation",
-			MemberOverloadFunc(createTimeID("with_location_timestamp_location_timestamp"), cel.TimestampType, []*cel.Type{LocationType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("with_location_time_location_time"), TimeType, []*cel.Type{LocationType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.In(args[0].(*Location).Location),
+					loc, err := args[0].Value().(*Location).GoLocation()
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return lib.toTimeValue(v.In(loc))
 				},
 			),
 		),
 		BindMemberFunction(
 			"isDST",
-			MemberOverloadFunc(createTimeID("is_dst_timestamp_bool"), cel.TimestampType, []*cel.Type{}, cel.BoolType,
+			MemberOverloadFunc(createTimeID("is_dst_time_bool"), TimeType, []*cel.Type{}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.IsDST())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Bool(v.IsDST())
 				},
 			),
 		),
 		BindMemberFunction(
 			"isZero",
-			MemberOverloadFunc(createTimeID("is_zero_timestamp_bool"), cel.TimestampType, []*cel.Type{}, cel.BoolType,
+			MemberOverloadFunc(createTimeID("is_zero_time_bool"), TimeType, []*cel.Type{}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Bool(self.(types.Timestamp).Time.IsZero())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Bool(v.IsZero())
 				},
 			),
 		),
 		BindMemberFunction(
 			"local",
-			MemberOverloadFunc(createTimeID("local_timestamp_timestamp"), cel.TimestampType, []*cel.Type{}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("local_time_time"), TimeType, []*cel.Type{}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Local(),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(v.Local())
 				},
 			),
 		),
 		BindMemberFunction(
 			"location",
-			MemberOverloadFunc(createTimeID("location_timestamp_location"), cel.TimestampType, []*cel.Type{}, LocationType,
+			MemberOverloadFunc(createTimeID("location_time_location"), TimeType, []*cel.Type{}, LocationType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return &Location{Location: self.(types.Timestamp).Time.Location()}
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					name, offset := v.Zone()
+					return lib.toLocationValue(name, offset)
 				},
 			),
 		),
 		BindMemberFunction(
 			"minute",
-			MemberOverloadFunc(createTimeID("minute_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("minute_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Minute())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Minute())
 				},
 			),
 		),
 		BindMemberFunction(
 			"month",
-			MemberOverloadFunc(createTimeID("month_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("month_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Month())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Month())
 				},
 			),
 		),
 		BindMemberFunction(
 			"nanosecond",
-			MemberOverloadFunc(createTimeID("nanosecond_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("nanosecond_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Nanosecond())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Nanosecond())
 				},
 			),
 		),
 		BindMemberFunction(
 			"round",
-			MemberOverloadFunc(createTimeID("round_timestamp_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("round_time_int_time"), TimeType, []*cel.Type{cel.IntType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Round(time.Duration(args[0].(types.Int))),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(v.Round(time.Duration(args[0].(types.Int))))
 				},
 			),
-			MemberOverloadFunc(createTimeID("round_timestamp_duration_timestamp"), cel.TimestampType, []*cel.Type{cel.DurationType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("round_time_duration_time"), TimeType, []*cel.Type{cel.DurationType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Round(args[0].(types.Duration).Duration),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(v.Round(args[0].(types.Duration).Duration))
 				},
 			),
 		),
 		BindMemberFunction(
 			"second",
-			MemberOverloadFunc(createTimeID("second_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("second_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Second())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Second())
 				},
 			),
 		),
 		BindMemberFunction(
 			"string",
-			MemberOverloadFunc(createTimeID("string_timestamp_string"), cel.TimestampType, []*cel.Type{}, cel.StringType,
+			MemberOverloadFunc(createTimeID("string_time_string"), TimeType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.String(self.(types.Timestamp).Time.String())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.String(v.String())
 				},
 			),
 		),
 		BindMemberFunction(
 			"sub",
-			MemberOverloadFunc(createTimeID("sub_timestamp_timestamp_duration"), cel.TimestampType, []*cel.Type{cel.TimestampType}, cel.DurationType,
+			MemberOverloadFunc(createTimeID("sub_time_time_duration"), TimeType, []*cel.Type{TimeType}, cel.DurationType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					a0, err := lib.refToGoTimeValue(args[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
 					return types.Duration{
-						Duration: self.(types.Timestamp).Time.Sub(args[0].(types.Timestamp).Time),
+						Duration: v.Sub(a0),
 					}
 				},
 			),
 		),
 		BindMemberFunction(
 			"truncate",
-			MemberOverloadFunc(createTimeID("truncate_timestamp_int_timestamp"), cel.TimestampType, []*cel.Type{cel.IntType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("truncate_time_int_time"), TimeType, []*cel.Type{cel.IntType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Truncate(time.Duration(args[0].(types.Int))),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(v.Truncate(time.Duration(args[0].(types.Int))))
 				},
 			),
-			MemberOverloadFunc(createTimeID("truncate_timestamp_duration_timestamp"), cel.TimestampType, []*cel.Type{cel.DurationType}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("truncate_time_duration_time"), TimeType, []*cel.Type{cel.DurationType}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{
-						Time: self.(types.Timestamp).Time.Truncate(args[0].(types.Duration).Duration),
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
 					}
+					return lib.toTimeValue(v.Truncate(args[0].(types.Duration).Duration))
 				},
 			),
 		),
 		BindMemberFunction(
 			"utc",
-			MemberOverloadFunc(createTimeID("utc_timestamp_timestamp"), cel.TimestampType, []*cel.Type{}, cel.TimestampType,
+			MemberOverloadFunc(createTimeID("utc_time_time"), TimeType, []*cel.Type{}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Timestamp{Time: self.(types.Timestamp).Time.UTC()}
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return lib.toTimeValue(v.UTC())
 				},
 			),
 		),
 		BindMemberFunction(
 			"unix",
-			MemberOverloadFunc(createTimeID("unix_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("unix_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Unix())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Unix())
 				},
 			),
 		),
 		BindMemberFunction(
 			"unixMicro",
-			MemberOverloadFunc(createTimeID("unix_micro_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("unix_micro_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.UnixMicro())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.UnixMicro())
 				},
 			),
 		),
 		BindMemberFunction(
 			"unixMilli",
-			MemberOverloadFunc(createTimeID("unix_milli_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("unix_milli_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.UnixMilli())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.UnixMilli())
 				},
 			),
 		),
 		BindMemberFunction(
 			"unixNano",
-			MemberOverloadFunc(createTimeID("unix_nano_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("unix_nano_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.UnixNano())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.UnixNano())
 				},
 			),
 		),
 		BindMemberFunction(
 			"weekday",
-			MemberOverloadFunc(createTimeID("weekday_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("weekday_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Weekday())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Weekday())
 				},
 			),
 		),
 		BindMemberFunction(
 			"year",
-			MemberOverloadFunc(createTimeID("year_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("year_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.Year())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.Year())
 				},
 			),
 		),
 		BindMemberFunction(
 			"yearDay",
-			MemberOverloadFunc(createTimeID("year_day_timestamp_int"), cel.TimestampType, []*cel.Type{}, cel.IntType,
+			MemberOverloadFunc(createTimeID("year_day_time_int"), TimeType, []*cel.Type{}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(types.Timestamp).Time.YearDay())
+					v, err := lib.refToGoTimeValue(self)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(v.YearDay())
 				},
 			),
 		),
