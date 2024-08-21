@@ -463,9 +463,11 @@ func (f *File) DefaultImports() []*Import {
 }
 
 func (f *File) Imports() []*Import {
-	defaultImportMap := make(map[string]struct{})
+	importPathMap := make(map[string]struct{})
+	importAliasMap := make(map[string]struct{})
 	for _, imprt := range f.DefaultImports() {
-		defaultImportMap[imprt.Path] = struct{}{}
+		importPathMap[imprt.Path] = struct{}{}
+		importAliasMap[imprt.Alias] = struct{}{}
 	}
 	curImportPath := f.GoPackage.ImportPath
 
@@ -478,14 +480,28 @@ func (f *File) Imports() []*Import {
 		if pkg.ImportPath == curImportPath {
 			return
 		}
-		if _, exists := defaultImportMap[pkg.ImportPath]; exists {
+		if _, exists := importPathMap[pkg.ImportPath]; exists {
 			return
+		}
+		if _, exists := importAliasMap[pkg.Name]; exists {
+			// conflict alias name
+			suffixIndex := 1 // start from 1.
+			for {
+				alias := pkg.Name + fmt.Sprint(suffixIndex)
+				if _, exists := importAliasMap[alias]; !exists {
+					pkg.Name = alias
+					break
+				}
+				suffixIndex++
+			}
 		}
 		imports = append(imports, &Import{
 			Path:  pkg.ImportPath,
 			Alias: pkg.Name,
 			Used:  true,
 		})
+		importPathMap[pkg.ImportPath] = struct{}{}
+		importAliasMap[pkg.Name] = struct{}{}
 	}
 	for pkg := range f.pkgMap {
 		addImport(pkg)
