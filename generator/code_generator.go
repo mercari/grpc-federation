@@ -503,7 +503,14 @@ func (f *File) Imports() []*Import {
 		importPathMap[pkg.ImportPath] = struct{}{}
 		importAliasMap[pkg.Name] = struct{}{}
 	}
+	sortedPkgs := make([]*resolver.GoPackage, 0, len(f.pkgMap))
 	for pkg := range f.pkgMap {
+		sortedPkgs = append(sortedPkgs, pkg)
+	}
+	sort.Slice(sortedPkgs, func(i, j int) bool {
+		return sortedPkgs[i].ImportPath < sortedPkgs[j].ImportPath
+	})
+	for _, pkg := range sortedPkgs {
 		addImport(pkg)
 	}
 	sort.Slice(imports, func(i, j int) bool {
