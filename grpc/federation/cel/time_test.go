@@ -1365,6 +1365,22 @@ func TestTime(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name: "asTime",
+			expr: "google.protobuf.Timestamp{seconds: 1560000000}.asTime()",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.Value().(*cellib.Time)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				gotSecond := gotV.GetTimestamp().GetSeconds()
+				expected := 1560000000
+				if diff := cmp.Diff(int(gotSecond), expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
 	}
 	reg, err := types.NewRegistry(new(cellib.Time), new(cellib.Location))
 	if err != nil {

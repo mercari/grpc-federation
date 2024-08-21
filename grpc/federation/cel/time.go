@@ -432,7 +432,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 			"asTime",
 			MemberOverloadFunc(createTimeID("asTime_timestamp_int_time"), cel.TimestampType, []*cel.Type{}, TimeType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return lib.toTimeValue(self.(*types.Timestamp).Time)
+					return lib.toTimeValue(self.(types.Timestamp).Time)
 				},
 			),
 		),
