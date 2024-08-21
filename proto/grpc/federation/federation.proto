@@ -6,6 +6,7 @@ import "google/protobuf/descriptor.proto";
 import "google/rpc/code.proto";
 import "google/rpc/error_details.proto";
 import "grpc/federation/private.proto";
+import "grpc/federation/time.proto";
 
 option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
 

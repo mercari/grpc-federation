@@ -143,6 +143,7 @@ func TestCompletion(t *testing.T) {
 			"google.protobuf.ServiceOptions",
 			"google.protobuf.SourceCodeInfo",
 			"google.protobuf.SourceCodeInfo.Location",
+			"google.protobuf.Timestamp",
 			"google.protobuf.UninterpretedOption",
 			"google.protobuf.UninterpretedOption.NamePart",
 			"google.rpc.BadRequest",
