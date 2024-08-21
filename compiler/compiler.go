@@ -87,6 +87,7 @@ func (e *CompilerError) Error() string {
 const (
 	grpcFederationFilePath        = "grpc/federation/federation.proto"
 	grpcFederationPrivateFilePath = "grpc/federation/private.proto"
+	grpcFederationTimeFilePath    = "grpc/federation/time.proto"
 	grpcFederationPluginFilePath  = "grpc/federation/plugin.proto"
 	googleRPCCodeFilePath         = "google/rpc/code.proto"
 	googleRPCErrorDetailsFilePath = "google/rpc/error_details.proto"
@@ -163,6 +164,7 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 					for _, set := range []*dependentProtoFileSet{
 						{path: grpcFederationFilePath, data: federation.ProtoFile},
 						{path: grpcFederationPrivateFilePath, data: federation.PrivateProtoFile},
+						{path: grpcFederationTimeFilePath, data: federation.TimeProtoFile},
 						{path: grpcFederationPluginFilePath, data: federation.PluginProtoFile},
 						{path: googleRPCCodeFilePath, data: rpc.GoogleRPCCodeProtoFile},
 						{path: googleRPCErrorDetailsFilePath, data: rpc.GoogleRPCErrorDetailsProtoFile},
