@@ -130,12 +130,12 @@ FYI: https://pkg.go.dev/time#Location
 ### Examples
 
 ```cel
-googl.protobuf.Timestamp{}.asTime() //=> grpc.federation.time.Time{timestamp: google.protobuf.Timestamp{}}
+google.protobuf.Timestamp{}.asTime() //=> grpc.federation.time.Time{timestamp: google.protobuf.Timestamp{}}
 ```
 
 ## Time
 
-A `Time` represents an instant in time with nanosecond precision. `Time` type is compatible with [`google.protobuf.Timestamp`](https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/timestamp.proto) type.
+A `Time` represents `google.protobuf.Timestamp` with time zone.
 
 # Constants
 
