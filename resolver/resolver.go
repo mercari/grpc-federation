@@ -378,7 +378,7 @@ func (r *Resolver) allMessages(files []*File) []*Message {
 
 func (r *Resolver) validateFiles(ctx *context, files []*File) {
 	for _, file := range files {
-		ctx = ctx.withFile(file)
+		ctx := ctx.withFile(file)
 		r.validateFileImport(ctx, file)
 
 		for _, svc := range file.Services {
