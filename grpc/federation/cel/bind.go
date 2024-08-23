@@ -78,19 +78,3 @@ func MemberOverloadFunc(name string, self *cel.Type, args []*cel.Type, result *c
 		),
 	}
 }
-
-func toSelectorName(v ast.Expr) string {
-	switch v.Kind() {
-	case ast.SelectKind:
-		sel := v.AsSelect()
-		parent := toSelectorName(sel.Operand())
-		if parent != "" {
-			return parent + "." + sel.FieldName()
-		}
-		return sel.FieldName()
-	case ast.IdentKind:
-		return v.AsIdent()
-	default:
-		return ""
-	}
-}

@@ -110,7 +110,7 @@ func TestHandler_DidChange(t *testing.T) {
 			)
 			client := protocol.ClientDispatcher(conn, zap.NewNop())
 
-			handler := server.NewHandler(client, &bytes.Buffer{}, nil)
+			handler := server.NewHandler(client, &bytes.Buffer{}, []string{"testdata"})
 
 			err := handler.DidChange(context.Background(), tc.params)
 			if err != nil {
@@ -175,7 +175,7 @@ func TestHandler_Definition(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      24,
+						Line:      25,
 						Character: 15,
 					},
 				},
@@ -184,8 +184,8 @@ func TestHandler_Definition(t *testing.T) {
 				{
 					URI: mustTestdataAbs(t, "testdata/service.proto"),
 					Range: protocol.Range{
-						Start: protocol.Position{Line: 32, Character: 8},
-						End:   protocol.Position{Line: 32, Character: 12},
+						Start: protocol.Position{Line: 33, Character: 8},
+						End:   protocol.Position{Line: 33, Character: 12},
 					},
 				},
 			},
@@ -198,7 +198,7 @@ func TestHandler_Definition(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      38,
+						Line:      39,
 						Character: 19,
 					},
 				},
@@ -221,7 +221,7 @@ func TestHandler_Definition(t *testing.T) {
 						URI: mustTestdataAbs(t, "testdata/service.proto"),
 					},
 					Position: protocol.Position{
-						Line:      19,
+						Line:      20,
 						Character: 0,
 					},
 				},

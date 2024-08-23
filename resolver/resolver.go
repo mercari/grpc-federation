@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -22,6 +23,7 @@ import (
 	"golang.org/x/text/language"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"github.com/mercari/grpc-federation/compiler"
@@ -168,7 +170,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 	r.resolveAutoBind(ctx, files)
 	r.resolveMessageDependencies(ctx, files)
 
-	r.validateServiceFromFiles(ctx, files)
+	r.validateFiles(ctx, files)
 
 	resultFiles := r.resultFiles(files)
 	return &Result{
@@ -374,13 +376,253 @@ func (r *Resolver) allMessages(files []*File) []*Message {
 	return msgs
 }
 
-func (r *Resolver) validateServiceFromFiles(ctx *context, files []*File) {
+func (r *Resolver) validateFiles(ctx *context, files []*File) {
 	for _, file := range files {
 		ctx := ctx.withFile(file)
+		r.validateFileImport(ctx, file)
+
 		for _, svc := range file.Services {
 			r.validateService(ctx, svc)
 		}
 	}
+}
+
+func (r *Resolver) validateFileImport(ctx *context, file *File) {
+	pkgNameUsedInProtoMap := r.lookupPackageNameMapUsedInProtoDefinitionFromFile(file)
+	pkgNameUsedInGrpcFedMap := r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(file)
+	ruleDef, err := getExtensionRule[*federation.FileRule](file.Desc.GetOptions(), federation.E_File)
+	if err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				source.NewLocationBuilder(file.Desc.GetName()).Location(),
+			),
+		)
+		return
+	}
+	grpcFedFileImports := map[string]struct{}{}
+	if ruleDef != nil {
+		for _, path := range ruleDef.GetImport() {
+			grpcFedFileImports[path] = struct{}{}
+		}
+	}
+
+	for _, importFile := range file.ImportFiles {
+		if _, imported := grpcFedFileImports[importFile.Name]; imported {
+			if _, used := pkgNameUsedInGrpcFedMap[importFile.PackageName()]; !used {
+				ctx.addWarning(WarnWithLocation(
+					fmt.Sprintf("Import %s is unused for the definition of grpc federation.", importFile.Name),
+					source.NewLocationBuilder(file.Desc.GetName()).WithImportName(importFile.Name).Location(),
+				))
+			}
+		} else {
+			if _, used := pkgNameUsedInProtoMap[importFile.PackageName()]; used {
+				continue
+			}
+			if _, used := pkgNameUsedInGrpcFedMap[importFile.PackageName()]; used {
+				ctx.addWarning(WarnWithLocation(
+					fmt.Sprintf("Import %s is used only for the definition of grpc federation. You can use grpc.federation.file.import instead.", importFile.Name),
+					source.NewLocationBuilder(file.Desc.GetName()).WithImportName(importFile.Name).Location(),
+				))
+			}
+		}
+	}
+}
+
+func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromFile(file *File) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	for _, s := range file.Services {
+		if opt := s.Desc.GetOptions(); opt != nil {
+			opt.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, val protoreflect.Value) bool {
+				pkgNameMap[string(fd.ParentFile().Package())] = struct{}{}
+				return true
+			})
+		}
+
+		for _, m := range s.Methods {
+			if opt := m.Desc.GetOptions(); opt != nil {
+				opt.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, val protoreflect.Value) bool {
+					pkgNameMap[string(fd.ParentFile().Package())] = struct{}{}
+					return true
+				})
+			}
+			pkgNameMap[m.Request.PackageName()] = struct{}{}
+			pkgNameMap[m.Response.PackageName()] = struct{}{}
+		}
+	}
+
+	for _, msg := range file.Messages {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInProtoDefinitionFromMessage(msg))
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromMessage(msg *Message) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	for _, field := range msg.Fields {
+		if opt := field.Desc.GetOptions(); opt != nil {
+			opt.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, val protoreflect.Value) bool {
+				pkgNameMap[string(fd.ParentFile().Package())] = struct{}{}
+				return true
+			})
+		}
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(field.Type))
+	}
+
+	for _, nestedMsg := range msg.NestedMessages {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInProtoDefinitionFromMessage(nestedMsg))
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapRecursiveFromType(typ *Type) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	if typ == nil {
+		return pkgNameMap
+	}
+	switch typ.Kind {
+	case types.Message:
+		if typ.Message == nil {
+			return pkgNameMap
+		}
+		if typ.Message.IsMapEntry {
+			for _, field := range typ.Message.Fields {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(field.Type))
+			}
+		} else {
+			pkgNameMap[typ.Message.PackageName()] = struct{}{}
+		}
+	case types.Enum:
+		if typ.Enum == nil {
+			return pkgNameMap
+		}
+		pkgNameMap[typ.Enum.PackageName()] = struct{}{}
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(file *File) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	for _, s := range file.Services {
+		if s.Rule != nil && s.Rule.Env != nil {
+			for _, v := range s.Rule.Env.Vars {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(v.Type))
+			}
+		}
+	}
+
+	for _, msg := range file.Messages {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(msg))
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(msg *Message) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	if msg.Rule != nil {
+		for _, a := range msg.Rule.Aliases {
+			pkgNameMap[a.PackageName()] = struct{}{}
+		}
+		if msg.Rule.DefSet != nil {
+			for _, v := range msg.Rule.DefSet.Defs {
+				if v.Expr == nil {
+					continue
+				}
+				switch {
+				case v.Expr.By != nil:
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.By))
+				case v.Expr.Call != nil:
+					if v.Expr.Call.Method != nil && v.Expr.Call.Method.Service != nil {
+						pkgNameMap[v.Expr.Call.Method.Service.PackageName()] = struct{}{}
+					}
+					if v.Expr.Call.Request != nil {
+						if v.Expr.Call.Request.Type != nil {
+							pkgNameMap[v.Expr.Call.Request.Type.PackageName()] = struct{}{}
+						}
+						maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Call.Request.Args))
+					}
+				case v.Expr.Message != nil:
+					if v.Expr.Message.Message != nil {
+						pkgNameMap[v.Expr.Message.Message.PackageName()] = struct{}{}
+					}
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Message.Args))
+				case v.Expr.Map != nil:
+					if v.Expr.Map.Expr != nil {
+						if v.Expr.Map.Expr.By != nil {
+							maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.Map.Expr.By))
+						}
+						if v.Expr.Map.Expr.Message != nil {
+							pkgNameMap[v.Expr.Map.Expr.Message.Message.PackageName()] = struct{}{}
+							maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Map.Expr.Message.Args))
+						}
+					}
+				}
+			}
+		}
+	}
+
+	for _, field := range msg.Fields {
+		rule := field.Rule
+		if rule == nil {
+			continue
+		}
+		for _, a := range rule.Aliases {
+			if a.Message == nil {
+				continue
+			}
+			pkgNameMap[a.Message.PackageName()] = struct{}{}
+		}
+		if rule.Value != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(rule.Value.CEL))
+		}
+		if rule.Oneof != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(rule.Oneof.By))
+		}
+	}
+
+	for _, nestedMsg := range msg.NestedMessages {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(nestedMsg))
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapFromCELValue(val *CELValue) map[string]struct{} {
+	if val == nil {
+		return nil
+	}
+	env, err := r.createCELEnv()
+	if err != nil {
+		// skip reporting error
+		return nil
+	}
+	expr := strings.Replace(val.Expr, "$", federation.MessageArgumentVariableName, -1)
+	ast, issues := env.Parse(expr)
+	if issues.Err() != nil {
+		// skip reporting error
+		return nil
+	}
+	idents := grpcfedcel.ToIdentifiers(ast.NativeRep().Expr())
+
+	pkgNameMap := map[string]struct{}{}
+	for _, ident := range idents {
+		if pkg, err := r.lookupPackage(ident); err == nil {
+			pkgNameMap[pkg.Name] = struct{}{}
+		} else if _, exists := r.protoPackageNameToPackage[ident]; exists {
+			pkgNameMap[ident] = struct{}{}
+		}
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapFromMessageArguments(args []*Argument) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	for _, arg := range args {
+		if arg.Value != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(arg.Value.CEL))
+		}
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(arg.Type))
+	}
+	return pkgNameMap
 }
 
 func (r *Resolver) resultFiles(allFiles []*File) []*File {
@@ -734,6 +976,7 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string, build
 	service := &Service{
 		File:       file,
 		Name:       name,
+		Desc:       serviceDef,
 		Methods:    make([]*Method, 0, len(serviceDef.GetMethod())),
 		CELPlugins: plugins,
 	}
@@ -798,6 +1041,7 @@ func (r *Resolver) resolveMethod(ctx *context, service *Service, methodDef *desc
 	method := &Method{
 		Service:  service,
 		Name:     methodDef.GetName(),
+		Desc:     methodDef,
 		Request:  req,
 		Response: res,
 	}
@@ -838,7 +1082,11 @@ func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string, build
 		)
 		return nil
 	}
-	msg := &Message{File: file, Name: msgDef.GetName()}
+	msg := &Message{
+		File: file,
+		Name: msgDef.GetName(),
+		Desc: msgDef,
+	}
 	for _, nestedMsgDef := range msgDef.GetNestedType() {
 		nestedMsg := r.resolveMessage(ctx, pkg, fmt.Sprintf("%s.%s", name, nestedMsgDef.GetName()), builder.WithMessage(name))
 		if nestedMsg == nil {
@@ -2610,7 +2858,12 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 		)
 		return nil
 	}
-	field := &Field{Name: fieldDef.GetName(), Type: typ, Message: ctx.msg}
+	field := &Field{
+		Name:    fieldDef.GetName(),
+		Desc:    fieldDef,
+		Type:    typ,
+		Message: ctx.msg,
+	}
 	if fieldDef.OneofIndex != nil {
 		oneof := oneofs[fieldDef.GetOneofIndex()]
 		oneof.Fields = append(oneof.Fields, field)
@@ -2973,7 +3226,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(
 		)
 		return nil
 	}
-	env, err := r.createCELEnv(ctx, msg, svcMsgSet, builder)
+	env, err := r.createMessageCELEnv(ctx, msg, svcMsgSet, builder)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -3725,15 +3978,8 @@ func (r *Resolver) removeContextArgumentFromErrorText(err *cel.Error) {
 	err.Message = strings.Replace(err.Message, federation.ContextTypeName, "", -1)
 }
 
-func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
+func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
-		cel.StdLib(),
-		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
-		cel.CrossTypeNumericComparisons(true),
-		cel.CustomTypeAdapter(r.celRegistry),
-		cel.CustomTypeProvider(r.celRegistry),
-		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
-		cel.Variable(federation.ContextVariableName, cel.ObjectType(federation.ContextTypeName)),
 		cel.Container(msg.Package().Name),
 	}
 	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)
@@ -3744,13 +3990,26 @@ func (r *Resolver) createCELEnv(ctx *context, msg *Message, svcMsgSet map[*Servi
 		}
 		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
 	}
+	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
+		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
+	}
+	return r.createCELEnv(envOpts...)
+}
+
+func (r *Resolver) createCELEnv(envOpts ...cel.EnvOption) (*cel.Env, error) {
+	envOpts = append(envOpts, []cel.EnvOption{
+		cel.StdLib(),
+		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
+		cel.CrossTypeNumericComparisons(true),
+		cel.CustomTypeAdapter(r.celRegistry),
+		cel.CustomTypeProvider(r.celRegistry),
+		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
+		cel.Variable(federation.ContextVariableName, cel.ObjectType(federation.ContextTypeName)),
+	}...)
 	envOpts = append(envOpts, r.enumAccessors()...)
 	envOpts = append(envOpts, r.enumOperators()...)
 	for _, plugin := range r.celPluginMap {
 		envOpts = append(envOpts, cel.Lib(plugin))
-	}
-	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
-		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
 	}
 	env, err := cel.NewCustomEnv(envOpts...)
 	if err != nil {

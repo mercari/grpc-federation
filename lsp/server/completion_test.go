@@ -24,8 +24,8 @@ func TestCompletion(t *testing.T) {
 	completer := server.NewCompleter(compiler.New(), slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	t.Run("method", func(t *testing.T) {
 		// resolver.method value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 39,
+		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+			Line: 40,
 			Col:  19,
 		})
 		if err != nil {
@@ -44,8 +44,8 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("request.field", func(t *testing.T) {
 		// resolver.request.field value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 40,
+		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+			Line: 41,
 			Col:  28,
 		})
 		if err != nil {
@@ -61,8 +61,8 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("request.by", func(t *testing.T) {
 		// resolver.request.by value position os Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 40,
+		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+			Line: 41,
 			Col:  38,
 		})
 		if err != nil {
@@ -78,8 +78,8 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("filter response", func(t *testing.T) {
 		// resolver.response.field value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 43,
+		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+			Line: 44,
 			Col:  28,
 		})
 		if err != nil {
@@ -96,8 +96,8 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("message", func(t *testing.T) {
 		// def[2].message value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, nil, path, file, source.Position{
-			Line: 47,
+		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+			Line: 48,
 			Col:  17,
 		})
 		if err != nil {
