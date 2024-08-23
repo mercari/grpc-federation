@@ -52,7 +52,7 @@ func (h *Handler) definitionWithLink(ctx context.Context, params *protocol.Defin
 		return nil, nil
 	}
 	h.logger.Info("node", slog.String("text", nodeInfo.RawText()))
-	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...))
+	protoFiles, err := h.compiler.Compile(ctx, file, compiler.ImportPathOption(h.importPaths...), compiler.ImportRuleOption())
 	if err != nil {
 		return nil, err
 	}

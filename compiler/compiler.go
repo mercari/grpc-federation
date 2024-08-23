@@ -28,6 +28,7 @@ import (
 type Compiler struct {
 	importPaths  []string
 	manualImport bool
+	importRule   bool
 }
 
 // Option represents compiler option.
@@ -47,6 +48,13 @@ func ImportPathOption(path ...string) Option {
 func ManualImportOption() Option {
 	return func(c *Compiler) {
 		c.manualImport = true
+	}
+}
+
+// ImportRuleOption used to reference proto files imported by grpc.federation.file.import rule.
+func ImportRuleOption() Option {
+	return func(c *Compiler) {
+		c.importRule = true
 	}
 }
 
@@ -183,6 +191,9 @@ func (c *Compiler) Compile(ctx context.Context, file *source.File, opts ...Optio
 	}
 	files := []string{relPath}
 	files = append(files, file.Imports()...)
+	if c.importRule {
+		files = append(files, file.ImportsByImportRule()...)
+	}
 	linkedFiles, err := compiler.Compile(ctx, files...)
 	if err != nil {
 		return nil, &CompilerError{Err: err, ErrWithPos: r.errs}
