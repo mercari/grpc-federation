@@ -541,6 +541,9 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 						}
 						maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Call.Request.Args))
 					}
+					for _, err := range v.Expr.Call.Errors {
+						maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(err))
+					}
 				case v.Expr.Message != nil:
 					if v.Expr.Message.Message != nil {
 						pkgNameMap[v.Expr.Message.Message.PackageName()] = struct{}{}
@@ -556,6 +559,8 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 							maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Map.Expr.Message.Args))
 						}
 					}
+				case v.Expr.Validation != nil:
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(v.Expr.Validation.Error))
 				}
 			}
 		}
@@ -582,6 +587,23 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 
 	for _, nestedMsg := range msg.NestedMessages {
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(nestedMsg))
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapFromGRPCError(err *GRPCError) map[string]struct{} {
+	if err == nil {
+		return nil
+	}
+	pkgNameMap := map[string]struct{}{}
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.If))
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.Message))
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.IgnoreAndResponse))
+	for _, detail := range err.Details {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(detail.If))
+		for _, by := range detail.By {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(by))
+		}
 	}
 	return pkgNameMap
 }
