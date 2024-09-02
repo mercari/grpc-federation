@@ -523,42 +523,7 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 		for _, a := range msg.Rule.Aliases {
 			pkgNameMap[a.PackageName()] = struct{}{}
 		}
-		if msg.Rule.DefSet != nil {
-			for _, v := range msg.Rule.DefSet.Defs {
-				if v.Expr == nil {
-					continue
-				}
-				switch {
-				case v.Expr.By != nil:
-					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.By))
-				case v.Expr.Call != nil:
-					if v.Expr.Call.Method != nil && v.Expr.Call.Method.Service != nil {
-						pkgNameMap[v.Expr.Call.Method.Service.PackageName()] = struct{}{}
-					}
-					if v.Expr.Call.Request != nil {
-						if v.Expr.Call.Request.Type != nil {
-							pkgNameMap[v.Expr.Call.Request.Type.PackageName()] = struct{}{}
-						}
-						maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Call.Request.Args))
-					}
-				case v.Expr.Message != nil:
-					if v.Expr.Message.Message != nil {
-						pkgNameMap[v.Expr.Message.Message.PackageName()] = struct{}{}
-					}
-					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Message.Args))
-				case v.Expr.Map != nil:
-					if v.Expr.Map.Expr != nil {
-						if v.Expr.Map.Expr.By != nil {
-							maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.Map.Expr.By))
-						}
-						if v.Expr.Map.Expr.Message != nil {
-							pkgNameMap[v.Expr.Map.Expr.Message.Message.PackageName()] = struct{}{}
-							maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Map.Expr.Message.Args))
-						}
-					}
-				}
-			}
-		}
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(msg.Rule.DefSet))
 	}
 
 	for _, field := range msg.Fields {
@@ -582,6 +547,88 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 
 	for _, nestedMsg := range msg.NestedMessages {
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(nestedMsg))
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(defSet *VariableDefinitionSet) map[string]struct{} {
+	if defSet == nil {
+		return nil
+	}
+	pkgNameMap := map[string]struct{}{}
+	for _, v := range defSet.Defs {
+		if v.Expr == nil {
+			continue
+		}
+		switch {
+		case v.Expr.By != nil:
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.By))
+		case v.Expr.Call != nil:
+			if v.Expr.Call.Method != nil && v.Expr.Call.Method.Service != nil {
+				pkgNameMap[v.Expr.Call.Method.Service.PackageName()] = struct{}{}
+			}
+			if v.Expr.Call.Request != nil {
+				if v.Expr.Call.Request.Type != nil {
+					pkgNameMap[v.Expr.Call.Request.Type.PackageName()] = struct{}{}
+				}
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Call.Request.Args))
+			}
+			for _, err := range v.Expr.Call.Errors {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(err))
+			}
+		case v.Expr.Message != nil:
+			if v.Expr.Message.Message != nil {
+				pkgNameMap[v.Expr.Message.Message.PackageName()] = struct{}{}
+			}
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Message.Args))
+		case v.Expr.Map != nil:
+			if v.Expr.Map.Expr != nil {
+				if v.Expr.Map.Expr.By != nil {
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.Map.Expr.By))
+				}
+				if v.Expr.Map.Expr.Message != nil {
+					pkgNameMap[v.Expr.Map.Expr.Message.Message.PackageName()] = struct{}{}
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Map.Expr.Message.Args))
+				}
+			}
+		case v.Expr.Validation != nil:
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(v.Expr.Validation.Error))
+		}
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapFromGRPCError(err *GRPCError) map[string]struct{} {
+	if err == nil {
+		return nil
+	}
+	pkgNameMap := map[string]struct{}{}
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.If))
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.Message))
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.IgnoreAndResponse))
+	for _, detail := range err.Details {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(detail.If))
+		for _, by := range detail.By {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(by))
+		}
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(detail.Messages))
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(detail.DefSet))
+		for _, preconditionFailure := range detail.PreconditionFailures {
+			for _, violation := range preconditionFailure.Violations {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(violation.Type))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(violation.Subject))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(violation.Description))
+			}
+		}
+		for _, badRequest := range detail.BadRequests {
+			for _, fieldViolation := range badRequest.FieldViolations {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(fieldViolation.Field))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(fieldViolation.Description))
+			}
+		}
+		for _, localizedMessage := range detail.LocalizedMessages {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(localizedMessage.Message))
+		}
 	}
 	return pkgNameMap
 }
