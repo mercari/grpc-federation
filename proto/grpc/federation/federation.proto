@@ -154,6 +154,11 @@ message MethodRule {
   // If you want to handle this error, you need to implement a custom error handler in Go.
   // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
   optional string timeout = 1;
+  // response specify the name of the message you want to use to create the response value.
+  // If you specify a reserved type like `google.protobuf.Empty` as the response, you cannot define gRPC Federation options.
+  // In such cases, you can specify a separate message to create the response value.
+  // The specified response message must contain fields with the same names and types as all the fields in the original response.
+  optional string response = 2;
 }
 
 // MessageRule define gRPC Federation rules for the message.

@@ -353,19 +353,43 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 			{{- end }}
 		})
 	})
-	{{- else }}
-	res, err := s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}{
-		{{- range .ReturnTypeArguments }}
-		{{ . }}: req.Get{{ . }}(),
-		{{- end }}
-	})
-	{{- end }}
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		grpcfed.OutputErrorLog(ctx, err)
 		return nil, err
 	}
 	return res, nil
+	{{- else if .CustomResponse }}
+	customRes, err := s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}{
+		{{- range .ReturnTypeArguments }}
+		{{ . }}: req.Get{{ . }}(),
+		{{- end }}
+	})
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		grpcfed.OutputErrorLog(ctx, err)
+		return nil, err
+	}
+	ret, err := s.{{ .ResponseCastFuncName }}(customRes)
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		grpcfed.OutputErrorLog(ctx, err)
+		return nil, err
+	}
+	return ret, nil
+	{{- else }}
+	res, err := s.{{ .ResolverName }}(ctx, &{{ .ArgumentName }}{
+		{{- range .ReturnTypeArguments }}
+		{{ . }}: req.Get{{ . }}(),
+		{{- end }}
+	})
+	if err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		grpcfed.OutputErrorLog(ctx, err)
+		return nil, err
+	}
+	return res, nil
+	{{- end }}
 }
 
 {{- end }}

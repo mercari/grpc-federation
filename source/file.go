@@ -1714,9 +1714,13 @@ func (f *File) nodeInfoByService(node *ast.ServiceNode, svc *Service) *ast.NodeI
 				return f.nodeInfoByServiceOption(n, svc.Option)
 			}
 		case *ast.RPCNode:
-			if svc.Method != nil {
-				return f.nodeInfoByMethod(n, svc.Method)
+			if svc.Method == nil {
+				continue
 			}
+			if n.Name.Val != svc.Method.Name {
+				continue
+			}
+			return f.nodeInfoByMethod(n, svc.Method)
 		}
 	}
 	return f.nodeInfo(node)
@@ -1801,11 +1805,20 @@ func (f *File) nodeInfoByMethodOption(node *ast.OptionNode, opt *MethodOption) *
 		if opt.Timeout && strings.HasSuffix(f.optionName(node), "timeout") {
 			return f.nodeInfo(n)
 		}
+		if opt.Response && strings.HasSuffix(f.optionName(node), "response") {
+			return f.nodeInfo(n)
+		}
 	case *ast.MessageLiteralNode:
 		for _, elem := range n.Elements {
 			optName := elem.Name.Name.AsIdentifier()
 			switch {
 			case opt.Timeout && optName == "timeout":
+				value, ok := elem.Val.(*ast.StringLiteralNode)
+				if !ok {
+					return nil
+				}
+				return f.nodeInfo(value)
+			case opt.Response && optName == "response":
 				value, ok := elem.Val.(*ast.StringLiteralNode)
 				if !ok {
 					return nil

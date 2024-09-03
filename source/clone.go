@@ -140,7 +140,8 @@ func (o *MethodOption) Clone() *MethodOption {
 		return nil
 	}
 	return &MethodOption{
-		Timeout: o.Timeout,
+		Timeout:  o.Timeout,
+		Response: o.Response,
 	}
 }
 

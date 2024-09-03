@@ -8,6 +8,7 @@ service PostService {
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
   rpc GetPosts(GetPostsRequest) returns (GetPostsResponse) {};
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {};
+  rpc UpdatePost(UpdatePostRequest) returns (UpdatePostResponse) {};
 }
 
 message GetPostRequest {
@@ -53,4 +54,11 @@ message Post {
   string title = 2;
   string content = 3;
   string user_id = 4;
+}
+
+message UpdatePostRequest {
+  string id = 1;
+}
+
+message UpdatePostResponse {
 }

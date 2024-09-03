@@ -846,3 +846,12 @@ func (s *FederationService) logvalue_Org_Post_PostType(v post.PostType) slog.Val
 	}
 	return slog.StringValue("")
 }
+
+func (s *FederationService) logvalue_Org_Post_UpdatePostRequest(v *post.UpdatePostRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
+	)
+}

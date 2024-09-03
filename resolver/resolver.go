@@ -748,7 +748,7 @@ func (r *Resolver) validateService(ctx *context, svc *Service) {
 
 func (r *Resolver) validateMethodResponse(ctx *context, service *Service) {
 	for _, method := range service.Methods {
-		response := method.Response
+		response := method.FederationResponse()
 		if response.Rule == nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -1267,7 +1267,7 @@ func (r *Resolver) resolveServiceRules(ctx *context, svcs []*Service) {
 
 func (r *Resolver) resolveMethodRules(ctx *context, mtds []*Method, builder *source.ServiceBuilder) {
 	for _, mtd := range mtds {
-		mtd.Rule = r.resolveMethodRule(ctx, r.methodToRuleMap[mtd], builder.WithMethod(mtd.Name))
+		mtd.Rule = r.resolveMethodRule(ctx, mtd, r.methodToRuleMap[mtd], builder.WithMethod(mtd.Name))
 	}
 }
 
@@ -2033,10 +2033,11 @@ func (r *Resolver) resolveEnvVarOption(def *federation.EnvVarOption) *EnvVarOpti
 	}
 }
 
-func (r *Resolver) resolveMethodRule(ctx *context, def *federation.MethodRule, builder *source.MethodBuilder) *MethodRule {
+func (r *Resolver) resolveMethodRule(ctx *context, mtd *Method, def *federation.MethodRule, builder *source.MethodBuilder) *MethodRule {
 	if def == nil {
 		return nil
 	}
+	optBuilder := builder.WithOption()
 	rule := &MethodRule{}
 	timeout := def.GetTimeout()
 	if timeout != "" {
@@ -2045,11 +2046,49 @@ func (r *Resolver) resolveMethodRule(ctx *context, def *federation.MethodRule, b
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					builder.WithOption().WithTimeout().Location(),
+					optBuilder.WithTimeout().Location(),
 				),
 			)
 		} else {
 			rule.Timeout = &duration
+		}
+	}
+	if response := def.GetResponse(); response != "" {
+		resBuilder := optBuilder.WithResponse()
+		msg, err := r.resolveMessageByName(ctx, response, source.ToLazyMessageBuilder(resBuilder, response))
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					resBuilder.Location(),
+				),
+			)
+		}
+		if msg != nil && mtd.Response != nil {
+			var notFoundFields []string
+			for _, orgField := range mtd.Response.Fields {
+				aliasField := msg.Field(orgField.Name)
+				if aliasField == nil {
+					notFoundFields = append(notFoundFields, fmt.Sprintf("%q", orgField.Name))
+					continue
+				}
+				if isDifferentType(aliasField.Type, orgField.Type) {
+					notFoundFields = append(notFoundFields, fmt.Sprintf("%q", orgField.Name))
+					continue
+				}
+			}
+			if len(notFoundFields) != 0 {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(
+							`%q message must contain fields with the same names and types as the %s fields in the %q message`,
+							msg.FQDN(), strings.Join(notFoundFields, ", "), mtd.Response.FQDN(),
+						),
+						resBuilder.Location(),
+					),
+				)
+			}
+			rule.Response = msg
 		}
 	}
 	return rule
@@ -4533,7 +4572,7 @@ func (r *Resolver) resolveValue(def *commonValueDef) (*Value, error) {
 
 func (r *Resolver) lookupRequestMessageFromResponseMessage(resMsg *Message) *Message {
 	for _, method := range r.cachedMethodMap {
-		if method.Response == resMsg {
+		if method.FederationResponse() == resMsg {
 			return method.Request
 		}
 	}

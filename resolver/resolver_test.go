@@ -525,6 +525,7 @@ func TestSimpleAggregation(t *testing.T) {
 				"org.post.PostService/CreatePost",
 				"org.post.PostService/GetPost",
 				"org.post.PostService/GetPosts",
+				"org.post.PostService/UpdatePost",
 				"org.user.UserService/GetUser",
 				"org.user.UserService/GetUsers",
 			},
@@ -730,12 +731,59 @@ func TestCreatePost(t *testing.T) {
 				).
 				Build(t),
 		).
+		AddMessage(
+			testutil.NewMessageBuilder("UpdatePostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("UpdatePostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("UpdatePostResponse").
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("_def0").
+								SetCall(
+									testutil.NewCallExprBuilder().
+										SetMethod(ref.Method(t, "org.post", "PostService", "UpdatePost")).
+										SetRequest(
+											testutil.NewRequestBuilder().
+												AddField(
+													"id",
+													resolver.StringType,
+													resolver.NewByValue("$.id", resolver.StringType),
+												).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "UpdatePostResponseArgument")).
+						SetDependencyGraph(testutil.NewDependencyGraphBuilder().Build(t)).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("_def0")).
+						Build(t),
+				).
+				Build(t),
+		).
 		AddService(
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("CreatePost", ref.Message(t, "org.federation", "CreatePostRequest"), ref.Message(t, "org.federation", "CreatePostResponse"), nil).
+				AddMethod(
+					"UpdatePost",
+					ref.Message(t, "org.federation", "UpdatePostRequest"),
+					resolver.EmptyType.Message,
+					testutil.NewMethodRuleBuilder().Response(ref.Message(t, "org.federation", "UpdatePostResponse")).Build(t),
+				).
 				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
 				AddMessage(ref.Message(t, "org.federation", "CreatePost"), ref.Message(t, "org.federation", "CreatePostArgument")).
 				AddMessage(ref.Message(t, "org.federation", "CreatePostResponse"), ref.Message(t, "org.federation", "CreatePostResponseArgument")).
+				AddMessage(ref.Message(t, "org.federation", "UpdatePostResponse"), ref.Message(t, "org.federation", "UpdatePostResponseArgument")).
 				Build(t),
 		)
 
@@ -3900,6 +3948,15 @@ func getPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("UpdatePostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("UpdatePostResponse").
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponseArgument").
 				AddField("id", resolver.StringType).
 				Build(t),
@@ -3914,11 +3971,17 @@ func getPostProtoBuilder(t *testing.T) *testutil.FileBuilder {
 				AddField("post", ref.Type(t, "org.post", "CreatePost")).
 				Build(t),
 		).
+		AddMessage(
+			testutil.NewMessageBuilder("UpdatePostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
 		AddService(
 			testutil.NewServiceBuilder("PostService").
 				AddMethod("GetPost", ref.Message(t, "org.post", "GetPostRequest"), ref.Message(t, "org.post", "GetPostResponse"), nil).
 				AddMethod("GetPosts", ref.Message(t, "org.post", "GetPostsRequest"), ref.Message(t, "org.post", "GetPostsResponse"), nil).
 				AddMethod("CreatePost", ref.Message(t, "org.post", "CreatePostRequest"), ref.Message(t, "org.post", "CreatePostResponse"), nil).
+				AddMethod("UpdatePost", ref.Message(t, "org.post", "UpdatePostRequest"), ref.Message(t, "org.post", "UpdatePostResponse"), nil).
 				Build(t),
 		)
 	return pb

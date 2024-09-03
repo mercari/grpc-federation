@@ -1577,6 +1577,11 @@ func (b *MethodRuleBuilder) Timeout(duration string) *MethodRuleBuilder {
 	return b
 }
 
+func (b *MethodRuleBuilder) Response(msg *resolver.Message) *MethodRuleBuilder {
+	b.rule.Response = msg
+	return b
+}
+
 func (b *MethodRuleBuilder) Build(t *testing.T) *resolver.MethodRule {
 	t.Helper()
 	if b.duration != "" {

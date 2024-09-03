@@ -122,6 +122,7 @@ message Method {
 
 message MethodRule {
   google.protobuf.Duration timeout = 1;
+  string response_id = 2;
 }
 
 message Message {

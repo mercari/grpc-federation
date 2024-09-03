@@ -28,8 +28,9 @@ import (
 const bufSize = 1024
 
 var (
-	listener   *bufconn.Listener
-	postClient post.PostServiceClient
+	listener         *bufconn.Listener
+	postClient       post.PostServiceClient
+	calledUpdatePost bool
 )
 
 type clientConfig struct{}
@@ -52,6 +53,11 @@ func (s *PostServer) GetPost(ctx context.Context, req *post.GetPostRequest) (*po
 			UserId:  fmt.Sprintf("user:%s", req.Id),
 		},
 	}, nil
+}
+
+func (s *PostServer) UpdatePost(ctx context.Context, req *post.UpdatePostRequest) (*post.UpdatePostResponse, error) {
+	calledUpdatePost = true
+	return nil, nil
 }
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
@@ -114,13 +120,26 @@ func TestFederation(t *testing.T) {
 	}()
 
 	client := federation.NewFederationServiceClient(conn)
-	if _, err := client.GetPost(ctx, &federation.GetPostRequest{
-		Id: "foo",
-	}); err == nil {
-		t.Fatal("expected error")
-	} else {
-		if status.Code(err) != codes.DeadlineExceeded {
-			t.Fatalf("unexpected status code: %v", err)
+
+	t.Run("GetPost", func(t *testing.T) {
+		if _, err := client.GetPost(ctx, &federation.GetPostRequest{
+			Id: "foo",
+		}); err == nil {
+			t.Fatal("expected error")
+		} else {
+			if status.Code(err) != codes.DeadlineExceeded {
+				t.Fatalf("unexpected status code: %v", err)
+			}
 		}
-	}
+	})
+	t.Run("UpdatePost", func(t *testing.T) {
+		if _, err := client.UpdatePost(ctx, &federation.UpdatePostRequest{
+			Id: "foo",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if !calledUpdatePost {
+			t.Fatal("failed to call UpdatePost method")
+		}
+	})
 }

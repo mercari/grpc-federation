@@ -4,6 +4,7 @@ package federation;
 
 import "grpc/federation/federation.proto";
 import "google/protobuf/descriptor.proto";
+import "google/protobuf/empty.proto";
 
 option go_package = "example/federation;federation";
 
@@ -25,6 +26,9 @@ service FederationService {
     option (grpc.federation.method).timeout = "1s";
     option (ext).foo = "xxx";
   };
+  rpc UpdatePost(UpdatePostRequest) returns (google.protobuf.Empty) {
+    option (grpc.federation.method).response = "UpdatePostResponse";
+  }
 }
 
 message GetPostRequest {
@@ -58,4 +62,19 @@ message Post {
   string id = 1;
   string title = 2;
   string content = 3;
+}
+
+message UpdatePostRequest {
+  string id = 1;
+}
+
+message UpdatePostResponse {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "post.PostService/UpdatePost"
+        request { field: "id" by: "$.id" }
+      }
+    }
+  };
 }
