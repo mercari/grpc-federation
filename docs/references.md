@@ -195,6 +195,7 @@ No action is taken even if the environment variable exists.
 | field | type | required or optional |
 | ----- | ---- | ------------------- |
 | [`timeout`](#grpcfederationmethodtimeout) | string | optional |
+| [`response`](#grpcfederationmethodresponse) | string | optional |
 
 ## (grpc.federation.method).timeout
 
@@ -209,6 +210,39 @@ service MyService {
   option (grpc.federation.service) = {};
   rpc Get(GetRequest) returns (GetResponse) {
     option (grpc.federation.method).timeout = "1m";
+  };
+}
+```
+
+## (grpc.federation.method).response
+
+`response` specify the name of the message you want to use to create the response value.
+If you specify a reserved type like `google.protobuf.Empty` as the response, you cannot define gRPC Federation options.
+In such cases, you can specify a separate message to create the response value.
+The specified response message must contain fields with the same names and types as all the fields in the original response.
+
+### Example
+
+```proto
+service MyService {
+  option (grpc.federation.service) = {};
+  rpc Update(UpdateRequest) returns (google.protobuf.Empty) {
+    option (grpc.federation.method).response = "UpdateResponse";
+  };
+}
+
+message UpdateRequest {
+  string id = 1;
+}
+
+message UpdateResponse {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "pkg.PostService/UpdatePost"
+        request { field: "id" by: "$.id" }
+      }
+    }
   };
 }
 ```

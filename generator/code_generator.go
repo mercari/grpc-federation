@@ -1377,7 +1377,7 @@ type DependentMethod struct {
 func (s *Service) DependentMethods() []*DependentMethod {
 	methodMap := make(map[string]*DependentMethod)
 	for _, method := range s.Service.Methods {
-		for _, depMethod := range s.dependentMethods(method.Response) {
+		for _, depMethod := range s.dependentMethods(method.FederationResponse()) {
 			methodMap[depMethod.Name] = depMethod
 		}
 	}
@@ -1472,16 +1472,28 @@ func (m *Method) Timeout() string {
 	return fmt.Sprintf("%[1]d/* %[1]s */", *m.Rule.Timeout)
 }
 
+func (m *Method) CustomResponse() bool {
+	return m.Rule != nil && m.Rule.Response != nil
+}
+
+func (m *Method) ResponseCastFuncName() string {
+	return castFuncName(
+		resolver.NewMessageType(m.Rule.Response, false),
+		resolver.NewMessageType(m.Response, false),
+	)
+}
+
 func (m *Method) ResolverName() string {
-	msg := fullMessageName(m.Response)
-	if m.Response.Rule == nil {
+	response := m.FederationResponse()
+	msg := fullMessageName(response)
+	if response.Rule == nil {
 		return fmt.Sprintf("resolver.Resolve_%s", msg)
 	}
 	return fmt.Sprintf("resolve_%s", msg)
 }
 
 func (m *Method) ArgumentName() string {
-	msg := fullMessageName(m.Response)
+	msg := fullMessageName(m.FederationResponse())
 	return fmt.Sprintf("%s_%sArgument", m.Service.ServiceName(), msg)
 }
 
@@ -3249,6 +3261,24 @@ func (s *Service) Messages() []*Message {
 
 func (s *Service) CastFields() []*CastField {
 	castFieldMap := make(map[string]*CastField)
+	for _, mtd := range s.Service.Methods {
+		if mtd.Rule == nil {
+			continue
+		}
+		if mtd.Rule.Response == nil {
+			continue
+		}
+		fromType := resolver.NewMessageType(mtd.Rule.Response, false)
+		toType := resolver.NewMessageType(mtd.Response, false)
+		fnName := castFuncName(fromType, toType)
+		castFieldMap[fnName] = &CastField{
+			Name:     fnName,
+			service:  s.Service,
+			fromType: fromType,
+			toType:   toType,
+			file:     s.file,
+		}
+	}
 	for _, msg := range s.Service.Messages {
 		for _, decl := range msg.TypeConversionDecls() {
 			fnName := castFuncName(decl.From, decl.To)

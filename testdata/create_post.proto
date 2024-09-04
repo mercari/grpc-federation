@@ -3,6 +3,7 @@ syntax = "proto3";
 package org.federation;
 
 import "grpc/federation/federation.proto";
+import "google/protobuf/empty.proto";
 
 option go_package = "example/federation;federation";
 
@@ -13,6 +14,9 @@ option (grpc.federation.file)= {
 service FederationService {
   option (grpc.federation.service) = {};
   rpc CreatePost(CreatePostRequest) returns (CreatePostResponse) {};
+  rpc UpdatePost(UpdatePostRequest) returns (google.protobuf.Empty) {
+    option (grpc.federation.method).response = "UpdatePostResponse";
+  };
 }
 
 enum PostType {
@@ -75,4 +79,19 @@ message Post {
   string title = 2;
   string content = 3;
   string user_id = 4;
+}
+
+message UpdatePostRequest {
+  string id = 1;
+}
+
+message UpdatePostResponse {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "org.post.PostService/UpdatePost"
+        request { field: "id" by: "$.id" }
+      }
+    }
+  };
 }

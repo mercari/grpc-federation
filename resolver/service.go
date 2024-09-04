@@ -41,7 +41,7 @@ func (s *Service) HasMessageInMethod(msg *Message) bool {
 		if mtd.Request == msg {
 			return true
 		}
-		if mtd.Response == msg {
+		if mtd.FederationResponse() == msg {
 			return true
 		}
 	}
@@ -76,7 +76,7 @@ func (r *CustomResolver) FQDN() string {
 func (s *Service) CustomResolvers() []*CustomResolver {
 	resolverMap := make(map[string]*CustomResolver)
 	for _, method := range s.Methods {
-		for _, resolver := range method.Response.CustomResolvers() {
+		for _, resolver := range method.FederationResponse().CustomResolvers() {
 			resolverMap[resolver.FQDN()] = resolver
 		}
 	}

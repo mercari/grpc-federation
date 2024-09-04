@@ -98,7 +98,8 @@ type ServiceDependency struct {
 }
 
 type MethodRule struct {
-	Timeout *time.Duration
+	Timeout  *time.Duration
+	Response *Message
 }
 
 type Message struct {

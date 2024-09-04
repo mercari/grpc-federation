@@ -1339,7 +1339,10 @@ func (d *decoder) toMethod(id string) (*resolver.Method, error) {
 	if err != nil {
 		return nil, err
 	}
-	rule := d.toMethodRule(mtd.GetRule())
+	rule, err := d.toMethodRule(mtd.GetRule())
+	if err != nil {
+		return nil, err
+	}
 	ret.Request = request
 	ret.Response = response
 	ret.Service = svc
@@ -1347,16 +1350,23 @@ func (d *decoder) toMethod(id string) (*resolver.Method, error) {
 	return ret, nil
 }
 
-func (d *decoder) toMethodRule(rule *plugin.MethodRule) *resolver.MethodRule {
+func (d *decoder) toMethodRule(rule *plugin.MethodRule) (*resolver.MethodRule, error) {
 	if rule == nil {
-		return nil
+		return nil, nil
 	}
 	ret := &resolver.MethodRule{}
 	if rule.Timeout != nil {
 		timeout := rule.GetTimeout().AsDuration()
 		ret.Timeout = &timeout
 	}
-	return ret
+	if rule.GetResponseId() != "" {
+		response, err := d.toMessage(rule.GetResponseId())
+		if err != nil {
+			return nil, err
+		}
+		ret.Response = response
+	}
+	return ret, nil
 }
 
 func (d *decoder) toEnums(ids []string) ([]*resolver.Enum, error) {

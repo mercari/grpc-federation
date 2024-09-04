@@ -348,6 +348,16 @@ func (b *MethodOptionBuilder) WithTimeout() *MethodOptionBuilder {
 	}
 }
 
+func (b *MethodOptionBuilder) WithResponse() *MethodOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Response = true
+	return &MethodOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
 func (b *MethodOptionBuilder) Location() *Location {
 	return b.root
 }

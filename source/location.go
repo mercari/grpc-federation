@@ -85,7 +85,8 @@ type EnvVarOption struct {
 
 // MethodOption represents grpc.federation.method option location.
 type MethodOption struct {
-	Timeout bool
+	Timeout  bool
+	Response bool
 }
 
 // Enum represents enum location.

@@ -439,6 +439,15 @@ missing_response_message_option.proto:18:1: "federation.GetPostResponse" message
 18:  message GetPostResponse {
      ^
 `},
+		{file: "invalid_method_response_option.proto", expected: `
+invalid_method_response_option.proto: "google.protobuf.Empty" message needs to specify "grpc.federation.message" option
+invalid_method_response_option.proto:14:48: "federation.Invalid" message does not exist
+14:      option (grpc.federation.method).response = "Invalid";
+                                                    ^
+invalid_method_response_option.proto:17:48: "federation.DeletePostResponse" message must contain fields with the same names and types as the "seconds", "nanos" fields in the "google.protobuf.Timestamp" message
+17:      option (grpc.federation.method).response = "DeletePostResponse";
+                                                    ^
+`},
 		{file: "invalid_method_response.proto", expected: `
 invalid_method_response.proto:43:27: ERROR: <input>:1:1: undeclared reference to 'invalid' (in container 'federation')
  | invalid

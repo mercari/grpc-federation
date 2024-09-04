@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package federation;
+
+import "federation.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc UpdatePost(UpdatePostRequest) returns (google.protobuf.Empty) {
+    option (grpc.federation.method).response = "Invalid";
+  };
+  rpc DeletePost(DeletePostRequest) returns (google.protobuf.Timestamp) {
+    option (grpc.federation.method).response = "DeletePostResponse";
+  };
+}
+
+message UpdatePostRequest {}
+
+message DeletePostRequest {}
+
+message DeletePostResponse {
+  string seconds = 1 [(grpc.federation.field).by = "'foo'"];
+}

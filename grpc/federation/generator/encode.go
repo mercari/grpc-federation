@@ -499,8 +499,13 @@ func (e *encoder) toMethodRule(rule *resolver.MethodRule) *plugin.MethodRule {
 	if rule.Timeout != nil {
 		timeout = durationpb.New(*rule.Timeout)
 	}
+	var response string
+	if rule.Response != nil {
+		response = e.toMessage(rule.Response).GetId()
+	}
 	return &plugin.MethodRule{
-		Timeout: timeout,
+		Timeout:    timeout,
+		ResponseId: response,
 	}
 }
 
