@@ -90,7 +90,7 @@ func (r *Resolver) Resolve_Federation_V2Dev_User_Name(_ context.Context, arg *fe
 	return arg.Federation_V2Dev_User.Name, nil
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_TypedNull(_ context.Context, _ *federation.FederationV2DevService_Federation_V2Dev_TypedNullArgument) (*federation.TypedNull, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_TypedNil(_ context.Context, _ *federation.FederationV2DevService_Federation_V2Dev_TypedNilArgument) (*federation.TypedNil, error) {
 	return nil, nil
 }
 

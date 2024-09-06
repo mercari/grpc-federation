@@ -856,6 +856,8 @@ func SetCELValue[T any](ctx context.Context, param *SetCELValueParam[T]) error {
 	return nil
 }
 
+// nullValueFuncReplacer is a feature that allows to compare typed null and null value correctly.
+// It parses the expression and wraps the message with grpc.federation.cast.null_value if the message is compared to null.
 type nullValueFuncReplacer struct {
 	checkedExpr *exprpb.CheckedExpr
 	lastID      int64
@@ -892,34 +894,19 @@ func (r *nullValueFuncReplacer) nextID() int64 {
 
 func (r *nullValueFuncReplacer) Replace(checkedExpr *exprpb.CheckedExpr) bool {
 	r.init(checkedExpr)
-	r.replace(checkedExpr.GetExpr())
+	newExprVisitor().Visit(checkedExpr.GetExpr(), func(e *exprpb.Expr) {
+		switch e.GetExprKind().(type) {
+		case *exprpb.Expr_CallExpr:
+			r.replaceCall(e)
+		case *exprpb.Expr_ComprehensionExpr:
+			// Comprehension is not supported by parser.Unparse.
+			r.unsupported = true
+		}
+	})
 	return r.replaced && !r.unsupported
 }
 
-func (r *nullValueFuncReplacer) replace(e *exprpb.Expr) {
-	if e == nil {
-		return
-	}
-	switch e.GetExprKind().(type) {
-	case *exprpb.Expr_SelectExpr:
-		r.convertSelect(e)
-	case *exprpb.Expr_CallExpr:
-		r.convertCall(e)
-	case *exprpb.Expr_ListExpr:
-		r.convertList(e)
-	case *exprpb.Expr_StructExpr:
-		r.convertStruct(e)
-	case *exprpb.Expr_ComprehensionExpr:
-		r.convertComprehension(e)
-	}
-}
-
-func (r *nullValueFuncReplacer) convertSelect(e *exprpb.Expr) {
-	sel := e.GetSelectExpr()
-	r.replace(sel.GetOperand())
-}
-
-func (r *nullValueFuncReplacer) convertCall(e *exprpb.Expr) {
+func (r *nullValueFuncReplacer) replaceCall(e *exprpb.Expr) {
 	call := e.GetCallExpr()
 	fnName := call.GetFunction()
 	if fnName == operators.Equals || fnName == operators.NotEquals {
@@ -936,7 +923,7 @@ func (r *nullValueFuncReplacer) convertCall(e *exprpb.Expr) {
 			}
 			target = lhs
 		}
-		if target == nil {
+		if target == nil || target.GetIdentExpr() == nil {
 			return
 		}
 		newID := r.nextID()
@@ -959,29 +946,71 @@ func (r *nullValueFuncReplacer) convertCall(e *exprpb.Expr) {
 			TypeKind: &exprpb.Type_Dyn{},
 		}
 		r.replaced = true
-	} else {
-		for _, arg := range call.GetArgs() {
-			r.replace(arg)
-		}
-		r.replace(call.GetTarget())
 	}
 }
 
-func (r *nullValueFuncReplacer) convertList(e *exprpb.Expr) {
+type exprVisitor struct {
+	callback func(e *exprpb.Expr)
+}
+
+func newExprVisitor() *exprVisitor {
+	return &exprVisitor{}
+}
+
+func (v *exprVisitor) Visit(e *exprpb.Expr, cb func(e *exprpb.Expr)) {
+	v.callback = cb
+	v.visit(e)
+}
+
+func (v *exprVisitor) visit(e *exprpb.Expr) {
+	v.callback(e)
+
+	switch e.GetExprKind().(type) {
+	case *exprpb.Expr_SelectExpr:
+		v.visitSelect(e)
+	case *exprpb.Expr_CallExpr:
+		v.visitCall(e)
+	case *exprpb.Expr_ListExpr:
+		v.visitList(e)
+	case *exprpb.Expr_StructExpr:
+		v.visitStruct(e)
+	case *exprpb.Expr_ComprehensionExpr:
+		v.visitComprehension(e)
+	}
+}
+
+func (v *exprVisitor) visitSelect(e *exprpb.Expr) {
+	sel := e.GetSelectExpr()
+	v.visit(sel.GetOperand())
+}
+
+func (v *exprVisitor) visitCall(e *exprpb.Expr) {
+	call := e.GetCallExpr()
+	for _, arg := range call.GetArgs() {
+		v.visit(arg)
+	}
+	v.visit(call.GetTarget())
+}
+
+func (v *exprVisitor) visitList(e *exprpb.Expr) {
 	l := e.GetListExpr()
 	for _, elem := range l.GetElements() {
-		r.replace(elem)
+		v.visit(elem)
 	}
 }
 
-func (r *nullValueFuncReplacer) convertStruct(e *exprpb.Expr) {
+func (v *exprVisitor) visitStruct(e *exprpb.Expr) {
 	msg := e.GetStructExpr()
 	for _, ent := range msg.GetEntries() {
-		r.replace(ent.GetValue())
+		v.visit(ent.GetValue())
 	}
 }
 
-func (r *nullValueFuncReplacer) convertComprehension(_ *exprpb.Expr) {
-	// Comprehension is not supported by parser.Unparse.
-	r.unsupported = true
+func (v *exprVisitor) visitComprehension(e *exprpb.Expr) {
+	comp := e.GetComprehensionExpr()
+	v.visit(comp.GetIterRange())
+	v.visit(comp.GetAccuInit())
+	v.visit(comp.GetLoopCondition())
+	v.visit(comp.GetLoopStep())
+	v.visit(comp.GetResult())
 }

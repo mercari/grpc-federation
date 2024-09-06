@@ -110,14 +110,14 @@ message PostV2dev {
       },
       {
         // return nil by custom resolver
-        name: "typed_null"
+        name: "typed_nil"
         message {
-          name: "TypedNull"
+          name: "TypedNil"
         }
       },
       {
         name: "null_check"
-        if: "typed_null == null" // replace `grpc.federation.cast.null_value(typed_null) == null` by EvalCEL function
+        if: "typed_nil == null" // replace `grpc.federation.cast.null_value(typed_nil) == null` by EvalCEL function
         by: "true"
       }
     ]
@@ -155,6 +155,6 @@ message ForNameless {
   string bar = 1;
 }
 
-message TypedNull {
+message TypedNil {
   option (grpc.federation.message).custom_resolver = true;
 }
