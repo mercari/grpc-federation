@@ -101,18 +101,32 @@ message PostV2dev {
           args { name: "foo", by: "'foo'" }
         }
       },
-      { 
+      {
+        // without name
         message {
           name: "ForNameless"
           args { name: "bar", by: "'bar'" }
         }
-      } // without name
+      },
+      {
+        // return nil by custom resolver
+        name: "typed_null"
+        message {
+          name: "TypedNull"
+        }
+      },
+      {
+        name: "null_check"
+        if: "typed_null == null" // replace `grpc.federation.cast.null_value(typed_null) == null` by EvalCEL function
+        by: "true"
+      }
     ]
   };
   string id = 1;
   string title = 2;
   string content = 3;
   User user = 4 [(grpc.federation.field).custom_resolver = true];
+  bool null_check = 5 [(grpc.federation.field).by = "null_check"];
 }
 
 message User {
@@ -139,4 +153,8 @@ message Unused {
 message ForNameless {
   option (grpc.federation.message).custom_resolver = true;
   string bar = 1;
+}
+
+message TypedNull {
+  option (grpc.federation.message).custom_resolver = true;
 }

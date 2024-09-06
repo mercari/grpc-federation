@@ -86,8 +86,12 @@ func (r *Resolver) Resolve_Federation_V2Dev_ForNameless(_ context.Context, _ *fe
 	return &federation.ForNameless{}, nil
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_User_Name(ctx context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_User_NameArgument) (string, error) {
+func (r *Resolver) Resolve_Federation_V2Dev_User_Name(_ context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_User_NameArgument) (string, error) {
 	return arg.Federation_V2Dev_User.Name, nil
+}
+
+func (r *Resolver) Resolve_Federation_V2Dev_TypedNull(_ context.Context, _ *federation.FederationV2DevService_Federation_V2Dev_TypedNullArgument) (*federation.TypedNull, error) {
+	return nil, nil
 }
 
 type PostServer struct {
@@ -246,6 +250,7 @@ func TestFederation(t *testing.T) {
 				Id:   "anonymous_id",
 				Name: "anonymous",
 			},
+			NullCheck: true,
 		},
 		EnvA:      "xxx",
 		EnvB:      2,
