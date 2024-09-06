@@ -119,6 +119,10 @@ message PostV2dev {
         name: "null_check"
         if: "typed_nil == null" // replace `grpc.federation.cast.null_value(typed_nil) == null` by EvalCEL function
         by: "true"
+      },
+      {
+        if: "typed_nil == null"
+        by: "grpc.federation.log.info('output typed_nil', {'result': typed_nil == null})"
       }
     ]
   };

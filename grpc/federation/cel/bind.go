@@ -31,7 +31,12 @@ func BindFunction(name string, opts ...BindFunctionOpt) []cel.EnvOption {
 			if sel != "" {
 				fqdn = sel + "." + funcName
 			}
-			argsWithCtx := append([]ast.Expr{mef.NewIdent(ContextVariableName)}, args...)
+			var argsWithCtx []ast.Expr
+			if len(args) > 0 && args[0].AsIdent() == ContextVariableName {
+				argsWithCtx = args
+			} else {
+				argsWithCtx = append([]ast.Expr{mef.NewIdent(ContextVariableName)}, args...)
+			}
 			return mef.NewCall(fqdn, argsWithCtx...), nil
 		})),
 		cel.Function(name, celOpts...),
@@ -45,7 +50,12 @@ func BindMemberFunction(name string, opts ...BindMemberFunctionOpt) []cel.EnvOpt
 	}
 	return []cel.EnvOption{
 		cel.Macros(cel.ReceiverVarArgMacro(name, func(mef cel.MacroExprFactory, target ast.Expr, args []ast.Expr) (ast.Expr, *cel.Error) {
-			argsWithCtx := append([]ast.Expr{mef.NewIdent(ContextVariableName)}, args...)
+			var argsWithCtx []ast.Expr
+			if len(args) > 0 && args[0].AsIdent() == ContextVariableName {
+				argsWithCtx = args
+			} else {
+				argsWithCtx = append([]ast.Expr{mef.NewIdent(ContextVariableName)}, args...)
+			}
 			return mef.NewMemberCall(name, target, argsWithCtx...), nil
 		})),
 		cel.Function(name, celOpts...),
