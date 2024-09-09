@@ -17,6 +17,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	"example/federation"
@@ -121,6 +123,72 @@ func TestFederation(t *testing.T) {
 		federation.GetResponse{},
 		federation.User{},
 	)); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}
+
+func TestFederation_NoValue(t *testing.T) {
+	ctx := context.Background()
+	listener = bufconn.Listen(bufSize)
+
+	if os.Getenv("ENABLE_JAEGER") != "" {
+		exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tp := sdktrace.NewTracerProvider(
+			sdktrace.WithBatcher(exporter),
+			sdktrace.WithResource(
+				resource.NewWithAttributes(
+					semconv.SchemaURL,
+					semconv.ServiceNameKey.String("example10/oneof"),
+					semconv.ServiceVersionKey.String("1.0.0"),
+					attribute.String("environment", "dev"),
+				),
+			),
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		)
+		defer tp.Shutdown(ctx)
+		otel.SetTextMapPropagator(propagation.TraceContext{})
+		otel.SetTracerProvider(tp)
+	}
+
+	conn, err := grpc.DialContext(ctx, "", grpc.WithContextDialer(dialer), grpc.WithInsecure())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	userClient = user.NewUserServiceClient(conn)
+
+	grpcServer := grpc.NewServer()
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
+		Client: new(clientConfig),
+		Logger: logger,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	user.RegisterUserServiceServer(grpcServer, &UserServer{})
+	federation.RegisterFederationServiceServer(grpcServer, federationServer)
+
+	go func() {
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	client := federation.NewFederationServiceClient(conn)
+	_, err = client.GetNoValue(ctx, &federation.GetNoValueRequest{})
+	if err == nil {
+		t.Fatal("unexpected error nil")
+	}
+	expectedErr := status.New(codes.Unknown, "NoValue is invalid field")
+	if diff := cmp.Diff(err.Error(), expectedErr.Err().Error()); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }
