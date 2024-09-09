@@ -162,6 +162,10 @@ func NewOneofSelectorFieldType(typ *celtypes.Type, fieldName string, oneofTypes 
 		}
 		field := rv.FieldByName(fieldName)
 		fieldImpl := reflect.ValueOf(field.Interface())
+		if !fieldImpl.IsValid() {
+			// prevent panic if no value assigned
+			return nil, fmt.Errorf("%s is invalid field", fieldName)
+		}
 		for idx, oneofType := range oneofTypes {
 			if fieldImpl.Type() != oneofType {
 				continue
@@ -923,11 +927,14 @@ func (r *nullValueFuncReplacer) replaceCall(e *exprpb.Expr) {
 			}
 			target = lhs
 		}
-		if target == nil || target.GetIdentExpr() == nil {
+		if target == nil {
+			return
+		}
+		if target.GetCallExpr() != nil && target.GetCallExpr().GetFunction() == grpcfedcel.CastNullValueFunc {
 			return
 		}
 		newID := r.nextID()
-		target.ExprKind = &exprpb.Expr_CallExpr{
+		newExprKind := &exprpb.Expr_CallExpr{
 			CallExpr: &exprpb.Expr_Call{
 				Function: grpcfedcel.CastNullValueFunc,
 				Args: []*exprpb.Expr{
@@ -939,6 +946,7 @@ func (r *nullValueFuncReplacer) replaceCall(e *exprpb.Expr) {
 			},
 		}
 		target.Id = newID
+		target.ExprKind = newExprKind
 		r.checkedExpr.GetReferenceMap()[newID] = &exprpb.Reference{
 			OverloadId: []string{grpcfedcel.CastNullValueFunc},
 		}
@@ -963,6 +971,9 @@ func (v *exprVisitor) Visit(e *exprpb.Expr, cb func(e *exprpb.Expr)) {
 }
 
 func (v *exprVisitor) visit(e *exprpb.Expr) {
+	if e == nil {
+		return
+	}
 	v.callback(e)
 
 	switch e.GetExprKind().(type) {

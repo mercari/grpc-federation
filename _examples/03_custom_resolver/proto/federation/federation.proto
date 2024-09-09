@@ -109,7 +109,7 @@ message PostV2dev {
         }
       },
       {
-        // return nil by custom resolver
+        // assign typed-nil by custom resolver
         name: "typed_nil"
         message {
           name: "TypedNil"
