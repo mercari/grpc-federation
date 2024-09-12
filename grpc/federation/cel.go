@@ -11,9 +11,13 @@ import (
 	"sync"
 
 	"github.com/google/cel-go/cel"
+	celast "github.com/google/cel-go/common/ast"
+	"github.com/google/cel-go/common/operators"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/parser"
 	"golang.org/x/sync/singleflight"
+	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -158,6 +162,10 @@ func NewOneofSelectorFieldType(typ *celtypes.Type, fieldName string, oneofTypes 
 		}
 		field := rv.FieldByName(fieldName)
 		fieldImpl := reflect.ValueOf(field.Interface())
+		if !fieldImpl.IsValid() {
+			// prevent panic if no value assigned
+			return nil, fmt.Errorf("%s is invalid field", fieldName)
+		}
 		for idx, oneofType := range oneofTypes {
 			if fieldImpl.Type() != oneofType {
 				continue
@@ -731,6 +739,25 @@ func createCELAst(req *EvalCELRequest, env *cel.Env) (*cel.Ast, error) {
 	if iss.Err() != nil {
 		return nil, iss.Err()
 	}
+
+	checkedExpr, err := cel.AstToCheckedExpr(ast)
+	if err != nil {
+		return nil, err
+	}
+	if newComparingNullResolver().Resolve(checkedExpr) {
+		ca, err := celast.ToAST(checkedExpr)
+		if err != nil {
+			return nil, err
+		}
+		expr, err = parser.Unparse(ca.Expr(), ca.SourceInfo())
+		if err != nil {
+			return nil, err
+		}
+		ast, iss = env.Compile(expr)
+		if iss.Err() != nil {
+			return nil, iss.Err()
+		}
+	}
 	return ast, nil
 }
 
@@ -831,4 +858,174 @@ func SetCELValue[T any](ctx context.Context, param *SetCELValueParam[T]) error {
 		return err
 	}
 	return nil
+}
+
+// comparingNullResolver is a feature that allows to compare typed null and null value correctly.
+// It parses the expression and wraps the message with grpc.federation.cast.null_value if the message is compared to null.
+type comparingNullResolver struct {
+	checkedExpr *exprpb.CheckedExpr
+	lastID      int64
+	resolved    bool
+}
+
+func newComparingNullResolver() *comparingNullResolver {
+	return &comparingNullResolver{}
+}
+
+func (r *comparingNullResolver) init(checkedExpr *exprpb.CheckedExpr) {
+	var lastID int64
+	for k := range checkedExpr.GetReferenceMap() {
+		if lastID < k {
+			lastID = k
+		}
+	}
+	for k := range checkedExpr.GetTypeMap() {
+		if lastID < k {
+			lastID = k
+		}
+	}
+	r.checkedExpr = checkedExpr
+	r.lastID = lastID
+	r.resolved = false
+}
+
+func (r *comparingNullResolver) nextID() int64 {
+	r.lastID++
+	return r.lastID
+}
+
+func (r *comparingNullResolver) Resolve(checkedExpr *exprpb.CheckedExpr) bool {
+	r.init(checkedExpr)
+	newExprVisitor().Visit(checkedExpr.GetExpr(), func(e *exprpb.Expr) {
+		switch e.GetExprKind().(type) {
+		case *exprpb.Expr_CallExpr:
+			r.resolveCallExpr(e)
+		}
+	})
+	return r.resolved
+}
+
+func (r *comparingNullResolver) resolveCallExpr(e *exprpb.Expr) {
+	target := r.lookupComparingNullCallExpr(e)
+	if target == nil {
+		return
+	}
+	newID := r.nextID()
+	newExprKind := &exprpb.Expr_CallExpr{
+		CallExpr: &exprpb.Expr_Call{
+			Function: grpcfedcel.CastNullValueFunc,
+			Args: []*exprpb.Expr{
+				{
+					Id:       target.GetId(),
+					ExprKind: target.GetExprKind(),
+				},
+			},
+		},
+	}
+	target.Id = newID
+	target.ExprKind = newExprKind
+	r.checkedExpr.GetReferenceMap()[newID] = &exprpb.Reference{
+		OverloadId: []string{grpcfedcel.CastNullValueFunc},
+	}
+	r.checkedExpr.GetTypeMap()[newID] = &exprpb.Type{
+		TypeKind: &exprpb.Type_Dyn{},
+	}
+	r.resolved = true
+}
+
+func (r *comparingNullResolver) lookupComparingNullCallExpr(e *exprpb.Expr) *exprpb.Expr {
+	call := e.GetCallExpr()
+	fnName := call.GetFunction()
+	if fnName == operators.Equals || fnName == operators.NotEquals {
+		lhs := call.GetArgs()[0]
+		rhs := call.GetArgs()[1]
+		var target *exprpb.Expr
+		if _, ok := lhs.GetConstExpr().GetConstantKind().(*exprpb.Constant_NullValue); ok {
+			target = rhs
+		}
+		if _, ok := rhs.GetConstExpr().GetConstantKind().(*exprpb.Constant_NullValue); ok {
+			if target != nil {
+				// maybe null == null
+				return nil
+			}
+			target = lhs
+		}
+		if target == nil {
+			return nil
+		}
+		if target.GetCallExpr() != nil && target.GetCallExpr().GetFunction() == grpcfedcel.CastNullValueFunc {
+			return nil
+		}
+		return target
+	}
+	return nil
+}
+
+type exprVisitor struct {
+	callback func(e *exprpb.Expr)
+}
+
+func newExprVisitor() *exprVisitor {
+	return &exprVisitor{}
+}
+
+func (v *exprVisitor) Visit(e *exprpb.Expr, cb func(e *exprpb.Expr)) {
+	v.callback = cb
+	v.visit(e)
+}
+
+func (v *exprVisitor) visit(e *exprpb.Expr) {
+	if e == nil {
+		return
+	}
+	v.callback(e)
+
+	switch e.GetExprKind().(type) {
+	case *exprpb.Expr_SelectExpr:
+		v.visitSelect(e)
+	case *exprpb.Expr_CallExpr:
+		v.visitCall(e)
+	case *exprpb.Expr_ListExpr:
+		v.visitList(e)
+	case *exprpb.Expr_StructExpr:
+		v.visitStruct(e)
+	case *exprpb.Expr_ComprehensionExpr:
+		v.visitComprehension(e)
+	}
+}
+
+func (v *exprVisitor) visitSelect(e *exprpb.Expr) {
+	sel := e.GetSelectExpr()
+	v.visit(sel.GetOperand())
+}
+
+func (v *exprVisitor) visitCall(e *exprpb.Expr) {
+	call := e.GetCallExpr()
+	for _, arg := range call.GetArgs() {
+		v.visit(arg)
+	}
+	v.visit(call.GetTarget())
+}
+
+func (v *exprVisitor) visitList(e *exprpb.Expr) {
+	l := e.GetListExpr()
+	for _, elem := range l.GetElements() {
+		v.visit(elem)
+	}
+}
+
+func (v *exprVisitor) visitStruct(e *exprpb.Expr) {
+	msg := e.GetStructExpr()
+	for _, ent := range msg.GetEntries() {
+		v.visit(ent.GetValue())
+	}
+}
+
+func (v *exprVisitor) visitComprehension(e *exprpb.Expr) {
+	comp := e.GetComprehensionExpr()
+	v.visit(comp.GetIterRange())
+	v.visit(comp.GetAccuInit())
+	v.visit(comp.GetLoopCondition())
+	v.visit(comp.GetLoopStep())
+	v.visit(comp.GetResult())
 }

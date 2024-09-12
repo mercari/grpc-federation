@@ -25,6 +25,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 			new(EnumLibrary),
 			mdLib,
 			logLib,
+			new(CastLibrary),
 		},
 	}
 }

@@ -13,6 +13,7 @@ option (grpc.federation.file)= {
 service FederationService {
   option (grpc.federation.service) = {};
   rpc Get(GetRequest) returns (GetResponse) {};
+  rpc GetNoValue(GetNoValueRequest) returns (GetNoValueResponse) {};
 }
 
 message GetRequest {}
@@ -30,6 +31,15 @@ message GetResponse {
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
   string msg = 2 [(grpc.federation.field).by = "msg_sel.message"];
+}
+
+message GetNoValueRequest {}
+
+message GetNoValueResponse {
+  option (grpc.federation.message) = {
+    def { name: "no_value_sel" message { name: "NoValueSelection" } }
+  };
+  M no_value = 1 [(grpc.federation.field).by = "no_value_sel.no_value"];
 }
 
 message UserSelection {
@@ -108,6 +118,23 @@ message MessageSelection {
       (grpc.federation.field).oneof = {
         default: true
         by: "'ccc'"
+      }
+    ];
+  }
+}
+
+message NoValueSelection {
+  oneof no_value {
+    M m_a = 1 [
+      (grpc.federation.field).oneof = {
+        if: "false"
+        by: "M{value: 'a'}"
+      }
+    ];
+    M m_b = 2 [
+      (grpc.federation.field).oneof = {
+        if: "false"
+        by: "M{value: 'b'}"
       }
     ];
   }
