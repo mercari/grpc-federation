@@ -31,6 +31,7 @@ message GetPostResponse {
         args { name: "id", by: "$.id" }
       }
     }
+    def { name: "strings_join" by: "grpc.federation.strings.join(['a', 'b', 'c'], ',')" }
     def { name: "date" by: "grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())" }
     def { name: "rand_source" by: "grpc.federation.rand.newSource(date.unix())" }
     def { name: "fixed_rand" by: "grpc.federation.rand.new(rand_source)" }
@@ -76,6 +77,7 @@ message GetPostResponse {
   google.protobuf.Timestamp null_timestamp2 = 29 [(grpc.federation.field).by = "null_value"];
   google.protobuf.Timestamp null_timestamp3 = 30 [(grpc.federation.field).by = "true ? null : google.protobuf.Timestamp{}"];
   string jp_loc = 31 [(grpc.federation.field).by = "jp_time.location().string()"];
+  string strings_join = 32 [(grpc.federation.field).by = "strings_join"];
 }
 
 message A {
