@@ -2,11 +2,14 @@ package cel
 
 import (
 	"context"
+	"strings"
+
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
-	"strings"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const StringsPackageName = "strings"
@@ -299,7 +302,8 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 			createStringsName("title"),
 			OverloadFunc(createStringsID("title_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.String(strings.Title(args[0].(types.String).Value().(string)))
+					c := cases.Title(language.English)
+					return types.String(c.String(args[0].(types.String).Value().(string)))
 				},
 			),
 		),

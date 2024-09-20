@@ -3,14 +3,18 @@ package cel_test
 import (
 	"context"
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/go-cmp/cmp"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	cellib "github.com/mercari/grpc-federation/grpc/federation/cel"
-	"strings"
-	"testing"
 )
 
 func TestStringsFunctions(t *testing.T) {
@@ -453,7 +457,8 @@ func TestStringsFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := types.String(strings.Title("her royal highness"))
+				c := cases.Title(language.English)
+				expected := types.String(c.String("her royal highness"))
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -567,13 +572,13 @@ func TestStringsFunctions(t *testing.T) {
 		},
 		{
 			name: "trimRight",
-			expr: "grpc.federation.strings.trimRight('¡¡¡Hello, Gophers!!!', '¡¡¡')",
+			expr: "grpc.federation.strings.trimRight('¡¡¡Hello, Gophers!!!', '¡')",
 			cmp: func(got ref.Val) error {
 				gotV, ok := got.(types.String)
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := types.String(strings.TrimRight("¡¡¡Hello, Gophers!!!", "¡¡¡"))
+				expected := types.String(strings.TrimRight("¡¡¡Hello, Gophers!!!", "¡"))
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
