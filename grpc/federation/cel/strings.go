@@ -92,7 +92,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func Cut(s, sep string) (before, after string, found bool)
+		// func Cut(s, sep string) (before, after string, found bool) is not implemented because it has multiple return values.
 		BindFunction(
 			createStringsName("cutPrefix"),
 			OverloadFunc(createStringsID("cutPrefix_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
@@ -138,7 +138,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func FieldsFunc(s string, f func(rune) bool) []string
+		// func FieldsFunc(s string, f func(rune) bool) []string is not implemented because it has a function argument.
 		BindFunction(
 			createStringsName("hasPrefix"),
 			OverloadFunc(createStringsID("hasPrefix_string_string_bool"), []*cel.Type{cel.StringType, cel.StringType}, cel.BoolType,
@@ -184,7 +184,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func IndexFunc(s string, f func(rune) bool) int
+		// func IndexFunc(s string, f func(rune) bool) int　is not implemented because it has a function argument.
 		BindFunction(
 			createStringsName("indexRune"),
 			OverloadFunc(createStringsID("indexRune_string_int_int"), []*cel.Type{cel.StringType, cel.IntType}, cel.IntType,
@@ -235,8 +235,8 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func LastIndexFunc(s string, f func(rune) bool) int
-		// func Map(mapping func(rune) rune, s string) string
+		// func LastIndexFunc(s string, f func(rune) bool) int　is not implemented because it has a function argument.
+		// func Map(mapping func(rune) rune, s string) string　is not implemented because it has a function argument.
 		BindFunction(
 			createStringsName("repeat"),
 			OverloadFunc(createStringsID("repeat_string_int_string"), []*cel.Type{cel.StringType, cel.IntType}, cel.StringType,
@@ -297,7 +297,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func Title(s string) string : deprecated
+		// strings.Title is deprecated. So, we use golang.org/x/text/cases.Title instead.
 		BindFunction(
 			createStringsName("title"),
 			OverloadFunc(createStringsID("title_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
@@ -315,7 +315,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func ToLowerSpecial(c unicode.SpecialCase, s string) string
+		// func ToLowerSpecial(c unicode.SpecialCase, s string) string is not implemented because unicode.SpecialCase is not supported.
 		BindFunction(
 			createStringsName("toTitle"),
 			OverloadFunc(createStringsID("toTitle_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
@@ -324,7 +324,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func ToTitleSpecial(c unicode.SpecialCase, s string) string
+		// func ToTitleSpecial(c unicode.SpecialCase, s string) string is not implemented because unicode.SpecialCase is not supported.
 		BindFunction(
 			createStringsName("toUpper"),
 			OverloadFunc(createStringsID("toUpper_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
@@ -333,7 +333,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func ToUpperSpecial(c unicode.SpecialCase, s string) string
+		// func ToUpperSpecial(c unicode.SpecialCase, s string) string is not implemented because unicode.SpecialCase is not supported.
 		BindFunction(
 			createStringsName("toValidUTF8"),
 			OverloadFunc(createStringsID("toValidUTF8_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
@@ -350,7 +350,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func TrimFunc(s string, f func(rune) bool) string
+		// func TrimFunc(s string, f func(rune) bool) string is not implemented because it has a function argument.
 		BindFunction(
 			createStringsName("trimLeft"),
 			OverloadFunc(createStringsID("trimLeft_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
@@ -359,7 +359,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func TrimLeftFunc(s string, f func(rune) bool) string
+		// func TrimLeftFunc(s string, f func(rune) bool) string is not implemented because it has a function argument.
 		BindFunction(
 			createStringsName("trimPrefix"),
 			OverloadFunc(createStringsID("trimPrefix_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
@@ -376,7 +376,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func TrimRightFunc(s string, f func(rune) bool) string
+		// func TrimRightFunc(s string, f func(rune) bool) string is not implemented because it has a function argument.
 		BindFunction(
 			createStringsName("trimSpace"),
 			OverloadFunc(createStringsID("trimSpace_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
