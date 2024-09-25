@@ -109,7 +109,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 	for _, funcOpts := range [][]cel.EnvOption{
 		BindFunction(
 			createURLName("joinPath"),
-			OverloadFunc(createURLID("joinPath_string_strings_url"), []*cel.Type{cel.StringType, cel.ListType(cel.StringType)}, URLType,
+			OverloadFunc(createURLID("joinPath_string_strings_string"), []*cel.Type{cel.StringType, cel.ListType(cel.StringType)}, cel.StringType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					base := string(args[0].(types.String))
 					elems := args[1].(traits.Lister)
@@ -218,7 +218,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			),
 		),
 		BindMemberFunction(
-			"user",
+			"userinfo", // user is not a valid field name
 			MemberOverloadFunc(createURLID("user_url_userinfo"), URLType, []*cel.Type{}, UserinfoType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := self.Value().(*URL).GoURL()
@@ -434,6 +434,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
+		// func (u *URL) Query() Values : returns map[string][]string
 		BindMemberFunction(
 			"query",
 			MemberOverloadFunc(createURLID("query_url_map"), URLType, []*cel.Type{}, cel.MapType(cel.StringType, cel.ListType(cel.StringType)),
@@ -455,6 +456,18 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 					}
 
 					return types.NewRefValMap(adapter, queryMap)
+				},
+			),
+		),
+		BindMemberFunction(
+			"redacted",
+			MemberOverloadFunc(createURLID("redacted_url_string"), URLType, []*cel.Type{}, cel.StringType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					v, err := self.Value().(*URL).GoURL()
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.String(v.Redacted())
 				},
 			),
 		),
