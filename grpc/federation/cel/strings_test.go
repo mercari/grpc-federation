@@ -617,15 +617,11 @@ func TestStringsFunctions(t *testing.T) {
 		},
 	}
 
-	reg, err := types.NewRegistry()
-	if err != nil {
-		t.Fatal(err)
-	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			env, err := cel.NewEnv(
 				cel.Variable(cellib.ContextVariableName, cel.ObjectType(cellib.ContextTypeName)),
-				cel.Lib(cellib.NewStringsLibrary(reg)),
+				cel.Lib(cellib.NewStringsLibrary()),
 			)
 			if err != nil {
 				t.Fatal(err)

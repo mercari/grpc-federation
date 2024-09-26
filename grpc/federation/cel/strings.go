@@ -17,13 +17,10 @@ const StringsPackageName = "strings"
 var _ cel.SingletonLibrary = new(StringsLibrary)
 
 type StringsLibrary struct {
-	typeAdapter types.Adapter
 }
 
-func NewStringsLibrary(typeAdapter types.Adapter) *StringsLibrary {
-	return &StringsLibrary{
-		typeAdapter: typeAdapter,
-	}
+func NewStringsLibrary() *StringsLibrary {
+	return &StringsLibrary{}
 }
 
 func (lib *StringsLibrary) LibraryName() string {
