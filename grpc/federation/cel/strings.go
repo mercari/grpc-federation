@@ -89,18 +89,25 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// func Cut(s, sep string) (before, after string, found bool) is not implemented because it has multiple return values.
+		BindFunction(
+			createStringsName("cut"),
+			OverloadFunc(createStringsID("cut_string_string_strings"), []*cel.Type{cel.StringType, cel.StringType}, cel.ListType(cel.StringType),
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					str := args[0].(types.String).Value().(string)
+					sep := args[1].(types.String).Value().(string)
+					before, after, _ := strings.Cut(str, sep)
+					return types.NewStringList(types.DefaultTypeAdapter, []string{before, after})
+				},
+			),
+		),
 		BindFunction(
 			createStringsName("cutPrefix"),
 			OverloadFunc(createStringsID("cutPrefix_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					str := args[0].(types.String).Value().(string)
 					prefix := args[1].(types.String).Value().(string)
-					after, found := strings.CutPrefix(str, prefix)
-					if found {
-						return types.String(after)
-					}
-					return types.String(str)
+					after, _ := strings.CutPrefix(str, prefix)
+					return types.String(after)
 				},
 			),
 		),
@@ -110,11 +117,8 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					str := args[0].(types.String).Value().(string)
 					suffix := args[1].(types.String).Value().(string)
-					before, found := strings.CutSuffix(str, suffix)
-					if found {
-						return types.String(before)
-					}
-					return types.String(str)
+					before, _ := strings.CutSuffix(str, suffix)
+					return types.String(before)
 				},
 			),
 		),

@@ -115,6 +115,26 @@ func TestStringsFunctions(t *testing.T) {
 			},
 		},
 		{
+			name: "cut",
+			expr: "grpc.federation.strings.cut('abc', 'b')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				strs := make([]string, gotV.Size().(types.Int))
+				for i := 0; i < int(gotV.Size().(types.Int)); i++ {
+					strs[i] = gotV.Get(types.Int(i)).(types.String).Value().(string)
+				}
+				before, after, _ := strings.Cut("abc", "b")
+				expected := []string{before, after}
+				if diff := cmp.Diff(strs, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
 			name: "cutPrefix",
 			expr: "grpc.federation.strings.cutPrefix('abc', 'a')",
 			cmp: func(got ref.Val) error {
@@ -122,7 +142,8 @@ func TestStringsFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := types.String(strings.TrimPrefix("abc", "a"))
+				c, _ := strings.CutPrefix("abc", "a")
+				expected := types.String(c)
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -137,7 +158,8 @@ func TestStringsFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := types.String(strings.TrimSuffix("abc", "c"))
+				c, _ := strings.CutSuffix("abc", "c")
+				expected := types.String(c)
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
