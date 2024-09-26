@@ -12,6 +12,7 @@ The API for this package was created based on Go's [`strings`](https://pkg.go.de
 - [`containsAny`](#containsAny)
 - [`containsRune`](#containsRune)
 - [`count`](#count)
+- [`cut`](#cut)
 - [`cutPrefix`](#cutPrefix)
 - [`cutSuffix`](#cutSuffix)
 - [`equalFold`](#equalFold)
@@ -152,6 +153,30 @@ grpc.federation.strings.containsRune("hello", 120) //=> false ('x')
 ```cel
 grpc.federation.strings.count("cheese", "e") //=> 3
 grpc.federation.strings.count("five", "ve") //=> 1
+```
+
+## cut
+
+`cut` slices the input string `s` into two substrings, `before` and `after`, separated by the first occurrence of the separator `sep`. If `sep` is not found, `before` will be set to `s` and `after` will be empty.
+
+### Parameters
+
+`cut(s string, sep string) []string`
+
+- `s`: the string to cut.
+- `sep`: the separator string.
+
+### Returns
+
+A list of two strings:
+- The part of `s` before the first occurrence of `sep`.
+- The part of `s` after the first occurrence of `sep`.
+
+### Examples
+
+```cel
+grpc.federation.strings.cut("gophers", "ph") //=> ["go", "ers"]
+grpc.federation.strings.cut("gophers", "x") //=> ["gophers", ""]
 ```
 
 ## cutPrefix
