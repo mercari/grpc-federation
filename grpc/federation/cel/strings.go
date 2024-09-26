@@ -2,6 +2,7 @@ package cel
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"github.com/google/cel-go/cel"
@@ -39,6 +40,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 	opts := []cel.EnvOption{}
 
 	for _, funcOpts := range [][]cel.EnvOption{
+		// strings package functions
 		BindFunction(
 			createStringsName("clone"),
 			OverloadFunc(createStringsID("clone_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
@@ -391,6 +393,378 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 			OverloadFunc(createStringsID("trimSuffix_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.String(strings.TrimSuffix(args[0].(types.String).Value().(string), args[1].(types.String).Value().(string)))
+				},
+			),
+		),
+
+		// strconv package functions
+		BindFunction(
+			createStringsName("appendBool"),
+			OverloadFunc(createStringsID("appendBool_bytes_bool_bytes"), []*cel.Type{cel.BytesType, cel.BoolType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendBool(args[0].(types.Bytes).Value().([]byte), args[1].(types.Bool).Value().(bool)))
+				},
+			),
+			OverloadFunc(createStringsID("appendBool_string_bool_string"), []*cel.Type{cel.StringType, cel.BoolType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendBool([]byte(args[0].(types.String).Value().(string)), args[1].(types.Bool).Value().(bool)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendFloat"),
+			OverloadFunc(createStringsID("appendFloat_bytes_float64_string_int_int_bytes"), []*cel.Type{cel.BytesType, cel.DoubleType, cel.StringType, cel.IntType, cel.IntType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendFloat(args[0].(types.Bytes).Value().([]byte), args[1].(types.Double).Value().(float64), args[2].(types.String).Value().(string)[0], int(args[3].(types.Int).Value().(int64)), int(args[4].(types.Int).Value().(int64))))
+				},
+			),
+			OverloadFunc(createStringsID("appendFloat_string_float64_int_string_int_string"), []*cel.Type{cel.StringType, cel.DoubleType, cel.StringType, cel.IntType, cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendFloat([]byte(args[0].(types.String).Value().(string)), args[1].(types.Double).Value().(float64), args[2].(types.String).Value().(string)[0], int(args[3].(types.Int).Value().(int64)), int(args[4].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendInt"),
+			OverloadFunc(createStringsID("appendInt_bytes_int_int_bytes"), []*cel.Type{cel.BytesType, cel.IntType, cel.IntType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendInt(args[0].(types.Bytes).Value().([]byte), args[1].(types.Int).Value().(int64), int(args[2].(types.Int).Value().(int64))))
+				},
+			),
+			OverloadFunc(createStringsID("appendInt_string_int_int_string"), []*cel.Type{cel.StringType, cel.IntType, cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendInt([]byte(args[0].(types.String).Value().(string)), args[1].(types.Int).Value().(int64), int(args[2].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendQuote"),
+			OverloadFunc(createStringsID("appendQuote_bytes_string_bytes"), []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendQuote(args[0].(types.Bytes).Value().([]byte), args[1].(types.String).Value().(string)))
+				},
+			),
+			OverloadFunc(createStringsID("appendQuote_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendQuote([]byte(args[0].(types.String).Value().(string)), args[1].(types.String).Value().(string)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendQuoteRune"),
+			OverloadFunc(createStringsID("appendQuoteRune_bytes_int_bytes"), []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendQuoteRune(args[0].(types.Bytes).Value().([]byte), rune(args[1].(types.String).Value().(string)[0])))
+				},
+			),
+			OverloadFunc(createStringsID("appendQuoteRune_string_int_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendQuoteRune([]byte(args[0].(types.String).Value().(string)), rune(args[1].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendQuoteRuneToASCII"),
+			OverloadFunc(createStringsID("appendQuoteRuneToASCII_bytes_string_bytes"), []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendQuoteRuneToASCII(args[0].(types.Bytes).Value().([]byte), rune(args[1].(types.String).Value().(string)[0])))
+				},
+			),
+			OverloadFunc(createStringsID("appendQuoteRuneToASCII_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendQuoteRuneToASCII([]byte(args[0].(types.String).Value().(string)), rune(args[1].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendQuoteRuneToGraphic"),
+			OverloadFunc(createStringsID("appendQuoteRuneToGraphic_bytes_string_bytes"), []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendQuoteRuneToGraphic(args[0].(types.Bytes).Value().([]byte), rune(args[1].(types.String).Value().(string)[0])))
+				},
+			),
+			OverloadFunc(createStringsID("appendQuoteRuneToGraphic_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendQuoteRuneToGraphic([]byte(args[0].(types.String).Value().(string)), rune(args[1].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendQuoteToASCII"),
+			OverloadFunc(createStringsID("appendQuoteToASCII_bytes_string_bytes"), []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendQuoteToASCII(args[0].(types.Bytes).Value().([]byte), args[1].(types.String).Value().(string)))
+				},
+			),
+			OverloadFunc(createStringsID("appendQuoteToASCII_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendQuoteToASCII([]byte(args[0].(types.String).Value().(string)), args[1].(types.String).Value().(string)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendQuoteToGraphic"),
+			OverloadFunc(createStringsID("appendQuoteToGraphic_bytes_string_bytes"), []*cel.Type{cel.BytesType, cel.StringType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendQuoteToGraphic(args[0].(types.Bytes).Value().([]byte), args[1].(types.String).Value().(string)))
+				},
+			),
+			OverloadFunc(createStringsID("appendQuoteToGraphic_string_string_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendQuoteToGraphic([]byte(args[0].(types.String).Value().(string)), args[1].(types.String).Value().(string)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("appendUint"),
+			OverloadFunc(createStringsID("appendUint_bytes_uint_int_bytes"), []*cel.Type{cel.BytesType, cel.UintType, cel.IntType}, cel.BytesType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bytes(strconv.AppendUint(args[0].(types.Bytes).Value().([]byte), uint64(args[1].(types.Uint).Value().(uint64)), int(args[2].(types.Int).Value().(int64))))
+				},
+			),
+			OverloadFunc(createStringsID("appendUint_string_uint_int_string"), []*cel.Type{cel.StringType, cel.UintType, cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.AppendUint([]byte(args[0].(types.String).Value().(string)), uint64(args[1].(types.Uint).Value().(uint64)), int(args[2].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("atoi"),
+			OverloadFunc(createStringsID("atoi_string_int"), []*cel.Type{cel.StringType}, cel.IntType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					i, err := strconv.Atoi(args[0].(types.String).Value().(string))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(i)
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("canBackquote"),
+			OverloadFunc(createStringsID("canBackquote_string_bool"), []*cel.Type{cel.StringType}, cel.BoolType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bool(strconv.CanBackquote(args[0].(types.String).Value().(string)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("formatBool"),
+			OverloadFunc(createStringsID("formatBool_bool_string"), []*cel.Type{cel.BoolType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.FormatBool(args[0].(types.Bool).Value().(bool)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("formatComplex"),
+			OverloadFunc(createStringsID("formatComplex_complex128_string_int_int_string"), []*cel.Type{cel.ListType(cel.DoubleType), cel.StringType, cel.IntType, cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					cList := args[0].(traits.Lister)
+					c := complex(cList.Get(types.IntZero).(types.Double).Value().(float64), cList.Get(types.IntOne).(types.Double).Value().(float64))
+					return types.String(strconv.FormatComplex(c, args[1].(types.String).Value().(string)[0], int(args[2].(types.Int).Value().(int64)), int(args[3].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("formatFloat"),
+			OverloadFunc(createStringsID("formatFloat_float64_string_int_int_string"), []*cel.Type{cel.DoubleType, cel.StringType, cel.IntType, cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.FormatFloat(args[0].(types.Double).Value().(float64), args[1].(types.String).Value().(string)[0], int(args[2].(types.Int).Value().(int64)), int(args[3].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("formatInt"),
+			OverloadFunc(createStringsID("formatInt_int_int_string"), []*cel.Type{cel.IntType, cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.FormatInt(args[0].(types.Int).Value().(int64), int(args[1].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("formatUint"),
+			OverloadFunc(createStringsID("formatUint_uint_int_string"), []*cel.Type{cel.UintType, cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.FormatUint(args[0].(types.Uint).Value().(uint64), int(args[1].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("isGraphic"),
+			OverloadFunc(createStringsID("isGraphic_byte_bool"), []*cel.Type{cel.BytesType}, cel.BoolType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bool(strconv.IsGraphic(rune(args[0].(types.Bytes).Value().(byte))))
+				},
+			),
+			OverloadFunc(createStringsID("isGraphic_string_bool"), []*cel.Type{cel.StringType}, cel.BoolType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bool(strconv.IsGraphic(rune(args[0].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("isPrint"),
+			OverloadFunc(createStringsID("isPrint_byte_bool"), []*cel.Type{cel.BytesType}, cel.BoolType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bool(strconv.IsPrint(rune(args[0].(types.Bytes).Value().(byte))))
+				},
+			),
+			OverloadFunc(createStringsID("isPrint_string_bool"), []*cel.Type{cel.StringType}, cel.BoolType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bool(strconv.IsPrint(rune(args[0].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("itoa"),
+			OverloadFunc(createStringsID("itoa_int_string"), []*cel.Type{cel.IntType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.Itoa(int(args[0].(types.Int).Value().(int64))))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("parseBool"),
+			OverloadFunc(createStringsID("parseBool_string_bool"), []*cel.Type{cel.StringType}, cel.BoolType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					b, err := strconv.ParseBool(args[0].(types.String).Value().(string))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Bool(b)
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("parseComplex"),
+			OverloadFunc(createStringsID("parseComplex_string_int_complex128"), []*cel.Type{cel.StringType, cel.IntType}, cel.ListType(cel.DoubleType),
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					c, err := strconv.ParseComplex(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.NewDynamicList(types.DefaultTypeAdapter, []ref.Val{types.Double(real(c)), types.Double(imag(c))})
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("parseFloat"),
+			OverloadFunc(createStringsID("parseFloat_string_int_float64"), []*cel.Type{cel.StringType, cel.IntType}, cel.DoubleType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					f, err := strconv.ParseFloat(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Double(f)
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("parseInt"),
+			OverloadFunc(createStringsID("parseInt_string_int_int_int"), []*cel.Type{cel.StringType, cel.IntType, cel.IntType}, cel.IntType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					i, err := strconv.ParseInt(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)), int(args[2].(types.Int).Value().(int64)))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Int(i)
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("parseUint"),
+			OverloadFunc(createStringsID("parseUint_string_int_int__uint"), []*cel.Type{cel.StringType, cel.IntType, cel.IntType}, cel.UintType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					u, err := strconv.ParseUint(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)), int(args[2].(types.Int).Value().(int64)))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Uint(u)
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("quote"),
+			OverloadFunc(createStringsID("quote_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.Quote(args[0].(types.String).Value().(string)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("quoteRune"),
+			OverloadFunc(createStringsID("quoteRune_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.QuoteRune(rune(args[0].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("quoteRuneToASCII"),
+			OverloadFunc(createStringsID("quoteRuneToASCII_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.QuoteRuneToASCII(rune(args[0].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("quoteRuneToGraphic"),
+			OverloadFunc(createStringsID("quoteRuneToGraphic_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.QuoteRuneToGraphic(rune(args[0].(types.String).Value().(string)[0])))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("quoteToASCII"),
+			OverloadFunc(createStringsID("quoteToASCII_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.QuoteToASCII(args[0].(types.String).Value().(string)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("quoteToGraphic"),
+			OverloadFunc(createStringsID("quoteToGraphic_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.String(strconv.QuoteToGraphic(args[0].(types.String).Value().(string)))
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("quotedPrefix"),
+			OverloadFunc(createStringsID("quotedPrefix_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					s, err := strconv.QuotedPrefix(args[0].(types.String).Value().(string))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.String(s)
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("unquote"),
+			OverloadFunc(createStringsID("unquote_string_string"), []*cel.Type{cel.StringType}, cel.StringType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					s, err := strconv.Unquote(args[0].(types.String).Value().(string))
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.String(s)
+				},
+			),
+		),
+		BindFunction(
+			createStringsName("unquoteChar"),
+			OverloadFunc(createStringsID("unquoteChar_string_byte_string_bool_string"), []*cel.Type{cel.StringType, cel.StringType}, cel.ListType(cel.AnyType),
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					s, b, t, err := strconv.UnquoteChar(args[0].(types.String).Value().(string), args[1].(types.String).Value().(string)[0])
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.NewDynamicList(types.DefaultTypeAdapter, []ref.Val{types.String(s), types.Bool(b), types.String(t)})
 				},
 			),
 		),
