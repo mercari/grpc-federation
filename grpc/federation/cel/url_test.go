@@ -3,8 +3,6 @@ package cel_test
 import (
 	"context"
 	"fmt"
-	"github.com/google/cel-go/common/types/traits"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"net/url"
 	"strings"
 	"testing"
@@ -12,7 +10,10 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+
 	cellib "github.com/mercari/grpc-federation/grpc/federation/cel"
 )
 
@@ -425,7 +426,7 @@ func TestURLFunctions(t *testing.T) {
 			},
 		},
 		{
-			name: "join path",
+			name: "url join path",
 			expr: `grpc.federation.url.parse('https://example.com/path?query=1#fragment').joinPath(['/new'])`,
 			cmp: func(got ref.Val) error {
 				gotV, ok := got.Value().(*cellib.URL)

@@ -2,11 +2,12 @@ package cel
 
 import (
 	"context"
+	"net/url"
+
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
-	"net/url"
 )
 
 const URLPackageName = "url"
@@ -381,6 +382,9 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 					}
 
 					v.Path, err = url.JoinPath(v.Path, paths...)
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
 
 					return lib.toURLValue(v)
 				},
@@ -448,10 +452,6 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 					queryParams := v.Query()
 					queryMap := map[ref.Val]ref.Val{}
 					for key, values := range queryParams {
-						var valueList []ref.Val
-						for _, val := range values {
-							valueList = append(valueList, types.String(val))
-						}
 						queryMap[types.String(key)] = types.NewStringList(adapter, values)
 					}
 
