@@ -519,12 +519,12 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 			createStringsName("appendUint"),
 			OverloadFunc(createStringsID("appendUint_bytes_uint_int_bytes"), []*cel.Type{cel.BytesType, cel.UintType, cel.IntType}, cel.BytesType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Bytes(strconv.AppendUint(args[0].(types.Bytes).Value().([]byte), uint64(args[1].(types.Uint).Value().(uint64)), int(args[2].(types.Int).Value().(int64))))
+					return types.Bytes(strconv.AppendUint(args[0].(types.Bytes).Value().([]byte), args[1].(types.Uint).Value().(uint64), int(args[2].(types.Int).Value().(int64))))
 				},
 			),
 			OverloadFunc(createStringsID("appendUint_string_uint_int_string"), []*cel.Type{cel.StringType, cel.UintType, cel.IntType}, cel.StringType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.String(strconv.AppendUint([]byte(args[0].(types.String).Value().(string)), uint64(args[1].(types.Uint).Value().(uint64)), int(args[2].(types.Int).Value().(int64))))
+					return types.String(strconv.AppendUint([]byte(args[0].(types.String).Value().(string)), args[1].(types.Uint).Value().(uint64), int(args[2].(types.Int).Value().(int64))))
 				},
 			),
 		),
