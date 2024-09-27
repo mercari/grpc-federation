@@ -317,7 +317,8 @@ func TestFederation(t *testing.T) {
 		NullTimestamp2: nil,
 		NullTimestamp3: nil,
 		JpLoc:          "JST",
-		StringsJoin:    "a,b,c",
+		StringsJoin:    "1.2",
+		ParseFloat:     1.2,
 		UrlUserName:    "test_user",
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
