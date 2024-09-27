@@ -1,10 +1,10 @@
 # grpc.federation.strings APIs
 
-The API for this package was created based on Go's [`strings`](https://pkg.go.dev/strings) package.
+The API for this package was created based on Go's [`strings`](https://pkg.go.dev/strings) and [`strconv`](https://pkg.go.dev/strconv) packages.
 
 # Index
 
-## Functions
+## Strings Functions
 
 - [`clone`](#clone)
 - [`compare`](#compare)
@@ -46,7 +46,38 @@ The API for this package was created based on Go's [`strings`](https://pkg.go.de
 - [`trimSpace`](#trimSpace)
 - [`trimSuffix`](#trimSuffix)
 
-# Functions
+## Strconv Functions
+
+- [`appendBool`](#appendBool)
+- [`appendFloat`](#appendFloat)
+- [`appendInt`](#appendInt)
+- [`appendQuote`](#appendQuote)
+- [`appendQuoteRune`](#appendQuoteRune)
+- [`appendQuoteToASCII`](#appendQuoteToASCII)
+- [`appendUint`](#appendUint)
+- [`atoi`](#atoi)
+- [`canBackquote`](#canBackquote)
+- [`formatBool`](#formatBool)
+- [`formatComplex`](#formatComplex)
+- [`formatFloat`](#formatFloat)
+- [`formatInt`](#formatInt)
+- [`formatUint`](#formatUint)
+- [`isGraphic`](#isGraphic)
+- [`isPrint`](#isPrint)
+- [`itoa`](#itoa)
+- [`parseBool`](#parseBool)
+- [`parseComplex`](#parseComplex)
+- [`parseFloat`](#parseFloat)
+- [`parseInt`](#parseInt)
+- [`parseUint`](#parseUint)
+- [`quote`](#quote)
+- [`quoteRune`](#quoteRune)
+- [`quoteToASCII`](#quoteToASCII)
+- [`quotedPrefix`](#quotedPrefix)
+- [`unquote`](#unquote)
+- [`unquoteChar`](#unquoteChar)
+
+# Strings Functions
 
 ## clone
 
@@ -738,4 +769,424 @@ grpc.federation.strings.trimSpace("  hello  ") //=> "hello"
 ```cel
 grpc.federation.strings.trimSuffix("hello world", "world") //=> "hello "
 grpc.federation.strings.trimSuffix("hello world", "hello") //=> "hello world"
+```
+
+# `strconv` Functions
+
+## appendBool
+
+Appends the string form of a boolean value to a byte slice.
+
+**Signature:**
+```cel
+grpc.federation.strings.appendBool(b []byte, v bool) []byte
+grpc.federation.strings.appendBool(s string, v bool) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.appendBool(b"hello ", true) //=> "hello true"
+grpc.federation.strings.appendBool("hello ", true)  //=> "hello true"
+```
+
+## appendFloat
+
+Appends the string form of a floating-point value to a byte slice.
+
+**Signature:**
+```cel
+grpc.federation.strings.appendFloat(b []byte, f float64, fmt byte, prec int, bitSize int) []byte
+grpc.federation.strings.appendFloat(s string, f float64, fmt byte, prec int, bitSize int) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.appendFloat(b"price: ", 1.23, 'f', 2, 64) //=> "price: 1.23"
+grpc.federation.strings.appendFloat("price: ", 1.23, 'f', 2, 64)  //=> "price: 1.23"
+```
+
+## appendInt
+
+Appends the string form of an integer value to a byte slice.
+
+**Signature:**
+```cel
+grpc.federation.strings.appendInt(b []byte, i int64, base int) []byte
+grpc.federation.strings.appendInt(s string, i int64, base int) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.appendInt(b"number: ", 42, 10) //=> "number: 42"
+grpc.federation.strings.appendInt("number: ", 42, 10)  //=> "number: 42"
+```
+
+## appendQuote
+
+Appends the quoted string form of `s` to a byte slice.
+
+**Signature:**
+```cel
+grpc.federation.strings.appendQuote(b []byte, s string) []byte
+grpc.federation.strings.appendQuote(s string, s string) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.appendQuote(b"quoted: ", "hello") //=> "quoted: \"hello\""
+grpc.federation.strings.appendQuote("quoted: ", "hello")  //=> "quoted: \"hello\""
+```
+
+## appendQuoteRune
+
+Appends the quoted rune form of `r` to a byte slice.
+
+**Signature:**
+```cel
+grpc.federation.strings.appendQuoteRune(b []byte, r rune) []byte
+grpc.federation.strings.appendQuoteRune(s string, r rune) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.appendQuoteRune(b"quoted: ", 'a') //=> "quoted: 'a'"
+grpc.federation.strings.appendQuoteRune("quoted: ", 'a')  //=> "quoted: 'a'"
+```
+
+## appendQuoteToASCII
+
+Appends the ASCII-quoted string form of `s` to a byte slice.
+
+**Signature:**
+```cel
+grpc.federation.strings.appendQuoteToASCII(b []byte, s string) []byte
+grpc.federation.strings.appendQuoteToASCII(s string, s string) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.appendQuoteToASCII(b"ascii: ", "abc") //=> "ascii: \"abc\""
+grpc.federation.strings.appendQuoteToASCII("ascii: ", "abc")  //=> "ascii: \"abc\""
+```
+
+## appendUint
+
+Appends the string form of an unsigned integer value to a byte slice.
+
+**Signature:**
+```cel
+grpc.federation.strings.appendUint(b []byte, u uint64, base int) []byte
+grpc.federation.strings.appendUint(s string, u uint64, base int) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.appendUint(b"number: ", 123, 10) //=> "number: 123"
+grpc.federation.strings.appendUint("number: ", 123, 10)  //=> "number: 123"
+```
+
+## atoi
+
+Parses a string and returns the integer it represents.
+
+**Signature:**
+```cel
+grpc.federation.strings.atoi(s string) int
+```
+
+**Example:**
+```cel
+grpc.federation.strings.atoi("123") //=> 123
+```
+
+## canBackquote
+
+Reports whether the string `s` can be represented unchanged as a single-line backquoted string.
+
+**Signature:**
+```cel
+grpc.federation.strings.canBackquote(s string) bool
+```
+
+**Example:**
+```cel
+grpc.federation.strings.canBackquote("hello") //=> true
+grpc.federation.strings.canBackquote("hello\nworld") //=> false
+```
+
+## formatBool
+
+Returns the string representation of a boolean value.
+
+**Signature:**
+```cel
+grpc.federation.strings.formatBool(v bool) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.formatBool(true) //=> "true"
+grpc.federation.strings.formatBool(false) //=> "false"
+```
+
+## formatComplex
+
+Returns the string representation of a complex number.
+
+**Signature:**
+```cel
+grpc.federation.strings.formatComplex(c []float64, fmt byte, prec int, bitSize int) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.formatComplex([1.23, 4.56], 'f', 2, 64) //=> "(1.23+4.56i)"
+```
+
+## formatFloat
+
+Returns the string representation of a floating-point number.
+
+**Signature:**
+```cel
+grpc.federation.strings.formatFloat(f float64, fmt byte, prec int, bitSize int) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.formatFloat(1.23, 'f', 2, 64) //=> "1.23"
+```
+
+## formatInt
+
+Returns the string representation of an integer.
+
+**Signature:**
+```cel
+grpc.federation.strings.formatInt(i int64, base int) string
+``
+
+`
+
+**Example:**
+```cel
+grpc.federation.strings.formatInt(42, 10) //=> "42"
+```
+
+## formatUint
+
+Returns the string representation of an unsigned integer.
+
+**Signature:**
+```cel
+grpc.federation.strings.formatUint(u uint64, base int) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.formatUint(123, 10) //=> "123"
+```
+
+## isGraphic
+
+Returns `true` if the provided rune is a graphic, i.e., a printable character other than space.
+
+**Signature:**
+```cel
+grpc.federation.strings.isGraphic(r rune) bool
+```
+
+**Example:**
+```cel
+grpc.federation.strings.isGraphic('a') //=> true
+grpc.federation.strings.isGraphic(' ') //=> false
+```
+
+## isPrint
+
+Returns `true` if the provided rune is printable, meaning it is either a letter, number, punctuation, space, or symbol.
+
+**Signature:**
+```cel
+grpc.federation.strings.isPrint(r rune) bool
+```
+
+**Example:**
+```cel
+grpc.federation.strings.isPrint('a') //=> true
+grpc.federation.strings.isPrint('\n') //=> false
+```
+
+## itoa
+
+Converts an integer to its string representation.
+
+**Signature:**
+```cel
+grpc.federation.strings.itoa(i int) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.itoa(123) //=> "123"
+```
+
+## parseBool
+
+Parses a boolean value from its string representation.
+
+**Signature:**
+```cel
+grpc.federation.strings.parseBool(s string) bool
+```
+
+**Example:**
+```cel
+grpc.federation.strings.parseBool("true")  //=> true
+grpc.federation.strings.parseBool("false") //=> false
+```
+
+## parseComplex
+
+Parses a complex number from a string representation.
+
+**Signature:**
+```cel
+grpc.federation.strings.parseComplex(s string, bitSize int) complex128
+```
+
+**Example:**
+```cel
+grpc.federation.strings.parseComplex("(1.23+4.56i)", 128) //=> (1.23 + 4.56i)
+```
+
+## parseFloat
+
+Parses a floating-point number from a string representation.
+
+**Signature:**
+```cel
+grpc.federation.strings.parseFloat(s string, bitSize int) float64
+```
+
+**Example:**
+```cel
+grpc.federation.strings.parseFloat("1.23", 64) //=> 1.23
+```
+
+## parseInt
+
+Parses an integer from a string representation, supporting base conversions.
+
+**Signature:**
+```cel
+grpc.federation.strings.parseInt(s string, base int, bitSize int) int64
+```
+
+**Example:**
+```cel
+grpc.federation.strings.parseInt("42", 10, 64)   //=> 42
+grpc.federation.strings.parseInt("101010", 2, 8) //=> 42
+```
+
+## parseUint
+
+Parses an unsigned integer from a string representation, supporting base conversions.
+
+**Signature:**
+```cel
+grpc.federation.strings.parseUint(s string, base int, bitSize int) uint64
+```
+
+**Example:**
+```cel
+grpc.federation.strings.parseUint("42", 10, 64)   //=> 42
+grpc.federation.strings.parseUint("101010", 2, 8) //=> 42
+```
+
+## quote
+
+Returns a double-quoted string with any special characters escaped.
+
+**Signature:**
+```cel
+grpc.federation.strings.quote(s string) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.quote("hello") //=> "\"hello\""
+grpc.federation.strings.quote("tab\t") //=> "\"tab\\t\""
+```
+
+## quoteRune
+
+Returns a single-quoted string literal with the provided rune, escaping any special characters.
+
+**Signature:**
+```cel
+grpc.federation.strings.quoteRune(r rune) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.quoteRune('a') //=> "'a'"
+grpc.federation.strings.quoteRune('\n') //=> "'\\n'"
+```
+
+## quoteToASCII
+
+Returns a double-quoted string with any non-ASCII characters escaped.
+
+**Signature:**
+```cel
+grpc.federation.strings.quoteToASCII(s string) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.quoteToASCII("abc")     //=> "\"abc\""
+grpc.federation.strings.quoteToASCII("こんにちは") //=> "\"\\u3053\\u3093\\u306b\\u3061\\u306f\""
+```
+
+## quotedPrefix
+
+Parses a quoted prefix from the input string.
+
+**Signature:**
+```cel
+grpc.federation.strings.quotedPrefix(s string) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.quotedPrefix("\"hello\" world") //=> "hello"
+```
+
+## unquote
+
+Removes the surrounding quotes from a quoted string and unescapes any special characters.
+
+**Signature:**
+```cel
+grpc.federation.strings.unquote(s string) string
+```
+
+**Example:**
+```cel
+grpc.federation.strings.unquote("\"hello\"") //=> "hello"
+```
+
+## unquoteChar
+
+Decodes the next character or byte in the quoted string literal.
+
+**Signature:**
+```cel
+grpc.federation.strings.unquoteChar(s string, quote byte) rune
+```
+
+**Example:**
+```cel
+grpc.federation.strings.unquoteChar("\\n", '"') //=> '\n'
 ```
