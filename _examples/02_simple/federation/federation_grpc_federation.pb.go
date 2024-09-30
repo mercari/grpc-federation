@@ -1617,10 +1617,10 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "url.user().username()"
+	// (grpc.federation.field).by = "url.userinfo().username()"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
-		Expr:       `url.user().username()`,
+		Expr:       `url.userinfo().username()`,
 		CacheIndex: 59,
 		Setter: func(v string) error {
 			ret.UrlUserName = v

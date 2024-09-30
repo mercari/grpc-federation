@@ -79,7 +79,7 @@ message GetPostResponse {
   google.protobuf.Timestamp null_timestamp3 = 30 [(grpc.federation.field).by = "true ? null : google.protobuf.Timestamp{}"];
   string jp_loc = 31 [(grpc.federation.field).by = "jp_time.location().string()"];
   string strings_join = 32 [(grpc.federation.field).by = "strings_join"];
-  string url_user_name = 33 [(grpc.federation.field).by = "url.user().username()"];
+  string url_user_name = 33 [(grpc.federation.field).by = "url.userinfo().username()"];
 }
 
 message A {

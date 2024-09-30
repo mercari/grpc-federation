@@ -276,17 +276,13 @@ func TestURLFunctions(t *testing.T) {
 			name: "parse force query",
 			expr: `grpc.federation.url.parse('https://example.com/path?').forceQuery()`,
 			cmp: func(got ref.Val) error {
-				gotV, ok := got.(types.String)
-				if !ok {
-					return fmt.Errorf("invalid result type: %T", got)
-				}
+				gotV := got.(types.Bool)
 				parse, err := url.Parse("https://example.com/path?")
 				if err != nil {
 					return err
 				}
-				parse.ForceQuery = true
-				expected := parse.String()
-				if diff := cmp.Diff(string(gotV), expected); diff != "" {
+				expected := parse.ForceQuery
+				if diff := cmp.Diff(bool(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
 				return nil
