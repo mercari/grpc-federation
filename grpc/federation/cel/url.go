@@ -28,24 +28,28 @@ func (x *URL) GoURL() (url.URL, error) {
 	}
 
 	return url.URL{
-		Scheme:     x.GetScheme(),
-		Opaque:     x.GetOpaque(),
-		User:       user,
-		Host:       x.GetHost(),
-		Path:       x.GetPath(),
-		RawPath:    x.GetRawPath(),
-		ForceQuery: x.GetForceQuery(),
-		RawQuery:   x.GetRawQuery(),
-		Fragment:   x.GetFragment(),
+		Scheme:      x.GetScheme(),
+		Opaque:      x.GetOpaque(),
+		User:        user,
+		Host:        x.GetHost(),
+		Path:        x.GetPath(),
+		RawPath:     x.GetRawPath(),
+		OmitHost:    x.GetOmitHost(),
+		ForceQuery:  x.GetForceQuery(),
+		RawQuery:    x.GetRawQuery(),
+		Fragment:    x.GetFragment(),
+		RawFragment: x.GetRawFragment(),
 	}, nil
 }
 
 func (x *Userinfo) GoUserinfo() (*url.Userinfo, error) {
+	if x == nil {
+		return nil, nil
+	}
 	if x.GetPasswordSet() {
 		return url.UserPassword(x.GetUsername(), x.GetPassword()), nil
-	} else {
-		return url.User(x.GetUsername()), nil
 	}
+	return url.User(x.GetUsername()), nil
 }
 
 var _ cel.SingletonLibrary = new(URLLibrary)
@@ -267,17 +271,27 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
-		// forceQuery is changed to return String
 		BindMemberFunction(
-			"forceQuery",
-			MemberOverloadFunc(createURLID("forceQuery_url_string"), URLType, []*cel.Type{}, cel.StringType,
+			"omitHost",
+			MemberOverloadFunc(createURLID("omitHost_url_bool"), URLType, []*cel.Type{}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := self.Value().(*URL).GoURL()
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
-					v.ForceQuery = true
-					return types.String(v.String())
+					return types.Bool(v.OmitHost)
+				},
+			),
+		),
+		BindMemberFunction(
+			"forceQuery",
+			MemberOverloadFunc(createURLID("forceQuery_url_string"), URLType, []*cel.Type{}, cel.BoolType,
+				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
+					v, err := self.Value().(*URL).GoURL()
+					if err != nil {
+						return types.NewErr(err.Error())
+					}
+					return types.Bool(v.ForceQuery)
 				},
 			),
 		),
@@ -565,12 +579,8 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 					if err != nil {
 						return types.NewErr(err.Error())
 					}
-					password, hasPassword := v.Password()
-					if hasPassword {
-						return types.String(password)
-					} else {
-						return types.String("")
-					}
+					password, _ := v.Password()
+					return types.String(password)
 				},
 			),
 		),
