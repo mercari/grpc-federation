@@ -53,6 +53,8 @@ The API for this package was created based on Go's [`strings`](https://pkg.go.de
 - [`appendInt`](#appendInt)
 - [`appendQuote`](#appendQuote)
 - [`appendQuoteRune`](#appendQuoteRune)
+- [`appendQuoteRuneToASCII`](#appendQuoteRuneToASCII)
+- [`appendQuoteRuneToGraphic`](#appendQuoteRuneToGraphic)
 - [`appendQuoteToASCII`](#appendQuoteToASCII)
 - [`appendUint`](#appendUint)
 - [`atoi`](#atoi)
@@ -72,7 +74,9 @@ The API for this package was created based on Go's [`strings`](https://pkg.go.de
 - [`parseUint`](#parseUint)
 - [`quote`](#quote)
 - [`quoteRune`](#quoteRune)
+- [`quoteRuneToGraphic`](#quoteRuneToGraphic)
 - [`quoteToASCII`](#quoteToASCII)
+- [`quoteToGraphic`](#quoteToGraphic)
 - [`quotedPrefix`](#quotedPrefix)
 - [`unquote`](#unquote)
 - [`unquoteChar`](#unquoteChar)
@@ -773,420 +777,490 @@ grpc.federation.strings.trimSuffix("hello world", "hello") //=> "hello world"
 
 # `strconv` Functions
 
-## appendBool
+Sure! Here's the requested unified format for the functions you listed:
 
+## appendBool
 Appends the string form of a boolean value to a byte slice.
 
-**Signature:**
-```cel
-grpc.federation.strings.appendBool(b []byte, v bool) []byte
-grpc.federation.strings.appendBool(s string, v bool) string
-```
+### Parameters
+`appendBool(b []byte, v bool) []byte`  
+`appendBool(s string, v bool) string`
 
-**Example:**
+- `b`: byte slice to append the boolean string to.
+- `s`: string to append the boolean string to.
+- `v`: the boolean value to convert to a string and append.
+
+### Examples
 ```cel
 grpc.federation.strings.appendBool(b"hello ", true) //=> "hello true"
 grpc.federation.strings.appendBool("hello ", true)  //=> "hello true"
 ```
 
 ## appendFloat
-
 Appends the string form of a floating-point value to a byte slice.
 
-**Signature:**
-```cel
-grpc.federation.strings.appendFloat(b []byte, f float64, fmt byte, prec int, bitSize int) []byte
-grpc.federation.strings.appendFloat(s string, f float64, fmt byte, prec int, bitSize int) string
-```
+### Parameters
+`appendFloat(b []byte, f float64, fmt byte, prec int, bitSize int) []byte`  
+`appendFloat(s string, f float64, fmt byte, prec int, bitSize int) string`
 
-**Example:**
+- `b`: byte slice to append the float string to.
+- `s`: string to append the float string to.
+- `f`: the floating-point value to convert to a string and append.
+- `fmt`: the format for the floating-point number (`'f'`, `'e'`, `'g'`, etc.).
+- `prec`: the precision of the floating-point number.
+- `bitSize`: the size of the float (32 for `float32`, 64 for `float64`).
+
+### Examples
 ```cel
 grpc.federation.strings.appendFloat(b"price: ", 1.23, 'f', 2, 64) //=> "price: 1.23"
 grpc.federation.strings.appendFloat("price: ", 1.23, 'f', 2, 64)  //=> "price: 1.23"
 ```
 
 ## appendInt
-
 Appends the string form of an integer value to a byte slice.
 
-**Signature:**
-```cel
-grpc.federation.strings.appendInt(b []byte, i int64, base int) []byte
-grpc.federation.strings.appendInt(s string, i int64, base int) string
-```
+### Parameters
+`appendInt(b []byte, i int64, base int) []byte`  
+`appendInt(s string, i int64, base int) string`
 
-**Example:**
+- `b`: byte slice to append the integer string to.
+- `s`: string to append the integer string to.
+- `i`: the integer value to convert to a string and append.
+- `base`: the numeric base (e.g., 10 for decimal, 16 for hexadecimal).
+
+### Examples
 ```cel
 grpc.federation.strings.appendInt(b"number: ", 42, 10) //=> "number: 42"
 grpc.federation.strings.appendInt("number: ", 42, 10)  //=> "number: 42"
 ```
 
 ## appendQuote
-
 Appends the quoted string form of `s` to a byte slice.
 
-**Signature:**
-```cel
-grpc.federation.strings.appendQuote(b []byte, s string) []byte
-grpc.federation.strings.appendQuote(s string, s string) string
-```
+### Parameters
+`appendQuote(b []byte, s string) []byte`  
+`appendQuote(s string, s string) string`
 
-**Example:**
+- `b`: byte slice to append the quoted string to.
+- `s`: string to append the quoted string to.
+- `s`: the string to be quoted and appended.
+
+### Examples
 ```cel
 grpc.federation.strings.appendQuote(b"quoted: ", "hello") //=> "quoted: \"hello\""
 grpc.federation.strings.appendQuote("quoted: ", "hello")  //=> "quoted: \"hello\""
 ```
 
 ## appendQuoteRune
-
 Appends the quoted rune form of `r` to a byte slice.
 
-**Signature:**
-```cel
-grpc.federation.strings.appendQuoteRune(b []byte, r rune) []byte
-grpc.federation.strings.appendQuoteRune(s string, r rune) string
-```
+### Parameters
+`appendQuoteRune(b []byte, r rune) []byte`  
+`appendQuoteRune(s string, r rune) string`
 
-**Example:**
+- `b`: byte slice to append the quoted rune to.
+- `s`: string to append the quoted rune to.
+- `r`: the rune to be quoted and appended.
+
+### Examples
 ```cel
 grpc.federation.strings.appendQuoteRune(b"quoted: ", 'a') //=> "quoted: 'a'"
 grpc.federation.strings.appendQuoteRune("quoted: ", 'a')  //=> "quoted: 'a'"
 ```
 
-## appendQuoteToASCII
+## appendQuoteRuneToASCII
+Appends the ASCII-quoted string form of `r` to a byte slice.
 
-Appends the ASCII-quoted string form of `s` to a byte slice.
+### Parameters
+`appendQuoteRuneToASCII(b []byte, r rune) []byte`  
+`appendQuoteRuneToASCII(s string, r rune) string`
 
-**Signature:**
+- `b`: byte slice to append the quoted ASCII rune to.
+- `s`: string to append the quoted ASCII rune to.
+- `r`: the rune to be quoted in ASCII form and appended.
+
+### Examples
 ```cel
-grpc.federation.strings.appendQuoteToASCII(b []byte, s string) []byte
-grpc.federation.strings.appendQuoteToASCII(s string, s string) string
+grpc.federation.strings.appendQuoteRuneToASCII(b"ascii: ", 'a') //=> "ascii: 'a'"
+grpc.federation.strings.appendQuoteRuneToASCII("ascii: ", 'a')  //=> "ascii: 'a'"
 ```
 
-**Example:**
+## appendQuoteRuneToGraphic
+Appends the graphic-quoted string form of `r` to a byte slice.
+
+### Parameters
+`appendQuoteRuneToGraphic(b []byte, r rune) []byte`  
+`appendQuoteRuneToGraphic(s string, r rune) string`
+
+- `b`: byte slice to append the quoted graphic rune to.
+- `s`: string to append the quoted graphic rune to.
+- `r`: the rune to be quoted in graphic form and appended.
+
+### Examples
+```cel
+grpc.federation.strings.appendQuoteRuneToGraphic(b"graphic: ", 'a') //=> "graphic: 'a'"
+grpc.federation.strings.appendQuoteRuneToGraphic("graphic: ", 'a')  //=> "graphic: 'a'"
+```
+
+## appendQuoteToASCII
+Appends the ASCII-quoted string form of `s` to a byte slice.
+
+### Parameters
+`appendQuoteToASCII(b []byte, s string) []byte`  
+`appendQuoteToASCII(s string, s string) string`
+
+- `b`: byte slice to append the quoted ASCII string to.
+- `s`: string to append the quoted ASCII string to.
+- `s`: the string to be quoted in ASCII form and appended.
+
+### Examples
 ```cel
 grpc.federation.strings.appendQuoteToASCII(b"ascii: ", "abc") //=> "ascii: \"abc\""
 grpc.federation.strings.appendQuoteToASCII("ascii: ", "abc")  //=> "ascii: \"abc\""
 ```
 
 ## appendUint
-
 Appends the string form of an unsigned integer value to a byte slice.
 
-**Signature:**
-```cel
-grpc.federation.strings.appendUint(b []byte, u uint64, base int) []byte
-grpc.federation.strings.appendUint(s string, u uint64, base int) string
-```
+### Parameters
+`appendUint(b []byte, u uint64, base int) []byte`  
+`appendUint(s string, u uint64, base int) string`
 
-**Example:**
+- `b`: byte slice to append the unsigned integer string to.
+- `s`: string to append the unsigned integer string to.
+- `u`: the unsigned integer value to convert to a string and append.
+- `base`: the numeric base (e.g., 10 for decimal, 16 for hexadecimal).
+
+### Examples
 ```cel
 grpc.federation.strings.appendUint(b"number: ", 123, 10) //=> "number: 123"
 grpc.federation.strings.appendUint("number: ", 123, 10)  //=> "number: 123"
 ```
 
 ## atoi
-
 Parses a string and returns the integer it represents.
 
-**Signature:**
-```cel
-grpc.federation.strings.atoi(s string) int
-```
+### Parameters
+`atoi(s string) int`
 
-**Example:**
+- `s`: the string to parse as an integer.
+
+### Examples
 ```cel
 grpc.federation.strings.atoi("123") //=> 123
 ```
 
 ## canBackquote
-
 Reports whether the string `s` can be represented unchanged as a single-line backquoted string.
 
-**Signature:**
-```cel
-grpc.federation.strings.canBackquote(s string) bool
-```
+### Parameters
+`canBackquote(s string) bool`
 
-**Example:**
+- `s`: the string to check if it can be backquoted.
+
+### Examples
 ```cel
 grpc.federation.strings.canBackquote("hello") //=> true
 grpc.federation.strings.canBackquote("hello\nworld") //=> false
 ```
 
 ## formatBool
-
 Returns the string representation of a boolean value.
 
-**Signature:**
-```cel
-grpc.federation.strings.formatBool(v bool) string
-```
+### Parameters
+`formatBool(v bool) string`
 
-**Example:**
+- `v`: the boolean value to format as a string.
+
+### Examples
 ```cel
-grpc.federation.strings.formatBool(true) //=> "true"
+grpc.federation.strings.formatBool(true)  //=> "true"
 grpc.federation.strings.formatBool(false) //=> "false"
 ```
 
 ## formatComplex
-
 Returns the string representation of a complex number.
 
-**Signature:**
-```cel
-grpc.federation.strings.formatComplex(c []float64, fmt byte, prec int, bitSize int) string
-```
+### Parameters
+`formatComplex(c complex128, fmt byte, prec int, bitSize int) string`
 
-**Example:**
+- `c`: the complex number to format as a string.
+- `fmt`: the format for the complex number.
+- `prec`: the precision of the complex number.
+- `bitSize`: the bit size of the complex number.
+
+### Examples
 ```cel
-grpc.federation.strings.formatComplex([1.23, 4.56], 'f', 2, 64) //=> "(1.23+4.56i)"
+grpc.federation.strings.formatComplex(1.23+4.56i, 'f', 2, 64) //=> "(1.23+4.56i)"
 ```
 
 ## formatFloat
-
 Returns the string representation of a floating-point number.
 
-**Signature:**
-```cel
-grpc.federation.strings.formatFloat(f float64, fmt byte, prec int, bitSize int) string
-```
+### Parameters
+`formatFloat(f float64, fmt byte, prec int, bitSize int) string`
 
-**Example:**
+- `f`: the floating-point number to format as a string.
+- `fmt`: the format for the floating-point number (`'f'`, `'e'`, `'g'`, etc.).
+- `prec`: the precision of the floating-point number.
+- `bitSize`: the size of the float (32 for `float32`, 64 for `float64`).
+
+### Examples
 ```cel
-grpc.federation.strings.formatFloat(1.23, 'f', 2, 64) //=> "1.23"
+grpc.federation.strings.formatFloat(1.23, 'f', 2, 64) //=> "1
+
+.23"
 ```
 
 ## formatInt
-
 Returns the string representation of an integer.
 
-**Signature:**
-```cel
-grpc.federation.strings.formatInt(i int64, base int) string
-``
+### Parameters
+`formatInt(i int64, base int) string`
 
-`
+- `i`: the integer value to format as a string.
+- `base`: the numeric base (e.g., 10 for decimal, 16 for hexadecimal).
 
-**Example:**
+### Examples
 ```cel
 grpc.federation.strings.formatInt(42, 10) //=> "42"
 ```
 
 ## formatUint
-
 Returns the string representation of an unsigned integer.
 
-**Signature:**
-```cel
-grpc.federation.strings.formatUint(u uint64, base int) string
-```
+### Parameters
+`formatUint(u uint64, base int) string`
 
-**Example:**
+- `u`: the unsigned integer value to format as a string.
+- `base`: the numeric base (e.g., 10 for decimal, 16 for hexadecimal).
+
+### Examples
 ```cel
 grpc.federation.strings.formatUint(123, 10) //=> "123"
 ```
 
 ## isGraphic
-
 Returns `true` if the provided rune is a graphic, i.e., a printable character other than space.
 
-**Signature:**
-```cel
-grpc.federation.strings.isGraphic(r rune) bool
-```
+### Parameters
+`isGraphic(r rune) bool`
 
-**Example:**
+- `r`: the rune to check if it's a graphic character.
+
+### Examples
 ```cel
 grpc.federation.strings.isGraphic('a') //=> true
 grpc.federation.strings.isGraphic(' ') //=> false
 ```
 
 ## isPrint
-
 Returns `true` if the provided rune is printable, meaning it is either a letter, number, punctuation, space, or symbol.
 
-**Signature:**
-```cel
-grpc.federation.strings.isPrint(r rune) bool
-```
+### Parameters
+`isPrint(r rune) bool`
 
-**Example:**
+- `r`: the rune to check if it's printable.
+
+### Examples
 ```cel
 grpc.federation.strings.isPrint('a') //=> true
 grpc.federation.strings.isPrint('\n') //=> false
 ```
 
 ## itoa
-
 Converts an integer to its string representation.
 
-**Signature:**
-```cel
-grpc.federation.strings.itoa(i int) string
-```
+### Parameters
+`itoa(i int) string`
 
-**Example:**
+- `i`: the integer to convert to a string.
+
+### Examples
 ```cel
 grpc.federation.strings.itoa(123) //=> "123"
 ```
 
 ## parseBool
-
 Parses a boolean value from its string representation.
 
-**Signature:**
-```cel
-grpc.federation.strings.parseBool(s string) bool
-```
+### Parameters
+`parseBool(s string) bool`
 
-**Example:**
+- `s`: the string to parse as a boolean.
+
+### Examples
 ```cel
 grpc.federation.strings.parseBool("true")  //=> true
 grpc.federation.strings.parseBool("false") //=> false
 ```
 
 ## parseComplex
-
 Parses a complex number from a string representation.
 
-**Signature:**
-```cel
-grpc.federation.strings.parseComplex(s string, bitSize int) complex128
-```
+### Parameters
+`parseComplex(s string, bitSize int) complex128`
 
-**Example:**
+- `s`: the string to parse as a complex number.
+- `bitSize`: the bit size for the complex number (64 or 128).
+
+### Examples
 ```cel
 grpc.federation.strings.parseComplex("(1.23+4.56i)", 128) //=> (1.23 + 4.56i)
 ```
 
 ## parseFloat
-
 Parses a floating-point number from a string representation.
 
-**Signature:**
-```cel
-grpc.federation.strings.parseFloat(s string, bitSize int) float64
-```
+### Parameters
+`parseFloat(s string, bitSize int) float64`
 
-**Example:**
+- `s`: the string to parse as a floating-point number.
+- `bitSize`: the size of the float (32 for `float32`, 64 for `float64`).
+
+### Examples
 ```cel
 grpc.federation.strings.parseFloat("1.23", 64) //=> 1.23
 ```
 
 ## parseInt
-
 Parses an integer from a string representation, supporting base conversions.
 
-**Signature:**
-```cel
-grpc.federation.strings.parseInt(s string, base int, bitSize int) int64
-```
+### Parameters
+`parseInt(s string, base int, bitSize int) int64`
 
-**Example:**
+- `s`: the string to parse as an integer.
+- `base`: the numeric base (e.g., 10 for decimal, 16 for hexadecimal).
+- `bitSize`: the size of the integer.
+
+### Examples
 ```cel
 grpc.federation.strings.parseInt("42", 10, 64)   //=> 42
 grpc.federation.strings.parseInt("101010", 2, 8) //=> 42
 ```
 
 ## parseUint
-
 Parses an unsigned integer from a string representation, supporting base conversions.
 
-**Signature:**
-```cel
-grpc.federation.strings.parseUint(s string, base int, bitSize int) uint64
-```
+### Parameters
+`parseUint(s string, base int, bitSize int) uint64`
 
-**Example:**
+- `s`: the string to parse as an unsigned integer.
+- `base`: the numeric base (e.g., 10 for decimal, 16 for hexadecimal).
+- `bitSize`: the size of the unsigned integer.
+
+### Examples
 ```cel
 grpc.federation.strings.parseUint("42", 10, 64)   //=> 42
 grpc.federation.strings.parseUint("101010", 2, 8) //=> 42
 ```
 
 ## quote
-
 Returns a double-quoted string with any special characters escaped.
 
-**Signature:**
-```cel
-grpc.federation.strings.quote(s string) string
-```
+### Parameters
+`quote(s string) string`
 
-**Example:**
+- `s`: the string to quote.
+
+### Examples
 ```cel
 grpc.federation.strings.quote("hello") //=> "\"hello\""
 grpc.federation.strings.quote("tab\t") //=> "\"tab\\t\""
 ```
 
 ## quoteRune
-
 Returns a single-quoted string literal with the provided rune, escaping any special characters.
 
-**Signature:**
-```cel
-grpc.federation.strings.quoteRune(r rune) string
-```
+### Parameters
+`quoteRune(r rune) string`
 
-**Example:**
+- `r`: the rune to quote.
+
+### Examples
 ```cel
 grpc.federation.strings.quoteRune('a') //=> "'a'"
 grpc.federation.strings.quoteRune('\n') //=> "'\\n'"
 ```
 
-## quoteToASCII
+## quoteRuneToGraphic
+Returns a graphic-quoted string literal for the provided rune.
 
-Returns a double-quoted string with any non-ASCII characters escaped.
+### Parameters
+`quoteRuneToGraphic(r rune) string`
 
-**Signature:**
+- `r`: the rune to quote in a graphic string literal.
+
+### Examples
 ```cel
-grpc.federation.strings.quoteToASCII(s string) string
+grpc.federation.strings.quoteRuneToGraphic('a') //=> "'a'"
+grpc.federation.strings.quoteRuneToGraphic('\n') //=> "'\\n'"
 ```
 
-**Example:**
+## quoteToASCII
+Returns a double-quoted string with any non-ASCII characters escaped.
+
+### Parameters
+`quoteToASCII(s string) string`
+
+- `s`: the string to quote with ASCII escapes.
+
+### Examples
 ```cel
 grpc.federation.strings.quoteToASCII("abc")     //=> "\"abc\""
 grpc.federation.strings.quoteToASCII("こんにちは") //=> "\"\\u3053\\u3093\\u306b\\u3061\\u306f\""
 ```
 
-## quotedPrefix
+## quoteToGraphic
+Returns a double-quoted string with non-printable characters quoted in their graphic representations.
 
-Parses a quoted prefix from the input string.
+### Parameters
+`quoteToGraphic(s string) string`
 
-**Signature:**
+- `s`: the string to quote with graphic character escapes.
+
+### Examples
 ```cel
-grpc.federation.strings.quotedPrefix(s string) string
+grpc.federation.strings.quoteToGraphic("abc")     //=> "\"abc\""
+grpc.federation.strings.quoteToGraphic("\u2028") //=> "\"\\u2028\""
 ```
 
-**Example:**
+## quotedPrefix
+Parses a quoted prefix from the input string.
+
+### Parameters
+`quotedPrefix(s string) string`
+
+- `s`: the string containing the quoted prefix.
+
+### Examples
 ```cel
 grpc.federation.strings.quotedPrefix("\"hello\" world") //=> "hello"
 ```
 
 ## unquote
-
 Removes the surrounding quotes from a quoted string and unescapes any special characters.
 
-**Signature:**
-```cel
-grpc.federation.strings.unquote(s string) string
-```
+### Parameters
+`unquote(s string) string`
 
-**Example:**
+- `s`: the string to unquote.
+
+### Examples
 ```cel
 grpc.federation.strings.unquote("\"hello\"") //=> "hello"
 ```
 
 ## unquoteChar
-
 Decodes the next character or byte in the quoted string literal.
 
-**Signature:**
-```cel
-grpc.federation.strings.unquoteChar(s string, quote byte) rune
-```
+### Parameters
+`unquoteChar(s string, quote byte) rune`
 
-**Example:**
+- `s`: the string containing the quoted character.
+- `quote`: the quote character used (`'` or `"`).
+
+### Examples
 ```cel
 grpc.federation.strings.unquoteChar("\\n", '"') //=> '\n'
 ```
