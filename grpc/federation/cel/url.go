@@ -71,6 +71,10 @@ func (lib *URLLibrary) refToGoURLValue(v ref.Val) url.URL {
 	return v.Value().(*URL).GoURL()
 }
 
+func (lib *URLLibrary) refToGoUserinfoValue(v ref.Val) *url.Userinfo {
+	return v.Value().(*Userinfo).GoUserinfo()
+}
+
 func (lib *URLLibrary) toURLValue(v url.URL) ref.Val {
 	var userinfo *Userinfo
 	if v.User != nil {
@@ -204,7 +208,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"opaque",
 			MemberOverloadFunc(createURLID("opaque_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.Opaque)
 				},
 			),
@@ -213,7 +217,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"userinfo", // user is not a valid field name
 			MemberOverloadFunc(createURLID("user_url_userinfo"), URLType, []*cel.Type{}, UserinfoType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					password, hasPassword := v.User.Password()
 					return lib.toUserinfoValue(v.User.Username(), password, hasPassword)
 				},
@@ -223,7 +227,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"host",
 			MemberOverloadFunc(createURLID("host_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.Host)
 				},
 			),
@@ -232,7 +236,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"path",
 			MemberOverloadFunc(createURLID("path_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.Path)
 				},
 			),
@@ -241,7 +245,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"rawPath",
 			MemberOverloadFunc(createURLID("rawPath_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.RawPath)
 				},
 			),
@@ -250,7 +254,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"omitHost",
 			MemberOverloadFunc(createURLID("omitHost_url_bool"), URLType, []*cel.Type{}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.Bool(v.OmitHost)
 				},
 			),
@@ -259,7 +263,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"forceQuery",
 			MemberOverloadFunc(createURLID("forceQuery_url_bool"), URLType, []*cel.Type{}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.Bool(v.ForceQuery)
 				},
 			),
@@ -268,7 +272,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"rawQuery",
 			MemberOverloadFunc(createURLID("rawQuery_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.RawQuery)
 				},
 			),
@@ -277,7 +281,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"fragment",
 			MemberOverloadFunc(createURLID("fragment_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.Fragment)
 				},
 			),
@@ -286,7 +290,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"rawFragment",
 			MemberOverloadFunc(createURLID("rawFragment_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.RawFragment)
 				},
 			),
@@ -295,7 +299,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"escapedFragment",
 			MemberOverloadFunc(createURLID("escapedFragment_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.EscapedFragment())
 				},
 			),
@@ -304,7 +308,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"escapedPath",
 			MemberOverloadFunc(createURLID("escapedPath_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.EscapedPath())
 				},
 			),
@@ -313,7 +317,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"hostname",
 			MemberOverloadFunc(createURLID("hostname_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.Hostname())
 				},
 			),
@@ -322,7 +326,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"isAbs",
 			MemberOverloadFunc(createURLID("isAbs_url_bool"), URLType, []*cel.Type{}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.Bool(v.IsAbs())
 				},
 			),
@@ -331,7 +335,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"joinPath",
 			MemberOverloadFunc(createURLID("joinPath_url_strings_url"), URLType, []*cel.Type{cel.ListType(cel.StringType)}, URLType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 
 					elems := args[0].(traits.Lister)
 					var paths []string
@@ -354,7 +358,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"marshalBinary",
 			MemberOverloadFunc(createURLID("MarshalBinary_url_bytes"), URLType, []*cel.Type{}, cel.BytesType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 
 					b, err := v.MarshalBinary()
 					if err != nil {
@@ -369,7 +373,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"parse",
 			MemberOverloadFunc(createURLID("parse_url_string_url"), URLType, []*cel.Type{cel.StringType}, URLType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 
 					u, err := v.Parse(string(args[0].(types.String)))
 					if err != nil {
@@ -384,7 +388,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"port",
 			MemberOverloadFunc(createURLID("port_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.Port())
 				},
 			),
@@ -394,7 +398,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"query",
 			MemberOverloadFunc(createURLID("query_url_map"), URLType, []*cel.Type{}, cel.MapType(cel.StringType, cel.ListType(cel.StringType)),
 				func(ctx context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 
 					adapter := types.DefaultTypeAdapter
 					queryParams := v.Query()
@@ -411,7 +415,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"redacted",
 			MemberOverloadFunc(createURLID("redacted_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.Redacted())
 				},
 			),
@@ -420,7 +424,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"requestURI",
 			MemberOverloadFunc(createURLID("requestURI_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.RequestURI())
 				},
 			),
@@ -429,7 +433,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"resolveReference",
 			MemberOverloadFunc(createURLID("resolveReference_url_url_url"), URLType, []*cel.Type{URLType}, URLType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 
 					r := args[0].Value().(*URL).GoURL()
 					u := v.ResolveReference(&r)
@@ -442,7 +446,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"string",
 			MemberOverloadFunc(createURLID("string_url_string"), URLType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*URL).GoURL()
+					v := lib.refToGoURLValue(self)
 					return types.String(v.String())
 				},
 			),
@@ -482,7 +486,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"username",
 			MemberOverloadFunc(createURLID("username_userinfo_string"), UserinfoType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*Userinfo).GoUserinfo()
+					v := lib.refToGoUserinfoValue(self)
 					return types.String(v.Username())
 				},
 			),
@@ -491,7 +495,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"password",
 			MemberOverloadFunc(createURLID("password_userinfo_string"), UserinfoType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*Userinfo).GoUserinfo()
+					v := lib.refToGoUserinfoValue(self)
 					password, _ := v.Password()
 					return types.String(password)
 				},
@@ -501,7 +505,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"passwordSet",
 			MemberOverloadFunc(createURLID("passwordSet_userinfo_bool"), UserinfoType, []*cel.Type{}, cel.BoolType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*Userinfo).GoUserinfo()
+					v := lib.refToGoUserinfoValue(self)
 					_, hasPassword := v.Password()
 					return types.Bool(hasPassword)
 				},
@@ -511,7 +515,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 			"string",
 			MemberOverloadFunc(createURLID("string_userinfo_string"), UserinfoType, []*cel.Type{}, cel.StringType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					v := self.Value().(*Userinfo).GoUserinfo()
+					v := lib.refToGoUserinfoValue(self)
 					return types.String(v.String())
 				},
 			),
