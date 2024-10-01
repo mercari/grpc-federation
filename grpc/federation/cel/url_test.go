@@ -118,10 +118,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotURL, err := gotV.GoURL()
-				if err != nil {
-					return err
-				}
+				gotURL := gotV.GoURL()
 				expected, err := url.Parse("https://example.com/path?query=1#fragment")
 				if err != nil {
 					return err
@@ -140,10 +137,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotURL, err := gotV.GoURL()
-				if err != nil {
-					return err
-				}
+				gotURL := gotV.GoURL()
 				expected, err := url.ParseRequestURI("https://example.com/path?query=1#fragment")
 				if err != nil {
 					return err
@@ -200,10 +194,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotUser, err := gotV.GoUserinfo()
-				if err != nil {
-					return err
-				}
+				gotUser := gotV.GoUserinfo()
 				parse, err := url.Parse("https://example.com/path?query=1#fragment")
 				if err != nil {
 					return err
@@ -429,10 +420,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotURL, err := gotV.GoURL()
-				if err != nil {
-					return err
-				}
+				gotURL := gotV.GoURL()
 				parse, err := url.Parse("https://example.com/path?query=1#fragment")
 				if err != nil {
 					return err
@@ -474,10 +462,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotURL, err := gotV.GoURL()
-				if err != nil {
-					return err
-				}
+				gotURL := gotV.GoURL()
 				parse, err := url.Parse("https://example.com/path?query=1#fragment")
 				if err != nil {
 					return err
@@ -591,10 +576,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotURL, err := gotV.GoURL()
-				if err != nil {
-					return err
-				}
+				gotURL := gotV.GoURL()
 				parse, err := url.Parse("https://example.com/path?query=1#fragment")
 				if err != nil {
 					return err
@@ -637,10 +619,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotURL, err := gotV.GoURL()
-				if err != nil {
-					return err
-				}
+				gotURL := gotV.GoURL()
 				parse, err := url.Parse("https://example.com/path?query=1#fragment")
 				if err != nil {
 					return err
@@ -662,10 +641,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotUser, err := gotV.GoUserinfo()
-				if err != nil {
-					return err
-				}
+				gotUser := gotV.GoUserinfo()
 				expected := url.User("username")
 				if diff := userinfoDiff(gotUser, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
@@ -681,10 +657,7 @@ func TestURLFunctions(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				gotUser, err := gotV.GoUserinfo()
-				if err != nil {
-					return err
-				}
+				gotUser := gotV.GoUserinfo()
 				expected := url.UserPassword("username", "password")
 				if diff := userinfoDiff(gotUser, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
