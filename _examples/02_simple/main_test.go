@@ -205,6 +205,7 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if diff := cmp.Diff(res, &federation.GetPostResponse{
 		Post: &federation.Post{
 			Id:      "foo",
@@ -317,6 +318,7 @@ func TestFederation(t *testing.T) {
 		NullTimestamp3: nil,
 		JpLoc:          "JST",
 		StringsJoin:    "a,b,c",
+		UrlUserName:    "test_user",
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
