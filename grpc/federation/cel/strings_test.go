@@ -3,6 +3,7 @@ package cel_test
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -24,6 +25,7 @@ func TestStringsFunctions(t *testing.T) {
 		args map[string]any
 		cmp  func(ref.Val) error
 	}{
+		// strings package
 		{
 			name: "clone",
 			expr: "grpc.federation.strings.clone('abc')",
@@ -632,6 +634,741 @@ func TestStringsFunctions(t *testing.T) {
 				}
 				expected := types.String(strings.TrimSuffix("¡¡¡Hello, Gophers!!!", "!!!"))
 				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+
+		// strconv package
+		{
+			name: "appendBool(bytes)",
+			expr: "grpc.federation.strings.appendBool(b\"abc\", true)",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendBool([]byte("abc"), true))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendBool(string)",
+			expr: "grpc.federation.strings.appendBool('ab', true)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendBool([]byte("ab"), true))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendFloat(bytes)",
+			expr: "grpc.federation.strings.appendFloat(b\"abc\", 1.23, 'f', 2, 64)",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendFloat([]byte("abc"), 1.23, 'f', 2, 64))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendFloat(string)",
+			expr: "grpc.federation.strings.appendFloat('ab', 1.23, 'f', 2, 64)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendFloat([]byte("ab"), 1.23, 'f', 2, 64))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendInt(bytes)",
+			expr: "grpc.federation.strings.appendInt(b\"abc\", 123, 10)",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendInt([]byte("abc"), 123, 10))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendInt(string)",
+			expr: "grpc.federation.strings.appendInt('ab', 123, 10)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendInt([]byte("ab"), 123, 10))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuote(bytes)",
+			expr: "grpc.federation.strings.appendQuote(b\"abc\", 'a')",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendQuote([]byte("abc"), "a"))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuote(string)",
+			expr: "grpc.federation.strings.appendQuote('ab', 'a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendQuote([]byte("ab"), "a"))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteRune(bytes)",
+			expr: "grpc.federation.strings.appendQuoteRune(b\"abc\", 'a')",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendQuoteRune([]byte("abc"), 'a'))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteRune(string)",
+			expr: "grpc.federation.strings.appendQuoteRune('ab', 'a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendQuoteRune([]byte("ab"), 'a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteRuneToASCII(bytes)",
+			expr: "grpc.federation.strings.appendQuoteRuneToASCII(b\"abc\", 'a')",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendQuoteRuneToASCII([]byte("abc"), 'a'))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteRuneToASCII(string)",
+			expr: "grpc.federation.strings.appendQuoteRuneToASCII('ab', 'a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendQuoteRuneToASCII([]byte("ab"), 'a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteRuneToGraphic(bytes)",
+			expr: "grpc.federation.strings.appendQuoteRuneToGraphic(b\"abc\", 'a')",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendQuoteRuneToGraphic([]byte("abc"), 'a'))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteRuneToGraphic(string)",
+			expr: "grpc.federation.strings.appendQuoteRuneToGraphic('ab', 'a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendQuoteRuneToGraphic([]byte("ab"), 'a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteToASCII(bytes)",
+			expr: "grpc.federation.strings.appendQuoteToASCII(b\"abc\", 'a')",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendQuoteToASCII([]byte("abc"), "a"))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteToASCII(string)",
+			expr: "grpc.federation.strings.appendQuoteToASCII('ab', 'a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendQuoteToASCII([]byte("ab"), "a"))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteToGraphic(bytes)",
+			expr: "grpc.federation.strings.appendQuoteToGraphic(b\"abc\", 'a')",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendQuoteToGraphic([]byte("abc"), "a"))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendQuoteToGraphic(string)",
+			expr: "grpc.federation.strings.appendQuoteToGraphic('ab', 'a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendQuoteToGraphic([]byte("ab"), "a"))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendUint(bytes)",
+			expr: "grpc.federation.strings.appendUint(b\"abc\", uint(123), 10)",
+			cmp: func(got ref.Val) error {
+				_, ok := got.(types.Bytes)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bytes(strconv.AppendUint([]byte("abc"), 123, 10))
+				if diff := cmp.Diff(got, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "appendUint(string)",
+			expr: "grpc.federation.strings.appendUint('ab', uint(123), 10)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.AppendUint([]byte("ab"), 123, 10))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "atoi",
+			expr: "grpc.federation.strings.atoi('123')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Int)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				i, err := strconv.Atoi("123")
+				if err != nil {
+					return err
+				}
+				expected := types.Int(i)
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "canBackquote",
+			expr: "grpc.federation.strings.canBackquote('abc')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Bool)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.Bool(strconv.CanBackquote("abc"))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "formatBool",
+			expr: "grpc.federation.strings.formatBool(true)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := types.String(strconv.FormatBool(true))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "formatComplex",
+			expr: "grpc.federation.strings.formatComplex([1.23, 4.56], 'f', 2, 64)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.FormatComplex(1.23+4.56i, 'f', 2, 64))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "formatFloat",
+			expr: "grpc.federation.strings.formatFloat(1.23, 'f', 2, 64)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.FormatFloat(1.23, 'f', 2, 64))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "formatInt",
+			expr: "grpc.federation.strings.formatInt(123, 10)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.FormatInt(123, 10))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "formatUint",
+			expr: "grpc.federation.strings.formatUint(uint(123), 10)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.FormatUint(123, 10))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "isGraphic",
+			expr: "grpc.federation.strings.isGraphic('a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Bool)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bool(strconv.IsGraphic('a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "isPrint",
+			expr: "grpc.federation.strings.isPrint('a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Bool)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.Bool(strconv.IsPrint('a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "itoa",
+			expr: "grpc.federation.strings.itoa(123)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.Itoa(123))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "parseBool",
+			expr: "grpc.federation.strings.parseBool('true')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Bool)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected, err := strconv.ParseBool("true")
+				if err != nil {
+					return err
+				}
+				if diff := cmp.Diff(gotV, types.Bool(expected)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "parseComplex",
+			expr: "grpc.federation.strings.parseComplex('1.23', 64)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				c, err := strconv.ParseComplex("1.23", 64)
+				if err != nil {
+					return err
+				}
+				re, im := real(c), imag(c)
+				expected := []ref.Val{types.Double(re), types.Double(im)}
+				if diff := cmp.Diff(gotV.Get(types.Int(0)), expected[0]); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				if diff := cmp.Diff(gotV.Get(types.Int(1)), expected[1]); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "parseFloat",
+			expr: "grpc.federation.strings.parseFloat('1.23', 64)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Double)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected, err := strconv.ParseFloat("1.23", 64)
+				if err != nil {
+					return err
+				}
+				if diff := cmp.Diff(gotV, types.Double(expected)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "parseInt",
+			expr: "grpc.federation.strings.parseInt('123', 10, 64)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Int)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected, err := strconv.ParseInt("123", 10, 64)
+				if err != nil {
+					return err
+				}
+				if diff := cmp.Diff(gotV, types.Int(expected)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "parseUint",
+			expr: "grpc.federation.strings.parseUint('123', 10, 64)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Uint)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected, err := strconv.ParseUint("123", 10, 64)
+				if err != nil {
+					return err
+				}
+				if diff := cmp.Diff(gotV, types.Uint(expected)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quote",
+			expr: "grpc.federation.strings.quote('abc')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.Quote("abc"))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quoteRune",
+			expr: "grpc.federation.strings.quoteRune('a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.QuoteRune('a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quoteRuneToASCII",
+			expr: "grpc.federation.strings.quoteRuneToASCII('a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.QuoteRuneToASCII('a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quoteRuneToGraphic",
+			expr: "grpc.federation.strings.quoteRuneToGraphic('a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.QuoteRuneToGraphic('a'))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quoteToASCII",
+			expr: "grpc.federation.strings.quoteToASCII('abc')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.QuoteToASCII("abc"))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quoteToGraphic",
+			expr: "grpc.federation.strings.quoteToGraphic('abc')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected := types.String(strconv.QuoteToGraphic("abc"))
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quotedPrefix",
+			expr: "grpc.federation.strings.quotedPrefix('`or backquoted` with more trailing text')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected, err := strconv.QuotedPrefix("`or backquoted` with more trailing text")
+				if err != nil {
+					return err
+				}
+
+				if diff := cmp.Diff(gotV.Value(), expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "unquote",
+			expr: "grpc.federation.strings.unquote('\"abc\"')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+
+				expected, err := strconv.Unquote("\"abc\"")
+				if err != nil {
+					return err
+				}
+				if diff := cmp.Diff(gotV, types.String(expected)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "unquoteChar",
+			expr: "grpc.federation.strings.unquoteChar('`a`', 'a')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				s := rune(gotV.Get(types.Int(0)).Value().(string)[0])
+				b := gotV.Get(types.Int(1)).Value().(bool)
+				t2 := gotV.Get(types.Int(2)).Value().(string)
+				es, eb, et, err := strconv.UnquoteChar("`a`", 'a')
+				if err != nil {
+					return err
+				}
+				if diff := cmp.Diff(s, es); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				if diff := cmp.Diff(b, eb); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				if diff := cmp.Diff(t2, et); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
 				return nil
