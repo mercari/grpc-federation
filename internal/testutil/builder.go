@@ -975,7 +975,7 @@ func (b *GRPCErrorBuilder) SetIf(expr string) *GRPCErrorBuilder {
 }
 
 func (b *GRPCErrorBuilder) SetCode(v code.Code) *GRPCErrorBuilder {
-	b.err.Code = v
+	b.err.Code = &v
 	return b
 }
 

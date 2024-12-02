@@ -13,6 +13,7 @@ option (grpc.federation.file)= {
 service FederationService {
   option (grpc.federation.service) = {};
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+  rpc GetPost2(GetPost2Request) returns (GetPost2Response) {};
 }
 
 message GetPostRequest {
@@ -93,4 +94,21 @@ message LocalizedMessage {
 
 message CustomMessage {
   string msg = 1 [(grpc.federation.field).by = "'custom error message:' + $.error_info.message"];
+}
+
+
+message GetPost2Request {
+  string id = 1;
+}
+
+message GetPost2Response {
+  option (grpc.federation.message) = {
+    def {
+      call {
+        method: "post.PostService/GetPost"
+        request { field: "id" by: "$.id" }
+        error { log_level: WARN }
+      }
+    }
+  };
 }

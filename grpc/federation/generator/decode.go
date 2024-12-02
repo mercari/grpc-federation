@@ -1033,7 +1033,7 @@ func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) 
 		return nil, nil
 	}
 	ret := &resolver.GRPCError{
-		Code:   e.GetCode(),
+		Code:   e.Code,
 		Ignore: e.GetIgnore(),
 	}
 
