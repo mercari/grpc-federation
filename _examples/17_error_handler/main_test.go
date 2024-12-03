@@ -206,4 +206,44 @@ func TestFederation(t *testing.T) {
 			t.Fatalf("got unexpected error: %v", err)
 		}
 	})
+	t.Run("pass through default error", func(t *testing.T) {
+		code := codes.FailedPrecondition
+		msg := "this is default error message"
+		detail := &errdetails.PreconditionFailure{
+			Violations: []*errdetails.PreconditionFailure_Violation{
+				{
+					Type:        "x",
+					Subject:     "y",
+					Description: "z",
+				},
+			},
+		}
+		st, _ := status.New(code, msg).WithDetails(detail)
+		getPostError = st.Err()
+		_, err := client.GetPost2(ctx, &federation.GetPost2Request{Id: "y"})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		s, ok := status.FromError(err)
+		if !ok {
+			t.Fatalf("failed to extract gRPC Status from the error: %v", err)
+		}
+		if s.Code() != code {
+			t.Fatalf("got unexpected error: %v", err)
+		}
+		if s.Message() != msg {
+			t.Fatalf("got unexpected error: %v", err)
+		}
+		if len(s.Details()) != 1 {
+			t.Fatalf("got unexpected error: %v", err)
+		}
+		if diff := cmp.Diff(s.Details()[0], detail,
+			cmpopts.IgnoreUnexported(
+				errdetails.PreconditionFailure{},
+				errdetails.PreconditionFailure_Violation{},
+			),
+		); diff != "" {
+			t.Errorf("(-got, +want)\n%s", diff)
+		}
+	})
 }

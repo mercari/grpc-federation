@@ -397,6 +397,27 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			ret, err := s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
 			if err != nil {
 				grpcfed.SetGRPCError(ctx, value, err)
+				var (
+					defaultMsg     string
+					defaultCode    grpcfed.Code
+					defaultDetails []grpcfed.ProtoMessage
+				)
+				if stat, exists := grpcfed.GRPCStatusFromError(err); exists {
+					defaultMsg = stat.Message()
+					defaultCode = stat.Code()
+					details := stat.Details()
+					defaultDetails = make([]grpcfed.ProtoMessage, 0, len(details))
+					for _, detail := range details {
+						msg, ok := detail.(grpcfed.ProtoMessage)
+						if ok {
+							defaultDetails = append(defaultDetails, msg)
+						}
+					}
+					_ = defaultMsg
+					_ = defaultCode
+					_ = defaultDetails
+				}
+
 				type localStatusType struct {
 					status   *grpcfed.Status
 					logLevel slog.Level
@@ -600,7 +621,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 							}); err != nil {
 								return err
 							}
-							status := grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage)
+
+							var code grpcfed.Code
+							code = grpcfed.FailedPreconditionCode
+							status := grpcfed.NewGRPCStatus(code, errorMessage)
 							statusWithDetails, err := status.WithDetails(details...)
 							if err != nil {
 								grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))

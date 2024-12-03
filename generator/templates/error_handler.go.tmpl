@@ -4,6 +4,27 @@
 {{- $grpcErrors := $def.GRPCErrors }}
 {{- if $grpcErrors }}
 grpcfed.SetGRPCError(ctx, value, err)
+var (
+	defaultMsg string
+	defaultCode grpcfed.Code
+	defaultDetails []grpcfed.ProtoMessage
+)
+if stat, exists := grpcfed.GRPCStatusFromError(err); exists {
+	defaultMsg = stat.Message()
+	defaultCode = stat.Code()
+	details := stat.Details()
+	defaultDetails = make([]grpcfed.ProtoMessage, 0, len(details))
+	for _, detail := range details {
+		msg, ok := detail.(grpcfed.ProtoMessage)
+		if ok {
+			defaultDetails = append(defaultDetails, msg)
+		}
+	}
+	_ = defaultMsg
+	_ = defaultCode
+	_ = defaultDetails
+}
+
 type localStatusType struct {
 	status *grpcfed.Status
 	logLevel slog.Level
@@ -53,7 +74,12 @@ stat, handleErr := func() (*localStatusType, error) {
 			}
 			errorMessage := errmsg.(string)
 			{{- else }}
-			errorMessage := "error"
+			var errorMessage string
+			if defaultMsg != "" {
+				errorMessage = defaultMsg
+			} else {
+				errorMessage = "error"
+			}
 			{{- end }}
 
 			{{- $details := .Details }}
@@ -126,8 +152,14 @@ stat, handleErr := func() (*localStatusType, error) {
 			{{- end }}
 			{{- end }}
 
+			var code grpcfed.Code
+			{{- if .Code }}
+			code = grpcfed.{{ .GoGRPCStatusCode }}
+			{{- else }}
+			code = defaultCode
+			{{- end }}
 			{{- if $details }}
-			status := grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage)
+			status := grpcfed.NewGRPCStatus(code, errorMessage)
 			statusWithDetails, err := status.WithDetails(details...)
 			if err != nil {
 				grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -136,7 +168,14 @@ stat, handleErr := func() (*localStatusType, error) {
 				stat = statusWithDetails
 			}
 			{{- else }}
-			stat = grpcfed.NewGRPCStatus(grpcfed.{{ .GoGRPCStatusCode }}, errorMessage)
+			status := grpcfed.NewGRPCStatus(code, errorMessage)
+			statusWithDetails, err := status.WithDetails(defaultDetails...)
+			if err != nil {
+				grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+				stat = status
+			} else {
+				stat = statusWithDetails
+			}
 			{{- end }}
 			return nil
 			{{- end }}

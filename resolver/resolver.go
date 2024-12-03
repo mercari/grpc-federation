@@ -2416,7 +2416,7 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 			}),
 		},
 		If:                r.resolveGRPCErrorIf(def.GetIf()),
-		Code:              def.GetCode(),
+		Code:              def.Code,
 		Message:           msg,
 		Details:           r.resolveGRPCErrorDetails(ctx, def.GetDetails(), builder),
 		Ignore:            def.GetIgnore(),

@@ -234,10 +234,11 @@ func TestValidationError_GoGRPCStatusCode(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.desc, func(t *testing.T) {
 			validation := generator.GRPCError{
 				GRPCError: &resolver.GRPCError{
-					Code: tc.code,
+					Code: &tc.code,
 				},
 			}
 			if got := validation.GoGRPCStatusCode(); got != tc.expected {

@@ -279,7 +279,7 @@ message GRPCError {
   // The return value must always be of type boolean.
   optional string if = 2;
   // code is a gRPC status code.
-  google.rpc.Code code = 3;
+  optional google.rpc.Code code = 3;
   // message is a gRPC status message.
   // If omitted, the message will be auto-generated from the configurations.
   optional string message = 4;

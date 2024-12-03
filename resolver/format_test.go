@@ -326,12 +326,16 @@ func TestProtoFormat(t *testing.T) {
 	}
 }
 
+func toCodePtr(c code.Code) *code.Code {
+	return &c
+}
+
 func TestValidationExpr_ProtoFormat(t *testing.T) {
 	t.Parallel()
 	expr := &resolver.ValidationExpr{
 		Name: "_validation0",
 		Error: &resolver.GRPCError{
-			Code: code.Code_FAILED_PRECONDITION,
+			Code: toCodePtr(code.Code_FAILED_PRECONDITION),
 			Details: resolver.GRPCErrorDetails{
 				{
 					If: &resolver.CELValue{
@@ -377,7 +381,7 @@ func TestGRPCError_ProtoFormat(t *testing.T) {
 		{
 			desc: "Rule is set",
 			err: &resolver.GRPCError{
-				Code: code.Code_FAILED_PRECONDITION,
+				Code: toCodePtr(code.Code_FAILED_PRECONDITION),
 				If: &resolver.CELValue{
 					Expr: "1 == 1",
 				},
@@ -390,7 +394,7 @@ func TestGRPCError_ProtoFormat(t *testing.T) {
 		{
 			desc: "Details are set",
 			err: &resolver.GRPCError{
-				Code: code.Code_FAILED_PRECONDITION,
+				Code: toCodePtr(code.Code_FAILED_PRECONDITION),
 				Details: resolver.GRPCErrorDetails{
 					{
 						If: &resolver.CELValue{

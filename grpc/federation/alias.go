@@ -38,6 +38,7 @@ var (
 	Getenv                = os.Getenv
 	GRPCErrorf            = status.Errorf
 	NewGRPCStatus         = status.New
+	GRPCStatusFromError   = status.FromError
 	ErrorGroupWithContext = errgroup.WithContext
 	NewCELEnv             = cel.NewCustomEnv
 	NewCELVariable        = cel.Variable
