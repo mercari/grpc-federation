@@ -1,29 +1,47 @@
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { ExtensionContext, workspace } from 'vscode';
 
 import {
 	LanguageClient,
 	LanguageClientOptions,
 	ServerOptions,
 } from 'vscode-languageclient/node';
+import * as constants from './constants';
 
 let client: LanguageClient;
 
-export function activate(context: ExtensionContext) {
-	const config = workspace.getConfiguration("grpc-federation");
-	const cmdPath = config.get<string>("path");
-	const importPaths = config.get<string[]>("import-paths");
-	const folders = workspace.workspaceFolders;
-	const defaultCommand = "grpc-federation-language-server"
+function getCommand(cmdPath: string, workspacePath: string) {
+	if (path.isAbsolute(cmdPath) || cmdPath == constants.defaultCommand)
+		return cmdPath;
 
-	let serverOptions: ServerOptions
+	return path.join(workspacePath, cmdPath);
+}
+
+function getArgs(importPaths: string[], workspacePath: string) {
+	const paths: string[] = [];
+	for (const importPath of importPaths) {
+		if (path.isAbsolute(importPath))
+			paths.push(importPath);
+		else
+			paths.push(path.join(workspacePath, importPath));
+	}
+	return paths.map((path) => { return `-I${path}`; });
+}
+
+export function activate(context: ExtensionContext) {
+	const config = workspace.getConfiguration(constants.configName);
+	const cmdPath = config.get<string>("path", constants.defaultCommand);
+	const importPaths = config.get<string[]>("import-paths", []);
+	const folders = workspace.workspaceFolders;
+
+	let serverOptions: ServerOptions;
 	if (folders.length != 0) {
 		const uri = folders[0].uri;
-		const command = cmdPath ? path.join(uri.path, cmdPath) : defaultCommand;
-		const args = importPaths.map((importPath) => { return `-I${path.join(uri.path, importPath)}` });
-		serverOptions = {command: command, args: args};
+		const command = getCommand(cmdPath, uri.path);
+		const args = getArgs(importPaths, uri.path);
+		serverOptions = { command: command, args: args };
 	} else {
-		serverOptions = {command: defaultCommand }
+		serverOptions = { command: constants.defaultCommand };
 	}
 
 	const clientOptions: LanguageClientOptions = {
