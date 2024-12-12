@@ -28,9 +28,11 @@ message GetResponse {
       }
     }
     def { name: "msg_sel" message { name: "MessageSelection" } }
+    def { name: "nested_msg" message { name: "NestedMessageSelection.Nest" }}
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
   string msg = 2 [(grpc.federation.field).by = "msg_sel.message"];
+  NestedMessageSelection.Nest nested_msg = 3 [(grpc.federation.field).by = "nested_msg"];
 }
 
 message GetNoValueRequest {}
@@ -137,6 +139,21 @@ message NoValueSelection {
         by: "M{value: 'b'}"
       }
     ];
+  }
+}
+
+message NestedMessageSelection {
+  message Nest {
+    oneof value {
+      int64 int = 1 [(grpc.federation.field).oneof = {
+        if: "true"
+        by: "1"
+      }];
+      string text = 2 [(grpc.federation.field).oneof = {
+        if: "false"
+        by: "'foo'"
+      }];
+    }
   }
 }
 

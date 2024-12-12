@@ -2378,7 +2378,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 			toType := field.Type
 
 			fieldName := util.ToPublicGoVariable(field.Name)
-			oneofTypeName := m.Message.Name + "_" + fieldName
+			oneofTypeName := strings.TrimPrefix(m.file.messageTypeToText(m.Message), "*") + "_" + fieldName
 			if toType.OneofField.IsConflict() {
 				oneofTypeName += "_"
 			}
