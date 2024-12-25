@@ -166,6 +166,38 @@ func (f *CELFunctionArgument) CELType() string {
 }
 
 func (f *CELFunctionArgument) Converter() string {
+	if f.arg.Repeated {
+		switch f.arg.Kind {
+		case types.Double:
+			return "ToFloat64List"
+		case types.Float:
+			return "ToFloat32List"
+		case types.Int32, types.Sint32, types.Sfixed32:
+			return "ToInt32List"
+		case types.Int64, types.Sint64, types.Sfixed64:
+			return "ToInt64List"
+		case types.Uint32, types.Fixed32:
+			return "ToUint32List"
+		case types.Uint64, types.Fixed64:
+			return "ToUint64List"
+		case types.Bool:
+			return "ToBoolList"
+		case types.String:
+			return "ToStringList"
+		case types.Bytes:
+			return "ToBytesList"
+		case types.Enum:
+			cloned := f.arg.Clone()
+			cloned.Repeated = false
+			enum := f.file.toTypeText(cloned)
+			return fmt.Sprintf("ToEnumList[%s]", enum)
+		case types.Message:
+			cloned := f.arg.Clone()
+			cloned.Repeated = false
+			msg := f.file.toTypeText(cloned)
+			return fmt.Sprintf("ToMessageList[%s]", msg)
+		}
+	}
 	switch f.arg.Kind {
 	case types.Double:
 		return "ToFloat64"
@@ -214,6 +246,33 @@ func (r *CELFunctionReturn) FuncName() string {
 }
 
 func (r *CELFunctionReturn) Converter() string {
+	if r.ret.Repeated {
+		switch r.ret.Kind {
+		case types.Double:
+			return "ToFloat64ListCELPluginResponse"
+		case types.Float:
+			return "ToFloat32ListCELPluginResponse"
+		case types.Int32, types.Sint32, types.Sfixed32, types.Enum:
+			return "ToInt32ListCELPluginResponse"
+		case types.Int64, types.Sint64, types.Sfixed64:
+			return "ToInt64ListCELPluginResponse"
+		case types.Uint32, types.Fixed32:
+			return "ToUint32ListCELPluginResponse"
+		case types.Uint64, types.Fixed64:
+			return "ToUint64ListCELPluginResponse"
+		case types.Bool:
+			return "ToBoolListCELPluginResponse"
+		case types.String:
+			return "ToStringListCELPluginResponse"
+		case types.Bytes:
+			return "ToBytesListCELPluginResponse"
+		case types.Message:
+			cloned := r.ret.Clone()
+			cloned.Repeated = false
+			msg := r.file.toTypeText(cloned)
+			return fmt.Sprintf("ToMessageListCELPluginResponse[%s]", msg)
+		}
+	}
 	switch r.ret.Kind {
 	case types.Double:
 		return "ToFloat64CELPluginResponse"

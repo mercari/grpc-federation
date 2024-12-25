@@ -221,7 +221,7 @@ func (f *CELFunction) signatures(args []*Type, ret *Type) []*CELPluginFunctionSi
 	sigs = append(sigs, &CELPluginFunctionSignature{
 		ID:     f.toSignatureID(append(args, ret)),
 		Args:   celArgs,
-		Return: toCELType(ret),
+		Return: ToCELType(ret),
 	})
 	return sigs
 }
