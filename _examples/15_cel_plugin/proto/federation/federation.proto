@@ -14,6 +14,7 @@ option (grpc.federation.file)= {
 service FederationService {
   option (grpc.federation.service) = {};
   rpc IsMatch(IsMatchRequest) returns (IsMatchResponse) {};
+  rpc Example(ExampleRequest) returns (ExampleResponse) {};
 }
 
 message IsMatchRequest {
@@ -27,4 +28,16 @@ message IsMatchResponse {
     def { name: "matched" by: "re.matchString($.target)" }
   };
   bool result = 1 [(grpc.federation.field).by = "matched"];
+}
+
+message ExampleRequest{}
+
+message ExampleResponse {
+  option (grpc.federation.message) = {
+    def { name: "v" by: "example.regexp.filterExamples(example.regexp.newExamples())" }
+    def { name: "exp" by: "example.regexp.newExample()"}
+    def { name: "str" by: "exp.concat(exp.mySplit('/a/b/c', '/'))"}
+  };
+  int64 size = 1 [(grpc.federation.field).by = "v.size()"];
+  string str = 2 [(grpc.federation.field).by = "str"];
 }
