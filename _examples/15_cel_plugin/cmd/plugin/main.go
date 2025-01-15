@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"unsafe"
 
 	"google.golang.org/grpc/metadata"
@@ -34,6 +35,27 @@ func (_ *plugin) Example_Regexp_Compile(ctx context.Context, expr string) (*plug
 func (_ *plugin) Example_Regexp_Regexp_MatchString(ctx context.Context, re *pluginpb.Regexp, s string) (bool, error) {
 	return (*regexp.Regexp)(unsafe.Pointer(uintptr(re.Ptr))).MatchString(s), nil
 }
+
+func (_ *plugin) Example_Regexp_NewExample(_ context.Context) (*pluginpb.Example, error) {
+	return &pluginpb.Example{}, nil
+}
+
+func (_ *plugin) Example_Regexp_NewExamples(_ context.Context) ([]*pluginpb.Example, error) {
+	return []*pluginpb.Example{{}, {}}, nil
+}
+
+func (_ *plugin) Example_Regexp_FilterExamples(_ context.Context, v []*pluginpb.Example) ([]*pluginpb.Example, error) {
+	return v, nil
+}
+
+func (_ *plugin) Example_Regexp_Example_Concat(_ context.Context, _ *pluginpb.Example, v []string) (string, error) {
+	return strings.Join(v, ""), nil
+}
+
+func (_ *plugin) Example_Regexp_Example_MySplit(_ context.Context, _ *pluginpb.Example, s string, sep string) ([]string, error) {
+	return strings.Split(s, sep), nil
+}
+
 func main() {
 	pluginpb.RegisterRegexpPlugin(&plugin{})
 }

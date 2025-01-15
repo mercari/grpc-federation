@@ -10,6 +10,10 @@ message Regexp {
   uint32 ptr = 1; // store raw pointer value.
 }
 
+message Example {
+
+}
+
 option (grpc.federation.file).plugin.export = {
   name: "regexp"
   types: [
@@ -28,6 +32,23 @@ option (grpc.federation.file).plugin.export = {
           return { kind: BOOL }
         }
       ]
+    },
+    {
+      name: "Example"
+      desc: "example type"
+      methods: [
+        {
+          name: "concat"
+          args { type { repeated {kind: STRING} } }
+          return { kind: STRING }
+        },
+        {
+          name: "mySplit"
+          args { name: "s" type {kind: STRING} }
+          args { name: "sep" type {kind: STRING} }
+          return { repeated {kind: STRING} }
+        }
+      ]
     }
   ]
   functions: [
@@ -40,6 +61,19 @@ option (grpc.federation.file).plugin.export = {
         desc: "a regular expression text"
       }
       return { message: "Regexp" }
+    },
+    {
+      name: "newExample"
+      return { message: "Example" }
+    },
+    {
+      name: "newExamples"
+      return { repeated {message: "Example"} }
+    },
+    {
+      name: "filterExamples"
+      args {type {repeated {message: "Example"}}}
+      return { repeated {message: "Example"} }
     }
   ]
   variables: [

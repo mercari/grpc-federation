@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	FederationService_IsMatch_FullMethodName = "/org.federation.FederationService/IsMatch"
+	FederationService_Example_FullMethodName = "/org.federation.FederationService/Example"
 )
 
 // FederationServiceClient is the client API for FederationService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FederationServiceClient interface {
 	IsMatch(ctx context.Context, in *IsMatchRequest, opts ...grpc.CallOption) (*IsMatchResponse, error)
+	Example(ctx context.Context, in *ExampleRequest, opts ...grpc.CallOption) (*ExampleResponse, error)
 }
 
 type federationServiceClient struct {
@@ -46,11 +48,21 @@ func (c *federationServiceClient) IsMatch(ctx context.Context, in *IsMatchReques
 	return out, nil
 }
 
+func (c *federationServiceClient) Example(ctx context.Context, in *ExampleRequest, opts ...grpc.CallOption) (*ExampleResponse, error) {
+	out := new(ExampleResponse)
+	err := c.cc.Invoke(ctx, FederationService_Example_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationServiceServer is the server API for FederationService service.
 // All implementations must embed UnimplementedFederationServiceServer
 // for forward compatibility
 type FederationServiceServer interface {
 	IsMatch(context.Context, *IsMatchRequest) (*IsMatchResponse, error)
+	Example(context.Context, *ExampleRequest) (*ExampleResponse, error)
 	mustEmbedUnimplementedFederationServiceServer()
 }
 
@@ -60,6 +72,9 @@ type UnimplementedFederationServiceServer struct {
 
 func (UnimplementedFederationServiceServer) IsMatch(context.Context, *IsMatchRequest) (*IsMatchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsMatch not implemented")
+}
+func (UnimplementedFederationServiceServer) Example(context.Context, *ExampleRequest) (*ExampleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Example not implemented")
 }
 func (UnimplementedFederationServiceServer) mustEmbedUnimplementedFederationServiceServer() {}
 
@@ -92,6 +107,24 @@ func _FederationService_IsMatch_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationService_Example_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExampleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationServiceServer).Example(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationService_Example_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationServiceServer).Example(ctx, req.(*ExampleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationService_ServiceDesc is the grpc.ServiceDesc for FederationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +135,10 @@ var FederationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "IsMatch",
 			Handler:    _FederationService_IsMatch_Handler,
+		},
+		{
+			MethodName: "Example",
+			Handler:    _FederationService_Example_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

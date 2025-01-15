@@ -33,5 +33,10 @@ message CELPluginValue {
     bool bool = 6;
     uint64 ptr = 7;
     google.protobuf.Any message = 8;
+    CELPluginListValue list = 9;
   }
+}
+
+message CELPluginListValue {
+  repeated CELPluginValue values = 1;
 }

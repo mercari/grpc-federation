@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
 
 	"github.com/google/cel-go/cel"
@@ -350,6 +351,22 @@ func (i *CELPluginInstance) recvContent() (string, error) {
 
 func (i *CELPluginInstance) refToCELPluginValue(typ *cel.Type, v ref.Val) (*plugin.CELPluginValue, error) {
 	switch typ.Kind() {
+	case types.ListKind:
+		elemType := typ.Parameters()[0]
+		slice := reflect.ValueOf(v.Value())
+		list := &plugin.CELPluginListValue{}
+		for idx := 0; idx < slice.Len(); idx++ {
+			value, err := i.refToCELPluginValue(elemType, slice.Index(idx).Interface().(ref.Val))
+			if err != nil {
+				return nil, err
+			}
+			list.Values = append(list.Values, value)
+		}
+		return &plugin.CELPluginValue{
+			Value: &plugin.CELPluginValue_List{
+				List: list,
+			},
+		}, nil
 	case types.BoolKind:
 		vv := v.(types.Bool)
 		return &plugin.CELPluginValue{
@@ -420,6 +437,18 @@ func (i *CELPluginInstance) refToCELPluginValue(typ *cel.Type, v ref.Val) (*plug
 
 func (i *CELPluginInstance) celPluginValueToRef(fn *CELFunction, typ *cel.Type, v *plugin.CELPluginValue) ref.Val {
 	switch typ.Kind() {
+	case types.ListKind:
+		elemType := typ.Parameters()[0]
+		values := make([]ref.Val, 0, len(v.GetList().GetValues()))
+		for _, vv := range v.GetList().GetValues() {
+			value := i.celPluginValueToRef(fn, elemType, vv)
+			if value.Type().TypeName() == types.ErrType.TypeName() {
+				// return error value
+				return value
+			}
+			values = append(values, value)
+		}
+		return types.NewRefValList(i.celRegistry, values)
 	case types.BoolKind:
 		return types.Bool(v.GetBool())
 	case types.BytesKind:

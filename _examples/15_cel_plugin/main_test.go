@@ -132,4 +132,19 @@ func TestFederation(t *testing.T) {
 		}
 		t.Logf("expected error is %s", err)
 	})
+	t.Run("example", func(t *testing.T) {
+		res, err := client.Example(ctx, &federation.ExampleRequest{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(res, &federation.ExampleResponse{
+			Size: 2,
+			Str:  "abc",
+		}, cmpopts.IgnoreUnexported(
+			federation.ExampleResponse{},
+		)); diff != "" {
+			t.Errorf("(-got, +want)\n%s", diff)
+		}
+	})
+
 }
