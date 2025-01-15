@@ -56,6 +56,7 @@ message GetPostResponse {
             message: "'validation3 failed!'",
             if: "$.id != 'correct-id'"
             details: {
+              by: "CustomMessage{message: 'foo'}"
               message: [
                 {
                   name: "CustomMessage",

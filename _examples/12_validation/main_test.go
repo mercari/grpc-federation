@@ -103,6 +103,9 @@ func TestFederation(t *testing.T) {
 					&federation.CustomMessage{
 						Message: "message2",
 					},
+					&federation.CustomMessage{
+						Message: "foo",
+					},
 					&errdetails.PreconditionFailure{
 						Violations: []*errdetails.PreconditionFailure_Violation{
 							{

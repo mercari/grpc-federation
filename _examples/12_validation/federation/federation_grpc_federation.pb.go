@@ -1075,14 +1075,28 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									}); detail != nil {
 										details = append(details, detail)
 									}
+									{
+										detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+											Value:      value,
+											Expr:       `CustomMessage{message: 'foo'}`,
+											OutType:    reflect.TypeOf((*CustomMessage)(nil)),
+											CacheIndex: 23,
+										})
+										if err != nil {
+											grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+										}
+										if detail != nil {
+											details = append(details, detail.(grpcfed.ProtoMessage))
+										}
+									}
 									if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFailureViolation{
 										{
 											Type:              `'type1'`,
 											Subject:           `post.id`,
 											Desc:              `'description1'`,
-											TypeCacheIndex:    23,
-											SubjectCacheIndex: 24,
-											DescCacheIndex:    25,
+											TypeCacheIndex:    24,
+											SubjectCacheIndex: 25,
+											DescCacheIndex:    26,
 										},
 									}); detail != nil {
 										details = append(details, detail)
@@ -1091,8 +1105,8 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										{
 											Field:           `post.id`,
 											Desc:            `'description2'`,
-											FieldCacheIndex: 26,
-											DescCacheIndex:  27,
+											FieldCacheIndex: 27,
+											DescCacheIndex:  28,
 										},
 									}); detail != nil {
 										details = append(details, detail)
@@ -1101,7 +1115,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										Value:      value,
 										Locale:     "en-US",
 										Message:    `post.content`,
-										CacheIndex: 28,
+										CacheIndex: 29,
 									}); detail != nil {
 										details = append(details, detail)
 									}
@@ -1206,7 +1220,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 							return nil
 						},
 						By:           `post.id != 'some-id'`,
-						ByCacheIndex: 29,
+						ByCacheIndex: 30,
 					}); err != nil {
 						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
@@ -1218,13 +1232,13 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				if err := grpcfed.If(ctx1, &grpcfed.IfParam[*localValueType]{
 					Value:      value,
 					Expr:       `condition`,
-					CacheIndex: 30,
+					CacheIndex: 31,
 					Body: func(value *localValueType) error {
 						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 							Value:      value,
 							Expr:       `'validation4 failed!'`,
 							OutType:    reflect.TypeOf(""),
-							CacheIndex: 31,
+							CacheIndex: 32,
 						})
 						if err != nil {
 							return err
@@ -1270,7 +1284,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'some-arg'`,
-					CacheIndex: 32,
+					CacheIndex: 33,
 					Setter: func(v string) error {
 						args.Arg = v
 						return nil
@@ -1309,7 +1323,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `post`,
-		CacheIndex: 33,
+		CacheIndex: 34,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -1345,7 +1359,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'some-id'`,
-		CacheIndex: 34,
+		CacheIndex: 35,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -1358,7 +1372,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'some-title'`,
-		CacheIndex: 35,
+		CacheIndex: 36,
 		Setter: func(v string) error {
 			ret.Title = v
 			return nil
@@ -1371,7 +1385,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'some-content'`,
-		CacheIndex: 36,
+		CacheIndex: 37,
 		Setter: func(v string) error {
 			ret.Content = v
 			return nil
