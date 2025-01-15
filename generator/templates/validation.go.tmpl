@@ -65,6 +65,23 @@ if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 				{{- end }}
 				{{- end }}
 
+				{{- range .By }}
+				{
+					detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+						Value: value,
+						Expr: `{{ .Expr }}`,
+						OutType: reflect.TypeOf({{ .Type }}),
+						CacheIndex: {{ $error.CELCacheIndex }},
+					})
+					if err != nil {
+						grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+					}
+					if detail != nil {
+						details = append(details, detail.(grpcfed.ProtoMessage))
+					}
+				}
+				{{- end }}
+
 				{{- range .PreconditionFailures }}
 				{{- template "preconditionFailure" . }}
 				{{- end }}
