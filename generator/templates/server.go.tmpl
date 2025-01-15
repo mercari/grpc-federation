@@ -123,7 +123,7 @@ type {{ $serviceName }}CELPluginConfig struct {
 // {{ $serviceName }}Env keeps the values read from environment variables.
 type {{ $serviceName }}Env struct {
 	{{- range $env.Vars }}
-	{{ .Name }} {{ .Type }} {{- if .Tag }}`{{ .Tag }}`{{- end }}
+	{{ .Name }} {{ .Type }} `{{ .Tag }}`
 	{{- end }}
 }
 

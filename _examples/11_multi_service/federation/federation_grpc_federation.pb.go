@@ -92,8 +92,8 @@ type FederationServiceCELPluginConfig struct {
 
 // FederationServiceEnv keeps the values read from environment variables.
 type FederationServiceEnv struct {
-	Name       string `default:"federation"`
-	Federation string
+	Name       string `envconfig:"NAME" default:"federation"`
+	Federation string `envconfig:"FEDERATION"`
 }
 
 type keyFederationServiceEnv struct{}
@@ -993,8 +993,8 @@ type PrivateServiceCELPluginConfig struct {
 
 // PrivateServiceEnv keeps the values read from environment variables.
 type PrivateServiceEnv struct {
-	Name    string `default:"private"`
-	Private string
+	Name    string `envconfig:"NAME" default:"private"`
+	Private string `envconfig:"PRIVATE"`
 }
 
 type keyPrivateServiceEnv struct{}
