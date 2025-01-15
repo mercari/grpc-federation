@@ -420,13 +420,16 @@ func (v *EnvVar) Type() string {
 }
 
 func (v *EnvVar) Tag() string {
+	name := strings.ToUpper(v.EnvVar.Name)
 	if v.EnvVar.Option == nil {
-		return ""
+		return fmt.Sprintf("envconfig:%q", name)
 	}
-	var opts []string
+
 	if v.EnvVar.Option.Alternate != "" {
-		opts = append(opts, fmt.Sprintf("envconfig:%q", v.EnvVar.Option.Alternate))
+		name = v.EnvVar.Option.Alternate
 	}
+
+	opts := []string{fmt.Sprintf("envconfig:%q", name)}
 	if v.EnvVar.Option.Default != "" {
 		opts = append(opts, fmt.Sprintf("default:%q", v.EnvVar.Option.Default))
 	}

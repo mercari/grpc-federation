@@ -60,10 +60,10 @@ type RefEnvServiceCELPluginConfig struct {
 
 // RefEnvServiceEnv keeps the values read from environment variables.
 type RefEnvServiceEnv struct {
-	Aaa string                      `default:"xxx"`
+	Aaa string                      `envconfig:"AAA" default:"xxx"`
 	Bbb []int64                     `envconfig:"yyy"`
 	Ccc map[string]grpcfed.Duration `envconfig:"c" required:"true"`
-	Ddd float64                     `ignored:"true"`
+	Ddd float64                     `envconfig:"DDD" ignored:"true"`
 }
 
 type keyRefEnvServiceEnv struct{}

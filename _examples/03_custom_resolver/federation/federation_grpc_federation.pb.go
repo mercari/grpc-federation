@@ -147,10 +147,10 @@ type FederationV2DevServiceCELPluginConfig struct {
 
 // FederationV2DevServiceEnv keeps the values read from environment variables.
 type FederationV2DevServiceEnv struct {
-	A string                      `default:"xxx"`
+	A string                      `envconfig:"A" default:"xxx"`
 	B []int64                     `envconfig:"yyy"`
 	C map[string]grpcfed.Duration `envconfig:"zzz" required:"true"`
-	D float64                     `ignored:"true"`
+	D float64                     `envconfig:"D" ignored:"true"`
 }
 
 type keyFederationV2DevServiceEnv struct{}
