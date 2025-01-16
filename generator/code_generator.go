@@ -1654,6 +1654,9 @@ type VariableDefinitionSet struct {
 }
 
 func (set *VariableDefinitionSet) Definitions() []*VariableDefinition {
+	if set == nil {
+		return nil
+	}
 	ret := make([]*VariableDefinition, 0, len(set.VariableDefinitionSet.Definitions()))
 	for _, def := range set.VariableDefinitionSet.Definitions() {
 		ret = append(ret, &VariableDefinition{
