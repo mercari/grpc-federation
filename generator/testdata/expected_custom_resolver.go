@@ -458,12 +458,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_post(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_user(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -579,7 +577,6 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_u(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

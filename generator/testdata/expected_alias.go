@@ -432,7 +432,6 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_post(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

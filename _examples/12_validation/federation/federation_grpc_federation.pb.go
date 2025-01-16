@@ -640,7 +640,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 									grpcfed.GoWithRecover(eg, func() (any, error) {
-
 										if err := def__def4_err_detail0_msg0(ctx1); err != nil {
 											grpcfed.RecordErrorToSpan(ctx1, err)
 											return nil, err
@@ -649,7 +648,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									})
 
 									grpcfed.GoWithRecover(eg, func() (any, error) {
-
 										if err := def__def4_err_detail0_msg1(ctx1); err != nil {
 											grpcfed.RecordErrorToSpan(ctx1, err)
 											return nil, err
@@ -848,12 +846,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 		eg, ctx2 := grpcfed.ErrorGroupWithContext(ctx1)
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-
 			if err := def_post(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
 			}
-
 			if err := def__def2(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -863,12 +859,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		grpcfed.GoWithRecover(eg, func() (any, error) {
 			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
 			grpcfed.GoWithRecover(eg, func() (any, error) {
-
 				if err := def_post(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
 				}
-
 				if err := def__def2(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
@@ -876,7 +870,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil, nil
 			})
 			grpcfed.GoWithRecover(eg, func() (any, error) {
-
 				if err := def_post(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
@@ -886,7 +879,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			if err := eg.Wait(); err != nil {
 				return nil, err
 			}
-
 			if err := def__def3(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -896,12 +888,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		grpcfed.GoWithRecover(eg, func() (any, error) {
 			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
 			grpcfed.GoWithRecover(eg, func() (any, error) {
-
 				if err := def_post(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
 				}
-
 				if err := def__def2(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
@@ -911,12 +901,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			grpcfed.GoWithRecover(eg, func() (any, error) {
 				eg, ctx4 := grpcfed.ErrorGroupWithContext(ctx3)
 				grpcfed.GoWithRecover(eg, func() (any, error) {
-
 					if err := def_post(ctx4); err != nil {
 						grpcfed.RecordErrorToSpan(ctx4, err)
 						return nil, err
 					}
-
 					if err := def__def2(ctx4); err != nil {
 						grpcfed.RecordErrorToSpan(ctx4, err)
 						return nil, err
@@ -924,7 +912,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					return nil, nil
 				})
 				grpcfed.GoWithRecover(eg, func() (any, error) {
-
 					if err := def_post(ctx4); err != nil {
 						grpcfed.RecordErrorToSpan(ctx4, err)
 						return nil, err
@@ -934,7 +921,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				if err := eg.Wait(); err != nil {
 					return nil, err
 				}
-
 				if err := def__def3(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
@@ -942,7 +928,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil, nil
 			})
 			grpcfed.GoWithRecover(eg, func() (any, error) {
-
 				if err := def_post(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
@@ -952,7 +937,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			if err := eg.Wait(); err != nil {
 				return nil, err
 			}
-
 			if err := def__def4(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -960,7 +944,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			return nil, nil
 		})
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-
 			if err := def_post(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -970,7 +953,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
-
 		if err := def__def5(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -979,7 +961,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_customHandler(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err

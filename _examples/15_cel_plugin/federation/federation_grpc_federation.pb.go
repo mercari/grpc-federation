@@ -344,12 +344,10 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_exp(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_str(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -358,7 +356,6 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_v(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -467,7 +464,6 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_matched(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

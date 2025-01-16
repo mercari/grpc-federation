@@ -464,7 +464,6 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 		eg, ctx2 := grpcfed.ErrorGroupWithContext(ctx1)
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-
 			if err := def_bar(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -472,7 +471,6 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 			return nil, nil
 		})
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-
 			if err := def_foo(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -482,7 +480,6 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
-
 		if err := def__def2(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -493,7 +490,6 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 		eg, ctx2 := grpcfed.ErrorGroupWithContext(ctx1)
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-
 			if err := def_bar(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -501,7 +497,6 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 			return nil, nil
 		})
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-
 			if err := def_foo(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
@@ -511,7 +506,6 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
-
 		if err := def__def3(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1003,12 +997,10 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_post(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def__def16(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1017,7 +1009,6 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_a(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1026,12 +1017,10 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_loc(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_jp_time(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1040,7 +1029,6 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_map_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1049,7 +1037,6 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_null_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1058,12 +1045,10 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_strings_join(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_parse_float(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1072,7 +1057,6 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_sorted_items(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1081,7 +1065,6 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_sorted_values(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1090,7 +1073,6 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_url(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1099,22 +1081,18 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_date(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_rand_source(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_fixed_rand(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_uuid(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1123,7 +1101,6 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_value1(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1803,12 +1780,10 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_post(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_user(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
@@ -1964,7 +1939,6 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_user(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

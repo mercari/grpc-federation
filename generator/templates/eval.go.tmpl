@@ -1,16 +1,3 @@
-{{- define "evalDef" -}}
-{{- $def := .Definition -}}
-{{- $ctx := .Ctx -}}
-def_{{ $def.Key }}({{ $ctx }})
-{{- end -}}
-
-{{- define "evalMessageDef" }}
-if err := {{- template "evalDef" (map "Ctx" .Ctx "Definition" .Definition) -}}; err != nil {
-	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
-	return nil, err
-}
-{{- end }}
-
 {{- define "declDef" }}
 {{- $def := . }}
 /*
@@ -137,6 +124,12 @@ def_{{ .Key }} := func(ctx context.Context) error {
 }
 {{- end }}
 
+{{- define "evalMessageDef" }}
+if err := def_{{ .Definition.Key }}({{ .Ctx }}); err != nil {
+	grpcfed.RecordErrorToSpan({{ .Ctx }}, err)
+	return nil, err
+}
+{{- end }}
 
 {{- define "evalDefGroup" }}
 {{- if .Definition.IsConcurrent }}
@@ -151,20 +144,20 @@ if err := eg.Wait(); err != nil {
 	return nil, err
 }
 {{- if .Definition.ExistsEnd }}
-{{ template "evalMessageDef" (map "Ctx" (parentCtx .Level) "Definition" .Definition.End) }}
-{{- end }}
+{{- template "evalMessageDef" (map "Ctx" (parentCtx .Level) "Definition" .Definition.End) }}
+{{- end -}}
 
-{{- else }}
+{{- else -}}
 
 {{- if .Definition.ExistsStart }}
-{{ template "evalDefGroup" (map "Level" .Level "Definition" .Definition.Start) }}
-{{- end }}
+{{- template "evalDefGroup" (map "Level" .Level "Definition" .Definition.Start) }}
+{{- end -}}
 
 {{- if .Definition.ExistsEnd }}
-{{ template "evalMessageDef" (map "Ctx" (parentCtx .Level) "Definition" .Definition.End) }}
-{{- end }}
+{{- template "evalMessageDef" (map "Ctx" (parentCtx .Level) "Definition" .Definition.End) }}
+{{- end -}}
 
-{{- end }}
+{{- end -}}
 {{- end }}
 
 {{- define "evalDefSet" -}}

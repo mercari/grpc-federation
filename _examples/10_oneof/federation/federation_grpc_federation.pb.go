@@ -436,7 +436,6 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_msg_sel(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -445,7 +444,6 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_nested_msg(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -454,7 +452,6 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_sel(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err

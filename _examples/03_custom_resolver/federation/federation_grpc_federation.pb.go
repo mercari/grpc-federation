@@ -455,7 +455,6 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_post(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -464,7 +463,6 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_r(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -865,7 +863,6 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def__def4(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -874,12 +871,10 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_typed_nil(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def__def7(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -888,12 +883,10 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_typed_nil(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_null_check(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -902,7 +895,6 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_unused(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -911,17 +903,14 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_res(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_post(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_user(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1141,7 +1130,6 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-
 	if err := def_u(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err

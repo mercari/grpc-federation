@@ -422,12 +422,10 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_favorite_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_cmp(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -436,12 +434,10 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_favorite_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_reaction(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -450,7 +446,6 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_u(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err

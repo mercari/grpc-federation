@@ -500,12 +500,10 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_favorite_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_cmp(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -514,12 +512,10 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_favorite_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_reaction(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -528,7 +524,6 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_u(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1401,12 +1396,10 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_favorite_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_cmp(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1415,12 +1408,10 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_favorite_value(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-
 		if err := def_reaction(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -1429,7 +1420,6 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-
 		if err := def_u(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
