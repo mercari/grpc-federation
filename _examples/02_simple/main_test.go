@@ -320,6 +320,7 @@ func TestFederation(t *testing.T) {
 		StringsJoin:    "1.2",
 		ParseFloat:     1.2,
 		UrlUserName:    "test_user",
+		EnumValue:      federation.Item_ITEM_TYPE_2,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},

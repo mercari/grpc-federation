@@ -663,6 +663,19 @@ func ToLazyMessageBuilder(l Locationer, name string) *MessageBuilder {
 	}
 }
 
+// ToLazyEnumBuilder sets new Enum to the root lazily to return the original Location
+// unless EnumBuilder's methods are called afterword.
+func ToLazyEnumBuilder(l Locationer, name string) *EnumBuilder {
+	root := l.Location().Clone()
+	return &EnumBuilder{
+		root: root,
+		enum: func(loc *Location) *Enum {
+			loc.Enum = &Enum{Name: name}
+			return loc.Enum
+		},
+	}
+}
+
 type FieldBuilder struct {
 	root  *Location
 	field func(*Location) *Field
@@ -823,6 +836,18 @@ func (b *VariableDefinitionOptionBuilder) WithMessage() *MessageExprOptionBuilde
 	}
 }
 
+func (b *VariableDefinitionOptionBuilder) WithEnum() *EnumExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Enum = &EnumExprOption{}
+	return &EnumExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *EnumExprOption {
+			return b.option(loc).Enum
+		},
+	}
+}
+
 func (b *VariableDefinitionOptionBuilder) WithCall() *CallExprOptionBuilder {
 	root := b.root.Clone()
 	option := b.option(root)
@@ -891,6 +916,35 @@ func (b *MessageExprOptionBuilder) WithArgs(idx int) *ArgumentOptionBuilder {
 }
 
 func (b *MessageExprOptionBuilder) Location() *Location {
+	return b.root
+}
+
+type EnumExprOptionBuilder struct {
+	root   *Location
+	option func(*Location) *EnumExprOption
+}
+
+func (b *EnumExprOptionBuilder) WithName() *EnumExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Name = true
+	return &EnumExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *EnumExprOptionBuilder) WithBy() *EnumExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &EnumExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *EnumExprOptionBuilder) Location() *Location {
 	return b.root
 }
 
@@ -1377,6 +1431,18 @@ func (b *MapExprOptionBuilder) WithMessage() *MessageExprOptionBuilder {
 		root: root,
 		option: func(loc *Location) *MessageExprOption {
 			return b.option(loc).Message
+		},
+	}
+}
+
+func (b *MapExprOptionBuilder) WithEnum() *EnumExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Enum = &EnumExprOption{}
+	return &EnumExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *EnumExprOption {
+			return b.option(loc).Enum
 		},
 	}
 }

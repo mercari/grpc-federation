@@ -94,6 +94,17 @@ invalid_enum_alias_target.proto:68:3: required specify alias = "org.post.PostCon
 68:    enum Category {
        ^
 `},
+		{file: "invalid_enum_conversion.proto", expected: `
+invalid_enum_conversion.proto:27:13: required specify alias = "org.federation.PostType" in grpc.federation.enum option for the "org.post.PostContent.Category" type to automatically assign a value
+27:          by: "org.post.PostContent.Category.value('CATEGORY_B')"
+                 ^
+invalid_enum_conversion.proto:33:13: enum must always return a enum value, but got "int64" type
+33:          by: "1"
+                 ^
+invalid_enum_conversion.proto:49:15: required specify alias = "org.federation.PostType" in grpc.federation.enum option for the "org.post.PostContent.Category" type to automatically assign a value
+49:            by: "typ"
+                   ^
+`},
 		{file: "invalid_enum_selector.proto", expected: `
 invalid_enum_selector.proto:22:15: ERROR: <input>:1:56: cannot specify an int type. if you are directly specifying an enum value, you need to explicitly use "pkg.EnumName.value('ENUM_VALUE')" function to use the enum type
  | grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, 'foo')
@@ -133,9 +144,9 @@ invalid_error_variable.proto:25:15: ERROR: <input>:1:1: undeclared reference to 
                    ^
 `},
 		{file: "invalid_map_iterator_src_type.proto", expected: `
-invalid_map_iterator_src_type.proto:40:13: map iterator's src value type must be repeated type
-40:          map {
-                 ^
+invalid_map_iterator_src_type.proto:43:18: map iterator's src value type must be repeated type
+43:              src: "post_ids"
+                      ^
 invalid_map_iterator_src_type.proto:54:57: ERROR: <input>:1:1: undeclared reference to 'users' (in container 'org.federation')
  | users
  | ^
@@ -148,14 +159,14 @@ invalid_map_iterator_src_type.proto:58:47: ERROR: <input>:1:8: undefined field '
                                                    ^
 `},
 		{file: "invalid_map_iterator_src.proto", expected: `
-invalid_map_iterator_src.proto:36:13: "posts" variable is not defined
-36:          map {
-                 ^
-invalid_map_iterator_src.proto:36:13: ERROR: <input>:1:1: undeclared reference to 'iter' (in container 'org.federation')
+invalid_map_iterator_src.proto:39:18: "posts" variable is not defined
+39:              src: "posts"
+                      ^
+invalid_map_iterator_src.proto:43:41: ERROR: <input>:1:1: undeclared reference to 'iter' (in container 'org.federation')
  | iter.id
  | ^
-36:          map {
-                 ^
+43:              args { name: "user_id", by: "iter.id" }
+                                             ^
 invalid_map_iterator_src.proto:54:47: ERROR: <input>:1:8: undefined field 'user_id'
  | __ARG__.user_id
  | .......^

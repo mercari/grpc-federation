@@ -697,6 +697,14 @@ func (b *VariableDefinitionBuilder) SetMessage(v *resolver.MessageExpr) *Variabl
 	return b
 }
 
+func (b *VariableDefinitionBuilder) SetEnum(v *resolver.EnumExpr) *VariableDefinitionBuilder {
+	b.def.Expr = &resolver.VariableExpr{
+		Enum: v,
+		Type: resolver.NewEnumType(v.Enum, false),
+	}
+	return b
+}
+
 func (b *VariableDefinitionBuilder) SetValidation(v *resolver.ValidationExpr) *VariableDefinitionBuilder {
 	b.def.Expr = &resolver.VariableExpr{
 		Validation: v,
@@ -781,6 +789,12 @@ func (b *MapIteratorExprBuilder) SetBy(v *resolver.CELValue) *MapIteratorExprBui
 func (b *MapIteratorExprBuilder) SetMessage(v *resolver.MessageExpr) *MapIteratorExprBuilder {
 	b.expr.Message = v
 	b.expr.Type = resolver.NewMessageType(v.Message, false)
+	return b
+}
+
+func (b *MapIteratorExprBuilder) SetEnum(v *resolver.EnumExpr) *MapIteratorExprBuilder {
+	b.expr.Enum = v
+	b.expr.Type = resolver.NewEnumType(v.Enum, false)
 	return b
 }
 
@@ -910,6 +924,31 @@ func (b *MessageExprBuilder) SetArgs(v []*resolver.Argument) *MessageExprBuilder
 }
 
 func (b *MessageExprBuilder) Build(t *testing.T) *resolver.MessageExpr {
+	t.Helper()
+	return b.expr
+}
+
+type EnumExprBuilder struct {
+	expr *resolver.EnumExpr
+}
+
+func NewEnumExprBuilder() *EnumExprBuilder {
+	return &EnumExprBuilder{
+		expr: &resolver.EnumExpr{},
+	}
+}
+
+func (b *EnumExprBuilder) SetEnum(v *resolver.Enum) *EnumExprBuilder {
+	b.expr.Enum = v
+	return b
+}
+
+func (b *EnumExprBuilder) SetBy(v *resolver.CELValue) *EnumExprBuilder {
+	b.expr.By = v
+	return b
+}
+
+func (b *EnumExprBuilder) Build(t *testing.T) *resolver.EnumExpr {
 	t.Helper()
 	return b.expr
 }

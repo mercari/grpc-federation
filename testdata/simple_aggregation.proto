@@ -33,6 +33,7 @@ message GetPostResponse {
     }
     def { name: "uuid" by: "grpc.federation.uuid.newRandom()" }
     def { name: "map_value" by: "{1:'a', 2:'b', 3:'c'}" }
+    def { name: "e" enum { name: "Item.ItemType" by: "org.user.Item.ItemType.value('ITEM_TYPE_2')" }}
   };
   org.federation.Post post = 1 [(grpc.federation.field).by = "post"];
   string const = 2 [(grpc.federation.field).by = "'foo'"];
@@ -40,6 +41,7 @@ message GetPostResponse {
   string enum_name = 4 [(grpc.federation.field).by = "org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)"];
   int32 enum_value = 5 [(grpc.federation.field).by = "org.federation.Item.ItemType.value('ITEM_TYPE_1')"];
   map<int32, string> map_value = 6 [(grpc.federation.field).by = "map_value"];
+  Item.ItemType item_type = 7 [(grpc.federation.field).by = "e"];
 }
 
 message Post {

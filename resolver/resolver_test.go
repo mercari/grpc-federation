@@ -416,6 +416,17 @@ func TestSimpleAggregation(t *testing.T) {
 						}, false)),
 					).Build(t),
 				).
+				AddFieldWithRule(
+					"item_type",
+					ref.Type(t, "org.federation", "Item.ItemType"),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(
+							ref.Type(t, "org.federation", "Item.ItemType"),
+							ref.Type(t, "org.user", "Item.ItemType"),
+							"e",
+						).Build(t),
+					).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
@@ -458,12 +469,30 @@ func TestSimpleAggregation(t *testing.T) {
 								).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("e").
+								SetUsed(true).
+								SetEnum(
+									testutil.NewEnumExprBuilder().
+										SetEnum(ref.Enum(t, "org.federation", "Item.ItemType")).
+										SetBy(
+											testutil.NewCELValueBuilder(
+												"org.user.Item.ItemType.value('ITEM_TYPE_2')",
+												resolver.NewEnumType(ref.Enum(t, "org.user", "Item.ItemType"), false),
+											).Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
 								Add(ref.Message(t, "org.federation", "Post")).
 								Build(t),
 						).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("e")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("map_value")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("uuid")).
@@ -2737,6 +2766,13 @@ func TestMap(t *testing.T) {
 
 	fb.SetPackage("org.federation").
 		SetGoPackage("example/federation", "federation").
+		AddEnum(
+			testutil.NewEnumBuilder("UserType").
+				WithAlias(ref.Enum(t, "org.user", "UserType")).
+				AddValueWithAlias("USER_TYPE_1", ref.EnumValue(t, "org.user", "UserType", "USER_TYPE_1")).
+				AddValueWithAlias("USER_TYPE_2", ref.EnumValue(t, "org.user", "UserType", "USER_TYPE_2")).
+				Build(t),
+		).
 		AddMessage(
 			testutil.NewMessageBuilder("PostsArgument").
 				AddField("post_ids", resolver.StringRepeatedType).
@@ -2834,6 +2870,11 @@ func TestMap(t *testing.T) {
 					"items",
 					repeatedPostItemType,
 					testutil.NewFieldRuleBuilder(resolver.NewByValue("items", repeatedPostItemType)).Build(t),
+				).
+				AddFieldWithRule(
+					"user_types",
+					ref.RepeatedType(t, "org.federation", "UserType"),
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("user_types", ref.RepeatedType(t, "org.federation", "UserType"))).Build(t),
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
@@ -2945,6 +2986,49 @@ func TestMap(t *testing.T) {
 								).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("source_user_types").
+								SetUsed(true).
+								SetBy(
+									testutil.NewCELValueBuilder(
+										"[org.user.UserType.value('USER_TYPE_1'), org.user.UserType.value('USER_TYPE_2')]",
+										ref.RepeatedType(t, "org.user", "UserType"),
+									).Build(t),
+								).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("user_types").
+								SetUsed(true).
+								SetMap(
+									testutil.NewMapExprBuilder().
+										SetIterator(
+											testutil.NewIteratorBuilder().
+												SetName("typ").
+												SetSource("source_user_types").
+												Build(t),
+										).
+										SetExpr(
+											testutil.NewMapIteratorExprBuilder().
+												SetEnum(
+													testutil.NewEnumExprBuilder().
+														SetEnum(ref.Enum(t, "org.federation", "UserType")).
+														SetBy(
+															testutil.NewCELValueBuilder(
+																"typ",
+																resolver.NewEnumType(ref.Enum(t, "org.user", "UserType"), false),
+															).Build(t),
+														).
+														Build(t),
+												).
+												Build(t),
+										).
+										Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "PostsArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
@@ -2971,6 +3055,12 @@ func TestMap(t *testing.T) {
 										Build(t),
 								).
 								SetEnd(testutil.NewVariableDefinition("items")).
+								Build(t),
+						).
+						AddVariableDefinitionGroup(
+							testutil.NewVariableDefinitionGroupBuilder().
+								AddStart(testutil.NewVariableDefinitionGroupByName("source_user_types")).
+								SetEnd(testutil.NewVariableDefinition("user_types")).
 								Build(t),
 						).
 						AddVariableDefinitionGroup(

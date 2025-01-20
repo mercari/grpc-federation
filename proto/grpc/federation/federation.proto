@@ -213,6 +213,9 @@ message VariableDefinition {
 
     // validation defines the validation rule and error.
     ValidationExpr validation = 15;
+
+    // enum gets with cel value.
+    EnumExpr enum = 16;
   }
 }
 
@@ -230,6 +233,9 @@ message MapExpr {
     // message gets with message arguments, and it is made an element of the map.
     // The result type of MapExpr is the repeated type of the specified message.
     MessageExpr message = 12;
+    // enum creates enum value for each element of the map.
+    // The result type of MapExpr is the repeated type of the specified enum.
+    EnumExpr enum = 13;
   }
 }
 
@@ -250,6 +256,16 @@ message MessageExpr {
 
   // args specify the parameters needed to get the message. This is called the "message arguments".
   repeated Argument args = 2;
+}
+
+// EnumExpr represents dependent enum.
+message EnumExpr {
+  // name specify the enum name by FQDN. format is `<package-name>.<enum-name>`.
+  // <package-name> can be omitted when referring to enum in the same package.
+  string name = 1;
+
+  // `by` evaluates with CEL.
+  string by = 2;
 }
 
 // CallExpr represents how to call gRPC method.

@@ -803,6 +803,10 @@ func (e *encoder) toVariableExpr(expr *resolver.VariableExpr) *plugin.VariableEx
 		ret.Expr = &plugin.VariableExpr_Message{
 			Message: e.toMessageExpr(expr.Message),
 		}
+	case expr.Enum != nil:
+		ret.Expr = &plugin.VariableExpr_Enum{
+			Enum: e.toEnumExpr(expr.Enum),
+		}
 	case expr.Validation != nil:
 		ret.Expr = &plugin.VariableExpr_Validation{
 			Validation: e.toValidationExpr(expr.Validation),
@@ -846,6 +850,10 @@ func (e *encoder) toMapIteratorExpr(expr *resolver.MapIteratorExpr) *plugin.MapI
 	case expr.Message != nil:
 		ret.Expr = &plugin.MapIteratorExpr_Message{
 			Message: e.toMessageExpr(expr.Message),
+		}
+	case expr.Enum != nil:
+		ret.Expr = &plugin.MapIteratorExpr_Enum{
+			Enum: e.toEnumExpr(expr.Enum),
 		}
 	}
 	return ret
@@ -955,6 +963,16 @@ func (e *encoder) toValue(value *resolver.Value) *plugin.Value {
 	return &plugin.Value{
 		Inline: value.Inline,
 		Cel:    e.toCELValue(value.CEL),
+	}
+}
+
+func (e *encoder) toEnumExpr(expr *resolver.EnumExpr) *plugin.EnumExpr {
+	if expr == nil {
+		return nil
+	}
+	return &plugin.EnumExpr{
+		EnumId: e.toEnum(expr.Enum).GetId(),
+		By:     e.toCELValue(expr.By),
 	}
 }
 

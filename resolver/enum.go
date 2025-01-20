@@ -1,6 +1,18 @@
 package resolver
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/mercari/grpc-federation/types"
+)
+
+func NewEnumType(enum *Enum, repeated bool) *Type {
+	return &Type{
+		Kind:     types.Enum,
+		Enum:     enum,
+		Repeated: repeated,
+	}
+}
 
 func (e *Enum) HasValue(name string) bool {
 	return e.Value(name) != nil
@@ -42,4 +54,8 @@ func (e *Enum) PackageName() string {
 		return ""
 	}
 	return pkg.Name
+}
+
+func (e *EnumExpr) ReferenceNames() []string {
+	return e.By.ReferenceNames()
 }

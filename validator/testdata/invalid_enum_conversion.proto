@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+
+option go_package = "example/federation;federation";
+option (grpc.federation.file) = {
+  import: ["nested_post.proto"]
+};
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "e"
+      enum {
+        name: "PostType"
+        by: "org.post.PostContent.Category.value('CATEGORY_B')"
+      }
+    }
+    def {
+      enum {
+        name: "PostType"
+        by: "1"
+      }
+    }
+    def {
+      name: "post_types"
+      by: "[org.post.PostContent.Category.value('CATEGORY_A'), org.post.PostContent.Category.value('CATEGORY_B')]"
+    }
+    def {
+      name: "types"
+      map {
+        iterator {
+          name: "typ"
+          src: "post_types"
+        }
+        enum {
+          name: "PostType"
+          by: "typ"
+        }
+      }
+    }
+  };
+}
+
+enum PostType {
+  option (grpc.federation.enum).alias = "org.post.FakePostDataType";
+
+  POST_TYPE_UNKNOWN = 0 [(grpc.federation.enum_value).default = true];
+  POST_TYPE_FOO = 1 [(grpc.federation.enum_value) = { alias: ["FAKE_POST_TYPE_A"] }];
+  POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = { alias: ["FAKE_POST_TYPE_B", "FAKE_POST_TYPE_C"] }];
+}

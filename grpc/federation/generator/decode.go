@@ -792,6 +792,10 @@ func (d *decoder) toVariableExpr(expr *plugin.VariableExpr) (*resolver.VariableE
 	if err != nil {
 		return nil, err
 	}
+	enumExpr, err := d.toEnumExpr(expr.GetEnum())
+	if err != nil {
+		return nil, err
+	}
 	validationExpr, err := d.toValidationExpr(expr.GetValidation())
 	if err != nil {
 		return nil, err
@@ -802,6 +806,7 @@ func (d *decoder) toVariableExpr(expr *plugin.VariableExpr) (*resolver.VariableE
 	ret.Map = mapExpr
 	ret.Call = callExpr
 	ret.Message = msgExpr
+	ret.Enum = enumExpr
 	ret.Validation = validationExpr
 	return ret, nil
 }
@@ -858,10 +863,15 @@ func (d *decoder) toMapIteratorExpr(expr *plugin.MapIteratorExpr) (*resolver.Map
 	if err != nil {
 		return nil, err
 	}
+	enum, err := d.toEnumExpr(expr.GetEnum())
+	if err != nil {
+		return nil, err
+	}
 
 	ret.Type = typ
 	ret.By = by
 	ret.Message = msg
+	ret.Enum = enum
 	return ret, nil
 }
 
@@ -1011,6 +1021,25 @@ func (d *decoder) toMessageExpr(expr *plugin.MessageExpr) (*resolver.MessageExpr
 
 	ret.Message = msg
 	ret.Args = args
+	return ret, nil
+}
+
+func (d *decoder) toEnumExpr(expr *plugin.EnumExpr) (*resolver.EnumExpr, error) {
+	if expr == nil {
+		return nil, nil
+	}
+	ret := &resolver.EnumExpr{}
+
+	enum, err := d.toEnum(expr.GetEnumId())
+	if err != nil {
+		return nil, err
+	}
+	by, err := d.toCELValue(expr.GetBy())
+	if err != nil {
+		return nil, err
+	}
+	ret.Enum = enum
+	ret.By = by
 	return ret, nil
 }
 

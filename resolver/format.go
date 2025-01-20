@@ -130,6 +130,8 @@ func (e *VariableExpr) ProtoFormat(opt *ProtoFormatOption) string {
 		return e.Call.ProtoFormat(opt)
 	case e.Message != nil:
 		return e.Message.ProtoFormat(opt)
+	case e.Enum != nil:
+		return e.Enum.ProtoFormat(opt)
 	case e.Map != nil:
 		return e.Map.ProtoFormat(opt)
 	case e.Validation != nil:
@@ -256,6 +258,25 @@ func (e *MessageExpr) protoFormatMessageArgs(opt *ProtoFormatOption) string {
 		formattedArgs = append(formattedArgs, nextOpt.indentFormat()+arg)
 	}
 	return indent + fmt.Sprintf("args: [\n%s\n%s]", strings.Join(formattedArgs, ",\n"), indent)
+}
+
+func (e *EnumExpr) ProtoFormat(opt *ProtoFormatOption) string {
+	if e == nil {
+		return ""
+	}
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	if e.Enum != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("name: %q", e.Enum.FQDN()))
+	}
+	if e.By != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("by: %q", e.By.Expr))
+	}
+	if len(elems) == 0 {
+		return ""
+	}
+	return indent + fmt.Sprintf("enum {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
 func (m *Method) ProtoFormat(opt *ProtoFormatOption) string {

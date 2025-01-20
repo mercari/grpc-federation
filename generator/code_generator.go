@@ -2967,6 +2967,10 @@ func (d *VariableDefinition) IsBy() bool {
 	return d.VariableDefinition.Expr.By != nil
 }
 
+func (d *VariableDefinition) IsEnum() bool {
+	return d.VariableDefinition.Expr.Enum != nil
+}
+
 func (d *VariableDefinition) IsMap() bool {
 	return d.VariableDefinition.Expr.Map != nil
 }
@@ -2991,6 +2995,10 @@ func (d *VariableDefinition) By() *resolver.CELValue {
 	return d.VariableDefinition.Expr.By
 }
 
+func (d *VariableDefinition) Enum() *resolver.EnumExpr {
+	return d.VariableDefinition.Expr.Enum
+}
+
 func (d *VariableDefinition) ZeroValue() string {
 	return toMakeZeroValue(d.Message.file, d.VariableDefinition.Expr.Type)
 }
@@ -3004,7 +3012,38 @@ func (d *VariableDefinition) ProtoComment() string {
 }
 
 func (d *VariableDefinition) Type() string {
+	if typ := d.enumType(); typ != nil {
+		return d.Message.file.toTypeText(typ)
+	}
 	return d.Message.file.toTypeText(d.VariableDefinition.Expr.Type)
+}
+
+func (d *VariableDefinition) enumType() *resolver.Type {
+	if d.VariableDefinition.Expr.Enum != nil {
+		return d.VariableDefinition.Expr.Enum.By.Out
+	}
+	if d.VariableDefinition.Expr.Map != nil && d.VariableDefinition.Expr.Map.Expr.Enum != nil {
+		typ := d.VariableDefinition.Expr.Map.Expr.Enum.By.Out.Clone()
+		typ.Repeated = true
+		return typ
+	}
+	return nil
+}
+
+func (d *VariableDefinition) EnumCastFunc() string {
+	typ := d.enumType()
+	if typ == nil {
+		return "v"
+	}
+	if typ.Enum == d.VariableDefinition.Expr.Type.Enum {
+		return "v"
+	}
+	return fmt.Sprintf("s.%s(v)",
+		castFuncName(
+			typ,
+			d.VariableDefinition.Expr.Type,
+		),
+	)
 }
 
 func (d *VariableDefinition) CELType() string {
@@ -3052,7 +3091,12 @@ func (r *MapResolver) IteratorType() string {
 }
 
 func (r *MapResolver) IteratorZeroValue() string {
-	iterType := r.MapExpr.Expr.Type.Clone()
+	var iterType *resolver.Type
+	if r.MapExpr.Expr.Enum != nil {
+		iterType = r.MapExpr.Expr.Enum.By.Out.Clone()
+	} else {
+		iterType = r.MapExpr.Expr.Type.Clone()
+	}
 	iterType.Repeated = false
 	return toMakeZeroValue(r.file, iterType)
 }
@@ -3073,6 +3117,10 @@ func (r *MapResolver) IsBy() bool {
 
 func (r *MapResolver) IsMessage() bool {
 	return r.MapExpr.Expr.Message != nil
+}
+
+func (r *MapResolver) IsEnum() bool {
+	return r.MapExpr.Expr.Enum != nil
 }
 
 func (r *MapResolver) Arguments() []*Argument {

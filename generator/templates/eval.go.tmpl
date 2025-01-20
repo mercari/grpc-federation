@@ -13,10 +13,21 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		{{- end }}
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
+		{{- if $mapResolver.IsEnum }}
+		Setter: func(value *localValueType, v {{ .Type }}) error {
+			dst, err := {{ .EnumCastFunc }}
+			if err != nil {
+				return err
+			}
+			value.vars.{{ .Key }} = dst
+			return nil
+		},
+		{{- else }}
 		Setter: func(value *localValueType, v {{ .Type }}) error {
 			value.vars.{{ .Key }} = v
 			return nil
 		},
+		{{- end }}
 		IteratorName: `{{ $mapResolver.IteratorName }}`,
 		IteratorType: {{ $mapResolver.IteratorCELType }},
 		IteratorSource: func(value *localValueType) []{{ $mapResolver.IteratorSourceType }}{ return {{ $mapResolver.IteratorSource }} },
@@ -26,6 +37,14 @@ def_{{ .Key }} := func(ctx context.Context) error {
 			return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 				Value: value,
 				Expr: `{{ $by.Expr }}`,
+				OutType: reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}),
+				CacheIndex: {{ .CELCacheIndex }},
+			})
+			{{- else if $mapResolver.IsEnum }}
+			{{- $enumExpr := $mapResolver.MapExpr.Expr.Enum }}
+			return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				Value: value,
+				Expr: `{{ $enumExpr.By.Expr }}`,
 				OutType: reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}),
 				CacheIndex: {{ .CELCacheIndex }},
 			})
@@ -53,12 +72,26 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		{{- end }}
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
+		{{- if .IsEnum }}
+		Setter: func(value *localValueType, v {{ .Type }}) error {
+			dst, err := {{ .EnumCastFunc }}
+			if err != nil {
+				return err
+			}
+			value.vars.{{ .Key }} = dst
+			return nil
+		},
+		{{- else }}
 		Setter: func(value *localValueType, v {{ .Type }}) error {
 			value.vars.{{ .Key }} = v
 			return nil
 		},
+		{{- end }}
 		{{- if .IsBy }}
 		By:     `{{ .By.Expr }}`,
+		ByCacheIndex: {{ .CELCacheIndex }},
+		{{- else if .IsEnum }}
+		By: `{{ .Enum.By.Expr }}`,
 		ByCacheIndex: {{ .CELCacheIndex }},
 		{{- else if .IsValidation }}
 		Validation:  func(ctx context.Context, value *localValueType) error {
