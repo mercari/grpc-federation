@@ -28,10 +28,37 @@ func TestSimpleAggregation(t *testing.T) {
 			testutil.NewMessageBuilder("Item").
 				AddEnum(
 					testutil.NewEnumBuilder("ItemType").
-						WithAlias(ref.Enum(t, "org.user", "Item.ItemType")).
-						AddValueWithAlias("ITEM_TYPE_1", ref.EnumValue(t, "org.user", "Item.ItemType", "ITEM_TYPE_1")).
-						AddValueWithAlias("ITEM_TYPE_2", ref.EnumValue(t, "org.user", "Item.ItemType", "ITEM_TYPE_2")).
-						AddValueWithAlias("ITEM_TYPE_3", ref.EnumValue(t, "org.user", "Item.ItemType", "ITEM_TYPE_3")).
+						SetAlias(ref.Enum(t, "org.user", "Item.ItemType")).
+						AddValueWithRule(
+							"ITEM_TYPE_1",
+							testutil.NewEnumValueRuleBuilder().
+								SetAlias(ref.EnumValue(t, "org.user", "Item.ItemType", "ITEM_TYPE_1")).
+								SetAttr(&resolver.EnumValueAttribute{
+									Name:  "en",
+									Value: "item type 1",
+								}).
+								Build(t),
+						).
+						AddValueWithRule(
+							"ITEM_TYPE_2",
+							testutil.NewEnumValueRuleBuilder().
+								SetAlias(ref.EnumValue(t, "org.user", "Item.ItemType", "ITEM_TYPE_2")).
+								SetAttr(&resolver.EnumValueAttribute{
+									Name:  "en",
+									Value: "item type 2",
+								}).
+								Build(t),
+						).
+						AddValueWithRule(
+							"ITEM_TYPE_3",
+							testutil.NewEnumValueRuleBuilder().
+								SetAlias(ref.EnumValue(t, "org.user", "Item.ItemType", "ITEM_TYPE_3")).
+								SetAttr(&resolver.EnumValueAttribute{
+									Name:  "en",
+									Value: "item type 3",
+								}).
+								Build(t),
+						).
 						Build(t),
 				).
 				AddFieldWithAlias("name", resolver.StringType, ref.Field(t, "org.user", "Item", "name")).
@@ -46,7 +73,7 @@ func TestSimpleAggregation(t *testing.T) {
 		).
 		AddEnum(
 			testutil.NewEnumBuilder("UserType").
-				WithAlias(ref.Enum(t, "org.user", "UserType")).
+				SetAlias(ref.Enum(t, "org.user", "UserType")).
 				AddValueWithAlias("USER_TYPE_1", ref.EnumValue(t, "org.user", "UserType", "USER_TYPE_1")).
 				AddValueWithAlias("USER_TYPE_2", ref.EnumValue(t, "org.user", "UserType", "USER_TYPE_2")).
 				Build(t),
@@ -427,6 +454,11 @@ func TestSimpleAggregation(t *testing.T) {
 						).Build(t),
 					).Build(t),
 				).
+				AddFieldWithRule(
+					"item_type_text",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("Item.ItemType.attr(e, 'en')", resolver.StringType)).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
@@ -575,7 +607,7 @@ func TestCreatePost(t *testing.T) {
 		SetGoPackage("example/federation", "federation").
 		AddEnum(
 			testutil.NewEnumBuilder("PostType").
-				WithAlias(ref.Enum(t, "org.post", "PostType")).
+				SetAlias(ref.Enum(t, "org.post", "PostType")).
 				AddValueWithAlias(
 					"TYPE_UNKNOWN",
 					ref.EnumValue(t, "org.post", "PostType", "POST_TYPE_UNKNOWN"),
@@ -1613,7 +1645,7 @@ func TestAlias(t *testing.T) {
 		SetGoPackage("example/federation", "federation").
 		AddEnum(
 			testutil.NewEnumBuilder("PostType").
-				WithAlias(ref.Enum(t, "org.post", "PostDataType")).
+				SetAlias(ref.Enum(t, "org.post", "PostDataType")).
 				AddValueWithDefault("POST_TYPE_UNKNOWN").
 				AddValueWithAlias(
 					"POST_TYPE_FOO",
@@ -1630,7 +1662,7 @@ func TestAlias(t *testing.T) {
 			testutil.NewMessageBuilder("PostContent").
 				AddEnum(
 					testutil.NewEnumBuilder("Category").
-						WithAlias(ref.Enum(t, "org.post", "PostContent.Category")).
+						SetAlias(ref.Enum(t, "org.post", "PostContent.Category")).
 						AddValueWithAlias("CATEGORY_A", ref.EnumValue(t, "org.post", "PostContent.Category", "CATEGORY_A")).
 						AddValueWithAlias("CATEGORY_B", ref.EnumValue(t, "org.post", "PostContent.Category", "CATEGORY_B")).
 						Build(t),
@@ -2768,7 +2800,7 @@ func TestMap(t *testing.T) {
 		SetGoPackage("example/federation", "federation").
 		AddEnum(
 			testutil.NewEnumBuilder("UserType").
-				WithAlias(ref.Enum(t, "org.user", "UserType")).
+				SetAlias(ref.Enum(t, "org.user", "UserType")).
 				AddValueWithAlias("USER_TYPE_1", ref.EnumValue(t, "org.user", "UserType", "USER_TYPE_1")).
 				AddValueWithAlias("USER_TYPE_2", ref.EnumValue(t, "org.user", "UserType", "USER_TYPE_2")).
 				Build(t),

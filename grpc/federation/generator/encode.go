@@ -309,6 +309,18 @@ func (e *encoder) toEnumValueAliases(aliases []*resolver.EnumValueAlias) []*plug
 	return ret
 }
 
+func (e *encoder) toEnumValueAttributes(attrs []*resolver.EnumValueAttribute) []*plugin.EnumValueAttribute {
+	ret := make([]*plugin.EnumValueAttribute, 0, len(attrs))
+	for _, attr := range attrs {
+		v := e.toEnumValueAttribute(attr)
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret
+}
+
 func (e *encoder) toEnumValues(values []*resolver.EnumValue) []*plugin.EnumValue {
 	ret := make([]*plugin.EnumValue, 0, len(values))
 	for _, value := range values {
@@ -335,6 +347,16 @@ func (e *encoder) toEnumValueAlias(alias *resolver.EnumValueAlias) *plugin.EnumV
 	}
 }
 
+func (e *encoder) toEnumValueAttribute(attr *resolver.EnumValueAttribute) *plugin.EnumValueAttribute {
+	if attr == nil {
+		return nil
+	}
+	return &plugin.EnumValueAttribute{
+		Name:  attr.Name,
+		Value: attr.Value,
+	}
+}
+
 func (e *encoder) toEnumValue(value *resolver.EnumValue) *plugin.EnumValue {
 	if value == nil {
 		return nil
@@ -358,6 +380,7 @@ func (e *encoder) toEnumValueRule(rule *resolver.EnumValueRule) *plugin.EnumValu
 	ret := &plugin.EnumValueRule{
 		Default: rule.Default,
 		Aliases: e.toEnumValueAliases(rule.Aliases),
+		Attrs:   e.toEnumValueAttributes(rule.Attrs),
 	}
 	return ret
 }

@@ -499,7 +499,16 @@ func (b *EnumBuilder) AddValueWithAlias(value string, aliases ...*resolver.EnumV
 	return b
 }
 
-func (b *EnumBuilder) WithAlias(aliases ...*resolver.Enum) *EnumBuilder {
+func (b *EnumBuilder) AddValueWithRule(value string, rule *resolver.EnumValueRule) *EnumBuilder {
+	b.enum.Values = append(b.enum.Values, &resolver.EnumValue{
+		Value: value,
+		Rule:  rule,
+		Enum:  b.enum,
+	})
+	return b
+}
+
+func (b *EnumBuilder) SetAlias(aliases ...*resolver.Enum) *EnumBuilder {
 	b.enum.Rule = &resolver.EnumRule{
 		Aliases: aliases,
 	}
@@ -509,6 +518,43 @@ func (b *EnumBuilder) WithAlias(aliases ...*resolver.Enum) *EnumBuilder {
 func (b *EnumBuilder) Build(t *testing.T) *resolver.Enum {
 	t.Helper()
 	return b.enum
+}
+
+type EnumValueRuleBuilder struct {
+	rule *resolver.EnumValueRule
+}
+
+func NewEnumValueRuleBuilder() *EnumValueRuleBuilder {
+	return &EnumValueRuleBuilder{
+		rule: &resolver.EnumValueRule{},
+	}
+}
+
+func (b *EnumValueRuleBuilder) SetAlias(aliases ...*resolver.EnumValue) *EnumValueRuleBuilder {
+	enumValueAliases := make([]*resolver.EnumValueAlias, 0, len(aliases))
+	for _, alias := range aliases {
+		enumValueAliases = append(enumValueAliases, &resolver.EnumValueAlias{
+			EnumAlias: alias.Enum,
+			Aliases:   []*resolver.EnumValue{alias},
+		})
+	}
+	b.rule.Aliases = enumValueAliases
+	return b
+}
+
+func (b *EnumValueRuleBuilder) SetDefault() *EnumValueRuleBuilder {
+	b.rule.Default = true
+	return b
+}
+
+func (b *EnumValueRuleBuilder) SetAttr(attrs ...*resolver.EnumValueAttribute) *EnumValueRuleBuilder {
+	b.rule.Attrs = attrs
+	return b
+}
+
+func (b *EnumValueRuleBuilder) Build(t *testing.T) *resolver.EnumValueRule {
+	t.Helper()
+	return b.rule
 }
 
 type ServiceBuilder struct {

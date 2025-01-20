@@ -34,6 +34,19 @@ func (e *Enum) Value(name string) *EnumValue {
 	return nil
 }
 
+func (e *Enum) AttributeMap() map[string][]*EnumValue {
+	attrMap := make(map[string][]*EnumValue)
+	for _, value := range e.Values {
+		if value.Rule == nil {
+			continue
+		}
+		for _, attr := range value.Rule.Attrs {
+			attrMap[attr.Name] = append(attrMap[attr.Name], value)
+		}
+	}
+	return attrMap
+}
+
 func (e *Enum) Package() *Package {
 	if e.File == nil {
 		return nil

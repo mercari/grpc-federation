@@ -94,6 +94,17 @@ invalid_enum_alias_target.proto:68:3: required specify alias = "org.post.PostCon
 68:    enum Category {
        ^
 `},
+		{file: "invalid_enum_attribute.proto", expected: `
+invalid_enum_attribute.proto:25:13: attribute name is required
+25:        name: ""
+                 ^
+invalid_enum_attribute.proto:30:13: "xxx" attribute must be defined for all enum values, but it is only defined for 1/3 of them
+30:        name: "xxx"
+                 ^
+invalid_enum_attribute.proto:36:13: "yyy" attribute must be defined for all enum values, but it is only defined for 1/3 of them
+36:        name: "yyy"
+                 ^
+`},
 		{file: "invalid_enum_conversion.proto", expected: `
 invalid_enum_conversion.proto:27:13: required specify alias = "org.federation.PostType" in grpc.federation.enum option for the "org.post.PostContent.Category" type to automatically assign a value
 27:          by: "org.post.PostContent.Category.value('CATEGORY_B')"

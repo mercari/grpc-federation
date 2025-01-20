@@ -66,6 +66,19 @@ message EnumValueRule {
   // and specifies the value name to be referenced among the enums specified in alias of enum option.
   // multiple value names can be specified for alias.
   repeated string alias = 2;
+
+  // attr is used to hold multiple name-value pairs corresponding to an enum value.
+  // The values specified by the name must be consistently specified for all enum values.
+  // The values stored using this feature can be retrieved using the `attr()` method of the enum API.
+  repeated EnumValueAttribute attr = 3;
+}
+
+message EnumValueAttribute {
+  // name is the attribute key.
+  // This value is used to search for values using the `attr(<name>)` method.
+  string name = 1;
+  // value represents the value corresponding to `name`.
+  string value = 2;
 }
 
 message OneofRule {}

@@ -182,6 +182,18 @@ func (o *EnumValueOption) Clone() *EnumValueOption {
 	return &EnumValueOption{
 		Alias:   o.Alias,
 		Default: o.Default,
+		Attr:    o.Attr.Clone(),
+	}
+}
+
+func (a *EnumValueAttribute) Clone() *EnumValueAttribute {
+	if a == nil {
+		return nil
+	}
+	return &EnumValueAttribute{
+		Idx:   a.Idx,
+		Name:  a.Name,
+		Value: a.Value,
 	}
 }
 

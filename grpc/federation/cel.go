@@ -237,6 +237,25 @@ func EnumAccessorOptions(enumName string, nameToValue map[string]int32, valueToN
 	}
 }
 
+type EnumAttributeMap[T ~int32] map[T]EnumValueAttributeMap
+
+type EnumValueAttributeMap map[string]string
+
+func EnumAttrOption[T ~int32](enumName string, enumAttrMap EnumAttributeMap[T]) cel.EnvOption {
+	return cel.Function(
+		fmt.Sprintf("%s.attr", enumName),
+		cel.Overload(fmt.Sprintf("%s_attr", enumName), []*cel.Type{cel.IntType, cel.StringType}, cel.StringType,
+			cel.BinaryBinding(func(enumValue, key ref.Val) ref.Val {
+				enumValueAttrMap := enumAttrMap[T(enumValue.(celtypes.Int))]
+				if enumValueAttrMap == nil {
+					return celtypes.NewErr(fmt.Sprintf(`could not find enum value attribute map from %q`, enumName))
+				}
+				return celtypes.String(enumValueAttrMap[string(key.(celtypes.String))])
+			}),
+		),
+	)
+}
+
 func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 	return []cel.EnvOption{
 		cel.StdLib(),

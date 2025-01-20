@@ -42,6 +42,7 @@ message GetPostResponse {
   int32 enum_value = 5 [(grpc.federation.field).by = "org.federation.Item.ItemType.value('ITEM_TYPE_1')"];
   map<int32, string> map_value = 6 [(grpc.federation.field).by = "map_value"];
   Item.ItemType item_type = 7 [(grpc.federation.field).by = "e"];
+  string item_type_text = 8 [(grpc.federation.field).by = "Item.ItemType.attr(e, 'en')"];
 }
 
 message Post {
@@ -151,9 +152,24 @@ message Item {
   enum ItemType {
     option (grpc.federation.enum).alias = "org.user.Item.ItemType";
 
-    ITEM_TYPE_1 = 0;
-    ITEM_TYPE_2 = 1;
-    ITEM_TYPE_3 = 2;
+    ITEM_TYPE_1 = 0 [(grpc.federation.enum_value) = {
+      attr {
+        name: "en"
+        value: "item type 1"
+      }
+    }];
+    ITEM_TYPE_2 = 1 [(grpc.federation.enum_value) = {
+      attr {
+        name: "en"
+        value: "item type 2"
+      }
+    }];
+    ITEM_TYPE_3 = 2 [(grpc.federation.enum_value) = {
+      attr {
+        name: "en"
+        value: "item type 3"
+      }
+    }];
   };
 
   string name = 1;

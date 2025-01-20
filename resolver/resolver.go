@@ -1851,9 +1851,32 @@ func (r *Resolver) validateEnumMultipleAliases(fromType *Type, toField *Field) e
 func (r *Resolver) resolveEnumRules(ctx *context, enums []*Enum) {
 	for _, enum := range enums {
 		ctx := ctx.withEnum(enum)
-		enum.Rule = r.resolveEnumRule(ctx, r.enumToRuleMap[enum])
+		builder := source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName())
+		enum.Rule = r.resolveEnumRule(ctx, r.enumToRuleMap[enum], builder)
 		for _, value := range enum.Values {
-			value.Rule = r.resolveEnumValueRule(ctx, enum, value, r.enumValueToRuleMap[value])
+			valueBuilder := builder.WithValue(value.Value)
+			value.Rule = r.resolveEnumValueRule(ctx, enum, value, r.enumValueToRuleMap[value], valueBuilder.WithOption())
+		}
+		for attrName, enumValues := range enum.AttributeMap() {
+			if len(enumValues) != len(enum.Values) {
+				value := enumValues[0]
+				for idx, attr := range value.Rule.Attrs {
+					if attr.Name == attrName {
+						ctx.addError(
+							ErrWithLocation(
+								fmt.Sprintf(
+									`%q attribute must be defined for all enum values, but it is only defined for %d/%d of them`,
+									attrName,
+									len(enumValues),
+									len(enum.Values),
+								),
+								builder.WithValue(value.Value).WithOption().WithAttr(idx).WithName().Location(),
+							),
+						)
+						break
+					}
+				}
+			}
 		}
 	}
 }
@@ -2832,16 +2855,16 @@ func (r *Resolver) resolveFieldAlias(ctx *context, msg *Message, field *Field, f
 	return aliasField
 }
 
-func (r *Resolver) resolveEnumRule(ctx *context, ruleDef *federation.EnumRule) *EnumRule {
+func (r *Resolver) resolveEnumRule(ctx *context, ruleDef *federation.EnumRule, builder *source.EnumBuilder) *EnumRule {
 	if ruleDef == nil {
 		return nil
 	}
 	return &EnumRule{
-		Aliases: r.resolveEnumAliases(ctx, ruleDef.GetAlias()),
+		Aliases: r.resolveEnumAliases(ctx, ruleDef.GetAlias(), builder),
 	}
 }
 
-func (r *Resolver) resolveEnumAliases(ctx *context, aliasNames []string) []*Enum {
+func (r *Resolver) resolveEnumAliases(ctx *context, aliasNames []string, builder *source.EnumBuilder) []*Enum {
 	if len(aliasNames) == 0 {
 		return nil
 	}
@@ -2853,7 +2876,7 @@ func (r *Resolver) resolveEnumAliases(ctx *context, aliasNames []string) []*Enum
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).WithOption().Location(),
+						builder.WithOption().Location(),
 					),
 				)
 				return nil
@@ -2871,7 +2894,7 @@ func (r *Resolver) resolveEnumAliases(ctx *context, aliasNames []string) []*Enum
 	return ret
 }
 
-func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *EnumValue, ruleDef *federation.EnumValueRule) *EnumValueRule {
+func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *EnumValue, ruleDef *federation.EnumValueRule, builder *source.EnumValueOptionBuilder) *EnumValueRule {
 	if ruleDef == nil {
 		if enum.Rule == nil {
 			return nil
@@ -2884,9 +2907,7 @@ func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *Enu
 		ctx.addError(
 			ErrWithLocation(
 				`use "alias" in "grpc.federation.enum_value" option, but "alias" is not defined in "grpc.federation.enum" option`,
-				source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), ctx.enumName()).
-					WithValue(enumValue.Value).
-					WithOption().WithAlias().Location(),
+				builder.WithAlias().Location(),
 			),
 		)
 		return nil
@@ -2895,13 +2916,18 @@ func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *Enu
 	defaultValue := ruleDef.GetDefault()
 	var aliases []*EnumValueAlias
 	if enum.Rule != nil && !defaultValue {
-		for _, aliasName := range ruleDef.GetAlias() {
-			aliases = append(aliases, r.resolveEnumValueAlias(ctx, enumValue.Value, aliasName, enum.Rule.Aliases)...)
+		if len(ruleDef.GetAlias()) != 0 {
+			for _, aliasName := range ruleDef.GetAlias() {
+				aliases = append(aliases, r.resolveEnumValueAlias(ctx, enumValue.Value, aliasName, enum.Rule.Aliases)...)
+			}
+		} else {
+			aliases = r.resolveEnumValueAlias(ctx, enumValue.Value, "", enum.Rule.Aliases)
 		}
 	}
 	return &EnumValueRule{
 		Default: defaultValue,
 		Aliases: aliases,
+		Attrs:   r.resolveEnumValueAttributes(ctx, ruleDef.GetAttr(), builder),
 	}
 }
 
@@ -2941,6 +2967,50 @@ func (r *Resolver) resolveEnumValueAlias(ctx *context, enumValueName, enumValueA
 		return nil
 	}
 	return enumValueAliases
+}
+
+func (r *Resolver) resolveEnumValueAttributes(ctx *context, defs []*federation.EnumValueAttribute, builder *source.EnumValueOptionBuilder) []*EnumValueAttribute {
+	if len(defs) == 0 {
+		return nil
+	}
+	ret := make([]*EnumValueAttribute, 0, len(defs))
+	for idx, def := range defs {
+		attr := r.resolveEnumValueAttribute(ctx, def, builder.WithAttr(idx))
+		if attr == nil {
+			continue
+		}
+		ret = append(ret, attr)
+	}
+	return ret
+}
+
+func (r *Resolver) resolveEnumValueAttribute(ctx *context, def *federation.EnumValueAttribute, builder *source.EnumValueAttributeBuilder) *EnumValueAttribute {
+	if def == nil {
+		return nil
+	}
+	name := def.GetName()
+	if name == "" {
+		ctx.addError(
+			ErrWithLocation(
+				"attribute name is required",
+				builder.WithName().Location(),
+			),
+		)
+		return nil
+	}
+	if err := r.validateName(name); err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithName().Location(),
+			),
+		)
+		return nil
+	}
+	return &EnumValueAttribute{
+		Name:  name,
+		Value: def.GetValue(),
+	}
 }
 
 func (r *Resolver) resolveEnumValueRuleByAutoAlias(ctx *context, enumValueName string, aliases []*Enum) []*EnumValueAlias {
@@ -4361,6 +4431,12 @@ func (r *Resolver) enumAccessors() []cel.EnvOption {
 				fmt.Sprintf("%s.from", enum.FQDN()),
 				cel.Overload(fmt.Sprintf("%s_from_int_enum", enum.FQDN()), []*cel.Type{cel.IntType}, celtypes.NewOpaqueType(enum.FQDN(), cel.IntType),
 					cel.UnaryBinding(func(self ref.Val) ref.Val { return nil }),
+				),
+			),
+			cel.Function(
+				fmt.Sprintf("%s.attr", enum.FQDN()),
+				cel.Overload(fmt.Sprintf("%s_attr_string_string", enum.FQDN()), []*cel.Type{celtypes.NewOpaqueType(enum.FQDN(), cel.IntType), cel.StringType}, cel.StringType,
+					cel.BinaryBinding(func(enumValue, key ref.Val) ref.Val { return nil }),
 				),
 			),
 		)

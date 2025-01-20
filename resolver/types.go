@@ -136,11 +136,17 @@ type EnumValue struct {
 type EnumValueRule struct {
 	Default bool
 	Aliases []*EnumValueAlias
+	Attrs   []*EnumValueAttribute
 }
 
 type EnumValueAlias struct {
 	EnumAlias *Enum
 	Aliases   []*EnumValue
+}
+
+type EnumValueAttribute struct {
+	Name  string
+	Value string
 }
 
 type MessageRule struct {
