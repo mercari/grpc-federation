@@ -3,6 +3,10 @@
 # Index
 
 - [`select`](#select)
+- [`name`](#enum-fqdnname)
+- [`value`](#enum-fqdnvalue)
+- [`from`](#enum-fqdnfrom)
+- [`attr`](#enum-fqdnattr)
 
 # Functions
 
@@ -34,7 +38,7 @@ grpc-federation: ERROR: <input>:1:6: found no matching overload for '_?_:_' appl
 grpc.federation.enum.select(true, pkg.EnumType.ENUM_VALUE_A, pkgv2.EnumType.ENUM_VALUE_B)
 ```
 
-## <enum-fqdn>.name
+## `<enum-fqdn>.name`
 
 For all enum types, you can use the `name` method to obtain the name of the enum value as a string.
 
@@ -61,7 +65,7 @@ enum EnumType {
 }
 ```
 
-## <enum-fqdn>.value
+## `<enum-fqdn>.value`
 
 For all enum types, you can use the `value` method to obtain the enum typed value from name.
 
@@ -89,7 +93,7 @@ enum EnumType {
 }
 ```
 
-## <enum-fqdn>.from
+## `<enum-fqdn>.from`
 
 For all enum types, you can use the `from` method to obtain the enum typed value from int value.
 
@@ -121,5 +125,42 @@ package foo;
 enum EnumType {
   ENUM_VALUE_UNKNOWN = 0;
   ENUM_VALUE_1 = 1;
+}
+```
+
+## `<enum-fqdn>.attr`
+
+If you use `attr` to hold multiple name-value pairs corresponding to an enum value, you can get value from `name`.
+
+### Parameters
+
+`pkg.EnumType.attr(enumValue EnumValue, name string) string`
+
+- `enumValue`: the enum value
+- `name`: string value to search attribute.
+
+### Examples
+
+In the following case, `Foo.text` value is `foo`.
+
+```proto
+package mypkg;
+
+message Foo {
+  option (grpc.federation.message) = {
+    def { name: "v" by: "Type.value('VALUE_1')" }
+  };
+  string text = 1 [(grpc.federation.field).by = "Type.attr(v, 'attr_x')"];
+}
+
+enum Type {
+  VALUE_1 = 1 [(grpc.federation.enum_value).attr = {
+    name: "attr_x"
+    value: "foo"
+  }];
+  VALUE_2 = 2 [(grpc.federation.enum_value).attr = {
+    name: "attr_x"
+    value: "bar"
+  }];
 }
 ```
