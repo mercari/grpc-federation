@@ -183,6 +183,7 @@ type VariableDefinitionOption struct {
 	Map        *MapExprOption
 	Call       *CallExprOption
 	Message    *MessageExprOption
+	Enum       *EnumExprOption
 	Validation *ValidationExprOption
 }
 
@@ -191,6 +192,7 @@ type MapExprOption struct {
 	Iterator *IteratorOption
 	By       bool
 	Message  *MessageExprOption
+	Enum     *EnumExprOption
 }
 
 // IteratorOption represents def.map.iterator location of grpc.federation.message option.
@@ -212,6 +214,12 @@ type CallExprOption struct {
 type MessageExprOption struct {
 	Name bool
 	Args *ArgumentOption
+}
+
+// EnumExprOption represents def.enum location of grpc.federation.message option.
+type EnumExprOption struct {
+	Name bool
+	By   bool
 }
 
 // RequestOption represents resolver.request location of grpc.federation.message option.

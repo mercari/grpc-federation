@@ -224,6 +224,8 @@ func (e *VariableExpr) ReferenceNames() []string {
 		return e.Call.ReferenceNames()
 	case e.Message != nil:
 		return e.Message.ReferenceNames()
+	case e.Enum != nil:
+		return e.Enum.ReferenceNames()
 	case e.Validation != nil:
 		return e.Validation.Error.ReferenceNames()
 	}

@@ -271,6 +271,7 @@ func (o *VariableDefinitionOption) Clone() *VariableDefinitionOption {
 		Map:        o.Map.Clone(),
 		Call:       o.Call.Clone(),
 		Message:    o.Message.Clone(),
+		Enum:       o.Enum.Clone(),
 		Validation: o.Validation.Clone(),
 	}
 }
@@ -283,6 +284,7 @@ func (o *MapExprOption) Clone() *MapExprOption {
 		Iterator: o.Iterator.Clone(),
 		By:       o.By,
 		Message:  o.Message.Clone(),
+		Enum:     o.Enum.Clone(),
 	}
 }
 
@@ -316,6 +318,16 @@ func (o *MessageExprOption) Clone() *MessageExprOption {
 	return &MessageExprOption{
 		Name: o.Name,
 		Args: o.Args.Clone(),
+	}
+}
+
+func (o *EnumExprOption) Clone() *EnumExprOption {
+	if o == nil {
+		return nil
+	}
+	return &EnumExprOption{
+		Name: o.Name,
+		By:   o.By,
 	}
 }
 

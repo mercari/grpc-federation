@@ -39,6 +39,13 @@ func TestProtoFormat(t *testing.T) {
       name: "map_value"
       by: "{1:'a', 2:'b', 3:'c'}"
     }
+    def {
+      name: "e"
+      enum {
+        name: "org.federation.Item.ItemType"
+        by: "org.user.Item.ItemType.value('ITEM_TYPE_2')"
+      }
+    }
   }`,
 				"Post": `
   option (grpc.federation.message) = {

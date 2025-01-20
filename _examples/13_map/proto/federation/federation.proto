@@ -79,6 +79,23 @@ message Posts {
             args { name: "id" by: "iter.id" }
           }
         }
+      },
+      {
+        name: "source_item_types"
+        by: "[user.Item.ItemType.value('ITEM_TYPE_1'), user.Item.ItemType.value('ITEM_TYPE_2')]"
+      },
+      {
+        name: "item_types"
+        map {
+          iterator {
+            name: "typ"
+            src: "source_item_types"
+          }
+          enum {
+            name: "Item.ItemType"
+            by: "typ"
+          }
+        }
       }
     ]
   };
@@ -92,6 +109,7 @@ message Posts {
   repeated string contents = 3 [(grpc.federation.field).by = "posts.map(post, post.content)"];
   repeated User users = 4 [(grpc.federation.field).by = "users"];
   repeated PostItem items = 5 [(grpc.federation.field).by = "items"];
+  repeated Item.ItemType item_types = 6 [(grpc.federation.field).by = "item_types"];
 }
 
 message User {
@@ -107,4 +125,17 @@ message User {
   };
   string id = 1;
   string name = 2;
+}
+
+message Item {
+  option (grpc.federation.message).alias = "user.Item";
+
+  enum ItemType {
+    option (grpc.federation.enum).alias = "user.Item.ItemType";
+
+    ITEM_TYPE_UNSPECIFIED = 0;
+    ITEM_TYPE_1 = 1;
+    ITEM_TYPE_2 = 2;
+    ITEM_TYPE_3 = 3;
+  }
 }

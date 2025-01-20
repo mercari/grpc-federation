@@ -228,6 +228,7 @@ message VariableExpr {
     CallExpr call = 4;
     MessageExpr message = 5;
     ValidationExpr validation = 6;
+    EnumExpr enum = 7;
   }
 }
 
@@ -284,6 +285,7 @@ message MapIteratorExpr {
   oneof expr {
     CELValue by = 2;
     MessageExpr message = 3;
+    EnumExpr enum = 4;
   }
 }
 
@@ -325,6 +327,11 @@ message Request {
 message MessageExpr {
   string message_id = 1;
   repeated Argument args = 2;
+}
+
+message EnumExpr {
+  string enum_id = 1;
+  CELValue by = 2;
 }
 
 message Argument {

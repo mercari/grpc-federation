@@ -47,6 +47,7 @@ message GetPostResponse {
     def { name: "map_value" by : "{1: 'a', 2: 'b', 3: 'c'}" }
     def { name: "null_value" by: "null" }
     def { by: "grpc.federation.log.info('output federation log', {'post_message': post})" }
+    def { name: "e" enum {name: "Item.ItemType" by: "user.Item.ItemType.value('ITEM_TYPE_2')"}}
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).by = "'hello'"];
@@ -82,6 +83,7 @@ message GetPostResponse {
   string strings_join = 32 [(grpc.federation.field).by = "strings_join"];
   double parse_float = 33 [(grpc.federation.field).by = "parse_float"];
   string url_user_name = 34 [(grpc.federation.field).by = "url.userinfo().username()"];
+  Item.ItemType enum_value = 35 [(grpc.federation.field).by = "e"];
 }
 
 message A {

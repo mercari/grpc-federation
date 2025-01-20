@@ -1229,6 +1229,12 @@ func (f *File) nodeInfoByDef(list []*ast.MessageLiteralNode, def *VariableDefini
 				return nil
 			}
 			return f.nodeInfoByMessageExpr(value, def.Message)
+		case def.Enum != nil && fieldName == "enum":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByEnumExpr(value, def.Enum)
 		case def.Validation != nil && fieldName == "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
@@ -1240,7 +1246,44 @@ func (f *File) nodeInfoByDef(list []*ast.MessageLiteralNode, def *VariableDefini
 	return f.nodeInfo(node)
 }
 
-func (f *File) nodeInfoByMapExpr(node *ast.MessageLiteralNode, _ *MapExprOption) *ast.NodeInfo {
+func (f *File) nodeInfoByMapExpr(node *ast.MessageLiteralNode, opt *MapExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.Iterator != nil && fieldName == "iterator":
+			n, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			for _, elem := range n.Elements {
+				optName := elem.Name.Name.AsIdentifier()
+				switch {
+				case opt.Iterator.Name && optName == "name":
+					return f.nodeInfo(elem.Val)
+				case opt.Iterator.Source && optName == "src":
+					return f.nodeInfo(elem.Val)
+				}
+			}
+		case opt.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.Message != nil && fieldName == "message":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByMessageExpr(value, opt.Message)
+		case opt.Enum != nil && fieldName == "enum":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByEnumExpr(value, opt.Enum)
+		}
+	}
 	return f.nodeInfo(node)
 }
 
@@ -1388,6 +1431,27 @@ func (f *File) nodeInfoByMessageExpr(node *ast.MessageLiteralNode, msg *MessageE
 	}
 	if len(args) != 0 {
 		return f.nodeInfoByArgument(args, msg.Args)
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByEnumExpr(node *ast.MessageLiteralNode, expr *EnumExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case expr.Name && fieldName == "name":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case expr.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
 	}
 	return f.nodeInfo(node)
 }

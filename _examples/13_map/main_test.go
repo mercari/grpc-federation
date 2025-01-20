@@ -164,6 +164,10 @@ func TestFederation(t *testing.T) {
 				{Name: "item_x"},
 				{Name: "item_y"},
 			},
+			ItemTypes: []federation.Item_ItemType{
+				federation.Item_ITEM_TYPE_1,
+				federation.Item_ITEM_TYPE_2,
+			},
 		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostsResponse{},

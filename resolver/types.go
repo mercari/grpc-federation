@@ -213,6 +213,7 @@ type VariableExpr struct {
 	Map        *MapExpr
 	Call       *CallExpr
 	Message    *MessageExpr
+	Enum       *EnumExpr
 	Validation *ValidationExpr
 }
 
@@ -238,11 +239,17 @@ type MapIteratorExpr struct {
 	Type    *Type
 	By      *CELValue
 	Message *MessageExpr
+	Enum    *EnumExpr
 }
 
 type MessageExpr struct {
 	Message *Message
 	Args    []*Argument
+}
+
+type EnumExpr struct {
+	Enum *Enum
+	By   *CELValue
 }
 
 type ValidationExpr struct {

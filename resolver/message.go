@@ -404,6 +404,17 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 						}
 					}
 				}
+			case varDef.Expr.Enum != nil:
+				enumExpr := varDef.Expr.Enum
+				decls = append(decls, typeConversionDecls(enumExpr.By.Out, varDef.Expr.Type, convertedFQDNMap)...)
+			case varDef.Expr.Map != nil:
+				mapExpr := varDef.Expr.Map.Expr
+				switch {
+				case mapExpr.Enum != nil:
+					from := mapExpr.Enum.By.Out.Clone()
+					from.Repeated = true
+					decls = append(decls, typeConversionDecls(from, varDef.Expr.Type, convertedFQDNMap)...)
+				}
 			}
 		}
 	}

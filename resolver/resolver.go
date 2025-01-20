@@ -581,6 +581,10 @@ func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(defSet *Variabl
 				pkgNameMap[v.Expr.Message.Message.PackageName()] = struct{}{}
 			}
 			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Message.Args))
+		case v.Expr.Enum != nil:
+			if v.Expr.Enum.Enum != nil {
+				pkgNameMap[v.Expr.Enum.Enum.PackageName()] = struct{}{}
+			}
 		case v.Expr.Map != nil:
 			if v.Expr.Map.Expr != nil {
 				if v.Expr.Map.Expr.By != nil {
@@ -1190,6 +1194,22 @@ func (r *Resolver) resolveOneof(ctx *context, def *descriptorpb.OneofDescriptorP
 	}
 	r.oneofToRuleMap[oneof] = rule
 	return oneof
+}
+
+func (r *Resolver) resolveEnumByName(ctx *context, name string, builder *source.EnumBuilder) (*Enum, error) {
+	if strings.Contains(name, ".") {
+		pkg, err := r.lookupPackage(name)
+		if err != nil {
+			// attempt to resolve the enum because of a possible name specified as a inner message.
+			if enum := r.resolveEnum(ctx, ctx.file().Package, name, builder); enum != nil {
+				return enum, nil
+			}
+			return nil, err
+		}
+		enumName := r.trimPackage(pkg, name)
+		return r.resolveEnum(ctx, pkg, enumName, source.ToLazyEnumBuilder(builder, enumName)), nil
+	}
+	return r.resolveEnum(ctx, ctx.file().Package, name, builder), nil
 }
 
 func (r *Resolver) resolveEnum(ctx *context, pkg *Package, name string, builder *source.EnumBuilder) *Enum {
@@ -2191,6 +2211,8 @@ func (r *Resolver) resolveVariableExpr(ctx *context, varDef *federation.Variable
 		return &VariableExpr{Map: r.resolveMapExpr(ctx, varDef.GetMap(), builder.WithMap())}
 	case *federation.VariableDefinition_Message:
 		return &VariableExpr{Message: r.resolveMessageExpr(ctx, varDef.GetMessage(), builder.WithMessage())}
+	case *federation.VariableDefinition_Enum:
+		return &VariableExpr{Enum: r.resolveEnumExpr(ctx, varDef.GetEnum(), builder.WithEnum())}
 	case *federation.VariableDefinition_Call:
 		return &VariableExpr{Call: r.resolveCallExpr(ctx, varDef.GetCall(), builder.WithCall())}
 	case *federation.VariableDefinition_Validation:
@@ -2250,6 +2272,8 @@ func (r *Resolver) resolveMapIteratorExpr(ctx *context, def *federation.MapExpr,
 		return &MapIteratorExpr{By: &CELValue{Expr: def.GetBy()}}
 	case *federation.MapExpr_Message:
 		return &MapIteratorExpr{Message: r.resolveMessageExpr(ctx, def.GetMessage(), builder.WithMessage())}
+	case *federation.MapExpr_Enum:
+		return &MapIteratorExpr{Enum: r.resolveEnumExpr(ctx, def.GetEnum(), builder.WithEnum())}
 	}
 	return nil
 }
@@ -2282,6 +2306,34 @@ func (r *Resolver) resolveMessageExpr(ctx *context, def *federation.MessageExpr,
 	return &MessageExpr{
 		Message: msg,
 		Args:    args,
+	}
+}
+
+func (r *Resolver) resolveEnumExpr(ctx *context, def *federation.EnumExpr, builder *source.EnumExprOptionBuilder) *EnumExpr {
+	if def == nil {
+		return nil
+	}
+	enum, err := r.resolveEnumByName(ctx, def.GetName(), source.ToLazyEnumBuilder(builder, def.GetName()))
+	if err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithName().Location(),
+			),
+		)
+	}
+	by := def.GetBy()
+	if by == "" {
+		ctx.addError(
+			ErrWithLocation(
+				`"by" is required`,
+				builder.WithBy().Location(),
+			),
+		)
+	}
+	return &EnumExpr{
+		Enum: enum,
+		By:   &CELValue{Expr: by},
 	}
 }
 
@@ -3736,6 +3788,52 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 			}
 		}
 		expr.Type = NewMessageType(expr.Message.Message, false)
+	case expr.Enum != nil:
+		toEnum := expr.Enum.Enum
+		expr.Type = NewEnumType(toEnum, false)
+
+		enumBuilder := builder.WithEnum()
+		if err := r.resolveCELValue(ctx, env, expr.Enum.By); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					enumBuilder.WithBy().Location(),
+				),
+			)
+			return
+		}
+		fromType := expr.Enum.By.Out
+		if fromType.Kind != types.Enum {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						"enum must always return a enum value, but got %q type",
+						fromType.Kind.ToString(),
+					),
+					enumBuilder.WithBy().Location(),
+				),
+			)
+		}
+		fromEnum := fromType.Enum
+		if fromEnum == nil || toEnum == nil {
+			return
+		}
+		fromEnumName := fromEnum.FQDN()
+		toEnumName := toEnum.FQDN()
+		if fromEnumName != toEnumName {
+			if !r.findEnumAliasName(fromEnum, toEnum) {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(
+							`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value`,
+							toEnumName, fromEnumName,
+						),
+						enumBuilder.WithBy().Location(),
+					),
+				)
+				return
+			}
+		}
 	case expr.Validation != nil:
 		validationBuilder := builder.WithValidation()
 		r.resolveGRPCErrorCELValues(ctx, env, expr.Validation.Error, nil, validationBuilder.WithError())
@@ -3780,6 +3878,52 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 			}
 		}
 		expr.Type = NewMessageType(expr.Message.Message, false)
+	case expr.Enum != nil:
+		toEnum := expr.Enum.Enum
+		expr.Type = NewEnumType(toEnum, false)
+
+		enumBuilder := mapBuilder.WithEnum()
+		if err := r.resolveCELValue(ctx, env, expr.Enum.By); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					enumBuilder.WithBy().Location(),
+				),
+			)
+			return
+		}
+		fromType := expr.Enum.By.Out
+		if fromType.Kind != types.Enum {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						"enum must always return a enum value, but got %q type",
+						fromType.Kind.ToString(),
+					),
+					enumBuilder.WithBy().Location(),
+				),
+			)
+		}
+		fromEnum := fromType.Enum
+		if fromEnum == nil || toEnum == nil {
+			return
+		}
+		fromEnumName := fromEnum.FQDN()
+		toEnumName := toEnum.FQDN()
+		if fromEnumName != toEnumName {
+			if !r.findEnumAliasName(fromEnum, toEnum) {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(
+							`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value`,
+							toEnumName, fromEnumName,
+						),
+						enumBuilder.WithBy().Location(),
+					),
+				)
+				return
+			}
+		}
 	}
 }
 

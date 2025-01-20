@@ -380,6 +380,7 @@ The value to be assigned to a variable can be created with the following feature
 | [`by`](#grpcfederationmessagedefby) | [CEL](./cel.md) | optional |
 | [`call`](#grpcfederationmessagedefcall) | CallExpr | optional |
 | [`message`](#grpcfederationmessagedefmessage) | MessageExpr | optional |
+| [`enum`](#grpcfederationmessagedefenum) | EnumExpr | optional |
 | [`map`](#grpcfederationmessagedefmap) | MapExpr | optional |
 | [`validation`](#grpcfederationmessagedefvalidation) | ValidationExpr | optional |
 
@@ -1081,6 +1082,51 @@ You need to use `$.` to refer to the message argument.
 `inline` like `by`, it refers to the specified value and expands all fields beyond it.
 For this reason, the referenced value must always be of message type.
 
+## (grpc.federation.message).def.enum
+
+`enum` is a feature designed to create enum values defined in the federation package. If you want to create enum values in the federation package based on enum values defined in a dependency package, this feature will be useful.
+
+### Example
+
+In this example, the value of `dep.Type.TYPE_1` is converted to the type `mypkg.MyType`. If the conversion fails, it is logged.
+
+```proto
+package mypkg;
+
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      name: "v"
+      enum {
+        name: "MyType"
+        by: "dep.Type.TYPE_1"
+      }
+    }
+    def {
+      if: "v == MyType.TYPE_UNSPECIFIED"
+      by: "grpc.federation.log.warn('got unexpected type')"
+    }
+  };
+}
+
+enum MyType {
+  option (grpc.federation.enum).alias = "dep.Type";
+
+  TYPE_UNSPECIFIED = 1 [(grpc.federation.enum_value).default = true];
+  TYPE_1 = 2;
+  TYPE_2 = 3;
+}
+```
+
+```proto
+package dep;
+
+enum Type {
+  TYPE_1 = 1;
+  TYPE_2 = 2;
+}
+```
+
 ## (grpc.federation.message).def.map
 
 | field | type | required or optional |
@@ -1088,6 +1134,7 @@ For this reason, the referenced value must always be of message type.
 | [`iterator`](#grpcfederationmessagedefmapiterator) | Iterator | required |
 | [`by`](#grpcfederationmessagedefmapby) | [CEL](./cel.md) | optional |
 | [`message`](#grpcfederationmessagedefmapmessage) | MessageExpr | optional |
+| [`enum`](#grpcfederationmessagedefmapenum) | EnumExpr | optional |
 
 ## (grpc.federation.message).def.map.iterator
 
@@ -1157,6 +1204,10 @@ Create map elements using [`CEL`](./cel.md) by referencing variables created wit
 ## (grpc.federation.message).def.map.message
 
 Create map elements using `message` value by referencing variables created with `iterator` section.
+
+## (grpc.federation.message).def.map.enum
+
+Create map elements using `enum` value by referencing variables created with `iterator` section.
 
 ## (grpc.federation.message).def.validation
 
