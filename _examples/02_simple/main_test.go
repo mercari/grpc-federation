@@ -322,6 +322,9 @@ func TestFederation(t *testing.T) {
 		UrlUserName:    "test_user",
 		EnumValue:      federation.Item_ITEM_TYPE_2,
 		EnumValueStr:   "second item type",
+		Sqrt:           5,
+		Pow:            8,
+		Floor:          1,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
