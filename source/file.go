@@ -1148,6 +1148,7 @@ func (f *File) nodeInfoByEnumValueOption(node *ast.OptionNode, opt *EnumValueOpt
 			return f.nodeInfo(n)
 		}
 	case *ast.MessageLiteralNode:
+		var attrs []*ast.MessageLiteralNode
 		for _, elem := range n.Elements {
 			optName := elem.Name.Name.AsIdentifier()
 			switch {
@@ -1155,7 +1156,37 @@ func (f *File) nodeInfoByEnumValueOption(node *ast.OptionNode, opt *EnumValueOpt
 				return f.nodeInfo(elem.Val)
 			case opt.Alias && optName == "alias":
 				return f.nodeInfo(elem.Val)
+			case opt.Attr != nil && optName == "attr":
+				attrs = append(attrs, f.getMessageListFromNode(elem.Val)...)
 			}
+		}
+		if len(attrs) != 0 {
+			return f.nodeInfoByEnumValueAttribute(attrs, opt.Attr)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByEnumValueAttribute(list []*ast.MessageLiteralNode, attr *EnumValueAttribute) *ast.NodeInfo {
+	if attr.Idx >= len(list) {
+		return nil
+	}
+	node := list[attr.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case attr.Name && fieldName == "name":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case attr.Value && fieldName == "value":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
 		}
 	}
 	return f.nodeInfo(node)

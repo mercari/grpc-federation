@@ -279,6 +279,7 @@ enum FooEnum {
 | ----- | ---- | ------------------- |
 | [`default`](#grpcfederationenum_valuedefault) | bool | optional |
 | [`alias`](#grpcfederationenum_valuealias) | repeated string | optional |
+| [`attr`](#grpcfederationenum_valueattr) | repeated EnumValueAttribute | optional |
 
 ## (grpc.federation.enum_value).default
 
@@ -346,6 +347,36 @@ package foopkg;
 enum FooEnum {
   FOO_VALUE_1 = 0;
   FOO_VALUE_2 = 1;
+}
+```
+
+## (grpc.federation.enum_value).attr
+
+`attr` is used to hold multiple name-value pairs corresponding to an enum value.
+The values specified by the name must be consistently specified for all enum values.
+The values stored using this feature can be retrieved using the [`attr()`](./cel/enum.md#enum-fqdnattr) method of the enum API.
+
+### Example
+
+```proto
+package mypkg;
+
+message Foo {
+  option (grpc.federation.message) = {
+    def { name: "v" by: "Type.value('VALUE_1')" }
+  };
+  string text = 1 [(grpc.federation.field).by = "Type.attr(v, 'attr_x')"];
+}
+
+enum Type {
+  VALUE_1 = 1 [(grpc.federation.enum_value).attr = {
+    name: "attr_x"
+    value: "foo"
+  }];
+  VALUE_2 = 2 [(grpc.federation.enum_value).attr = {
+    name: "attr_x"
+    value: "bar"
+  }];
 }
 ```
 

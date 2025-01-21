@@ -27,6 +27,7 @@ var (
 
 {{- $pkgName := .Package.Name }}
 {{- $enums := .Enums }}
+{{- $enumAttrs := .EnumAttributes }}
 
 {{- range .Services }}
 
@@ -48,6 +49,20 @@ type {{ $serviceName }}_{{ .Name }} struct {
 	{{- else }}
 	*{{ $serviceName }}_{{ .Type }}
 	{{- end }}
+	{{- end }}
+}
+
+{{- end }}
+
+{{- range $enumAttrs }}
+
+var {{ .Name }}_attrMap = grpcfed.EnumAttributeMap[{{ .Name }}]{
+	{{- range .Values }}
+	{{ .Name }}: grpcfed.EnumValueAttributeMap{
+		{{- range .Attrs }}
+		`{{ .Name }}`: `{{ .Value }}`,
+		{{- end }}
+	},
 	{{- end }}
 }
 
@@ -257,6 +272,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	{{- range $enums }}
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("{{ .ProtoName }}", {{ .GoName }}_value, {{ .GoName }}_name)...)
+	{{- end }}
+	{{- range $enumAttrs }}
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAttrOption[{{ .Name }}]("{{ .ProtoName }}", {{ .Name }}_attrMap))
 	{{- end }}
 	{{- if $env }}
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))

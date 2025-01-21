@@ -1481,6 +1481,18 @@ func (d *decoder) toEnumValueAliases(aliases []*plugin.EnumValueAlias) ([]*resol
 	return ret, nil
 }
 
+func (d *decoder) toEnumValueAttributes(attrs []*plugin.EnumValueAttribute) []*resolver.EnumValueAttribute {
+	ret := make([]*resolver.EnumValueAttribute, 0, len(attrs))
+	for _, attr := range attrs {
+		v := d.toEnumValueAttribute(attr)
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret
+}
+
 func (d *decoder) toEnumValues(ids []string) ([]*resolver.EnumValue, error) {
 	ret := make([]*resolver.EnumValue, 0, len(ids))
 	for _, id := range ids {
@@ -1512,6 +1524,16 @@ func (d *decoder) toEnumValueAlias(alias *plugin.EnumValueAlias) (*resolver.Enum
 		EnumAlias: enumAlias,
 		Aliases:   enumValues,
 	}, nil
+}
+
+func (d *decoder) toEnumValueAttribute(attr *plugin.EnumValueAttribute) *resolver.EnumValueAttribute {
+	if attr == nil {
+		return nil
+	}
+	return &resolver.EnumValueAttribute{
+		Name:  attr.GetName(),
+		Value: attr.GetValue(),
+	}
 }
 
 func (d *decoder) toEnumValue(id string) (*resolver.EnumValue, error) {
@@ -1549,9 +1571,11 @@ func (d *decoder) toEnumValueRule(rule *plugin.EnumValueRule) (*resolver.EnumVal
 	if err != nil {
 		return nil, err
 	}
+	attrs := d.toEnumValueAttributes(rule.GetAttrs())
 	return &resolver.EnumValueRule{
 		Default: rule.GetDefault(),
 		Aliases: aliases,
+		Attrs:   attrs,
 	}, nil
 }
 

@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {};
+}
+
+enum Type {
+  TYPE_UNKNOWN = 0 [(grpc.federation.enum_value) = {
+    attr {
+      name: ""
+    }
+  }];
+  TYPE_FOO = 1 [(grpc.federation.enum_value) = {
+    attr {
+      name: "xxx"
+      value: "foo"
+    }
+  }];
+  TYPE_BAR = 2 [(grpc.federation.enum_value) = {
+    attr {
+      name: "yyy"
+      value: "bar"
+    }
+  }];
+}

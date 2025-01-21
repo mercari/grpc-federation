@@ -425,11 +425,17 @@ message EnumRule {
 message EnumValueRule {
   bool default = 1;
   repeated EnumValueAlias aliases = 2;
+  repeated EnumValueAttribute attrs = 3;
 }
 
 message EnumValueAlias {
   string enum_alias_id = 1;
   repeated string alias_ids = 2;
+}
+
+message EnumValueAttribute {
+  string name = 1;
+  string value = 2;
 }
 
 message CELPlugin {

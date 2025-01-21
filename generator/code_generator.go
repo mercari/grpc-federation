@@ -610,6 +610,41 @@ func (f *File) Enums() []*Enum {
 	return ret
 }
 
+type EnumAttribute struct {
+	Name      string
+	ProtoName string
+	Values    []*EnumValueAttribute
+}
+
+type EnumValueAttribute struct {
+	Name  string
+	Type  string
+	Attrs []*resolver.EnumValueAttribute
+}
+
+func (f *File) EnumAttributes() []*EnumAttribute {
+	enums := f.AllEnums()
+	enumAttrs := make([]*EnumAttribute, 0, len(enums))
+	for _, enum := range enums {
+		attrMap := enum.AttributeMap()
+		if len(attrMap) == 0 {
+			continue
+		}
+		enumAttr := &EnumAttribute{
+			Name:      f.enumTypeToText(enum),
+			ProtoName: enum.FQDN(),
+		}
+		for _, value := range enum.Values {
+			enumAttr.Values = append(enumAttr.Values, &EnumValueAttribute{
+				Name:  toEnumValueText(toEnumValuePrefix(f, resolver.NewEnumType(enum, false)), value.Value),
+				Attrs: value.Rule.Attrs,
+			})
+		}
+		enumAttrs = append(enumAttrs, enumAttr)
+	}
+	return enumAttrs
+}
+
 func newServiceTypeDeclares(file *File, msgs []*resolver.Message) []*Type {
 	var ret []*Type
 	for _, msg := range msgs {

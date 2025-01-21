@@ -577,7 +577,48 @@ func (b *EnumValueOptionBuilder) WithDefault() *EnumValueOptionBuilder {
 	}
 }
 
+func (b *EnumValueOptionBuilder) WithAttr(idx int) *EnumValueAttributeBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Attr = &EnumValueAttribute{Idx: idx}
+	return &EnumValueAttributeBuilder{
+		root: root,
+		attr: func(loc *Location) *EnumValueAttribute {
+			return b.option(loc).Attr
+		},
+	}
+}
+
 func (b *EnumValueOptionBuilder) Location() *Location {
+	return b.root
+}
+
+type EnumValueAttributeBuilder struct {
+	root *Location
+	attr func(*Location) *EnumValueAttribute
+}
+
+func (b *EnumValueAttributeBuilder) WithName() *EnumValueAttributeBuilder {
+	root := b.root.Clone()
+	attr := b.attr(root)
+	attr.Name = true
+	return &EnumValueAttributeBuilder{
+		root: root,
+		attr: b.attr,
+	}
+}
+
+func (b *EnumValueAttributeBuilder) WithValue() *EnumValueAttributeBuilder {
+	root := b.root.Clone()
+	attr := b.attr(root)
+	attr.Value = true
+	return &EnumValueAttributeBuilder{
+		root: root,
+		attr: b.attr,
+	}
+}
+
+func (b *EnumValueAttributeBuilder) Location() *Location {
 	return b.root
 }
 

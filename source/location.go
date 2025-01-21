@@ -111,6 +111,14 @@ type EnumValue struct {
 type EnumValueOption struct {
 	Alias   bool
 	Default bool
+	Attr    *EnumValueAttribute
+}
+
+// EnumValueAttribute represents grpc.federation.enum_value.attr location.
+type EnumValueAttribute struct {
+	Idx   int
+	Name  bool
+	Value bool
 }
 
 // Message represents message location.

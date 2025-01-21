@@ -84,6 +84,7 @@ message GetPostResponse {
   double parse_float = 33 [(grpc.federation.field).by = "parse_float"];
   string url_user_name = 34 [(grpc.federation.field).by = "url.userinfo().username()"];
   Item.ItemType enum_value = 35 [(grpc.federation.field).by = "e"];
+  string enum_value_str = 36 [(grpc.federation.field).by = "Item.ItemType.attr(e, 'en')"];
 }
 
 message A {
@@ -191,10 +192,46 @@ message Item {
   enum ItemType {
     option (grpc.federation.enum).alias = "user.Item.ItemType";
 
-    ITEM_TYPE_UNSPECIFIED = 0;
-    ITEM_TYPE_1 = 1;
-    ITEM_TYPE_2 = 2;
-    ITEM_TYPE_3 = 3;
+    ITEM_TYPE_UNSPECIFIED = 0 [(grpc.federation.enum_value) = {
+      attr {
+        name: "en"
+        value: "unknown item"
+      }
+      attr {
+        name: "sub"
+        value: ""
+      }
+    }];
+    ITEM_TYPE_1 = 1 [(grpc.federation.enum_value) = {
+      attr {
+        name: "en"
+        value: "first item type"
+      }
+      attr {
+        name: "sub"
+        value: "xxx"
+      }
+    }];
+    ITEM_TYPE_2 = 2 [(grpc.federation.enum_value) = {
+      attr {
+        name: "en"
+        value: "second item type"
+      }
+      attr {
+        name: "sub"
+        value: "yyy"
+      }
+    }];
+    ITEM_TYPE_3 = 3 [(grpc.federation.enum_value) = {
+      attr {
+        name: "en"
+        value: "third item type"
+      }
+      attr {
+        name: "sub"
+        value: "zzz"
+      }
+    }];
   }
   message Location {
     option (grpc.federation.message).alias = "user.Item.Location";
