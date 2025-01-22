@@ -47,7 +47,7 @@ func (lib *MathLibrary) CompileOptions() []cel.EnvOption {
 		),
 		BindFunction(
 			createMathName("pow"),
-			OverloadFunc(createMathID("trunc_double_double_double"), []*cel.Type{cel.DoubleType, cel.DoubleType}, cel.DoubleType,
+			OverloadFunc(createMathID("pow_double_double_double"), []*cel.Type{cel.DoubleType, cel.DoubleType}, cel.DoubleType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Double(math.Pow(args[0].(types.Double).Value().(float64), args[1].(types.Double).Value().(float64)))
 				},
@@ -55,7 +55,7 @@ func (lib *MathLibrary) CompileOptions() []cel.EnvOption {
 		),
 		BindFunction(
 			createMathName("floor"),
-			OverloadFunc(createMathID("trunc_double_double"), []*cel.Type{cel.DoubleType}, cel.DoubleType,
+			OverloadFunc(createMathID("floor_double_double"), []*cel.Type{cel.DoubleType}, cel.DoubleType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					return types.Double(math.Floor(args[0].(types.Double).Value().(float64)))
 				},
