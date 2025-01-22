@@ -41,7 +41,12 @@ func (lib *MathLibrary) CompileOptions() []cel.EnvOption {
 			createMathName("sqrt"),
 			OverloadFunc(createMathID("sqrt_double_double"), []*cel.Type{cel.DoubleType}, cel.DoubleType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Double(math.Sqrt(args[0].(types.Double).Value().(float64)))
+					return types.Double(math.Sqrt(float64(args[0].(types.Double))))
+				},
+			),
+			OverloadFunc(createMathID("sqrt_int_double"), []*cel.Type{cel.IntType}, cel.DoubleType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Double(math.Sqrt(float64(args[0].(types.Int))))
 				},
 			),
 		),
@@ -49,7 +54,7 @@ func (lib *MathLibrary) CompileOptions() []cel.EnvOption {
 			createMathName("pow"),
 			OverloadFunc(createMathID("pow_double_double_double"), []*cel.Type{cel.DoubleType, cel.DoubleType}, cel.DoubleType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Double(math.Pow(args[0].(types.Double).Value().(float64), args[1].(types.Double).Value().(float64)))
+					return types.Double(math.Pow(float64(args[0].(types.Double)), float64(args[1].(types.Double))))
 				},
 			),
 		),
@@ -57,7 +62,7 @@ func (lib *MathLibrary) CompileOptions() []cel.EnvOption {
 			createMathName("floor"),
 			OverloadFunc(createMathID("floor_double_double"), []*cel.Type{cel.DoubleType}, cel.DoubleType,
 				func(_ context.Context, args ...ref.Val) ref.Val {
-					return types.Double(math.Floor(args[0].(types.Double).Value().(float64)))
+					return types.Double(math.Floor(float64(args[0].(types.Double))))
 				},
 			),
 		),

@@ -23,7 +23,7 @@ func TestMathFunctions(t *testing.T) {
 	}{
 		// math package
 		{
-			name: "sqrt",
+			name: "sqrt_double",
 			expr: "grpc.federation.math.sqrt(3.0*3.0 + 4.0*4.0)",
 			cmp: func(got ref.Val) error {
 				gotV, ok := got.(types.Double).Value().(float64)
@@ -35,6 +35,25 @@ func TestMathFunctions(t *testing.T) {
 					b = 4.0
 				)
 				expected := math.Sqrt(a*a + b*b)
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "sqrt_int",
+			expr: "grpc.federation.math.sqrt(3*3 + 4*4)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Double).Value().(float64)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				const (
+					a = 3
+					b = 4
+				)
+				expected := math.Sqrt(float64(a*a + b*b))
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -84,7 +103,6 @@ func TestMathFunctions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			env, err := cel.NewEnv(
 				cel.Variable(cellib.ContextVariableName, cel.ObjectType(cellib.ContextTypeName)),
-				cel.CrossTypeNumericComparisons(true),
 				cel.Lib(cellib.NewMathLibrary()),
 			)
 			if err != nil {
