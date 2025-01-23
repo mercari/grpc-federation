@@ -221,7 +221,7 @@ func (r *Resolver) resolvePackageAndFileReference(ctx *context, files []*descrip
 	}
 }
 
-func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.FileDescriptorProto) error {
+func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.FileDescriptorProto) {
 	importFileDefs := r.resolveFileImportRuleRecursive(ctx, files)
 
 	newFileDefs := make([]*descriptorpb.FileDescriptorProto, 0, len(importFileDefs))
@@ -249,7 +249,6 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 		r.files = append([]*descriptorpb.FileDescriptorProto{fileDef}, r.files...)
 		filesMap[fileDef.GetName()] = struct{}{}
 	}
-	return nil
 }
 
 func (r *Resolver) resolveFileImportRuleRecursive(ctx *context, files []*descriptorpb.FileDescriptorProto) []*descriptorpb.FileDescriptorProto {
