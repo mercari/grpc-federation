@@ -20,6 +20,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 		subLibs: []cel.SingletonLibrary{
 			NewURLLibrary(typeAdapter),
 			NewStringsLibrary(),
+			NewMathLibrary(),
 			NewTimeLibrary(typeAdapter),
 			NewListLibrary(typeAdapter),
 			new(RandLibrary),
