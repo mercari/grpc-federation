@@ -758,12 +758,6 @@ invalid_message_map_alias.proto:39:3: cannot convert type automatically: map val
        ^
 `},
 		{file: "invalid_file_import.proto", expected: `
-invalid_file_import.proto:6:8: [WARN] Import post.proto is used only for the definition of grpc federation. You can use grpc.federation.file.import instead.
-6:  import "post.proto";
-           ^
-invalid_file_import.proto:12:5: [WARN] Import user.proto is unused for the definition of grpc federation.
-12:      "user.proto",
-         ^
 invalid_file_import.proto:13:5: unknown.proto: no such file or directory
 13:      "unknown.proto"
          ^
