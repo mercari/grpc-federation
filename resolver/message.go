@@ -164,6 +164,14 @@ func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 	return ret
 }
 
+func (m *Message) AllVariableDefinitions() VariableDefinitions {
+	var defs VariableDefinitions
+	for _, group := range m.VariableDefinitionGroups() {
+		defs = append(defs, group.VariableDefinitions()...)
+	}
+	return defs
+}
+
 func (m *Message) HasCELValue() bool {
 	if m.Rule == nil {
 		return false
@@ -364,14 +372,15 @@ func (m *Message) DependencyGraphTreeFormat() string {
 func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 	convertedFQDNMap := make(map[string]struct{})
 	var decls []*TypeConversionDecl
-	if m.Rule != nil && len(m.Rule.DefSet.Definitions()) != 0 {
-		for _, varDef := range m.Rule.DefSet.Definitions() {
-			if varDef.Expr == nil {
-				continue
-			}
-			switch {
-			case varDef.Expr.Call != nil && varDef.Expr.Call.Request != nil:
-				request := varDef.Expr.Call.Request
+	for _, def := range m.AllVariableDefinitions() {
+		if def.Expr == nil {
+			continue
+		}
+		switch {
+		case def.Expr.Call != nil:
+			callExpr := def.Expr.Call
+			if callExpr.Request != nil {
+				request := callExpr.Request
 				for _, arg := range request.Args {
 					if !request.Type.HasField(arg.Name) {
 						continue
@@ -385,40 +394,39 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 					}
 					decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
 				}
-			case varDef.Expr.Message != nil:
-				// For numeric types, the specification allows accepting them even if the type of the message argument differs.
-				// In such cases, since the actual message argument type may differ, additional type conversion is necessary.
-				msgExpr := varDef.Expr.Message
-				if msgExpr.Message != nil && msgExpr.Message.Rule != nil {
-					msgArg := msgExpr.Message.Rule.MessageArgument
-					for _, arg := range msgExpr.Args {
-						switch {
-						case arg.Name != "":
-							msgArgField := msgArg.Field(arg.Name)
-							decls = append(decls, typeConversionDecls(arg.Value.Type(), msgArgField.Type, convertedFQDNMap)...)
-						case arg.Value != nil && arg.Value.Inline:
-							for _, field := range arg.Value.CEL.Out.Message.Fields {
-								msgArgField := msgArg.Field(field.Name)
-								decls = append(decls, typeConversionDecls(field.Type, msgArgField.Type, convertedFQDNMap)...)
-							}
+			}
+		case def.Expr.Message != nil:
+			// For numeric types, the specification allows accepting them even if the type of the message argument differs.
+			// In such cases, since the actual message argument type may differ, additional type conversion is necessary.
+			msgExpr := def.Expr.Message
+			if msgExpr.Message != nil && msgExpr.Message.Rule != nil {
+				msgArg := msgExpr.Message.Rule.MessageArgument
+				for _, arg := range msgExpr.Args {
+					switch {
+					case arg.Name != "":
+						msgArgField := msgArg.Field(arg.Name)
+						decls = append(decls, typeConversionDecls(arg.Value.Type(), msgArgField.Type, convertedFQDNMap)...)
+					case arg.Value != nil && arg.Value.Inline:
+						for _, field := range arg.Value.CEL.Out.Message.Fields {
+							msgArgField := msgArg.Field(field.Name)
+							decls = append(decls, typeConversionDecls(field.Type, msgArgField.Type, convertedFQDNMap)...)
 						}
 					}
 				}
-			case varDef.Expr.Enum != nil:
-				enumExpr := varDef.Expr.Enum
-				decls = append(decls, typeConversionDecls(enumExpr.By.Out, varDef.Expr.Type, convertedFQDNMap)...)
-			case varDef.Expr.Map != nil:
-				mapExpr := varDef.Expr.Map.Expr
-				switch {
-				case mapExpr.Enum != nil:
-					from := mapExpr.Enum.By.Out.Clone()
-					from.Repeated = true
-					decls = append(decls, typeConversionDecls(from, varDef.Expr.Type, convertedFQDNMap)...)
-				}
+			}
+		case def.Expr.Enum != nil:
+			enumExpr := def.Expr.Enum
+			decls = append(decls, typeConversionDecls(enumExpr.By.Out, def.Expr.Type, convertedFQDNMap)...)
+		case def.Expr.Map != nil:
+			mapExpr := def.Expr.Map.Expr
+			switch {
+			case mapExpr.Enum != nil:
+				from := mapExpr.Enum.By.Out.Clone()
+				from.Repeated = true
+				decls = append(decls, typeConversionDecls(from, def.Expr.Type, convertedFQDNMap)...)
 			}
 		}
 	}
-
 	for _, field := range m.Fields {
 		decls = append(decls, field.typeConversionDecls(convertedFQDNMap)...)
 	}
@@ -514,40 +522,8 @@ func (m *Message) DependServices() []*Service {
 
 func (m *Message) dependServices(defMap map[*VariableDefinition]struct{}) []*Service {
 	var svcs []*Service
-	if m.Rule != nil {
-		for _, group := range m.Rule.DefSet.DefinitionGroups() {
-			for _, def := range group.VariableDefinitions() {
-				svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
-			}
-		}
-		for _, def := range m.Rule.DefSet.Definitions() {
-			if def.Expr == nil {
-				continue
-			}
-			if def.Expr.Validation == nil || def.Expr.Validation.Error == nil {
-				continue
-			}
-			for _, detail := range def.Expr.Validation.Error.Details {
-				for _, group := range detail.DefSet.DefinitionGroups() {
-					for _, def := range group.VariableDefinitions() {
-						svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
-					}
-				}
-			}
-		}
-	}
-	for _, field := range m.Fields {
-		if field.Rule == nil {
-			continue
-		}
-		if field.Rule.Oneof == nil {
-			continue
-		}
-		for _, group := range field.Rule.Oneof.DefSet.DefinitionGroups() {
-			for _, def := range group.VariableDefinitions() {
-				svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
-			}
-		}
+	for _, def := range m.AllVariableDefinitions() {
+		svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
 	}
 	return svcs
 }
