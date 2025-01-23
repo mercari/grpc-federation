@@ -2998,15 +2998,6 @@ func (r *Resolver) resolveEnumValueAttribute(ctx *context, def *federation.EnumV
 		)
 		return nil
 	}
-	if err := r.validateName(name); err != nil {
-		ctx.addError(
-			ErrWithLocation(
-				err.Error(),
-				builder.WithName().Location(),
-			),
-		)
-		return nil
-	}
 	return &EnumValueAttribute{
 		Name:  name,
 		Value: def.GetValue(),
