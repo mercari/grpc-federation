@@ -26,6 +26,18 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+var Item_ItemType_attrMap = grpcfed.EnumAttributeMap[Item_ItemType]{
+	Item_ITEM_TYPE_1: grpcfed.EnumValueAttributeMap{
+		`en`: `item type 1`,
+	},
+	Item_ITEM_TYPE_2: grpcfed.EnumValueAttributeMap{
+		`en`: `item type 2`,
+	},
+	Item_ITEM_TYPE_3: grpcfed.EnumValueAttributeMap{
+		`en`: `item type 3`,
+	},
+}
+
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type FederationService_Org_Federation_GetPostResponseArgument struct {
 	E        Item_ItemType
@@ -68,18 +80,6 @@ type FederationService_Org_Federation_User_AgeArgument struct {
 
 // Org_Federation_ZArgument is argument for "org.federation.Z" message.
 type FederationService_Org_Federation_ZArgument struct {
-}
-
-var Item_ItemType_attrMap = grpcfed.EnumAttributeMap[Item_ItemType]{
-	Item_ITEM_TYPE_1: grpcfed.EnumValueAttributeMap{
-		`en`: `item type 1`,
-	},
-	Item_ITEM_TYPE_2: grpcfed.EnumValueAttributeMap{
-		`en`: `item type 2`,
-	},
-	Item_ITEM_TYPE_3: grpcfed.EnumValueAttributeMap{
-		`en`: `item type 3`,
-	},
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -225,11 +225,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.Item.ItemType", Item_ItemType_value, Item_ItemType_name)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAttrOption[Item_ItemType]("org.federation.Item.ItemType", Item_ItemType_attrMap))
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.UserType", UserType_value, UserType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostType", post.PostType_value, post.PostType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.UserType", user.UserType_value, user.UserType_name)...)
-	celEnvOpts = append(celEnvOpts, grpcfed.EnumAttrOption[Item_ItemType]("org.federation.Item.ItemType", Item_ItemType_attrMap))
 	return &FederationService{
 		cfg:           cfg,
 		logger:        logger,

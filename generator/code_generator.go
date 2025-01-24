@@ -481,8 +481,9 @@ func (f *File) StandardImports() []*Import {
 
 func (f *File) DefaultImports() []*Import {
 	var (
-		existsServiceDef bool
-		existsPluginDef  bool
+		existsServiceDef  bool
+		existsPluginDef   bool
+		existsEnumAttrDef bool
 	)
 	if len(f.File.Services) != 0 {
 		existsServiceDef = true
@@ -490,8 +491,11 @@ func (f *File) DefaultImports() []*Import {
 	if len(f.File.CELPlugins) != 0 {
 		existsPluginDef = true
 	}
+	if len(f.EnumAttributes()) != 0 {
+		existsEnumAttrDef = true
+	}
 	pkgs := []*Import{
-		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation", Used: existsServiceDef || existsPluginDef},
+		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation", Used: existsServiceDef || existsPluginDef || existsEnumAttrDef},
 		{Alias: "grpcfedcel", Path: "github.com/mercari/grpc-federation/grpc/federation/cel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel/trace", Used: existsServiceDef},
@@ -582,8 +586,9 @@ func (f *File) Imports() []*Import {
 }
 
 type Enum struct {
-	ProtoName string
-	GoName    string
+	ProtoName     string
+	GoName        string
+	EnumAttribute *EnumAttribute
 }
 
 func (f *File) Enums() []*Enum {
@@ -602,9 +607,25 @@ func (f *File) Enums() []*Enum {
 		if len(f.File.Services) != 0 {
 			f.pkgMap[enum.GoPackage()] = struct{}{}
 		}
+		var enumAttr *EnumAttribute
+		attrMap := enum.AttributeMap()
+		if len(attrMap) != 0 {
+			enumAttr = &EnumAttribute{
+				Name:      f.enumTypeToText(enum),
+				ProtoName: enum.FQDN(),
+			}
+			for _, value := range enum.Values {
+				enumAttr.Values = append(enumAttr.Values, &EnumValueAttribute{
+					Name:  toEnumValueText(toEnumValuePrefix(f, resolver.NewEnumType(enum, false)), value.Value),
+					Attrs: value.Rule.Attrs,
+				})
+			}
+		}
+
 		ret = append(ret, &Enum{
-			ProtoName: protoName,
-			GoName:    f.enumTypeToText(enum),
+			ProtoName:     protoName,
+			GoName:        f.enumTypeToText(enum),
+			EnumAttribute: enumAttr,
 		})
 	}
 	return ret

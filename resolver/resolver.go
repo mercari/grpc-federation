@@ -157,6 +157,9 @@ func (r *Resolver) Resolve() (*Result, error) {
 
 	r.resolvePackageAndFileReference(ctx, r.files)
 	r.resolveFileImportRule(ctx, r.files)
+	if err := ctx.error(); err != nil {
+		return nil, err
+	}
 
 	files := r.resolveFiles(ctx)
 
@@ -281,7 +284,6 @@ func (r *Resolver) resolveFileImportRuleRecursive(ctx *context, files []*descrip
 						source.NewLocationBuilder(fileDef.GetName()).WithImportName(path).Location(),
 					),
 				)
-				continue
 			}
 			importFileDefs = append(importFileDefs, fileDefs...)
 			fileDef.Dependency = append(fileDef.Dependency, path)
@@ -514,6 +516,9 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(fi
 	for _, msg := range file.Messages {
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(msg))
 	}
+	for _, enum := range file.Enums {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(enum))
+	}
 	return pkgNameMap
 }
 
@@ -547,6 +552,17 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 
 	for _, nestedMsg := range msg.NestedMessages {
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(nestedMsg))
+	}
+	return pkgNameMap
+}
+
+func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(enum *Enum) map[string]struct{} {
+	pkgNameMap := make(map[string]struct{})
+	if enum.Rule == nil {
+		return pkgNameMap
+	}
+	for _, a := range enum.Rule.Aliases {
+		pkgNameMap[a.PackageName()] = struct{}{}
 	}
 	return pkgNameMap
 }
@@ -2993,15 +3009,6 @@ func (r *Resolver) resolveEnumValueAttribute(ctx *context, def *federation.EnumV
 		ctx.addError(
 			ErrWithLocation(
 				"attribute name is required",
-				builder.WithName().Location(),
-			),
-		)
-		return nil
-	}
-	if err := r.validateName(name); err != nil {
-		ctx.addError(
-			ErrWithLocation(
-				err.Error(),
 				builder.WithName().Location(),
 			),
 		)

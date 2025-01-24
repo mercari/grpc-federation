@@ -382,6 +382,11 @@ missing_field_option.proto:57:3: "user" field in "federation.Post" message needs
 57:    User user = 4;
        ^
 `},
+		{file: "missing_file_import.proto", expected: `
+missing_file_import.proto:13:5: unknown.proto: no such file or directory
+13:      "unknown.proto"
+         ^
+`},
 		{file: "missing_map_iterator.proto", expected: `
 missing_map_iterator.proto:36:13: map iterator name must be specified
 36:          map {
@@ -762,10 +767,7 @@ invalid_file_import.proto:6:8: [WARN] Import post.proto is used only for the def
 6:  import "post.proto";
            ^
 invalid_file_import.proto:12:5: [WARN] Import user.proto is unused for the definition of grpc federation.
-12:      "user.proto",
-         ^
-invalid_file_import.proto:13:5: unknown.proto: no such file or directory
-13:      "unknown.proto"
+12:      "user.proto"
          ^
 `},
 	}
