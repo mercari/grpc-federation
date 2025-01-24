@@ -9,7 +9,8 @@ option go_package = "example/federation;federation";
 
 option (grpc.federation.file)= {
   import: [
-    "user.proto"
+    "user.proto",
+    "unknown.proto"
   ]
 };
 
