@@ -435,6 +435,10 @@ func (t *Type) IsNumberWrapper() bool {
 	return exists
 }
 
+func (t *Type) IsEnumSelector() bool {
+	return t.Kind == types.Message && t.Message != nil && t.Message.IsEnumSelector()
+}
+
 type MethodCall struct {
 	Method  *Method
 	Request *Request

@@ -13,21 +13,10 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		{{- end }}
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
-		{{- if $mapResolver.IsEnum }}
-		Setter: func(value *localValueType, v {{ .Type }}) error {
-			dst, err := {{ .EnumCastFunc }}
-			if err != nil {
-				return err
-			}
-			value.vars.{{ .Key }} = dst
-			return nil
-		},
-		{{- else }}
 		Setter: func(value *localValueType, v {{ .Type }}) error {
 			value.vars.{{ .Key }} = v
 			return nil
 		},
-		{{- end }}
 		IteratorName: `{{ $mapResolver.IteratorName }}`,
 		IteratorType: {{ $mapResolver.IteratorCELType }},
 		IteratorSource: func(value *localValueType) []{{ $mapResolver.IteratorSourceType }}{ return {{ $mapResolver.IteratorSource }} },
@@ -42,12 +31,29 @@ def_{{ .Key }} := func(ctx context.Context) error {
 			})
 			{{- else if $mapResolver.IsEnum }}
 			{{- $enumExpr := $mapResolver.MapExpr.Expr.Enum }}
-			return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+			{{- $enumSelector := $mapResolver.EnumSelector }}
+			src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 				Value: value,
-				Expr: `{{ $enumExpr.By.Expr }}`,
-				OutType: reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}),
+				Expr: `{{ $mapResolver.MapExpr.Expr.Enum.By.Expr }}`,
+				OutType: reflect.TypeOf({{ $mapResolver.EnumSrcZeroValue }}),
 				CacheIndex: {{ .CELCacheIndex }},
 			})
+			if err != nil {
+				return 0, err
+			}
+			v := src.({{ $mapResolver.EnumSrcType }})
+			{{- if $enumSelector }}
+			var dst {{ $mapResolver.IteratorType }}
+			if err := func() error {
+				{{- template "setEnumValueByEnumSelector" (map "Dst" "dst" "EnumSelector" $enumSelector ) }}
+				return nil
+			}(); err != nil {
+				return 0, err
+			}
+			return dst, nil
+			{{- else }}
+			return {{ $mapResolver.EnumCastFunc }}
+			{{- end }}
 			{{- else if $mapResolver.IsMessage }}
 			{{- $arguments := $mapResolver.Arguments }}
 			args := &{{ $mapResolver.Service.ServiceName }}_{{ $mapResolver.RequestType }}{
@@ -72,30 +78,42 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		{{- end }}
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
-		{{- if .IsEnum }}
-		Setter: func(value *localValueType, v {{ .Type }}) error {
-			dst, err := {{ .EnumCastFunc }}
-			if err != nil {
-				return err
-			}
-			value.vars.{{ .Key }} = dst
-			return nil
-		},
-		{{- else }}
 		Setter: func(value *localValueType, v {{ .Type }}) error {
 			value.vars.{{ .Key }} = v
 			return nil
 		},
-		{{- end }}
 		{{- if .IsBy }}
 		By:     `{{ .By.Expr }}`,
-		ByCacheIndex: {{ .CELCacheIndex }},
-		{{- else if .IsEnum }}
-		By: `{{ .Enum.By.Expr }}`,
 		ByCacheIndex: {{ .CELCacheIndex }},
 		{{- else if .IsValidation }}
 		Validation:  func(ctx context.Context, value *localValueType) error {
 			{{- template "messageValidation" (map "Ctx" "ctx" "Error" .ValidationError) }}
+		},
+		{{- else if .IsEnum }}
+		Enum: func(ctx context.Context, value *localValueType) ({{ .Type }}, error) {
+			{{- $enumSelector := .EnumSelector }}
+			src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				Value: value,
+				Expr: `{{ .Enum.By.Expr }}`,
+				OutType: reflect.TypeOf({{ .EnumSrcZeroValue }}),
+				CacheIndex: {{ .CELCacheIndex }},
+			})
+			if err != nil {
+				return 0, err
+			}
+			v := src.({{ .EnumSrcType }})
+			{{- if $enumSelector }}
+			var dst {{ .Type }}
+			if err := func() error {
+				{{- template "setEnumValueByEnumSelector" (map "Dst" "dst" "EnumSelector" $enumSelector ) }}
+				return nil
+			}(); err != nil {
+				return 0, err
+			}
+			return dst, nil
+			{{- else }}
+			return {{ .EnumCastFunc }}
+			{{- end }}
 		},
 		{{- else }}
 		Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -329,3 +347,43 @@ args.{{ .Name }} = {{ .Value }}
 {{- end }}
 
 {{- end }}
+
+{{- define "setEnumValueByEnumSelector" -}}
+{{- $enumSelector := .EnumSelector }}
+if v.GetCond() {
+	{{- if $enumSelector.TrueEnumSelector }}
+	if err := func(v *grpcfedcel.EnumSelector) error {
+		{{- template "setEnumValueByEnumSelector" (map "Dst" .Dst "EnumSelector" $enumSelector.TrueEnumSelector ) }}
+		return nil
+	}(v.GetTrueSelector()); err != nil {
+		return err
+	}
+	{{- else if $enumSelector.RequiredCastTrueType }}
+	casted, err := s.{{ $enumSelector.CastTrueTypeFunc }}({{ $enumSelector.TrueType }}(v.GetTrueValue()))
+	if err != nil {
+		return err
+	}
+	{{ .Dst }} = casted
+	{{- else }}
+	{{ .Dst }} = {{ $enumSelector.TrueType }}(v.GetTrueValue())
+	{{- end }}
+} else {
+	{{- if $enumSelector.FalseEnumSelector }}
+	if err := func(v *grpcfedcel.EnumSelector) {
+		{{- template "setEnumValueByEnumSelector" (map "Dst" .Dst "EnumSelector" $enumSelector.FalseEnumSelector ) }}
+		return nil
+	}(v.GetFalseSelector()); err != nil {
+		return err
+	}
+	{{- else if $enumSelector.RequiredCastFalseType }}
+	casted, err := s.{{ $enumSelector.CastFalseTypeFunc }}({{ $enumSelector.FalseType }}(v.GetFalseValue()))
+	if err != nil {
+		return err
+	}
+	{{ .Dst }} = casted
+	{{- else }}
+	{{ .Dst }} = {{ $enumSelector.FalseType }}(v.GetFalseValue())
+	{{- end }}
+}
+
+{{- end -}}

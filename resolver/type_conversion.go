@@ -46,11 +46,15 @@ func typeConversionDecls(fromType, toType *Type, convertedFQDNMap map[string]str
 	decls := []*TypeConversionDecl{}
 	switch {
 	case fromType.Repeated:
-		decls = append(decls, &TypeConversionDecl{From: fromType, To: toType})
 		ft := fromType.Clone()
 		tt := toType.Clone()
 		ft.Repeated = false
 		tt.Repeated = false
+		if ft.Message.IsEnumSelector() && tt.Kind == types.Enum {
+			decls = append(decls, enumSelectorTypeConversionDecls(ft.Message, tt, convertedFQDNMap)...)
+			return decls
+		}
+		decls = append(decls, &TypeConversionDecl{From: fromType, To: toType})
 		decls = append(decls, typeConversionDecls(ft, tt, convertedFQDNMap)...)
 	case fromType.OneofField != nil:
 		decls = append(decls, &TypeConversionDecl{From: fromType, To: toType})

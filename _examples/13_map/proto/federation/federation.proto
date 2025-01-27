@@ -96,6 +96,19 @@ message Posts {
             by: "typ"
           }
         }
+      },
+      {
+        name: "selected_item_types"
+        map {
+          iterator {
+            name: "typ"
+            src: "source_item_types"
+          }
+          enum {
+            name: "Item.ItemType"
+            by: "grpc.federation.enum.select(true, typ, user.Item.ItemType.value('ITEM_TYPE_UNSPECIFIED'))"
+          }
+        }
       }
     ]
   };
@@ -110,6 +123,7 @@ message Posts {
   repeated User users = 4 [(grpc.federation.field).by = "users"];
   repeated PostItem items = 5 [(grpc.federation.field).by = "items"];
   repeated Item.ItemType item_types = 6 [(grpc.federation.field).by = "item_types"];
+  repeated Item.ItemType selected_item_types = 7 [(grpc.federation.field).by = "selected_item_types"];
 }
 
 message User {

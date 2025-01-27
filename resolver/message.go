@@ -104,6 +104,9 @@ func (m *Message) HasRule() bool {
 }
 
 func (m *Message) IsEnumSelector() bool {
+	if m == nil {
+		return false
+	}
 	return m.FQDN() == grpcfedcel.EnumSelectorFQDN
 }
 
