@@ -75,12 +75,14 @@ message Post {
     def { name: "data2", by: "res2.post.data" }
     def { name: "data_type" by: "grpc.federation.enum.select(true, org.post.PostDataType.from(org.post.PostDataType.POST_TYPE_B), org.post.v2.PostDataType.value('POST_V2_TYPE_B'))" }
     def { name: "data_type2" by: "grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.value('POST_V2_TYPE_C'))" }
+    def { name: "type_fed" enum { name: "PostType" by: "data_type2" }}
   };
   string id = 1;
   PostData data = 2;
   PostData data2 = 3 [(grpc.federation.field).by = "data2"];
   PostType type = 4 [(grpc.federation.field).by = "data_type2"];
-  org.post.M m = 5 [(grpc.federation.field).by = "M{x: 'xxx'}"];
+  PostType type2 = 5 [(grpc.federation.field).by = "type_fed"];
+  org.post.M m = 6 [(grpc.federation.field).by = "M{x: 'xxx'}"];
 }
 
 enum PostType {

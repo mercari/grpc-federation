@@ -44,6 +44,7 @@ type FederationService_Org_Federation_PostArgument struct {
 	Post      *post.Post
 	Res       *post.GetPostResponse
 	Res2      *post1.GetPostResponse
+	TypeFed   PostType
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -330,6 +331,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			post       *post.Post
 			res        *post.GetPostResponse
 			res2       *post1.GetPostResponse
+			type_fed   PostType
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
@@ -550,14 +552,80 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		})
 	}
 
+	/*
+		def {
+		  name: "type_fed"
+		  enum {
+		    name: "org.federation.PostType"
+		    by: "data_type2"
+		  }
+		}
+	*/
+	def_type_fed := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[PostType, *localValueType]{
+			Name: `type_fed`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v PostType) error {
+				value.vars.type_fed = v
+				return nil
+			},
+			Enum: func(ctx context.Context, value *localValueType) (PostType, error) {
+				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+					Value:      value,
+					Expr:       `data_type2`,
+					OutType:    reflect.TypeOf((*grpcfedcel.EnumSelector)(nil)),
+					CacheIndex: 15,
+				})
+				if err != nil {
+					return 0, err
+				}
+				v := src.(*grpcfedcel.EnumSelector)
+				var dst PostType
+				if err := func() error {
+					if v.GetCond() {
+						if err := func(v *grpcfedcel.EnumSelector) error {
+							if v.GetCond() {
+								casted, err := s.cast_Org_Post_PostDataType__to__Org_Federation_PostType(post.PostDataType(v.GetTrueValue()))
+								if err != nil {
+									return err
+								}
+								dst = casted
+							} else {
+								casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
+								if err != nil {
+									return err
+								}
+								dst = casted
+							}
+							return nil
+						}(v.GetTrueSelector()); err != nil {
+							return err
+						}
+					} else {
+						casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
+						if err != nil {
+							return err
+						}
+						dst = casted
+					}
+					return nil
+				}(); err != nil {
+					return 0, err
+				}
+				return dst, nil
+			},
+		})
+	}
+
 	// A tree view of message dependencies is shown below.
 	/*
-	        res2 ─┐
-	                   data2 ─┐
-	   data_type ─┐           │
-	              data_type2 ─┤
-	         res ─┐           │
-	                    post ─┤
+	                    res2 ─┐
+	                             data2 ─┐
+	                     res ─┐         │
+	                              post ─┤
+	   data_type ─┐                     │
+	              data_type2 ─┐         │
+	                          type_fed ─┤
 	*/
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
@@ -567,18 +635,6 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			return nil, err
 		}
 		if err := def_data2(ctx1); err != nil {
-			grpcfed.RecordErrorToSpan(ctx1, err)
-			return nil, err
-		}
-		return nil, nil
-	})
-
-	grpcfed.GoWithRecover(eg, func() (any, error) {
-		if err := def_data_type(ctx1); err != nil {
-			grpcfed.RecordErrorToSpan(ctx1, err)
-			return nil, err
-		}
-		if err := def_data_type2(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
@@ -597,6 +653,22 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		return nil, nil
 	})
 
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_data_type(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_data_type2(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_type_fed(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
@@ -608,6 +680,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	req.Post = value.vars.post
 	req.Res = value.vars.res
 	req.Res2 = value.vars.res2
+	req.TypeFed = value.vars.type_fed
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -626,7 +699,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post1.PostData]{
 		Value:      value,
 		Expr:       `data2`,
-		CacheIndex: 15,
+		CacheIndex: 16,
 		Setter: func(v *post1.PostData) error {
 			data2Value, err := s.cast_Org_Post_V2_PostData__to__Org_Federation_PostData(v)
 			if err != nil {
@@ -643,7 +716,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*grpcfedcel.EnumSelector]{
 		Value:      value,
 		Expr:       `data_type2`,
-		CacheIndex: 16,
+		CacheIndex: 17,
 		Setter: func(v *grpcfedcel.EnumSelector) error {
 			var typeValue PostType
 			if v.GetCond() {
@@ -679,11 +752,24 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	// (grpc.federation.field).by = "type_fed"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostType]{
+		Value:      value,
+		Expr:       `type_fed`,
+		CacheIndex: 18,
+		Setter: func(v PostType) error {
+			ret.Type2 = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 	// (grpc.federation.field).by = "M{x: 'xxx'}"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*M]{
 		Value:      value,
 		Expr:       `M{x: 'xxx'}`,
-		CacheIndex: 17,
+		CacheIndex: 19,
 		Setter: func(v *M) error {
 			mValue, err := s.cast_Org_Federation_M__to__Org_Post_M(v)
 			if err != nil {
@@ -927,6 +1013,7 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 		slog.Any("data", s.logvalue_Org_Federation_PostData(v.GetData())),
 		slog.Any("data2", s.logvalue_Org_Federation_PostData(v.GetData2())),
 		slog.String("type", s.logvalue_Org_Federation_PostType(v.GetType()).String()),
+		slog.String("type2", s.logvalue_Org_Federation_PostType(v.GetType2()).String()),
 		slog.Any("m", s.logvalue_Org_Post_M(v.GetM())),
 	)
 }

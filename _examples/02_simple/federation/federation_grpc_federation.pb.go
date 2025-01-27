@@ -1014,19 +1014,26 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		}
 	*/
 	def_e := func(ctx context.Context) error {
-		return grpcfed.EvalDef(ctx, value, grpcfed.Def[user.Item_ItemType, *localValueType]{
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[Item_ItemType, *localValueType]{
 			Name: `e`,
 			Type: grpcfed.CELIntType,
-			Setter: func(value *localValueType, v user.Item_ItemType) error {
-				dst, err := s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
-				if err != nil {
-					return err
-				}
-				value.vars.e = dst
+			Setter: func(value *localValueType, v Item_ItemType) error {
+				value.vars.e = v
 				return nil
 			},
-			By:           `user.Item.ItemType.value('ITEM_TYPE_2')`,
-			ByCacheIndex: 26,
+			Enum: func(ctx context.Context, value *localValueType) (Item_ItemType, error) {
+				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+					Value:      value,
+					Expr:       `user.Item.ItemType.value('ITEM_TYPE_2')`,
+					OutType:    reflect.TypeOf(user.Item_ItemType(0)),
+					CacheIndex: 26,
+				})
+				if err != nil {
+					return 0, err
+				}
+				v := src.(user.Item_ItemType)
+				return s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
+			},
 		})
 	}
 

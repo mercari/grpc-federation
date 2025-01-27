@@ -33,14 +33,15 @@ type FederationService_Org_Federation_GetPostsResponseArgument struct {
 
 // Org_Federation_PostsArgument is argument for "org.federation.Posts" message.
 type FederationService_Org_Federation_PostsArgument struct {
-	Ids             []string
-	ItemTypes       []Item_ItemType
-	Items           []*Posts_PostItem
-	PostIds         []string
-	Posts           []*post.Post
-	Res             *post.GetPostsResponse
-	SourceItemTypes []user.Item_ItemType
-	Users           []*User
+	Ids               []string
+	ItemTypes         []Item_ItemType
+	Items             []*Posts_PostItem
+	PostIds           []string
+	Posts             []*post.Post
+	Res               *post.GetPostsResponse
+	SelectedItemTypes []Item_ItemType
+	SourceItemTypes   []user.Item_ItemType
+	Users             []*User
 }
 
 // Org_Federation_Posts_PostItemArgument is argument for "org.federation.PostItem" message.
@@ -301,13 +302,14 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			ids               []string
-			item_types        []Item_ItemType
-			items             []*Posts_PostItem
-			posts             []*post.Post
-			res               *post.GetPostsResponse
-			source_item_types []user.Item_ItemType
-			users             []*User
+			ids                 []string
+			item_types          []Item_ItemType
+			items               []*Posts_PostItem
+			posts               []*post.Post
+			res                 *post.GetPostsResponse
+			selected_item_types []Item_ItemType
+			source_item_types   []user.Item_ItemType
+			users               []*User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostsArgument", req)}
@@ -528,27 +530,85 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		}
 	*/
 	def_item_types := func(ctx context.Context) error {
-		return grpcfed.EvalDefMap(ctx, value, grpcfed.DefMap[[]user.Item_ItemType, user.Item_ItemType, *localValueType]{
+		return grpcfed.EvalDefMap(ctx, value, grpcfed.DefMap[[]Item_ItemType, user.Item_ItemType, *localValueType]{
 			Name: `item_types`,
 			Type: grpcfed.CELListType(grpcfed.CELIntType),
-			Setter: func(value *localValueType, v []user.Item_ItemType) error {
-				dst, err := s.cast_repeated_User_Item_ItemType__to__repeated_Org_Federation_Item_ItemType(v)
-				if err != nil {
-					return err
-				}
-				value.vars.item_types = dst
+			Setter: func(value *localValueType, v []Item_ItemType) error {
+				value.vars.item_types = v
 				return nil
 			},
 			IteratorName:   `typ`,
 			IteratorType:   grpcfed.CELIntType,
 			IteratorSource: func(value *localValueType) []user.Item_ItemType { return value.vars.source_item_types },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
-				return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 					Value:      value,
 					Expr:       `typ`,
 					OutType:    reflect.TypeOf(user.Item_ItemType(0)),
 					CacheIndex: 9,
 				})
+				if err != nil {
+					return 0, err
+				}
+				v := src.(user.Item_ItemType)
+				return s.cast_User_Item_ItemType__to__Org_Federation_Item_ItemType(v)
+			},
+		})
+	}
+
+	/*
+		def {
+		  name: "selected_item_types"
+		  map {
+		    iterator {
+		      name: "typ"
+		      src: "source_item_types"
+		    }
+		  }
+		}
+	*/
+	def_selected_item_types := func(ctx context.Context) error {
+		return grpcfed.EvalDefMap(ctx, value, grpcfed.DefMap[[]Item_ItemType, user.Item_ItemType, *localValueType]{
+			Name: `selected_item_types`,
+			Type: grpcfed.CELListType(grpcfed.CELIntType),
+			Setter: func(value *localValueType, v []Item_ItemType) error {
+				value.vars.selected_item_types = v
+				return nil
+			},
+			IteratorName:   `typ`,
+			IteratorType:   grpcfed.CELIntType,
+			IteratorSource: func(value *localValueType) []user.Item_ItemType { return value.vars.source_item_types },
+			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
+				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+					Value:      value,
+					Expr:       `grpc.federation.enum.select(true, typ, user.Item.ItemType.value('ITEM_TYPE_UNSPECIFIED'))`,
+					OutType:    reflect.TypeOf((*grpcfedcel.EnumSelector)(nil)),
+					CacheIndex: 10,
+				})
+				if err != nil {
+					return 0, err
+				}
+				v := src.(*grpcfedcel.EnumSelector)
+				var dst Item_ItemType
+				if err := func() error {
+					if v.GetCond() {
+						casted, err := s.cast_User_Item_ItemType__to__Org_Federation_Item_ItemType(user.Item_ItemType(v.GetTrueValue()))
+						if err != nil {
+							return err
+						}
+						dst = casted
+					} else {
+						casted, err := s.cast_User_Item_ItemType__to__Org_Federation_Item_ItemType(user.Item_ItemType(v.GetFalseValue()))
+						if err != nil {
+							return err
+						}
+						dst = casted
+					}
+					return nil
+				}(); err != nil {
+					return 0, err
+				}
+				return dst, nil
 			},
 		})
 	}
@@ -557,15 +617,17 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	/*
 	   res ─┐
 	                    posts ─┐
-	                                  ids ─┐
-	        source_item_types ─┐           │
-	                           item_types ─┤
-	   res ─┐                              │
-	                    posts ─┐           │
-	                                items ─┤
-	   res ─┐                              │
-	                    posts ─┐           │
-	                                users ─┤
+	                                           ids ─┐
+	        source_item_types ─┐                    │
+	                                    item_types ─┤
+	   res ─┐                                       │
+	                    posts ─┐                    │
+	                                         items ─┤
+	        source_item_types ─┐                    │
+	                           selected_item_types ─┤
+	   res ─┐                                       │
+	                    posts ─┐                    │
+	                                         users ─┤
 	*/
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
@@ -614,6 +676,18 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_source_item_types(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_selected_item_types(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
 		if err := def_res(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -639,6 +713,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	req.Items = value.vars.items
 	req.Posts = value.vars.posts
 	req.Res = value.vars.res
+	req.SelectedItemTypes = value.vars.selected_item_types
 	req.SourceItemTypes = value.vars.source_item_types
 	req.Users = value.vars.users
 
@@ -650,7 +725,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `ids`,
-		CacheIndex: 10,
+		CacheIndex: 11,
 		Setter: func(v []string) error {
 			ret.Ids = v
 			return nil
@@ -663,7 +738,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `posts.map(post, post.title)`,
-		CacheIndex: 11,
+		CacheIndex: 12,
 		Setter: func(v []string) error {
 			ret.Titles = v
 			return nil
@@ -676,7 +751,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `posts.map(post, post.content)`,
-		CacheIndex: 12,
+		CacheIndex: 13,
 		Setter: func(v []string) error {
 			ret.Contents = v
 			return nil
@@ -689,7 +764,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]*User]{
 		Value:      value,
 		Expr:       `users`,
-		CacheIndex: 13,
+		CacheIndex: 14,
 		Setter: func(v []*User) error {
 			ret.Users = v
 			return nil
@@ -702,7 +777,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]*Posts_PostItem]{
 		Value:      value,
 		Expr:       `items`,
-		CacheIndex: 14,
+		CacheIndex: 15,
 		Setter: func(v []*Posts_PostItem) error {
 			ret.Items = v
 			return nil
@@ -715,9 +790,22 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]Item_ItemType]{
 		Value:      value,
 		Expr:       `item_types`,
-		CacheIndex: 15,
+		CacheIndex: 16,
 		Setter: func(v []Item_ItemType) error {
 			ret.ItemTypes = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "selected_item_types"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]Item_ItemType]{
+		Value:      value,
+		Expr:       `selected_item_types`,
+		CacheIndex: 17,
+		Setter: func(v []Item_ItemType) error {
+			ret.SelectedItemTypes = v
 			return nil
 		},
 	}); err != nil {
@@ -751,7 +839,7 @@ func (s *FederationService) resolve_Org_Federation_Posts_PostItem(ctx context.Co
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'item_' + $.id`,
-		CacheIndex: 16,
+		CacheIndex: 18,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -803,7 +891,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.user_id`,
-					CacheIndex: 17,
+					CacheIndex: 19,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -839,7 +927,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				return nil
 			},
 			By:           `res.user`,
-			ByCacheIndex: 18,
+			ByCacheIndex: 20,
 		})
 	}
 
@@ -939,6 +1027,7 @@ func (s *FederationService) logvalue_Org_Federation_Posts(v *Posts) slog.Value {
 		slog.Any("users", s.logvalue_repeated_Org_Federation_User(v.GetUsers())),
 		slog.Any("items", s.logvalue_repeated_Org_Federation_Posts_PostItem(v.GetItems())),
 		slog.Any("item_types", s.logvalue_repeated_Org_Federation_Item_ItemType(v.GetItemTypes())),
+		slog.Any("selected_item_types", s.logvalue_repeated_Org_Federation_Item_ItemType(v.GetSelectedItemTypes())),
 	)
 }
 

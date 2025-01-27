@@ -3,6 +3,7 @@ package generator
 import (
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"go/format"
 	"log"
@@ -2388,7 +2389,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	toType := field.Type
 	fromType := value.Out
 
-	enumSelectorSetterParam := m.createEnumSelectorParam(fromType.Message, toType)
+	enumSelectorSetterParam := m.file.createEnumSelectorParam(fromType.Message, toType)
 
 	toText := m.file.toTypeText(toType)
 	fromText := m.file.toTypeText(fromType)
@@ -2425,7 +2426,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 	}
 }
 
-func (m *Message) createEnumSelectorParam(msg *resolver.Message, toType *resolver.Type) *EnumSelectorSetterParam {
+func (f *File) createEnumSelectorParam(msg *resolver.Message, toType *resolver.Type) *EnumSelectorSetterParam {
 	if msg == nil {
 		return nil
 	}
@@ -2433,22 +2434,22 @@ func (m *Message) createEnumSelectorParam(msg *resolver.Message, toType *resolve
 		return nil
 	}
 	ret := &EnumSelectorSetterParam{
-		Type: m.file.toTypeText(toType),
+		Type: f.toTypeText(toType),
 	}
 	trueType := msg.Fields[0].Type
 	if trueType.Message != nil && trueType.Message.IsEnumSelector() {
-		ret.TrueEnumSelector = m.createEnumSelectorParam(trueType.Message, toType)
+		ret.TrueEnumSelector = f.createEnumSelectorParam(trueType.Message, toType)
 	} else {
 		ret.RequiredCastTrueType = requiredCast(trueType, toType)
-		ret.TrueType = m.file.toTypeText(trueType)
+		ret.TrueType = f.toTypeText(trueType)
 		ret.CastTrueTypeFunc = castFuncName(trueType, toType)
 	}
 	falseType := msg.Fields[1].Type
 	if falseType.Message != nil && falseType.Message.IsEnumSelector() {
-		ret.FalseEnumSelector = m.createEnumSelectorParam(falseType.Message, toType)
+		ret.FalseEnumSelector = f.createEnumSelectorParam(falseType.Message, toType)
 	} else {
 		ret.RequiredCastFalseType = requiredCast(falseType, toType)
-		ret.FalseType = m.file.toTypeText(falseType)
+		ret.FalseType = f.toTypeText(falseType)
 		ret.CastFalseTypeFunc = castFuncName(falseType, toType)
 	}
 	return ret
@@ -3055,6 +3056,19 @@ func (d *VariableDefinition) Enum() *resolver.EnumExpr {
 	return d.VariableDefinition.Expr.Enum
 }
 
+func (d *VariableDefinition) EnumSrcType() string {
+	return d.Message.file.toTypeText(d.Enum().By.Out)
+}
+
+func (d *VariableDefinition) EnumSrcZeroValue() string {
+	return toMakeZeroValue(d.Message.file, d.Enum().By.Out)
+}
+
+func (d *VariableDefinition) EnumSelector() *EnumSelectorSetterParam {
+	typ := d.VariableDefinition.Expr.Enum.By.Out
+	return d.Message.file.createEnumSelectorParam(typ.Message, d.VariableDefinition.Expr.Type)
+}
+
 func (d *VariableDefinition) ZeroValue() string {
 	return toMakeZeroValue(d.Message.file, d.VariableDefinition.Expr.Type)
 }
@@ -3068,26 +3082,11 @@ func (d *VariableDefinition) ProtoComment() string {
 }
 
 func (d *VariableDefinition) Type() string {
-	if typ := d.enumType(); typ != nil {
-		return d.Message.file.toTypeText(typ)
-	}
 	return d.Message.file.toTypeText(d.VariableDefinition.Expr.Type)
 }
 
-func (d *VariableDefinition) enumType() *resolver.Type {
-	if d.VariableDefinition.Expr.Enum != nil {
-		return d.VariableDefinition.Expr.Enum.By.Out
-	}
-	if d.VariableDefinition.Expr.Map != nil && d.VariableDefinition.Expr.Map.Expr.Enum != nil {
-		typ := d.VariableDefinition.Expr.Map.Expr.Enum.By.Out.Clone()
-		typ.Repeated = true
-		return typ
-	}
-	return nil
-}
-
 func (d *VariableDefinition) EnumCastFunc() string {
-	typ := d.enumType()
+	typ := d.Enum().By.Out
 	if typ == nil {
 		return "v"
 	}
@@ -3147,14 +3146,66 @@ func (r *MapResolver) IteratorType() string {
 }
 
 func (r *MapResolver) IteratorZeroValue() string {
-	var iterType *resolver.Type
-	if r.MapExpr.Expr.Enum != nil {
-		iterType = r.MapExpr.Expr.Enum.By.Out.Clone()
-	} else {
-		iterType = r.MapExpr.Expr.Type.Clone()
-	}
+	iterType := r.MapExpr.Expr.Type.Clone()
 	iterType.Repeated = false
 	return toMakeZeroValue(r.file, iterType)
+}
+
+func (r *MapResolver) EnumSelector() (*EnumSelectorSetterParam, error) {
+	enumExpr := r.MapExpr.Expr.Enum
+	if enumExpr == nil || enumExpr.Enum == nil {
+		return nil, errors.New("cannot find enum value from map iterator")
+	}
+	typ := enumExpr.By.Out
+	outType := r.MapExpr.Expr.Type.Clone()
+	outType.Repeated = false
+	return r.file.createEnumSelectorParam(typ.Message, outType), nil
+}
+
+func (r *MapResolver) EnumCastFunc() (string, error) {
+	enumExpr := r.MapExpr.Expr.Enum
+	if enumExpr == nil || enumExpr.Enum == nil {
+		return "", errors.New("cannot find enum value from map iterator")
+	}
+	typ := enumExpr.By.Out
+	if typ == nil {
+		return "v", nil
+	}
+	outType := r.MapExpr.Expr.Type.Clone()
+	outType.Repeated = false
+	if typ.Enum == outType.Enum {
+		return "v", nil
+	}
+	return fmt.Sprintf("s.%s(v)",
+		castFuncName(
+			typ,
+			outType,
+		),
+	), nil
+}
+
+func (r *MapResolver) EnumSrcType() (string, error) {
+	enumExpr := r.MapExpr.Expr.Enum
+	if enumExpr == nil || enumExpr.Enum == nil {
+		return "", errors.New("cannot find enum value from map iterator")
+	}
+	return r.file.toTypeText(enumExpr.By.Out), nil
+}
+
+func (r *MapResolver) EnumDrcType() (string, error) {
+	enumExpr := r.MapExpr.Expr.Enum
+	if enumExpr == nil || enumExpr.Enum == nil {
+		return "", errors.New("cannot find enum value from map iterator")
+	}
+	return r.file.toTypeText(enumExpr.By.Out), nil
+}
+
+func (r *MapResolver) EnumSrcZeroValue() (string, error) {
+	enumExpr := r.MapExpr.Expr.Enum
+	if enumExpr == nil || enumExpr.Enum == nil {
+		return "", errors.New("cannot find enum value from map iterator")
+	}
+	return toMakeZeroValue(r.file, enumExpr.By.Out), nil
 }
 
 func (r *MapResolver) IteratorSource() string {

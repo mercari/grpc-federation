@@ -122,6 +122,9 @@ invalid_enum_selector.proto:22:15: ERROR: <input>:1:56: cannot specify an int ty
  | .......................................................^
 22:      def { by: "grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, 'foo')" }
                    ^
+invalid_enum_selector.proto:28:1: required specify alias = "org.post.PostContent.Category" in grpc.federation.enum option for the "org.federation.PostDataType" type to automatically assign a value to the "GetPostResponse.type" field via autobind
+28:  enum PostDataType {
+     ^
 `},
 		{file: "invalid_env.proto", expected: `
 invalid_env.proto:11:9: "message" and "var" cannot be used simultaneously

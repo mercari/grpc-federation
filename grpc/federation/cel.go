@@ -468,6 +468,7 @@ type Def[T any, U localValue] struct {
 	IfCacheIndex int
 	ByCacheIndex int
 	Message      func(context.Context, U) (any, error)
+	Enum         func(context.Context, U) (T, error)
 	Validation   func(context.Context, U) error
 }
 
@@ -530,6 +531,8 @@ func evalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 				})
 			case def.Message != nil:
 				return def.Message(ctx, value)
+			case def.Enum != nil:
+				return def.Enum(ctx, value)
 			case def.Validation != nil:
 				if err := def.Validation(ctx, value); err != nil {
 					if _, ok := grpcstatus.FromError(err); ok {

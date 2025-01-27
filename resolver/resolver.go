@@ -1858,7 +1858,10 @@ func (r *Resolver) validateEnumMultipleAliases(fromType *Type, toField *Field) e
 	if fromType == nil {
 		return nil
 	}
-	if fromType.Kind == types.Message && fromType.Message != nil && fromType.Message.IsEnumSelector() {
+	if fromType.Enum == toType.Enum {
+		return nil
+	}
+	if fromType.IsEnumSelector() {
 		return nil
 	}
 	return errors.New(`if multiple aliases are specified, you must use grpc.federation.enum.select function to bind`)
@@ -3880,7 +3883,7 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 			return
 		}
 		fromType := expr.Enum.By.Out
-		if fromType.Kind != types.Enum {
+		if fromType.Kind != types.Enum && !fromType.IsEnumSelector() {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -3970,7 +3973,7 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 			return
 		}
 		fromType := expr.Enum.By.Out
-		if fromType.Kind != types.Enum {
+		if fromType.Kind != types.Enum && !fromType.IsEnumSelector() {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(

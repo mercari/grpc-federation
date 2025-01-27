@@ -690,84 +690,9 @@ ret.{{ $name }} = {{ $v }}
 {{- end -}}
 
 {{- define "setReturnValueByEnumSelector" -}}
-{{- $name := .Name }}
+{{- $dst := toLocalVariable .Name }}
 {{- $enumSelector := .EnumSelector }}
-var {{ toLocalVariable $name }} {{ $enumSelector.Type }}
-if v.GetCond() {
-	{{- if $enumSelector.TrueEnumSelector }}
-	if err := func(v *grpcfedcel.EnumSelector) error {
-		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.TrueEnumSelector ) }}
-		return nil
-	}(v.GetTrueSelector()); err != nil {
-		return err
-	}
-	{{- else if $enumSelector.RequiredCastTrueType }}
-	casted, err := s.{{ $enumSelector.CastTrueTypeFunc }}({{ $enumSelector.TrueType }}(v.GetTrueValue()))
-	if err != nil {
-		return err
-	}
-	{{ toLocalVariable $name }} = casted
-	{{- else }}
-	{{ toLocalVariable $name }} = {{ $enumSelector.TrueType }}(v.GetTrueValue())
-	{{- end }}
-} else {
-	{{- if $enumSelector.FalseEnumSelector }}
-	if err := func(v *grpcfedcel.EnumSelector) {
-		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.FalseEnumSelector ) }}
-		return nil
-	}(v.GetFalseSelector()); err != nil {
-		return err
-	}
-	{{- else if $enumSelector.RequiredCastFalseType }}
-	casted, err := s.{{ $enumSelector.CastFalseTypeFunc }}({{ $enumSelector.FalseType }}(v.GetFalseValue()))
-	if err != nil {
-		return err
-	}
-	{{ toLocalVariable $name }} = casted
-	{{- else }}
-	{{ toLocalVariable $name }} = {{ $enumSelector.FalseType }}(v.GetFalseValue())
-	{{- end }}
-}
-ret.{{ $name }} = {{ toLocalVariable $name }}
-
-{{- end -}}
-
-{{- define "setReturnValueByEnumSelectorRecursive" -}}
-{{- $name := .Name }}
-{{- $enumSelector := .EnumSelector }}
-if v.GetCond() {
-	{{- if $enumSelector.TrueEnumSelector }}
-	if err := func(v *grpcfedcel.EnumSelector) error {
-		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.TrueEnumSelector ) }}
-		return nil
-	}(v.GetTrueSelector()); err != nil {
-		return err
-	}
-	{{- else if $enumSelector.RequiredCastTrueType }}
-	casted, err := s.{{ $enumSelector.CastTrueTypeFunc }}({{ $enumSelector.TrueType }}(v.GetTrueValue()))
-	if err != nil {
-		return err
-	}
-	{{ toLocalVariable $name }} = casted
-	{{- else }}
-	{{ toLocalVariable $name }} = {{ $enumSelector.TrueType }}(v.GetTrueValue())
-	{{- end }}
-} else {
-	{{- if $enumSelector.FalseEnumSelector }}
-	if err := func(v *grpcfedcel.EnumSelector) {
-		{{- template "setReturnValueByEnumSelectorRecursive" (map "Name" $name "EnumSelector" $enumSelector.FalseEnumSelector ) }}
-		return nil
-	}(v.GetFalseSelector()); err != nil {
-		return err
-	}
-	{{- else if $enumSelector.RequiredCastFalseType }}
-	casted, err := s.{{ $enumSelector.CastFalseTypeFunc }}({{ $enumSelector.FalseType }}(v.GetFalseValue()))
-	if err != nil {
-		return err
-	}
-	{{ toLocalVariable $name }} = casted
-	{{- else }}
-	{{ toLocalVariable $name }} = {{ $enumSelector.FalseType }}(v.GetFalseValue())
-	{{- end }}
-}
+var {{ $dst }} {{ $enumSelector.Type }}
+{{- template "setEnumValueByEnumSelector" (map "Dst" $dst "EnumSelector" $enumSelector) }}
+ret.{{ .Name }} = {{ $dst }}
 {{- end -}}

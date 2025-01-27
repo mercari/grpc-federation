@@ -547,27 +547,28 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 		}
 	*/
 	def_user_types := func(ctx context.Context) error {
-		return grpcfed.EvalDefMap(ctx, value, grpcfed.DefMap[[]user.UserType, user.UserType, *localValueType]{
+		return grpcfed.EvalDefMap(ctx, value, grpcfed.DefMap[[]UserType, user.UserType, *localValueType]{
 			Name: `user_types`,
 			Type: grpcfed.CELListType(grpcfed.CELIntType),
-			Setter: func(value *localValueType, v []user.UserType) error {
-				dst, err := s.cast_repeated_Org_User_UserType__to__repeated_Org_Federation_UserType(v)
-				if err != nil {
-					return err
-				}
-				value.vars.user_types = dst
+			Setter: func(value *localValueType, v []UserType) error {
+				value.vars.user_types = v
 				return nil
 			},
 			IteratorName:   `typ`,
 			IteratorType:   grpcfed.CELIntType,
 			IteratorSource: func(value *localValueType) []user.UserType { return value.vars.source_user_types },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
-				return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 					Value:      value,
 					Expr:       `typ`,
 					OutType:    reflect.TypeOf(user.UserType(0)),
 					CacheIndex: 9,
 				})
+				if err != nil {
+					return 0, err
+				}
+				v := src.(user.UserType)
+				return s.cast_Org_User_UserType__to__Org_Federation_UserType(v)
 			},
 		})
 	}

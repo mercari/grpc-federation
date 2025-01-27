@@ -21,4 +21,34 @@ message GetPostResponse {
   option (grpc.federation.message) = {
     def { by: "grpc.federation.enum.select(true, org.post.PostDataType.POST_TYPE_B, 'foo')" }
   };
+
+  PostDataType type = 1 [(grpc.federation.field).by = "grpc.federation.enum.select(true, org.post.PostDataType.value('POST_TYPE_B'), org.post.PostContent.Category.value('CATEGORY_A'))"];
+}
+
+enum PostDataType {
+  option (grpc.federation.enum) = {
+    alias: [
+      "org.post.PostDataType",
+      "org.post.FakePostDataType"
+    ]
+  };
+
+  POST_TYPE_A = 0 [(grpc.federation.enum_value) = {
+    alias: [
+      "org.post.PostDataType.POST_TYPE_A",
+      "org.post.FakePostDataType.FAKE_POST_TYPE_A"
+    ]
+  }];
+  POST_TYPE_B = 1 [(grpc.federation.enum_value) = {
+    alias: [
+      "org.post.PostDataType.POST_TYPE_B",
+      "org.post.FakePostDataType.FAKE_POST_TYPE_B"
+    ]
+  }];
+  POST_TYPE_C = 2 [(grpc.federation.enum_value) = {
+    alias: [
+      "org.post.PostDataType.POST_TYPE_C",
+      "org.post.FakePostDataType.FAKE_POST_TYPE_C"
+    ]
+  }];
 }
