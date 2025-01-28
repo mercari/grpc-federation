@@ -18,6 +18,7 @@ import (
 	"github.com/google/cel-go/parser"
 	"golang.org/x/sync/singleflight"
 	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
+	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	grpccodes "google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -257,7 +258,7 @@ func EnumAttrOption[T ~int32](enumName string, enumAttrMap EnumAttributeMap[T]) 
 }
 
 func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
-	return []cel.EnvOption{
+	opts := []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary(celHelper)),
 		cel.CrossTypeNumericComparisons(true),
@@ -267,6 +268,8 @@ func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 		cel.Variable(ContextVariableName, cel.ObjectType(ContextTypeName)),
 		cel.Container(celHelper.pkgName),
 	}
+	opts = append(opts, EnumAccessorOptions("google.rpc.Code", code.Code_value, code.Code_name)...)
+	return opts
 }
 
 // CELCache used to speed up CEL evaluation from the second time onward.

@@ -107,7 +107,11 @@ message GetPost2Response {
       call {
         method: "post.PostService/GetPost"
         request { field: "id" by: "$.id" }
-        error { log_level: WARN }
+        error {
+          def { name: "code" by: "google.rpc.Code.from(error.code)" }
+          if: "code == google.rpc.Code.FAILED_PRECONDITION"
+          log_level: WARN
+        }
       }
     }
   };
