@@ -32,6 +32,9 @@ func (f *OneofField) FQDN() string {
 }
 
 func (e *Enum) FQDN() string {
+	if e == nil {
+		return ""
+	}
 	if e.Message != nil {
 		return fmt.Sprintf("%s.%s", e.Message.FQDN(), e.Name)
 	}
