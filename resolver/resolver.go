@@ -2889,26 +2889,17 @@ func (r *Resolver) resolveEnumAliases(ctx *context, aliasNames []string, builder
 	}
 	var ret []*Enum
 	for _, aliasName := range aliasNames {
-		if strings.Contains(aliasName, ".") {
-			pkg, err := r.lookupPackage(aliasName)
-			if err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						builder.WithOption().Location(),
-					),
-				)
-				return nil
-			}
-			name := r.trimPackage(pkg, aliasName)
-			if alias := r.resolveEnum(ctx, pkg, name, source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), name)); alias != nil {
-				ret = append(ret, alias)
-			}
-		} else {
-			if alias := r.resolveEnum(ctx, ctx.file().Package, aliasName, source.NewEnumBuilder(ctx.fileName(), ctx.messageName(), aliasName)); alias != nil {
-				ret = append(ret, alias)
-			}
+		enum, err := r.resolveEnumByName(ctx, aliasName, builder)
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithOption().Location(),
+				),
+			)
+			continue
 		}
+		ret = append(ret, enum)
 	}
 	return ret
 }
@@ -2958,6 +2949,11 @@ func (r *Resolver) resolveEnumValueAlias(ctx *context, enumValueName, enumValueA
 	var enumValueAliases []*EnumValueAlias
 	for _, alias := range aliases {
 		if value := alias.Value(enumValueAlias); value != nil {
+			enumValueAliases = append(enumValueAliases, &EnumValueAlias{
+				EnumAlias: alias,
+				Aliases:   []*EnumValue{value},
+			})
+		} else if value := alias.Value(ctx.file().PackageName() + "." + enumValueAlias); value != nil {
 			enumValueAliases = append(enumValueAliases, &EnumValueAlias{
 				EnumAlias: alias,
 				Aliases:   []*EnumValue{value},
