@@ -326,6 +326,7 @@ func TestFederation(t *testing.T) {
 		SqrtInt:        5,
 		Pow:            8,
 		Floor:          1,
+		Flatten:        []int64{1, 2, 3},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
