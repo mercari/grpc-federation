@@ -86,8 +86,52 @@ func (lib *ListLibrary) CompileOptions() []cel.EnvOption {
 				cel.BinaryBinding(lib.sortStableDesc),
 			),
 		),
+		cel.Function("flatten",
+			cel.MemberOverload("list_flatten",
+				[]*cel.Type{cel.ListType(listTypeO)}, listTypeO,
+				cel.UnaryBinding(func(arg ref.Val) ref.Val {
+					list, ok := arg.(traits.Lister)
+					if !ok {
+						return types.ValOrErr(arg, "no such overload: %v.flatten()", arg.Type())
+					}
+					flatList, err := flatten(list, 1)
+					if err != nil {
+						return types.WrapErr(err)
+					}
+					return lib.typeAdapter.NativeToValue(flatList)
+				}),
+			),
+		),
 	}
 	return opts
+}
+
+func flatten(list traits.Lister, depth int64) ([]ref.Val, error) {
+	if depth < 0 {
+		return nil, fmt.Errorf("level must be non-negative")
+	}
+
+	var newList []ref.Val
+	iter := list.Iterator()
+
+	for iter.HasNext() == types.True {
+		val := iter.Next()
+		nestedList, isList := val.(traits.Lister)
+
+		if !isList || depth == 0 {
+			newList = append(newList, val)
+			continue
+		} else {
+			flattenedList, err := flatten(nestedList, depth-1)
+			if err != nil {
+				return nil, err
+			}
+
+			newList = append(newList, flattenedList...)
+		}
+	}
+
+	return newList, nil
 }
 
 func (lib *ListLibrary) ProgramOptions() []cel.ProgramOption {
