@@ -129,6 +129,7 @@ func TestCompletion(t *testing.T) {
 			"google.protobuf.FieldDescriptorProto",
 			"google.protobuf.FieldOptions",
 			"google.protobuf.FieldOptions.EditionDefault",
+			"google.protobuf.FieldOptions.FeatureSupport",
 			"google.protobuf.FileDescriptorProto",
 			"google.protobuf.FileDescriptorSet",
 			"google.protobuf.FileOptions",
