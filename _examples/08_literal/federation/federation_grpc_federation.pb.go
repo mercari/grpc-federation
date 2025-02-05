@@ -126,7 +126,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("content.ContentType", content.ContentType_value, content.ContentType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.ContentType", ContentType_value, ContentType_name)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -137,7 +137,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Content_ContentServiceClient: Content_ContentServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // Get implements "org.federation.FederationService/Get" method.
@@ -173,8 +174,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			content *content.Content
-			res     *content.GetContentResponse
+			Content *content.Content
+			Res     *content.GetContentResponse
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
@@ -228,7 +229,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `res`,
 			Type: grpcfed.CELObjectType("content.GetContentResponse"),
 			Setter: func(value *localValueType, v *content.GetContentResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -676,7 +677,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `content`,
 			Type: grpcfed.CELObjectType("content.Content"),
 			Setter: func(value *localValueType, v *content.Content) error {
-				value.vars.content = v
+				value.vars.Content = v
 				return nil
 			},
 			By:           `res.content`,
@@ -694,8 +695,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Content = value.vars.content
-	req.Res = value.vars.res
+	req.Content = value.vars.Content
+	req.Res = value.vars.Res
 
 	// create a message value to be returned.
 	ret := &GetResponse{}

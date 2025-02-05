@@ -143,7 +143,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -154,7 +154,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Post_PostServiceClient: Post_PostServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPost implements "federation.FederationService/GetPost" method.
@@ -221,7 +222,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *Post
+			Post *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
@@ -239,7 +240,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			Name: `post`,
 			Type: grpcfed.CELObjectType("federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -271,7 +272,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
+	req.Post = value.vars.Post
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -305,8 +306,8 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *post.Post
-			res  *post.GetPostResponse
+			Post *post.Post
+			Res  *post.GetPostResponse
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
@@ -324,7 +325,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			Name: `res`,
 			Type: grpcfed.CELObjectType("post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -365,7 +366,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			Name: `post`,
 			Type: grpcfed.CELObjectType("post.Post"),
 			Setter: func(value *localValueType, v *post.Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			By:           `res.post`,
@@ -383,16 +384,16 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
-	req.Res = value.vars.res
+	req.Post = value.vars.Post
+	req.Res = value.vars.Res
 
 	// create a message value to be returned.
 	ret := &Post{}
 
 	// field binding section.
-	ret.Id = value.vars.post.GetId()           // { name: "post", autobind: true }
-	ret.Title = value.vars.post.GetTitle()     // { name: "post", autobind: true }
-	ret.Content = value.vars.post.GetContent() // { name: "post", autobind: true }
+	ret.Id = value.vars.Post.GetId()           // { name: "post", autobind: true }
+	ret.Title = value.vars.Post.GetTitle()     // { name: "post", autobind: true }
+	ret.Content = value.vars.Post.GetContent() // { name: "post", autobind: true }
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved federation.Post", slog.Any("federation.Post", s.logvalue_Federation_Post(ret)))
 	return ret, nil
@@ -408,7 +409,7 @@ func (s *FederationService) resolve_Federation_UpdatePostResponse(ctx context.Co
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			_def0 *post.UpdatePostResponse
+			XDef0 *post.UpdatePostResponse
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UpdatePostResponseArgument", req)}
@@ -426,7 +427,7 @@ func (s *FederationService) resolve_Federation_UpdatePostResponse(ctx context.Co
 			Name: `_def0`,
 			Type: grpcfed.CELObjectType("post.UpdatePostResponse"),
 			Setter: func(value *localValueType, v *post.UpdatePostResponse) error {
-				value.vars._def0 = v
+				value.vars.XDef0 = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {

@@ -13,6 +13,7 @@ service MyService {
 | field | type | required or optional |
 | ----- | ---- | ------------------- |
 | [`env`](#grpcfederationserviceenv) | Env | optional |
+| [`var`](#grpcfederationservicevar) | repeated ServiceVariable | optional |
 
 ## (grpc.federation.service).env
 
@@ -189,6 +190,97 @@ Make the existence of the environment variable mandatory.
 ## (grpc.federation.service).env.var.option.ignored
 
 No action is taken even if the environment variable exists.
+
+## (grpc.federation.service).var
+
+This option defines variables at the service level.
+This definition is executed at server startup, after the initialization of environment variables.
+The defined variables can be used across all messages that the service depends on.
+
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`name`](#grpcfederationservicevarname) | string | optional |
+| [`if`](#grpcfederationservicevarif) | [CEL](./cel.md) | optional |
+| [`by`](#grpcfederationservicevarby) | [CEL](./cel.md) | optional |
+| [`map`](#grpcfederationservicevarmap) | MapExpr | optional |
+| [`message`](#grpcfederationservicevarmessage) | MessageExpr | optional |
+| [`enum`](#grpcfederationservicevarenum) | EnumExpr | optional |
+| [`validation`](#grpcfederationservicevarvalidation) | ServiceVariableValidationExpr | optional |
+
+### Example
+
+```proto
+service MyService {
+  option (grpc.federation.service) = {
+    env {
+      var {
+        // version is '1.0.0'.
+        name: "version"
+        type { kind: STRING }
+      }
+    }
+    var {
+      // modified_version is 'v1.0.0'.
+      name: "modified_version"
+      by: "'v' + grpc.federation.env.version"
+    }
+  };
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    def {
+      // refer modified_version variable with `grpc.federation.var.` prefix.
+      if: "grpc.federation.var.modified_version == 'v1.0.0'"
+    }
+  };
+}
+```
+
+## (grpc.federation.service).var.name
+
+The `name` is a variable name.
+This name can be referenced in all CELs related to the service by using `grpc.federation.var.` prefix.
+
+## (grpc.federation.service).var.if
+
+If `if` is defined, then it is evaluated only if the condition is matched.
+If does not evaluated, a default value of the type obtained when evaluating is assigned.
+
+## (grpc.federation.service).var.by
+
+Binds the result of evaluating the [CEL](./cel.md) defined in `by` to the variable defined in name.
+
+## (grpc.federation.service).var.map
+
+Please see [(grpc.federation.message).def.map](#grpcfederationmessagedefmap).
+
+## (grpc.federation.service).var.message
+
+Please see [(grpc.federation.message).def.message](#grpcfederationmessagedefmessage).
+
+## (grpc.federation.service).var.enum
+
+Please see [(grpc.federation.message).def.enum](#grpcfederationmessagedefenum).
+
+## (grpc.federation.service).var.validation
+
+A validation rule against variables defined within the current scope.
+
+| field | type | required or optional |
+| ----- | ---- | ------------------- |
+| [`if`](#grpcfederationservicevarvalidationif) | [CEL](./cel.md) | required |
+| [`message`](#grpcfederationservicevarvalidationmessage) | [CEL](./cel.md) | required |
+
+## (grpc.federation.service).var.validation.if
+
+A validation rule in [CEL](./cel.md). If the condition is true, the validation returns the error.
+The return value must always be of type boolean.
+
+## (grpc.federation.service).var.validation.message
+
+A gRPC status message in case of validation error.
 
 # grpc.federation.method
 

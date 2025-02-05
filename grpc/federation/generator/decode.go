@@ -219,7 +219,10 @@ func (d *decoder) toService(id string) (*resolver.Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	rule := d.toServiceRule(svc.GetRule())
+	rule, err := d.toServiceRule(svc.GetRule())
+	if err != nil {
+		return nil, err
+	}
 	ret.Methods = methods
 	ret.File = file
 	ret.Messages = msgs
@@ -229,11 +232,172 @@ func (d *decoder) toService(id string) (*resolver.Service, error) {
 	return ret, nil
 }
 
-func (d *decoder) toServiceRule(rule *plugin.ServiceRule) *resolver.ServiceRule {
+func (d *decoder) toServiceRule(rule *plugin.ServiceRule) (*resolver.ServiceRule, error) {
 	if rule == nil {
+		return nil, nil
+	}
+	env, err := d.toEnv(rule.GetEnv())
+	if err != nil {
+		return nil, err
+	}
+	vars, err := d.toServiceVariables(rule.GetVars())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.ServiceRule{
+		Env:  env,
+		Vars: vars,
+	}, nil
+}
+
+func (d *decoder) toEnv(env *plugin.Env) (*resolver.Env, error) {
+	vars, err := d.toEnvVars(env.GetVars())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.Env{
+		Vars: vars,
+	}, nil
+}
+
+func (d *decoder) toEnvVars(vars []*plugin.EnvVar) ([]*resolver.EnvVar, error) {
+	if len(vars) == 0 {
+		return nil, nil
+	}
+	ret := make([]*resolver.EnvVar, 0, len(vars))
+	for _, envVar := range vars {
+		v, err := d.toEnvVar(envVar)
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret, nil
+}
+
+func (d *decoder) toEnvVar(v *plugin.EnvVar) (*resolver.EnvVar, error) {
+	if v == nil {
+		return nil, nil
+	}
+	typ, err := d.toType(v.GetType())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.EnvVar{
+		Name:   v.GetName(),
+		Type:   typ,
+		Option: d.toEnvVarOption(v.GetOption()),
+	}, nil
+}
+
+func (d *decoder) toEnvVarOption(opt *plugin.EnvVarOption) *resolver.EnvVarOption {
+	if opt == nil {
 		return nil
 	}
-	return &resolver.ServiceRule{}
+	return &resolver.EnvVarOption{
+		Alternate: opt.GetAlternate(),
+		Default:   opt.GetDefault(),
+		Required:  opt.GetRequired(),
+		Ignored:   opt.GetIgnored(),
+	}
+}
+
+func (d *decoder) toServiceVariables(vars []*plugin.ServiceVariable) ([]*resolver.ServiceVariable, error) {
+	if len(vars) == 0 {
+		return nil, nil
+	}
+	ret := make([]*resolver.ServiceVariable, 0, len(vars))
+	for _, svcVar := range vars {
+		v, err := d.toServiceVariable(svcVar)
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret, nil
+}
+
+func (d *decoder) toServiceVariable(v *plugin.ServiceVariable) (*resolver.ServiceVariable, error) {
+	if v == nil {
+		return nil, nil
+	}
+	ret := &resolver.ServiceVariable{
+		Name: v.GetName(),
+	}
+	ifValue, err := d.toCELValue(v.GetIf())
+	if err != nil {
+		return nil, err
+	}
+	expr, err := d.toServiceVariableExpr(v.GetExpr())
+	if err != nil {
+		return nil, err
+	}
+	ret.If = ifValue
+	ret.Expr = expr
+	return ret, nil
+}
+
+func (d *decoder) toServiceVariableExpr(expr *plugin.ServiceVariableExpr) (*resolver.ServiceVariableExpr, error) {
+	if expr == nil {
+		return nil, nil
+	}
+	ret := &resolver.ServiceVariableExpr{}
+	typ, err := d.toType(expr.GetType())
+	if err != nil {
+		return nil, err
+	}
+	by, err := d.toCELValue(expr.GetBy())
+	if err != nil {
+		return nil, err
+	}
+	mapExpr, err := d.toMapExpr(expr.GetMap())
+	if err != nil {
+		return nil, err
+	}
+	msgExpr, err := d.toMessageExpr(expr.GetMessage())
+	if err != nil {
+		return nil, err
+	}
+	enumExpr, err := d.toEnumExpr(expr.GetEnum())
+	if err != nil {
+		return nil, err
+	}
+	validationExpr, err := d.toServiceVariableValidationExpr(expr.GetValidation())
+	if err != nil {
+		return nil, err
+	}
+
+	ret.Type = typ
+	ret.By = by
+	ret.Map = mapExpr
+	ret.Message = msgExpr
+	ret.Enum = enumExpr
+	ret.Validation = validationExpr
+	return ret, nil
+}
+
+func (d *decoder) toServiceVariableValidationExpr(expr *plugin.ServiceVariableValidationExpr) (*resolver.ServiceVariableValidationExpr, error) {
+	if expr == nil {
+		return nil, nil
+	}
+	ret := &resolver.ServiceVariableValidationExpr{}
+	ifValue, err := d.toCELValue(expr.GetIf())
+	if err != nil {
+		return nil, err
+	}
+	msg, err := d.toCELValue(expr.GetMessage())
+	if err != nil {
+		return nil, err
+	}
+	ret.If = ifValue
+	ret.Message = msg
+	return ret, nil
 }
 
 func (d *decoder) toMessages(ids []string) ([]*resolver.Message, error) {

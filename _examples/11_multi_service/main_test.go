@@ -86,6 +86,7 @@ func TestFederation(t *testing.T) {
 					FavoriteValue: federation.MyFavoriteType_TYPE1,
 					Cmp:           true,
 				},
+				UpperName: "FEDERATION",
 			}
 			expectedGetNameResp = &federation.GetNameResponse{
 				Name: "federation",

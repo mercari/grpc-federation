@@ -40,5 +40,9 @@ service InlineEnvService {
         }
       }
     }
+    var [
+      { name: "x" by: "grpc.federation.env.aaa" },
+      { validation { if: "grpc.federation.env.bbb == 1" message: "'error'" } }
+    ]
   };
 }

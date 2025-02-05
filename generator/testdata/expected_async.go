@@ -194,7 +194,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -203,7 +203,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("org.federation.FederationService"),
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // Get implements "org.federation.FederationService/Get" method.
@@ -237,8 +238,8 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *F
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			aa *AA
-			ab *AB
+			Aa *AA
+			Ab *AB
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.AArgument", req)}
@@ -255,7 +256,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *F
 			Name: `aa`,
 			Type: grpcfed.CELObjectType("org.federation.AA"),
 			Setter: func(value *localValueType, v *AA) error {
-				value.vars.aa = v
+				value.vars.Aa = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -282,7 +283,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *F
 			Name: `ab`,
 			Type: grpcfed.CELObjectType("org.federation.AB"),
 			Setter: func(value *localValueType, v *AB) error {
-				value.vars.ab = v
+				value.vars.Ab = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -643,16 +644,16 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			a *A
-			b *B
-			c *C
-			d *D
-			e *E
-			f *F
-			g *G
-			h *H
-			i *I
-			j *J
+			A *A
+			B *B
+			C *C
+			D *D
+			E *E
+			F *F
+			G *G
+			H *H
+			I *I
+			J *J
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
@@ -669,7 +670,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `a`,
 			Type: grpcfed.CELObjectType("org.federation.A"),
 			Setter: func(value *localValueType, v *A) error {
-				value.vars.a = v
+				value.vars.A = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -696,7 +697,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `b`,
 			Type: grpcfed.CELObjectType("org.federation.B"),
 			Setter: func(value *localValueType, v *B) error {
-				value.vars.b = v
+				value.vars.B = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -724,7 +725,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `c`,
 			Type: grpcfed.CELObjectType("org.federation.C"),
 			Setter: func(value *localValueType, v *C) error {
-				value.vars.c = v
+				value.vars.C = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -764,7 +765,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `d`,
 			Type: grpcfed.CELObjectType("org.federation.D"),
 			Setter: func(value *localValueType, v *D) error {
-				value.vars.d = v
+				value.vars.D = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -807,7 +808,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `e`,
 			Type: grpcfed.CELObjectType("org.federation.E"),
 			Setter: func(value *localValueType, v *E) error {
-				value.vars.e = v
+				value.vars.E = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -862,7 +863,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `f`,
 			Type: grpcfed.CELObjectType("org.federation.F"),
 			Setter: func(value *localValueType, v *F) error {
-				value.vars.f = v
+				value.vars.F = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -913,7 +914,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `g`,
 			Type: grpcfed.CELObjectType("org.federation.G"),
 			Setter: func(value *localValueType, v *G) error {
-				value.vars.g = v
+				value.vars.G = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -945,7 +946,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `h`,
 			Type: grpcfed.CELObjectType("org.federation.H"),
 			Setter: func(value *localValueType, v *H) error {
-				value.vars.h = v
+				value.vars.H = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -1008,7 +1009,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `i`,
 			Type: grpcfed.CELObjectType("org.federation.I"),
 			Setter: func(value *localValueType, v *I) error {
-				value.vars.i = v
+				value.vars.I = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -1036,7 +1037,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `j`,
 			Type: grpcfed.CELObjectType("org.federation.J"),
 			Setter: func(value *localValueType, v *J) error {
-				value.vars.j = v
+				value.vars.J = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -1183,16 +1184,16 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.A = value.vars.a
-	req.B = value.vars.b
-	req.C = value.vars.c
-	req.D = value.vars.d
-	req.E = value.vars.e
-	req.F = value.vars.f
-	req.G = value.vars.g
-	req.H = value.vars.h
-	req.I = value.vars.i
-	req.J = value.vars.j
+	req.A = value.vars.A
+	req.B = value.vars.B
+	req.C = value.vars.C
+	req.D = value.vars.D
+	req.E = value.vars.E
+	req.F = value.vars.F
+	req.G = value.vars.G
+	req.H = value.vars.H
+	req.I = value.vars.I
+	req.J = value.vars.J
 
 	// create a message value to be returned.
 	ret := &GetResponse{}

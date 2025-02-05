@@ -59,6 +59,7 @@ type Method struct {
 // ServiceOption represents grpc.federation.service option location.
 type ServiceOption struct {
 	Env *Env
+	Var *ServiceVariable
 }
 
 // Env represents grpc.federation.service.env location.
@@ -81,6 +82,24 @@ type EnvVarOption struct {
 	Default   bool
 	Required  bool
 	Ignored   bool
+}
+
+// ServiceVariable represents grpc.federation.service.var option location.
+type ServiceVariable struct {
+	Idx        int
+	Name       bool
+	If         bool
+	By         bool
+	Map        *MapExprOption
+	Message    *MessageExprOption
+	Enum       *EnumExprOption
+	Validation *ServiceVariableValidationExpr
+}
+
+// ServiceVariableValidationExpr represents grpc.federation.service.var.validation option location.
+type ServiceVariableValidationExpr struct {
+	If      bool
+	Message bool
 }
 
 // MethodOption represents grpc.federation.method option location.

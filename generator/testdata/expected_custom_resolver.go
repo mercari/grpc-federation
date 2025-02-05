@@ -209,7 +209,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostType", post.PostType_value, post.PostType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.UserType", user.UserType_value, user.UserType_name)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -222,7 +222,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPost implements "org.federation.FederationService/GetPost" method.
@@ -258,7 +259,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *Post
+			Post *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
@@ -276,7 +277,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -308,7 +309,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
+	req.Post = value.vars.Post
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -342,9 +343,9 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *post.Post
-			res  *post.GetPostResponse
-			user *User
+			Post *post.Post
+			Res  *post.GetPostResponse
+			User *User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
@@ -362,7 +363,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `res`,
 			Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -403,7 +404,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.post.Post"),
 			Setter: func(value *localValueType, v *post.Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			By:           `res.post`,
@@ -425,7 +426,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `user`,
 			Type: grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.user = v
+				value.vars.User = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -468,17 +469,17 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
-	req.Res = value.vars.res
-	req.User = value.vars.user
+	req.Post = value.vars.Post
+	req.Res = value.vars.Res
+	req.User = value.vars.User
 
 	// create a message value to be returned.
 	ret := &Post{}
 
 	// field binding section.
-	ret.Id = value.vars.post.GetId()           // { name: "post", autobind: true }
-	ret.Title = value.vars.post.GetTitle()     // { name: "post", autobind: true }
-	ret.Content = value.vars.post.GetContent() // { name: "post", autobind: true }
+	ret.Id = value.vars.Post.GetId()           // { name: "post", autobind: true }
+	ret.Title = value.vars.Post.GetTitle()     // { name: "post", autobind: true }
+	ret.Content = value.vars.Post.GetContent() // { name: "post", autobind: true }
 	{
 		// (grpc.federation.field).custom_resolver = true
 		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
@@ -506,8 +507,8 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			res *user.GetUserResponse
-			u   *user.User
+			Res *user.GetUserResponse
+			U   *user.User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
@@ -525,7 +526,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			Name: `res`,
 			Type: grpcfed.CELObjectType("org.user.GetUserResponse"),
 			Setter: func(value *localValueType, v *user.GetUserResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -565,7 +566,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			Name: `u`,
 			Type: grpcfed.CELObjectType("org.user.User"),
 			Setter: func(value *localValueType, v *user.User) error {
-				value.vars.u = v
+				value.vars.U = v
 				return nil
 			},
 			By:           `res.user`,
@@ -583,8 +584,8 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.res
-	req.U = value.vars.u
+	req.Res = value.vars.Res
+	req.U = value.vars.U
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.

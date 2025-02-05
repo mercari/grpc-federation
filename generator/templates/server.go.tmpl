@@ -51,6 +51,7 @@ var {{ .Name }}_attrMap = grpcfed.EnumAttributeMap[{{ .Name }}]{
 {{- $oneofTypes := .OneofTypes }}
 {{- $celPlugins := .CELPlugins }}
 {{- $env := .Env }}
+{{- $svcVars := .ServiceVariables }}
 
 {{- range $types }}
 
@@ -157,6 +158,30 @@ func with{{ $serviceName }}Env(ctx context.Context, env *{{ $serviceName }}Env) 
 }
 {{- end }}
 
+{{- if $svcVars }}
+// {{ $serviceName }}Variable keeps the initial values.
+type {{ $serviceName }}Variable struct {
+	{{- range $svcVars.Vars }}
+	{{ .Name }} {{ .Type }}
+	{{- end }}
+}
+
+type key{{ $serviceName }}Variable struct{}
+
+// Get{{ $serviceName }}Variable gets initial variables.
+func Get{{ $serviceName }}Variable(ctx context.Context) *{{ $serviceName }}Variable {
+	value := ctx.Value(key{{ $serviceName }}Variable{})
+	if value == nil {
+		return nil
+	}
+	return value.(*{{ $serviceName }}Variable)
+}
+
+func with{{ $serviceName }}Variable(ctx context.Context, svcVar *{{ $serviceName }}Variable) context.Context {
+	return context.WithValue(ctx, key{{ $serviceName }}Variable{}, svcVar)
+}
+{{- end }}
+
 // {{ $serviceName }}UnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -191,6 +216,9 @@ type {{ $serviceName }} struct {
 	tracer trace.Tracer
 	{{- if $env }}
 	env *{{ $serviceName }}Env
+	{{- end }}
+	{{- if $svcVars }}
+	svcVar *{{ $serviceName }}Variable
 	{{- end }}
 	{{- if $customResolvers }}
 	resolver {{ $serviceName }}Resolver
@@ -265,6 +293,14 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 			{{- end }}
 		},
 		{{- end }}
+
+		{{- if $svcVars }}
+		"grpc.federation.private.ServiceVariable": {
+			{{- range $svcVars.Vars }}
+			"{{ .ProtoName }}": grpcfed.NewCELFieldType({{ .CELType }}, "{{ .Name }}"),
+			{{- end }}
+		},
+		{{- end }}
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("{{ $pkgName }}", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
@@ -277,6 +313,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	{{- end }}
 	{{- if $env }}
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	{{- end }}
+	{{- if $svcVars }}
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	{{- end }}
 	{{- if $celPlugins }}
 	var celPlugins []*grpcfedcel.CELPlugin
@@ -319,7 +358,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		return nil, err
 	}
 	{{- end }}
-	return &{{ $serviceName }}{
+	svc := &{{ $serviceName }}{
 		cfg: cfg,
 		logger: logger,
 		errorHandler: errorHandler,
@@ -329,6 +368,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		tracer: otel.Tracer("{{ .FQDN }}"),
 		{{- if $env }}
 		env: &env,
+		{{- end }}
+		{{- if $svcVars }}
+		svcVar: new({{ $serviceName }}Variable),
 		{{- end }}
 		{{- if $customResolvers }}
 		resolver: cfg.Resolver,
@@ -341,8 +383,62 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 			{{ .ClientName }}: {{ .ClientName }},
 			{{- end }}
 		},
-	}, nil
+	}
+	{{- if $svcVars }}
+	if err := svc.initServiceVariables(); err != nil {
+		return nil, err
+	}
+	{{- end }}
+	return svc, nil
 }
+
+{{- if $svcVars }}
+func (s *{{ $serviceName }}) initServiceVariables() error {
+	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars *{{ $serviceName }}Variable
+	}
+	value := &localValueType{
+		LocalValue: grpcfed.NewServiceVariableLocalValue(s.celEnvOpts),
+		vars: s.svcVar,
+	}
+	{{- if $env }}
+	value.AddEnv(s.env)
+	{{- end }}
+	value.AddServiceVariable(s.svcVar)
+
+	{{ range $svcVars.Defs }}
+	{{- if .IsValidation }}
+	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+		Value: value,
+		Expr: `{{ .Expr.Validation.Error.If.Expr }}`,
+		CacheIndex: {{ .CELCacheIndex }},
+		Body: func(value *localValueType) error {
+			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				Value: value,
+				Expr: `{{ .Expr.Validation.Error.Message.Expr }}`,
+				OutType: reflect.TypeOf(""),
+				CacheIndex: {{ .CELCacheIndex }},
+			})
+			if err != nil {
+				return err
+			}
+			return grpcfed.NewGRPCStatus(grpcfed.InternalCode, errmsg.(string)).Err()
+		},
+	}); err != nil {
+		return err
+	}
+	{{- else }}
+	{{- template "declDef" . }}
+	if err := def_{{ .Key }}(ctx); err != nil {
+		return err
+	}
+	{{- end }}
+	{{ end }}
+	return nil
+}
+{{- end }}
 
 {{- range .Methods }}
 
@@ -353,6 +449,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 
 	{{- if $env }}
 	ctx = with{{ $serviceName }}Env(ctx, s.env)
+	{{- end }}
+	{{- if $svcVars }}
+	ctx = with{{ $serviceName }}Variable(ctx, s.svcVar)
 	{{- end }}
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
@@ -434,6 +533,9 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ $s
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "{{ .RequestProtoType }}", req)}
 	{{- if $env }}
 	value.AddEnv(s.env)
+	{{- end }}
+	{{- if $svcVars }}
+	value.AddServiceVariable(s.svcVar)
 	{{- end }}
 	{{- end }}
 	{{- template "evalDefSet" .VariableDefinitionSet }}

@@ -117,7 +117,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -127,7 +127,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:        otel.Tracer("org.federation.FederationService"),
 		resolver:      cfg.Resolver,
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // Get implements "org.federation.FederationService/Get" method.

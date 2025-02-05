@@ -175,7 +175,122 @@ func (e *encoder) toServiceRule(rule *resolver.ServiceRule) *plugin.ServiceRule 
 	if rule == nil {
 		return nil
 	}
-	return &plugin.ServiceRule{}
+	env := e.toEnv(rule.Env)
+	vars := e.toServiceVariables(rule.Vars)
+	return &plugin.ServiceRule{
+		Env:  env,
+		Vars: vars,
+	}
+}
+
+func (e *encoder) toServiceVariables(vars []*resolver.ServiceVariable) []*plugin.ServiceVariable {
+	ret := make([]*plugin.ServiceVariable, 0, len(vars))
+	for _, svcVar := range vars {
+		v := e.toServiceVariable(svcVar)
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret
+}
+
+func (e *encoder) toServiceVariable(v *resolver.ServiceVariable) *plugin.ServiceVariable {
+	if v == nil {
+		return nil
+	}
+	ret := &plugin.ServiceVariable{
+		Name: v.Name,
+	}
+	ret.If = e.toCELValue(v.If)
+	ret.Expr = e.toServiceVariableExpr(v.Expr)
+	return ret
+}
+
+func (e *encoder) toServiceVariableExpr(expr *resolver.ServiceVariableExpr) *plugin.ServiceVariableExpr {
+	if expr == nil {
+		return nil
+	}
+	ret := &plugin.ServiceVariableExpr{
+		Type: e.toType(expr.Type),
+	}
+	switch {
+	case expr.By != nil:
+		ret.Expr = &plugin.ServiceVariableExpr_By{
+			By: e.toCELValue(expr.By),
+		}
+	case expr.Map != nil:
+		ret.Expr = &plugin.ServiceVariableExpr_Map{
+			Map: e.toMapExpr(expr.Map),
+		}
+	case expr.Message != nil:
+		ret.Expr = &plugin.ServiceVariableExpr_Message{
+			Message: e.toMessageExpr(expr.Message),
+		}
+	case expr.Enum != nil:
+		ret.Expr = &plugin.ServiceVariableExpr_Enum{
+			Enum: e.toEnumExpr(expr.Enum),
+		}
+	case expr.Validation != nil:
+		ret.Expr = &plugin.ServiceVariableExpr_Validation{
+			Validation: e.toServiceVariableValidationExpr(expr.Validation),
+		}
+	}
+	return ret
+}
+
+func (e *encoder) toServiceVariableValidationExpr(expr *resolver.ServiceVariableValidationExpr) *plugin.ServiceVariableValidationExpr {
+	if expr == nil {
+		return nil
+	}
+	return &plugin.ServiceVariableValidationExpr{
+		If:      e.toCELValue(expr.If),
+		Message: e.toCELValue(expr.Message),
+	}
+}
+
+func (e *encoder) toEnv(env *resolver.Env) *plugin.Env {
+	if env == nil {
+		return nil
+	}
+	return &plugin.Env{
+		Vars: e.toEnvVars(env.Vars),
+	}
+}
+
+func (e *encoder) toEnvVars(vars []*resolver.EnvVar) []*plugin.EnvVar {
+	ret := make([]*plugin.EnvVar, 0, len(vars))
+	for _, envVar := range vars {
+		v := e.toEnvVar(envVar)
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
+	return ret
+}
+
+func (e *encoder) toEnvVar(v *resolver.EnvVar) *plugin.EnvVar {
+	if v == nil {
+		return nil
+	}
+	return &plugin.EnvVar{
+		Name:   v.Name,
+		Type:   e.toType(v.Type),
+		Option: e.toEnvVarOption(v.Option),
+	}
+}
+
+func (e *encoder) toEnvVarOption(opt *resolver.EnvVarOption) *plugin.EnvVarOption {
+	if opt == nil {
+		return nil
+	}
+	return &plugin.EnvVarOption{
+		Alternate: opt.Alternate,
+		Default:   opt.Default,
+		Required:  opt.Required,
+		Ignored:   opt.Ignored,
+	}
 }
 
 func (e *encoder) toMessages(msgs []*resolver.Message) []*plugin.Message {

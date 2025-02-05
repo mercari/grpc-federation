@@ -142,7 +142,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		}
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
 	}
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -152,7 +152,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:        otel.Tracer("org.federation.FederationService"),
 		celPlugins:    celPlugins,
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // Get implements "org.federation.FederationService/Get" method.
@@ -186,8 +187,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			id_from_metadata string
-			id_from_plugin   string
+			IdFromMetadata string
+			IdFromPlugin   string
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
@@ -202,7 +203,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `id_from_plugin`,
 			Type: grpcfed.CELStringType,
 			Setter: func(value *localValueType, v string) error {
-				value.vars.id_from_plugin = v
+				value.vars.IdFromPlugin = v
 				return nil
 			},
 			By:           `example.account.get_id()`,
@@ -221,7 +222,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `id_from_metadata`,
 			Type: grpcfed.CELStringType,
 			Setter: func(value *localValueType, v string) error {
-				value.vars.id_from_metadata = v
+				value.vars.IdFromMetadata = v
 				return nil
 			},
 			By:           `grpc.federation.metadata.incoming()['id'][0]`,
@@ -257,8 +258,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.IdFromMetadata = value.vars.id_from_metadata
-	req.IdFromPlugin = value.vars.id_from_plugin
+	req.IdFromMetadata = value.vars.IdFromMetadata
+	req.IdFromPlugin = value.vars.IdFromPlugin
 
 	// create a message value to be returned.
 	ret := &GetResponse{}

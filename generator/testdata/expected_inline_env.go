@@ -81,6 +81,27 @@ func withInlineEnvServiceEnv(ctx context.Context, env *InlineEnvServiceEnv) cont
 	return context.WithValue(ctx, keyInlineEnvServiceEnv{}, env)
 }
 
+// InlineEnvServiceVariable keeps the initial values.
+type InlineEnvServiceVariable struct {
+	X string
+	bool
+}
+
+type keyInlineEnvServiceVariable struct{}
+
+// GetInlineEnvServiceVariable gets initial variables.
+func GetInlineEnvServiceVariable(ctx context.Context) *InlineEnvServiceVariable {
+	value := ctx.Value(keyInlineEnvServiceVariable{})
+	if value == nil {
+		return nil
+	}
+	return value.(*InlineEnvServiceVariable)
+}
+
+func withInlineEnvServiceVariable(ctx context.Context, svcVar *InlineEnvServiceVariable) context.Context {
+	return context.WithValue(ctx, keyInlineEnvServiceVariable{}, svcVar)
+}
+
 // InlineEnvServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -96,6 +117,7 @@ type InlineEnvService struct {
 	celCacheMap   *grpcfed.CELCacheMap
 	tracer        trace.Tracer
 	env           *InlineEnvServiceEnv
+	svcVar        *InlineEnvServiceVariable
 	celTypeHelper *grpcfed.CELTypeHelper
 	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
@@ -119,16 +141,21 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 			"ccc": grpcfed.NewCELFieldType(grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELDurationType), "Ccc"),
 			"ddd": grpcfed.NewCELFieldType(grpcfed.CELDoubleType, "Ddd"),
 		},
+		"grpc.federation.private.ServiceVariable": {
+			"x": grpcfed.NewCELFieldType(grpcfed.CELStringType, "X"),
+			"":  grpcfed.NewCELFieldType(grpcfed.CELBoolType, ""),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	var env InlineEnvServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
 	}
-	return &InlineEnvService{
+	svc := &InlineEnvService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -137,6 +164,68 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("org.federation.InlineEnvService"),
 		env:           &env,
+		svcVar:        new(InlineEnvServiceVariable),
 		client:        &InlineEnvServiceDependentClientSet{},
-	}, nil
+	}
+	if err := svc.initServiceVariables(); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+func (s *InlineEnvService) initServiceVariables() error {
+	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars *InlineEnvServiceVariable
+	}
+	value := &localValueType{
+		LocalValue: grpcfed.NewServiceVariableLocalValue(s.celEnvOpts),
+		vars:       s.svcVar,
+	}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
+
+	/*
+		def {
+		  name: "x"
+		  by: "grpc.federation.env.aaa"
+		}
+	*/
+	def_x := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+			Name: `x`,
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.X = v
+				return nil
+			},
+			By:           `grpc.federation.env.aaa`,
+			ByCacheIndex: 1,
+		})
+	}
+	if err := def_x(ctx); err != nil {
+		return err
+	}
+
+	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+		Value:      value,
+		Expr:       `grpc.federation.env.bbb == 1`,
+		CacheIndex: 2,
+		Body: func(value *localValueType) error {
+			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				Value:      value,
+				Expr:       `'error'`,
+				OutType:    reflect.TypeOf(""),
+				CacheIndex: 3,
+			})
+			if err != nil {
+				return err
+			}
+			return grpcfed.NewGRPCStatus(grpcfed.InternalCode, errmsg.(string)).Err()
+		},
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }

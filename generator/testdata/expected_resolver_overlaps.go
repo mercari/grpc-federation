@@ -143,7 +143,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostContent.Category", post.PostContent_Category_value, post.PostContent_Category_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostDataType", post.PostDataType_value, post.PostDataType_name)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -154,7 +154,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPost1 implements "org.federation.FederationService/GetPost1" method.
@@ -213,7 +214,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *Post
+			Post *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponse1Argument", req)}
@@ -231,7 +232,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -263,7 +264,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
+	req.Post = value.vars.Post
 
 	// create a message value to be returned.
 	ret := &GetPostResponse1{}
@@ -297,7 +298,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *Post
+			Post *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponse2Argument", req)}
@@ -315,7 +316,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -347,7 +348,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
+	req.Post = value.vars.Post
 
 	// create a message value to be returned.
 	ret := &GetPostResponse2{}
@@ -381,7 +382,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			res *post.GetPostResponse
+			Res *post.GetPostResponse
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
@@ -399,7 +400,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `res`,
 			Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -434,7 +435,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.res
+	req.Res = value.vars.Res
 
 	// create a message value to be returned.
 	ret := &Post{}

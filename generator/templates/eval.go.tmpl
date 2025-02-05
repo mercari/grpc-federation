@@ -14,7 +14,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
 		Setter: func(value *localValueType, v {{ .Type }}) error {
-			value.vars.{{ .Key }} = v
+			value.vars.{{ .VarFieldName }} = v
 			return nil
 		},
 		IteratorName: `{{ $mapResolver.IteratorName }}`,
@@ -79,7 +79,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
 		Setter: func(value *localValueType, v {{ .Type }}) error {
-			value.vars.{{ .Key }} = v
+			value.vars.{{ .VarFieldName }} = v
 			return nil
 		},
 		{{- if .IsBy }}

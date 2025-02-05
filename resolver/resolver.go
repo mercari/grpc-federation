@@ -1295,7 +1295,7 @@ func (r *Resolver) resolveServiceRules(ctx *context, svcs []*Service) {
 	pkgToSvcs := make(map[*Package][]*Service)
 	for _, svc := range svcs {
 		builder := source.NewServiceBuilder(ctx.fileName(), svc.Name)
-		svc.Rule = r.resolveServiceRule(ctx, r.serviceToRuleMap[svc], builder.WithOption())
+		svc.Rule = r.resolveServiceRule(ctx, svc, r.serviceToRuleMap[svc], builder.WithOption())
 		r.resolveMethodRules(ctx, svc.Methods, builder)
 		pkgToSvcs[svc.Package()] = append(pkgToSvcs[svc.Package()], svc)
 	}
@@ -1900,12 +1900,16 @@ func (r *Resolver) resolveEnumRules(ctx *context, enums []*Enum) {
 	}
 }
 
-func (r *Resolver) resolveServiceRule(ctx *context, def *federation.ServiceRule, builder *source.ServiceOptionBuilder) *ServiceRule {
+func (r *Resolver) resolveServiceRule(ctx *context, svc *Service, def *federation.ServiceRule, builder *source.ServiceOptionBuilder) *ServiceRule {
 	if def == nil {
 		return nil
 	}
+	env := r.resolveEnv(ctx, def.GetEnv(), builder.WithEnv())
+	vars := r.resolveServiceVariables(ctx, svc, env, def.GetVar(), builder)
+	ctx.clearVariableDefinitions()
 	return &ServiceRule{
-		Env: r.resolveEnv(ctx, def.GetEnv(), builder.WithEnv()),
+		Env:  env,
+		Vars: vars,
 	}
 }
 
@@ -2092,6 +2096,215 @@ func (r *Resolver) resolveEnvVarOption(def *federation.EnvVarOption) *EnvVarOpti
 		Default:   def.GetDefault(),
 		Required:  def.GetRequired(),
 		Ignored:   def.GetIgnored(),
+	}
+}
+
+func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env, def []*federation.ServiceVariable, builder *source.ServiceOptionBuilder) []*ServiceVariable {
+	if len(def) == 0 {
+		return nil
+	}
+
+	svcVars := make([]*ServiceVariable, 0, len(def))
+	nameMap := make(map[string]struct{})
+	celEnv, err := r.createServiceCELEnv(svc, env)
+	if err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.Location(),
+			),
+		)
+		return nil
+	}
+	for idx, v := range def {
+		svcVar := r.resolveServiceVariable(ctx, celEnv, v, nameMap, builder.WithVar(idx))
+		if svcVar == nil {
+			continue
+		}
+		if svcVar.Name != "" && svcVar.Expr != nil && svcVar.Expr.Type != nil {
+			newEnv, err := celEnv.Extend(cel.Variable(svcVar.Name, ToCELType(svcVar.Expr.Type)))
+			if err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`failed to extend cel.Env from service variables: %s`, err.Error()),
+						builder.Location(),
+					),
+				)
+				return nil
+			}
+			celEnv = newEnv
+		}
+		ctx.addVariableDefinition(svcVar.ToVariableDefinition())
+		nameMap[svcVar.Name] = struct{}{}
+		svcVars = append(svcVars, svcVar)
+	}
+	return svcVars
+}
+
+func (r *Resolver) resolveServiceVariable(ctx *context, env *cel.Env, def *federation.ServiceVariable, nameMap map[string]struct{}, builder *source.ServiceVariableBuilder) *ServiceVariable {
+	name := def.GetName()
+	if name == "" && def.GetValidation() == nil {
+		ctx.addError(
+			ErrWithLocation(
+				"variable name is not found",
+				builder.WithName().Location(),
+			),
+		)
+		return nil
+	}
+	if err := r.validateName(name); err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithName().Location(),
+			),
+		)
+		return nil
+	}
+	if _, exists := nameMap[name]; exists {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf("found duplicated variable name %q", name),
+				builder.WithName().Location(),
+			),
+		)
+		return nil
+	}
+	var ifValue *CELValue
+	if def.GetIf() != "" {
+		ifValue = &CELValue{Expr: def.GetIf()}
+		if err := r.resolveCELValue(ctx, env, ifValue); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithIf().Location(),
+				),
+			)
+			return nil
+		}
+		if ifValue.Out != nil {
+			if ifValue.Out.Kind != types.Bool {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`return value of "if" must be bool type but got %s type`, ifValue.Out.Kind.ToString()),
+						builder.WithIf().Location(),
+					),
+				)
+			}
+			return nil
+		}
+	}
+
+	expr := r.resolveServiceVariableExpr(ctx, def, builder)
+	switch {
+	case expr.By != nil:
+		if err := r.resolveCELValue(ctx, env, expr.By); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithBy().Location(),
+				),
+			)
+			return nil
+		}
+		expr.Type = expr.By.Out
+	case expr.Message != nil:
+		expr.Type = r.resolveMessageExprCELValues(ctx, env, expr.Message, builder.WithMessage())
+	case expr.Enum != nil:
+		expr.Type = r.resolveEnumExprCELValues(ctx, env, expr.Enum, builder.WithEnum())
+	case expr.Map != nil:
+		expr.Type = r.resolveMapExprCELValues(ctx, env, expr.Map, builder.WithMap())
+	case expr.Validation != nil:
+		validationIfValue := expr.Validation.If
+		builder := builder.WithValidation()
+		if err := r.resolveCELValue(ctx, env, validationIfValue); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithIf().Location(),
+				),
+			)
+			return nil
+		}
+		if validationIfValue.Out != nil {
+			if validationIfValue.Out.Kind != types.Bool {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`return value of "if" must be bool type but got %s type`, validationIfValue.Out.Kind.ToString()),
+						builder.WithIf().Location(),
+					),
+				)
+				return nil
+			}
+		}
+		msgValue := expr.Validation.Message
+		if err := r.resolveCELValue(ctx, env, msgValue); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithMessage().Location(),
+				),
+			)
+			return nil
+		}
+		if msgValue.Out != nil {
+			if msgValue.Out.Kind != types.String {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`return value of "message" must be string type but got %s type`, msgValue.Out.Kind.ToString()),
+						builder.WithMessage().Location(),
+					),
+				)
+				return nil
+			}
+		}
+		expr.Type = BoolType
+	}
+	return &ServiceVariable{
+		Name: name,
+		If:   ifValue,
+		Expr: expr,
+	}
+}
+
+func (r *Resolver) resolveServiceVariableExpr(ctx *context, def *federation.ServiceVariable, builder *source.ServiceVariableBuilder) *ServiceVariableExpr {
+	switch def.GetExpr().(type) {
+	case *federation.ServiceVariable_By:
+		return &ServiceVariableExpr{By: &CELValue{Expr: def.GetBy()}}
+	case *federation.ServiceVariable_Map:
+		return &ServiceVariableExpr{Map: r.resolveMapExpr(ctx, def.GetMap(), builder.WithMap())}
+	case *federation.ServiceVariable_Message:
+		return &ServiceVariableExpr{Message: r.resolveMessageExpr(ctx, def.GetMessage(), builder.WithMessage())}
+	case *federation.ServiceVariable_Enum:
+		return &ServiceVariableExpr{Enum: r.resolveEnumExpr(ctx, def.GetEnum(), builder.WithEnum())}
+	case *federation.ServiceVariable_Validation:
+		return &ServiceVariableExpr{Validation: r.resolveServiceVariableValidationExpr(ctx, def.GetValidation(), builder.WithValidation())}
+	}
+	return nil
+}
+
+func (r *Resolver) resolveServiceVariableValidationExpr(ctx *context, def *federation.ServiceVariableValidationExpr, builder *source.ServiceVariableValidationExprBuilder) *ServiceVariableValidationExpr {
+	if def.GetIf() == "" {
+		ctx.addError(
+			ErrWithLocation(
+				"required if value",
+				builder.WithIf().Location(),
+			),
+		)
+		return nil
+	}
+	if def.GetMessage() == "" {
+		ctx.addError(
+			ErrWithLocation(
+				"required message value",
+				builder.WithMessage().Location(),
+			),
+		)
+		return nil
+	}
+	return &ServiceVariableValidationExpr{
+		If:      &CELValue{Expr: def.GetIf()},
+		Message: &CELValue{Expr: def.GetMessage()},
 	}
 }
 
@@ -3361,36 +3574,35 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 	svcMsgSet := make(map[*Service]map[*Message]struct{})
 	for _, root := range graph.Roots {
 		// The root message is always the response message of the method.
-		resMsg := root.Message
+		rootMsg := root.Message
 		// Store the messages to serviceMsgMap first to avoid inserting duplicated ones to Service.Messages
 		for _, svc := range r.cachedServiceMap {
 			if _, exists := svcMsgSet[svc]; !exists {
 				svcMsgSet[svc] = make(map[*Message]struct{})
 			}
 			// If the method of the service has not a response message, it is excluded.
-			if !svc.HasMessageInMethod(resMsg) {
-				continue
-			}
-			for _, msg := range root.childMessages() {
-				svcMsgSet[svc][msg] = struct{}{}
+			if svc.HasMessageInMethod(rootMsg) || svc.HasMessageInVariables(rootMsg) {
+				for _, msg := range root.childMessages() {
+					svcMsgSet[svc][msg] = struct{}{}
+				}
 			}
 		}
 	}
 
 	for _, root := range graph.Roots {
-		resMsg := root.Message
+		rootMsg := root.Message
 
 		var msgArg *Message
-		if resMsg.Rule.MessageArgument != nil {
-			msgArg = resMsg.Rule.MessageArgument
+		if rootMsg.Rule.MessageArgument != nil {
+			msgArg = rootMsg.Rule.MessageArgument
 		} else {
-			msgArg = newMessageArgument(resMsg)
-			resMsg.Rule.MessageArgument = msgArg
+			msgArg = newMessageArgument(rootMsg)
+			rootMsg.Rule.MessageArgument = msgArg
 		}
 
 		// The message argument of the response message is the request message.
 		// Therefore, the request message is retrieved from the response message.
-		reqMsg := r.lookupRequestMessageFromResponseMessage(resMsg)
+		reqMsg := r.lookupRequestMessageFromResponseMessage(rootMsg)
 		if reqMsg == nil {
 			// A non-response message may also become a root message.
 			// In such a case, the message argument field does not exist.
@@ -3735,181 +3947,13 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		}
 		expr.Type = expr.By.Out
 	case expr.Map != nil:
-		mapEnv := env
-		iter := expr.Map.Iterator
-		mapBuilder := builder.WithMap()
-		if iter != nil && iter.Name != "" && iter.Source != nil {
-			if iter.Source.Expr == nil || iter.Source.Expr.Type == nil {
-				ctx.addError(
-					ErrWithLocation(
-						`map iterator's src value type could not be determined`,
-						mapBuilder.WithIteratorSource().Location(),
-					),
-				)
-				return
-			}
-			if !iter.Source.Expr.Type.Repeated {
-				ctx.addError(
-					ErrWithLocation(
-						`map iterator's src value type must be repeated type`,
-						mapBuilder.WithIteratorSource().Location(),
-					),
-				)
-				return
-			}
-			iterType := iter.Source.Expr.Type.Clone()
-			iterType.Repeated = false
-			newEnv, err := env.Extend(cel.Variable(iter.Name, ToCELType(iterType)))
-			if err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						mapBuilder.WithIteratorSource().Location(),
-					),
-				)
-			}
-			mapEnv = newEnv
-		}
-		r.resolveMapIteratorExprCELValues(ctx, mapEnv, expr.Map.Expr, mapBuilder)
-		varType := expr.Map.Expr.Type.Clone()
-		varType.Repeated = true
-		expr.Type = varType
+		expr.Type = r.resolveMapExprCELValues(ctx, env, expr.Map, builder.WithMap())
 	case expr.Call != nil:
-		callBuilder := builder.WithCall()
-		if expr.Call.Request != nil {
-			for idx, arg := range expr.Call.Request.Args {
-				if arg.Value == nil {
-					continue
-				}
-				if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-					ctx.addError(
-						ErrWithLocation(
-							err.Error(),
-							callBuilder.WithRequest(idx).WithBy().Location(),
-						),
-					)
-				}
-				field := expr.Call.Request.Type.Field(arg.Name)
-				if field != nil && arg.Value.CEL != nil && arg.Value.CEL.Out != nil {
-					r.validateRequestFieldType(ctx, arg.Value.CEL.Out, field, callBuilder.WithRequest(idx))
-				}
-				if arg.If != nil {
-					if err := r.resolveCELValue(ctx, env, arg.If); err != nil {
-						ctx.addError(
-							ErrWithLocation(
-								err.Error(),
-								callBuilder.WithRequest(idx).WithIf().Location(),
-							),
-						)
-					}
-					if arg.If.Out != nil && arg.If.Out.Kind != types.Bool {
-						ctx.addError(
-							ErrWithLocation(
-								"if must always return a boolean value",
-								callBuilder.WithRequest(idx).WithIf().Location(),
-							),
-						)
-					}
-				}
-			}
-		}
-		grpcErrEnv, _ := env.Extend(
-			cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
-		)
-		if expr.Call.Retry != nil {
-			retryBuilder := callBuilder.WithRetry()
-			retry := expr.Call.Retry
-			if err := r.resolveCELValue(ctx, grpcErrEnv, retry.If); err != nil {
-				ctx.addError(
-					ErrWithLocation(
-						err.Error(),
-						retryBuilder.WithIf().Location(),
-					),
-				)
-			}
-			if retry.If.Out != nil && retry.If.Out.Kind != types.Bool {
-				ctx.addError(
-					ErrWithLocation(
-						"if must always return a boolean value",
-						retryBuilder.WithIf().Location(),
-					),
-				)
-			}
-		}
-		for idx, grpcErr := range expr.Call.Errors {
-			r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, expr.Call.Method.Response, callBuilder.WithError(idx))
-		}
-		expr.Type = NewMessageType(expr.Call.Method.Response, false)
+		expr.Type = r.resolveCallExprCELValues(ctx, env, expr.Call, builder.WithCall())
 	case expr.Message != nil:
-		for argIdx, arg := range expr.Message.Args {
-			if arg.Value == nil {
-				continue
-			}
-			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				if arg.Value.Inline {
-					ctx.addError(
-						ErrWithLocation(
-							err.Error(),
-							builder.WithMessage().WithArgs(argIdx).WithInline().Location(),
-						),
-					)
-				} else {
-					ctx.addError(
-						ErrWithLocation(
-							err.Error(),
-							builder.WithMessage().WithArgs(argIdx).WithBy().Location(),
-						),
-					)
-				}
-			}
-		}
-		expr.Type = NewMessageType(expr.Message.Message, false)
+		expr.Type = r.resolveMessageExprCELValues(ctx, env, expr.Message, builder.WithMessage())
 	case expr.Enum != nil:
-		toEnum := expr.Enum.Enum
-		expr.Type = NewEnumType(toEnum, false)
-
-		enumBuilder := builder.WithEnum()
-		if err := r.resolveCELValue(ctx, env, expr.Enum.By); err != nil {
-			ctx.addError(
-				ErrWithLocation(
-					err.Error(),
-					enumBuilder.WithBy().Location(),
-				),
-			)
-			return
-		}
-		fromType := expr.Enum.By.Out
-		if fromType.Kind != types.Enum && !fromType.IsEnumSelector() {
-			ctx.addError(
-				ErrWithLocation(
-					fmt.Sprintf(
-						"enum must always return a enum value, but got %q type",
-						fromType.Kind.ToString(),
-					),
-					enumBuilder.WithBy().Location(),
-				),
-			)
-		}
-		fromEnum := fromType.Enum
-		if fromEnum == nil || toEnum == nil {
-			return
-		}
-		fromEnumName := fromEnum.FQDN()
-		toEnumName := toEnum.FQDN()
-		if fromEnumName != toEnumName {
-			if !r.findEnumAliasName(fromEnum, toEnum) {
-				ctx.addError(
-					ErrWithLocation(
-						fmt.Sprintf(
-							`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value`,
-							toEnumName, fromEnumName,
-						),
-						enumBuilder.WithBy().Location(),
-					),
-				)
-				return
-			}
-		}
+		expr.Type = r.resolveEnumExprCELValues(ctx, env, expr.Enum, builder.WithEnum())
 	case expr.Validation != nil:
 		validationBuilder := builder.WithValidation()
 		r.resolveGRPCErrorCELValues(ctx, env, expr.Validation.Error, nil, validationBuilder.WithError())
@@ -3918,7 +3962,51 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 	}
 }
 
-func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, expr *MapIteratorExpr, mapBuilder *source.MapExprOptionBuilder) {
+func (r *Resolver) resolveMapExprCELValues(ctx *context, env *cel.Env, expr *MapExpr, builder *source.MapExprOptionBuilder) *Type {
+	mapEnv := env
+	iter := expr.Iterator
+	if iter != nil && iter.Name != "" && iter.Source != nil {
+		if iter.Source.Expr == nil || iter.Source.Expr.Type == nil {
+			ctx.addError(
+				ErrWithLocation(
+					`map iterator's src value type could not be determined`,
+					builder.WithIteratorSource().Location(),
+				),
+			)
+			return nil
+		}
+		if !iter.Source.Expr.Type.Repeated {
+			ctx.addError(
+				ErrWithLocation(
+					`map iterator's src value type must be repeated type`,
+					builder.WithIteratorSource().Location(),
+				),
+			)
+			return nil
+		}
+		iterType := iter.Source.Expr.Type.Clone()
+		iterType.Repeated = false
+		newEnv, err := env.Extend(cel.Variable(iter.Name, ToCELType(iterType)))
+		if err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithIteratorSource().Location(),
+				),
+			)
+		}
+		mapEnv = newEnv
+	}
+	typ := r.resolveMapIteratorExprCELValues(ctx, mapEnv, expr.Expr, builder)
+	if typ == nil {
+		return nil
+	}
+	varType := typ.Clone()
+	varType.Repeated = true
+	return varType
+}
+
+func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, expr *MapIteratorExpr, mapBuilder *source.MapExprOptionBuilder) *Type {
 	switch {
 	case expr.By != nil:
 		if err := r.resolveCELValue(ctx, env, expr.By); err != nil {
@@ -3931,76 +4019,104 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 		}
 		expr.Type = expr.By.Out
 	case expr.Message != nil:
-		for argIdx, arg := range expr.Message.Args {
+		expr.Type = r.resolveMessageExprCELValues(ctx, env, expr.Message, mapBuilder.WithMessage())
+	case expr.Enum != nil:
+		expr.Type = r.resolveEnumExprCELValues(ctx, env, expr.Enum, mapBuilder.WithEnum())
+	}
+	return expr.Type
+}
+
+func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *CallExpr, builder *source.CallExprOptionBuilder) *Type {
+	if expr.Request != nil {
+		for idx, arg := range expr.Request.Args {
 			if arg.Value == nil {
 				continue
 			}
 			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
-				if arg.Value.Inline {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						builder.WithRequest(idx).WithBy().Location(),
+					),
+				)
+			}
+			field := expr.Request.Type.Field(arg.Name)
+			if field != nil && arg.Value.CEL != nil && arg.Value.CEL.Out != nil {
+				r.validateRequestFieldType(ctx, arg.Value.CEL.Out, field, builder.WithRequest(idx))
+			}
+			if arg.If != nil {
+				if err := r.resolveCELValue(ctx, env, arg.If); err != nil {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
-							mapBuilder.WithMessage().WithArgs(argIdx).WithInline().Location(),
+							builder.WithRequest(idx).WithIf().Location(),
 						),
 					)
-				} else {
+				}
+				if arg.If.Out != nil && arg.If.Out.Kind != types.Bool {
 					ctx.addError(
 						ErrWithLocation(
-							err.Error(),
-							mapBuilder.WithMessage().WithArgs(argIdx).WithBy().Location(),
+							"if must always return a boolean value",
+							builder.WithRequest(idx).WithIf().Location(),
 						),
 					)
 				}
 			}
 		}
-		expr.Type = NewMessageType(expr.Message.Message, false)
-	case expr.Enum != nil:
-		toEnum := expr.Enum.Enum
-		expr.Type = NewEnumType(toEnum, false)
-
-		enumBuilder := mapBuilder.WithEnum()
-		if err := r.resolveCELValue(ctx, env, expr.Enum.By); err != nil {
+	}
+	grpcErrEnv, _ := env.Extend(
+		cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
+	)
+	if expr.Retry != nil {
+		retryBuilder := builder.WithRetry()
+		retry := expr.Retry
+		if err := r.resolveCELValue(ctx, grpcErrEnv, retry.If); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
-					enumBuilder.WithBy().Location(),
+					retryBuilder.WithIf().Location(),
 				),
 			)
-			return
 		}
-		fromType := expr.Enum.By.Out
-		if fromType.Kind != types.Enum && !fromType.IsEnumSelector() {
+		if retry.If.Out != nil && retry.If.Out.Kind != types.Bool {
 			ctx.addError(
 				ErrWithLocation(
-					fmt.Sprintf(
-						"enum must always return a enum value, but got %q type",
-						fromType.Kind.ToString(),
-					),
-					enumBuilder.WithBy().Location(),
+					"if must always return a boolean value",
+					retryBuilder.WithIf().Location(),
 				),
 			)
 		}
-		fromEnum := fromType.Enum
-		if fromEnum == nil || toEnum == nil {
-			return
+	}
+	for idx, grpcErr := range expr.Errors {
+		r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, expr.Method.Response, builder.WithError(idx))
+	}
+	return NewMessageType(expr.Method.Response, false)
+}
+
+func (r *Resolver) resolveMessageExprCELValues(ctx *context, env *cel.Env, expr *MessageExpr, builder *source.MessageExprOptionBuilder) *Type {
+	for argIdx, arg := range expr.Args {
+		if arg.Value == nil {
+			continue
 		}
-		fromEnumName := fromEnum.FQDN()
-		toEnumName := toEnum.FQDN()
-		if fromEnumName != toEnumName {
-			if !r.findEnumAliasName(fromEnum, toEnum) {
+		if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
+			if arg.Value.Inline {
 				ctx.addError(
 					ErrWithLocation(
-						fmt.Sprintf(
-							`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value`,
-							toEnumName, fromEnumName,
-						),
-						enumBuilder.WithBy().Location(),
+						err.Error(),
+						builder.WithArgs(argIdx).WithInline().Location(),
 					),
 				)
-				return
+			} else {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						builder.WithArgs(argIdx).WithBy().Location(),
+					),
+				)
 			}
 		}
 	}
+	return NewMessageType(expr.Message, false)
 }
 
 func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr *GRPCError, response *Message, builder *source.GRPCErrorOptionBuilder) {
@@ -4223,6 +4339,53 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 	}
 }
 
+func (r *Resolver) resolveEnumExprCELValues(ctx *context, env *cel.Env, expr *EnumExpr, builder *source.EnumExprOptionBuilder) *Type {
+	toEnum := expr.Enum
+	enumType := NewEnumType(toEnum, false)
+
+	if err := r.resolveCELValue(ctx, env, expr.By); err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithBy().Location(),
+			),
+		)
+		return enumType
+	}
+	fromType := expr.By.Out
+	if fromType.Kind != types.Enum && !fromType.IsEnumSelector() {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					"enum must always return a enum value, but got %q type",
+					fromType.Kind.ToString(),
+				),
+				builder.WithBy().Location(),
+			),
+		)
+	}
+	fromEnum := fromType.Enum
+	if fromEnum == nil || toEnum == nil {
+		return enumType
+	}
+	fromEnumName := fromEnum.FQDN()
+	toEnumName := toEnum.FQDN()
+	if fromEnumName != toEnumName {
+		if !r.findEnumAliasName(fromEnum, toEnum) {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf(
+						`required specify alias = %q in grpc.federation.enum option for the %q type to automatically assign a value`,
+						toEnumName, fromEnumName,
+					),
+					builder.WithBy().Location(),
+				),
+			)
+		}
+	}
+	return enumType
+}
+
 func (r *Resolver) resolveUsedNameReference(msg *Message) {
 	if msg.Rule == nil {
 		return
@@ -4284,21 +4447,46 @@ func (r *Resolver) removeContextArgumentFromErrorText(err *cel.Error) {
 	err.Message = strings.Replace(err.Message, federation.ContextTypeName, "", -1)
 }
 
+func (r *Resolver) createServiceCELEnv(svc *Service, env *Env) (*cel.Env, error) {
+	envOpts := []cel.EnvOption{
+		cel.Container(svc.PackageName()),
+	}
+	if env != nil {
+		envMsg := envVarsToMessage(svc.File, svc.Name, env.Vars)
+		fileDesc := dynamicMsgFileDescriptor(envMsg, strings.Replace(svc.FQDN()+"Env", ".", "_", -1))
+		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+			return nil, err
+		}
+		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
+	}
+	return r.createCELEnv(envOpts...)
+}
+
 func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.Container(msg.Package().Name),
 	}
 	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)
 	if envMsg != nil {
-		fileDesc := envFileDescriptor(envMsg, msg)
+		fileDesc := dynamicMsgFileDescriptor(envMsg, strings.Replace(msg.FQDN()+"Env", ".", "_", -1))
 		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
 			return nil, err
 		}
 		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
 	}
+	svcVarsMsg := r.buildServiceVariablesMessage(ctx, msg, svcMsgSet, builder)
+	if svcVarsMsg != nil {
+		fileDesc := dynamicMsgFileDescriptor(svcVarsMsg, strings.Replace(msg.FQDN()+"Variable", ".", "_", -1))
+		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+			return nil, err
+		}
+		envOpts = append(envOpts, cel.Variable("grpc.federation.var", cel.ObjectType(svcVarsMsg.FQDN())))
+	}
+
 	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
 		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
 	}
+
 	return r.createCELEnv(envOpts...)
 }
 
@@ -4411,7 +4599,106 @@ func (r *Resolver) buildEnvMessage(ctx *context, msg *Message, svcMsgSet map[*Se
 		)
 	}
 
-	return envVarsToMessage(msg, envVars)
+	return envVarsToMessage(msg.File, msg.Name, envVars)
+}
+
+func (r *Resolver) buildServiceVariablesMessage(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) *Message {
+	if msg.File == nil {
+		return nil
+	}
+	if msg.File.Package == nil {
+		return nil
+	}
+
+	// Examine all the services where the message is used and collect all the essential information
+	// to calculate the intersection set of each service's variables.
+	svcVarMap := make(map[*Service]map[string]*ServiceVariable)
+	svcVarNameSet := map[string]struct{}{}
+	for svc, msgSet := range svcMsgSet {
+		if _, exists := msgSet[msg]; exists {
+			svcVarNameMap := make(map[string]*ServiceVariable)
+			if svc.Rule != nil && svc.Rule.Vars != nil {
+				for _, svcVar := range svc.Rule.Vars {
+					if svcVar.Name == "" {
+						continue
+					}
+					if svcVar.Expr == nil || svcVar.Expr.Type == nil {
+						continue
+					}
+					svcVarNameMap[svcVar.Name] = svcVar
+					svcVarNameSet[svcVar.Name] = struct{}{}
+				}
+			}
+			svcVarMap[svc] = svcVarNameMap
+		}
+	}
+
+	// Calculate the intersection set of each service's variables.
+	var svcVars []*ServiceVariable
+	var mismatchSvcVarNames []string
+	mismatchServiceNames := map[string][]string{}
+	for svcVarName := range svcVarNameSet {
+		omit := false
+		type SvcVarSet struct {
+			svc    *Service
+			svcVar *ServiceVariable
+		}
+		var svcVarSets []*SvcVarSet
+		for svc, svcVarNameMap := range svcVarMap {
+			svcVar, exists := svcVarNameMap[svcVarName]
+			if !exists {
+				// The given svcVar is not defined in the service, so just omit it from the intersection set
+				omit = true
+				break
+			}
+			svcVarSets = append(svcVarSets, &SvcVarSet{
+				svc:    svc,
+				svcVar: svcVar,
+			})
+		}
+		if omit {
+			continue
+		}
+
+		// Check if all the svcVar has the same type.
+		typ := svcVarSets[0].svcVar.Expr.Type
+		var mismatch bool
+		for _, set := range svcVarSets[1:] {
+			if !isExactlySameType(typ, set.svcVar.Expr.Type) {
+				mismatch = true
+				break
+			}
+		}
+		if mismatch {
+			mismatchSvcVarNames = append(mismatchSvcVarNames, svcVarName)
+			var serviceNames []string
+			for _, set := range svcVarSets {
+				serviceNames = append(serviceNames, set.svc.Name)
+			}
+			// Fix the order for testing
+			sort.Strings(serviceNames)
+			mismatchServiceNames[svcVarName] = serviceNames
+		}
+
+		svcVars = append(svcVars, svcVarSets[0].svcVar)
+	}
+
+	// Fix the order for testing
+	sort.Strings(mismatchSvcVarNames)
+	for _, missingSvcVarName := range mismatchSvcVarNames {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf(
+					"service variable %q has different types across services: %s",
+					missingSvcVarName,
+					strings.Join(mismatchServiceNames[missingSvcVarName], ", "),
+				),
+				builder.Location(),
+			),
+		)
+	}
+
+	return svcVarsToMessage(msg.File, msg.Name, svcVars)
 }
 
 func (r *Resolver) enumAccessors() []cel.EnvOption {
@@ -4615,14 +4902,14 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 	}
 }
 
-func envVarsToMessage(msg *Message, envVars []*EnvVar) *Message {
-	copied := *msg.File
+func envVarsToMessage(file *File, name string, envVars []*EnvVar) *Message {
+	copied := *file
 	copied.Package = &Package{
 		Name: federation.PrivatePackageName,
 	}
 	envMsg := &Message{
 		File: &copied,
-		Name: msg.Name + "Env",
+		Name: name + "Env",
 	}
 	for _, v := range envVars {
 		envMsg.Fields = append(envMsg.Fields, &Field{
@@ -4633,9 +4920,33 @@ func envVarsToMessage(msg *Message, envVars []*EnvVar) *Message {
 	return envMsg
 }
 
-func envFileDescriptor(envMsg, baseMsg *Message) *descriptorpb.FileDescriptorProto {
-	msg := messageToDescriptor(envMsg)
-	desc := envMsg.File.Desc
+func svcVarsToMessage(file *File, name string, svcVars []*ServiceVariable) *Message {
+	copied := *file
+	copied.Package = &Package{
+		Name: federation.PrivatePackageName,
+	}
+	svcVarMsg := &Message{
+		File: &copied,
+		Name: strings.Replace(name, ".", "_", -1) + "Variable",
+	}
+	for _, v := range svcVars {
+		if v.Name == "" {
+			continue
+		}
+		if v.Expr == nil || v.Expr.Type == nil {
+			continue
+		}
+		svcVarMsg.Fields = append(svcVarMsg.Fields, &Field{
+			Name: v.Name,
+			Type: v.Expr.Type,
+		})
+	}
+	return svcVarMsg
+}
+
+func dynamicMsgFileDescriptor(srcMsg *Message, fileName string) *descriptorpb.FileDescriptorProto {
+	msg := messageToDescriptor(srcMsg)
+	desc := srcMsg.File.Desc
 	var (
 		importedPrivateFile  bool
 		importedDurationFile bool
@@ -4648,7 +4959,7 @@ func envFileDescriptor(envMsg, baseMsg *Message) *descriptorpb.FileDescriptorPro
 			importedDurationFile = true
 		}
 	}
-	deps := append(desc.GetDependency(), envMsg.File.Name)
+	deps := append(desc.GetDependency(), srcMsg.File.Name)
 	if !importedPrivateFile {
 		deps = append(deps, privateProtoFile)
 	}
@@ -4656,7 +4967,7 @@ func envFileDescriptor(envMsg, baseMsg *Message) *descriptorpb.FileDescriptorPro
 		deps = append(deps, durationProtoFile)
 	}
 	return &descriptorpb.FileDescriptorProto{
-		Name:             proto.String(strings.Replace(baseMsg.FQDN(), ".", "_", -1)),
+		Name:             proto.String(fileName),
 		Package:          proto.String(federation.PrivatePackageName),
 		Dependency:       deps,
 		PublicDependency: desc.PublicDependency,

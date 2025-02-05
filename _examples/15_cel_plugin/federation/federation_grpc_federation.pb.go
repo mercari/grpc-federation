@@ -204,7 +204,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		}
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
 	}
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -214,7 +214,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:        otel.Tracer("org.federation.FederationService"),
 		celPlugins:    celPlugins,
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // IsMatch implements "org.federation.FederationService/IsMatch" method.
@@ -272,9 +273,9 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			exp *pluginpb.Example
-			str string
-			v   []*pluginpb.Example
+			Exp *pluginpb.Example
+			Str string
+			V   []*pluginpb.Example
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ExampleResponseArgument", req)}
@@ -289,7 +290,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 			Name: `v`,
 			Type: grpcfed.CELListType(grpcfed.CELObjectType("example.regexp.Example")),
 			Setter: func(value *localValueType, v []*pluginpb.Example) error {
-				value.vars.v = v
+				value.vars.V = v
 				return nil
 			},
 			By:           `example.regexp.filterExamples(example.regexp.newExamples())`,
@@ -308,7 +309,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 			Name: `exp`,
 			Type: grpcfed.CELObjectType("example.regexp.Example"),
 			Setter: func(value *localValueType, v *pluginpb.Example) error {
-				value.vars.exp = v
+				value.vars.Exp = v
 				return nil
 			},
 			By:           `example.regexp.newExample()`,
@@ -327,7 +328,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 			Name: `str`,
 			Type: grpcfed.CELStringType,
 			Setter: func(value *localValueType, v string) error {
-				value.vars.str = v
+				value.vars.Str = v
 				return nil
 			},
 			By:           `exp.concat(exp.mySplit('/a/b/c', '/'))`,
@@ -368,9 +369,9 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Exp = value.vars.exp
-	req.Str = value.vars.str
-	req.V = value.vars.v
+	req.Exp = value.vars.Exp
+	req.Str = value.vars.Str
+	req.V = value.vars.V
 
 	// create a message value to be returned.
 	ret := &ExampleResponse{}
@@ -417,8 +418,8 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			matched bool
-			re      *pluginpb.Regexp
+			Matched bool
+			Re      *pluginpb.Regexp
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.IsMatchResponseArgument", req)}
@@ -433,7 +434,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 			Name: `re`,
 			Type: grpcfed.CELObjectType("example.regexp.Regexp"),
 			Setter: func(value *localValueType, v *pluginpb.Regexp) error {
-				value.vars.re = v
+				value.vars.Re = v
 				return nil
 			},
 			By:           `example.regexp.compile($.expr)`,
@@ -452,7 +453,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 			Name: `matched`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.matched = v
+				value.vars.Matched = v
 				return nil
 			},
 			By:           `re.matchString($.target)`,
@@ -470,8 +471,8 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Matched = value.vars.matched
-	req.Re = value.vars.re
+	req.Matched = value.vars.Matched
+	req.Re = value.vars.Re
 
 	// create a message value to be returned.
 	ret := &IsMatchResponse{}

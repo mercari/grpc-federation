@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    var {
+      name: "foo"
+      by: "1"
+    }
+    var {
+      name: "bar"
+      by: "foo + 1"
+    }
+    var {
+      name: "baz"
+      by: "foo2 + 1"
+    }
+  };
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {
+
+}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "foo"
+      by: "grpc.federation.var.foo + 1"
+    }
+    def {
+      name: "bar"
+      by: "grpc.federation.var.unknown"
+    }
+  };
+}

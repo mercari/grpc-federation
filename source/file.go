@@ -1824,6 +1824,7 @@ func (f *File) nodeInfoByService(node *ast.ServiceNode, svc *Service) *ast.NodeI
 func (f *File) nodeInfoByServiceOption(node *ast.OptionNode, opt *ServiceOption) *ast.NodeInfo {
 	switch n := node.Val.(type) {
 	case *ast.MessageLiteralNode:
+		var vars []*ast.MessageLiteralNode
 		for _, elem := range n.Elements {
 			fieldName := elem.Name.Name.AsIdentifier()
 			switch {
@@ -1833,7 +1834,12 @@ func (f *File) nodeInfoByServiceOption(node *ast.OptionNode, opt *ServiceOption)
 					return nil
 				}
 				return f.nodeInfoByEnv(value, opt.Env)
+			case opt.Var != nil && fieldName == "var":
+				vars = append(vars, f.getMessageListFromNode(elem.Val)...)
 			}
+		}
+		if len(vars) != 0 {
+			return f.nodeInfoByServiceVariable(vars, opt.Var)
 		}
 	}
 	return f.nodeInfo(node)
@@ -1869,6 +1875,82 @@ func (f *File) nodeInfoByEnvVar(list []*ast.MessageLiteralNode, v *EnvVar) *ast.
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
 		case v.Name && fieldName == "name":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByServiceVariable(list []*ast.MessageLiteralNode, svcVar *ServiceVariable) *ast.NodeInfo {
+	if svcVar.Idx >= len(list) {
+		return nil
+	}
+	node := list[svcVar.Idx]
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case svcVar.Name && fieldName == "name":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case svcVar.If && fieldName == "if":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case svcVar.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case svcVar.Map != nil && fieldName == "map":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByMapExpr(value, svcVar.Map)
+		case svcVar.Message != nil && fieldName == "message":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByMessageExpr(value, svcVar.Message)
+		case svcVar.Enum != nil && fieldName == "enum":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByEnumExpr(value, svcVar.Enum)
+		case svcVar.Validation != nil && fieldName == "validation":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByServiceVariableValidationExpr(value, svcVar.Validation)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByServiceVariableValidationExpr(node *ast.MessageLiteralNode, expr *ServiceVariableValidationExpr) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case expr.If && fieldName == "if":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case expr.Message && fieldName == "message":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
 				return nil
