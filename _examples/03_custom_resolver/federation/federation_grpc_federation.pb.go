@@ -302,7 +302,7 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
 	}
-	return &FederationV2DevService{
+	svc := &FederationV2DevService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -316,7 +316,8 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 			Post_PostServiceClient: Post_PostServiceClient,
 			User_UserServiceClient: User_UserServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPostV2Dev implements "federation.v2dev.FederationV2devService/GetPostV2dev" method.
@@ -374,8 +375,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *PostV2Dev
-			r    *Ref
+			Post *PostV2Dev
+			R    *Ref
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostV2devResponseArgument", req)}
@@ -394,7 +395,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 			Name: `post`,
 			Type: grpcfed.CELObjectType("federation.v2dev.PostV2dev"),
 			Setter: func(value *localValueType, v *PostV2Dev) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -433,7 +434,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 			Name: `r`,
 			Type: grpcfed.CELObjectType("federation.v2dev.Ref"),
 			Setter: func(value *localValueType, v *Ref) error {
-				value.vars.r = v
+				value.vars.R = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -475,8 +476,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
-	req.R = value.vars.r
+	req.Post = value.vars.Post
+	req.R = value.vars.R
 
 	// create a message value to be returned.
 	ret := &GetPostV2DevResponse{}
@@ -579,14 +580,14 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			_def4      *ForNameless
-			_def7      bool
-			null_check bool
-			post       *post.Post
-			res        *post.GetPostResponse
-			typed_nil  *TypedNil
-			unused     *Unused
-			user       *User
+			NullCheck bool
+			Post      *post.Post
+			Res       *post.GetPostResponse
+			TypedNil  *TypedNil
+			Unused    *Unused
+			User      *User
+			XDef4     *ForNameless
+			XDef7     bool
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostV2devArgument", req)}
@@ -605,7 +606,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name: `res`,
 			Type: grpcfed.CELObjectType("post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -646,7 +647,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name: `post`,
 			Type: grpcfed.CELObjectType("post.Post"),
 			Setter: func(value *localValueType, v *post.Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			By:           `res.post`,
@@ -668,7 +669,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name: `user`,
 			Type: grpcfed.CELObjectType("federation.v2dev.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.user = v
+				value.vars.User = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -711,7 +712,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name: `unused`,
 			Type: grpcfed.CELObjectType("federation.v2dev.Unused"),
 			Setter: func(value *localValueType, v *Unused) error {
-				value.vars.unused = v
+				value.vars.Unused = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -751,7 +752,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name: `_def4`,
 			Type: grpcfed.CELObjectType("federation.v2dev.ForNameless"),
 			Setter: func(value *localValueType, v *ForNameless) error {
-				value.vars._def4 = v
+				value.vars.XDef4 = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -790,7 +791,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name: `typed_nil`,
 			Type: grpcfed.CELObjectType("federation.v2dev.TypedNil"),
 			Setter: func(value *localValueType, v *TypedNil) error {
-				value.vars.typed_nil = v
+				value.vars.TypedNil = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -818,7 +819,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name:         `null_check`,
 			Type:         grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.null_check = v
+				value.vars.NullCheck = v
 				return nil
 			},
 			By:           `true`,
@@ -840,7 +841,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 			Name:         `_def7`,
 			Type:         grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def7 = v
+				value.vars.XDef7 = v
 				return nil
 			},
 			By:           `grpc.federation.log.info('output typed_nil', {'result': typed_nil == null})`,
@@ -923,22 +924,22 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.NullCheck = value.vars.null_check
-	req.Post = value.vars.post
-	req.Res = value.vars.res
-	req.TypedNil = value.vars.typed_nil
-	req.Unused = value.vars.unused
-	req.User = value.vars.user
-	req.XDef4 = value.vars._def4
-	req.XDef7 = value.vars._def7
+	req.NullCheck = value.vars.NullCheck
+	req.Post = value.vars.Post
+	req.Res = value.vars.Res
+	req.TypedNil = value.vars.TypedNil
+	req.Unused = value.vars.Unused
+	req.User = value.vars.User
+	req.XDef4 = value.vars.XDef4
+	req.XDef7 = value.vars.XDef7
 
 	// create a message value to be returned.
 	ret := &PostV2Dev{}
 
 	// field binding section.
-	ret.Id = value.vars.post.GetId()           // { name: "post", autobind: true }
-	ret.Title = value.vars.post.GetTitle()     // { name: "post", autobind: true }
-	ret.Content = value.vars.post.GetContent() // { name: "post", autobind: true }
+	ret.Id = value.vars.Post.GetId()           // { name: "post", autobind: true }
+	ret.Title = value.vars.Post.GetTitle()     // { name: "post", autobind: true }
+	ret.Content = value.vars.Post.GetContent() // { name: "post", autobind: true }
 	{
 		// (grpc.federation.field).custom_resolver = true
 		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
@@ -1058,8 +1059,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			res *user.GetUserResponse
-			u   *user.User
+			Res *user.GetUserResponse
+			U   *user.User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
@@ -1078,7 +1079,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 			Name: `res`,
 			Type: grpcfed.CELObjectType("user.GetUserResponse"),
 			Setter: func(value *localValueType, v *user.GetUserResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -1118,7 +1119,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 			Name: `u`,
 			Type: grpcfed.CELObjectType("user.User"),
 			Setter: func(value *localValueType, v *user.User) error {
-				value.vars.u = v
+				value.vars.U = v
 				return nil
 			},
 			By:           `res.user`,
@@ -1136,8 +1137,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.res
-	req.U = value.vars.u
+	req.Res = value.vars.Res
+	req.U = value.vars.U
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.

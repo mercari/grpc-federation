@@ -170,7 +170,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.Item.ItemType", Item_ItemType_value, Item_ItemType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -182,7 +182,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Post_PostServiceClient: Post_PostServiceClient,
 			User_UserServiceClient: User_UserServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPosts implements "org.federation.FederationService/GetPosts" method.
@@ -218,7 +219,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			posts *Posts
+			Posts *Posts
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostsResponseArgument", req)}
@@ -236,7 +237,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 			Name: `posts`,
 			Type: grpcfed.CELObjectType("org.federation.Posts"),
 			Setter: func(value *localValueType, v *Posts) error {
-				value.vars.posts = v
+				value.vars.Posts = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -268,7 +269,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Posts = value.vars.posts
+	req.Posts = value.vars.Posts
 
 	// create a message value to be returned.
 	ret := &GetPostsResponse{}
@@ -302,14 +303,14 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			ids                 []string
-			item_types          []Item_ItemType
-			items               []*Posts_PostItem
-			posts               []*post.Post
-			res                 *post.GetPostsResponse
-			selected_item_types []Item_ItemType
-			source_item_types   []user.Item_ItemType
-			users               []*User
+			Ids               []string
+			ItemTypes         []Item_ItemType
+			Items             []*Posts_PostItem
+			Posts             []*post.Post
+			Res               *post.GetPostsResponse
+			SelectedItemTypes []Item_ItemType
+			SourceItemTypes   []user.Item_ItemType
+			Users             []*User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostsArgument", req)}
@@ -327,7 +328,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `res`,
 			Type: grpcfed.CELObjectType("post.GetPostsResponse"),
 			Setter: func(value *localValueType, v *post.GetPostsResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -367,7 +368,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `posts`,
 			Type: grpcfed.CELListType(grpcfed.CELObjectType("post.Post")),
 			Setter: func(value *localValueType, v []*post.Post) error {
-				value.vars.posts = v
+				value.vars.Posts = v
 				return nil
 			},
 			By:           `res.posts`,
@@ -392,12 +393,12 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `ids`,
 			Type: grpcfed.CELListType(grpcfed.CELStringType),
 			Setter: func(value *localValueType, v []string) error {
-				value.vars.ids = v
+				value.vars.Ids = v
 				return nil
 			},
 			IteratorName:   `post`,
 			IteratorType:   grpcfed.CELObjectType("post.Post"),
-			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
+			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.Posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 					Value:      value,
@@ -429,12 +430,12 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `users`,
 			Type: grpcfed.CELListType(grpcfed.CELObjectType("org.federation.User")),
 			Setter: func(value *localValueType, v []*User) error {
-				value.vars.users = v
+				value.vars.Users = v
 				return nil
 			},
 			IteratorName:   `iter`,
 			IteratorType:   grpcfed.CELObjectType("post.Post"),
-			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
+			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.Posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				args := &FederationService_Org_Federation_UserArgument{}
 				// { name: "user_id", by: "iter.user_id" }
@@ -474,12 +475,12 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `items`,
 			Type: grpcfed.CELListType(grpcfed.CELObjectType("org.federation.Posts.PostItem")),
 			Setter: func(value *localValueType, v []*Posts_PostItem) error {
-				value.vars.items = v
+				value.vars.Items = v
 				return nil
 			},
 			IteratorName:   `iter`,
 			IteratorType:   grpcfed.CELObjectType("post.Post"),
-			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.posts },
+			IteratorSource: func(value *localValueType) []*post.Post { return value.vars.Posts },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				args := &FederationService_Org_Federation_Posts_PostItemArgument{}
 				// { name: "id", by: "iter.id" }
@@ -510,7 +511,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `source_item_types`,
 			Type: grpcfed.CELListType(grpcfed.CELIntType),
 			Setter: func(value *localValueType, v []user.Item_ItemType) error {
-				value.vars.source_item_types = v
+				value.vars.SourceItemTypes = v
 				return nil
 			},
 			By:           `[user.Item.ItemType.value('ITEM_TYPE_1'), user.Item.ItemType.value('ITEM_TYPE_2')]`,
@@ -534,12 +535,12 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `item_types`,
 			Type: grpcfed.CELListType(grpcfed.CELIntType),
 			Setter: func(value *localValueType, v []Item_ItemType) error {
-				value.vars.item_types = v
+				value.vars.ItemTypes = v
 				return nil
 			},
 			IteratorName:   `typ`,
 			IteratorType:   grpcfed.CELIntType,
-			IteratorSource: func(value *localValueType) []user.Item_ItemType { return value.vars.source_item_types },
+			IteratorSource: func(value *localValueType) []user.Item_ItemType { return value.vars.SourceItemTypes },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 					Value:      value,
@@ -572,12 +573,12 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Name: `selected_item_types`,
 			Type: grpcfed.CELListType(grpcfed.CELIntType),
 			Setter: func(value *localValueType, v []Item_ItemType) error {
-				value.vars.selected_item_types = v
+				value.vars.SelectedItemTypes = v
 				return nil
 			},
 			IteratorName:   `typ`,
 			IteratorType:   grpcfed.CELIntType,
-			IteratorSource: func(value *localValueType) []user.Item_ItemType { return value.vars.source_item_types },
+			IteratorSource: func(value *localValueType) []user.Item_ItemType { return value.vars.SourceItemTypes },
 			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
 				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 					Value:      value,
@@ -708,14 +709,14 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Ids = value.vars.ids
-	req.ItemTypes = value.vars.item_types
-	req.Items = value.vars.items
-	req.Posts = value.vars.posts
-	req.Res = value.vars.res
-	req.SelectedItemTypes = value.vars.selected_item_types
-	req.SourceItemTypes = value.vars.source_item_types
-	req.Users = value.vars.users
+	req.Ids = value.vars.Ids
+	req.ItemTypes = value.vars.ItemTypes
+	req.Items = value.vars.Items
+	req.Posts = value.vars.Posts
+	req.Res = value.vars.Res
+	req.SelectedItemTypes = value.vars.SelectedItemTypes
+	req.SourceItemTypes = value.vars.SourceItemTypes
+	req.Users = value.vars.Users
 
 	// create a message value to be returned.
 	ret := &Posts{}
@@ -863,8 +864,8 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			res  *user.GetUserResponse
-			user *user.User
+			Res  *user.GetUserResponse
+			User *user.User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
@@ -882,7 +883,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			Name: `res`,
 			Type: grpcfed.CELObjectType("user.GetUserResponse"),
 			Setter: func(value *localValueType, v *user.GetUserResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -923,7 +924,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			Name: `user`,
 			Type: grpcfed.CELObjectType("user.User"),
 			Setter: func(value *localValueType, v *user.User) error {
-				value.vars.user = v
+				value.vars.User = v
 				return nil
 			},
 			By:           `res.user`,
@@ -941,15 +942,15 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.res
-	req.User = value.vars.user
+	req.Res = value.vars.Res
+	req.User = value.vars.User
 
 	// create a message value to be returned.
 	ret := &User{}
 
 	// field binding section.
-	ret.Id = value.vars.user.GetId()     // { name: "user", autobind: true }
-	ret.Name = value.vars.user.GetName() // { name: "user", autobind: true }
+	ret.Id = value.vars.User.GetId()     // { name: "user", autobind: true }
+	ret.Name = value.vars.User.GetName() // { name: "user", autobind: true }
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.User", slog.Any("org.federation.User", s.logvalue_Org_Federation_User(ret)))
 	return ret, nil

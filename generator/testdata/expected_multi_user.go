@@ -175,7 +175,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.UserType", user.UserType_value, user.UserType_name)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -187,7 +187,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // Get implements "org.federation.FederationService/Get" method.
@@ -221,9 +222,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			uid   *UserID
-			user  *User
-			user2 *User
+			Uid   *UserID
+			User  *User
+			User2 *User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
@@ -240,7 +241,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `uid`,
 			Type: grpcfed.CELObjectType("org.federation.UserID"),
 			Setter: func(value *localValueType, v *UserID) error {
-				value.vars.uid = v
+				value.vars.Uid = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -268,7 +269,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `user`,
 			Type: grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.user = v
+				value.vars.User = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -308,7 +309,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Name: `user2`,
 			Type: grpcfed.CELObjectType("org.federation.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.user2 = v
+				value.vars.User2 = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -372,9 +373,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Uid = value.vars.uid
-	req.User = value.vars.user
-	req.User2 = value.vars.user2
+	req.Uid = value.vars.Uid
+	req.User = value.vars.User
+	req.User2 = value.vars.User2
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
@@ -442,9 +443,9 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			_def2 *Sub
-			res   *user.GetUserResponse
-			user  *user.User
+			Res   *user.GetUserResponse
+			User  *user.User
+			XDef2 *Sub
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
@@ -462,7 +463,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			Name: `res`,
 			Type: grpcfed.CELObjectType("org.user.GetUserResponse"),
 			Setter: func(value *localValueType, v *user.GetUserResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -503,7 +504,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			Name: `user`,
 			Type: grpcfed.CELObjectType("org.user.User"),
 			Setter: func(value *localValueType, v *user.User) error {
-				value.vars.user = v
+				value.vars.User = v
 				return nil
 			},
 			By:           `res.user`,
@@ -524,7 +525,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			Name: `_def2`,
 			Type: grpcfed.CELObjectType("org.federation.Sub"),
 			Setter: func(value *localValueType, v *Sub) error {
-				value.vars._def2 = v
+				value.vars.XDef2 = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -571,15 +572,15 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.res
-	req.User = value.vars.user
-	req.XDef2 = value.vars._def2
+	req.Res = value.vars.Res
+	req.User = value.vars.User
+	req.XDef2 = value.vars.XDef2
 
 	// create a message value to be returned.
 	ret := &User{}
 
 	// field binding section.
-	ret.Id = value.vars.user.GetId() // { name: "user", autobind: true }
+	ret.Id = value.vars.User.GetId() // { name: "user", autobind: true }
 	{
 		// (grpc.federation.field).custom_resolver = true
 		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
@@ -607,7 +608,7 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			_def0 *Sub
+			XDef0 *Sub
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserIDArgument", req)}
@@ -624,7 +625,7 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 			Name: `_def0`,
 			Type: grpcfed.CELObjectType("org.federation.Sub"),
 			Setter: func(value *localValueType, v *Sub) error {
-				value.vars._def0 = v
+				value.vars.XDef0 = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {

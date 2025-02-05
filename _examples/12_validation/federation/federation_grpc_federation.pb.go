@@ -142,7 +142,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -152,7 +152,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:        otel.Tracer("org.federation.FederationService"),
 		resolver:      cfg.Resolver,
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPost implements "org.federation.FederationService/GetPost" method.
@@ -188,7 +189,7 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			_def0 bool
+			XDef0 bool
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.CustomHandlerMessageArgument", req)}
@@ -208,7 +209,7 @@ func (s *FederationService) resolve_Org_Federation_CustomHandlerMessage(ctx cont
 			Name: `_def0`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def0 = v
+				value.vars.XDef0 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -294,16 +295,16 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			_def2                  bool
-			_def3                  bool
-			_def4                  bool
-			_def4_def0             bool
-			_def4_err_detail0_msg0 *CustomMessage
-			_def4_err_detail0_msg1 *CustomMessage
-			_def5                  bool
-			condition              bool
-			customHandler          *CustomHandlerMessage
-			post                   *Post
+			Condition           bool
+			CustomHandler       *CustomHandlerMessage
+			Post                *Post
+			XDef2               bool
+			XDef3               bool
+			XDef4               bool
+			XDef4Def0           bool
+			XDef4ErrDetail0Msg0 *CustomMessage
+			XDef4ErrDetail0Msg1 *CustomMessage
+			XDef5               bool
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
@@ -320,7 +321,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -348,7 +349,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `customHandler`,
 			Type: grpcfed.CELObjectType("org.federation.CustomHandlerMessage"),
 			Setter: func(value *localValueType, v *CustomHandlerMessage) error {
-				value.vars.customHandler = v
+				value.vars.CustomHandler = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -391,7 +392,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `_def2`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def2 = v
+				value.vars.XDef2 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -439,7 +440,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `_def3`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def3 = v
+				value.vars.XDef3 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -497,7 +498,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `_def4`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def4 = v
+				value.vars.XDef4 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -514,7 +515,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 							Name: `_def4_def0`,
 							Type: grpcfed.CELBoolType,
 							Setter: func(value *localValueType, v bool) error {
-								value.vars._def4_def0 = v
+								value.vars.XDef4Def0 = v
 								return nil
 							},
 							By:           `grpc.federation.log.add({'validation3_attrs': true})`,
@@ -566,7 +567,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											Name: `_def4_err_detail0_msg0`,
 											Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
 											Setter: func(value *localValueType, v *CustomMessage) error {
-												value.vars._def4_err_detail0_msg0 = v
+												value.vars.XDef4ErrDetail0Msg0 = v
 												return nil
 											},
 											Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -606,7 +607,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											Name: `_def4_err_detail0_msg1`,
 											Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
 											Setter: func(value *localValueType, v *CustomMessage) error {
-												value.vars._def4_err_detail0_msg1 = v
+												value.vars.XDef4ErrDetail0Msg1 = v
 												return nil
 											},
 											Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -762,7 +763,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `_def5`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def5 = v
+				value.vars.XDef5 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -779,7 +780,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 							Name: `condition`,
 							Type: grpcfed.CELBoolType,
 							Setter: func(value *localValueType, v bool) error {
-								value.vars.condition = v
+								value.vars.Condition = v
 								return nil
 							},
 							By:           `post.id != 'some-id'`,
@@ -973,10 +974,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Condition = value.vars.condition
-	req.Post = value.vars.post
-	req.XDef4ErrDetail0Msg0 = value.vars._def4_err_detail0_msg0
-	req.XDef4ErrDetail0Msg1 = value.vars._def4_err_detail0_msg1
+	req.Condition = value.vars.Condition
+	req.Post = value.vars.Post
+	req.XDef4ErrDetail0Msg0 = value.vars.XDef4ErrDetail0Msg0
+	req.XDef4ErrDetail0Msg1 = value.vars.XDef4ErrDetail0Msg1
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}

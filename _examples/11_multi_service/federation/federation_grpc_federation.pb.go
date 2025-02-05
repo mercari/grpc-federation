@@ -111,6 +111,28 @@ func withFederationServiceEnv(ctx context.Context, env *FederationServiceEnv) co
 	return context.WithValue(ctx, keyFederationServiceEnv{}, env)
 }
 
+// FederationServiceVariable keeps the initial values.
+type FederationServiceVariable struct {
+	UpperName                 string
+	FederationServiceVariable int64
+	bool
+}
+
+type keyFederationServiceVariable struct{}
+
+// GetFederationServiceVariable gets initial variables.
+func GetFederationServiceVariable(ctx context.Context) *FederationServiceVariable {
+	value := ctx.Value(keyFederationServiceVariable{})
+	if value == nil {
+		return nil
+	}
+	return value.(*FederationServiceVariable)
+}
+
+func withFederationServiceVariable(ctx context.Context, svcVar *FederationServiceVariable) context.Context {
+	return context.WithValue(ctx, keyFederationServiceVariable{}, svcVar)
+}
+
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -126,6 +148,7 @@ type FederationService struct {
 	celCacheMap   *grpcfed.CELCacheMap
 	tracer        trace.Tracer
 	env           *FederationServiceEnv
+	svcVar        *FederationServiceVariable
 	celTypeHelper *grpcfed.CELTypeHelper
 	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
@@ -159,6 +182,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			"name":       grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 			"federation": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Federation"),
 		},
+		"grpc.federation.private.ServiceVariable": {
+			"upper_name":                  grpcfed.NewCELFieldType(grpcfed.CELStringType, "UpperName"),
+			"federation_service_variable": grpcfed.NewCELFieldType(grpcfed.CELIntType, "FederationServiceVariable"),
+			"":                            grpcfed.NewCELFieldType(grpcfed.CELBoolType, ""),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
@@ -166,11 +194,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	var env FederationServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
 	}
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -179,8 +208,92 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("federation.FederationService"),
 		env:           &env,
+		svcVar:        new(FederationServiceVariable),
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	if err := svc.initServiceVariables(); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+func (s *FederationService) initServiceVariables() error {
+	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars *FederationServiceVariable
+	}
+	value := &localValueType{
+		LocalValue: grpcfed.NewServiceVariableLocalValue(s.celEnvOpts),
+		vars:       s.svcVar,
+	}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
+
+	/*
+		def {
+		  name: "upper_name"
+		  by: "grpc.federation.strings.toUpper(grpc.federation.env.name)"
+		}
+	*/
+	def_upper_name := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+			Name: `upper_name`,
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.UpperName = v
+				return nil
+			},
+			By:           `grpc.federation.strings.toUpper(grpc.federation.env.name)`,
+			ByCacheIndex: 1,
+		})
+	}
+	if err := def_upper_name(ctx); err != nil {
+		return err
+	}
+
+	/*
+		def {
+		  name: "federation_service_variable"
+		  by: "1"
+		}
+	*/
+	def_federation_service_variable := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
+			Name: `federation_service_variable`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v int64) error {
+				value.vars.FederationServiceVariable = v
+				return nil
+			},
+			By:           `1`,
+			ByCacheIndex: 2,
+		})
+	}
+	if err := def_federation_service_variable(ctx); err != nil {
+		return err
+	}
+
+	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+		Value:      value,
+		Expr:       `grpc.federation.env.name == ''`,
+		CacheIndex: 3,
+		Body: func(value *localValueType) error {
+			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				Value:      value,
+				Expr:       `'name environment variable is unspecified'`,
+				OutType:    reflect.TypeOf(""),
+				CacheIndex: 4,
+			})
+			if err != nil {
+				return err
+			}
+			return grpcfed.NewGRPCStatus(grpcfed.InternalCode, errmsg.(string)).Err()
+		},
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetPost implements "federation.FederationService/GetPost" method.
@@ -188,6 +301,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	ctx, span := s.tracer.Start(ctx, "federation.FederationService/GetPost")
 	defer span.End()
 	ctx = withFederationServiceEnv(ctx, s.env)
+	ctx = withFederationServiceVariable(ctx, s.svcVar)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -212,6 +326,7 @@ func (s *FederationService) GetName(ctx context.Context, req *GetNameRequest) (r
 	ctx, span := s.tracer.Start(ctx, "federation.FederationService/GetName")
 	defer span.End()
 	ctx = withFederationServiceEnv(ctx, s.env)
+	ctx = withFederationServiceVariable(ctx, s.svcVar)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -243,6 +358,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse(ctx context.Conte
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetNameResponseArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 
 	// create a message value to be returned.
 	ret := &GetNameResponse{}
@@ -252,7 +368,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.env.name`,
-		CacheIndex: 1,
+		CacheIndex: 5,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -276,11 +392,12 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			p *Post
+			P *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "p"
@@ -294,7 +411,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			Name: `p`,
 			Type: grpcfed.CELObjectType("federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.p = v
+				value.vars.P = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -314,7 +431,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.P = value.vars.p
+	req.P = value.vars.P
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -324,9 +441,22 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `p`,
-		CacheIndex: 2,
+		CacheIndex: 6,
 		Setter: func(v *Post) error {
 			ret.Post = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "grpc.federation.var.upper_name"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:      value,
+		Expr:       `grpc.federation.var.upper_name`,
+		CacheIndex: 7,
+		Setter: func(v string) error {
+			ret.UpperName = v
 			return nil
 		},
 	}); err != nil {
@@ -348,14 +478,15 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			cmp            bool
-			favorite_value favorite.FavoriteType
-			reaction       *Reaction
-			u              *User
+			Cmp           bool
+			FavoriteValue favorite.FavoriteType
+			Reaction      *Reaction
+			U             *User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "u"
@@ -373,7 +504,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			Name: `u`,
 			Type: grpcfed.CELObjectType("federation.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.u = v
+				value.vars.U = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -382,7 +513,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'foo'`,
-					CacheIndex: 3,
+					CacheIndex: 8,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -394,7 +525,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'bar'`,
-					CacheIndex: 4,
+					CacheIndex: 9,
 					Setter: func(v string) error {
 						args.Name = v
 						return nil
@@ -422,11 +553,11 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			Name: `favorite_value`,
 			Type: grpcfed.CELIntType,
 			Setter: func(value *localValueType, v favorite.FavoriteType) error {
-				value.vars.favorite_value = v
+				value.vars.FavoriteValue = v
 				return nil
 			},
 			By:           `favorite.FavoriteType.value('TYPE1')`,
-			ByCacheIndex: 5,
+			ByCacheIndex: 10,
 		})
 	}
 
@@ -441,11 +572,11 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			Name: `cmp`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.cmp = v
+				value.vars.Cmp = v
 				return nil
 			},
 			By:           `favorite_value == favorite.FavoriteType.TYPE1`,
-			ByCacheIndex: 6,
+			ByCacheIndex: 11,
 		})
 	}
 
@@ -463,7 +594,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			Name: `reaction`,
 			Type: grpcfed.CELObjectType("federation.Reaction"),
 			Setter: func(value *localValueType, v *Reaction) error {
-				value.vars.reaction = v
+				value.vars.Reaction = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -472,7 +603,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 					Value:      value,
 					Expr:       `favorite_value`,
-					CacheIndex: 7,
+					CacheIndex: 12,
 					Setter: func(v favorite.FavoriteType) error {
 						args.V = v
 						return nil
@@ -536,10 +667,10 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.cmp
-	req.FavoriteValue = value.vars.favorite_value
-	req.Reaction = value.vars.reaction
-	req.U = value.vars.u
+	req.Cmp = value.vars.Cmp
+	req.FavoriteValue = value.vars.FavoriteValue
+	req.Reaction = value.vars.Reaction
+	req.U = value.vars.U
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -549,7 +680,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'post-id'`,
-		CacheIndex: 8,
+		CacheIndex: 13,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -562,7 +693,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'title'`,
-		CacheIndex: 9,
+		CacheIndex: 14,
 		Setter: func(v string) error {
 			ret.Title = v
 			return nil
@@ -575,7 +706,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'content'`,
-		CacheIndex: 10,
+		CacheIndex: 15,
 		Setter: func(v string) error {
 			ret.Content = v
 			return nil
@@ -588,7 +719,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:      value,
 		Expr:       `u`,
-		CacheIndex: 11,
+		CacheIndex: 16,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -601,7 +732,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Reaction]{
 		Value:      value,
 		Expr:       `reaction`,
-		CacheIndex: 12,
+		CacheIndex: 17,
 		Setter: func(v *Reaction) error {
 			ret.Reaction = v
 			return nil
@@ -614,7 +745,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 		Value:      value,
 		Expr:       `favorite_value`,
-		CacheIndex: 13,
+		CacheIndex: 18,
 		Setter: func(v favorite.FavoriteType) error {
 			favoriteValueValue, err := s.cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(v)
 			if err != nil {
@@ -631,7 +762,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `cmp`,
-		CacheIndex: 14,
+		CacheIndex: 19,
 		Setter: func(v bool) error {
 			ret.Cmp = v
 			return nil
@@ -655,11 +786,12 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			cmp bool
+			Cmp bool
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ReactionArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "cmp"
@@ -671,11 +803,11 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 			Name: `cmp`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.cmp = v
+				value.vars.Cmp = v
 				return nil
 			},
 			By:           `$.v == favorite.FavoriteType.TYPE1`,
-			ByCacheIndex: 15,
+			ByCacheIndex: 20,
 		})
 	}
 
@@ -685,7 +817,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.cmp
+	req.Cmp = value.vars.Cmp
 
 	// create a message value to be returned.
 	ret := &Reaction{}
@@ -695,7 +827,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 		Value:      value,
 		Expr:       `favorite.FavoriteType.TYPE1`,
-		CacheIndex: 16,
+		CacheIndex: 21,
 		Setter: func(v favorite.FavoriteType) error {
 			ret.FavoriteType = v
 			return nil
@@ -708,7 +840,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`,
-		CacheIndex: 17,
+		CacheIndex: 22,
 		Setter: func(v string) error {
 			ret.FavoriteTypeStr = v
 			return nil
@@ -721,7 +853,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `cmp`,
-		CacheIndex: 18,
+		CacheIndex: 23,
 		Setter: func(v bool) error {
 			ret.Cmp = v
 			return nil
@@ -749,6 +881,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 
 	// create a message value to be returned.
 	ret := &User{}
@@ -758,7 +891,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `$.id`,
-		CacheIndex: 19,
+		CacheIndex: 24,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -771,7 +904,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `$.name`,
-		CacheIndex: 20,
+		CacheIndex: 25,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -836,6 +969,7 @@ func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostRespon
 	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Federation_Post(v.GetPost())),
+		slog.String("upper_name", v.GetUpperName()),
 	)
 }
 
@@ -1007,6 +1141,30 @@ func withPrivateServiceEnv(ctx context.Context, env *PrivateServiceEnv) context.
 	return context.WithValue(ctx, keyPrivateServiceEnv{}, env)
 }
 
+// PrivateServiceVariable keeps the initial values.
+type PrivateServiceVariable struct {
+	UpperName               string
+	PrivateServiceEnum      MyFavoriteType
+	PrivateServiceUser      *User
+	Users                   []*User
+	PrivateServiceUserNames []string
+}
+
+type keyPrivateServiceVariable struct{}
+
+// GetPrivateServiceVariable gets initial variables.
+func GetPrivateServiceVariable(ctx context.Context) *PrivateServiceVariable {
+	value := ctx.Value(keyPrivateServiceVariable{})
+	if value == nil {
+		return nil
+	}
+	return value.(*PrivateServiceVariable)
+}
+
+func withPrivateServiceVariable(ctx context.Context, svcVar *PrivateServiceVariable) context.Context {
+	return context.WithValue(ctx, keyPrivateServiceVariable{}, svcVar)
+}
+
 // PrivateServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -1022,6 +1180,7 @@ type PrivateService struct {
 	celCacheMap   *grpcfed.CELCacheMap
 	tracer        trace.Tracer
 	env           *PrivateServiceEnv
+	svcVar        *PrivateServiceVariable
 	celTypeHelper *grpcfed.CELTypeHelper
 	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
@@ -1055,6 +1214,13 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 			"name":    grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 			"private": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Private"),
 		},
+		"grpc.federation.private.ServiceVariable": {
+			"upper_name":                 grpcfed.NewCELFieldType(grpcfed.CELStringType, "UpperName"),
+			"private_service_enum":       grpcfed.NewCELFieldType(grpcfed.CELIntType, "PrivateServiceEnum"),
+			"private_service_user":       grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("federation.User"), "PrivateServiceUser"),
+			"users":                      grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.NewCELObjectType("federation.User")), "Users"),
+			"private_service_user_names": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELStringType), "PrivateServiceUserNames"),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
@@ -1062,11 +1228,12 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	var env PrivateServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
 	}
-	return &PrivateService{
+	svc := &PrivateService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -1075,8 +1242,203 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("federation.PrivateService"),
 		env:           &env,
+		svcVar:        new(PrivateServiceVariable),
 		client:        &PrivateServiceDependentClientSet{},
-	}, nil
+	}
+	if err := svc.initServiceVariables(); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+func (s *PrivateService) initServiceVariables() error {
+	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars *PrivateServiceVariable
+	}
+	value := &localValueType{
+		LocalValue: grpcfed.NewServiceVariableLocalValue(s.celEnvOpts),
+		vars:       s.svcVar,
+	}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
+
+	/*
+		def {
+		  name: "upper_name"
+		  by: "grpc.federation.strings.toUpper(grpc.federation.env.name)"
+		}
+	*/
+	def_upper_name := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+			Name: `upper_name`,
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.UpperName = v
+				return nil
+			},
+			By:           `grpc.federation.strings.toUpper(grpc.federation.env.name)`,
+			ByCacheIndex: 1,
+		})
+	}
+	if err := def_upper_name(ctx); err != nil {
+		return err
+	}
+
+	/*
+		def {
+		  name: "private_service_enum"
+		  enum {
+		    name: "federation.MyFavoriteType"
+		    by: "favorite.FavoriteType.value('TYPE_1')"
+		  }
+		}
+	*/
+	def_private_service_enum := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[MyFavoriteType, *localValueType]{
+			Name: `private_service_enum`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v MyFavoriteType) error {
+				value.vars.PrivateServiceEnum = v
+				return nil
+			},
+			Enum: func(ctx context.Context, value *localValueType) (MyFavoriteType, error) {
+				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+					Value:      value,
+					Expr:       `favorite.FavoriteType.value('TYPE_1')`,
+					OutType:    reflect.TypeOf(favorite.FavoriteType(0)),
+					CacheIndex: 2,
+				})
+				if err != nil {
+					return 0, err
+				}
+				v := src.(favorite.FavoriteType)
+				return s.cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(v)
+			},
+		})
+	}
+	if err := def_private_service_enum(ctx); err != nil {
+		return err
+	}
+
+	/*
+		def {
+		  name: "private_service_user"
+		  message {
+		    name: "User"
+		    args: [
+		      { name: "id", by: "'private_service_user_id'" },
+		      { name: "name", by: "'private_service_user_name'" }
+		    ]
+		  }
+		}
+	*/
+	def_private_service_user := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*User, *localValueType]{
+			Name: `private_service_user`,
+			Type: grpcfed.CELObjectType("federation.User"),
+			Setter: func(value *localValueType, v *User) error {
+				value.vars.PrivateServiceUser = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &PrivateService_Federation_UserArgument{}
+				// { name: "id", by: "'private_service_user_id'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:      value,
+					Expr:       `'private_service_user_id'`,
+					CacheIndex: 3,
+					Setter: func(v string) error {
+						args.Id = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				// { name: "name", by: "'private_service_user_name'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:      value,
+					Expr:       `'private_service_user_name'`,
+					CacheIndex: 4,
+					Setter: func(v string) error {
+						args.Name = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				ret, err := s.resolve_Federation_User(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
+			},
+		})
+	}
+	if err := def_private_service_user(ctx); err != nil {
+		return err
+	}
+
+	/*
+		def {
+		  name: "users"
+		  by: "[private_service_user]"
+		}
+	*/
+	def_users := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[[]*User, *localValueType]{
+			Name: `users`,
+			Type: grpcfed.CELListType(grpcfed.CELObjectType("federation.User")),
+			Setter: func(value *localValueType, v []*User) error {
+				value.vars.Users = v
+				return nil
+			},
+			By:           `[private_service_user]`,
+			ByCacheIndex: 5,
+		})
+	}
+	if err := def_users(ctx); err != nil {
+		return err
+	}
+
+	/*
+		def {
+		  name: "private_service_user_names"
+		  map {
+		    iterator {
+		      name: "iter"
+		      src: "users"
+		    }
+		    by: "iter.name"
+		  }
+		}
+	*/
+	def_private_service_user_names := func(ctx context.Context) error {
+		return grpcfed.EvalDefMap(ctx, value, grpcfed.DefMap[[]string, *User, *localValueType]{
+			Name: `private_service_user_names`,
+			Type: grpcfed.CELListType(grpcfed.CELStringType),
+			Setter: func(value *localValueType, v []string) error {
+				value.vars.PrivateServiceUserNames = v
+				return nil
+			},
+			IteratorName:   `iter`,
+			IteratorType:   grpcfed.CELObjectType("federation.User"),
+			IteratorSource: func(value *localValueType) []*User { return value.vars.Users },
+			Iterator: func(ctx context.Context, value *grpcfed.MapIteratorValue) (any, error) {
+				return grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+					Value:      value,
+					Expr:       `iter.name`,
+					OutType:    reflect.TypeOf(""),
+					CacheIndex: 6,
+				})
+			},
+		})
+	}
+	if err := def_private_service_user_names(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetPost implements "federation.PrivateService/GetPost" method.
@@ -1084,6 +1446,7 @@ func (s *PrivateService) GetPost(ctx context.Context, req *GetPostRequest) (res 
 	ctx, span := s.tracer.Start(ctx, "federation.PrivateService/GetPost")
 	defer span.End()
 	ctx = withPrivateServiceEnv(ctx, s.env)
+	ctx = withPrivateServiceVariable(ctx, s.svcVar)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -1108,6 +1471,7 @@ func (s *PrivateService) GetName(ctx context.Context, req *GetNameRequest) (res 
 	ctx, span := s.tracer.Start(ctx, "federation.PrivateService/GetName")
 	defer span.End()
 	ctx = withPrivateServiceEnv(ctx, s.env)
+	ctx = withPrivateServiceVariable(ctx, s.svcVar)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -1139,6 +1503,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse(ctx context.Context,
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetNameResponseArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 
 	// create a message value to be returned.
 	ret := &GetNameResponse{}
@@ -1148,7 +1513,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse(ctx context.Context,
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.env.name`,
-		CacheIndex: 1,
+		CacheIndex: 7,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -1172,11 +1537,12 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			p *Post
+			P *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "p"
@@ -1190,7 +1556,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 			Name: `p`,
 			Type: grpcfed.CELObjectType("federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.p = v
+				value.vars.P = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -1210,7 +1576,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.P = value.vars.p
+	req.P = value.vars.P
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -1220,9 +1586,22 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `p`,
-		CacheIndex: 2,
+		CacheIndex: 8,
 		Setter: func(v *Post) error {
 			ret.Post = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "grpc.federation.var.upper_name"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:      value,
+		Expr:       `grpc.federation.var.upper_name`,
+		CacheIndex: 9,
+		Setter: func(v string) error {
+			ret.UpperName = v
 			return nil
 		},
 	}); err != nil {
@@ -1244,14 +1623,15 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			cmp            bool
-			favorite_value favorite.FavoriteType
-			reaction       *Reaction
-			u              *User
+			Cmp           bool
+			FavoriteValue favorite.FavoriteType
+			Reaction      *Reaction
+			U             *User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "u"
@@ -1269,7 +1649,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 			Name: `u`,
 			Type: grpcfed.CELObjectType("federation.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.u = v
+				value.vars.U = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -1278,7 +1658,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'foo'`,
-					CacheIndex: 3,
+					CacheIndex: 10,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -1290,7 +1670,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'bar'`,
-					CacheIndex: 4,
+					CacheIndex: 11,
 					Setter: func(v string) error {
 						args.Name = v
 						return nil
@@ -1318,11 +1698,11 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 			Name: `favorite_value`,
 			Type: grpcfed.CELIntType,
 			Setter: func(value *localValueType, v favorite.FavoriteType) error {
-				value.vars.favorite_value = v
+				value.vars.FavoriteValue = v
 				return nil
 			},
 			By:           `favorite.FavoriteType.value('TYPE1')`,
-			ByCacheIndex: 5,
+			ByCacheIndex: 12,
 		})
 	}
 
@@ -1337,11 +1717,11 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 			Name: `cmp`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.cmp = v
+				value.vars.Cmp = v
 				return nil
 			},
 			By:           `favorite_value == favorite.FavoriteType.TYPE1`,
-			ByCacheIndex: 6,
+			ByCacheIndex: 13,
 		})
 	}
 
@@ -1359,7 +1739,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 			Name: `reaction`,
 			Type: grpcfed.CELObjectType("federation.Reaction"),
 			Setter: func(value *localValueType, v *Reaction) error {
-				value.vars.reaction = v
+				value.vars.Reaction = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -1368,7 +1748,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 					Value:      value,
 					Expr:       `favorite_value`,
-					CacheIndex: 7,
+					CacheIndex: 14,
 					Setter: func(v favorite.FavoriteType) error {
 						args.V = v
 						return nil
@@ -1432,10 +1812,10 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.cmp
-	req.FavoriteValue = value.vars.favorite_value
-	req.Reaction = value.vars.reaction
-	req.U = value.vars.u
+	req.Cmp = value.vars.Cmp
+	req.FavoriteValue = value.vars.FavoriteValue
+	req.Reaction = value.vars.Reaction
+	req.U = value.vars.U
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -1445,7 +1825,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'post-id'`,
-		CacheIndex: 8,
+		CacheIndex: 15,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -1458,7 +1838,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'title'`,
-		CacheIndex: 9,
+		CacheIndex: 16,
 		Setter: func(v string) error {
 			ret.Title = v
 			return nil
@@ -1471,7 +1851,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'content'`,
-		CacheIndex: 10,
+		CacheIndex: 17,
 		Setter: func(v string) error {
 			ret.Content = v
 			return nil
@@ -1484,7 +1864,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:      value,
 		Expr:       `u`,
-		CacheIndex: 11,
+		CacheIndex: 18,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -1497,7 +1877,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Reaction]{
 		Value:      value,
 		Expr:       `reaction`,
-		CacheIndex: 12,
+		CacheIndex: 19,
 		Setter: func(v *Reaction) error {
 			ret.Reaction = v
 			return nil
@@ -1510,7 +1890,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 		Value:      value,
 		Expr:       `favorite_value`,
-		CacheIndex: 13,
+		CacheIndex: 20,
 		Setter: func(v favorite.FavoriteType) error {
 			favoriteValueValue, err := s.cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(v)
 			if err != nil {
@@ -1527,7 +1907,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `cmp`,
-		CacheIndex: 14,
+		CacheIndex: 21,
 		Setter: func(v bool) error {
 			ret.Cmp = v
 			return nil
@@ -1551,11 +1931,12 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			cmp bool
+			Cmp bool
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ReactionArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "cmp"
@@ -1567,11 +1948,11 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 			Name: `cmp`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.cmp = v
+				value.vars.Cmp = v
 				return nil
 			},
 			By:           `$.v == favorite.FavoriteType.TYPE1`,
-			ByCacheIndex: 15,
+			ByCacheIndex: 22,
 		})
 	}
 
@@ -1581,7 +1962,7 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.cmp
+	req.Cmp = value.vars.Cmp
 
 	// create a message value to be returned.
 	ret := &Reaction{}
@@ -1591,7 +1972,7 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 		Value:      value,
 		Expr:       `favorite.FavoriteType.TYPE1`,
-		CacheIndex: 16,
+		CacheIndex: 23,
 		Setter: func(v favorite.FavoriteType) error {
 			ret.FavoriteType = v
 			return nil
@@ -1604,7 +1985,7 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`,
-		CacheIndex: 17,
+		CacheIndex: 24,
 		Setter: func(v string) error {
 			ret.FavoriteTypeStr = v
 			return nil
@@ -1617,7 +1998,7 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `cmp`,
-		CacheIndex: 18,
+		CacheIndex: 25,
 		Setter: func(v bool) error {
 			ret.Cmp = v
 			return nil
@@ -1645,6 +2026,7 @@ func (s *PrivateService) resolve_Federation_User(ctx context.Context, req *Priva
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 
 	// create a message value to be returned.
 	ret := &User{}
@@ -1654,7 +2036,7 @@ func (s *PrivateService) resolve_Federation_User(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `$.id`,
-		CacheIndex: 19,
+		CacheIndex: 26,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -1667,7 +2049,7 @@ func (s *PrivateService) resolve_Federation_User(ctx context.Context, req *Priva
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `$.name`,
-		CacheIndex: 20,
+		CacheIndex: 27,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -1732,6 +2114,7 @@ func (s *PrivateService) logvalue_Federation_GetPostResponse(v *GetPostResponse)
 	}
 	return slog.GroupValue(
 		slog.Any("post", s.logvalue_Federation_Post(v.GetPost())),
+		slog.String("upper_name", v.GetUpperName()),
 	)
 }
 
@@ -1905,7 +2288,7 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
-	return &DebugService{
+	svc := &DebugService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -1914,7 +2297,8 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("federation.DebugService"),
 		client:        &DebugServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetStatus implements "federation.DebugService/GetStatus" method.
@@ -1948,7 +2332,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			u *User
+			U *User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetStatusResponseArgument", req)}
@@ -1969,7 +2353,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 			Name: `u`,
 			Type: grpcfed.CELObjectType("federation.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.u = v
+				value.vars.U = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -2013,7 +2397,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.U = value.vars.u
+	req.U = value.vars.U
 
 	// create a message value to be returned.
 	ret := &GetStatusResponse{}

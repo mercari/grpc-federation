@@ -163,7 +163,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostDataType", post.PostDataType_value, post.PostDataType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostContent.Category", post1.PostContent_Category_value, post1.PostContent_Category_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostDataType", post1.PostDataType_value, post1.PostDataType_name)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -175,7 +175,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_Post_PostServiceClient:    Org_Post_PostServiceClient,
 			Org_Post_V2_PostServiceClient: Org_Post_V2_PostServiceClient,
 		},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPost implements "org.federation.FederationService/GetPost" method.
@@ -213,7 +214,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			post *Post
+			Post *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
@@ -235,7 +236,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -291,7 +292,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
+	req.Post = value.vars.Post
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -325,13 +326,13 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			data2      *post1.PostData
-			data_type  *grpcfedcel.EnumSelector
-			data_type2 *grpcfedcel.EnumSelector
-			post       *post.Post
-			res        *post.GetPostResponse
-			res2       *post1.GetPostResponse
-			type_fed   PostType
+			Data2     *post1.PostData
+			DataType  *grpcfedcel.EnumSelector
+			DataType2 *grpcfedcel.EnumSelector
+			Post      *post.Post
+			Res       *post.GetPostResponse
+			Res2      *post1.GetPostResponse
+			TypeFed   PostType
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
@@ -353,7 +354,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `res`,
 			Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
 			Setter: func(value *localValueType, v *post.GetPostResponse) error {
-				value.vars.res = v
+				value.vars.Res = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -444,7 +445,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.post.Post"),
 			Setter: func(value *localValueType, v *post.Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			By:           `res.post`,
@@ -466,7 +467,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `res2`,
 			Type: grpcfed.CELObjectType("org.post.v2.GetPostResponse"),
 			Setter: func(value *localValueType, v *post1.GetPostResponse) error {
-				value.vars.res2 = v
+				value.vars.Res2 = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -506,7 +507,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `data2`,
 			Type: grpcfed.CELObjectType("org.post.v2.PostData"),
 			Setter: func(value *localValueType, v *post1.PostData) error {
-				value.vars.data2 = v
+				value.vars.Data2 = v
 				return nil
 			},
 			By:           `res2.post.data`,
@@ -525,7 +526,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `data_type`,
 			Type: grpcfed.CELObjectType("grpc.federation.private.EnumSelector"),
 			Setter: func(value *localValueType, v *grpcfedcel.EnumSelector) error {
-				value.vars.data_type = v
+				value.vars.DataType = v
 				return nil
 			},
 			By:           `grpc.federation.enum.select(true, org.post.PostDataType.from(org.post.PostDataType.POST_TYPE_B), org.post.v2.PostDataType.value('POST_V2_TYPE_B'))`,
@@ -544,7 +545,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `data_type2`,
 			Type: grpcfed.CELObjectType("grpc.federation.private.EnumSelector"),
 			Setter: func(value *localValueType, v *grpcfedcel.EnumSelector) error {
-				value.vars.data_type2 = v
+				value.vars.DataType2 = v
 				return nil
 			},
 			By:           `grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.value('POST_V2_TYPE_C'))`,
@@ -566,7 +567,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Name: `type_fed`,
 			Type: grpcfed.CELIntType,
 			Setter: func(value *localValueType, v PostType) error {
-				value.vars.type_fed = v
+				value.vars.TypeFed = v
 				return nil
 			},
 			Enum: func(ctx context.Context, value *localValueType) (PostType, error) {
@@ -674,21 +675,21 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Data2 = value.vars.data2
-	req.DataType = value.vars.data_type
-	req.DataType2 = value.vars.data_type2
-	req.Post = value.vars.post
-	req.Res = value.vars.res
-	req.Res2 = value.vars.res2
-	req.TypeFed = value.vars.type_fed
+	req.Data2 = value.vars.Data2
+	req.DataType = value.vars.DataType
+	req.DataType2 = value.vars.DataType2
+	req.Post = value.vars.Post
+	req.Res = value.vars.Res
+	req.Res2 = value.vars.Res2
+	req.TypeFed = value.vars.TypeFed
 
 	// create a message value to be returned.
 	ret := &Post{}
 
 	// field binding section.
-	ret.Id = value.vars.post.GetId() // { name: "post", autobind: true }
+	ret.Id = value.vars.Post.GetId() // { name: "post", autobind: true }
 	{
-		dataValue, err := s.cast_Org_Post_PostData__to__Org_Federation_PostData(value.vars.post.GetData()) // { name: "post", autobind: true }
+		dataValue, err := s.cast_Org_Post_PostData__to__Org_Federation_PostData(value.vars.Post.GetData()) // { name: "post", autobind: true }
 		if err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err

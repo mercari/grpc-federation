@@ -26,6 +26,20 @@ service FederationService {
         type { kind: STRING }
       }
     }
+    var {
+      name: "upper_name"
+      by: "grpc.federation.strings.toUpper(grpc.federation.env.name)"
+    }
+    var {
+      name: "federation_service_variable"
+      by: "1"
+    }
+    var {
+      validation {
+        if: "grpc.federation.env.name == ''"
+        message: "'name environment variable is unspecified'"
+      }
+    }
   };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
   rpc GetName(GetNameRequest) returns (GetNameResponse) {};
@@ -44,6 +58,38 @@ service PrivateService {
       var {
         name: "private"
         type { kind: STRING }
+      }
+    }
+    var {
+      name: "upper_name"
+      by: "grpc.federation.strings.toUpper(grpc.federation.env.name)"
+    }
+    var {
+      name: "private_service_enum"
+      enum {
+        name: "MyFavoriteType"
+        by: "favorite.FavoriteType.value('TYPE_1')"
+      }
+    }
+    var {
+      name: "private_service_user"
+      message {
+        name: "User"
+        args [
+          {name: "id" by: "'private_service_user_id'"},
+          {name: "name" by: "'private_service_user_name'"}
+        ]
+      }
+    }
+    var { name: "users" by: "[private_service_user]"}
+    var {
+      name: "private_service_user_names"
+      map {
+        iterator {
+          name: "iter"
+          src: "users"
+        }
+        by: "iter.name"
       }
     }
   };
@@ -66,6 +112,7 @@ message GetPostResponse {
     message { name: "Post" }
   };
   Post post = 1 [(grpc.federation.field).by = "p"];
+  string upper_name = 2 [(grpc.federation.field).by = "grpc.federation.var.upper_name"];
 }
 
 message Post {

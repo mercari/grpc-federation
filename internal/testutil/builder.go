@@ -1556,6 +1556,11 @@ func (b *ServiceRuleBuilder) SetEnv(env *resolver.Env) *ServiceRuleBuilder {
 	return b
 }
 
+func (b *ServiceRuleBuilder) AddVar(svcVar *resolver.ServiceVariable) *ServiceRuleBuilder {
+	b.rule.Vars = append(b.rule.Vars, svcVar)
+	return b
+}
+
 func (b *ServiceRuleBuilder) Build(t *testing.T) *resolver.ServiceRule {
 	t.Helper()
 	return b.rule
@@ -1644,6 +1649,76 @@ func (b *EnvVarOptionBuilder) SetIgnored(v bool) *EnvVarOptionBuilder {
 func (b *EnvVarOptionBuilder) Build(t *testing.T) *resolver.EnvVarOption {
 	t.Helper()
 	return b.opt
+}
+
+type ServiceVariableBuilder struct {
+	svcVar *resolver.ServiceVariable
+}
+
+func NewServiceVariableBuilder() *ServiceVariableBuilder {
+	return &ServiceVariableBuilder{
+		svcVar: &resolver.ServiceVariable{},
+	}
+}
+
+func (b *ServiceVariableBuilder) SetName(name string) *ServiceVariableBuilder {
+	b.svcVar.Name = name
+	return b
+}
+
+func (b *ServiceVariableBuilder) SetIf(v string) *ServiceVariableBuilder {
+	b.svcVar.If = &resolver.CELValue{
+		Expr: v,
+		Out:  resolver.BoolType,
+	}
+	return b
+}
+
+func (b *ServiceVariableBuilder) SetBy(v *resolver.CELValue) *ServiceVariableBuilder {
+	b.svcVar.Expr = &resolver.ServiceVariableExpr{
+		By:   v,
+		Type: v.Out,
+	}
+	return b
+}
+
+func (b *ServiceVariableBuilder) SetMap(v *resolver.MapExpr) *ServiceVariableBuilder {
+	mapExprType := v.Expr.Type.Clone()
+	mapExprType.Repeated = true
+	b.svcVar.Expr = &resolver.ServiceVariableExpr{
+		Map:  v,
+		Type: mapExprType,
+	}
+	return b
+}
+
+func (b *ServiceVariableBuilder) SetMessage(v *resolver.MessageExpr) *ServiceVariableBuilder {
+	b.svcVar.Expr = &resolver.ServiceVariableExpr{
+		Message: v,
+		Type:    resolver.NewMessageType(v.Message, false),
+	}
+	return b
+}
+
+func (b *ServiceVariableBuilder) SetEnum(v *resolver.EnumExpr) *ServiceVariableBuilder {
+	b.svcVar.Expr = &resolver.ServiceVariableExpr{
+		Enum: v,
+		Type: resolver.NewEnumType(v.Enum, false),
+	}
+	return b
+}
+
+func (b *ServiceVariableBuilder) SetValidation(v *resolver.ServiceVariableValidationExpr) *ServiceVariableBuilder {
+	b.svcVar.Expr = &resolver.ServiceVariableExpr{
+		Validation: v,
+		Type:       resolver.BoolType,
+	}
+	return b
+}
+
+func (b *ServiceVariableBuilder) Build(t *testing.T) *resolver.ServiceVariable {
+	t.Helper()
+	return b.svcVar
 }
 
 type MethodRuleBuilder struct {

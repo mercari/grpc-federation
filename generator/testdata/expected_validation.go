@@ -117,7 +117,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -126,7 +126,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("org.federation.FederationService"),
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPost implements "org.federation.FederationService/GetPost" method.
@@ -198,11 +199,11 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			_def1                  bool
-			_def2                  bool
-			_def2_err_detail0_msg0 *CustomMessage
-			_def2_err_detail0_msg1 *CustomMessage
-			post                   *Post
+			Post                *Post
+			XDef1               bool
+			XDef2               bool
+			XDef2ErrDetail0Msg0 *CustomMessage
+			XDef2ErrDetail0Msg1 *CustomMessage
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
@@ -219,7 +220,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `post`,
 			Type: grpcfed.CELObjectType("org.federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.post = v
+				value.vars.Post = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -250,7 +251,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `_def1`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def1 = v
+				value.vars.XDef1 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -308,7 +309,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Name: `_def2`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars._def2 = v
+				value.vars.XDef2 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -349,7 +350,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											Name: `_def2_err_detail0_msg0`,
 											Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
 											Setter: func(value *localValueType, v *CustomMessage) error {
-												value.vars._def2_err_detail0_msg0 = v
+												value.vars.XDef2ErrDetail0Msg0 = v
 												return nil
 											},
 											Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -389,7 +390,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 											Name: `_def2_err_detail0_msg1`,
 											Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
 											Setter: func(value *localValueType, v *CustomMessage) error {
-												value.vars._def2_err_detail0_msg1 = v
+												value.vars.XDef2ErrDetail0Msg1 = v
 												return nil
 											},
 											Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -542,9 +543,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.post
-	req.XDef2ErrDetail0Msg0 = value.vars._def2_err_detail0_msg0
-	req.XDef2ErrDetail0Msg1 = value.vars._def2_err_detail0_msg1
+	req.Post = value.vars.Post
+	req.XDef2ErrDetail0Msg0 = value.vars.XDef2ErrDetail0Msg0
+	req.XDef2ErrDetail0Msg1 = value.vars.XDef2ErrDetail0Msg1
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}

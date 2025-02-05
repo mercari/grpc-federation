@@ -338,8 +338,23 @@ func NewLocalValue(ctx context.Context, envOpts []cel.EnvOption, argName string,
 	}
 }
 
+func NewServiceVariableLocalValue(envOpts []cel.EnvOption) *LocalValue {
+	newEnvOpts := append([]cel.EnvOption{}, envOpts...)
+	return &LocalValue{
+		sgCache: &singleflightCache{
+			resultMap: make(map[string]*singleflightCacheResult),
+		},
+		envOpts:    newEnvOpts,
+		evalValues: make(map[string]any),
+	}
+}
+
 func (v *LocalValue) AddEnv(env any) {
 	v.setEvalValue("grpc.federation.env", env)
+}
+
+func (v *LocalValue) AddServiceVariable(env any) {
+	v.setEvalValue("grpc.federation.var", env)
 }
 
 type localValue interface {

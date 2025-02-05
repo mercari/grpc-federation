@@ -18,6 +18,16 @@ func TestValidator(t *testing.T) {
 		file     string
 		expected string
 	}{
+		{file: "conflict_service_variable.proto", expected: `
+conflict_service_variable.proto:44:1: service variable "bar" has different types across services: BarService, FooService
+44:  message GetResponse {
+     ^
+conflict_service_variable.proto:56:11: ERROR: <input>:1:20: undefined field 'baz'
+ | grpc.federation.var.baz
+ | ...................^
+56:        by: "grpc.federation.var.baz"
+               ^
+`},
 		{file: "empty_response_field.proto", expected: `
 `},
 		{file: "different_message_argument_type.proto", expected: `
@@ -468,6 +478,18 @@ missing_method_request_value.proto:41:19: value must be specified
 missing_response_message_option.proto:18:1: "federation.GetPostResponse" message needs to specify "grpc.federation.message" option
 18:  message GetPostResponse {
      ^
+`},
+		{file: "missing_service_variable.proto", expected: `
+missing_service_variable.proto:21:11: ERROR: <input>:1:1: undeclared reference to 'foo2' (in container 'org.federation')
+ | foo2 + 1
+ | ^
+21:        by: "foo2 + 1"
+               ^
+missing_service_variable.proto:39:11: ERROR: <input>:1:20: undefined field 'unknown'
+ | grpc.federation.var.unknown
+ | ...................^
+39:        by: "grpc.federation.var.unknown"
+               ^
 `},
 		{file: "invalid_method_response_option.proto", expected: `
 invalid_method_response_option.proto: "google.protobuf.Empty" message needs to specify "grpc.federation.message" option
