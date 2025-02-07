@@ -749,6 +749,14 @@ invalid_validation_localized_message.proto:54:26: message must always return a s
 54:                  message: "1"
                               ^
 `},
+		{file: "invalid_validation_with_ignore.proto", expected: `
+invalid_validation_with_ignore.proto:24:19: validation doesn't support "ignore" feature
+24:            ignore: true
+                       ^
+invalid_validation_with_ignore.proto:32:32: validation doesn't support "ignore_and_response" feature
+32:            ignore_and_response: "'foo'"
+                                    ^
+`},
 		{file: "invalid_list_sort.proto", expected: `
 invalid_list_sort.proto:55:59: ERROR: <input>:1:14: list(org.federation.User) is not comparable
  | users.sortAsc(v, v).sortDesc(v, v).sortStableAsc(v, v).sortStableDesc(v, v)

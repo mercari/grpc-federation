@@ -2670,9 +2670,26 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr, build
 }
 
 func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.ValidationExpr, builder *source.ValidationExprOptionBuilder) *ValidationExpr {
+	grpcErr := r.resolveGRPCError(ctx, def.GetError(), builder.WithError())
+	if grpcErr.Ignore {
+		ctx.addError(
+			ErrWithLocation(
+				`validation doesn't support "ignore" feature`,
+				builder.WithError().WithIgnore().Location(),
+			),
+		)
+	}
+	if grpcErr.IgnoreAndResponse != nil {
+		ctx.addError(
+			ErrWithLocation(
+				`validation doesn't support "ignore_and_response" feature`,
+				builder.WithError().WithIgnoreAndResponse().Location(),
+			),
+		)
+	}
 	return &ValidationExpr{
 		Name:  def.GetName(),
-		Error: r.resolveGRPCError(ctx, def.GetError(), builder.WithError()),
+		Error: grpcErr,
 	}
 }
 
