@@ -603,12 +603,13 @@ func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(defSet *Variabl
 			}
 		case v.Expr.Map != nil:
 			if v.Expr.Map.Expr != nil {
-				if v.Expr.Map.Expr.By != nil {
-					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.Map.Expr.By))
+				expr := v.Expr.Map.Expr
+				if expr.By != nil {
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(expr.By))
 				}
-				if v.Expr.Map.Expr.Message != nil {
-					pkgNameMap[v.Expr.Map.Expr.Message.Message.PackageName()] = struct{}{}
-					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Map.Expr.Message.Args))
+				if expr.Message != nil && expr.Message.Message != nil {
+					pkgNameMap[expr.Message.Message.PackageName()] = struct{}{}
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(expr.Message.Args))
 				}
 			}
 		case v.Expr.Validation != nil:

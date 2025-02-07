@@ -6,6 +6,9 @@ import (
 )
 
 func (s *Service) GoPackage() *GoPackage {
+	if s == nil {
+		return nil
+	}
 	if s.File == nil {
 		return nil
 	}
@@ -13,6 +16,9 @@ func (s *Service) GoPackage() *GoPackage {
 }
 
 func (s *Service) Package() *Package {
+	if s == nil {
+		return nil
+	}
 	if s.File == nil {
 		return nil
 	}
@@ -20,6 +26,9 @@ func (s *Service) Package() *Package {
 }
 
 func (s *Service) PackageName() string {
+	if s == nil {
+		return ""
+	}
 	pkg := s.Package()
 	if pkg == nil {
 		return ""
@@ -28,6 +37,9 @@ func (s *Service) PackageName() string {
 }
 
 func (s *Service) Method(name string) *Method {
+	if s == nil {
+		return nil
+	}
 	for _, method := range s.Methods {
 		if method.Name == name {
 			return method
@@ -37,6 +49,9 @@ func (s *Service) Method(name string) *Method {
 }
 
 func (s *Service) HasMessageInMethod(msg *Message) bool {
+	if s == nil {
+		return false
+	}
 	for _, mtd := range s.Methods {
 		if mtd.Request == msg {
 			return true
@@ -63,6 +78,9 @@ func (s *Service) HasMessageInVariables(msg *Message) bool {
 }
 
 func (s *Service) GoPackageDependencies() []*GoPackage {
+	if s == nil {
+		return nil
+	}
 	pkgMap := map[*GoPackage]struct{}{}
 	pkgMap[s.GoPackage()] = struct{}{}
 	for _, dep := range s.ServiceDependencies() {
@@ -81,6 +99,9 @@ type CustomResolver struct {
 }
 
 func (r *CustomResolver) FQDN() string {
+	if r == nil {
+		return ""
+	}
 	if r.Field != nil {
 		return fmt.Sprintf("%s.%s", r.Message.FQDN(), r.Field.Name)
 	}
@@ -88,6 +109,9 @@ func (r *CustomResolver) FQDN() string {
 }
 
 func (s *Service) CustomResolvers() []*CustomResolver {
+	if s == nil {
+		return nil
+	}
 	resolverMap := make(map[string]*CustomResolver)
 	for _, method := range s.Methods {
 		for _, resolver := range method.FederationResponse().CustomResolvers() {
@@ -105,10 +129,16 @@ func (s *Service) CustomResolvers() []*CustomResolver {
 }
 
 func (s *Service) ExistsCustomResolver() bool {
+	if s == nil {
+		return false
+	}
 	return len(s.CustomResolvers()) != 0
 }
 
 func (s *Service) ServiceDependencies() []*ServiceDependency {
+	if s == nil {
+		return nil
+	}
 	useServices := s.UseServices()
 	deps := make([]*ServiceDependency, 0, len(useServices))
 	depSvcMap := map[string]*ServiceDependency{}
@@ -124,6 +154,9 @@ func (s *Service) ServiceDependencies() []*ServiceDependency {
 }
 
 func (s *Service) UseServices() []*Service {
+	if s == nil {
+		return nil
+	}
 	svcMap := map[*Service]struct{}{}
 	for _, method := range s.Methods {
 		for _, svc := range method.Response.DependServices() {

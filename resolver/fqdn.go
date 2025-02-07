@@ -6,14 +6,23 @@ import (
 )
 
 func (s *Service) FQDN() string {
+	if s == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s.%s", s.PackageName(), s.Name)
 }
 
 func (m *Method) FQDN() string {
+	if m == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s/%s", m.Service.FQDN(), m.Name)
 }
 
 func (m *Message) FQDN() string {
+	if m == nil {
+		return ""
+	}
 	return strings.Join(
 		append(append([]string{m.PackageName()}, m.ParentMessageNames()...), m.Name),
 		".",
@@ -21,6 +30,9 @@ func (m *Message) FQDN() string {
 }
 
 func (f *Field) FQDN() string {
+	if f == nil {
+		return ""
+	}
 	if f.Message == nil {
 		return f.Name
 	}
@@ -28,6 +40,9 @@ func (f *Field) FQDN() string {
 }
 
 func (f *OneofField) FQDN() string {
+	if f == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s.%s", f.Oneof.Message.FQDN(), f.Name)
 }
 
@@ -42,10 +57,16 @@ func (e *Enum) FQDN() string {
 }
 
 func (v *EnumValue) FQDN() string {
+	if v == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s.%s", v.Enum.FQDN(), v.Value)
 }
 
 func (t *Type) FQDN() string {
+	if t == nil {
+		return ""
+	}
 	var repeated string
 	if t.Repeated {
 		repeated = "repeated "
@@ -66,5 +87,8 @@ func (t *Type) FQDN() string {
 }
 
 func (n *MessageDependencyGraphNode) FQDN() string {
+	if n == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s_%s", n.BaseMessage.FQDN(), n.VariableDefinition.Name)
 }

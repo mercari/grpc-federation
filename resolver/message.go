@@ -74,6 +74,9 @@ func newMessageArgument(msg *Message) *Message {
 }
 
 func (m *Message) ParentMessageNames() []string {
+	if m == nil {
+		return nil
+	}
 	if m.ParentMessage == nil {
 		return []string{}
 	}
@@ -81,6 +84,9 @@ func (m *Message) ParentMessageNames() []string {
 }
 
 func (m *Message) Package() *Package {
+	if m == nil {
+		return nil
+	}
 	if m.File == nil {
 		return nil
 	}
@@ -88,6 +94,9 @@ func (m *Message) Package() *Package {
 }
 
 func (m *Message) HasRule() bool {
+	if m == nil {
+		return false
+	}
 	if m.Rule == nil {
 		return false
 	}
@@ -111,6 +120,9 @@ func (m *Message) IsEnumSelector() bool {
 }
 
 func (m *Message) HasResolvers() bool {
+	if m == nil {
+		return false
+	}
 	if m.Rule == nil {
 		return false
 	}
@@ -135,6 +147,9 @@ func (m *Message) HasResolvers() bool {
 }
 
 func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
+	if m == nil {
+		return nil
+	}
 	if m.Rule == nil {
 		return nil
 	}
@@ -168,6 +183,10 @@ func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 }
 
 func (m *Message) AllVariableDefinitions() VariableDefinitions {
+	if m == nil {
+		return nil
+	}
+
 	var defs VariableDefinitions
 	for _, group := range m.VariableDefinitionGroups() {
 		defs = append(defs, group.VariableDefinitions()...)
@@ -176,6 +195,9 @@ func (m *Message) AllVariableDefinitions() VariableDefinitions {
 }
 
 func (m *Message) HasCELValue() bool {
+	if m == nil {
+		return false
+	}
 	if m.Rule == nil {
 		return false
 	}
@@ -224,10 +246,18 @@ func (m *Message) HasCELValue() bool {
 }
 
 func (m *Message) HasCustomResolver() bool {
+	if m == nil {
+		return false
+	}
+
 	return m.Rule != nil && m.Rule.CustomResolver
 }
 
 func (m *Message) HasRuleEveryFields() bool {
+	if m == nil {
+		return false
+	}
+
 	for _, field := range m.Fields {
 		if !field.HasRule() {
 			return false
@@ -237,10 +267,18 @@ func (m *Message) HasRuleEveryFields() bool {
 }
 
 func (m *Message) HasCustomResolverFields() bool {
+	if m == nil {
+		return false
+	}
+
 	return len(m.CustomResolverFields()) != 0
 }
 
 func (m *Message) UseAllNameReference() {
+	if m == nil {
+		return
+	}
+
 	if m.Rule == nil {
 		return
 	}
@@ -257,6 +295,10 @@ func (m *Message) UseAllNameReference() {
 }
 
 func (e *MessageExpr) ReferenceNames() []string {
+	if e == nil {
+		return nil
+	}
+
 	var refNames []string
 	for _, arg := range e.Args {
 		refNames = append(refNames, arg.Value.ReferenceNames()...)
@@ -265,6 +307,10 @@ func (e *MessageExpr) ReferenceNames() []string {
 }
 
 func (m *Message) ReferenceNames() []string {
+	if m == nil {
+		return nil
+	}
+
 	if m.Rule == nil {
 		return nil
 	}
@@ -284,6 +330,10 @@ func (m *Message) ReferenceNames() []string {
 }
 
 func (m *Message) CustomResolverFields() []*Field {
+	if m == nil {
+		return nil
+	}
+
 	fields := make([]*Field, 0, len(m.Fields))
 	for _, field := range m.Fields {
 		if field.HasCustomResolver() {
@@ -294,6 +344,9 @@ func (m *Message) CustomResolverFields() []*Field {
 }
 
 func (m *Message) GoPackage() *GoPackage {
+	if m == nil {
+		return nil
+	}
 	if m.File == nil {
 		return nil
 	}
@@ -301,6 +354,9 @@ func (m *Message) GoPackage() *GoPackage {
 }
 
 func (m *Message) PackageName() string {
+	if m == nil {
+		return ""
+	}
 	pkg := m.Package()
 	if pkg == nil {
 		return ""
@@ -309,6 +365,9 @@ func (m *Message) PackageName() string {
 }
 
 func (m *Message) FileName() string {
+	if m == nil {
+		return ""
+	}
 	if m.File == nil {
 		return ""
 	}
@@ -316,10 +375,18 @@ func (m *Message) FileName() string {
 }
 
 func (m *Message) HasField(name string) bool {
+	if m == nil {
+		return false
+	}
+
 	return m.Field(name) != nil
 }
 
 func (m *Message) Field(name string) *Field {
+	if m == nil {
+		return nil
+	}
+
 	for _, field := range m.Fields {
 		if field.Name == name {
 			return field
@@ -329,6 +396,10 @@ func (m *Message) Field(name string) *Field {
 }
 
 func (m *Message) Oneof(name string) *Oneof {
+	if m == nil {
+		return nil
+	}
+
 	for _, field := range m.Fields {
 		if field.Oneof == nil {
 			continue
@@ -341,6 +412,10 @@ func (m *Message) Oneof(name string) *Oneof {
 }
 
 func (m *Message) AllMessages() []*Message {
+	if m == nil {
+		return nil
+	}
+
 	ret := []*Message{m}
 	for _, msg := range m.NestedMessages {
 		ret = append(ret, msg.AllMessages()...)
@@ -349,6 +424,10 @@ func (m *Message) AllMessages() []*Message {
 }
 
 func (m *Message) AllEnums() []*Enum {
+	if m == nil {
+		return nil
+	}
+
 	enums := m.Enums
 	for _, msg := range m.NestedMessages {
 		enums = append(enums, msg.AllEnums()...)
@@ -357,6 +436,10 @@ func (m *Message) AllEnums() []*Enum {
 }
 
 func (m *Message) HasFieldRule() bool {
+	if m == nil {
+		return false
+	}
+
 	for _, field := range m.Fields {
 		if field.HasRule() {
 			return true
@@ -366,6 +449,9 @@ func (m *Message) HasFieldRule() bool {
 }
 
 func (m *Message) DependencyGraphTreeFormat() string {
+	if m == nil {
+		return ""
+	}
 	if m.Rule == nil {
 		return ""
 	}
@@ -373,6 +459,10 @@ func (m *Message) DependencyGraphTreeFormat() string {
 }
 
 func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
+	if m == nil {
+		return nil
+	}
+
 	convertedFQDNMap := make(map[string]struct{})
 	var decls []*TypeConversionDecl
 	for _, def := range m.AllVariableDefinitions() {
@@ -438,6 +528,10 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 }
 
 func (m *Message) CustomResolvers() []*CustomResolver {
+	if m == nil {
+		return nil
+	}
+
 	var ret []*CustomResolver
 	if m.HasCustomResolver() {
 		ret = append(ret, &CustomResolver{Message: m})
@@ -459,6 +553,10 @@ func (m *Message) CustomResolvers() []*CustomResolver {
 }
 
 func (m *Message) customResolvers(def *VariableDefinition) []*CustomResolver {
+	if m == nil {
+		return nil
+	}
+
 	var ret []*CustomResolver
 	if def != nil {
 		for _, expr := range def.MessageExprs() {
@@ -472,6 +570,10 @@ func (m *Message) customResolvers(def *VariableDefinition) []*CustomResolver {
 }
 
 func (m *Message) GoPackageDependencies() []*GoPackage {
+	if m == nil {
+		return nil
+	}
+
 	pkgMap := map[*GoPackage]struct{}{}
 	gopkg := m.GoPackage()
 	pkgMap[gopkg] = struct{}{}
@@ -524,6 +626,10 @@ func (m *Message) DependServices() []*Service {
 }
 
 func (m *Message) dependServices(defMap map[*VariableDefinition]struct{}) []*Service {
+	if m == nil {
+		return nil
+	}
+
 	var svcs []*Service
 	for _, def := range m.AllVariableDefinitions() {
 		svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
