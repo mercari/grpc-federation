@@ -87,6 +87,8 @@ message OneofRule {}
 message ServiceRule {
   // env defines the environment variable.
   Env env = 1;
+  // var defines the service-level variables.
+  repeated ServiceVariable var = 2;
 }
 
 // Env is used when setting environment variables.
@@ -96,6 +98,47 @@ message Env {
   repeated EnvVar var = 1;
   // message is used to reference an already defined Protocol Buffers' message for defining environment variables.
   // If you want to set detailed options for the fields of the message, use the `env` option in FieldRule.
+  string message = 2;
+}
+
+// ServiceVariable define variables at the service level.
+// This definition is executed at server startup, after the initialization of Env.
+// The defined variables can be used across all messages that the service depends on.
+message ServiceVariable {
+  // name is a variable name.
+  // This name can be referenced in all CELs related to the service by using `grpc.federation.var.` prefix.
+  optional string name = 1;
+
+  // if specify the condition for evaluating expr.
+  // this value evaluated by CEL and it must return a boolean value.
+  // If the result of evaluation is `false`, the value assigned to name is the default value of the result of evaluation of `expr`.
+  optional string if = 2;
+
+  // expr specify the value to be assigned to name.
+  oneof expr {
+    // `by` evaluates with CEL.
+    string by = 11;
+
+    // map apply map operation for the specified repeated type.
+    MapExpr map = 12;
+
+    // message gets with message arguments.
+    MessageExpr message = 13;
+
+    // validation defines the validation rule and message.
+    ServiceVariableValidationExpr validation = 14;
+
+    // enum gets with cel value.
+    EnumExpr enum = 15;
+  }
+}
+
+// ServiceVariableValidationExpr represents validation rule and error message.
+message ServiceVariableValidationExpr {
+  // if specifies condition in CEL. If the condition is true, it returns error.
+  // The return value must always be of type boolean.
+  string if = 1;
+  // message is a error message in CEL.
   string message = 2;
 }
 

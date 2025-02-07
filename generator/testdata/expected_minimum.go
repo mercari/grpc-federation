@@ -120,7 +120,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
-	return &FederationService{
+	svc := &FederationService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -130,7 +130,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:        otel.Tracer("org.federation.FederationService"),
 		resolver:      cfg.Resolver,
 		client:        &FederationServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // GetPost implements "org.federation.FederationService/GetPost" method.

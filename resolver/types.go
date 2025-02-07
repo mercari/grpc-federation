@@ -72,7 +72,8 @@ type Method struct {
 }
 
 type ServiceRule struct {
-	Env *Env
+	Env  *Env
+	Vars []*ServiceVariable
 }
 
 type Env struct {
@@ -90,6 +91,26 @@ type EnvVarOption struct {
 	Default   string
 	Required  bool
 	Ignored   bool
+}
+
+type ServiceVariable struct {
+	Name string
+	If   *CELValue
+	Expr *ServiceVariableExpr
+}
+
+type ServiceVariableExpr struct {
+	Type       *Type
+	By         *CELValue
+	Map        *MapExpr
+	Message    *MessageExpr
+	Enum       *EnumExpr
+	Validation *ServiceVariableValidationExpr
+}
+
+type ServiceVariableValidationExpr struct {
+	If      *CELValue
+	Message *CELValue
 }
 
 type ServiceDependency struct {

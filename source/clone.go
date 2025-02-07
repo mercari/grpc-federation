@@ -98,6 +98,7 @@ func (o *ServiceOption) Clone() *ServiceOption {
 	}
 	return &ServiceOption{
 		Env: o.Env.Clone(),
+		Var: o.Var.Clone(),
 	}
 }
 
@@ -132,6 +133,32 @@ func (o *EnvVarOption) Clone() *EnvVarOption {
 		Default:   o.Default,
 		Required:  o.Required,
 		Ignored:   o.Ignored,
+	}
+}
+
+func (sv *ServiceVariable) Clone() *ServiceVariable {
+	if sv == nil {
+		return nil
+	}
+	return &ServiceVariable{
+		Idx:        sv.Idx,
+		Name:       sv.Name,
+		If:         sv.If,
+		By:         sv.By,
+		Map:        sv.Map.Clone(),
+		Message:    sv.Message.Clone(),
+		Enum:       sv.Enum.Clone(),
+		Validation: sv.Validation.Clone(),
+	}
+}
+
+func (v *ServiceVariableValidationExpr) Clone() *ServiceVariableValidationExpr {
+	if v == nil {
+		return nil
+	}
+	return &ServiceVariableValidationExpr{
+		If:      v.If,
+		Message: v.Message,
 	}
 }
 

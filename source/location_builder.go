@@ -379,6 +379,22 @@ func (b *ServiceOptionBuilder) WithEnv() *EnvBuilder {
 	}
 }
 
+func (b *ServiceOptionBuilder) WithVar(idx int) *ServiceVariableBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Var = &ServiceVariable{Idx: idx}
+	return &ServiceVariableBuilder{
+		root: root,
+		svcvar: func(loc *Location) *ServiceVariable {
+			return b.option(loc).Var
+		},
+	}
+}
+
+func (b *ServiceOptionBuilder) Location() *Location {
+	return b.root
+}
+
 type EnvBuilder struct {
 	root *Location
 	env  func(*Location) *Env
@@ -497,6 +513,122 @@ func (b *EnvVarOptionBuilder) WithIgnored() *EnvVarOptionBuilder {
 }
 
 func (b *EnvVarOptionBuilder) Location() *Location {
+	return b.root
+}
+
+type ServiceVariableBuilder struct {
+	root   *Location
+	svcvar func(*Location) *ServiceVariable
+}
+
+func (b *ServiceVariableBuilder) WithName() *ServiceVariableBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.Name = true
+	return &ServiceVariableBuilder{
+		root:   root,
+		svcvar: b.svcvar,
+	}
+}
+
+func (b *ServiceVariableBuilder) WithIf() *ServiceVariableBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.If = true
+	return &ServiceVariableBuilder{
+		root:   root,
+		svcvar: b.svcvar,
+	}
+}
+
+func (b *ServiceVariableBuilder) WithBy() *ServiceVariableBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.By = true
+	return &ServiceVariableBuilder{
+		root:   root,
+		svcvar: b.svcvar,
+	}
+}
+
+func (b *ServiceVariableBuilder) WithMap() *MapExprOptionBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.Map = &MapExprOption{}
+	return &MapExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *MapExprOption {
+			return b.svcvar(loc).Map
+		},
+	}
+}
+
+func (b *ServiceVariableBuilder) WithMessage() *MessageExprOptionBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.Message = &MessageExprOption{}
+	return &MessageExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *MessageExprOption {
+			return b.svcvar(loc).Message
+		},
+	}
+}
+
+func (b *ServiceVariableBuilder) WithEnum() *EnumExprOptionBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.Enum = &EnumExprOption{}
+	return &EnumExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *EnumExprOption {
+			return b.svcvar(loc).Enum
+		},
+	}
+}
+
+func (b *ServiceVariableBuilder) WithValidation() *ServiceVariableValidationExprBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.Validation = &ServiceVariableValidationExpr{}
+	return &ServiceVariableValidationExprBuilder{
+		root: root,
+		option: func(loc *Location) *ServiceVariableValidationExpr {
+			return b.svcvar(loc).Validation
+		},
+	}
+}
+
+func (b *ServiceVariableBuilder) Location() *Location {
+	return b.root
+}
+
+type ServiceVariableValidationExprBuilder struct {
+	root   *Location
+	option func(*Location) *ServiceVariableValidationExpr
+}
+
+func (b *ServiceVariableValidationExprBuilder) WithIf() *ServiceVariableValidationExprBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.If = true
+	return &ServiceVariableValidationExprBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *ServiceVariableValidationExprBuilder) WithMessage() *ServiceVariableValidationExprBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Message = true
+	return &ServiceVariableValidationExprBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *ServiceVariableValidationExprBuilder) Location() *Location {
 	return b.root
 }
 

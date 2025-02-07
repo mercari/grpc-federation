@@ -3788,6 +3788,20 @@ func TestInlineEnv(t *testing.T) {
 								).
 								Build(t),
 						).
+						AddVar(
+							testutil.NewServiceVariableBuilder().
+								SetName("x").
+								SetBy(testutil.NewCELValueBuilder("grpc.federation.env.aaa", resolver.StringType).Build(t)).
+								Build(t),
+						).
+						AddVar(
+							testutil.NewServiceVariableBuilder().
+								SetValidation(&resolver.ServiceVariableValidationExpr{
+									If:      testutil.NewCELValueBuilder("grpc.federation.env.bbb == 1", resolver.BoolType).Build(t),
+									Message: testutil.NewCELValueBuilder("'error'", resolver.StringType).Build(t),
+								}).
+								Build(t),
+						).
 						Build(t),
 				).
 				Build(t),
@@ -3815,6 +3829,7 @@ func TestRefEnv(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "testdata", "ref_env.proto")
 	fb := testutil.NewFileBuilder(fileName)
+	ref := testutil.NewBuilderReferenceManager(fb)
 
 	fb.SetPackage("org.federation").
 		SetGoPackage("example/federation", "federation").
@@ -3824,6 +3839,24 @@ func TestRefEnv(t *testing.T) {
 				AddField("bbb", resolver.Int64RepeatedType).
 				AddField("ccc", resolver.NewMapType(resolver.StringType, resolver.DurationType)).
 				AddField("ddd", resolver.DoubleType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("ConstantArgument").
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("Constant").
+				AddFieldWithRule(
+					"x",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("grpc.federation.env.aaa + 'xxx'", resolver.StringType)).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "ConstantArgument")).
+						Build(t),
+				).
 				Build(t),
 		).
 		AddMessage(
@@ -3883,8 +3916,19 @@ func TestRefEnv(t *testing.T) {
 								).
 								Build(t),
 						).
+						AddVar(
+							testutil.NewServiceVariableBuilder().
+								SetName("constant").
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "Constant")).
+										Build(t),
+								).
+								Build(t),
+						).
 						Build(t),
 				).
+				AddMessage(ref.Message(t, "org.federation", "Constant"), ref.Message(t, "org.federation", "ConstantArgument")).
 				Build(t),
 		)
 

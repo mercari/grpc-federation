@@ -48,6 +48,20 @@ func (s *Service) HasMessageInMethod(msg *Message) bool {
 	return false
 }
 
+func (s *Service) HasMessageInVariables(msg *Message) bool {
+	if s.Rule == nil || len(s.Rule.Vars) == 0 {
+		return false
+	}
+	for _, svcVar := range s.Rule.Vars {
+		for _, msgExpr := range svcVar.MessageExprs() {
+			if msgExpr.Message == msg {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (s *Service) GoPackageDependencies() []*GoPackage {
 	pkgMap := map[*GoPackage]struct{}{}
 	pkgMap[s.GoPackage()] = struct{}{}
@@ -124,4 +138,47 @@ func (s *Service) UseServices() []*Service {
 		return svcs[i].Name < svcs[j].Name
 	})
 	return svcs
+}
+
+func (sv *ServiceVariable) MessageExprs() []*MessageExpr {
+	if sv.Expr == nil {
+		return nil
+	}
+	expr := sv.Expr
+	switch {
+	case expr.Map != nil:
+		return expr.Map.MessageExprs()
+	case expr.Message != nil:
+		return []*MessageExpr{expr.Message}
+	}
+	return nil
+}
+
+func (sv *ServiceVariable) ToVariableDefinition() *VariableDefinition {
+	def := &VariableDefinition{
+		Name: sv.Name,
+		If:   sv.If,
+	}
+	if sv.Expr == nil {
+		return def
+	}
+	expr := sv.Expr
+	var validationExpr *ValidationExpr
+	if expr.Validation != nil {
+		validationExpr = &ValidationExpr{
+			Error: &GRPCError{
+				If:      expr.Validation.If,
+				Message: expr.Validation.Message,
+			},
+		}
+	}
+	def.Expr = &VariableExpr{
+		Type:       expr.Type,
+		By:         expr.By,
+		Map:        expr.Map,
+		Message:    expr.Message,
+		Enum:       expr.Enum,
+		Validation: validationExpr,
+	}
+	return def
 }

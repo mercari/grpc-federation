@@ -22,6 +22,10 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_ConstantArgument is argument for "org.federation.Constant" message.
+type RefEnvService_Org_Federation_ConstantArgument struct {
+}
+
 // RefEnvServiceConfig configuration required to initialize the service that use GRPC Federation.
 type RefEnvServiceConfig struct {
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
@@ -81,6 +85,26 @@ func withRefEnvServiceEnv(ctx context.Context, env *RefEnvServiceEnv) context.Co
 	return context.WithValue(ctx, keyRefEnvServiceEnv{}, env)
 }
 
+// RefEnvServiceVariable keeps the initial values.
+type RefEnvServiceVariable struct {
+	Constant *Constant
+}
+
+type keyRefEnvServiceVariable struct{}
+
+// GetRefEnvServiceVariable gets initial variables.
+func GetRefEnvServiceVariable(ctx context.Context) *RefEnvServiceVariable {
+	value := ctx.Value(keyRefEnvServiceVariable{})
+	if value == nil {
+		return nil
+	}
+	return value.(*RefEnvServiceVariable)
+}
+
+func withRefEnvServiceVariable(ctx context.Context, svcVar *RefEnvServiceVariable) context.Context {
+	return context.WithValue(ctx, keyRefEnvServiceVariable{}, svcVar)
+}
+
 // RefEnvServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -96,6 +120,7 @@ type RefEnvService struct {
 	celCacheMap   *grpcfed.CELCacheMap
 	tracer        trace.Tracer
 	env           *RefEnvServiceEnv
+	svcVar        *RefEnvServiceVariable
 	celTypeHelper *grpcfed.CELTypeHelper
 	celEnvOpts    []grpcfed.CELEnvOption
 	celPlugins    []*grpcfedcel.CELPlugin
@@ -113,22 +138,27 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
+		"grpc.federation.private.ConstantArgument": {},
 		"grpc.federation.private.Env": {
 			"aaa": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Aaa"),
 			"bbb": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELIntType), "Bbb"),
 			"ccc": grpcfed.NewCELFieldType(grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.NewCELObjectType("google.protobuf.Duration")), "Ccc"),
 			"ddd": grpcfed.NewCELFieldType(grpcfed.CELDoubleType, "Ddd"),
 		},
+		"grpc.federation.private.ServiceVariable": {
+			"constant": grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.Constant"), "Constant"),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	var env RefEnvServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
 	}
-	return &RefEnvService{
+	svc := &RefEnvService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -137,6 +167,110 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("org.federation.RefEnvService"),
 		env:           &env,
+		svcVar:        new(RefEnvServiceVariable),
 		client:        &RefEnvServiceDependentClientSet{},
-	}, nil
+	}
+	if err := svc.initServiceVariables(); err != nil {
+		return nil, err
+	}
+	return svc, nil
+}
+func (s *RefEnvService) initServiceVariables() error {
+	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars *RefEnvServiceVariable
+	}
+	value := &localValueType{
+		LocalValue: grpcfed.NewServiceVariableLocalValue(s.celEnvOpts),
+		vars:       s.svcVar,
+	}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
+
+	/*
+		def {
+		  name: "constant"
+		  message {
+		    name: "Constant"
+		  }
+		}
+	*/
+	def_constant := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*Constant, *localValueType]{
+			Name: `constant`,
+			Type: grpcfed.CELObjectType("org.federation.Constant"),
+			Setter: func(value *localValueType, v *Constant) error {
+				value.vars.Constant = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &RefEnvService_Org_Federation_ConstantArgument{}
+				ret, err := s.resolve_Org_Federation_Constant(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
+			},
+		})
+	}
+	if err := def_constant(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// resolve_Org_Federation_Constant resolve "org.federation.Constant" message.
+func (s *RefEnvService) resolve_Org_Federation_Constant(ctx context.Context, req *RefEnvService_Org_Federation_ConstantArgument) (*Constant, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.Constant")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.Constant", slog.Any("message_args", s.logvalue_Org_Federation_ConstantArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ConstantArgument", req)}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
+
+	// create a message value to be returned.
+	ret := &Constant{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "grpc.federation.env.aaa + 'xxx'"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:      value,
+		Expr:       `grpc.federation.env.aaa + 'xxx'`,
+		CacheIndex: 1,
+		Setter: func(v string) error {
+			ret.X = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.Constant", slog.Any("org.federation.Constant", s.logvalue_Org_Federation_Constant(ret)))
+	return ret, nil
+}
+
+func (s *RefEnvService) logvalue_Org_Federation_Constant(v *Constant) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("x", v.GetX()),
+	)
+}
+
+func (s *RefEnvService) logvalue_Org_Federation_ConstantArgument(v *RefEnvService_Org_Federation_ConstantArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue()
 }

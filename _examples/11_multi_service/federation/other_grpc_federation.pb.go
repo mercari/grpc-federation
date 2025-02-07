@@ -155,7 +155,7 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("favorite.FavoriteType", favorite.FavoriteType_value, favorite.FavoriteType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.MyFavoriteType", MyFavoriteType_value, MyFavoriteType_name)...)
-	return &OtherService{
+	svc := &OtherService{
 		cfg:           cfg,
 		logger:        logger,
 		errorHandler:  errorHandler,
@@ -165,7 +165,8 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 		tracer:        otel.Tracer("federation.OtherService"),
 		resolver:      cfg.Resolver,
 		client:        &OtherServiceDependentClientSet{},
-	}, nil
+	}
+	return svc, nil
 }
 
 // Get implements "federation.OtherService/Get" method.
@@ -201,7 +202,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			p *Post
+			P *Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
@@ -218,7 +219,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 			Name: `p`,
 			Type: grpcfed.CELObjectType("federation.Post"),
 			Setter: func(value *localValueType, v *Post) error {
-				value.vars.p = v
+				value.vars.P = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -238,7 +239,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.P = value.vars.p
+	req.P = value.vars.P
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
@@ -271,10 +272,10 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			cmp            bool
-			favorite_value favorite.FavoriteType
-			reaction       *Reaction
-			u              *User
+			Cmp           bool
+			FavoriteValue favorite.FavoriteType
+			Reaction      *Reaction
+			U             *User
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
@@ -295,7 +296,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 			Name: `u`,
 			Type: grpcfed.CELObjectType("federation.User"),
 			Setter: func(value *localValueType, v *User) error {
-				value.vars.u = v
+				value.vars.U = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -344,7 +345,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 			Name: `favorite_value`,
 			Type: grpcfed.CELIntType,
 			Setter: func(value *localValueType, v favorite.FavoriteType) error {
-				value.vars.favorite_value = v
+				value.vars.FavoriteValue = v
 				return nil
 			},
 			By:           `favorite.FavoriteType.value('TYPE1')`,
@@ -363,7 +364,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 			Name: `cmp`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.cmp = v
+				value.vars.Cmp = v
 				return nil
 			},
 			By:           `favorite_value == favorite.FavoriteType.TYPE1`,
@@ -385,7 +386,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 			Name: `reaction`,
 			Type: grpcfed.CELObjectType("federation.Reaction"),
 			Setter: func(value *localValueType, v *Reaction) error {
-				value.vars.reaction = v
+				value.vars.Reaction = v
 				return nil
 			},
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -458,10 +459,10 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.cmp
-	req.FavoriteValue = value.vars.favorite_value
-	req.Reaction = value.vars.reaction
-	req.U = value.vars.u
+	req.Cmp = value.vars.Cmp
+	req.FavoriteValue = value.vars.FavoriteValue
+	req.Reaction = value.vars.Reaction
+	req.U = value.vars.U
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -577,7 +578,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Oth
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			cmp bool
+			Cmp bool
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ReactionArgument", req)}
@@ -592,7 +593,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Oth
 			Name: `cmp`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.cmp = v
+				value.vars.Cmp = v
 				return nil
 			},
 			By:           `$.v == favorite.FavoriteType.TYPE1`,
@@ -606,7 +607,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Oth
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.cmp
+	req.Cmp = value.vars.Cmp
 
 	// create a message value to be returned.
 	ret := &Reaction{}

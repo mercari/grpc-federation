@@ -358,6 +358,26 @@ func (s *Service) Env() *Env {
 	}
 }
 
+func (s *Service) ServiceVariables() *ServiceVariables {
+	if s.Rule == nil {
+		return nil
+	}
+	if len(s.Rule.Vars) == 0 {
+		return nil
+	}
+	svcVars := make([]*ServiceVariable, 0, len(s.Rule.Vars))
+	for _, v := range s.Rule.Vars {
+		svcVars = append(svcVars, &ServiceVariable{
+			ServiceVariable: v,
+			file:            s.file,
+		})
+	}
+	return &ServiceVariables{
+		Vars: svcVars,
+		svc:  s,
+	}
+}
+
 type Env struct {
 	*resolver.Env
 	file *File
@@ -441,6 +461,44 @@ func (v *EnvVar) Tag() string {
 		opts = append(opts, `ignored:"true"`)
 	}
 	return strings.Join(opts, " ")
+}
+
+type ServiceVariables struct {
+	Vars []*ServiceVariable
+	svc  *Service
+}
+
+func (v *ServiceVariables) Defs() []*VariableDefinition {
+	ret := make([]*VariableDefinition, 0, len(v.Vars))
+	for _, svcVar := range v.Vars {
+		ret = append(ret, &VariableDefinition{
+			VariableDefinition: svcVar.ToVariableDefinition(),
+			Service:            v.svc,
+			file:               v.svc.file,
+		})
+	}
+	return ret
+}
+
+type ServiceVariable struct {
+	*resolver.ServiceVariable
+	file *File
+}
+
+func (v *ServiceVariable) Name() string {
+	return util.ToPublicGoVariable(v.ServiceVariable.Name)
+}
+
+func (v *ServiceVariable) ProtoName() string {
+	return v.ServiceVariable.Name
+}
+
+func (v *ServiceVariable) CELType() string {
+	return toCELTypeDeclare(v.Expr.Type)
+}
+
+func (v *ServiceVariable) Type() string {
+	return v.file.toTypeText(v.Expr.Type)
 }
 
 type Import struct {
@@ -1701,12 +1759,12 @@ func (m *Message) VariableDefinitionSet() *VariableDefinitionSet {
 	}
 	return &VariableDefinitionSet{
 		VariableDefinitionSet: m.Rule.DefSet,
-		msg:                   m,
+		svc:                   m.Service,
 	}
 }
 
 type VariableDefinitionSet struct {
-	msg *Message
+	svc *Service
 	*resolver.VariableDefinitionSet
 }
 
@@ -1717,9 +1775,9 @@ func (set *VariableDefinitionSet) Definitions() []*VariableDefinition {
 	ret := make([]*VariableDefinition, 0, len(set.VariableDefinitionSet.Definitions()))
 	for _, def := range set.VariableDefinitionSet.Definitions() {
 		ret = append(ret, &VariableDefinition{
-			Service:            set.msg.Service,
-			Message:            set.msg,
+			Service:            set.svc,
 			VariableDefinition: def,
+			file:               set.svc.file,
 		})
 	}
 	return ret
@@ -1745,8 +1803,7 @@ func (set *VariableDefinitionSet) VariableDefinitionGroups() []*VariableDefiniti
 	var groups []*VariableDefinitionGroup
 	for _, group := range set.DefinitionGroups() {
 		groups = append(groups, &VariableDefinitionGroup{
-			Service:                 set.msg.Service,
-			Message:                 set.msg,
+			Service:                 set.svc,
 			VariableDefinitionGroup: group,
 		})
 	}
@@ -1776,7 +1833,7 @@ func (m *Message) DeclVariables() []*DeclVariable {
 				continue
 			}
 			valueMap[def.Name] = &DeclVariable{
-				Name: def.Name,
+				Name: util.ToPublicGoVariable(def.Name),
 				Type: m.file.toTypeText(def.Expr.Type),
 			}
 		}
@@ -1884,7 +1941,7 @@ func (oneof *OneofField) VariableDefinitionSet() *VariableDefinitionSet {
 	}
 	return &VariableDefinitionSet{
 		VariableDefinitionSet: oneof.FieldOneofRule.DefSet,
-		msg:                   oneof.Message,
+		svc:                   oneof.Message.Service,
 	}
 }
 
@@ -2333,7 +2390,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	fieldName := util.ToPublicGoVariable(field.Name)
 
 	var (
-		value    = fmt.Sprintf("value.vars.%s.Get%s()", name, fieldName)
+		value    = fmt.Sprintf("value.vars.%s.Get%s()", util.ToPublicGoVariable(name), fieldName)
 		castFunc string
 	)
 	if field.RequiredTypeConversion() {
@@ -2581,7 +2638,6 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 
 type VariableDefinitionGroup struct {
 	Service *Service
-	Message *Message
 	resolver.VariableDefinitionGroup
 }
 
@@ -2616,7 +2672,6 @@ func (g *VariableDefinitionGroup) Starts() []*VariableDefinitionGroup {
 	for _, start := range rg.Starts {
 		starts = append(starts, &VariableDefinitionGroup{
 			Service:                 g.Service,
-			Message:                 g.Message,
 			VariableDefinitionGroup: start,
 		})
 	}
@@ -2630,7 +2685,6 @@ func (g *VariableDefinitionGroup) Start() *VariableDefinitionGroup {
 	}
 	return &VariableDefinitionGroup{
 		Service:                 g.Service,
-		Message:                 g.Message,
 		VariableDefinitionGroup: rg.Start,
 	}
 }
@@ -2640,14 +2694,14 @@ func (g *VariableDefinitionGroup) End() *VariableDefinition {
 	case *resolver.SequentialVariableDefinitionGroup:
 		return &VariableDefinition{
 			Service:            g.Service,
-			Message:            g.Message,
 			VariableDefinition: rg.End,
+			file:               g.Service.file,
 		}
 	case *resolver.ConcurrentVariableDefinitionGroup:
 		return &VariableDefinition{
 			Service:            g.Service,
-			Message:            g.Message,
 			VariableDefinition: rg.End,
+			file:               g.Service.file,
 		}
 	}
 	return nil
@@ -2655,8 +2709,8 @@ func (g *VariableDefinitionGroup) End() *VariableDefinition {
 
 type VariableDefinition struct {
 	Service *Service
-	Message *Message
 	*resolver.VariableDefinition
+	file *File
 }
 
 func (d *VariableDefinition) CELCacheIndex() int {
@@ -2665,6 +2719,10 @@ func (d *VariableDefinition) CELCacheIndex() int {
 
 func (d *VariableDefinition) Key() string {
 	return d.VariableDefinition.Name
+}
+
+func (d *VariableDefinition) VarFieldName() string {
+	return util.ToPublicGoVariable(d.VariableDefinition.Name)
 }
 
 func (d *VariableDefinition) UseIf() bool {
@@ -2755,7 +2813,7 @@ func (d *VariableDefinition) GRPCErrors() []*GRPCError {
 	for _, grpcErr := range callExpr.Errors {
 		ret = append(ret, &GRPCError{
 			GRPCError: grpcErr,
-			msg:       d.Message,
+			svc:       d.Service,
 		})
 	}
 	return ret
@@ -2763,11 +2821,11 @@ func (d *VariableDefinition) GRPCErrors() []*GRPCError {
 
 type GRPCError struct {
 	*resolver.GRPCError
-	msg *Message
+	svc *Service
 }
 
 func (e *GRPCError) CELCacheIndex() int {
-	return e.msg.Service.CELCacheIndex()
+	return e.svc.CELCacheIndex()
 }
 
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
@@ -2808,7 +2866,7 @@ func (e *GRPCError) VariableDefinitionSet() *VariableDefinitionSet {
 	}
 	return &VariableDefinitionSet{
 		VariableDefinitionSet: e.DefSet,
-		msg:                   e.msg,
+		svc:                   e.svc,
 	}
 }
 
@@ -2817,7 +2875,7 @@ func (e *GRPCError) Details() []*GRPCErrorDetail {
 	for _, detail := range e.GRPCError.Details {
 		ret = append(ret, &GRPCErrorDetail{
 			GRPCErrorDetail: detail,
-			msg:             e.msg,
+			svc:             e.svc,
 		})
 	}
 	return ret
@@ -2825,7 +2883,7 @@ func (e *GRPCError) Details() []*GRPCErrorDetail {
 
 type GRPCErrorDetail struct {
 	*resolver.GRPCErrorDetail
-	msg *Message
+	svc *Service
 }
 
 func (detail *GRPCErrorDetail) VariableDefinitionSet() *VariableDefinitionSet {
@@ -2840,7 +2898,7 @@ func (detail *GRPCErrorDetail) VariableDefinitionSet() *VariableDefinitionSet {
 	}
 	return &VariableDefinitionSet{
 		VariableDefinitionSet: detail.DefSet,
-		msg:                   detail.msg,
+		svc:                   detail.svc,
 	}
 }
 
@@ -2856,7 +2914,7 @@ func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
 	}
 	return &VariableDefinitionSet{
 		VariableDefinitionSet: detail.Messages,
-		msg:                   detail.msg,
+		svc:                   detail.svc,
 	}
 }
 
@@ -2870,7 +2928,7 @@ func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
 	for _, by := range detail.GRPCErrorDetail.By {
 		ret = append(ret, &GRPCErrorDetailBy{
 			Expr: by.Expr,
-			Type: toMakeZeroValue(detail.msg.file, by.Out),
+			Type: toMakeZeroValue(detail.svc.file, by.Out),
 		})
 	}
 	return ret
@@ -2881,7 +2939,7 @@ func (detail *GRPCErrorDetail) PreconditionFailures() []*PreconditionFailure {
 	for _, pf := range detail.GRPCErrorDetail.PreconditionFailures {
 		ret = append(ret, &PreconditionFailure{
 			PreconditionFailure: pf,
-			msg:                 detail.msg,
+			svc:                 detail.svc,
 		})
 	}
 	return ret
@@ -2892,7 +2950,7 @@ func (detail *GRPCErrorDetail) BadRequests() []*BadRequest {
 	for _, b := range detail.GRPCErrorDetail.BadRequests {
 		ret = append(ret, &BadRequest{
 			BadRequest: b,
-			msg:        detail.msg,
+			svc:        detail.svc,
 		})
 	}
 	return ret
@@ -2903,7 +2961,7 @@ func (detail *GRPCErrorDetail) LocalizedMessages() []*LocalizedMessage {
 	for _, m := range detail.GRPCErrorDetail.LocalizedMessages {
 		ret = append(ret, &LocalizedMessage{
 			LocalizedMessage: m,
-			msg:              detail.msg,
+			svc:              detail.svc,
 		})
 	}
 	return ret
@@ -2911,12 +2969,12 @@ func (detail *GRPCErrorDetail) LocalizedMessages() []*LocalizedMessage {
 
 type PreconditionFailure struct {
 	*resolver.PreconditionFailure
-	msg *Message
+	svc *Service
 }
 
 type PreconditionFailureViolation struct {
 	*resolver.PreconditionFailureViolation
-	msg *Message
+	svc *Service
 }
 
 func (pf *PreconditionFailure) Violations() []*PreconditionFailureViolation {
@@ -2924,24 +2982,24 @@ func (pf *PreconditionFailure) Violations() []*PreconditionFailureViolation {
 	for _, v := range pf.PreconditionFailure.Violations {
 		ret = append(ret, &PreconditionFailureViolation{
 			PreconditionFailureViolation: v,
-			msg:                          pf.msg,
+			svc:                          pf.svc,
 		})
 	}
 	return ret
 }
 
 func (v *PreconditionFailureViolation) CELCacheIndex() int {
-	return v.msg.Service.CELCacheIndex()
+	return v.svc.CELCacheIndex()
 }
 
 type BadRequest struct {
 	*resolver.BadRequest
-	msg *Message
+	svc *Service
 }
 
 type BadRequestFieldViolation struct {
 	*resolver.BadRequestFieldViolation
-	msg *Message
+	svc *Service
 }
 
 func (b *BadRequest) FieldViolations() []*BadRequestFieldViolation {
@@ -2949,23 +3007,23 @@ func (b *BadRequest) FieldViolations() []*BadRequestFieldViolation {
 	for _, v := range b.BadRequest.FieldViolations {
 		ret = append(ret, &BadRequestFieldViolation{
 			BadRequestFieldViolation: v,
-			msg:                      b.msg,
+			svc:                      b.svc,
 		})
 	}
 	return ret
 }
 
 func (v *BadRequestFieldViolation) CELCacheIndex() int {
-	return v.msg.Service.CELCacheIndex()
+	return v.svc.CELCacheIndex()
 }
 
 type LocalizedMessage struct {
-	msg *Message
+	svc *Service
 	*resolver.LocalizedMessage
 }
 
 func (m *LocalizedMessage) CELCacheIndex() int {
-	return m.msg.Service.CELCacheIndex()
+	return m.svc.CELCacheIndex()
 }
 
 func (d *VariableDefinition) ServiceName() string {
@@ -3040,7 +3098,7 @@ func (d *VariableDefinition) MapResolver() *MapResolver {
 	return &MapResolver{
 		Service: d.Service,
 		MapExpr: d.VariableDefinition.Expr.Map,
-		file:    d.Message.file,
+		file:    d.file,
 	}
 }
 
@@ -3057,20 +3115,20 @@ func (d *VariableDefinition) Enum() *resolver.EnumExpr {
 }
 
 func (d *VariableDefinition) EnumSrcType() string {
-	return d.Message.file.toTypeText(d.Enum().By.Out)
+	return d.file.toTypeText(d.Enum().By.Out)
 }
 
 func (d *VariableDefinition) EnumSrcZeroValue() string {
-	return toMakeZeroValue(d.Message.file, d.Enum().By.Out)
+	return toMakeZeroValue(d.file, d.Enum().By.Out)
 }
 
 func (d *VariableDefinition) EnumSelector() *EnumSelectorSetterParam {
 	typ := d.VariableDefinition.Expr.Enum.By.Out
-	return d.Message.file.createEnumSelectorParam(typ.Message, d.VariableDefinition.Expr.Type)
+	return d.file.createEnumSelectorParam(typ.Message, d.VariableDefinition.Expr.Type)
 }
 
 func (d *VariableDefinition) ZeroValue() string {
-	return toMakeZeroValue(d.Message.file, d.VariableDefinition.Expr.Type)
+	return toMakeZeroValue(d.file, d.VariableDefinition.Expr.Type)
 }
 
 func (d *VariableDefinition) ProtoComment() string {
@@ -3082,7 +3140,7 @@ func (d *VariableDefinition) ProtoComment() string {
 }
 
 func (d *VariableDefinition) Type() string {
-	return d.Message.file.toTypeText(d.VariableDefinition.Expr.Type)
+	return d.file.toTypeText(d.VariableDefinition.Expr.Type)
 }
 
 func (d *VariableDefinition) EnumCastFunc() string {
@@ -3303,7 +3361,7 @@ func (d *VariableDefinition) ValidationError() *GRPCError {
 	}
 	return &GRPCError{
 		GRPCError: d.Expr.Validation.Error,
-		msg:       d.Message,
+		svc:       d.Service,
 	}
 }
 
@@ -3322,7 +3380,7 @@ type Argument struct {
 }
 
 func (d *VariableDefinition) Arguments() []*Argument {
-	return arguments(d.Message.file, d.Expr)
+	return arguments(d.file, d.Expr)
 }
 
 func arguments(file *File, expr *resolver.VariableExpr) []*Argument {
@@ -3563,7 +3621,7 @@ func generateGoContent(tmpl *template.Template, f *File) ([]byte, error) {
 var tmpls embed.FS
 
 func toUserDefinedVariable(name string) string {
-	return "value.vars." + name
+	return "value.vars." + util.ToPublicGoVariable(name)
 }
 
 func toEnumValuePrefix(file *File, typ *resolver.Type) string {

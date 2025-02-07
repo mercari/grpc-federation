@@ -10,6 +10,7 @@ option go_package = "example/federation;federation";
 service RefEnvService {
   option (grpc.federation.service) = {
     env { message: "Env" }
+    var { name: "constant" message { name: "Constant" } }
   };
 }
   
@@ -21,4 +22,8 @@ message Env {
     alternate: "c"
   }];
   double ddd = 4 [(grpc.federation.field).env.ignored = true];
+}
+
+message Constant {
+  string x = 1 [(grpc.federation.field).by = "grpc.federation.env.aaa + 'xxx'"];
 }
