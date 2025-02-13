@@ -597,15 +597,15 @@ func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) ({{ .ResponseT
 	{{- else if .IsStruct }}
 	{{- template "castMessage" .ToStruct }}
 	{{- else if .IsEnumToNumber }}
-	return {{ .ResponseType }}(from), nil
+	{{- template "castEnumAndNumber" . }}
 	{{- else if .IsNumberToEnum }}
-	return {{ .ResponseType }}(from), nil
+	{{- template "castEnumAndNumber" . }}
 	{{- else if .IsEnum }}
 	{{- template "castEnum" .ToEnum }}
 	{{- else if .IsRequiredValidationNumber }}
-	return grpcfed.{{ .CastWithValidationName }}(from)
+	{{- template "castRequiredValidationNumber" . }}
 	{{- else }}
-	return {{ .ResponseType }}(from), nil
+	{{- template "castDefault" . }}
 	{{- end }}
 }
 {{ end }}

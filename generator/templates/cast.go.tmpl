@@ -1,5 +1,5 @@
 {{- define "castRepeated" }}
-ret := make({{ .ResponseType }}, 0, len(from))
+ret := make({{ .ReturnType }}, 0, len(from))
 for _, v := range from {
 	{{- if .ElemRequiredCast }}
 	casted, err := s.{{ .ElemCastName }}(v)
@@ -11,7 +11,14 @@ for _, v := range from {
 	ret = append(ret, v)
 	{{- end }}
 }
+{{- $wrapper := .CastOneofWrapper }}
+{{- if $wrapper }}
+return &{{ $wrapper.Name }}{
+	{{ $wrapper.FieldName }}: ret,
+}, nil
+{{- else }}
 return ret, nil
+{{- end }}
 {{- end }}
 
 {{- define "castMessage" }}
@@ -37,7 +44,7 @@ ret := &{{ .Name }}{
 	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
 	{{- end }}
 }
-{{- range .Oneofs }}
+{{- range $oneofFields }}
 switch {
 	{{ $name := .Name }}
 	{{- $localName := toLocalVariable $name }}
@@ -55,7 +62,6 @@ switch {
 	{{- end }}
 }
 {{- end }}
-return ret, nil
 
 {{- else }}
 {{- range .Fields }}
@@ -71,13 +77,21 @@ if err != nil {
 
 {{- end }}
 
-return &{{ .Name }}{
+ret := &{{ .Name }}{
 	{{- range .Fields }}
 	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
 	{{- end }}
-}, nil
-
+}
 {{- end }}
+{{- $wrapper := .CastOneofWrapper }}
+{{- if $wrapper }}
+return &{{ $wrapper.Name }}{
+	{{ $wrapper.FieldName }}: ret,
+}, nil
+{{- else }}
+return ret, nil
+{{- end }}
+
 {{- end }}
 
 {{- define "castOneof" }}
@@ -97,20 +111,29 @@ return &{{ .Name }}{ {{ .FieldName }}: {{ $fieldName }} }, nil
 {{- end }}
 
 {{- define "castEnum" }}
+var ret {{ .ReturnType }}
 switch from {
 	{{- range .FromValues }}
 	case {{ .FromValue }}:
-	return {{ .ToValue }}, nil
+		ret = {{ .ToValue }}
 	{{- end }}
 	{{- if .DefaultValue }}
 	default:
-	return {{ .DefaultValue }}, nil
+		ret = {{ .DefaultValue }}
 	{{- end }}
 }
+{{- $wrapper := .CastOneofWrapper }}
+{{- if $wrapper }}
+return &{{ $wrapper.Name }}{
+	{{ $wrapper.FieldName }}: ret,
+}, nil
+{{- else }}
+return ret, nil
+{{- end }}
 {{- end }}
 
 {{- define "castMap" }}
-ret := {{ .ResponseType }}{}
+ret := {{ .ReturnType }}{}
 for k, v := range from {
 	{{- if .KeyRequiredCast }}
 	key, err := s.{{ .KeyCastName }}(k)
@@ -130,5 +153,52 @@ for k, v := range from {
 	{{- end }}
 	ret[key] = val
 }
+{{- $wrapper := .CastOneofWrapper }}
+{{- if $wrapper }}
+return &{{ $wrapper.Name }}{
+	{{ $wrapper.FieldName }}: ret,
+}, nil
+{{- else }}
 return ret, nil
+{{- end }}
+{{- end }}
+
+{{- define "castEnumAndNumber" }}
+{{- $wrapper := .CastOneofWrapper }}
+{{- if $wrapper }}
+return &{{ $wrapper.Name }}{
+	{{ $wrapper.FieldName }}: {{ .ReturnType }}(from),
+}, nil
+{{- else }}
+return {{ .ReturnType }}(from), nil
+{{- end }}
+{{- end }}
+
+{{- define "castRequiredValidationNumber" }}
+ret, err := grpcfed.{{ .CastWithValidationName }}(from)
+{{- $wrapper := .CastOneofWrapper }}
+{{- if $wrapper }}
+if err != nil {
+	return nil, err
+}
+return &{{ $wrapper.Name }}{
+	{{ $wrapper.FieldName }}: ret,
+}, nil
+{{- else }}
+if err != nil {
+	return ret, err
+}
+return ret, nil
+{{- end }}
+{{- end }}
+
+{{- define "castDefault" }}
+{{- $wrapper := .CastOneofWrapper }}
+{{- if $wrapper }}
+return &{{ $wrapper.Name }}{
+	{{ $wrapper.FieldName }}: {{ .ReturnType }}(from),
+}, nil
+{{- else }}
+return {{ .ReturnType }}(from), nil
+{{- end }}
 {{- end }}
