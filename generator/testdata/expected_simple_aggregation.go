@@ -1211,16 +1211,18 @@ func (s *FederationService) cast_Org_Federation_Item_ItemType__to__int32(from It
 
 // cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType cast from "org.user.Item.ItemType" to "org.federation.Item.ItemType".
 func (s *FederationService) cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from user.Item_ItemType) (Item_ItemType, error) {
+	var ret Item_ItemType
 	switch from {
 	case user.Item_ITEM_TYPE_1:
-		return Item_ITEM_TYPE_1, nil
+		ret = Item_ITEM_TYPE_1
 	case user.Item_ITEM_TYPE_2:
-		return Item_ITEM_TYPE_2, nil
+		ret = Item_ITEM_TYPE_2
 	case user.Item_ITEM_TYPE_3:
-		return Item_ITEM_TYPE_3, nil
+		ret = Item_ITEM_TYPE_3
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_Org_User_Item__to__Org_Federation_Item cast from "org.user.Item" to "org.federation.Item".
@@ -1239,23 +1241,26 @@ func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *us
 		return nil, err
 	}
 
-	return &Item{
+	ret := &Item{
 		Name:  nameValue,
 		Type:  typeValue,
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_User_UserType__to__Org_Federation_UserType cast from "org.user.UserType" to "org.federation.UserType".
 func (s *FederationService) cast_Org_User_UserType__to__Org_Federation_UserType(from user.UserType) (UserType, error) {
+	var ret UserType
 	switch from {
 	case user.UserType_USER_TYPE_1:
-		return UserType_USER_TYPE_1, nil
+		ret = UserType_USER_TYPE_1
 	case user.UserType_USER_TYPE_2:
-		return UserType_USER_TYPE_2, nil
+		ret = UserType_USER_TYPE_2
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_ cast from "org.user.User.attr_a" to "org.federation.User.attr_a".
@@ -1279,9 +1284,10 @@ func (s *FederationService) cast_Org_User_User_AttrA__to__Org_Federation_User_At
 
 	fooValue := from.GetFoo()
 
-	return &User_AttrA{
+	ret := &User_AttrA{
 		Foo: fooValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB cast from "org.user.User.AttrB" to "org.federation.User.AttrB".
@@ -1292,9 +1298,10 @@ func (s *FederationService) cast_Org_User_User_AttrB__to__Org_Federation_User_At
 
 	barValue := from.GetBar()
 
-	return &User_AttrB{
+	ret := &User_AttrB{
 		Bar: barValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_User_User_B__to__Org_Federation_User_B cast from "org.user.User.b" to "org.federation.User.b".
@@ -1317,17 +1324,29 @@ func (s *FederationService) cast_int64__to__Org_User_Item_ItemType(from int64) (
 
 // cast_int64__to__int32 cast from "int64" to "int32".
 func (s *FederationService) cast_int64__to__int32(from int64) (int32, error) {
-	return grpcfed.Int64ToInt32(from)
+	ret, err := grpcfed.Int64ToInt32(from)
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
 
 // cast_int64__to__uint32 cast from "int64" to "uint32".
 func (s *FederationService) cast_int64__to__uint32(from int64) (uint32, error) {
-	return grpcfed.Int64ToUint32(from)
+	ret, err := grpcfed.Int64ToUint32(from)
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
 
 // cast_int64__to__uint64 cast from "int64" to "uint64".
 func (s *FederationService) cast_int64__to__uint64(from int64) (uint64, error) {
-	return grpcfed.Int64ToUint64(from)
+	ret, err := grpcfed.Int64ToUint64(from)
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
 
 // cast_map_int64_string__to__map_int32_string cast from "map<int64, string>" to "map<int32, string>".

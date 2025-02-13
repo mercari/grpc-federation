@@ -739,16 +739,18 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 
 // cast_Content_ContentType__to__Org_Federation_ContentType cast from "content.ContentType" to "org.federation.ContentType".
 func (s *FederationService) cast_Content_ContentType__to__Org_Federation_ContentType(from content.ContentType) (ContentType, error) {
+	var ret ContentType
 	switch from {
 	case content.ContentType_CONTENT_TYPE_1:
-		return ContentType_CONTENT_TYPE_1, nil
+		ret = ContentType_CONTENT_TYPE_1
 	case content.ContentType_CONTENT_TYPE_2:
-		return ContentType_CONTENT_TYPE_2, nil
+		ret = ContentType_CONTENT_TYPE_2
 	case content.ContentType_CONTENT_TYPE_3:
-		return ContentType_CONTENT_TYPE_3, nil
+		ret = ContentType_CONTENT_TYPE_3
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_Content_Content__to__Org_Federation_Content cast from "content.Content" to "org.federation.Content".
@@ -807,7 +809,7 @@ func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(fro
 		return nil, err
 	}
 
-	return &Content{
+	ret := &Content{
 		ByField:          byFieldValue,
 		DoubleField:      doubleFieldValue,
 		DoublesField:     doublesFieldValue,
@@ -845,7 +847,8 @@ func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(fro
 		EnvsField:        envsFieldValue,
 		MessageField:     messageFieldValue,
 		MessagesField:    messagesFieldValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_float64__to__float32 cast from "double" to "float".
@@ -974,7 +977,11 @@ func (s *FederationService) cast_repeated_uint64__to__repeated_uint64(from []uin
 
 // cast_uint64__to__uint32 cast from "uint64" to "uint32".
 func (s *FederationService) cast_uint64__to__uint32(from uint64) (uint32, error) {
-	return grpcfed.Uint64ToUint32(from)
+	ret, err := grpcfed.Uint64ToUint32(from)
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
 
 // cast_uint64__to__uint64 cast from "uint64" to "fixed64".

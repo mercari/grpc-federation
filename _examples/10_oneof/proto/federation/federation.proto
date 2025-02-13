@@ -29,10 +29,12 @@ message GetResponse {
     }
     def { name: "msg_sel" message { name: "MessageSelection" } }
     def { name: "nested_msg" message { name: "NestedMessageSelection.Nest" }}
+    def { name: "cast_oneof" message { name: "CastOneof" } }
   };
   User user = 1 [(grpc.federation.field).by = "sel.user"];
   string msg = 2 [(grpc.federation.field).by = "msg_sel.message"];
   NestedMessageSelection.Nest nested_msg = 3 [(grpc.federation.field).by = "nested_msg"];
+  CastOneof cast_oneof = 4 [(grpc.federation.field).by = "cast_oneof"];
 }
 
 message GetNoValueRequest {}
@@ -157,12 +159,30 @@ message NestedMessageSelection {
   }
 }
 
+message CastOneof {
+  oneof cast_oneof {
+    int64 num = 1 [(grpc.federation.field).oneof = {
+      if: "false"
+      by: "1"
+    }];
+    User user = 2 [(grpc.federation.field).oneof = {
+      if: "false"
+      by: "user.User{id: 'foo'}"
+    }];
+    UserType type = 3 [(grpc.federation.field).oneof = {
+      if: "true"
+      by: "user.UserType.value('USER_TYPE_ANONYMOUS')"
+    }];
+  }
+}
+
 message M {
   string value = 1 [(grpc.federation.field).by = "'foo'"];
 }
 
 message User {
   option (grpc.federation.message) = {
+    alias: "user.User"
     def {
       call {
         method: "user.UserService/GetUser"
@@ -176,4 +196,11 @@ message User {
   };
 
   string id = 1 [(grpc.federation.field).by = "$.user_id"];
+}
+
+enum UserType {
+  option (grpc.federation.enum).alias = "user.UserType";
+
+  USER_TYPE_UNSPECIFIED = 0;
+  USER_TYPE_ANONYMOUS = 1;
 }

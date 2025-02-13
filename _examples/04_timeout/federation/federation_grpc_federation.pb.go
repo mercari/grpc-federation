@@ -474,7 +474,8 @@ func (s *FederationService) cast_Federation_UpdatePostResponse__to__Google_Proto
 		return nil, nil
 	}
 
-	return &emptypb.Empty{}, nil
+	ret := &emptypb.Empty{}
+	return ret, nil
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {

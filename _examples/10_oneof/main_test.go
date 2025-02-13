@@ -122,11 +122,18 @@ func TestFederation(t *testing.T) {
 		NestedMsg: &federation.NestedMessageSelection_Nest{
 			Value: &federation.NestedMessageSelection_Nest_Int{Int: 1},
 		},
+		CastOneof: &federation.CastOneof{
+			CastOneof: &federation.CastOneof_Type{
+				Type: federation.UserType_USER_TYPE_ANONYMOUS,
+			},
+		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetResponse{},
 		federation.User{},
 		federation.NestedMessageSelection_Nest{},
 		federation.NestedMessageSelection_Nest_Int{},
+		federation.CastOneof{},
+		federation.CastOneof_Type{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
