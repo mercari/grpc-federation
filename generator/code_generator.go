@@ -2610,37 +2610,19 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 				oneofTypeName += "_"
 			}
 			var (
-				typ       string
 				value     string
 				castValue string
 				castFunc  string
 			)
-			switch fromType.Kind {
-			case types.Message:
-				typ = m.file.toTypeText(fromType)
-				if requiredCast(fromType, toType) {
-					castFunc = castFuncName(fromType, toType)
-					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
-					value = "v"
-				} else {
-					value = fmt.Sprintf("&%s{%s: v}", oneofTypeName, fieldName)
-				}
-			case types.Enum:
-				typ = m.file.toTypeText(fromType)
-				if requiredCast(fromType, toType) {
-					castFunc = castFuncName(fromType, toType)
-					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
-					value = "v"
-				} else {
-					value = fmt.Sprintf("&%s{%s: %s(v)}", oneofTypeName, fieldName, m.file.toTypeText(fromType))
-				}
-			default:
-				// Since fromType is a primitive type, type conversion is possible on the CEL side.
-				deletedOneofFieldType := toType.Clone()
-				deletedOneofFieldType.OneofField = nil
-				typ = m.file.toTypeText(deletedOneofFieldType)
+			typ := m.file.toTypeText(fromType)
+			if requiredCast(fromType, toType) {
+				castFunc = castFuncName(fromType, toType)
+				castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
+				value = "v"
+			} else {
 				value = fmt.Sprintf("&%s{%s: v}", oneofTypeName, fieldName)
 			}
+
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
 					By:             rule.Oneof.By.Expr,

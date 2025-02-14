@@ -163,7 +163,7 @@ message CastOneof {
   oneof cast_oneof {
     int64 num = 1 [(grpc.federation.field).oneof = {
       if: "false"
-      by: "1"
+      by: "uint(1)"
     }];
     User user = 2 [(grpc.federation.field).oneof = {
       if: "false"

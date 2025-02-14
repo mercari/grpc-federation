@@ -306,12 +306,16 @@ func (s *FederationService) resolve_Org_Federation_CastOneof(ctx context.Context
 	switch {
 	case oneof_Num.(bool):
 
-		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
 			Value:      value,
-			Expr:       `1`,
+			Expr:       `uint(1)`,
 			CacheIndex: 4,
-			Setter: func(v int64) error {
-				ret.CastOneof = &CastOneof_Num{Num: v}
+			Setter: func(v uint64) error {
+				castOneofValue, err := s.cast_uint64__to__Org_Federation_CastOneof_Num(v)
+				if err != nil {
+					return err
+				}
+				ret.CastOneof = castOneofValue
 				return nil
 			},
 		}); err != nil {
@@ -1381,6 +1385,17 @@ func (s *FederationService) cast_User_User__to__Org_Federation_CastOneof_User(fr
 	}
 	return &CastOneof_User{
 		User: ret,
+	}, nil
+}
+
+// cast_uint64__to__Org_Federation_CastOneof_Num cast from "uint64" to "org.federation.CastOneof.num".
+func (s *FederationService) cast_uint64__to__Org_Federation_CastOneof_Num(from uint64) (*CastOneof_Num, error) {
+	ret, err := grpcfed.Uint64ToInt64(from)
+	if err != nil {
+		return nil, err
+	}
+	return &CastOneof_Num{
+		Num: ret,
 	}, nil
 }
 
