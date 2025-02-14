@@ -1869,11 +1869,13 @@ type CELReturnField struct {
 }
 
 type SetterParam struct {
-	Name         string
-	Value        string
-	RequiredCast bool
-	CastFunc     string
-	EnumSelector *EnumSelectorSetterParam
+	Name           string
+	Value          string
+	RequiredCast   bool
+	CastFunc       string
+	EnumSelector   *EnumSelectorSetterParam
+	OneofTypeName  string
+	OneofFieldName string
 }
 
 type EnumSelectorSetterParam struct {
@@ -1962,8 +1964,18 @@ func (f *CastField) RequestType() string {
 	return f.file.toTypeText(f.fromType)
 }
 
+// ResponseType this represents the type of the return value of the cast function.
+// This type is always struct when the conversion destination type belongs to oneof.
 func (f *CastField) ResponseType() string {
 	return f.file.toTypeText(f.toType)
+}
+
+// ReturnType this type that is output regardless of whether the destination type is a oneof field or not.
+// This is used internally in the cast process.
+func (f *CastField) ReturnType() string {
+	toType := f.toType.Clone()
+	toType.OneofField = nil
+	return f.file.toTypeText(toType)
 }
 
 func (f *CastField) RequestProtoFQDN() string {
@@ -2022,17 +2034,40 @@ func (f *CastField) IsRequiredValidationNumber() bool {
 }
 
 func (f *CastField) CastWithValidationName() string {
-	return fmt.Sprintf("%sTo%s", util.ToPublicVariable(f.RequestType()), util.ToPublicVariable(f.ResponseType()))
+	return fmt.Sprintf("%sTo%s", util.ToPublicVariable(f.RequestType()), util.ToPublicVariable(f.ReturnType()))
+}
+
+type CastOneofWrapper struct {
+	Name      string
+	FieldName string
 }
 
 type CastEnum struct {
+	*CastOneofWrapper
 	FromValues   []*CastEnumValue
 	DefaultValue string
+	ReturnType   string
 }
 
 type CastEnumValue struct {
 	FromValue string
 	ToValue   string
+}
+
+func (f *CastField) CastOneofWrapper() *CastOneofWrapper {
+	if f.toType.OneofField == nil {
+		return nil
+	}
+	field := f.toType.OneofField
+	fieldName := util.ToPublicGoVariable(field.Name)
+	typeName := strings.TrimPrefix(f.file.messageTypeToText(field.Message), "*") + "_" + fieldName
+	if field.IsConflict() {
+		typeName += "_"
+	}
+	return &CastOneofWrapper{
+		Name:      typeName,
+		FieldName: fieldName,
+	}
 }
 
 func (f *CastField) ToEnum() (*CastEnum, error) {
@@ -2062,8 +2097,10 @@ func (f *CastField) ToEnum() (*CastEnum, error) {
 		})
 	}
 	return &CastEnum{
-		FromValues:   enumValues,
-		DefaultValue: "0",
+		CastOneofWrapper: f.CastOneofWrapper(),
+		FromValues:       enumValues,
+		DefaultValue:     "0",
+		ReturnType:       f.ReturnType(),
 	}, nil
 }
 
@@ -2096,8 +2133,10 @@ func (f *CastField) toEnumFromDepServiceToService(enum, depSvcEnum *resolver.Enu
 		}
 	}
 	return &CastEnum{
-		FromValues:   enumValues,
-		DefaultValue: defaultValue,
+		CastOneofWrapper: f.CastOneofWrapper(),
+		FromValues:       enumValues,
+		DefaultValue:     defaultValue,
+		ReturnType:       f.ReturnType(),
 	}
 }
 
@@ -2132,13 +2171,16 @@ func (f *CastField) toEnumFromServiceToDepService(enum, depSvcEnum *resolver.Enu
 		}
 	}
 	return &CastEnum{
-		FromValues:   enumValues,
-		DefaultValue: defaultValue,
+		CastOneofWrapper: f.CastOneofWrapper(),
+		FromValues:       enumValues,
+		DefaultValue:     defaultValue,
+		ReturnType:       f.ReturnType(),
 	}, nil
 }
 
 type CastSlice struct {
-	ResponseType     string
+	*CastOneofWrapper
+	ReturnType       string
 	ElemRequiredCast bool
 	ElemCastName     string
 }
@@ -2149,13 +2191,15 @@ func (f *CastField) ToSlice() *CastSlice {
 	fromElemType.Repeated = false
 	toElemType.Repeated = false
 	return &CastSlice{
-		ResponseType:     f.ResponseType(),
+		CastOneofWrapper: f.CastOneofWrapper(),
+		ReturnType:       f.ReturnType(),
 		ElemRequiredCast: requiredCast(fromElemType, toElemType),
 		ElemCastName:     castFuncName(fromElemType, toElemType),
 	}
 }
 
 type CastStruct struct {
+	*CastOneofWrapper
 	Name   string
 	Fields []*CastStructField
 	Oneofs []*CastOneofStruct
@@ -2216,10 +2260,12 @@ func (f *CastField) ToStruct() *CastStruct {
 	if f.service.GoPackage().ImportPath != toMsg.GoPackage().ImportPath {
 		name = fmt.Sprintf("%s.%s", toMsg.GoPackage().Name, name)
 	}
+
 	return &CastStruct{
-		Name:   name,
-		Fields: castFields,
-		Oneofs: castOneofStructs,
+		CastOneofWrapper: f.CastOneofWrapper(),
+		Name:             name,
+		Fields:           castFields,
+		Oneofs:           castOneofStructs,
 	}
 }
 
@@ -2293,7 +2339,8 @@ func (f *CastField) ToOneof() *CastOneof {
 }
 
 type CastMap struct {
-	ResponseType      string
+	*CastOneofWrapper
+	ReturnType        string
 	KeyRequiredCast   bool
 	KeyCastName       string
 	ValueRequiredCast bool
@@ -2306,7 +2353,8 @@ func (f *CastField) ToMap() *CastMap {
 	fromValueType := f.fromType.Message.Fields[1].Type
 	toValueType := f.toType.Message.Fields[1].Type
 	return &CastMap{
-		ResponseType:      f.ResponseType(),
+		CastOneofWrapper:  f.CastOneofWrapper(),
+		ReturnType:        f.ReturnType(),
 		KeyRequiredCast:   requiredCast(fromKeyType, toKeyType),
 		KeyCastName:       castFuncName(fromKeyType, toKeyType),
 		ValueRequiredCast: requiredCast(fromValueType, toValueType),
@@ -2562,33 +2610,19 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 				oneofTypeName += "_"
 			}
 			var (
-				typ       string
 				value     string
 				castValue string
 				castFunc  string
 			)
-			switch fromType.Kind {
-			case types.Message:
-				typ = m.file.toTypeText(fromType)
-				value = fmt.Sprintf("&%s{%s: v}", oneofTypeName, fieldName)
-				if requiredCast(fromType, toType) {
-					castFunc = castFuncName(fromType, toType)
-					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
-				}
-			case types.Enum:
-				typ = "int64"
-				value = fmt.Sprintf("&%s{%s: %s(v)}", oneofTypeName, fieldName, m.file.toTypeText(fromType))
-				if requiredCast(fromType, toType) {
-					castFunc = castFuncName(fromType, toType)
-					castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
-				}
-			default:
-				// Since fromType is a primitive type, type conversion is possible on the CEL side.
-				deletedOneofFieldType := toType.Clone()
-				deletedOneofFieldType.OneofField = nil
-				typ = m.file.toTypeText(deletedOneofFieldType)
+			typ := m.file.toTypeText(fromType)
+			if requiredCast(fromType, toType) {
+				castFunc = castFuncName(fromType, toType)
+				castValue = fmt.Sprintf("&%s{%s: s.%s(v)}", oneofTypeName, fieldName, castFunc)
+				value = "v"
+			} else {
 				value = fmt.Sprintf("&%s{%s: v}", oneofTypeName, fieldName)
 			}
+
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
 					By:             rule.Oneof.By.Expr,

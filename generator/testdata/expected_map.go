@@ -892,14 +892,16 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 
 // cast_Org_User_UserType__to__Org_Federation_UserType cast from "org.user.UserType" to "org.federation.UserType".
 func (s *FederationService) cast_Org_User_UserType__to__Org_Federation_UserType(from user.UserType) (UserType, error) {
+	var ret UserType
 	switch from {
 	case user.UserType_USER_TYPE_1:
-		return UserType_USER_TYPE_1, nil
+		ret = UserType_USER_TYPE_1
 	case user.UserType_USER_TYPE_2:
-		return UserType_USER_TYPE_2, nil
+		ret = UserType_USER_TYPE_2
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_repeated_Org_User_UserType__to__repeated_Org_Federation_UserType cast from "repeated org.user.UserType" to "repeated org.federation.UserType".

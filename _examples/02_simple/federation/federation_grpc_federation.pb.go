@@ -2309,9 +2309,10 @@ func (s *FederationService) cast_Google_Protobuf_BoolValue__to__Google_Protobuf_
 
 	valueValue := from.GetValue()
 
-	return &wrapperspb.BoolValue{
+	ret := &wrapperspb.BoolValue{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_BytesValue__to__Google_Protobuf_BytesValue cast from "google.protobuf.BytesValue" to "google.protobuf.BytesValue".
@@ -2322,9 +2323,10 @@ func (s *FederationService) cast_Google_Protobuf_BytesValue__to__Google_Protobuf
 
 	valueValue := from.GetValue()
 
-	return &wrapperspb.BytesValue{
+	ret := &wrapperspb.BytesValue{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_DoubleValue cast from "google.protobuf.DoubleValue" to "google.protobuf.DoubleValue".
@@ -2335,9 +2337,10 @@ func (s *FederationService) cast_Google_Protobuf_DoubleValue__to__Google_Protobu
 
 	valueValue := from.GetValue()
 
-	return &wrapperspb.DoubleValue{
+	ret := &wrapperspb.DoubleValue{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_FloatValue cast from "google.protobuf.DoubleValue" to "google.protobuf.FloatValue".
@@ -2351,9 +2354,10 @@ func (s *FederationService) cast_Google_Protobuf_DoubleValue__to__Google_Protobu
 		return nil, err
 	}
 
-	return &wrapperspb.FloatValue{
+	ret := &wrapperspb.FloatValue{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int32Value cast from "google.protobuf.Int64Value" to "google.protobuf.Int32Value".
@@ -2367,9 +2371,10 @@ func (s *FederationService) cast_Google_Protobuf_Int64Value__to__Google_Protobuf
 		return nil, err
 	}
 
-	return &wrapperspb.Int32Value{
+	ret := &wrapperspb.Int32Value{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int64Value cast from "google.protobuf.Int64Value" to "google.protobuf.Int64Value".
@@ -2380,9 +2385,10 @@ func (s *FederationService) cast_Google_Protobuf_Int64Value__to__Google_Protobuf
 
 	valueValue := from.GetValue()
 
-	return &wrapperspb.Int64Value{
+	ret := &wrapperspb.Int64Value{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_StringValue__to__Google_Protobuf_StringValue cast from "google.protobuf.StringValue" to "google.protobuf.StringValue".
@@ -2393,9 +2399,10 @@ func (s *FederationService) cast_Google_Protobuf_StringValue__to__Google_Protobu
 
 	valueValue := from.GetValue()
 
-	return &wrapperspb.StringValue{
+	ret := &wrapperspb.StringValue{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt32Value cast from "google.protobuf.UInt64Value" to "google.protobuf.UInt32Value".
@@ -2409,9 +2416,10 @@ func (s *FederationService) cast_Google_Protobuf_UInt64Value__to__Google_Protobu
 		return nil, err
 	}
 
-	return &wrapperspb.UInt32Value{
+	ret := &wrapperspb.UInt32Value{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt64Value cast from "google.protobuf.UInt64Value" to "google.protobuf.UInt64Value".
@@ -2422,25 +2430,28 @@ func (s *FederationService) cast_Google_Protobuf_UInt64Value__to__Google_Protobu
 
 	valueValue := from.GetValue()
 
-	return &wrapperspb.UInt64Value{
+	ret := &wrapperspb.UInt64Value{
 		Value: valueValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_User_Item_ItemType__to__Federation_Item_ItemType cast from "user.Item.ItemType" to "federation.Item.ItemType".
 func (s *FederationService) cast_User_Item_ItemType__to__Federation_Item_ItemType(from user.Item_ItemType) (Item_ItemType, error) {
+	var ret Item_ItemType
 	switch from {
 	case user.Item_ITEM_TYPE_UNSPECIFIED:
-		return Item_ITEM_TYPE_UNSPECIFIED, nil
+		ret = Item_ITEM_TYPE_UNSPECIFIED
 	case user.Item_ITEM_TYPE_1:
-		return Item_ITEM_TYPE_1, nil
+		ret = Item_ITEM_TYPE_1
 	case user.Item_ITEM_TYPE_2:
-		return Item_ITEM_TYPE_2, nil
+		ret = Item_ITEM_TYPE_2
 	case user.Item_ITEM_TYPE_3:
-		return Item_ITEM_TYPE_3, nil
+		ret = Item_ITEM_TYPE_3
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_User_Item_ItemType__to__int32 cast from "user.Item.ItemType" to "int32".
@@ -2469,9 +2480,10 @@ func (s *FederationService) cast_User_Item_Location_AddrA__to__Federation_Item_L
 
 	fooValue := from.GetFoo()
 
-	return &Item_Location_AddrA{
+	ret := &Item_Location_AddrA{
 		Foo: fooValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_User_Item_Location_AddrB__to__Federation_Item_Location_AddrB cast from "user.Item.Location.AddrB" to "federation.Item.Location.AddrB".
@@ -2482,9 +2494,10 @@ func (s *FederationService) cast_User_Item_Location_AddrB__to__Federation_Item_L
 
 	barValue := from.GetBar()
 
-	return &Item_Location_AddrB{
+	ret := &Item_Location_AddrB{
 		Bar: barValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_User_Item_Location_B__to__Federation_Item_Location_B cast from "user.Item.Location.b" to "federation.Item.Location.b".
@@ -2548,12 +2561,13 @@ func (s *FederationService) cast_User_Item__to__Federation_Item(from *user.Item)
 		return nil, err
 	}
 
-	return &Item{
+	ret := &Item{
 		Name:     nameValue,
 		Type:     typeValue,
 		Value:    valueValue,
 		Location: locationValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_User_User_AttrA___to__Federation_User_AttrA_ cast from "user.User.attr_a" to "federation.User.attr_a".
@@ -2577,9 +2591,10 @@ func (s *FederationService) cast_User_User_AttrA__to__Federation_User_AttrA(from
 
 	fooValue := from.GetFoo()
 
-	return &User_AttrA{
+	ret := &User_AttrA{
 		Foo: fooValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_User_User_AttrB__to__Federation_User_AttrB cast from "user.User.AttrB" to "federation.User.AttrB".
@@ -2590,9 +2605,10 @@ func (s *FederationService) cast_User_User_AttrB__to__Federation_User_AttrB(from
 
 	barValue := from.GetBar()
 
-	return &User_AttrB{
+	ret := &User_AttrB{
 		Bar: barValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_User_User_B__to__Federation_User_B cast from "user.User.b" to "federation.User.b".
@@ -2620,7 +2636,11 @@ func (s *FederationService) cast_int64__to__Federation_Item_ItemType(from int64)
 
 // cast_int64__to__int32 cast from "int64" to "int32".
 func (s *FederationService) cast_int64__to__int32(from int64) (int32, error) {
-	return grpcfed.Int64ToInt32(from)
+	ret, err := grpcfed.Int64ToInt32(from)
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
 
 // cast_map_int64_string__to__map_int32_string cast from "map<int64, string>" to "map<int32, string>".
@@ -2665,7 +2685,11 @@ func (s *FederationService) cast_repeated_int64__to__repeated_int32(from []int64
 
 // cast_uint64__to__uint32 cast from "uint64" to "uint32".
 func (s *FederationService) cast_uint64__to__uint32(from uint64) (uint32, error) {
-	return grpcfed.Uint64ToUint32(from)
+	ret, err := grpcfed.Uint64ToUint32(from)
+	if err != nil {
+		return ret, err
+	}
+	return ret, nil
 }
 
 func (s *FederationService) logvalue_Federation_A(v *A) slog.Value {

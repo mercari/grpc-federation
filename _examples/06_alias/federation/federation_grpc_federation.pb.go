@@ -796,9 +796,10 @@ func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionA__to__O
 
 	propValue := from.GetProp()
 
-	return &post.PostConditionA{
+	ret := &post.PostConditionA{
 		Prop: propValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB cast from "org.federation.GetPostRequest.ConditionB" to "org.post.PostConditionB".
@@ -807,7 +808,8 @@ func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionB__to__O
 		return nil, nil
 	}
 
-	return &post.PostConditionB{}, nil
+	ret := &post.PostConditionB{}
+	return ret, nil
 }
 
 // cast_Org_Federation_M__to__Org_Post_M cast from "org.federation.M" to "org.post.M".
@@ -818,21 +820,24 @@ func (s *FederationService) cast_Org_Federation_M__to__Org_Post_M(from *M) (*pos
 
 	xValue := from.GetX()
 
-	return &post.M{
+	ret := &post.M{
 		X: xValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_Post_PostContent_Category__to__Org_Federation_PostContent_Category cast from "org.post.PostContent.Category" to "org.federation.PostContent.Category".
 func (s *FederationService) cast_Org_Post_PostContent_Category__to__Org_Federation_PostContent_Category(from post.PostContent_Category) (PostContent_Category, error) {
+	var ret PostContent_Category
 	switch from {
 	case post.PostContent_CATEGORY_A:
-		return PostContent_CATEGORY_A, nil
+		ret = PostContent_CATEGORY_A
 	case post.PostContent_CATEGORY_B:
-		return PostContent_CATEGORY_B, nil
+		ret = PostContent_CATEGORY_B
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_Org_Post_PostContent__to__Org_Federation_PostContent cast from "org.post.PostContent" to "org.federation.PostContent".
@@ -850,27 +855,30 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	dupBodyValue := from.GetBody()
 	countsValue := from.GetCounts()
 
-	return &PostContent{
+	ret := &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
 		Body:     bodyValue,
 		DupBody:  dupBodyValue,
 		Counts:   countsValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_Post_PostDataType__to__Org_Federation_PostType cast from "org.post.PostDataType" to "org.federation.PostType".
 func (s *FederationService) cast_Org_Post_PostDataType__to__Org_Federation_PostType(from post.PostDataType) (PostType, error) {
+	var ret PostType
 	switch from {
 	case post.PostDataType_POST_TYPE_A:
-		return PostType_POST_TYPE_FOO, nil
+		ret = PostType_POST_TYPE_FOO
 	case post.PostDataType_POST_TYPE_B:
-		return PostType_POST_TYPE_BAR, nil
+		ret = PostType_POST_TYPE_BAR
 	case post.PostDataType_POST_TYPE_C:
-		return PostType_POST_TYPE_BAR, nil
+		ret = PostType_POST_TYPE_BAR
 	default:
-		return PostType_POST_TYPE_UNKNOWN, nil
+		ret = PostType_POST_TYPE_UNKNOWN
 	}
+	return ret, nil
 }
 
 // cast_Org_Post_PostData__to__Org_Federation_PostData cast from "org.post.PostData" to "org.federation.PostData".
@@ -889,23 +897,26 @@ func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(
 		return nil, err
 	}
 
-	return &PostData{
+	ret := &PostData{
 		Type:    typeValue,
 		Title:   titleValue,
 		Content: contentValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_Post_V2_PostContent_Category__to__Org_Federation_PostContent_Category cast from "org.post.v2.PostContent.Category" to "org.federation.PostContent.Category".
 func (s *FederationService) cast_Org_Post_V2_PostContent_Category__to__Org_Federation_PostContent_Category(from post1.PostContent_Category) (PostContent_Category, error) {
+	var ret PostContent_Category
 	switch from {
 	case post1.PostContent_CATEGORY_A:
-		return PostContent_CATEGORY_A, nil
+		ret = PostContent_CATEGORY_A
 	case post1.PostContent_CATEGORY_B:
-		return PostContent_CATEGORY_B, nil
+		ret = PostContent_CATEGORY_B
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_Org_Post_V2_PostContent__to__Org_Federation_PostContent cast from "org.post.v2.PostContent" to "org.federation.PostContent".
@@ -923,27 +934,30 @@ func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_Pos
 	dupBodyValue := from.GetBody()
 	countsValue := from.GetCounts()
 
-	return &PostContent{
+	ret := &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
 		Body:     bodyValue,
 		DupBody:  dupBodyValue,
 		Counts:   countsValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType cast from "org.post.v2.PostDataType" to "org.federation.PostType".
 func (s *FederationService) cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(from post1.PostDataType) (PostType, error) {
+	var ret PostType
 	switch from {
 	case post1.PostDataType_POST_TYPE_A:
-		return PostType_POST_TYPE_FOO, nil
+		ret = PostType_POST_TYPE_FOO
 	case post1.PostDataType_POST_V2_TYPE_B:
-		return PostType_POST_TYPE_BAR, nil
+		ret = PostType_POST_TYPE_BAR
 	case post1.PostDataType_POST_V2_TYPE_C:
-		return PostType_POST_TYPE_BAR, nil
+		ret = PostType_POST_TYPE_BAR
 	default:
-		return PostType_POST_TYPE_UNKNOWN, nil
+		ret = PostType_POST_TYPE_UNKNOWN
 	}
+	return ret, nil
 }
 
 // cast_Org_Post_V2_PostData__to__Org_Federation_PostData cast from "org.post.v2.PostData" to "org.federation.PostData".
@@ -962,11 +976,12 @@ func (s *FederationService) cast_Org_Post_V2_PostData__to__Org_Federation_PostDa
 		return nil, err
 	}
 
-	return &PostData{
+	ret := &PostData{
 		Type:    typeValue,
 		Title:   titleValue,
 		Content: contentValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionA(v *GetPostRequest_ConditionA) slog.Value {

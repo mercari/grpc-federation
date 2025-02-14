@@ -920,14 +920,16 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 
 // cast_Favorite_FavoriteType__to__Federation_MyFavoriteType cast from "favorite.FavoriteType" to "federation.MyFavoriteType".
 func (s *FederationService) cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(from favorite.FavoriteType) (MyFavoriteType, error) {
+	var ret MyFavoriteType
 	switch from {
 	case favorite.FavoriteType_UNKNOWN:
-		return MyFavoriteType_UNKNOWN, nil
+		ret = MyFavoriteType_UNKNOWN
 	case favorite.FavoriteType_TYPE1:
-		return MyFavoriteType_TYPE1, nil
+		ret = MyFavoriteType_TYPE1
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_int64__to__Favorite_FavoriteType cast from "int64" to "favorite.FavoriteType".
@@ -2065,14 +2067,16 @@ func (s *PrivateService) resolve_Federation_User(ctx context.Context, req *Priva
 
 // cast_Favorite_FavoriteType__to__Federation_MyFavoriteType cast from "favorite.FavoriteType" to "federation.MyFavoriteType".
 func (s *PrivateService) cast_Favorite_FavoriteType__to__Federation_MyFavoriteType(from favorite.FavoriteType) (MyFavoriteType, error) {
+	var ret MyFavoriteType
 	switch from {
 	case favorite.FavoriteType_UNKNOWN:
-		return MyFavoriteType_UNKNOWN, nil
+		ret = MyFavoriteType_UNKNOWN
 	case favorite.FavoriteType_TYPE1:
-		return MyFavoriteType_TYPE1, nil
+		ret = MyFavoriteType_TYPE1
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_int64__to__Favorite_FavoriteType cast from "int64" to "favorite.FavoriteType".

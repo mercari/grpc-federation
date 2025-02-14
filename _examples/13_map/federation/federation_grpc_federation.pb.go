@@ -958,18 +958,20 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 
 // cast_User_Item_ItemType__to__Org_Federation_Item_ItemType cast from "user.Item.ItemType" to "org.federation.Item.ItemType".
 func (s *FederationService) cast_User_Item_ItemType__to__Org_Federation_Item_ItemType(from user.Item_ItemType) (Item_ItemType, error) {
+	var ret Item_ItemType
 	switch from {
 	case user.Item_ITEM_TYPE_UNSPECIFIED:
-		return Item_ITEM_TYPE_UNSPECIFIED, nil
+		ret = Item_ITEM_TYPE_UNSPECIFIED
 	case user.Item_ITEM_TYPE_1:
-		return Item_ITEM_TYPE_1, nil
+		ret = Item_ITEM_TYPE_1
 	case user.Item_ITEM_TYPE_2:
-		return Item_ITEM_TYPE_2, nil
+		ret = Item_ITEM_TYPE_2
 	case user.Item_ITEM_TYPE_3:
-		return Item_ITEM_TYPE_3, nil
+		ret = Item_ITEM_TYPE_3
 	default:
-		return 0, nil
+		ret = 0
 	}
+	return ret, nil
 }
 
 // cast_repeated_User_Item_ItemType__to__repeated_Org_Federation_Item_ItemType cast from "repeated user.Item.ItemType" to "repeated org.federation.Item.ItemType".

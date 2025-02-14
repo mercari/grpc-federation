@@ -1177,10 +1177,11 @@ func (s *FederationV2DevService) cast_Google_Protobuf_Duration__to__Google_Proto
 	secondsValue := from.GetSeconds()
 	nanosValue := from.GetNanos()
 
-	return &durationpb.Duration{
+	ret := &durationpb.Duration{
 		Seconds: secondsValue,
 		Nanos:   nanosValue,
-	}, nil
+	}
+	return ret, nil
 }
 
 // cast_int64__to__Federation_V2Dev_PostV2DevType cast from "int64" to "federation.v2dev.PostV2devType".
