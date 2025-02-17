@@ -68,8 +68,8 @@ message CreatePost {
   string title = 1 [(grpc.federation.field).by = "$.title"];
   string content = 2 [(grpc.federation.field).by = "$.content"];
   string user_id = 3 [(grpc.federation.field).by = "$.user_id"];
-  PostType type = 4 [(grpc.federation.field).by = "$.type"];
-  PostType post_type = 5 [(grpc.federation.field).by = "org.federation.PostType.TYPE_A"];
+  PostType type = 4 [(grpc.federation.field).by = "PostType.from($.type)"];
+  int32 post_type = 5 [(grpc.federation.field).by = "PostType.TYPE_A"];
 }
 
 message Post {

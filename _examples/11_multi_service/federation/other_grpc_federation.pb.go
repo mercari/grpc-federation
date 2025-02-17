@@ -613,10 +613,10 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Oth
 	ret := &Reaction{}
 
 	// field binding section.
-	// (grpc.federation.field).by = "favorite.FavoriteType.TYPE1"
+	// (grpc.federation.field).by = "favorite.FavoriteType.value('TYPE1')"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[favorite.FavoriteType]{
 		Value:      value,
-		Expr:       `favorite.FavoriteType.TYPE1`,
+		Expr:       `favorite.FavoriteType.value('TYPE1')`,
 		CacheIndex: 14,
 		Setter: func(v favorite.FavoriteType) error {
 			ret.FavoriteType = v
@@ -718,11 +718,6 @@ func (s *OtherService) cast_Favorite_FavoriteType__to__Federation_MyFavoriteType
 		ret = 0
 	}
 	return ret, nil
-}
-
-// cast_int64__to__Favorite_FavoriteType cast from "int64" to "favorite.FavoriteType".
-func (s *OtherService) cast_int64__to__Favorite_FavoriteType(from int64) (favorite.FavoriteType, error) {
-	return favorite.FavoriteType(from), nil
 }
 
 func (s *OtherService) logvalue_Favorite_FavoriteType(v favorite.FavoriteType) slog.Value {

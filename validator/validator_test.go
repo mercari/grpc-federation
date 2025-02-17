@@ -595,6 +595,9 @@ invalid_message_field_alias.proto:61:3: The types of "org.federation.PostData"'s
 invalid_message_field_alias.proto:61:3: "title" field in "org.federation.PostData" message needs to specify "grpc.federation.field" option
 61:    int64 title = 2;
        ^
+invalid_message_field_alias.proto:71:3: cannot convert type automatically: field type is "enum" but specified value type is "int64"
+71:    PostType type = 1 [(grpc.federation.field).by = "org.federation.PostType.POST_TYPE_FOO"];
+       ^
 invalid_message_field_alias.proto:88:3: The types of "org.federation.PostContent"'s "body" field ("int64") and "org.post.PostContent"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
 88:    int64 body = 3;
        ^

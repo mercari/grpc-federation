@@ -496,10 +496,10 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "federation.v2dev.PostV2devType.POST_V2_DEV_TYPE"
+	// (grpc.federation.field).by = "PostV2devType.value('POST_V2_DEV_TYPE')"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostV2DevType]{
 		Value:      value,
-		Expr:       `federation.v2dev.PostV2devType.POST_V2_DEV_TYPE`,
+		Expr:       `PostV2devType.value('POST_V2_DEV_TYPE')`,
 		CacheIndex: 3,
 		Setter: func(v PostV2DevType) error {
 			ret.Type = v
@@ -1182,11 +1182,6 @@ func (s *FederationV2DevService) cast_Google_Protobuf_Duration__to__Google_Proto
 		Nanos:   nanosValue,
 	}
 	return ret, nil
-}
-
-// cast_int64__to__Federation_V2Dev_PostV2DevType cast from "int64" to "federation.v2dev.PostV2devType".
-func (s *FederationV2DevService) cast_int64__to__Federation_V2Dev_PostV2DevType(from int64) (PostV2DevType, error) {
-	return PostV2DevType(from), nil
 }
 
 func (s *FederationV2DevService) logvalue_Federation_V2Dev_ForNameless(v *ForNameless) slog.Value {

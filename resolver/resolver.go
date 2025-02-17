@@ -5280,6 +5280,10 @@ func isDifferentType(from, to *Type) bool {
 	if from.IsNumber() && to.IsNumber() {
 		return false
 	}
+	if from.Kind == types.Enum && to.IsNumber() {
+		// enum to number is OK.
+		return false
+	}
 	if from.IsNull && (to.Repeated || to.Kind == types.Message || to.Kind == types.Bytes) {
 		return false
 	}

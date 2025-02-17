@@ -64,7 +64,7 @@ message GetPostResponse {
   string user_item_type_name = 8 [(grpc.federation.field).by = "user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)"];
   Item.ItemType item_type_value_enum = 9 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_1')"];
   int32 item_type_value_int = 10 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_1')"];
-  Item.ItemType item_type_value_cast = 11 [(grpc.federation.field).by = "1"];
+  Item.ItemType item_type_value_cast = 11 [(grpc.federation.field).by = "user.Item.ItemType.from(1)"];
   int32 location_type_value = 12 [(grpc.federation.field).by = "Item.Location.LocationType.value('LOCATION_TYPE_1')"];
   int32 user_item_type_value = 13 [(grpc.federation.field).by = "user.Item.ItemType.value('ITEM_TYPE_2')"];
   A a = 14 [(grpc.federation.field).by = "a"];

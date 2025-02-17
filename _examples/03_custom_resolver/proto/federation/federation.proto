@@ -69,7 +69,7 @@ message GetPostV2devResponse {
     def { name: "r" message { name: "Ref" } }
   };
   PostV2dev post = 1 [(grpc.federation.field).by = "post"];
-  PostV2devType type = 2 [(grpc.federation.field).by = "federation.v2dev.PostV2devType.POST_V2_DEV_TYPE"];
+  PostV2devType type = 2 [(grpc.federation.field).by = "PostV2devType.value('POST_V2_DEV_TYPE')"];
   string env_a = 3 [(grpc.federation.field).by = "grpc.federation.env.a"];
   int64 env_b = 4 [(grpc.federation.field).by = "grpc.federation.env.b[1]"];
   google.protobuf.Duration env_c_value = 5 [(grpc.federation.field).by = "grpc.federation.env.c['z']"];

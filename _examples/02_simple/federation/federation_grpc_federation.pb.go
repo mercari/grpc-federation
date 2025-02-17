@@ -1493,13 +1493,17 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	// (grpc.federation.field).by = "1"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Item_ItemType]{
+	// (grpc.federation.field).by = "user.Item.ItemType.from(1)"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
-		Expr:       `1`,
+		Expr:       `user.Item.ItemType.from(1)`,
 		CacheIndex: 42,
-		Setter: func(v Item_ItemType) error {
-			ret.ItemTypeValueCast = v
+		Setter: func(v user.Item_ItemType) error {
+			itemTypeValueCastValue, err := s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
+			if err != nil {
+				return err
+			}
+			ret.ItemTypeValueCast = itemTypeValueCastValue
 			return nil
 		},
 	}); err != nil {
@@ -2627,11 +2631,6 @@ func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.U
 // cast_float64__to__float32 cast from "double" to "float".
 func (s *FederationService) cast_float64__to__float32(from float64) (float32, error) {
 	return float32(from), nil
-}
-
-// cast_int64__to__Federation_Item_ItemType cast from "int64" to "federation.Item.ItemType".
-func (s *FederationService) cast_int64__to__Federation_Item_ItemType(from int64) (Item_ItemType, error) {
-	return Item_ItemType(from), nil
 }
 
 // cast_int64__to__int32 cast from "int64" to "int32".
