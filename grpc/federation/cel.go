@@ -229,7 +229,7 @@ func EnumAccessorOptions(enumName string, nameToValue map[string]int32, valueToN
 		),
 		cel.Function(
 			fmt.Sprintf("%s.from", enumName),
-			cel.Overload(fmt.Sprintf("%[1]s_name_int_%[1]s", enumName), []*cel.Type{cel.IntType}, cel.IntType,
+			cel.Overload(fmt.Sprintf("%s_from_int_int", enumName), []*cel.Type{cel.IntType}, cel.IntType,
 				cel.UnaryBinding(func(self ref.Val) ref.Val {
 					return self
 				}),
