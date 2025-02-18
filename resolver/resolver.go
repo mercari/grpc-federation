@@ -43,6 +43,7 @@ type Resolver struct {
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
 	celPluginMap               map[string]*CELPlugin
+	enumAccessors              []cel.EnvOption
 
 	serviceToRuleMap   map[*Service]*federation.ServiceRule
 	methodToRuleMap    map[*Method]*federation.MethodRule
@@ -146,9 +147,6 @@ func (r *Resolver) ResolveWellknownFiles() (Files, error) {
 }
 
 func (r *Resolver) Resolve() (*Result, error) {
-	if err := r.celRegistry.RegisterFiles(r.files...); err != nil {
-		return nil, err
-	}
 	// In order to return multiple errors with source code location information,
 	// we add all errors to the context when they occur.
 	// Therefore, functions called from Resolve() do not return errors directly.
@@ -158,6 +156,10 @@ func (r *Resolver) Resolve() (*Result, error) {
 	r.resolvePackageAndFileReference(ctx, r.files)
 	r.resolveFileImportRule(ctx, r.files)
 	if err := ctx.error(); err != nil {
+		return nil, err
+	}
+
+	if err := r.celRegistry.RegisterFiles(r.files...); err != nil {
 		return nil, err
 	}
 
@@ -339,6 +341,10 @@ func (r *Resolver) resolveFiles(ctx *context) []*File {
 	for _, fileDef := range r.files {
 		files = append(files, r.resolveFile(ctx, fileDef, source.NewLocationBuilder(fileDef.GetName())))
 	}
+
+	// After resolving all file references, the enum references will also be resolved,
+	// allowing the construction of enumAccessors at this point.
+	r.resolveEnumAccessors()
 	return files
 }
 
@@ -3661,7 +3667,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(
 	builder := newMessageBuilderFromMessage(msg)
 	arg := msg.Rule.MessageArgument
 	fileDesc := messageArgumentFileDescriptor(arg)
-	if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+	if err := r.celRegistry.RegisterFiles(fileDesc); err != nil {
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
@@ -4472,7 +4478,7 @@ func (r *Resolver) createServiceCELEnv(svc *Service, env *Env) (*cel.Env, error)
 	if env != nil {
 		envMsg := envVarsToMessage(svc.File, svc.Name, env.Vars)
 		fileDesc := dynamicMsgFileDescriptor(envMsg, strings.Replace(svc.FQDN()+"Env", ".", "_", -1))
-		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+		if err := r.celRegistry.RegisterFiles(fileDesc); err != nil {
 			return nil, err
 		}
 		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
@@ -4487,7 +4493,7 @@ func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map
 	envMsg := r.buildEnvMessage(ctx, msg, svcMsgSet, builder)
 	if envMsg != nil {
 		fileDesc := dynamicMsgFileDescriptor(envMsg, strings.Replace(msg.FQDN()+"Env", ".", "_", -1))
-		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+		if err := r.celRegistry.RegisterFiles(fileDesc); err != nil {
 			return nil, err
 		}
 		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
@@ -4495,7 +4501,7 @@ func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map
 	svcVarsMsg := r.buildServiceVariablesMessage(ctx, msg, svcMsgSet, builder)
 	if svcVarsMsg != nil {
 		fileDesc := dynamicMsgFileDescriptor(svcVarsMsg, strings.Replace(msg.FQDN()+"Variable", ".", "_", -1))
-		if err := r.celRegistry.RegisterFiles(append(r.files, fileDesc)...); err != nil {
+		if err := r.celRegistry.RegisterFiles(fileDesc); err != nil {
 			return nil, err
 		}
 		envOpts = append(envOpts, cel.Variable("grpc.federation.var", cel.ObjectType(svcVarsMsg.FQDN())))
@@ -4518,7 +4524,7 @@ func (r *Resolver) createCELEnv(envOpts ...cel.EnvOption) (*cel.Env, error) {
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 		cel.Variable(federation.ContextVariableName, cel.ObjectType(federation.ContextTypeName)),
 	}...)
-	envOpts = append(envOpts, r.enumAccessors()...)
+	envOpts = append(envOpts, r.enumAccessors...)
 	envOpts = append(envOpts, r.enumOperators()...)
 	for _, plugin := range r.celPluginMap {
 		envOpts = append(envOpts, cel.Lib(plugin))
@@ -4719,10 +4725,9 @@ func (r *Resolver) buildServiceVariablesMessage(ctx *context, msg *Message, svcM
 	return svcVarsToMessage(msg.File, msg.Name, svcVars)
 }
 
-func (r *Resolver) enumAccessors() []cel.EnvOption {
-	var ret []cel.EnvOption
+func (r *Resolver) resolveEnumAccessors() {
 	for _, enum := range r.cachedEnumMap {
-		ret = append(ret,
+		r.enumAccessors = append(r.enumAccessors, []cel.EnvOption{
 			cel.Function(
 				fmt.Sprintf("%s.name", enum.FQDN()),
 				cel.Overload(fmt.Sprintf("%s_name_int_string", enum.FQDN()), []*cel.Type{cel.IntType}, cel.StringType,
@@ -4750,12 +4755,11 @@ func (r *Resolver) enumAccessors() []cel.EnvOption {
 					cel.BinaryBinding(func(enumValue, key ref.Val) ref.Val { return nil }),
 				),
 			),
-		)
+		}...)
 		for _, value := range enum.Values {
 			r.cachedEnumValueMap[value.FQDN()] = value
 		}
 	}
-	return ret
 }
 
 // enumOperators an enum may be treated as an `opaque<int>` or as an `int`.
