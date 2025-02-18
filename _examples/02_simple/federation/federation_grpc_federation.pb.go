@@ -1012,7 +1012,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		  name: "e"
 		  enum {
 		    name: "federation.Item.ItemType"
-		    by: "user.Item.ItemType.value('ITEM_TYPE_2')"
+		    by: "true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)"
 		  }
 		}
 	*/
@@ -1027,7 +1027,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			Enum: func(ctx context.Context, value *localValueType) (Item_ItemType, error) {
 				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 					Value:      value,
-					Expr:       `user.Item.ItemType.value('ITEM_TYPE_2')`,
+					Expr:       `true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)`,
 					OutType:    reflect.TypeOf(user.Item_ItemType(0)),
 					CacheIndex: 26,
 				})
