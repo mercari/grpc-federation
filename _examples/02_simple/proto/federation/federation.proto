@@ -47,7 +47,7 @@ message GetPostResponse {
     def { name: "map_value" by : "{1: 'a', 2: 'b', 3: 'c'}" }
     def { name: "null_value" by: "null" }
     def { by: "grpc.federation.log.info('output federation log', {'post_message': post})" }
-    def { name: "e" enum {name: "Item.ItemType" by: "user.Item.ItemType.value('ITEM_TYPE_2')"}}
+    def { name: "e" enum {name: "Item.ItemType" by: "true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)"}}
     def { name: "sqrt_double" by: "grpc.federation.math.sqrt(3.0*3.0+4.0*4.0)" }
     def { name: "sqrt_int" by: "grpc.federation.math.sqrt(3*3+4*4)" }
     def { name: "pow" by: "grpc.federation.math.pow(2.0, 3.0)" }
