@@ -8,6 +8,7 @@ import (
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"google.golang.org/protobuf/reflect/protodesc"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -16,11 +17,13 @@ import (
 
 type CELRegistry struct {
 	*celtypes.Registry
-	messageMap       map[string]*Message
-	enumTypeMap      map[*celtypes.Type]*Enum
-	enumValueMap     map[string]*EnumValue
-	usedEnumValueMap map[*EnumValue]struct{}
-	errs             []error
+	registryFiles     *protoregistry.Files
+	registeredFileMap map[string]struct{}
+	messageMap        map[string]*Message
+	enumTypeMap       map[*celtypes.Type]*Enum
+	enumValueMap      map[string]*EnumValue
+	usedEnumValueMap  map[*EnumValue]struct{}
+	errs              []error
 }
 
 func (r *CELRegistry) clear() {
@@ -127,30 +130,66 @@ func toEnumSelectorCELType(sel *Message) *cel.Type {
 
 func newCELRegistry(messageMap map[string]*Message, enumValueMap map[string]*EnumValue) *CELRegistry {
 	return &CELRegistry{
-		Registry:         celtypes.NewEmptyRegistry(),
-		messageMap:       messageMap,
-		enumTypeMap:      make(map[*celtypes.Type]*Enum),
-		enumValueMap:     enumValueMap,
-		usedEnumValueMap: make(map[*EnumValue]struct{}),
+		Registry:          celtypes.NewEmptyRegistry(),
+		registryFiles:     new(protoregistry.Files),
+		registeredFileMap: make(map[string]struct{}),
+		messageMap:        messageMap,
+		enumTypeMap:       make(map[*celtypes.Type]*Enum),
+		enumValueMap:      enumValueMap,
+		usedEnumValueMap:  make(map[*EnumValue]struct{}),
 	}
 }
 
-func (r *CELRegistry) RegisterFiles(files ...*descriptorpb.FileDescriptorProto) error {
-	registryFiles, err := protodesc.NewFiles(&descriptorpb.FileDescriptorSet{
-		File: files,
-	})
+func (r *CELRegistry) RegisterFiles(fds ...*descriptorpb.FileDescriptorProto) error {
+	fileMap := make(map[string]*descriptorpb.FileDescriptorProto)
+	for _, fd := range fds {
+		fileName := fd.GetName()
+		if _, ok := fileMap[fileName]; ok {
+			return fmt.Errorf("file appears multiple times: %q", fileName)
+		}
+		fileMap[fileName] = fd
+	}
+	for _, fd := range fileMap {
+		if err := r.registerFileDeps(fd, fileMap); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *CELRegistry) registerFileDeps(fd *descriptorpb.FileDescriptorProto, fileMap map[string]*descriptorpb.FileDescriptorProto) error {
+	// set the entry to nil while descending into a file's dependencies to detect cycles.
+	fileName := fd.GetName()
+	fileMap[fileName] = nil
+	for _, dep := range fd.GetDependency() {
+		depFD, ok := fileMap[dep]
+		if depFD == nil {
+			if ok {
+				return fmt.Errorf("import cycle in file: %q", dep)
+			}
+			continue
+		}
+		if err := r.registerFileDeps(depFD, fileMap); err != nil {
+			return err
+		}
+	}
+	// delete the entry once dependencies are processed.
+	delete(fileMap, fileName)
+	if _, exists := r.registeredFileMap[fileName]; exists {
+		return nil
+	}
+
+	f, err := protodesc.NewFile(fd, r.registryFiles)
 	if err != nil {
 		return err
 	}
-	for _, file := range files {
-		rf, err := protodesc.NewFile(file, registryFiles)
-		if err != nil {
-			return err
-		}
-		if err := r.Registry.RegisterDescriptor(rf); err != nil {
-			return err
-		}
+	if err := r.registryFiles.RegisterFile(f); err != nil {
+		return err
 	}
+	if err := r.Registry.RegisterDescriptor(f); err != nil {
+		return err
+	}
+	r.registeredFileMap[fileName] = struct{}{}
 	return nil
 }
 
