@@ -4623,7 +4623,7 @@ func (r *Resolver) buildEnvMessage(ctx *context, msg *Message, svcMsgSet map[*Se
 		)
 	}
 
-	return envVarsToMessage(msg.File, msg.Name, envVars)
+	return envVarsToMessage(msg.File, strings.Replace(msg.FQDN(), ".", "_", -1), envVars)
 }
 
 func (r *Resolver) buildServiceVariablesMessage(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) *Message {
@@ -4722,7 +4722,7 @@ func (r *Resolver) buildServiceVariablesMessage(ctx *context, msg *Message, svcM
 		)
 	}
 
-	return svcVarsToMessage(msg.File, msg.Name, svcVars)
+	return svcVarsToMessage(msg.File, strings.Replace(msg.FQDN(), ".", "_", -1), svcVars)
 }
 
 func (r *Resolver) resolveEnumAccessors() {

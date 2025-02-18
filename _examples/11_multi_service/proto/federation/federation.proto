@@ -107,12 +107,21 @@ message GetPostRequest {
 }
 
 message GetPostResponse {
-  option (grpc.federation.message).def = {
-    name: "p"
-    message { name: "Post" }
+  option (grpc.federation.message) = {
+    def {
+      name: "p"
+      message { name: "Post" }
+    }
+    def { name: "foo" message {name: "GetPostResponse.Foo"} }
   };
   Post post = 1 [(grpc.federation.field).by = "p"];
   string upper_name = 2 [(grpc.federation.field).by = "grpc.federation.var.upper_name"];
+
+  message Foo {
+    string x = 1 [(grpc.federation.field).by = "'x'"];
+  }
+
+  GetPostResponse.Foo foo = 3 [(grpc.federation.field).by = "foo"];
 }
 
 message Post {
@@ -163,7 +172,17 @@ message GetNameRequest {
 }
 
 message GetNameResponse {
+  option (grpc.federation.message) = {
+    def { name: "foo" message {name: "GetNameResponse.Foo"} }
+  };
+
   string name = 1 [(grpc.federation.field).by = "grpc.federation.env.name"];
+
+  message Foo {
+    string y = 1 [(grpc.federation.field).by = "'y'"];
+  }
+
+  GetNameResponse.Foo foo = 2 [(grpc.federation.field).by = "foo"];
 }
 
 message GetStatusRequest {

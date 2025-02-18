@@ -87,9 +87,11 @@ func TestFederation(t *testing.T) {
 					Cmp:           true,
 				},
 				UpperName: "FEDERATION",
+				Foo:       &federation.GetPostResponse_Foo{X: "x"},
 			}
 			expectedGetNameResp = &federation.GetNameResponse{
 				Name: "federation",
+				Foo:  &federation.GetNameResponse_Foo{Y: "y"},
 			}
 		)
 
@@ -105,7 +107,13 @@ func TestFederation(t *testing.T) {
 		}
 		if diff := cmp.Diff(
 			gotGetPostResp, expectedGetPostResp,
-			cmpopts.IgnoreUnexported(federation.GetPostResponse{}, federation.Post{}, federation.User{}, federation.Reaction{}),
+			cmpopts.IgnoreUnexported(
+				federation.GetPostResponse{},
+				federation.Post{},
+				federation.User{},
+				federation.Reaction{},
+				federation.GetPostResponse_Foo{},
+			),
 		); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
@@ -116,7 +124,10 @@ func TestFederation(t *testing.T) {
 		}
 		if diff := cmp.Diff(
 			gotGetNameResp, expectedGetNameResp,
-			cmpopts.IgnoreUnexported(federation.GetNameResponse{}),
+			cmpopts.IgnoreUnexported(
+				federation.GetNameResponse{},
+				federation.GetNameResponse_Foo{},
+			),
 		); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
@@ -148,6 +159,7 @@ func TestFederation(t *testing.T) {
 	t.Run("private", func(t *testing.T) {
 		expected := &federation.GetNameResponse{
 			Name: "private",
+			Foo:  &federation.GetNameResponse_Foo{Y: "y"},
 		}
 		svc, err := federation.NewPrivateService(federation.PrivateServiceConfig{
 			Logger: logger,
@@ -161,7 +173,7 @@ func TestFederation(t *testing.T) {
 		}
 		if diff := cmp.Diff(
 			got, expected,
-			cmpopts.IgnoreUnexported(federation.GetNameResponse{}),
+			cmpopts.IgnoreUnexported(federation.GetNameResponse{}, federation.GetNameResponse_Foo{}),
 		); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
