@@ -670,14 +670,14 @@ func TestCreatePost(t *testing.T) {
 					"type",
 					ref.Type(t, "org.federation", "PostType"),
 					testutil.NewFieldRuleBuilder(
-						testutil.NewMessageArgumentValueBuilder(ref.Type(t, "org.federation", "PostType"), ref.Type(t, "org.federation", "PostType"), "type").Build(t),
+						resolver.NewByValue("PostType.from($.type)", ref.Type(t, "org.federation", "PostType")),
 					).SetAlias(ref.Field(t, "org.post", "CreatePost", "type")).Build(t),
 				).
 				AddFieldWithRule(
 					"post_type",
-					ref.Type(t, "org.federation", "PostType"),
+					resolver.Int32Type,
 					testutil.NewFieldRuleBuilder(
-						resolver.NewByValue("org.federation.PostType.POST_TYPE_1", resolver.Int32Type),
+						resolver.NewByValue("PostType.TYPE_A", resolver.Int32Type),
 					).SetAlias(ref.Field(t, "org.post", "CreatePost", "post_type")).Build(t),
 				).
 				SetRule(

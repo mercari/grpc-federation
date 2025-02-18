@@ -12,7 +12,7 @@ message Reaction {
     def { name: "cmp" by: "$.v == favorite.FavoriteType.TYPE1" }
   };
 
-  favorite.FavoriteType favorite_type = 1 [(grpc.federation.field).by = "favorite.FavoriteType.TYPE1"];
+  favorite.FavoriteType favorite_type = 1 [(grpc.federation.field).by = "favorite.FavoriteType.value('TYPE1')"];
   string favorite_type_str = 2 [(grpc.federation.field).by = "favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))"];
   bool cmp = 3 [(grpc.federation.field).by = "cmp"];
 }

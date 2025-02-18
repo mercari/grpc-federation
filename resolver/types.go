@@ -441,8 +441,7 @@ func (t *Type) IsNumber() bool {
 		types.Sfixed32,
 		types.Sfixed64,
 		types.Sint32,
-		types.Sint64,
-		types.Enum:
+		types.Sint64:
 		return true
 	}
 	return false

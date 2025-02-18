@@ -1056,7 +1056,7 @@ func toMakeZeroValue(file *File, t *resolver.Type) string {
 	if t.OneofField != nil {
 		return fmt.Sprintf("(%s)(nil)", text)
 	}
-	if t.IsNumber() {
+	if t.IsNumber() || t.Kind == types.Enum {
 		return fmt.Sprintf("%s(0)", text)
 	}
 	switch t.Kind {

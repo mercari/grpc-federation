@@ -43,7 +43,7 @@ message Post {
     def { name: "post", by: "res.post", autobind: true }
   };
   string id = 1;
-  PostType type = 2 [(grpc.federation.field).by = "org.federation.PostType.FICTION"];
+  PostType type = 2 [(grpc.federation.field).by = "PostType.value('FICTION')"];
 }
 
 enum PostType {
