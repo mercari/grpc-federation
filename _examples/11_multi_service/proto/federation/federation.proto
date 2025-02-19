@@ -40,6 +40,10 @@ service FederationService {
         message: "'name environment variable is unspecified'"
       }
     }
+    var {
+      name: "foo_bar_baz"
+      by: "{'a': true}"
+    }
   };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
   rpc GetName(GetNameRequest) returns (GetNameResponse) {};
@@ -91,6 +95,10 @@ service PrivateService {
         }
         by: "iter.name"
       }
+    }
+    var {
+      name: "foo_bar_baz"
+      by: "{'b': true}"
     }
   };
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
