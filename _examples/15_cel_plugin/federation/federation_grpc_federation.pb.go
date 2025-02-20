@@ -26,9 +26,10 @@ var (
 
 // Org_Federation_ExampleResponseArgument is argument for "org.federation.ExampleResponse" message.
 type FederationService_Org_Federation_ExampleResponseArgument struct {
-	Exp *pluginpb.Example
-	Str string
-	V   []*pluginpb.Example
+	Exp  *pluginpb.Example
+	Exps []*pluginpb.Example
+	Str  string
+	V    []*pluginpb.Example
 }
 
 // Org_Federation_IsMatchResponseArgument is argument for "org.federation.IsMatchResponse" message.
@@ -273,16 +274,36 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			Exp *pluginpb.Example
-			Str string
-			V   []*pluginpb.Example
+			Exp  *pluginpb.Example
+			Exps []*pluginpb.Example
+			Str  string
+			V    []*pluginpb.Example
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ExampleResponseArgument", req)}
 	/*
 		def {
+		  name: "exps"
+		  by: "example.regexp.newExamples()"
+		}
+	*/
+	def_exps := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[[]*pluginpb.Example, *localValueType]{
+			Name: `exps`,
+			Type: grpcfed.CELListType(grpcfed.CELObjectType("example.regexp.Example")),
+			Setter: func(value *localValueType, v []*pluginpb.Example) error {
+				value.vars.Exps = v
+				return nil
+			},
+			By:           `example.regexp.newExamples()`,
+			ByCacheIndex: 1,
+		})
+	}
+
+	/*
+		def {
 		  name: "v"
-		  by: "example.regexp.filterExamples(example.regexp.newExamples())"
+		  by: "example.regexp.filterExamples(exps)"
 		}
 	*/
 	def_v := func(ctx context.Context) error {
@@ -293,8 +314,8 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				value.vars.V = v
 				return nil
 			},
-			By:           `example.regexp.filterExamples(example.regexp.newExamples())`,
-			ByCacheIndex: 1,
+			By:           `example.regexp.filterExamples(exps)`,
+			ByCacheIndex: 2,
 		})
 	}
 
@@ -313,7 +334,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				return nil
 			},
 			By:           `example.regexp.newExample()`,
-			ByCacheIndex: 2,
+			ByCacheIndex: 3,
 		})
 	}
 
@@ -332,15 +353,16 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				return nil
 			},
 			By:           `exp.concat(exp.mySplit('/a/b/c', '/'))`,
-			ByCacheIndex: 3,
+			ByCacheIndex: 4,
 		})
 	}
 
 	// A tree view of message dependencies is shown below.
 	/*
-	   exp ─┐
-	        str ─┐
-	          v ─┤
+	    exp ─┐
+	         str ─┐
+	   exps ─┐    │
+	           v ─┤
 	*/
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
@@ -357,6 +379,10 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_exps(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
 		if err := def_v(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
@@ -370,6 +396,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.Exp = value.vars.Exp
+	req.Exps = value.vars.Exps
 	req.Str = value.vars.Str
 	req.V = value.vars.V
 
@@ -381,7 +408,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:      value,
 		Expr:       `v.size()`,
-		CacheIndex: 4,
+		CacheIndex: 5,
 		Setter: func(v int64) error {
 			ret.Size = v
 			return nil
@@ -394,7 +421,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `str`,
-		CacheIndex: 5,
+		CacheIndex: 6,
 		Setter: func(v string) error {
 			ret.Str = v
 			return nil
@@ -438,7 +465,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 				return nil
 			},
 			By:           `example.regexp.compile($.expr)`,
-			ByCacheIndex: 6,
+			ByCacheIndex: 7,
 		})
 	}
 
@@ -457,7 +484,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 				return nil
 			},
 			By:           `re.matchString($.target)`,
-			ByCacheIndex: 7,
+			ByCacheIndex: 8,
 		})
 	}
 
@@ -482,7 +509,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `matched`,
-		CacheIndex: 8,
+		CacheIndex: 9,
 		Setter: func(v bool) error {
 			ret.Result = v
 			return nil

@@ -356,7 +356,12 @@ func (i *CELPluginInstance) refToCELPluginValue(typ *cel.Type, v ref.Val) (*plug
 		slice := reflect.ValueOf(v.Value())
 		list := &plugin.CELPluginListValue{}
 		for idx := 0; idx < slice.Len(); idx++ {
-			value, err := i.refToCELPluginValue(elemType, slice.Index(idx).Interface().(ref.Val))
+			src := slice.Index(idx).Interface()
+			val := i.celRegistry.NativeToValue(src)
+			if types.IsError(val) {
+				return nil, fmt.Errorf("failed to convert %T to CEL value: %v", src, val.Value())
+			}
+			value, err := i.refToCELPluginValue(elemType, val)
 			if err != nil {
 				return nil, err
 			}
@@ -442,7 +447,7 @@ func (i *CELPluginInstance) celPluginValueToRef(fn *CELFunction, typ *cel.Type, 
 		values := make([]ref.Val, 0, len(v.GetList().GetValues()))
 		for _, vv := range v.GetList().GetValues() {
 			value := i.celPluginValueToRef(fn, elemType, vv)
-			if value.Type().TypeName() == types.ErrType.TypeName() {
+			if types.IsError(value) {
 				// return error value
 				return value
 			}
