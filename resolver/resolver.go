@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/operators"
@@ -5013,7 +5014,7 @@ func messageToDescriptor(m *Message) *descriptorpb.DescriptorProto {
 		if field.Type.Message != nil && field.Type.Message.IsMapEntry {
 			mp := messageToDescriptor(field.Type.Message)
 			if mp.GetName() == "" {
-				mp.Name = proto.String(cases.Title(language.Und).String(field.Name) + "Entry")
+				mp.Name = proto.String(toMapEntryName(field.Name))
 			}
 			msg.NestedType = append(msg.NestedType, mp)
 			typeName = m.FQDN() + "." + mp.GetName()
@@ -5037,6 +5038,29 @@ func messageToDescriptor(m *Message) *descriptorpb.DescriptorProto {
 		})
 	}
 	return msg
+}
+
+// toMapEntryName normalize map message name.
+// To avoid this validation error, the message name of the map must be appropriately set.
+// https://github.com/protocolbuffers/protobuf-go/blob/9c8c2ddc6dd4a0de078404a4af1770e6b5320352/reflect/protodesc/desc_validate.go#L326-L327
+//
+// Here is the reference for this implementation: https://github.com/protocolbuffers/protobuf-go/blob/9c8c2ddc6dd4a0de078404a4af1770e6b5320352/internal/strs/strings.go#L125
+func toMapEntryName(s string) string {
+	var b []byte
+	upperNext := true
+	for _, c := range s {
+		switch {
+		case c == '_':
+			upperNext = true
+		case upperNext:
+			b = append(b, byte(unicode.ToUpper(c)))
+			upperNext = false
+		default:
+			b = append(b, byte(c))
+		}
+	}
+	b = append(b, "Entry"...)
+	return string(b)
 }
 
 func (r *Resolver) resolveAutoBind(ctx *context, files []*File) {
