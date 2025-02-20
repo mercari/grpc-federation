@@ -34,7 +34,8 @@ message ExampleRequest{}
 
 message ExampleResponse {
   option (grpc.federation.message) = {
-    def { name: "v" by: "example.regexp.filterExamples(example.regexp.newExamples())" }
+    def { name: "exps" by: "example.regexp.newExamples()" }
+    def { name: "v" by: "example.regexp.filterExamples(exps)" }
     def { name: "exp" by: "example.regexp.newExample()"}
     def { name: "str" by: "exp.concat(exp.mySplit('/a/b/c', '/'))"}
   };
