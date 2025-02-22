@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.uber.org/goleak"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,6 +34,7 @@ func dialer(_ context.Context, _ string) (net.Conn, error) {
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -175,4 +177,6 @@ func TestFederation(t *testing.T) {
 			}
 		})
 	}
+
+	grpcServer.Stop()
 }

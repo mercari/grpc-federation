@@ -114,17 +114,17 @@ type RefEnvServiceUnimplementedResolver struct{}
 // RefEnvService represents Federation Service.
 type RefEnvService struct {
 	UnimplementedRefEnvServiceServer
-	cfg           RefEnvServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	env           *RefEnvServiceEnv
-	svcVar        *RefEnvServiceVariable
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *RefEnvServiceDependentClientSet
+	cfg                RefEnvServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	env                *RefEnvServiceEnv
+	svcVar             *RefEnvServiceVariable
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *RefEnvServiceDependentClientSet
 }
 
 // NewRefEnvService creates RefEnvService instance by RefEnvServiceConfig.
@@ -174,6 +174,17 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		return nil, err
 	}
 	return svc, nil
+}
+
+// CleanupRefEnvService cleanup all resources to prevent goroutine leaks.
+func CleanupRefEnvService(ctx context.Context, svc *RefEnvService) {
+	svc.cleanup(ctx)
+}
+
+func (s *RefEnvService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 func (s *RefEnvService) initServiceVariables() error {
 	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)

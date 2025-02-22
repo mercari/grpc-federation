@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,6 +56,7 @@ func (s *UserServer) GetUser(ctx context.Context, req *user.GetUserRequest) (*us
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -137,9 +139,11 @@ func TestFederation(t *testing.T) {
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
+	grpcServer.Stop()
 }
 
 func TestFederation_NoValue(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -203,4 +207,5 @@ func TestFederation_NoValue(t *testing.T) {
 	if diff := cmp.Diff(err.Error(), expectedErr.Err().Error()); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
+	grpcServer.Stop()
 }

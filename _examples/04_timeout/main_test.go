@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,6 +32,7 @@ var (
 	listener         *bufconn.Listener
 	postClient       post.PostServiceClient
 	calledUpdatePost bool
+	blockCh          = make(chan struct{})
 )
 
 type clientConfig struct{}
@@ -44,7 +46,7 @@ type PostServer struct {
 }
 
 func (s *PostServer) GetPost(ctx context.Context, req *post.GetPostRequest) (*post.GetPostResponse, error) {
-	time.Sleep(2 * time.Second)
+	<-blockCh
 	return &post.GetPostResponse{
 		Post: &post.Post{
 			Id:      req.Id,
@@ -65,6 +67,8 @@ func dialer(ctx context.Context, address string) (net.Conn, error) {
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -142,4 +146,7 @@ func TestFederation(t *testing.T) {
 			t.Fatal("failed to call UpdatePost method")
 		}
 	})
+	blockCh <- struct{}{}
+	time.Sleep(500 * time.Millisecond)
+	grpcServer.GracefulStop()
 }

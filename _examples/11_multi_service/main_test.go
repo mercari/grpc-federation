@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 
 	"example/federation"
 )
@@ -39,6 +40,7 @@ func (r *Resolver) Resolve_Federation_GetResponse_Post(_ context.Context, _ *fed
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 
 	if os.Getenv("ENABLE_JAEGER") != "" {
@@ -200,5 +202,4 @@ func TestFederation(t *testing.T) {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
 	})
-
 }

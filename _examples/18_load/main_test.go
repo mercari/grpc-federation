@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -41,6 +42,7 @@ func toSha256(v []byte) string {
 }
 
 func TestCELEvaluation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -104,6 +106,8 @@ func TestCELEvaluation(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+	federation.CleanupFederationService(ctx, federationServer)
+	grpcServer.Stop()
 }
 
 func Benchmark_CELEvaluation(b *testing.B) {

@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -56,6 +57,7 @@ func dialer(ctx context.Context, address string) (net.Conn, error) {
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -246,4 +248,6 @@ func TestFederation(t *testing.T) {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
 	})
+
+	grpcServer.Stop()
 }
