@@ -225,7 +225,7 @@ type {{ $serviceName }} struct {
 	{{- end }}
 	celTypeHelper *grpcfed.CELTypeHelper
 	celEnvOpts []grpcfed.CELEnvOption
-	celPlugins []*grpcfedcel.CELPlugin
+	celPluginInstances []*grpcfedcel.CELPluginInstance
 	client *{{ $serviceName }}DependentClientSet
 }
 
@@ -318,7 +318,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	{{- end }}
 	{{- if $celPlugins }}
-	var celPlugins []*grpcfedcel.CELPlugin
+	var celPluginInstances []*grpcfedcel.CELPluginInstance
 	{{- end }}
 	{{- range $celPlugins }}
 	{
@@ -349,6 +349,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}
+		celPluginInstances = append(celPluginInstances, instance)
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
 	}
 	{{- end }}
@@ -376,7 +377,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		resolver: cfg.Resolver,
 		{{- end }}
 		{{- if $celPlugins }}
-		celPlugins: celPlugins,
+		celPluginInstances: celPluginInstances,
 		{{- end }}
 		client: &{{ $serviceName}}DependentClientSet{
 			{{- range $serviceDependencies }}
@@ -390,6 +391,17 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	}
 	{{- end }}
 	return svc, nil
+}
+
+// Cleanup{{ $serviceName }} cleanup all resources to prevent goroutine leaks.
+func Cleanup{{ $serviceName }}(ctx context.Context, svc *{{ $serviceName }}) {
+	svc.cleanup(ctx)
+}
+
+func (s *{{ $serviceName }}) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 
 {{- if $svcVars }}

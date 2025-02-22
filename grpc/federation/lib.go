@@ -19,7 +19,7 @@ func WithTimeout[T any](ctx context.Context, method string, timeout time.Duratio
 
 	var (
 		ret   *T
-		errch = make(chan error)
+		errch = make(chan error, 1)
 	)
 	go func() {
 		defer func() {
