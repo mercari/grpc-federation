@@ -173,6 +173,8 @@ func TestFederation(t *testing.T) {
 	userClient = user.NewUserServiceClient(conn)
 
 	grpcServer := grpc.NewServer()
+	defer grpcServer.Stop()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -183,6 +185,7 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer federation.CleanupFederationService(ctx, federationServer)
 	post.RegisterPostServiceServer(grpcServer, &PostServer{})
 	user.RegisterUserServiceServer(grpcServer, &UserServer{})
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
@@ -356,5 +359,4 @@ func TestFederation(t *testing.T) {
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
-	grpcServer.Stop()
 }

@@ -58,6 +58,8 @@ func TestCELEvaluation(t *testing.T) {
 	defer conn.Close()
 
 	grpcServer := grpc.NewServer()
+	defer grpcServer.Stop()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -73,6 +75,8 @@ func TestCELEvaluation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer federation.CleanupFederationService(ctx, federationServer)
+
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 
 	go func() {
@@ -106,8 +110,6 @@ func TestCELEvaluation(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	federation.CleanupFederationService(ctx, federationServer)
-	grpcServer.Stop()
 }
 
 func Benchmark_CELEvaluation(b *testing.B) {
