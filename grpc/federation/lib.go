@@ -18,8 +18,13 @@ func WithTimeout[T any](ctx context.Context, method string, timeout time.Duratio
 	defer cancel()
 
 	var (
-		ret   *T
-		errch = make(chan error)
+		ret *T
+
+		// If the channel buffer is empty and a timeout occurs first,
+		// the select statement will complete without receiving from `errch`,
+		// causing the goroutine to wait indefinitely for a receiver at the end and preventing it from terminating.
+		// Therefore, setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
+		errch = make(chan error, 1)
 	)
 	go func() {
 		defer func() {

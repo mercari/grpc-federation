@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -33,6 +34,7 @@ func dialer(ctx context.Context, address string) (net.Conn, error) {
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -65,6 +67,7 @@ func TestFederation(t *testing.T) {
 	defer conn.Close()
 
 	grpcServer := grpc.NewServer()
+	defer grpcServer.Stop()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -75,6 +78,8 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer federation.CleanupFederationService(ctx, federationServer)
+
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 
 	go func() {

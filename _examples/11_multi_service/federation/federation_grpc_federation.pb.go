@@ -153,17 +153,17 @@ type FederationServiceUnimplementedResolver struct{}
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	env           *FederationServiceEnv
-	svcVar        *FederationServiceVariable
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg                FederationServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	env                *FederationServiceEnv
+	svcVar             *FederationServiceVariable
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -229,6 +229,17 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		return nil, err
 	}
 	return svc, nil
+}
+
+// CleanupFederationService cleanup all resources to prevent goroutine leaks.
+func CleanupFederationService(ctx context.Context, svc *FederationService) {
+	svc.cleanup(ctx)
+}
+
+func (s *FederationService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 func (s *FederationService) initServiceVariables() error {
 	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
@@ -1440,17 +1451,17 @@ type PrivateServiceUnimplementedResolver struct{}
 // PrivateService represents Federation Service.
 type PrivateService struct {
 	UnimplementedPrivateServiceServer
-	cfg           PrivateServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	env           *PrivateServiceEnv
-	svcVar        *PrivateServiceVariable
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *PrivateServiceDependentClientSet
+	cfg                PrivateServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	env                *PrivateServiceEnv
+	svcVar             *PrivateServiceVariable
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *PrivateServiceDependentClientSet
 }
 
 // NewPrivateService creates PrivateService instance by PrivateServiceConfig.
@@ -1518,6 +1529,17 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 		return nil, err
 	}
 	return svc, nil
+}
+
+// CleanupPrivateService cleanup all resources to prevent goroutine leaks.
+func CleanupPrivateService(ctx context.Context, svc *PrivateService) {
+	svc.cleanup(ctx)
+}
+
+func (s *PrivateService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 func (s *PrivateService) initServiceVariables() error {
 	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
@@ -2765,15 +2787,15 @@ type DebugServiceUnimplementedResolver struct{}
 // DebugService represents Federation Service.
 type DebugService struct {
 	UnimplementedDebugServiceServer
-	cfg           DebugServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *DebugServiceDependentClientSet
+	cfg                DebugServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *DebugServiceDependentClientSet
 }
 
 // NewDebugService creates DebugService instance by DebugServiceConfig.
@@ -2809,6 +2831,17 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 		client:        &DebugServiceDependentClientSet{},
 	}
 	return svc, nil
+}
+
+// CleanupDebugService cleanup all resources to prevent goroutine leaks.
+func CleanupDebugService(ctx context.Context, svc *DebugService) {
+	svc.cleanup(ctx)
+}
+
+func (s *DebugService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 
 // GetStatus implements "federation.DebugService/GetStatus" method.

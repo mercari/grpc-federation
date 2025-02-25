@@ -167,15 +167,15 @@ const (
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg                FederationServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -243,6 +243,17 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		},
 	}
 	return svc, nil
+}
+
+// CleanupFederationService cleanup all resources to prevent goroutine leaks.
+func CleanupFederationService(ctx context.Context, svc *FederationService) {
+	svc.cleanup(ctx)
+}
+
+func (s *FederationService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 
 // GetPost implements "federation.FederationService/GetPost" method.

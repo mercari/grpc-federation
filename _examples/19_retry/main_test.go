@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -69,6 +70,7 @@ func dialer(ctx context.Context, address string) (net.Conn, error) {
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -107,6 +109,8 @@ func TestFederation(t *testing.T) {
 	postClient = post.NewPostServiceClient(conn)
 
 	grpcServer := grpc.NewServer()
+	defer grpcServer.Stop()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -117,6 +121,8 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer federation.CleanupFederationService(ctx, federationServer)
+
 	post.RegisterPostServiceServer(grpcServer, &PostServer{})
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 

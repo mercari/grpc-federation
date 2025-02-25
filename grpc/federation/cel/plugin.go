@@ -118,7 +118,8 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		WithStderr(os.Stderr).
 		WithArgs("plugin")
 
-	instanceModErrCh := make(chan error)
+	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
+	instanceModErrCh := make(chan error, 1)
 	go func() {
 		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
 		instanceModErrCh <- err

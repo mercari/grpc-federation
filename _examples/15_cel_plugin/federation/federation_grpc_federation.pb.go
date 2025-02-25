@@ -90,15 +90,15 @@ type FederationServiceUnimplementedResolver struct{}
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg                FederationServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -124,7 +124,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	var celPlugins []*grpcfedcel.CELPlugin
+	var celPluginInstances []*grpcfedcel.CELPluginInstance
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
 			Name: "regexp",
@@ -203,20 +203,32 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}
+		celPluginInstances = append(celPluginInstances, instance)
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
 	}
 	svc := &FederationService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("org.federation.FederationService"),
-		celPlugins:    celPlugins,
-		client:        &FederationServiceDependentClientSet{},
+		cfg:                cfg,
+		logger:             logger,
+		errorHandler:       errorHandler,
+		celEnvOpts:         celEnvOpts,
+		celTypeHelper:      celTypeHelper,
+		celCacheMap:        grpcfed.NewCELCacheMap(),
+		tracer:             otel.Tracer("org.federation.FederationService"),
+		celPluginInstances: celPluginInstances,
+		client:             &FederationServiceDependentClientSet{},
 	}
 	return svc, nil
+}
+
+// CleanupFederationService cleanup all resources to prevent goroutine leaks.
+func CleanupFederationService(ctx context.Context, svc *FederationService) {
+	svc.cleanup(ctx)
+}
+
+func (s *FederationService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 
 // IsMatch implements "org.federation.FederationService/IsMatch" method.

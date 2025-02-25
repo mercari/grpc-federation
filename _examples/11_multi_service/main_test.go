@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 
 	"example/federation"
 )
@@ -39,6 +40,7 @@ func (r *Resolver) Resolve_Federation_GetResponse_Post(_ context.Context, _ *fed
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 
 	if os.Getenv("ENABLE_JAEGER") != "" {
@@ -101,6 +103,8 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer federation.CleanupFederationService(ctx, svc)
+
 		gotGetPostResp, err := svc.GetPost(ctx, &federation.GetPostRequest{Id: requestID})
 		if err != nil {
 			t.Fatal(err)
@@ -145,6 +149,8 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer federation.CleanupDebugService(ctx, svc)
+
 		got, err := svc.GetStatus(ctx, &federation.GetStatusRequest{})
 		if err != nil {
 			t.Fatal(err)
@@ -167,6 +173,8 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer federation.CleanupPrivateService(ctx, svc)
+
 		got, err := svc.GetName(ctx, &federation.GetNameRequest{})
 		if err != nil {
 			t.Fatal(err)
@@ -189,6 +197,8 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer federation.CleanupOtherService(ctx, svc)
+
 		got, err := svc.Get(ctx, &federation.GetRequest{})
 		if err != nil {
 			t.Fatal(err)
@@ -200,5 +210,4 @@ func TestFederation(t *testing.T) {
 			t.Errorf("(-got, +want)\n%s", diff)
 		}
 	})
-
 }

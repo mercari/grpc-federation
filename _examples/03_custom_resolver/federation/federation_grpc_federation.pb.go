@@ -224,17 +224,17 @@ const (
 // FederationV2DevService represents Federation Service.
 type FederationV2DevService struct {
 	UnimplementedFederationV2DevServiceServer
-	cfg           FederationV2DevServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	env           *FederationV2DevServiceEnv
-	resolver      FederationV2DevServiceResolver
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationV2DevServiceDependentClientSet
+	cfg                FederationV2DevServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	env                *FederationV2DevServiceEnv
+	resolver           FederationV2DevServiceResolver
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *FederationV2DevServiceDependentClientSet
 }
 
 // NewFederationV2DevService creates FederationV2DevService instance by FederationV2DevServiceConfig.
@@ -318,6 +318,17 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 		},
 	}
 	return svc, nil
+}
+
+// CleanupFederationV2DevService cleanup all resources to prevent goroutine leaks.
+func CleanupFederationV2DevService(ctx context.Context, svc *FederationV2DevService) {
+	svc.cleanup(ctx)
+}
+
+func (s *FederationV2DevService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 
 // GetPostV2Dev implements "federation.v2dev.FederationV2devService/GetPostV2dev" method.

@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,6 +56,7 @@ func (s *UserServer) GetUser(ctx context.Context, req *user.GetUserRequest) (*us
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -89,6 +91,7 @@ func TestFederation(t *testing.T) {
 	userClient = user.NewUserServiceClient(conn)
 
 	grpcServer := grpc.NewServer()
+	defer grpcServer.Stop()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -100,6 +103,8 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer federation.CleanupFederationService(ctx, federationServer)
+
 	user.RegisterUserServiceServer(grpcServer, &UserServer{})
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 
@@ -140,6 +145,7 @@ func TestFederation(t *testing.T) {
 }
 
 func TestFederation_NoValue(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -174,6 +180,7 @@ func TestFederation_NoValue(t *testing.T) {
 	userClient = user.NewUserServiceClient(conn)
 
 	grpcServer := grpc.NewServer()
+	defer grpcServer.Stop()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -185,6 +192,8 @@ func TestFederation_NoValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer federation.CleanupFederationService(ctx, federationServer)
+
 	user.RegisterUserServiceServer(grpcServer, &UserServer{})
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 

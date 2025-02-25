@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -160,6 +161,7 @@ func init() {
 }
 
 func TestFederation(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -199,6 +201,7 @@ func TestFederation(t *testing.T) {
 	userClient = user.NewUserServiceClient(conn)
 
 	grpcServer := grpc.NewServer()
+	defer grpcServer.Stop()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -227,6 +230,8 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer federation.CleanupFederationV2DevService(ctx, federationServer)
+
 	post.RegisterPostServiceServer(grpcServer, &PostServer{})
 	user.RegisterUserServiceServer(grpcServer, &UserServer{})
 	federation.RegisterFederationV2DevServiceServer(grpcServer, federationServer)

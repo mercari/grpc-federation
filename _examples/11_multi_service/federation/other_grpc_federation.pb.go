@@ -112,16 +112,16 @@ func (OtherServiceUnimplementedResolver) Resolve_Federation_GetResponse_Post(con
 // OtherService represents Federation Service.
 type OtherService struct {
 	UnimplementedOtherServiceServer
-	cfg           OtherServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	resolver      OtherServiceResolver
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *OtherServiceDependentClientSet
+	cfg                OtherServiceConfig
+	logger             *slog.Logger
+	errorHandler       grpcfed.ErrorHandler
+	celCacheMap        *grpcfed.CELCacheMap
+	tracer             trace.Tracer
+	resolver           OtherServiceResolver
+	celTypeHelper      *grpcfed.CELTypeHelper
+	celEnvOpts         []grpcfed.CELEnvOption
+	celPluginInstances []*grpcfedcel.CELPluginInstance
+	client             *OtherServiceDependentClientSet
 }
 
 // NewOtherService creates OtherService instance by OtherServiceConfig.
@@ -167,6 +167,17 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 		client:        &OtherServiceDependentClientSet{},
 	}
 	return svc, nil
+}
+
+// CleanupOtherService cleanup all resources to prevent goroutine leaks.
+func CleanupOtherService(ctx context.Context, svc *OtherService) {
+	svc.cleanup(ctx)
+}
+
+func (s *OtherService) cleanup(ctx context.Context) {
+	for _, instance := range s.celPluginInstances {
+		instance.Close(ctx)
+	}
 }
 
 // Get implements "federation.OtherService/Get" method.
