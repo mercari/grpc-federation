@@ -701,18 +701,21 @@ func (r *Resolver) lookupPackageNameMapFromMessageArguments(args []*Argument) ma
 }
 
 func (r *Resolver) resultFiles(allFiles []*File) []*File {
-	fileMap := make(map[*File]struct{})
+	fileMap := make(map[string]struct{})
 	ret := make([]*File, 0, len(allFiles))
 	for _, file := range r.hasServiceOrPluginRuleFiles(allFiles) {
+		if _, exists := fileMap[file.Name]; exists {
+			continue
+		}
 		ret = append(ret, file)
-		fileMap[file] = struct{}{}
+		fileMap[file.Name] = struct{}{}
 
 		for _, samePkgFile := range r.samePackageFiles(file) {
-			if _, exists := fileMap[samePkgFile]; exists {
+			if _, exists := fileMap[samePkgFile.Name]; exists {
 				continue
 			}
 			ret = append(ret, samePkgFile)
-			fileMap[samePkgFile] = struct{}{}
+			fileMap[samePkgFile.Name] = struct{}{}
 		}
 	}
 	return ret
