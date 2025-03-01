@@ -2020,7 +2020,7 @@ func (r *Resolver) resolveEnvVar(ctx *context, def *federation.EnvVar, builder *
 		mp.Name = cases.Title(language.Und).String(name) + "Entry"
 		file := ctx.file()
 		copied := *file
-		copied.Package = &Package{Name: federation.PrivatePackageName}
+		copied.Package = &Package{Name: file.PrivatePackageName()}
 		mp.File = &copied
 		r.cachedMessageMap[mp.FQDN()] = mp
 	}
@@ -4916,8 +4916,8 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 		deps = append(deps, timeProtoFile)
 	}
 	return &descriptorpb.FileDescriptorProto{
-		Name:             proto.String(arg.Name),
-		Package:          proto.String(federation.PrivatePackageName),
+		Name:             proto.String(strings.Replace(arg.FQDN(), ".", "_", -1)),
+		Package:          proto.String(arg.PackageName()),
 		Dependency:       deps,
 		PublicDependency: desc.PublicDependency,
 		WeakDependency:   desc.WeakDependency,
@@ -4928,7 +4928,7 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 func envVarsToMessage(file *File, name string, envVars []*EnvVar) *Message {
 	copied := *file
 	copied.Package = &Package{
-		Name: federation.PrivatePackageName,
+		Name: file.PrivatePackageName(),
 	}
 	envMsg := &Message{
 		File: &copied,
@@ -4946,7 +4946,7 @@ func envVarsToMessage(file *File, name string, envVars []*EnvVar) *Message {
 func svcVarsToMessage(file *File, name string, svcVars []*ServiceVariable) *Message {
 	copied := *file
 	copied.Package = &Package{
-		Name: federation.PrivatePackageName,
+		Name: file.PrivatePackageName(),
 	}
 	svcVarMsg := &Message{
 		File: &copied,
@@ -4991,7 +4991,7 @@ func dynamicMsgFileDescriptor(srcMsg *Message, fileName string) *descriptorpb.Fi
 	}
 	return &descriptorpb.FileDescriptorProto{
 		Name:             proto.String(fileName),
-		Package:          proto.String(federation.PrivatePackageName),
+		Package:          proto.String(srcMsg.PackageName()),
 		Dependency:       deps,
 		PublicDependency: desc.PublicDependency,
 		WeakDependency:   desc.WeakDependency,

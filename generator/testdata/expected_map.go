@@ -167,16 +167,16 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetPostsResponseArgument": {
+		"grpc.federation.private.org.federation.GetPostsResponseArgument": {
 			"ids": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELStringType), "Ids"),
 		},
-		"grpc.federation.private.PostsArgument": {
+		"grpc.federation.private.org.federation.PostsArgument": {
 			"post_ids": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELStringType), "PostIds"),
 		},
-		"grpc.federation.private.Posts_PostItemArgument": {
+		"grpc.federation.private.org.federation.Posts_PostItemArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
-		"grpc.federation.private.UserArgument": {
+		"grpc.federation.private.org.federation.UserArgument": {
 			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 		},
 	}
@@ -251,7 +251,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 			Posts *Posts
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostsResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostsResponseArgument", req)}
 	/*
 		def {
 		  name: "posts"
@@ -341,7 +341,7 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 			Users           []*User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostsArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.PostsArgument", req)}
 	/*
 		def {
 		  name: "res"
@@ -773,7 +773,7 @@ func (s *FederationService) resolve_Org_Federation_Posts_PostItem(ctx context.Co
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.Posts_PostItemArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.Posts_PostItemArgument", req)}
 
 	// create a message value to be returned.
 	ret := &Posts_PostItem{}
@@ -811,7 +811,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			User *user.User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.UserArgument", req)}
 	/*
 		def {
 		  name: "res"

@@ -115,8 +115,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.ExampleResponseArgument": {},
-		"grpc.federation.private.IsMatchResponseArgument": {
+		"grpc.federation.private.org.federation.ExampleResponseArgument": {},
+		"grpc.federation.private.org.federation.IsMatchResponseArgument": {
 			"expr":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Expr"),
 			"target": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Target"),
 		},
@@ -292,7 +292,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 			V    []*pluginpb.Example
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ExampleResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.ExampleResponseArgument", req)}
 	/*
 		def {
 		  name: "exps"
@@ -461,7 +461,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 			Re      *pluginpb.Regexp
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.IsMatchResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.IsMatchResponseArgument", req)}
 	/*
 		def {
 		  name: "re"

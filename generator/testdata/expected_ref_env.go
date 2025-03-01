@@ -138,7 +138,7 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.ConstantArgument": {},
+		"grpc.federation.private.org.federation.ConstantArgument": {},
 		"grpc.federation.private.Env": {
 			"aaa": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Aaa"),
 			"bbb": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELIntType), "Bbb"),
@@ -244,7 +244,7 @@ func (s *RefEnvService) resolve_Org_Federation_Constant(ctx context.Context, req
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ConstantArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.ConstantArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 
