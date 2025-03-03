@@ -701,18 +701,21 @@ func (r *Resolver) lookupPackageNameMapFromMessageArguments(args []*Argument) ma
 }
 
 func (r *Resolver) resultFiles(allFiles []*File) []*File {
-	fileMap := make(map[*File]struct{})
+	fileMap := make(map[string]struct{})
 	ret := make([]*File, 0, len(allFiles))
 	for _, file := range r.hasServiceOrPluginRuleFiles(allFiles) {
+		if _, exists := fileMap[file.Name]; exists {
+			continue
+		}
 		ret = append(ret, file)
-		fileMap[file] = struct{}{}
+		fileMap[file.Name] = struct{}{}
 
 		for _, samePkgFile := range r.samePackageFiles(file) {
-			if _, exists := fileMap[samePkgFile]; exists {
+			if _, exists := fileMap[samePkgFile.Name]; exists {
 				continue
 			}
 			ret = append(ret, samePkgFile)
-			fileMap[samePkgFile] = struct{}{}
+			fileMap[samePkgFile.Name] = struct{}{}
 		}
 	}
 	return ret
@@ -2020,7 +2023,7 @@ func (r *Resolver) resolveEnvVar(ctx *context, def *federation.EnvVar, builder *
 		mp.Name = cases.Title(language.Und).String(name) + "Entry"
 		file := ctx.file()
 		copied := *file
-		copied.Package = &Package{Name: federation.PrivatePackageName}
+		copied.Package = &Package{Name: file.PrivatePackageName()}
 		mp.File = &copied
 		r.cachedMessageMap[mp.FQDN()] = mp
 	}
@@ -4916,8 +4919,8 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 		deps = append(deps, timeProtoFile)
 	}
 	return &descriptorpb.FileDescriptorProto{
-		Name:             proto.String(arg.Name),
-		Package:          proto.String(federation.PrivatePackageName),
+		Name:             proto.String(strings.Replace(arg.FQDN(), ".", "_", -1)),
+		Package:          proto.String(arg.PackageName()),
 		Dependency:       deps,
 		PublicDependency: desc.PublicDependency,
 		WeakDependency:   desc.WeakDependency,
@@ -4928,7 +4931,7 @@ func messageArgumentFileDescriptor(arg *Message) *descriptorpb.FileDescriptorPro
 func envVarsToMessage(file *File, name string, envVars []*EnvVar) *Message {
 	copied := *file
 	copied.Package = &Package{
-		Name: federation.PrivatePackageName,
+		Name: file.PrivatePackageName(),
 	}
 	envMsg := &Message{
 		File: &copied,
@@ -4946,7 +4949,7 @@ func envVarsToMessage(file *File, name string, envVars []*EnvVar) *Message {
 func svcVarsToMessage(file *File, name string, svcVars []*ServiceVariable) *Message {
 	copied := *file
 	copied.Package = &Package{
-		Name: federation.PrivatePackageName,
+		Name: file.PrivatePackageName(),
 	}
 	svcVarMsg := &Message{
 		File: &copied,
@@ -4991,7 +4994,7 @@ func dynamicMsgFileDescriptor(srcMsg *Message, fileName string) *descriptorpb.Fi
 	}
 	return &descriptorpb.FileDescriptorProto{
 		Name:             proto.String(fileName),
-		Package:          proto.String(federation.PrivatePackageName),
+		Package:          proto.String(srcMsg.PackageName()),
 		Dependency:       deps,
 		PublicDependency: desc.PublicDependency,
 		WeakDependency:   desc.WeakDependency,

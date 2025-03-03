@@ -3,7 +3,6 @@ package resolver
 import (
 	"strings"
 
-	"github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/types"
 )
@@ -64,7 +63,7 @@ func NewEnumSelectorType(trueType, falseType *Type) *Type {
 func newMessageArgument(msg *Message) *Message {
 	file := *msg.File
 	file.Package = &Package{
-		Name:  federation.PrivatePackageName,
+		Name:  file.PrivatePackageName(),
 		Files: Files{&file},
 	}
 	return &Message{

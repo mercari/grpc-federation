@@ -127,12 +127,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetPostResponseArgument": {
+		"grpc.federation.private.org.federation.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 			"a":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionA"), "A"),
 			"b":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionB"), "B"),
 		},
-		"grpc.federation.private.PostArgument": {
+		"grpc.federation.private.org.federation.PostArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 			"a":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionA"), "A"),
 			"b":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionB"), "B"),
@@ -209,7 +209,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Post *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponseArgument", req)}
 	/*
 		def {
 		  name: "post"
@@ -322,7 +322,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Res  *post.GetPostResponse
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.PostArgument", req)}
 	/*
 		def {
 		  name: "res"

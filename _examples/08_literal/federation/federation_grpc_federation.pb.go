@@ -117,7 +117,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetResponseArgument": {
+		"grpc.federation.private.org.federation.GetResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 	}
@@ -189,7 +189,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Res     *content.GetContentResponse
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetResponseArgument", req)}
 	/*
 		def {
 		  name: "res"

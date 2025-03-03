@@ -163,12 +163,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetResponseArgument": {},
-		"grpc.federation.private.SubArgument":         {},
-		"grpc.federation.private.UserArgument": {
+		"grpc.federation.private.org.federation.GetResponseArgument": {},
+		"grpc.federation.private.org.federation.SubArgument":         {},
+		"grpc.federation.private.org.federation.UserArgument": {
 			"user_id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "UserId"),
 		},
-		"grpc.federation.private.UserIDArgument": {},
+		"grpc.federation.private.org.federation.UserIDArgument": {},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
@@ -238,7 +238,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			User2 *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetResponseArgument", req)}
 	/*
 		def {
 		  name: "uid"
@@ -459,7 +459,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 			XDef2 *Sub
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.UserArgument", req)}
 	/*
 		def {
 		  name: "res"
@@ -622,7 +622,7 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 			XDef0 *Sub
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserIDArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.UserIDArgument", req)}
 	/*
 		def {
 		  name: "_def0"

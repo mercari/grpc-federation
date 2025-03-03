@@ -128,13 +128,13 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetPostResponse1Argument": {
+		"grpc.federation.private.org.federation.GetPostResponse1Argument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
-		"grpc.federation.private.GetPostResponse2Argument": {
+		"grpc.federation.private.org.federation.GetPostResponse2Argument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
-		"grpc.federation.private.PostArgument": {
+		"grpc.federation.private.org.federation.PostArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 	}
@@ -228,7 +228,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse1(ctx context.
 			Post *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponse1Argument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponse1Argument", req)}
 	/*
 		def {
 		  name: "post"
@@ -312,7 +312,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse2(ctx context.
 			Post *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponse2Argument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponse2Argument", req)}
 	/*
 		def {
 		  name: "post"
@@ -396,7 +396,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Res *post.GetPostResponse
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.PostArgument", req)}
 	/*
 		def {
 		  name: "res"

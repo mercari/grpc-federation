@@ -177,17 +177,17 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetNameResponseArgument":     {},
-		"grpc.federation.private.GetNameResponse_FooArgument": {},
-		"grpc.federation.private.GetPostResponseArgument": {
+		"grpc.federation.private.federation.GetNameResponseArgument":     {},
+		"grpc.federation.private.federation.GetNameResponse_FooArgument": {},
+		"grpc.federation.private.federation.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
-		"grpc.federation.private.GetPostResponse_FooArgument": {},
-		"grpc.federation.private.PostArgument":                {},
-		"grpc.federation.private.ReactionArgument": {
+		"grpc.federation.private.federation.GetPostResponse_FooArgument": {},
+		"grpc.federation.private.federation.PostArgument":                {},
+		"grpc.federation.private.federation.ReactionArgument": {
 			"v": grpcfed.NewCELFieldType(grpcfed.CELIntType, "V"),
 		},
-		"grpc.federation.private.UserArgument": {
+		"grpc.federation.private.federation.UserArgument": {
 			"id":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 		},
@@ -404,7 +404,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse(ctx context.Conte
 			Foo *GetNameResponse_Foo
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetNameResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetNameResponseArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -489,7 +489,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse_Foo(ctx context.C
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetNameResponse_FooArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetNameResponse_FooArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 
@@ -529,7 +529,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			P   *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetPostResponseArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -677,7 +677,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse_Foo(ctx context.C
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponse_FooArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetPostResponse_FooArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 
@@ -719,7 +719,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 			U             *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.PostArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -1024,7 +1024,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 			Cmp bool
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ReactionArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.ReactionArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -1114,7 +1114,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.UserArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 
@@ -1475,17 +1475,17 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetNameResponseArgument":     {},
-		"grpc.federation.private.GetNameResponse_FooArgument": {},
-		"grpc.federation.private.GetPostResponseArgument": {
+		"grpc.federation.private.federation.GetNameResponseArgument":     {},
+		"grpc.federation.private.federation.GetNameResponse_FooArgument": {},
+		"grpc.federation.private.federation.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
-		"grpc.federation.private.GetPostResponse_FooArgument": {},
-		"grpc.federation.private.PostArgument":                {},
-		"grpc.federation.private.ReactionArgument": {
+		"grpc.federation.private.federation.GetPostResponse_FooArgument": {},
+		"grpc.federation.private.federation.PostArgument":                {},
+		"grpc.federation.private.federation.ReactionArgument": {
 			"v": grpcfed.NewCELFieldType(grpcfed.CELIntType, "V"),
 		},
-		"grpc.federation.private.UserArgument": {
+		"grpc.federation.private.federation.UserArgument": {
 			"id":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 		},
@@ -1815,7 +1815,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse(ctx context.Context,
 			Foo *GetNameResponse_Foo
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetNameResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetNameResponseArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -1900,7 +1900,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse_Foo(ctx context.Cont
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetNameResponse_FooArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetNameResponse_FooArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 
@@ -1940,7 +1940,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 			P   *Post
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetPostResponseArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -2088,7 +2088,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse_Foo(ctx context.Cont
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetPostResponse_FooArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetPostResponse_FooArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 
@@ -2130,7 +2130,7 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 			U             *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.PostArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.PostArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -2435,7 +2435,7 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 			Cmp bool
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.ReactionArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.ReactionArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 	/*
@@ -2525,7 +2525,7 @@ func (s *PrivateService) resolve_Federation_User(ctx context.Context, req *Priva
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.UserArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
 
@@ -2809,8 +2809,8 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.GetStatusResponseArgument": {},
-		"grpc.federation.private.UserArgument": {
+		"grpc.federation.private.federation.GetStatusResponseArgument": {},
+		"grpc.federation.private.federation.UserArgument": {
 			"id":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 		},
@@ -2878,7 +2878,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 			U *User
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.GetStatusResponseArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetStatusResponseArgument", req)}
 	/*
 		def {
 		  name: "u"
@@ -2976,7 +2976,7 @@ func (s *DebugService) resolve_Federation_User(ctx context.Context, req *DebugSe
 		vars struct {
 		}
 	}
-	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.UserArgument", req)}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.UserArgument", req)}
 
 	// create a message value to be returned.
 	ret := &User{}

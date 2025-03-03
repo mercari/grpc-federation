@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/mercari/grpc-federation/grpc/federation"
 )
 
 func (f *File) PackageName() string {
@@ -37,6 +39,10 @@ func (f *File) AllEnums() []*Enum {
 		enums = append(enums, msg.AllEnums()...)
 	}
 	return enums
+}
+
+func (f *File) PrivatePackageName() string {
+	return federation.PrivatePackageName + "." + f.PackageName()
 }
 
 func (f Files) FindByPackageName(pkg string) Files {
