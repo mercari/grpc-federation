@@ -44,7 +44,6 @@ type Resolver struct {
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
 	celPluginMap               map[string]*CELPlugin
-	enumAccessors              []cel.EnvOption
 
 	serviceToRuleMap   map[*Service]*federation.ServiceRule
 	methodToRuleMap    map[*Method]*federation.MethodRule
@@ -54,11 +53,13 @@ type Resolver struct {
 	fieldToRuleMap     map[*Field]*federation.FieldRule
 	oneofToRuleMap     map[*Oneof]*federation.OneofRule
 
-	cachedMessageMap   map[string]*Message
-	cachedEnumMap      map[string]*Enum
-	cachedEnumValueMap map[string]*EnumValue
-	cachedMethodMap    map[string]*Method
-	cachedServiceMap   map[string]*Service
+	cachedMessageMap      map[string]*Message
+	cachedEnumMap         map[string]*Enum
+	cachedEnumValueMap    map[string]*EnumValue
+	cachedMethodMap       map[string]*Method
+	cachedServiceMap      map[string]*Service
+	cachedFileAllEnumMap  map[string][]*Enum
+	cachedEnumAccessorMap map[string][]cel.EnvOption
 }
 
 type Option func(*option)
@@ -102,11 +103,13 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		fieldToRuleMap:     make(map[*Field]*federation.FieldRule),
 		oneofToRuleMap:     make(map[*Oneof]*federation.OneofRule),
 
-		cachedMessageMap:   msgMap,
-		cachedEnumMap:      make(map[string]*Enum),
-		cachedEnumValueMap: enumValueMap,
-		cachedMethodMap:    make(map[string]*Method),
-		cachedServiceMap:   make(map[string]*Service),
+		cachedMessageMap:      msgMap,
+		cachedEnumMap:         make(map[string]*Enum),
+		cachedEnumValueMap:    enumValueMap,
+		cachedMethodMap:       make(map[string]*Method),
+		cachedServiceMap:      make(map[string]*Service),
+		cachedFileAllEnumMap:  make(map[string][]*Enum),
+		cachedEnumAccessorMap: make(map[string][]cel.EnvOption),
 	}
 }
 
@@ -122,8 +125,6 @@ func cloneFileDefs(files []*descriptorpb.FileDescriptorProto) []*descriptorpb.Fi
 type Result struct {
 	// Files list of files with services with the grpc.federation.service option.
 	Files []*File
-	// Enums list of all enum definition.
-	Enums []*Enum
 	// Warnings all warnings occurred during the resolve process.
 	Warnings []*Warning
 }
@@ -181,7 +182,6 @@ func (r *Resolver) Resolve() (*Result, error) {
 	resultFiles := r.resultFiles(files)
 	return &Result{
 		Files:    resultFiles,
-		Enums:    r.allEnums(resultFiles),
 		Warnings: ctx.warnings(),
 	}, ctx.error()
 }
@@ -288,7 +288,18 @@ func (r *Resolver) resolveFileImportRuleRecursive(ctx *context, files []*descrip
 					),
 				)
 			}
-			importFileDefs = append(importFileDefs, fileDefs...)
+			deps := make([]*descriptorpb.FileDescriptorProto, 0, len(fileDefs))
+			for _, def := range fileDefs {
+				// If a reference to a descriptorpb.FileDescriptorProto has already been registered map,
+				// the reference is used to refer to the same instance.
+				if dep, exists := r.fileNameToDefMap[def.GetName()]; exists {
+					deps = append(deps, dep)
+				} else {
+					deps = append(deps, def)
+					r.fileNameToDefMap[def.GetName()] = def
+				}
+			}
+			importFileDefs = append(importFileDefs, deps...)
 			fileDef.Dependency = append(fileDef.Dependency, path)
 		}
 	}
@@ -342,10 +353,6 @@ func (r *Resolver) resolveFiles(ctx *context) []*File {
 	for _, fileDef := range r.files {
 		files = append(files, r.resolveFile(ctx, fileDef, source.NewLocationBuilder(fileDef.GetName())))
 	}
-
-	// After resolving all file references, the enum references will also be resolved,
-	// allowing the construction of enumAccessors at this point.
-	r.resolveEnumAccessors()
 	return files
 }
 
@@ -397,8 +404,8 @@ func (r *Resolver) validateFiles(ctx *context, files []*File) {
 }
 
 func (r *Resolver) validateFileImport(ctx *context, file *File) {
-	pkgNameUsedInProtoMap := r.lookupPackageNameMapUsedInProtoDefinitionFromFile(file)
-	pkgNameUsedInGrpcFedMap := r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(file)
+	pkgNameUsedInProtoMap := r.lookupPackageNameMapUsedInProtoDefinitionFromFile(ctx, file)
+	pkgNameUsedInGrpcFedMap := r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(ctx, file)
 	ruleDef, err := getExtensionRule[*federation.FileRule](file.Desc.GetOptions(), federation.E_File)
 	if err != nil {
 		ctx.addError(
@@ -438,7 +445,7 @@ func (r *Resolver) validateFileImport(ctx *context, file *File) {
 	}
 }
 
-func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromFile(file *File) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromFile(ctx *context, file *File) map[string]struct{} {
 	pkgNameMap := map[string]struct{}{}
 	for _, s := range file.Services {
 		if opt := s.Desc.GetOptions(); opt != nil {
@@ -461,12 +468,13 @@ func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromFile(file *File)
 	}
 
 	for _, msg := range file.Messages {
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInProtoDefinitionFromMessage(msg))
+		ctx := ctx.withMessage(msg)
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInProtoDefinitionFromMessage(ctx, msg))
 	}
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromMessage(msg *Message) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromMessage(ctx *context, msg *Message) map[string]struct{} {
 	pkgNameMap := map[string]struct{}{}
 	for _, field := range msg.Fields {
 		if opt := field.Desc.GetOptions(); opt != nil {
@@ -479,7 +487,8 @@ func (r *Resolver) lookupPackageNameMapUsedInProtoDefinitionFromMessage(msg *Mes
 	}
 
 	for _, nestedMsg := range msg.NestedMessages {
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInProtoDefinitionFromMessage(nestedMsg))
+		ctx := ctx.withMessage(nestedMsg)
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInProtoDefinitionFromMessage(ctx, nestedMsg))
 	}
 	return pkgNameMap
 }
@@ -510,7 +519,7 @@ func (r *Resolver) lookupPackageNameMapRecursiveFromType(typ *Type) map[string]s
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(file *File) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(ctx *context, file *File) map[string]struct{} {
 	pkgNameMap := map[string]struct{}{}
 	for _, s := range file.Services {
 		if s.Rule != nil && s.Rule.Env != nil {
@@ -521,21 +530,23 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(fi
 	}
 
 	for _, msg := range file.Messages {
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(msg))
+		ctx := ctx.withMessage(msg)
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(ctx, msg))
 	}
 	for _, enum := range file.Enums {
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(enum))
+		ctx := ctx.withEnum(enum)
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(ctx, enum))
 	}
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(msg *Message) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(ctx *context, msg *Message) map[string]struct{} {
 	pkgNameMap := map[string]struct{}{}
 	if msg.Rule != nil {
 		for _, a := range msg.Rule.Aliases {
 			pkgNameMap[a.PackageName()] = struct{}{}
 		}
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(msg.Rule.DefSet))
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(ctx, msg.Rule.DefSet))
 	}
 
 	for _, field := range msg.Fields {
@@ -550,20 +561,21 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 			pkgNameMap[a.Message.PackageName()] = struct{}{}
 		}
 		if rule.Value != nil {
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(rule.Value.CEL))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, rule.Value.CEL))
 		}
 		if rule.Oneof != nil {
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(rule.Oneof.By))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, rule.Oneof.By))
 		}
 	}
 
 	for _, nestedMsg := range msg.NestedMessages {
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(nestedMsg))
+		ctx := ctx.withMessage(nestedMsg)
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(ctx, nestedMsg))
 	}
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(enum *Enum) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(_ *context, enum *Enum) map[string]struct{} {
 	pkgNameMap := make(map[string]struct{})
 	if enum.Rule == nil {
 		return pkgNameMap
@@ -574,7 +586,7 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(en
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(defSet *VariableDefinitionSet) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(ctx *context, defSet *VariableDefinitionSet) map[string]struct{} {
 	if defSet == nil {
 		return nil
 	}
@@ -585,7 +597,7 @@ func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(defSet *Variabl
 		}
 		switch {
 		case v.Expr.By != nil:
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(v.Expr.By))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, v.Expr.By))
 		case v.Expr.Call != nil:
 			if v.Expr.Call.Method != nil && v.Expr.Call.Method.Service != nil {
 				pkgNameMap[v.Expr.Call.Method.Service.PackageName()] = struct{}{}
@@ -594,16 +606,16 @@ func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(defSet *Variabl
 				if v.Expr.Call.Request.Type != nil {
 					pkgNameMap[v.Expr.Call.Request.Type.PackageName()] = struct{}{}
 				}
-				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Call.Request.Args))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(ctx, v.Expr.Call.Request.Args))
 			}
 			for _, err := range v.Expr.Call.Errors {
-				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(err))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(ctx, err))
 			}
 		case v.Expr.Message != nil:
 			if v.Expr.Message.Message != nil {
 				pkgNameMap[v.Expr.Message.Message.PackageName()] = struct{}{}
 			}
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(v.Expr.Message.Args))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(ctx, v.Expr.Message.Args))
 		case v.Expr.Enum != nil:
 			if v.Expr.Enum.Enum != nil {
 				pkgNameMap[v.Expr.Enum.Enum.PackageName()] = struct{}{}
@@ -612,60 +624,60 @@ func (r *Resolver) lookupPackageNameMapFromVariableDefinitionSet(defSet *Variabl
 			if v.Expr.Map.Expr != nil {
 				expr := v.Expr.Map.Expr
 				if expr.By != nil {
-					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(expr.By))
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, expr.By))
 				}
 				if expr.Message != nil && expr.Message.Message != nil {
 					pkgNameMap[expr.Message.Message.PackageName()] = struct{}{}
-					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(expr.Message.Args))
+					maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(ctx, expr.Message.Args))
 				}
 			}
 		case v.Expr.Validation != nil:
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(v.Expr.Validation.Error))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromGRPCError(ctx, v.Expr.Validation.Error))
 		}
 	}
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapFromGRPCError(err *GRPCError) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapFromGRPCError(ctx *context, err *GRPCError) map[string]struct{} {
 	if err == nil {
 		return nil
 	}
 	pkgNameMap := map[string]struct{}{}
-	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.If))
-	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.Message))
-	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(err.IgnoreAndResponse))
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, err.If))
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, err.Message))
+	maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, err.IgnoreAndResponse))
 	for _, detail := range err.Details {
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(detail.If))
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, detail.If))
 		for _, by := range detail.By {
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(by))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, by))
 		}
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(detail.Messages))
-		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(detail.DefSet))
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(ctx, detail.Messages))
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(ctx, detail.DefSet))
 		for _, preconditionFailure := range detail.PreconditionFailures {
 			for _, violation := range preconditionFailure.Violations {
-				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(violation.Type))
-				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(violation.Subject))
-				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(violation.Description))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, violation.Type))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, violation.Subject))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, violation.Description))
 			}
 		}
 		for _, badRequest := range detail.BadRequests {
 			for _, fieldViolation := range badRequest.FieldViolations {
-				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(fieldViolation.Field))
-				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(fieldViolation.Description))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, fieldViolation.Field))
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, fieldViolation.Description))
 			}
 		}
 		for _, localizedMessage := range detail.LocalizedMessages {
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(localizedMessage.Message))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, localizedMessage.Message))
 		}
 	}
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapFromCELValue(val *CELValue) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapFromCELValue(ctx *context, val *CELValue) map[string]struct{} {
 	if val == nil {
 		return nil
 	}
-	env, err := r.createCELEnv()
+	env, err := r.createCELEnv(ctx)
 	if err != nil {
 		// skip reporting error
 		return nil
@@ -689,11 +701,11 @@ func (r *Resolver) lookupPackageNameMapFromCELValue(val *CELValue) map[string]st
 	return pkgNameMap
 }
 
-func (r *Resolver) lookupPackageNameMapFromMessageArguments(args []*Argument) map[string]struct{} {
+func (r *Resolver) lookupPackageNameMapFromMessageArguments(ctx *context, args []*Argument) map[string]struct{} {
 	pkgNameMap := map[string]struct{}{}
 	for _, arg := range args {
 		if arg.Value != nil {
-			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(arg.Value.CEL))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, arg.Value.CEL))
 		}
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(arg.Type))
 	}
@@ -719,31 +731,6 @@ func (r *Resolver) resultFiles(allFiles []*File) []*File {
 		}
 	}
 	return ret
-}
-
-func (r *Resolver) allEnums(files []*File) []*Enum {
-	enumMap := make(map[*Enum]struct{})
-	for _, enum := range r.cachedEnumMap {
-		enumMap[enum] = struct{}{}
-	}
-	for _, file := range files {
-		for _, enum := range file.AllEnums() {
-			enumMap[enum] = struct{}{}
-		}
-		for _, importFile := range file.ImportFiles {
-			for _, enum := range importFile.AllEnums() {
-				enumMap[enum] = struct{}{}
-			}
-		}
-	}
-	enums := make([]*Enum, 0, len(enumMap))
-	for enum := range enumMap {
-		enums = append(enums, enum)
-	}
-	sort.Slice(enums, func(i, j int) bool {
-		return enums[i].FQDN() < enums[j].FQDN()
-	})
-	return enums
 }
 
 func (r *Resolver) hasServiceOrPluginRuleFiles(files []*File) []*File {
@@ -2117,7 +2104,7 @@ func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env,
 
 	svcVars := make([]*ServiceVariable, 0, len(def))
 	nameMap := make(map[string]struct{})
-	celEnv, err := r.createServiceCELEnv(svc, env)
+	celEnv, err := r.createServiceCELEnv(ctx, svc, env)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -3635,7 +3622,7 @@ func (r *Resolver) resolveMessageArgument(ctx *context, files []*File) {
 			// A non-response message may also become a root message.
 			// In such a case, the message argument field does not exist.
 			// However, since it is necessary to resolve the CEL reference, needs to call recursive message argument resolver.
-			ctx := newContext().withFile(ctx.file()) // ignore if exists error.
+			ctx := newContext() // ignore if exists error.
 			_ = r.resolveMessageArgumentRecursive(ctx, root, svcMsgSet)
 			continue
 		}
@@ -3668,6 +3655,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(
 	svcMsgSet map[*Service]map[*Message]struct{},
 ) []*Message {
 	msg := node.Message
+	ctx = ctx.withFile(msg.File).withMessage(msg)
 	builder := newMessageBuilderFromMessage(msg)
 	arg := msg.Rule.MessageArgument
 	fileDesc := messageArgumentFileDescriptor(arg)
@@ -3690,7 +3678,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(
 		)
 		return nil
 	}
-	r.resolveMessageCELValues(ctx.withFile(msg.File).withMessage(msg), env, msg, builder)
+	r.resolveMessageCELValues(ctx, env, msg, builder)
 
 	msgs := []*Message{msg}
 	msgToDefsMap := msg.Rule.DefSet.MessageToDefsMap()
@@ -4475,7 +4463,7 @@ func (r *Resolver) removeContextArgumentFromErrorText(err *cel.Error) {
 	err.Message = strings.Replace(err.Message, federation.ContextTypeName, "", -1)
 }
 
-func (r *Resolver) createServiceCELEnv(svc *Service, env *Env) (*cel.Env, error) {
+func (r *Resolver) createServiceCELEnv(ctx *context, svc *Service, env *Env) (*cel.Env, error) {
 	envOpts := []cel.EnvOption{
 		cel.Container(svc.PackageName()),
 	}
@@ -4487,7 +4475,7 @@ func (r *Resolver) createServiceCELEnv(svc *Service, env *Env) (*cel.Env, error)
 		}
 		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
 	}
-	return r.createCELEnv(envOpts...)
+	return r.createCELEnv(ctx, envOpts...)
 }
 
 func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
@@ -4515,10 +4503,10 @@ func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map
 		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
 	}
 
-	return r.createCELEnv(envOpts...)
+	return r.createCELEnv(ctx, envOpts...)
 }
 
-func (r *Resolver) createCELEnv(envOpts ...cel.EnvOption) (*cel.Env, error) {
+func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.Env, error) {
 	envOpts = append(envOpts, []cel.EnvOption{
 		cel.StdLib(),
 		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
@@ -4528,7 +4516,7 @@ func (r *Resolver) createCELEnv(envOpts ...cel.EnvOption) (*cel.Env, error) {
 		cel.ASTValidators(grpcfedcel.NewASTValidators()...),
 		cel.Variable(federation.ContextVariableName, cel.ObjectType(federation.ContextTypeName)),
 	}...)
-	envOpts = append(envOpts, r.enumAccessors...)
+	envOpts = append(envOpts, r.createEnumAccessors(ctx.file())...)
 	envOpts = append(envOpts, r.enumOperators()...)
 	for _, plugin := range r.celPluginMap {
 		envOpts = append(envOpts, cel.Lib(plugin))
@@ -4729,9 +4717,17 @@ func (r *Resolver) buildServiceVariablesMessage(ctx *context, msg *Message, svcM
 	return svcVarsToMessage(msg.File, strings.Replace(msg.FQDN(), ".", "_", -1), svcVars)
 }
 
-func (r *Resolver) resolveEnumAccessors() {
-	for _, enum := range r.cachedEnumMap {
-		r.enumAccessors = append(r.enumAccessors, []cel.EnvOption{
+func (r *Resolver) createEnumAccessors(file *File) []cel.EnvOption {
+	if opts, exists := r.cachedEnumAccessorMap[file.Name]; exists {
+		return opts
+	}
+
+	const optFuncNum = 4 // name, value, from, attr.
+
+	enums := file.allEnumsIncludeDeps(r.cachedFileAllEnumMap)
+	ret := make([]cel.EnvOption, 0, len(enums)*optFuncNum)
+	for _, enum := range enums {
+		ret = append(ret, []cel.EnvOption{
 			cel.Function(
 				fmt.Sprintf("%s.name", enum.FQDN()),
 				cel.Overload(fmt.Sprintf("%s_name_int_string", enum.FQDN()), []*cel.Type{cel.IntType}, cel.StringType,
@@ -4764,6 +4760,8 @@ func (r *Resolver) resolveEnumAccessors() {
 			r.cachedEnumValueMap[value.FQDN()] = value
 		}
 	}
+	r.cachedEnumAccessorMap[file.Name] = ret
+	return ret
 }
 
 // enumOperators an enum may be treated as an `opaque<int>` or as an `int`.

@@ -3,6 +3,7 @@ package resolver
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mercari/grpc-federation/grpc/federation"
@@ -33,11 +34,41 @@ func (f *File) Message(name string) *Message {
 	return nil
 }
 
+// AllEnums returns a list that includes the enums defined in the file itself.
 func (f *File) AllEnums() []*Enum {
 	enums := f.Enums
 	for _, msg := range f.Messages {
 		enums = append(enums, msg.AllEnums()...)
 	}
+	return enums
+}
+
+// AllEnumsIncludeDeps recursively searches for the imported file and returns a list of all enums.
+func (f *File) AllEnumsIncludeDeps() []*Enum {
+	return f.allEnumsIncludeDeps(make(map[string][]*Enum))
+}
+
+func (f *File) allEnumsIncludeDeps(cacheMap map[string][]*Enum) []*Enum {
+	if enums, exists := cacheMap[f.Name]; exists {
+		return enums
+	}
+	enumMap := make(map[string]*Enum)
+	for _, enum := range f.AllEnums() {
+		enumMap[enum.FQDN()] = enum
+	}
+	for _, importFile := range f.ImportFiles {
+		for _, enum := range importFile.allEnumsIncludeDeps(cacheMap) {
+			enumMap[enum.FQDN()] = enum
+		}
+	}
+	enums := make([]*Enum, 0, len(enumMap))
+	for _, enum := range enumMap {
+		enums = append(enums, enum)
+	}
+	sort.Slice(enums, func(i, j int) bool {
+		return enums[i].FQDN() < enums[j].FQDN()
+	})
+	cacheMap[f.Name] = enums
 	return enums
 }
 

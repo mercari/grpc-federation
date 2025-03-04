@@ -28,25 +28,25 @@ func NewCodeGenerator() *CodeGenerator {
 	return &CodeGenerator{}
 }
 
-func (g *CodeGenerator) Generate(file *resolver.File, enums []*resolver.Enum) ([]byte, error) {
+func (g *CodeGenerator) Generate(file *resolver.File) ([]byte, error) {
 	tmpl, err := loadTemplate()
 	if err != nil {
 		return nil, err
 	}
-	return generateGoContent(tmpl, NewFile(file, enums))
+	return generateGoContent(tmpl, NewFile(file))
 }
 
 type File struct {
 	*resolver.File
-	enums  []*resolver.Enum
-	pkgMap map[*resolver.GoPackage]struct{}
+	pkgMap   map[*resolver.GoPackage]struct{}
+	aliasMap map[*resolver.GoPackage]string
 }
 
-func NewFile(file *resolver.File, enums []*resolver.Enum) *File {
+func NewFile(file *resolver.File) *File {
 	return &File{
-		File:   file,
-		pkgMap: make(map[*resolver.GoPackage]struct{}),
-		enums:  enums,
+		File:     file,
+		pkgMap:   make(map[*resolver.GoPackage]struct{}),
+		aliasMap: make(map[*resolver.GoPackage]string),
 	}
 }
 
@@ -608,21 +608,22 @@ func (f *File) Imports() []*Import {
 		if _, exists := importPathMap[pkg.ImportPath]; exists {
 			return
 		}
+		alias := pkg.Name
 		if _, exists := importAliasMap[pkg.Name]; exists {
 			// conflict alias name
 			suffixIndex := 1 // start from 1.
 			for {
-				alias := pkg.Name + fmt.Sprint(suffixIndex)
+				alias = pkg.Name + fmt.Sprint(suffixIndex)
 				if _, exists := importAliasMap[alias]; !exists {
-					pkg.Name = alias
 					break
 				}
 				suffixIndex++
 			}
 		}
+		f.aliasMap[pkg] = alias
 		imports = append(imports, &Import{
 			Path:  pkg.ImportPath,
-			Alias: pkg.Name,
+			Alias: alias,
 			Used:  true,
 		})
 		importPathMap[pkg.ImportPath] = struct{}{}
@@ -644,6 +645,14 @@ func (f *File) Imports() []*Import {
 	return imports
 }
 
+func (f *File) getAlias(pkg *resolver.GoPackage) string {
+	alias, exists := f.aliasMap[pkg]
+	if exists {
+		return alias
+	}
+	return pkg.Name
+}
+
 type Enum struct {
 	ProtoName     string
 	GoName        string
@@ -651,8 +660,8 @@ type Enum struct {
 }
 
 func (f *File) Enums() []*Enum {
-	ret := make([]*Enum, 0, len(f.enums))
-	for _, enum := range f.enums {
+	var enums []*Enum
+	for _, enum := range f.AllEnumsIncludeDeps() {
 		protoName := enum.FQDN()
 		// ignore standard library's enum.
 		if strings.HasPrefix(protoName, "google.") {
@@ -661,7 +670,6 @@ func (f *File) Enums() []*Enum {
 		if strings.HasPrefix(protoName, "grpc.federation.") {
 			continue
 		}
-		// f.enums contain all the enums defined in the package
 		// Currently Enums are used only from a File contains Services.
 		if len(f.File.Services) != 0 {
 			f.pkgMap[enum.GoPackage()] = struct{}{}
@@ -680,14 +688,13 @@ func (f *File) Enums() []*Enum {
 				})
 			}
 		}
-
-		ret = append(ret, &Enum{
+		enums = append(enums, &Enum{
 			ProtoName:     protoName,
 			GoName:        f.enumTypeToText(enum),
 			EnumAttribute: enumAttr,
 		})
 	}
-	return ret
+	return enums
 }
 
 type EnumAttribute struct {
@@ -895,11 +902,12 @@ func (s *Service) ServiceName() string {
 }
 
 func (s *Service) PackageName() string {
-	return s.GoPackage().Name
+	return s.file.getAlias(s.GoPackage())
 }
 
 type ServiceDependency struct {
 	*resolver.ServiceDependency
+	file *File
 }
 
 func (dep *ServiceDependency) ServiceName() string {
@@ -923,7 +931,7 @@ func (dep *ServiceDependency) PrivateClientName() string {
 func (dep *ServiceDependency) ClientType() string {
 	return fmt.Sprintf(
 		"%s.%sClient",
-		dep.Service.GoPackage().Name,
+		dep.file.getAlias(dep.Service.GoPackage()),
 		dep.Service.Name,
 	)
 }
@@ -931,7 +939,7 @@ func (dep *ServiceDependency) ClientType() string {
 func (dep *ServiceDependency) ClientConstructor() string {
 	return fmt.Sprintf(
 		"%s.New%sClient",
-		dep.Service.GoPackage().Name,
+		dep.file.getAlias(dep.Service.GoPackage()),
 		dep.Service.Name,
 	)
 }
@@ -940,7 +948,10 @@ func (s *Service) ServiceDependencies() []*ServiceDependency {
 	deps := s.Service.ServiceDependencies()
 	ret := make([]*ServiceDependency, 0, len(deps))
 	for _, dep := range deps {
-		ret = append(ret, &ServiceDependency{dep})
+		ret = append(ret, &ServiceDependency{
+			ServiceDependency: dep,
+			file:              s.file,
+		})
 	}
 	return ret
 }
@@ -1198,7 +1209,7 @@ func (f *File) messageTypeToText(msg *resolver.Message) string {
 	if f.GoPackage.ImportPath == msg.GoPackage().ImportPath {
 		return fmt.Sprintf("*%s", name)
 	}
-	return fmt.Sprintf("*%s.%s", msg.GoPackage().Name, name)
+	return fmt.Sprintf("*%s.%s", f.getAlias(msg.GoPackage()), name)
 }
 
 func (f *File) enumTypeToText(enum *resolver.Enum) string {
@@ -1215,7 +1226,7 @@ func (f *File) enumTypeToText(enum *resolver.Enum) string {
 	if f.GoPackage.ImportPath == enum.GoPackage().ImportPath {
 		return name
 	}
-	return fmt.Sprintf("%s.%s", enum.GoPackage().Name, name)
+	return fmt.Sprintf("%s.%s", f.getAlias(enum.GoPackage()), name)
 }
 
 type LogValue struct {
@@ -2258,7 +2269,7 @@ func (f *CastField) ToStruct() *CastStruct {
 	}
 	name := strings.Join(names, "_")
 	if f.service.GoPackage().ImportPath != toMsg.GoPackage().ImportPath {
-		name = fmt.Sprintf("%s.%s", toMsg.GoPackage().Name, name)
+		name = fmt.Sprintf("%s.%s", f.file.getAlias(toMsg.GoPackage()), name)
 	}
 
 	return &CastStruct{
@@ -2328,7 +2339,7 @@ func (f *CastField) ToOneof() *CastOneof {
 		name += "_"
 	}
 	if f.service.GoPackage().ImportPath != msg.GoPackage().ImportPath {
-		name = fmt.Sprintf("%s.%s", msg.GoPackage().Name, name)
+		name = fmt.Sprintf("%s.%s", f.file.getAlias(msg.GoPackage()), name)
 	}
 	return &CastOneof{
 		Name:         name,
@@ -3075,7 +3086,7 @@ func (d *VariableDefinition) RequestType() string {
 	case expr.Call != nil:
 		request := expr.Call.Request
 		return fmt.Sprintf("%s.%s",
-			request.Type.GoPackage().Name,
+			d.file.getAlias(request.Type.GoPackage()),
 			util.ToPublicGoVariable(request.Type.Name),
 		)
 	case expr.Message != nil:
@@ -3099,7 +3110,7 @@ func (d *VariableDefinition) ReturnType() string {
 	case expr.Call != nil:
 		response := expr.Call.Method.Response
 		return fmt.Sprintf("%s.%s",
-			response.GoPackage().Name,
+			d.file.getAlias(response.GoPackage()),
 			response.Name,
 		)
 	case expr.Message != nil:
@@ -3673,7 +3684,7 @@ func toEnumValuePrefix(file *File, typ *resolver.Type) string {
 	if file.GoPackage.ImportPath == enum.GoPackage().ImportPath {
 		return name
 	}
-	return fmt.Sprintf("%s.%s", enum.GoPackage().Name, name)
+	return fmt.Sprintf("%s.%s", file.getAlias(enum.GoPackage()), name)
 }
 
 func toEnumValueText(enumValuePrefix string, value string) string {
