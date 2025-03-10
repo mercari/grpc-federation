@@ -242,6 +242,7 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
 	}
+	close(i.gcQueue)
 	return nil
 }
 
