@@ -140,7 +140,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	// start GC thread.
 	// It is enqueued into gcQueue using the `instance.GC()` function.
 	go func() {
-		for _ = range gcQueue {
+		for range gcQueue {
 			instance.startGC()
 		}
 	}()
