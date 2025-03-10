@@ -43,7 +43,6 @@ type Resolver struct {
 	fileNameToDefMap           map[string]*descriptorpb.FileDescriptorProto
 	protoPackageNameToFileDefs map[string][]*descriptorpb.FileDescriptorProto
 	protoPackageNameToPackage  map[string]*Package
-	celPluginMap               map[string]*CELPlugin
 
 	serviceToRuleMap   map[*Service]*federation.ServiceRule
 	methodToRuleMap    map[*Method]*federation.MethodRule
@@ -53,6 +52,7 @@ type Resolver struct {
 	fieldToRuleMap     map[*Field]*federation.FieldRule
 	oneofToRuleMap     map[*Oneof]*federation.OneofRule
 
+	cachedFileMap         map[string]*File
 	cachedMessageMap      map[string]*Message
 	cachedEnumMap         map[string]*Enum
 	cachedEnumValueMap    map[string]*EnumValue
@@ -93,7 +93,6 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		fileNameToDefMap:           make(map[string]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToFileDefs: make(map[string][]*descriptorpb.FileDescriptorProto),
 		protoPackageNameToPackage:  make(map[string]*Package),
-		celPluginMap:               make(map[string]*CELPlugin),
 
 		serviceToRuleMap:   make(map[*Service]*federation.ServiceRule),
 		methodToRuleMap:    make(map[*Method]*federation.MethodRule),
@@ -103,6 +102,7 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		fieldToRuleMap:     make(map[*Field]*federation.FieldRule),
 		oneofToRuleMap:     make(map[*Oneof]*federation.OneofRule),
 
+		cachedFileMap:         make(map[string]*File),
 		cachedMessageMap:      msgMap,
 		cachedEnumMap:         make(map[string]*Enum),
 		cachedEnumValueMap:    enumValueMap,
@@ -780,6 +780,10 @@ func (r *Resolver) validateMethodResponse(ctx *context, service *Service) {
 
 func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorProto, builder *source.LocationBuilder) *File {
 	file := r.defToFileMap[def]
+	if resolvedFile, exists := r.cachedFileMap[file.Name]; exists {
+		return resolvedFile
+	}
+
 	ctx = ctx.withFile(file)
 	fileDef, err := getExtensionRule[*federation.FileRule](def.GetOptions(), federation.E_File)
 	if err != nil {
@@ -803,7 +807,7 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		if !exists {
 			continue
 		}
-		file.ImportFiles = append(file.ImportFiles, r.defToFileMap[depDef])
+		file.ImportFiles = append(file.ImportFiles, r.resolveFile(ctx, depDef, source.NewLocationBuilder(depDef.GetName())))
 	}
 	for _, serviceDef := range def.GetService() {
 		name := serviceDef.GetName()
@@ -825,6 +829,7 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		name := enumDef.GetName()
 		file.Enums = append(file.Enums, r.resolveEnum(ctx, file.Package, name, builder.WithEnum(name)))
 	}
+	r.cachedFileMap[file.Name] = file
 	return file
 }
 
@@ -862,7 +867,6 @@ func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDesc
 			plugin.Functions = append(plugin.Functions, pluginFunc)
 		}
 	}
-	r.celPluginMap[def.GetName()] = plugin
 	return plugin
 }
 
@@ -1028,22 +1032,12 @@ func (r *Resolver) resolveService(ctx *context, pkg *Package, name string, build
 		)
 		return nil
 	}
-	var plugins []*CELPlugin
-	if len(r.celPluginMap) != 0 {
-		plugins = make([]*CELPlugin, 0, len(r.celPluginMap))
-		for _, plugin := range r.celPluginMap {
-			plugins = append(plugins, plugin)
-		}
-		sort.Slice(plugins, func(i, j int) bool {
-			return plugins[i].Name < plugins[j].Name
-		})
-	}
 	service := &Service{
 		File:       file,
 		Name:       name,
 		Desc:       serviceDef,
 		Methods:    make([]*Method, 0, len(serviceDef.GetMethod())),
-		CELPlugins: plugins,
+		CELPlugins: file.AllCELPlugins(),
 	}
 	r.serviceToRuleMap[service] = ruleDef
 	for _, methodDef := range serviceDef.GetMethod() {
@@ -4518,7 +4512,7 @@ func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.En
 	}...)
 	envOpts = append(envOpts, r.createEnumAccessors(ctx.file())...)
 	envOpts = append(envOpts, r.enumOperators()...)
-	for _, plugin := range r.celPluginMap {
+	for _, plugin := range ctx.file().AllCELPlugins() {
 		envOpts = append(envOpts, cel.Lib(plugin))
 	}
 	env, err := cel.NewCustomEnv(envOpts...)
