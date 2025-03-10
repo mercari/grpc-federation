@@ -344,6 +344,13 @@ func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Federation_V2Dev_GetPostV2DevResponse(ctx, &FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument{
 		Id: req.GetId(),
 	})

@@ -21,6 +21,10 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 		if content == "exit\n" {
 			return
 		}
+		if content == "gc\n" {
+			runtime.GC()
+			continue
+		}
 		if content == "version\n" {
 			b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
 				ProtocolVersion:   grpcfed.CELPluginProtocolVersion,

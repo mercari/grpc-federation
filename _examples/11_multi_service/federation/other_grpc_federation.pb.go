@@ -192,6 +192,13 @@ func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetRespon
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Federation_GetResponse(ctx, &OtherService_Federation_GetResponseArgument{
 		Id: req.GetId(),
 	})

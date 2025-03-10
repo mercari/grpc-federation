@@ -527,6 +527,7 @@ func (f *File) StandardImports() []*Import {
 		{Path: "os", Used: existsPluginDef},
 		{Path: "log/slog", Used: existsServiceDef},
 		{Path: "reflect", Used: true},
+		{Path: "runtime", Used: existsPluginDef},
 	}
 	usedPkgs := make([]*Import, 0, len(pkgs))
 	for _, pkg := range pkgs {

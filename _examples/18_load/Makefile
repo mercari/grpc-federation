@@ -43,7 +43,7 @@ build/wasm:
 
 .PHONY: bench
 bench:
-	go test -bench=. -benchmem -cpuprofile cpu.out --memprofile mem.out
+	go test -bench=. -run Benchmark -benchmem -cpuprofile cpu.out --memprofile mem.out
 
 .PHONY: bench/graph
 bench/graph: bench

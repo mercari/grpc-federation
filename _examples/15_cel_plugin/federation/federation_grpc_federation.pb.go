@@ -243,6 +243,13 @@ func (s *FederationService) IsMatch(ctx context.Context, req *IsMatchRequest) (r
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Org_Federation_IsMatchResponse(ctx, &FederationService_Org_Federation_IsMatchResponseArgument{
 		Expr:   req.GetExpr(),
 		Target: req.GetTarget(),
@@ -265,6 +272,13 @@ func (s *FederationService) Example(ctx context.Context, req *ExampleRequest) (r
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
 		}
 	}()
 	res, err := s.resolve_Org_Federation_ExampleResponse(ctx, &FederationService_Org_Federation_ExampleResponseArgument{})

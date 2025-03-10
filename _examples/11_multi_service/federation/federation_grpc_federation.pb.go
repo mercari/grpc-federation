@@ -357,6 +357,13 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Federation_GetPostResponse(ctx, &FederationService_Federation_GetPostResponseArgument{
 		Id: req.GetId(),
 	})
@@ -380,6 +387,13 @@ func (s *FederationService) GetName(ctx context.Context, req *GetNameRequest) (r
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
 		}
 	}()
 	res, err := s.resolve_Federation_GetNameResponse(ctx, &FederationService_Federation_GetNameResponseArgument{})
@@ -1768,6 +1782,13 @@ func (s *PrivateService) GetPost(ctx context.Context, req *GetPostRequest) (res 
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Federation_GetPostResponse(ctx, &PrivateService_Federation_GetPostResponseArgument{
 		Id: req.GetId(),
 	})
@@ -1791,6 +1812,13 @@ func (s *PrivateService) GetName(ctx context.Context, req *GetNameRequest) (res 
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
 		}
 	}()
 	res, err := s.resolve_Federation_GetNameResponse(ctx, &PrivateService_Federation_GetNameResponseArgument{})
@@ -2854,6 +2882,13 @@ func (s *DebugService) GetStatus(ctx context.Context, req *GetStatusRequest) (re
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
 		}
 	}()
 	res, err := s.resolve_Federation_GetStatusResponse(ctx, &DebugService_Federation_GetStatusResponseArgument{})
