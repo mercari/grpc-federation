@@ -124,14 +124,27 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
 		instanceModErrCh <- err
 	}()
-	return &CELPluginInstance{
+
+	const gcQueueLength = 3
+
+	gcQueue := make(chan struct{}, gcQueueLength)
+	instance := &CELPluginInstance{
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
 		celRegistry:      celRegistry,
 		stdin:            stdinW,
 		stdout:           stdoutR,
 		instanceModErrCh: instanceModErrCh,
+		gcQueue:          gcQueue,
 	}
+	// start GC thread.
+	// It is enqueued into gcQueue using the `instance.GC()` function.
+	go func() {
+		for _ = range gcQueue {
+			instance.startGC()
+		}
+	}()
+	return instance
 }
 
 type CELPluginInstance struct {
@@ -143,6 +156,7 @@ type CELPluginInstance struct {
 	instanceModErrCh chan error
 	closed           bool
 	mu               sync.Mutex
+	gcQueue          chan struct{}
 }
 
 const PluginProtocolVersion = 1
@@ -235,8 +249,21 @@ func (i *CELPluginInstance) LibraryName() string {
 	return i.name
 }
 
-// Start GC.
+// Trigger GC command.
+// The execution of GC is managed by queue, and if it exceeds the capacity of the queue, it will be ignored.
 func (i *CELPluginInstance) GC() {
+	i.enqueueGC()
+}
+
+func (i *CELPluginInstance) enqueueGC() {
+	select {
+	case i.gcQueue <- struct{}{}:
+	default:
+		// If the capacity of gcQueue is exceeded, the trigger event is discarded.
+	}
+}
+
+func (i *CELPluginInstance) startGC() {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
