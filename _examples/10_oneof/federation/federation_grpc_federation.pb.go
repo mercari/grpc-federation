@@ -236,6 +236,13 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Org_Federation_GetResponse(ctx, &FederationService_Org_Federation_GetResponseArgument{})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -255,6 +262,13 @@ func (s *FederationService) GetNoValue(ctx context.Context, req *GetNoValueReque
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetNoValueResponse(ctx, &FederationService_Org_Federation_GetNoValueResponseArgument{})

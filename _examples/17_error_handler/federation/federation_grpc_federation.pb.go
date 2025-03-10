@@ -199,6 +199,13 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &FederationService_Org_Federation_GetPostResponseArgument{
 		Id: req.GetId(),
 	})
@@ -220,6 +227,13 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPost2Request) 
 		if r := recover(); r != nil {
 			e = grpcfed.RecoverError(r, grpcfed.StackTrace())
 			grpcfed.OutputErrorLog(ctx, e)
+		}
+	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPost2Response(ctx, &FederationService_Org_Federation_GetPost2ResponseArgument{

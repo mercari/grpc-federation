@@ -156,9 +156,13 @@ type PluginVersionSchema struct {
 var (
 	versionCommand = "version\n"
 	exitCommand    = "exit\n"
+	gcCommand      = "gc\n"
 )
 
 func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	if err := i.write([]byte(versionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
@@ -231,6 +235,14 @@ func (i *CELPluginInstance) LibraryName() string {
 	return i.name
 }
 
+// Start GC.
+func (i *CELPluginInstance) GC() {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	_ = i.write([]byte(gcCommand))
+}
+
 func (i *CELPluginInstance) CompileOptions() []cel.EnvOption {
 	var opts []cel.EnvOption
 	for _, fn := range i.functions {
@@ -271,6 +283,9 @@ func (i *CELPluginInstance) ProgramOptions() []cel.ProgramOption {
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	if err := i.sendRequest(fn, md, args...); err != nil {
 		return types.NewErr(err.Error())
 	}

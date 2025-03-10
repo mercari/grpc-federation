@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"google.golang.org/grpc/metadata"
@@ -43,6 +44,10 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 		}
 		if content == "exit\n" {
 			return
+		}
+		if content == "gc\n" {
+			runtime.GC()
+			continue
 		}
 		if content == "version\n" {
 			b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
