@@ -48,6 +48,26 @@ func (f *File) AllEnumsIncludeDeps() []*Enum {
 	return f.allEnumsIncludeDeps(make(map[string][]*Enum))
 }
 
+func (f *File) AllCELPlugins() []*CELPlugin {
+	pluginMap := make(map[string]*CELPlugin)
+	for _, plugin := range f.CELPlugins {
+		pluginMap[plugin.Name] = plugin
+	}
+	for _, file := range f.ImportFiles {
+		for _, plugin := range file.AllCELPlugins() {
+			pluginMap[plugin.Name] = plugin
+		}
+	}
+	plugins := make([]*CELPlugin, 0, len(pluginMap))
+	for _, plugin := range pluginMap {
+		plugins = append(plugins, plugin)
+	}
+	sort.Slice(plugins, func(i, j int) bool {
+		return plugins[i].Name < plugins[j].Name
+	})
+	return plugins
+}
+
 func (f *File) allEnumsIncludeDeps(cacheMap map[string][]*Enum) []*Enum {
 	if enums, exists := cacheMap[f.Name]; exists {
 		return enums
