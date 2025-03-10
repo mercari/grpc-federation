@@ -125,7 +125,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		instanceModErrCh <- err
 	}()
 
-	const gcQueueLength = 3
+	const gcQueueLength = 1
 
 	gcQueue := make(chan struct{}, gcQueueLength)
 	instance := &CELPluginInstance{
