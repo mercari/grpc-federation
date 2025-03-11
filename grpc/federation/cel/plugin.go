@@ -124,14 +124,27 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
 		instanceModErrCh <- err
 	}()
-	return &CELPluginInstance{
+
+	const gcQueueLength = 1
+
+	gcQueue := make(chan struct{}, gcQueueLength)
+	instance := &CELPluginInstance{
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
 		celRegistry:      celRegistry,
 		stdin:            stdinW,
 		stdout:           stdoutR,
 		instanceModErrCh: instanceModErrCh,
+		gcQueue:          gcQueue,
 	}
+	// start GC thread.
+	// It is enqueued into gcQueue using the `instance.GC()` function.
+	go func() {
+		for range gcQueue {
+			instance.startGC()
+		}
+	}()
+	return instance
 }
 
 type CELPluginInstance struct {
@@ -143,6 +156,7 @@ type CELPluginInstance struct {
 	instanceModErrCh chan error
 	closed           bool
 	mu               sync.Mutex
+	gcQueue          chan struct{}
 }
 
 const PluginProtocolVersion = 1
@@ -156,9 +170,13 @@ type PluginVersionSchema struct {
 var (
 	versionCommand = "version\n"
 	exitCommand    = "exit\n"
+	gcCommand      = "gc\n"
 )
 
 func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	if err := i.write([]byte(versionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
@@ -224,11 +242,33 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
 	}
+	close(i.gcQueue)
 	return nil
 }
 
 func (i *CELPluginInstance) LibraryName() string {
 	return i.name
+}
+
+// Trigger GC command.
+// The execution of GC is managed by queue, and if it exceeds the capacity of the queue, it will be ignored.
+func (i *CELPluginInstance) GC() {
+	i.enqueueGC()
+}
+
+func (i *CELPluginInstance) enqueueGC() {
+	select {
+	case i.gcQueue <- struct{}{}:
+	default:
+		// If the capacity of gcQueue is exceeded, the trigger event is discarded.
+	}
+}
+
+func (i *CELPluginInstance) startGC() {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	_ = i.write([]byte(gcCommand))
 }
 
 func (i *CELPluginInstance) CompileOptions() []cel.EnvOption {
@@ -271,6 +311,9 @@ func (i *CELPluginInstance) ProgramOptions() []cel.ProgramOption {
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	if err := i.sendRequest(fn, md, args...); err != nil {
 		return types.NewErr(err.Error())
 	}

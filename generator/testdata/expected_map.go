@@ -227,6 +227,13 @@ func (s *FederationService) GetPosts(ctx context.Context, req *GetPostsRequest) 
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
+
+	defer func() {
+		// cleanup plugin instance memory.
+		for _, instance := range s.celPluginInstances {
+			instance.GC()
+		}
+	}()
 	res, err := s.resolve_Org_Federation_GetPostsResponse(ctx, &FederationService_Org_Federation_GetPostsResponseArgument{
 		Ids: req.GetIds(),
 	})

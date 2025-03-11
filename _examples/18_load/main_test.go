@@ -155,7 +155,7 @@ func Benchmark_CELEvaluation(b *testing.B) {
 
 	b.ReportAllocs()
 	var wg sync.WaitGroup
-	for n := 0; n < 100; n++ {
+	for n := 0; n < 1000; n++ {
 		n := n
 		wg.Add(1)
 		go func() {
