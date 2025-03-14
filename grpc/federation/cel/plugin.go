@@ -102,7 +102,7 @@ func getCompilationCache(name, baseDir string) wazero.CompilationCache {
 	}
 	cacheDir := filepath.Join(baseDir, "grpc-federation", name)
 	if _, err := os.Stat(cacheDir); err != nil {
-		if err := os.Mkdir(cacheDir, 0o755); err != nil {
+		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 			return nil
 		}
 	}
