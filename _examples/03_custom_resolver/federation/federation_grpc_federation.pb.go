@@ -143,6 +143,7 @@ type FederationV2DevServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationV2DevServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationV2DevServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // FederationV2DevServiceEnv keeps the values read from environment variables.

@@ -60,6 +60,7 @@ type RefEnvServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // RefEnvServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type RefEnvServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // RefEnvServiceEnv keeps the values read from environment variables.

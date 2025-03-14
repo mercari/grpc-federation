@@ -98,6 +98,7 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // FederationServiceEnv keeps the values read from environment variables.
@@ -1408,6 +1409,7 @@ type PrivateServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // PrivateServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type PrivateServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // PrivateServiceEnv keeps the values read from environment variables.
@@ -2804,6 +2806,7 @@ type DebugServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // DebugServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type DebugServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // DebugServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
