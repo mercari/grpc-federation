@@ -85,6 +85,7 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.

@@ -132,6 +132,7 @@ type {{ $serviceName }}CELPluginConfig struct {
 	{{- range $celPlugins }}
 	{{ .FieldName }} {{ $serviceName }}CELPluginWasmConfig
 	{{- end }}
+	CacheDir string
 }
 
 {{- if $env }}
@@ -325,6 +326,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
 			Name: "{{ .Name }}",
 			Wasm: cfg.CELPlugin.{{ .FieldName }},
+			CacheDir: cfg.CELPlugin.CacheDir,
 			Functions: []*grpcfedcel.CELFunction{
 				{{- range .Functions }}
 				{

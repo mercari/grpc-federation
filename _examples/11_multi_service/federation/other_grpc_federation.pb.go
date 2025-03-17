@@ -94,6 +94,7 @@ type OtherServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // OtherServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type OtherServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // OtherServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.

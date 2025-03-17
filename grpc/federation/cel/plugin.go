@@ -45,6 +45,7 @@ type CELPluginConfig struct {
 	Name      string
 	Wasm      WasmConfig
 	Functions []*CELFunction
+	CacheDir  string
 }
 
 type WasmConfig struct {
@@ -72,7 +73,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		return nil, fmt.Errorf(`expected [%s] but got [%s]: %w`, cfg.Wasm.Sha256, gotHash, ErrWasmContentMismatch)
 	}
 	runtimeCfg := wazero.NewRuntimeConfig().WithCloseOnContextDone(true)
-	if cache := getCompilationCache(); cache != nil {
+	if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
 		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 	}
 
@@ -91,14 +92,17 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}, nil
 }
 
-func getCompilationCache() wazero.CompilationCache {
-	tmpDir := os.TempDir()
-	if tmpDir == "" {
-		return nil
+func getCompilationCache(name, baseDir string) wazero.CompilationCache {
+	if baseDir == "" {
+		tmpDir := os.TempDir()
+		if tmpDir == "" {
+			return nil
+		}
+		baseDir = tmpDir
 	}
-	cacheDir := filepath.Join(tmpDir, "grpc-federation")
+	cacheDir := filepath.Join(baseDir, "grpc-federation", name)
 	if _, err := os.Stat(cacheDir); err != nil {
-		if err := os.Mkdir(cacheDir, 0o755); err != nil {
+		if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 			return nil
 		}
 	}

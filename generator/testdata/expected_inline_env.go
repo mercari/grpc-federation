@@ -56,6 +56,7 @@ type InlineEnvServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // InlineEnvServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type InlineEnvServiceCELPluginConfig struct {
+	CacheDir string
 }
 
 // InlineEnvServiceEnv keeps the values read from environment variables.

@@ -66,7 +66,8 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
-	Account FederationServiceCELPluginWasmConfig
+	Account  FederationServiceCELPluginWasmConfig
+	CacheDir string
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -111,8 +112,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celPluginInstances []*grpcfedcel.CELPluginInstance
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
-			Name: "account",
-			Wasm: cfg.CELPlugin.Account,
+			Name:     "account",
+			Wasm:     cfg.CELPlugin.Account,
+			CacheDir: cfg.CELPlugin.CacheDir,
 			Functions: []*grpcfedcel.CELFunction{
 				{
 					Name:     "example.account.get_id",

@@ -78,7 +78,8 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
-	Regexp FederationServiceCELPluginWasmConfig
+	Regexp   FederationServiceCELPluginWasmConfig
+	CacheDir string
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -127,8 +128,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celPluginInstances []*grpcfedcel.CELPluginInstance
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
-			Name: "regexp",
-			Wasm: cfg.CELPlugin.Regexp,
+			Name:     "regexp",
+			Wasm:     cfg.CELPlugin.Regexp,
+			CacheDir: cfg.CELPlugin.CacheDir,
 			Functions: []*grpcfedcel.CELFunction{
 				{
 					Name: "example.regexp.compile",
