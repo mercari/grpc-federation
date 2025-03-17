@@ -2,12 +2,13 @@ syntax = "proto3";
 
 import "google/type/date.proto";
 import "grpc/federation/federation.proto";
+
 import "planet/planet.proto";
 import "film/film.proto";
-import "person/person.proto";
 import "vehicle/vehicle.proto";
 import "species/species.proto";
 import "starship/starship.proto";
+import "person/person.proto";
 
 package swapi;
 
