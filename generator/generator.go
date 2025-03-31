@@ -666,6 +666,7 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	}
 
 	var resp pluginpb.CodeGeneratorResponse
+	resp.SupportedFeatures = proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL /*| pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS*/))
 	for _, file := range result.Files {
 		out, err := NewCodeGenerator().Generate(file)
 		if err != nil {
