@@ -38,12 +38,12 @@ func (h *Handler) completion(ctx context.Context, params *protocol.CompletionPar
 		if strings.HasPrefix(candidate, curText) {
 			endPos := nodeInfo.End()
 			start := protocol.Position{
-				Line:      uint32(endPos.Line) - 1,
-				Character: uint32(endPos.Col) - 2,
+				Line:      uint32(endPos.Line) - 1, //nolint:gosec
+				Character: uint32(endPos.Col) - 2,  //nolint:gosec
 			}
 			end := protocol.Position{
-				Line:      uint32(endPos.Line) - 1,
-				Character: uint32(endPos.Col) - 2,
+				Line:      uint32(endPos.Line) - 1, //nolint:gosec
+				Character: uint32(endPos.Col) - 2,  //nolint:gosec
 			}
 			items = append(items, protocol.CompletionItem{
 				Label: candidate,

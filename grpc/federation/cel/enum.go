@@ -42,7 +42,7 @@ func (lib *EnumLibrary) CompileOptions() []cel.EnvOption {
 						}
 					} else {
 						ret.True = &EnumSelector_TrueValue{
-							TrueValue: int32(args[1].(celtypes.Int)),
+							TrueValue: int32(args[1].(celtypes.Int)), //nolint:gosec
 						}
 					}
 					if sel, ok := args[2].(*EnumSelector); ok {
@@ -51,7 +51,7 @@ func (lib *EnumLibrary) CompileOptions() []cel.EnvOption {
 						}
 					} else {
 						ret.False = &EnumSelector_FalseValue{
-							FalseValue: int32(args[2].(celtypes.Int)),
+							FalseValue: int32(args[2].(celtypes.Int)), //nolint:gosec
 						}
 					}
 					return ret

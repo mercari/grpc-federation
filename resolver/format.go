@@ -526,9 +526,9 @@ func (g *SequentialVariableDefinitionGroup) setTextMaxLength(ctx *variableDefini
 		g.Start.setTextMaxLength(ctx.withNextDepth())
 	}
 	if g.End != nil {
-		max := ctx.depthToMaxLength[ctx.depth]
+		maxLen := ctx.depthToMaxLength[ctx.depth]
 		length := len(g.End.Name)
-		if max < length {
+		if maxLen < length {
 			ctx.depthToMaxLength[ctx.depth] = length
 		}
 	}
@@ -539,9 +539,9 @@ func (g *ConcurrentVariableDefinitionGroup) setTextMaxLength(ctx *variableDefini
 		start.setTextMaxLength(ctx.withNextDepth())
 	}
 	if g.End != nil {
-		max := ctx.depthToMaxLength[ctx.depth]
+		maxLen := ctx.depthToMaxLength[ctx.depth]
 		length := len(g.End.Name)
-		if max < length {
+		if maxLen < length {
 			ctx.depthToMaxLength[ctx.depth] = length
 		}
 	}
@@ -600,13 +600,13 @@ func (c *variableDefinitionGroupTreeFormatContext) withNextDepth() *variableDefi
 
 // maxDepth return max depth number for current tree.
 func (c *variableDefinitionGroupTreeFormatContext) maxDepth() int {
-	var max int
+	var maxDepth int
 	for depth := range c.depthToMaxLength {
-		if max < depth {
-			max = depth
+		if maxDepth < depth {
+			maxDepth = depth
 		}
 	}
-	return max
+	return maxDepth
 }
 
 // lineIndents returns all '│' character's indent position.

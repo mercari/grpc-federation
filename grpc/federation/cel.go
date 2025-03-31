@@ -215,7 +215,7 @@ func EnumAccessorOptions(enumName string, nameToValue map[string]int32, valueToN
 			fmt.Sprintf("%s.name", enumName),
 			cel.Overload(fmt.Sprintf("%s_name_int_string", enumName), []*cel.Type{cel.IntType}, cel.StringType,
 				cel.UnaryBinding(func(self ref.Val) ref.Val {
-					return celtypes.String(valueToName[int32(self.(celtypes.Int))])
+					return celtypes.String(valueToName[int32(self.(celtypes.Int))]) //nolint:gosec
 				}),
 			),
 		),
@@ -819,7 +819,7 @@ func SetGRPCError(ctx context.Context, value localValue, err error) {
 		return
 	}
 	grpcErr := &grpcfedcel.Error{
-		Code:    int32(stat.Code()),
+		Code:    int32(stat.Code()), //nolint:gosec
 		Message: stat.Message(),
 	}
 	for _, detail := range stat.Details() {

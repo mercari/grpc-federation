@@ -87,9 +87,9 @@ const (
 	UnauthenticatedCode    Code = codes.Unauthenticated
 )
 
-func BackOffWithMaxRetries(b *BackOff, max uint64) *BackOff {
+func BackOffWithMaxRetries(b *BackOff, maxRetries uint64) *BackOff {
 	return &BackOff{
-		BackOff: backoff.WithMaxRetries(b, max),
+		BackOff: backoff.WithMaxRetries(b, maxRetries),
 	}
 }
 

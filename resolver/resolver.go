@@ -5023,10 +5023,10 @@ func messageToDescriptor(m *Message) *descriptorpb.DescriptorProto {
 		if field.Type.Repeated {
 			label = descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 		}
-		kind := descriptorpb.FieldDescriptorProto_Type(field.Type.Kind)
+		kind := descriptorpb.FieldDescriptorProto_Type(field.Type.Kind) //nolint:gosec
 		msg.Field = append(msg.Field, &descriptorpb.FieldDescriptorProto{
 			Name:     proto.String(field.Name),
-			Number:   proto.Int32(int32(idx) + 1),
+			Number:   proto.Int32(int32(idx) + 1), //nolint:gosec
 			Type:     &kind,
 			TypeName: proto.String(typeName),
 			Label:    &label,
