@@ -60,13 +60,13 @@ func ToFloat64List(v *celplugin.CELPluginValue) ([]float64, error) {
 }
 
 func ToInt32(v *celplugin.CELPluginValue) (int32, error) {
-	return int32(v.GetInt64()), nil
+	return int32(v.GetInt64()), nil //nolint:gosec
 }
 
 func ToInt32List(v *celplugin.CELPluginValue) ([]int32, error) {
 	ret := make([]int32, 0, len(v.GetList().GetValues()))
 	for _, vv := range v.GetList().GetValues() {
-		ret = append(ret, int32(vv.GetInt64()))
+		ret = append(ret, int32(vv.GetInt64())) //nolint:gosec
 	}
 	return ret, nil
 }
@@ -84,13 +84,13 @@ func ToInt64List(v *celplugin.CELPluginValue) ([]int64, error) {
 }
 
 func ToUint32(v *celplugin.CELPluginValue) (uint32, error) {
-	return uint32(v.GetUint64()), nil
+	return uint32(v.GetUint64()), nil //nolint:gosec
 }
 
 func ToUint32List(v *celplugin.CELPluginValue) ([]uint32, error) {
 	ret := make([]uint32, 0, len(v.GetList().GetValues()))
 	for _, vv := range v.GetList().GetValues() {
-		ret = append(ret, uint32(vv.GetUint64()))
+		ret = append(ret, uint32(vv.GetUint64())) //nolint:gosec
 	}
 	return ret, nil
 }

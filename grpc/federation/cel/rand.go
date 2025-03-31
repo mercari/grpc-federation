@@ -173,7 +173,7 @@ func (lib *RandLibrary) CompileOptions() []cel.EnvOption {
 			"int31n",
 			MemberOverloadFunc(createRandID("int31n_rand_int"), RandType, []*cel.Type{cel.IntType}, cel.IntType,
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
-					return types.Int(self.(*Rand).Int31n(int32(args[0].(types.Int))))
+					return types.Int(self.(*Rand).Int31n(int32(args[0].(types.Int)))) //nolint:gosec
 				},
 			),
 		),

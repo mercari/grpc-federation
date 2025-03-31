@@ -14,11 +14,11 @@ func (h *Handler) initialize(params *protocol.InitializeParams) (*protocol.Initi
 		if semanticTokens := textDocument.SemanticTokens; semanticTokens != nil {
 			for idx, tokenType := range semanticTokens.TokenTypes {
 				tokenTypes = append(tokenTypes, protocol.SemanticTokenTypes(tokenType))
-				h.tokenTypeMap[tokenType] = uint32(idx)
+				h.tokenTypeMap[tokenType] = uint32(idx) //nolint:gosec
 			}
 			for idx, modifier := range semanticTokens.TokenModifiers {
 				tokenModifiers = append(tokenModifiers, protocol.SemanticTokenModifiers(modifier))
-				h.tokenModifierMap[modifier] = 1 << uint32(idx)
+				h.tokenModifierMap[modifier] = 1 << uint32(idx) //nolint:gosec
 			}
 		}
 		if definition := textDocument.Definition; definition != nil {

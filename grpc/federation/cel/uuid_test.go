@@ -1,3 +1,4 @@
+//nolint:gosec
 package cel_test
 
 import (
