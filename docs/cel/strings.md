@@ -1,6 +1,21 @@
 # grpc.federation.strings APIs
 
 The API for this package was created based on Go's [`strings`](https://pkg.go.dev/strings) and [`strconv`](https://pkg.go.dev/strconv) packages.
+It also supports the following string APIs supported by [google/cel-go/ext](https://pkg.go.dev/github.com/google/cel-go/ext#Strings).
+
+- [charAt](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-CharAt-Strings)
+- [format](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Format-Strings)
+- [indexOf](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-IndexOf-Strings)
+- [join](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Join-Strings)
+- [lastIndexOf](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-LastIndexOf-Strings)
+- [lowerAscii](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-LowerAscii-Strings)
+- [quote](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Strings_Quote-Strings)
+- [replace](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Replace-Strings)
+- [split](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Split-Strings)
+- [substring](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Substring-Strings)
+- [trim](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Trim-Strings)
+- [upperAscii](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-UpperAscii-Strings)
+- [reverse](https://pkg.go.dev/github.com/google/cel-go/ext#hdr-Reverse-Strings)
 
 # Index
 

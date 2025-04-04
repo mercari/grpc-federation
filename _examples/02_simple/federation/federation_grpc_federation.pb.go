@@ -717,7 +717,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	/*
 		def {
 		  name: "strings_join"
-		  by: "grpc.federation.strings.join(['1', '2'], '.')"
+		  by: "grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')"
 		}
 	*/
 	def_strings_join := func(ctx context.Context) error {
@@ -728,7 +728,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				value.vars.StringsJoin = v
 				return nil
 			},
-			By:           `grpc.federation.strings.join(['1', '2'], '.')`,
+			By:           `grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')`,
 			ByCacheIndex: 11,
 		})
 	}
