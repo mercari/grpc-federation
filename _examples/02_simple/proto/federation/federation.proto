@@ -31,7 +31,7 @@ message GetPostResponse {
         args { name: "id", by: "$.id" }
       }
     }
-    def { name: "strings_join" by: "grpc.federation.strings.join(['1', '2'], '.')" }
+    def { name: "strings_join" by: "grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')" }
     def { name: "parse_float" by: "grpc.federation.strings.parseFloat(strings_join, 64)" }
     def { name: "url" by: "grpc.federation.url.parse('https://test_user:password@example.com/path')" }
     def { name: "date" by: "grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())" }
