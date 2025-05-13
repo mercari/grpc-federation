@@ -144,8 +144,9 @@ func TestFederation(t *testing.T) {
 			t.Fatal(err)
 		}
 		if diff := cmp.Diff(res, &federation.ExampleResponse{
-			Size: 2,
-			Str:  "abc",
+			Size:  2,
+			Str:   "abc",
+			Value: 3,
 		}, cmpopts.IgnoreUnexported(
 			federation.ExampleResponse{},
 		)); diff != "" {

@@ -11,7 +11,10 @@ message Regexp {
 }
 
 message Example {
-
+  option (grpc.federation.message) = {
+    def { name: "v" by: "$.value + 1" }
+  };
+  int64 value = 1 [(grpc.federation.field).by = "v"];
 }
 
 option (grpc.federation.file).plugin.export = {
