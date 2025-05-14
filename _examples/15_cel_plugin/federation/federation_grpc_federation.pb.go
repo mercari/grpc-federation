@@ -24,12 +24,19 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Example_Regexp_ExampleArgument is argument for "example.regexp.Example" message.
+type FederationService_Example_Regexp_ExampleArgument struct {
+	V     int64
+	Value int64
+}
+
 // Org_Federation_ExampleResponseArgument is argument for "org.federation.ExampleResponse" message.
 type FederationService_Org_Federation_ExampleResponseArgument struct {
-	Exp  *pluginpb.Example
-	Exps []*pluginpb.Example
-	Str  string
-	V    []*pluginpb.Example
+	Exp    *pluginpb.Example
+	ExpMsg *pluginpb.Example
+	Exps   []*pluginpb.Example
+	Str    string
+	V      []*pluginpb.Example
 }
 
 // Org_Federation_IsMatchResponseArgument is argument for "org.federation.IsMatchResponse" message.
@@ -116,6 +123,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
+		"grpc.federation.private.example.regexp.ExampleArgument": {
+			"value": grpcfed.NewCELFieldType(grpcfed.CELIntType, "Value"),
+		},
 		"grpc.federation.private.org.federation.ExampleResponseArgument": {},
 		"grpc.federation.private.org.federation.IsMatchResponseArgument": {
 			"expr":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Expr"),
@@ -292,6 +302,69 @@ func (s *FederationService) Example(ctx context.Context, req *ExampleRequest) (r
 	return res, nil
 }
 
+// resolve_Example_Regexp_Example resolve "example.regexp.Example" message.
+func (s *FederationService) resolve_Example_Regexp_Example(ctx context.Context, req *FederationService_Example_Regexp_ExampleArgument) (*pluginpb.Example, error) {
+	ctx, span := s.tracer.Start(ctx, "example.regexp.Example")
+	defer span.End()
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve example.regexp.Example", slog.Any("message_args", s.logvalue_Example_Regexp_ExampleArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			V int64
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.example.regexp.ExampleArgument", req)}
+	/*
+		def {
+		  name: "v"
+		  by: "$.value + 1"
+		}
+	*/
+	def_v := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
+			Name: `v`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v int64) error {
+				value.vars.V = v
+				return nil
+			},
+			By:           `$.value + 1`,
+			ByCacheIndex: 1,
+		})
+	}
+
+	if err := def_v(ctx); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.V = value.vars.V
+
+	// create a message value to be returned.
+	ret := &pluginpb.Example{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "v"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:      value,
+		Expr:       `v`,
+		CacheIndex: 2,
+		Setter: func(v int64) error {
+			ret.Value = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved example.regexp.Example", slog.Any("example.regexp.Example", s.logvalue_Example_Regexp_Example(ret)))
+	return ret, nil
+}
+
 // resolve_Org_Federation_ExampleResponse resolve "org.federation.ExampleResponse" message.
 func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.Context, req *FederationService_Org_Federation_ExampleResponseArgument) (*ExampleResponse, error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.ExampleResponse")
@@ -302,10 +375,11 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			Exp  *pluginpb.Example
-			Exps []*pluginpb.Example
-			Str  string
-			V    []*pluginpb.Example
+			Exp    *pluginpb.Example
+			ExpMsg *pluginpb.Example
+			Exps   []*pluginpb.Example
+			Str    string
+			V      []*pluginpb.Example
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.ExampleResponseArgument", req)}
@@ -324,7 +398,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				return nil
 			},
 			By:           `example.regexp.newExamples()`,
-			ByCacheIndex: 1,
+			ByCacheIndex: 3,
 		})
 	}
 
@@ -343,7 +417,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				return nil
 			},
 			By:           `example.regexp.filterExamples(exps)`,
-			ByCacheIndex: 2,
+			ByCacheIndex: 4,
 		})
 	}
 
@@ -362,7 +436,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				return nil
 			},
 			By:           `example.regexp.newExample()`,
-			ByCacheIndex: 3,
+			ByCacheIndex: 5,
 		})
 	}
 
@@ -381,18 +455,67 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				return nil
 			},
 			By:           `exp.concat(exp.mySplit('/a/b/c', '/'))`,
-			ByCacheIndex: 4,
+			ByCacheIndex: 6,
+		})
+	}
+
+	/*
+		def {
+		  name: "exp_msg"
+		  message {
+		    name: "Example"
+		    args { name: "value", by: "2" }
+		  }
+		}
+	*/
+	def_exp_msg := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*pluginpb.Example, *localValueType]{
+			Name: `exp_msg`,
+			Type: grpcfed.CELObjectType("example.regexp.Example"),
+			Setter: func(value *localValueType, v *pluginpb.Example) error {
+				value.vars.ExpMsg = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &FederationService_Example_Regexp_ExampleArgument{}
+				// { name: "value", by: "2" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+					Value:      value,
+					Expr:       `2`,
+					CacheIndex: 7,
+					Setter: func(v int64) error {
+						args.Value = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				ret, err := s.resolve_Example_Regexp_Example(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
+			},
 		})
 	}
 
 	// A tree view of message dependencies is shown below.
 	/*
-	    exp ─┐
-	         str ─┐
-	   exps ─┐    │
-	           v ─┤
+	         exp_msg ─┐
+	    exp ─┐        │
+	             str ─┤
+	   exps ─┐        │
+	               v ─┤
 	*/
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_exp_msg(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 		if err := def_exp(ctx1); err != nil {
@@ -424,6 +547,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.Exp = value.vars.Exp
+	req.ExpMsg = value.vars.ExpMsg
 	req.Exps = value.vars.Exps
 	req.Str = value.vars.Str
 	req.V = value.vars.V
@@ -436,7 +560,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:      value,
 		Expr:       `v.size()`,
-		CacheIndex: 5,
+		CacheIndex: 8,
 		Setter: func(v int64) error {
 			ret.Size = v
 			return nil
@@ -449,9 +573,22 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `str`,
-		CacheIndex: 6,
+		CacheIndex: 9,
 		Setter: func(v string) error {
 			ret.Str = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "exp_msg.value"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:      value,
+		Expr:       `exp_msg.value`,
+		CacheIndex: 10,
+		Setter: func(v int64) error {
+			ret.Value = v
 			return nil
 		},
 	}); err != nil {
@@ -493,7 +630,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 				return nil
 			},
 			By:           `example.regexp.compile($.expr)`,
-			ByCacheIndex: 7,
+			ByCacheIndex: 11,
 		})
 	}
 
@@ -512,7 +649,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 				return nil
 			},
 			By:           `re.matchString($.target)`,
-			ByCacheIndex: 8,
+			ByCacheIndex: 12,
 		})
 	}
 
@@ -537,7 +674,7 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `matched`,
-		CacheIndex: 9,
+		CacheIndex: 13,
 		Setter: func(v bool) error {
 			ret.Result = v
 			return nil
@@ -551,6 +688,24 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	return ret, nil
 }
 
+func (s *FederationService) logvalue_Example_Regexp_Example(v *pluginpb.Example) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Int64("value", v.GetValue()),
+	)
+}
+
+func (s *FederationService) logvalue_Example_Regexp_ExampleArgument(v *FederationService_Example_Regexp_ExampleArgument) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Int64("value", v.Value),
+	)
+}
+
 func (s *FederationService) logvalue_Org_Federation_ExampleResponse(v *ExampleResponse) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
@@ -558,6 +713,7 @@ func (s *FederationService) logvalue_Org_Federation_ExampleResponse(v *ExampleRe
 	return slog.GroupValue(
 		slog.Int64("size", v.GetSize()),
 		slog.String("str", v.GetStr()),
+		slog.Int64("value", v.GetValue()),
 	)
 }
 
