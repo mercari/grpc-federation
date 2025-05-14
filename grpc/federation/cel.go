@@ -391,7 +391,7 @@ func (v *LocalValue) do(name string, cb func() (any, error)) (any, error) {
 	return ret, err
 }
 
-func (v *LocalValue) LockFunc(fn func()) {
+func (v *LocalValue) WithLock(fn func()) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	fn()

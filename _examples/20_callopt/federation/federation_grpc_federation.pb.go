@@ -295,7 +295,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				callOpts = append(callOpts, grpcfed.GRPCCallOptionWaitForReady(true))
 
 				ret, err := s.client.Post_PostServiceClient.GetPost(ctx, args, callOpts...)
-				value.LockFunc(func() {
+				value.WithLock(func() {
 					if value.vars.Hdr != nil {
 						for k, v := range hdr {
 							value.vars.Hdr[k] = v

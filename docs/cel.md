@@ -14,6 +14,7 @@ In addition to the standard CEL operations, the gRPC Federation supports a numbe
 - [grpc.federation.uuid APIs](./cel/uuid.md)
 - [grpc.federation.log APIs](./cel/log.md)
 - [grpc.federation.enum APIs](./cel/enum.md)
+- [grpc.federation.metadata APIs](./cel/metadata.md)
 
 ## Refer to the defined variable
 

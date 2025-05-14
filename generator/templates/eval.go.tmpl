@@ -241,7 +241,7 @@ callOpts = append(callOpts, grpcfed.GRPCCallOptionWaitForReady({{ $callOpt.WaitF
 
 {{ $callOpt := .CallOption }}
 ret, err := s.{{ .Caller }}(ctx, args, callOpts...)
-value.LockFunc(func() {
+value.WithLock(func() {
 	{{- if $callOpt.HeaderValueName }}
 	if value.vars.{{ $callOpt.HeaderValueName }} != nil {
 		for k, v := range hdr {
