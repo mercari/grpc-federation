@@ -139,6 +139,9 @@ def_{{ .Key }} := func(ctx context.Context) error {
 				OutType: reflect.TypeOf(map[string][]string{}),
 				CacheIndex: {{ .CELCacheIndex }},
 			})
+			if err != nil {
+				return nil, err
+			}
 			for k, v := range md.(map[string][]string) {
 				for _, vv := range v {
 					ctx = grpcfed.AppendToOutgoingContext(ctx, k, vv)

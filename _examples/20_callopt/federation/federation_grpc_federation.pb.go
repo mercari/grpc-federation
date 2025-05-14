@@ -278,6 +278,9 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 					OutType:    reflect.TypeOf(map[string][]string{}),
 					CacheIndex: 4,
 				})
+				if err != nil {
+					return nil, err
+				}
 				for k, v := range md.(map[string][]string) {
 					for _, vv := range v {
 						ctx = grpcfed.AppendToOutgoingContext(ctx, k, vv)
