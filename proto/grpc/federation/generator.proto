@@ -337,6 +337,8 @@ message CallExpr {
   google.protobuf.Duration timeout = 3;
   RetryPolicy retry = 4;
   repeated GRPCError errors = 5;
+  GRPCCallOption option = 6;
+  CELValue metadata = 7;
 }
 
 message RetryPolicy {
@@ -435,6 +437,16 @@ message BadRequestFieldViolation {
 message LocalizedMessage {
   string locale = 1;
   CELValue message = 2;
+}
+
+message GRPCCallOption {
+  optional string content_subtype = 1;
+  optional string header_id = 2;
+  optional int64 max_call_recv_msg_size = 3;
+  optional int64 max_call_send_msg_size = 4;
+  optional bool static_method = 5;
+  optional string trailer_id = 6;
+  optional bool wait_for_ready = 7;
 }
 
 message Oneof {

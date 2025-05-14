@@ -1010,6 +1010,9 @@ func (e *encoder) toCallExpr(expr *resolver.CallExpr) *plugin.CallExpr {
 		Request:  e.toRequest(expr.Request),
 		Timeout:  timeout,
 		Retry:    e.toRetryPolicy(expr.Retry),
+		Errors:   e.toGRPCErrors(expr.Errors),
+		Metadata: e.toCELValue(expr.Metadata),
+		Option:   e.toGRPCCallOption(expr.Option),
 	}
 }
 
@@ -1121,6 +1124,14 @@ func (e *encoder) toValidationExpr(expr *resolver.ValidationExpr) *plugin.Valida
 	return &plugin.ValidationExpr{
 		Error: e.toGRPCError(expr.Error),
 	}
+}
+
+func (e *encoder) toGRPCErrors(grpcErrs []*resolver.GRPCError) []*plugin.GRPCError {
+	ret := make([]*plugin.GRPCError, 0, len(grpcErrs))
+	for _, grpcErr := range grpcErrs {
+		ret = append(ret, e.toGRPCError(grpcErr))
+	}
+	return ret
 }
 
 func (e *encoder) toGRPCError(err *resolver.GRPCError) *plugin.GRPCError {
@@ -1247,6 +1258,28 @@ func (e *encoder) toLocalizedMessage(msg *resolver.LocalizedMessage) *plugin.Loc
 		Locale:  msg.Locale,
 		Message: e.toCELValue(msg.Message),
 	}
+}
+
+func (e *encoder) toGRPCCallOption(v *resolver.GRPCCallOption) *plugin.GRPCCallOption {
+	if v == nil {
+		return nil
+	}
+	ret := &plugin.GRPCCallOption{
+		ContentSubtype:     v.ContentSubtype,
+		MaxCallRecvMsgSize: v.MaxCallRecvMsgSize,
+		MaxCallSendMsgSize: v.MaxCallSendMsgSize,
+		StaticMethod:       v.StaticMethod,
+		WaitForReady:       v.WaitForReady,
+	}
+	if v.Header != nil {
+		id := e.toVariableDefinitionID(v.Header)
+		ret.HeaderId = &id
+	}
+	if v.Trailer != nil {
+		id := e.toVariableDefinitionID(v.Trailer)
+		ret.TrailerId = &id
+	}
+	return ret
 }
 
 func (e *encoder) toFileID(file *resolver.File) string {

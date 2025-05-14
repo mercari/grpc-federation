@@ -2,7 +2,6 @@ package validator_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -844,7 +843,6 @@ invalid_file_import.proto:12:5: [WARN] Import user.proto is unused for the defin
 				return
 			}
 			if diff := cmp.Diff("\n"+got, test.expected); diff != "" {
-				fmt.Println(string(got))
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
 		})
