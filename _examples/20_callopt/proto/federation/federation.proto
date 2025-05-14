@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package federation;
+
+import "grpc/federation/federation.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "example/federation;federation";
+
+option (grpc.federation.file)= {
+  import: ["post/post.proto"]
+};
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (.grpc.federation.message) = {
+    def { name: "hdr" by: "grpc.federation.metadata.new()" }
+    def { name: "tlr" by: "grpc.federation.metadata.new()" }
+    def {
+      name: "res"
+      call {
+        method: "post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+        metadata: "{'authorization': ['Bearer xxx']}"
+        option {
+          header: "hdr"
+          trailer: "tlr"
+          static_method: true
+          wait_for_ready: true
+          max_call_recv_msg_size: 100
+          max_call_send_msg_size: 100
+        }
+      }
+    }
+    def {name: "hdr_keys" by: "hdr.map(k, k)" if: "res != null"}
+    def {name: "tlr_keys" by: "tlr.map(k, k)" if: "res != null"}
+  };
+  repeated string header = 1 [(grpc.federation.field).by = "hdr_keys.sortAsc(v, v)"];
+  repeated string trailer = 2 [(grpc.federation.field).by = "tlr_keys.sortAsc(v, v)"];
+}

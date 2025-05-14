@@ -85,13 +85,15 @@ func (r *CELRegistry) LookupEnum(t *celtypes.Type) (*Enum, bool) {
 }
 
 func ToCELType(typ *Type) *cel.Type {
-	if typ.Repeated {
-		return cel.ListType(toCELType(typ))
-	}
 	return toCELType(typ)
 }
 
 func toCELType(typ *Type) *cel.Type {
+	if typ.Repeated {
+		t := typ.Clone()
+		t.Repeated = false
+		return cel.ListType(toCELType(t))
+	}
 	switch typ.Kind {
 	case types.Double, types.Float:
 		return cel.DoubleType

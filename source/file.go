@@ -1344,6 +1344,18 @@ func (f *File) nodeInfoByCallExpr(node *ast.MessageLiteralNode, call *CallExprOp
 			return f.nodeInfoByRetry(value, call.Retry)
 		case call.Error != nil && fieldName == "error":
 			grpcErrs = append(grpcErrs, f.getMessageListFromNode(elem.Val)...)
+		case call.Option != nil && fieldName == "option":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByGRPCCallOption(value, call.Option)
+		case call.Metadata && fieldName == "metadata":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
 		}
 	}
 	if len(requests) != 0 {
@@ -1351,6 +1363,49 @@ func (f *File) nodeInfoByCallExpr(node *ast.MessageLiteralNode, call *CallExprOp
 	}
 	if len(grpcErrs) != 0 {
 		return f.nodeInfoByGRPCError(grpcErrs, call.Error)
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoByGRPCCallOption(node *ast.MessageLiteralNode, opt *GRPCCallOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.ContentSubtype && fieldName == "content_subtype":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.Header && fieldName == "header":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.Trailer && fieldName == "trailer":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.MaxCallRecvMsgSize && fieldName == "max_call_recv_msg_size":
+			return f.nodeInfo(elem.Val)
+		case opt.MaxCallSendMsgSize && fieldName == "max_call_send_msg_size":
+			return f.nodeInfo(elem.Val)
+		case opt.StaticMethod && fieldName == "static_method":
+			value, ok := elem.Val.(*ast.IdentNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.WaitForReady && fieldName == "wait_for_ready":
+			value, ok := elem.Val.(*ast.IdentNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
 	}
 	return f.nodeInfo(node)
 }

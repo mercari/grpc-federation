@@ -23,8 +23,8 @@ EXAMPLES := $(wildcard _examples/*)
 
 GIT_REF := $(shell git rev-parse --short=7 HEAD)
 
-VERSION ?= dev
-LDFLAGS := -w -s -X=grpc/federation.Version=$(VERSION)
+VERSION ?= (devel)
+LDFLAGS := -w -s -X=github.com/mercari/grpc-federation/grpc/federation.Version=$(VERSION)
 
 .PHONY: tools
 tools:

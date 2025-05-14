@@ -391,6 +391,12 @@ func (v *LocalValue) do(name string, cb func() (any, error)) (any, error) {
 	return ret, err
 }
 
+func (v *LocalValue) WithLock(fn func()) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	fn()
+}
+
 func (v *LocalValue) rlock() {
 	v.mu.RLock()
 }

@@ -2652,12 +2652,18 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr, build
 	for idx, grpcErr := range def.GetError() {
 		grpcErrs = append(grpcErrs, r.resolveGRPCError(ctx, grpcErr, builder.WithError(idx)))
 	}
+	var md *CELValue
+	if v := def.GetMetadata(); v != "" {
+		md = &CELValue{Expr: v}
+	}
 	return &CallExpr{
-		Method:  method,
-		Request: r.resolveRequest(ctx, method, def.GetRequest(), builder),
-		Timeout: timeout,
-		Retry:   r.resolveRetry(ctx, def.GetRetry(), timeout, builder.WithRetry()),
-		Errors:  grpcErrs,
+		Method:   method,
+		Request:  r.resolveRequest(ctx, method, def.GetRequest(), builder),
+		Timeout:  timeout,
+		Retry:    r.resolveRetry(ctx, def.GetRetry(), timeout, builder.WithRetry()),
+		Option:   r.resolveGRPCCallOption(ctx, def.GetOption(), builder.WithOption()),
+		Metadata: md,
+		Errors:   grpcErrs,
 	}
 }
 
@@ -3495,6 +3501,94 @@ func (r *Resolver) resolveRetryExponential(ctx *context, def *federation.RetryPo
 	}
 }
 
+func (r *Resolver) resolveGRPCCallOption(ctx *context, def *federation.GRPCCallOption, builder *source.GRPCCallOptionBuilder) *GRPCCallOption {
+	if def == nil {
+		return nil
+	}
+
+	var (
+		opt      GRPCCallOption
+		foundOpt bool
+	)
+	if def.ContentSubtype != nil {
+		typ := def.GetContentSubtype()
+		opt.ContentSubtype = &typ
+		foundOpt = true
+	}
+	if def.Header != nil {
+		var headerDef *VariableDefinition
+		if header := def.GetHeader(); header == "" {
+			ctx.addError(
+				ErrWithLocation(
+					"gRPC call option's header value is required map<string, repeated string> typed value",
+					builder.WithHeader().Location(),
+				),
+			)
+		} else {
+			headerDef = ctx.variableDef(header)
+			if headerDef == nil {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`%q variable is not defined`, header),
+						builder.WithHeader().Location(),
+					),
+				)
+			} else {
+				opt.Header = headerDef
+				foundOpt = true
+			}
+		}
+	}
+	if def.Trailer != nil {
+		var trailerDef *VariableDefinition
+		if trailer := def.GetTrailer(); trailer == "" {
+			ctx.addError(
+				ErrWithLocation(
+					"gRPC call option's trailer value is required map<string, repeated string> typed value",
+					builder.WithTrailer().Location(),
+				),
+			)
+		} else {
+			trailerDef = ctx.variableDef(trailer)
+			if trailerDef == nil {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`%q variable is not defined`, trailer),
+						builder.WithTrailer().Location(),
+					),
+				)
+			} else {
+				opt.Trailer = trailerDef
+				foundOpt = true
+			}
+		}
+	}
+	if def.MaxCallRecvMsgSize != nil {
+		size := def.GetMaxCallRecvMsgSize()
+		opt.MaxCallRecvMsgSize = &size
+		foundOpt = true
+	}
+	if def.MaxCallSendMsgSize != nil {
+		size := def.GetMaxCallSendMsgSize()
+		opt.MaxCallSendMsgSize = &size
+		foundOpt = true
+	}
+	if def.StaticMethod != nil {
+		mtd := def.GetStaticMethod()
+		opt.StaticMethod = &mtd
+		foundOpt = true
+	}
+	if def.WaitForReady != nil {
+		ready := def.GetWaitForReady()
+		opt.WaitForReady = &ready
+		foundOpt = true
+	}
+	if !foundOpt {
+		return nil
+	}
+	return &opt
+}
+
 func (r *Resolver) resolveRequest(ctx *context, method *Method, requestDef []*federation.MethodRequest, builder *source.CallExprOptionBuilder) *Request {
 	reqMsg := method.Request
 	args := make([]*Argument, 0, len(requestDef))
@@ -4098,10 +4192,89 @@ func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *Ca
 			)
 		}
 	}
+	if opt := expr.Option; opt != nil {
+		builder := builder.WithOption()
+		if opt.Header != nil {
+			if opt.Header.Expr == nil || opt.Header.Expr.Type == nil {
+				ctx.addError(
+					ErrWithLocation(
+						`gRPC Call option header's value type could not be determined`,
+						builder.WithHeader().Location(),
+					),
+				)
+			} else if !r.isMetadataType(opt.Header.Expr.Type) {
+				ctx.addError(
+					ErrWithLocation(
+						`gRPC Call option header's value type must be map<string, repeated string> type`,
+						builder.WithHeader().Location(),
+					),
+				)
+			}
+		}
+		if opt.Trailer != nil {
+			if opt.Trailer.Expr == nil || opt.Trailer.Expr.Type == nil {
+				ctx.addError(
+					ErrWithLocation(
+						`gRPC Call option trailer's value type could not be determined`,
+						builder.WithTrailer().Location(),
+					),
+				)
+			} else if !r.isMetadataType(opt.Trailer.Expr.Type) {
+				ctx.addError(
+					ErrWithLocation(
+						`gRPC Call option trailer's value type must be map<string, repeated string> type`,
+						builder.WithTrailer().Location(),
+					),
+				)
+			}
+		}
+	}
+	if expr.Metadata != nil {
+		if err := r.resolveCELValue(ctx, env, expr.Metadata); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithMetadata().Location(),
+				),
+			)
+		}
+		if expr.Metadata.Out != nil && !r.isMetadataType(expr.Metadata.Out) {
+			ctx.addError(
+				ErrWithLocation(
+					`gRPC Call metadata's value type must be map<string, repeated string> type`,
+					builder.WithMetadata().Location(),
+				),
+			)
+		}
+	}
 	for idx, grpcErr := range expr.Errors {
 		r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, expr.Method.Response, builder.WithError(idx))
 	}
 	return NewMessageType(expr.Method.Response, false)
+}
+
+func (r *Resolver) isMetadataType(typ *Type) bool {
+	if typ == nil {
+		return false
+	}
+	if typ.Message == nil {
+		return false
+	}
+	if !typ.Message.IsMapEntry {
+		return false
+	}
+	key := typ.Message.Field("key")
+	value := typ.Message.Field("value")
+	if key == nil || value == nil {
+		return false
+	}
+	if key.Type.Kind != types.String {
+		return false
+	}
+	if !value.Type.Repeated || value.Type.Kind != types.String {
+		return false
+	}
+	return true
 }
 
 func (r *Resolver) resolveMessageExprCELValues(ctx *context, env *cel.Env, expr *MessageExpr, builder *source.MessageExprOptionBuilder) *Type {

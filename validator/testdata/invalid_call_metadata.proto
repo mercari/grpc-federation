@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+option (grpc.federation.file) = {
+  import: ["post.proto"]
+};
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+       call {
+        method: "post.PostService/GetPost"
+        metadata: "{'foo': 'bar'}"
+        request { field: "id" by: "$.id" }
+      }
+    }
+  };
+}

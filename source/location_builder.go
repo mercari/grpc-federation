@@ -1261,6 +1261,28 @@ func (b *CallExprOptionBuilder) WithError(idx int) *GRPCErrorOptionBuilder {
 	}
 }
 
+func (b *CallExprOptionBuilder) WithOption() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Option = &GRPCCallOption{}
+	return &GRPCCallOptionBuilder{
+		root: root,
+		option: func(loc *Location) *GRPCCallOption {
+			return b.option(loc).Option
+		},
+	}
+}
+
+func (b *CallExprOptionBuilder) WithMetadata() *CallExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Metadata = true
+	return &CallExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
 func (b *CallExprOptionBuilder) Location() *Location {
 	return b.root
 }
@@ -1558,6 +1580,85 @@ func (b *GRPCErrorDetailOptionBuilder) WithLocalizedMessage(idx int, fieldName s
 }
 
 func (b *GRPCErrorDetailOptionBuilder) Location() *Location {
+	return b.root
+}
+
+type GRPCCallOptionBuilder struct {
+	root   *Location
+	option func(*Location) *GRPCCallOption
+}
+
+func (b *GRPCCallOptionBuilder) WithContentSubtype() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.ContentSubtype = true
+	return &GRPCCallOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCCallOptionBuilder) WithHeader() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Header = true
+	return &GRPCCallOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCCallOptionBuilder) WithTrailer() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Trailer = true
+	return &GRPCCallOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCCallOptionBuilder) WithMaxCallRecvMsgSize() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.MaxCallRecvMsgSize = true
+	return &GRPCCallOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCCallOptionBuilder) WithMaxCallSendMsgSize() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.MaxCallSendMsgSize = true
+	return &GRPCCallOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCCallOptionBuilder) WithStaticMethod() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.StaticMethod = true
+	return &GRPCCallOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCCallOptionBuilder) WithWaitForReady() *GRPCCallOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.WaitForReady = true
+	return &GRPCCallOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *GRPCCallOptionBuilder) Location() *Location {
 	return b.root
 }
 

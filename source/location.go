@@ -230,11 +230,24 @@ type IteratorOption struct {
 
 // CallExprOption represents def.call location of grpc.federation.message option.
 type CallExprOption struct {
-	Method  bool
-	Request *RequestOption
-	Timeout bool
-	Retry   *RetryOption
-	Error   *GRPCErrorOption
+	Method   bool
+	Request  *RequestOption
+	Timeout  bool
+	Retry    *RetryOption
+	Error    *GRPCErrorOption
+	Option   *GRPCCallOption
+	Metadata bool
+}
+
+// GRPCCallOption represents def.call.option of grpc.federation.message option.
+type GRPCCallOption struct {
+	ContentSubtype     bool
+	Header             bool
+	Trailer            bool
+	MaxCallRecvMsgSize bool
+	MaxCallSendMsgSize bool
+	StaticMethod       bool
+	WaitForReady       bool
 }
 
 // MessageExprOption represents def.message location of grpc.federation.message option.

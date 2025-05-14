@@ -33,6 +33,16 @@ func (lib *MetadataLibrary) CompileOptions() []cel.EnvOption {
 	var opts []cel.EnvOption
 	for _, funcOpts := range [][]cel.EnvOption{
 		BindFunction(
+			createMetadata("new"),
+			OverloadFunc(createMetadataID("new_map_string_list_string"),
+				[]*cel.Type{}, types.NewMapType(types.StringType, types.NewListType(types.StringType)),
+				func(ctx context.Context, _ ...ref.Val) ref.Val {
+					refMap := make(map[ref.Val]ref.Val)
+					return types.NewRefValMap(types.DefaultTypeAdapter, refMap)
+				},
+			),
+		),
+		BindFunction(
 			createMetadata("incoming"),
 			OverloadFunc(createMetadataID("incoming_map_string_list_string"),
 				[]*cel.Type{}, types.NewMapType(types.StringType, types.NewListType(types.StringType)),

@@ -285,6 +285,14 @@ func (e *CallExpr) ReferenceNames() []string {
 	for _, grpcErr := range e.Errors {
 		names = append(names, grpcErr.ReferenceNames()...)
 	}
+	if e.Option != nil {
+		if e.Option.Header != nil && e.Option.Header.Name != "" {
+			names = append(names, e.Option.Header.Name)
+		}
+		if e.Option.Trailer != nil && e.Option.Trailer.Name != "" {
+			names = append(names, e.Option.Trailer.Name)
+		}
+	}
 	return toUniqueReferenceNames(names)
 }
 

@@ -1061,9 +1061,24 @@ func (d *decoder) toCallExpr(expr *plugin.CallExpr) (*resolver.CallExpr, error) 
 		timeout := expr.GetTimeout().AsDuration()
 		ret.Timeout = &timeout
 	}
+	errs, err := d.toGRPCErrors(expr.GetErrors())
+	if err != nil {
+		return nil, err
+	}
+	md, err := d.toCELValue(expr.Metadata)
+	if err != nil {
+		return nil, err
+	}
+	opt, err := d.toGRPCCallOption(expr.Option)
+	if err != nil {
+		return nil, err
+	}
 	ret.Method = mtd
 	ret.Request = req
 	ret.Retry = retry
+	ret.Errors = errs
+	ret.Metadata = md
+	ret.Option = opt
 	return ret, nil
 }
 
@@ -1218,6 +1233,24 @@ func (d *decoder) toValidationExpr(expr *plugin.ValidationExpr) (*resolver.Valid
 		return nil, err
 	}
 	ret.Error = grpcErr
+	return ret, nil
+}
+
+func (d *decoder) toGRPCErrors(errs []*plugin.GRPCError) ([]*resolver.GRPCError, error) {
+	if errs == nil {
+		return nil, nil
+	}
+	ret := make([]*resolver.GRPCError, 0, len(errs))
+	for _, grpcErr := range errs {
+		v, err := d.toGRPCError(grpcErr)
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			continue
+		}
+		ret = append(ret, v)
+	}
 	return ret, nil
 }
 
@@ -1485,6 +1518,34 @@ func (d *decoder) toLocalizedMessage(v *plugin.LocalizedMessage) (*resolver.Loca
 		return nil, err
 	}
 	ret.Message = msg
+	return ret, nil
+}
+
+func (d *decoder) toGRPCCallOption(v *plugin.GRPCCallOption) (*resolver.GRPCCallOption, error) {
+	if v == nil {
+		return nil, nil
+	}
+	ret := &resolver.GRPCCallOption{
+		ContentSubtype:     v.ContentSubtype,
+		MaxCallRecvMsgSize: v.MaxCallRecvMsgSize,
+		MaxCallSendMsgSize: v.MaxCallSendMsgSize,
+		StaticMethod:       v.StaticMethod,
+		WaitForReady:       v.WaitForReady,
+	}
+	if v.HeaderId != nil {
+		header, err := d.toVariableDefinition(v.GetHeaderId())
+		if err != nil {
+			return nil, err
+		}
+		ret.Header = header
+	}
+	if v.TrailerId != nil {
+		trailer, err := d.toVariableDefinition(v.GetTrailerId())
+		if err != nil {
+			return nil, err
+		}
+		ret.Trailer = trailer
+	}
 	return ret, nil
 }
 

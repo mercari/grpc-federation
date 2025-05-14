@@ -340,6 +340,11 @@ message CallExpr {
   // Multiple errors can be defined and are evaluated in the order in which they are described.
   // If an error occurs while creating an gRPC status error, original error will be returned.
   repeated GRPCError error = 5;
+  // option is the gRPC's call option (https://pkg.go.dev/google.golang.org/grpc#CallOption).
+  optional GRPCCallOption option = 6;
+  // metadata specify outgoing metadata with CEL value.
+  // The specified type must always be of type map<string, repeated string>.
+  optional string metadata = 7;
 }
 
 // GRPCError create gRPC status value.
@@ -415,6 +420,53 @@ message GRPCErrorDetail {
   repeated google.rpc.LocalizedMessage localized_message = 13;
   // by specify a message in CEL to express the details of the error.
   repeated string by = 14;
+}
+
+// GRPCCallOption configures a gRPC Call before it starts or extracts information from a gRPC Call after it completes.
+message GRPCCallOption {
+  // set the content-subtype. For example, if content-subtype is "json", the Content-Type over the wire will be "application/grpc+json".
+  // The content-subtype is converted to lowercase before being included in Content-Type.
+  // See Content-Type on https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests for more details.
+  // If no such codec is found, the call will result in an error with code INTERNAL.
+  optional string content_subtype = 1;
+
+  // header retrieves the header metadata for a unary RPC.
+  // In order to obtain the metadata, you must specify a variable of type map<string, repeated string> in the header.
+  // e.g.)
+  // def [
+  //  { name: "hdr" by: "grpc.federation.metadata.new()" }
+  //  { call { method: "pkg.Method" option { header: "hdr" } } }
+  // ]
+  optional string header = 2;
+
+  // max_call_recv_msg_size sets the maximum message size in bytes the client can receive.
+  // If this is not set, gRPC uses the default 4MB.
+  optional int64 max_call_recv_msg_size = 3;
+
+  // max_call_send_msg_size sets the maximum message size in bytes the client can send.
+  // If this is not set, gRPC uses the default maximum number of int32 range.
+  optional int64 max_call_send_msg_size = 4;
+
+  // static_method specifies that a call is being made to a method that is static,
+  // which means the method is known at compile time and doesn't change at runtime.
+  // This can be used as a signal to stats plugins that this method is safe to include as a key to a measurement.
+  optional bool static_method = 5;
+
+  // trailer retrieves the trailer metadata for a unary RPC.
+  // In order to obtain the metadata, you must specify a variable of type map<string, repeated string> in the trailer.
+  // e.g.)
+  // def [
+  //  { name: "trl" by: "grpc.federation.metadata.new()" }
+  //  { call { method: "pkg.Method" option { trailer: "trl" } } }
+  // ]
+  optional string trailer = 6;
+
+  // wait_for_ready configures the RPC's behavior when the client is in TRANSIENT_FAILURE,
+  // which occurs when all addresses fail to connect.
+  // If wait_for_ready is false, the RPC will fail immediately.
+  // Otherwise, the client will wait until a connection becomes available or the RPC's deadline is reached.
+  // By default, RPCs do not "wait for ready".
+  optional bool wait_for_ready = 7;
 }
 
 // Validation represents a validation rule against variables defined within the current scope.
