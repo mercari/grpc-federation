@@ -2793,6 +2793,77 @@ func (d *VariableDefinition) Retry() *resolver.RetryPolicy {
 	return d.VariableDefinition.Expr.Call.Retry
 }
 
+func (d *VariableDefinition) UseCallOption() bool {
+	expr := d.VariableDefinition.Expr
+	return expr.Call != nil && expr.Call.Option != nil
+}
+
+func (d *VariableDefinition) CallOption() *GRPCCallOption {
+	return &GRPCCallOption{d.VariableDefinition.Expr.Call.Option}
+}
+
+func (d *VariableDefinition) UseMetadata() bool {
+	expr := d.VariableDefinition.Expr
+	return expr.Call != nil && expr.Call.Metadata != nil
+}
+
+func (d *VariableDefinition) Metadata() string {
+	return d.VariableDefinition.Expr.Call.Metadata.Expr
+}
+
+type GRPCCallOption struct {
+	*resolver.GRPCCallOption
+}
+
+func (o *GRPCCallOption) ContentSubtype() string {
+	if o.GRPCCallOption.ContentSubtype == nil {
+		return ""
+	}
+	return *o.GRPCCallOption.ContentSubtype
+}
+
+func (o *GRPCCallOption) HeaderValueName() string {
+	if o.Header == nil {
+		return ""
+	}
+	return util.ToPublicGoVariable(o.Header.Name)
+}
+
+func (o *GRPCCallOption) TrailerValueName() string {
+	if o.Trailer == nil {
+		return ""
+	}
+	return util.ToPublicGoVariable(o.Trailer.Name)
+}
+
+func (o *GRPCCallOption) UseMaxCallRecvMsgSize() bool {
+	return o.GRPCCallOption.MaxCallRecvMsgSize != nil
+}
+
+func (o *GRPCCallOption) UseMaxCallSendMsgSize() bool {
+	return o.GRPCCallOption.MaxCallSendMsgSize != nil
+}
+
+func (o *GRPCCallOption) StaticMethod() bool {
+	return o.GRPCCallOption.StaticMethod != nil && *o.GRPCCallOption.StaticMethod
+}
+
+func (o *GRPCCallOption) UseWaitForReady() bool {
+	return o.GRPCCallOption.WaitForReady != nil
+}
+
+func (o *GRPCCallOption) MaxCallRecvMsgSize() int64 {
+	return *o.GRPCCallOption.MaxCallRecvMsgSize
+}
+
+func (o *GRPCCallOption) MaxCallSendMsgSize() int64 {
+	return *o.GRPCCallOption.MaxCallSendMsgSize
+}
+
+func (o *GRPCCallOption) WaitForReady() bool {
+	return *o.GRPCCallOption.WaitForReady
+}
+
 func (d *VariableDefinition) MethodFQDN() string {
 	expr := d.VariableDefinition.Expr
 	if expr.Call != nil {

@@ -245,11 +245,23 @@ type VariableExpr struct {
 }
 
 type CallExpr struct {
-	Method  *Method
-	Request *Request
-	Timeout *time.Duration
-	Retry   *RetryPolicy
-	Errors  []*GRPCError
+	Method   *Method
+	Request  *Request
+	Timeout  *time.Duration
+	Retry    *RetryPolicy
+	Option   *GRPCCallOption
+	Metadata *CELValue
+	Errors   []*GRPCError
+}
+
+type GRPCCallOption struct {
+	Header             *VariableDefinition
+	Trailer            *VariableDefinition
+	ContentSubtype     *string
+	MaxCallRecvMsgSize *int64
+	MaxCallSendMsgSize *int64
+	StaticMethod       *bool
+	WaitForReady       *bool
 }
 
 type MapExpr struct {

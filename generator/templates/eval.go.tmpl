@@ -132,6 +132,20 @@ def_{{ .Key }} := func(ctx context.Context) error {
 			{{- end }}
 			{{- if .IsCall }}
 			grpcfed.Logger(ctx).DebugContext(ctx, "call {{ .MethodFQDN }}", slog.Any("{{ .RequestTypeFQDN }}", s.logvalue_{{ .LogValueRequestType }}(args)))
+			{{- if .UseMetadata }}
+			md, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+				Value: value,
+				Expr: `{{ .Metadata }}`,
+				OutType: reflect.TypeOf(map[string][]string{}),
+				CacheIndex: {{ .CELCacheIndex }},
+			})
+			for k, v := range md.(map[string][]string) {
+				for _, vv := range v {
+					ctx = grpcfed.AppendToOutgoingContext(ctx, k, vv)
+				}
+			}
+			{{- end }}
+			{{- template "defineCallOpts" . }}
 			{{- end }}
 			{{- if .UseTimeout }}
 			ret, err := grpcfed.WithTimeout[{{ .ReturnType }}](ctx, "{{ .MethodFQDN }}", {{ .Timeout }}, func(ctx context.Context) (*{{ .ReturnType }}, error) {
@@ -143,11 +157,19 @@ def_{{ .Key }} := func(ctx context.Context) error {
 					CacheIndex: {{ .CELCacheIndex }},
 					BackOff: b,
 					Body: func() (*{{ .ReturnType }}, error) {
+						{{- if .UseCallOption }}
+						{{- template "callWithOption" . }}
+						{{- else }}
 						return s.{{ .Caller }}(ctx, args)
+						{{- end }}
 					},
 				})
 				{{- else }}
+				{{- if .UseCallOption }}
+				{{- template "callWithOption" . }}
+				{{- else }}
 				return s.{{ .Caller }}(ctx, args)
+				{{- end }}
 				{{- end }}
 			})
 			{{- else if .UseRetry }}
@@ -158,11 +180,19 @@ def_{{ .Key }} := func(ctx context.Context) error {
 				CacheIndex: {{ .CELCacheIndex }},
 				BackOff: b,
 				Body: func() (*{{ .ReturnType }}, error) {
+					{{- if .UseCallOption }}
+					{{- template "callWithOption" . }}
+					{{- else }}
 					return s.{{ .Caller }}(ctx, args)
+					{{- end }}
 				},
 			})
 			{{- else }}
+			{{- if .UseCallOption }}
+			{{- template "callWithOption" . }}
+			{{- else }}
 			ret, err := s.{{ .Caller }}(ctx, args)
+			{{- end }}
 			{{- end }}
 			if err != nil {
 				{{- template "errorHandler" (map "Definition" .) }}
@@ -173,6 +203,61 @@ def_{{ .Key }} := func(ctx context.Context) error {
 	})
 	{{- end }}
 }
+{{- end }}
+
+{{- define "defineCallOpts" }}
+
+{{- if .UseCallOption }}
+{{ $callOpt := .CallOption }}
+var callOpts []grpcfed.CallOption
+{{- if $callOpt.ContentSubtype }}
+callOpts = append(callOpts, grpcfed.GRPCCallOptionContentSubtype(`{{ $callOpt.ContentSubtype }}`))
+{{- end }}
+{{- if $callOpt.HeaderValueName }}
+var hdr grpcfed.GRPCMetadata
+callOpts = append(callOpts, grpcfed.GRPCCallOptionHeader(&hdr))
+{{- end }}
+{{- if $callOpt.TrailerValueName }}
+var tlr grpcfed.GRPCMetadata
+callOpts = append(callOpts, grpcfed.GRPCCallOptionTrailer(&tlr))
+{{- end }}
+{{- if $callOpt.UseMaxCallRecvMsgSize }}
+callOpts = append(callOpts, grpcfed.GRPCCallOptionMaxCallRecvMsgSize({{ $callOpt.MaxCallRecvMsgSize }}))
+{{- end }}
+{{- if $callOpt.UseMaxCallSendMsgSize }}
+callOpts = append(callOpts, grpcfed.GRPCCallOptionMaxCallSendMsgSize({{ $callOpt.MaxCallSendMsgSize }}))
+{{- end }}
+{{- if $callOpt.StaticMethod }}
+callOpts = append(callOpts, grpcfed.GRPCCallOptionStaticMethod())
+{{- end }}
+{{- if $callOpt.UseWaitForReady }}
+callOpts = append(callOpts, grpcfed.GRPCCallOptionWaitForReady({{ $callOpt.WaitForReady }}))
+{{- end }}
+{{- end }}
+
+{{- end }}
+
+{{- define "callWithOption" }}
+
+{{ $callOpt := .CallOption }}
+ret, err := s.{{ .Caller }}(ctx, args, callOpts...)
+value.LockFunc(func() {
+	{{- if $callOpt.HeaderValueName }}
+	if value.vars.{{ $callOpt.HeaderValueName }} != nil {
+		for k, v := range hdr {
+			value.vars.{{ $callOpt.HeaderValueName }}[k] = v
+		}
+	}
+	{{- end }}
+	{{- if $callOpt.TrailerValueName }}
+	if value.vars.{{ $callOpt.TrailerValueName }} != nil {
+		for k, v := range tlr {
+			value.vars.{{ $callOpt.TrailerValueName }}[k] = v
+		}
+	}
+	{{- end }}
+})
+
 {{- end }}
 
 {{- define "evalMessageDef" }}

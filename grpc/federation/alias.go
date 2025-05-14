@@ -14,7 +14,9 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/kelseyhightower/envconfig"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/protoadapt"
 )
@@ -30,32 +32,42 @@ type (
 	RWMutex        = sync.RWMutex
 	Status         = status.Status
 	Duration       = time.Duration
+	CallOption     = grpc.CallOption
+	GRPCMetadata   = metadata.MD
 )
 
 var (
-	StackTrace            = debug.Stack
-	LoadEnv               = envconfig.Process
-	Getenv                = os.Getenv
-	GRPCErrorf            = status.Errorf
-	NewGRPCStatus         = status.New
-	GRPCStatusFromError   = status.FromError
-	ErrorGroupWithContext = errgroup.WithContext
-	NewCELEnv             = cel.NewCustomEnv
-	NewCELVariable        = cel.Variable
-	CELLib                = cel.Lib
-	CELDoubleType         = types.DoubleType
-	CELIntType            = types.IntType
-	CELUintType           = types.UintType
-	CELBoolType           = types.BoolType
-	CELStringType         = types.StringType
-	CELBytesType          = types.BytesType
-	CELDurationType       = types.DurationType
-	CELObjectType         = cel.ObjectType
-	CELListType           = cel.ListType
-	CELNullType           = cel.NullType
-	NewCELListType        = types.NewListType
-	NewCELObjectType      = types.NewObjectType
-	NewCELMapType         = types.NewMapType
+	StackTrace                       = debug.Stack
+	LoadEnv                          = envconfig.Process
+	Getenv                           = os.Getenv
+	GRPCErrorf                       = status.Errorf
+	NewGRPCStatus                    = status.New
+	GRPCStatusFromError              = status.FromError
+	ErrorGroupWithContext            = errgroup.WithContext
+	GRPCCallOptionContentSubtype     = grpc.CallContentSubtype
+	GRPCCallOptionHeader             = grpc.Header
+	GRPCCallOptionTrailer            = grpc.Trailer
+	GRPCCallOptionMaxCallRecvMsgSize = grpc.MaxCallRecvMsgSize
+	GRPCCallOptionMaxCallSendMsgSize = grpc.MaxCallSendMsgSize
+	GRPCCallOptionStaticMethod       = grpc.StaticMethod
+	GRPCCallOptionWaitForReady       = grpc.WaitForReady
+	AppendToOutgoingContext          = metadata.AppendToOutgoingContext
+	NewCELEnv                        = cel.NewCustomEnv
+	NewCELVariable                   = cel.Variable
+	CELLib                           = cel.Lib
+	CELDoubleType                    = types.DoubleType
+	CELIntType                       = types.IntType
+	CELUintType                      = types.UintType
+	CELBoolType                      = types.BoolType
+	CELStringType                    = types.StringType
+	CELBytesType                     = types.BytesType
+	CELDurationType                  = types.DurationType
+	CELObjectType                    = cel.ObjectType
+	CELListType                      = cel.ListType
+	CELNullType                      = cel.NullType
+	NewCELListType                   = types.NewListType
+	NewCELObjectType                 = types.NewObjectType
+	NewCELMapType                    = types.NewMapType
 )
 
 const (

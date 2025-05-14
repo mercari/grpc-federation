@@ -342,11 +342,28 @@ func (o *CallExprOption) Clone() *CallExprOption {
 		return nil
 	}
 	return &CallExprOption{
-		Method:  o.Method,
-		Request: o.Request.Clone(),
-		Timeout: o.Timeout,
-		Retry:   o.Retry.Clone(),
-		Error:   o.Error.Clone(),
+		Method:   o.Method,
+		Request:  o.Request.Clone(),
+		Timeout:  o.Timeout,
+		Retry:    o.Retry.Clone(),
+		Error:    o.Error.Clone(),
+		Option:   o.Option.Clone(),
+		Metadata: o.Metadata,
+	}
+}
+
+func (o *GRPCCallOption) Clone() *GRPCCallOption {
+	if o == nil {
+		return nil
+	}
+	return &GRPCCallOption{
+		ContentSubtype:     o.ContentSubtype,
+		Header:             o.Header,
+		Trailer:            o.Trailer,
+		MaxCallRecvMsgSize: o.MaxCallRecvMsgSize,
+		MaxCallSendMsgSize: o.MaxCallSendMsgSize,
+		StaticMethod:       o.StaticMethod,
+		WaitForReady:       o.WaitForReady,
 	}
 }
 

@@ -2,6 +2,7 @@ package validator_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -73,6 +74,19 @@ invalid_call_error_handler.proto:49:19: "by" must always return a message value
 invalid_call_error_handler.proto:53:34: value must be "post.GetPostResponse" type
 53:              ignore_and_response: "10"
                                       ^
+`},
+		{file: "invalid_call_metadata.proto", expected: `
+invalid_call_metadata.proto:26:19: gRPC Call metadata's value type must be map<string, repeated string> type
+26:          metadata: "{'foo': 'bar'}"
+                       ^
+`},
+		{file: "invalid_call_option.proto", expected: `
+invalid_call_option.proto:29:19: "hdr" variable is not defined
+29:            header: "hdr"
+                       ^
+invalid_call_option.proto:30:20: gRPC Call option trailer's value type must be map<string, repeated string> type
+30:            trailer: "tlr"
+                        ^
 `},
 		{file: "invalid_condition_type.proto", expected: `
 invalid_condition_type.proto:38:13: return value of "if" must be bool type but got string type
@@ -830,6 +844,7 @@ invalid_file_import.proto:12:5: [WARN] Import user.proto is unused for the defin
 				return
 			}
 			if diff := cmp.Diff("\n"+got, test.expected); diff != "" {
+				fmt.Println(string(got))
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
 		})

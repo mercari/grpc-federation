@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+option (grpc.federation.file) = {
+  import: ["post.proto"]
+};
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def { name: "tlr" by: "[1, 2, 3]" }
+    def {
+       call {
+        method: "post.PostService/GetPost"
+        request { field: "id" by: "$.id" }
+        option {
+          header: "hdr"
+          trailer: "tlr"
+        }
+      }
+    }
+  };
+}
