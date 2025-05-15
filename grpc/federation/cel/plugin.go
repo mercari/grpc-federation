@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/google/cel-go/cel"
@@ -122,6 +123,10 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		WithStdout(stdoutW).
 		WithStderr(os.Stderr).
 		WithArgs("plugin")
+	for _, kv := range os.Environ() {
+		i := strings.IndexByte(kv, '=')
+		modCfg = modCfg.WithEnv(kv[:i], kv[i+1:])
+	}
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
 	instanceModErrCh := make(chan error, 1)
