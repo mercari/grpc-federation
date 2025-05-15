@@ -628,7 +628,7 @@ func (f *File) Imports() []*Import {
 			Used:  true,
 		})
 		importPathMap[pkg.ImportPath] = struct{}{}
-		importAliasMap[pkg.Name] = struct{}{}
+		importAliasMap[alias] = struct{}{}
 	}
 	sortedPkgs := make([]*resolver.GoPackage, 0, len(f.pkgMap))
 	for pkg := range f.pkgMap {
