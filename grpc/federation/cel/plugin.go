@@ -117,6 +117,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	stdinR, stdinW := io.Pipe()
 	stdoutR, stdoutW := io.Pipe()
 	modCfg := wazero.NewModuleConfig().
+		WithFSConfig(wazero.NewFSConfig().WithFSMount(os.DirFS("/"), "/")).
 		WithStdin(stdinR).
 		WithStdout(stdoutW).
 		WithStderr(os.Stderr).
