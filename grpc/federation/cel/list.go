@@ -11,7 +11,6 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/parser"
-	"github.com/google/uuid"
 )
 
 const ListPackageName = "list"
@@ -24,7 +23,8 @@ const (
 )
 
 type ListLibrary struct {
-	typeAdapter types.Adapter
+	typeAdapter    types.Adapter
+	tempVarCounter int
 }
 
 func NewListLibrary(typeAdapter types.Adapter) cel.SingletonLibrary {
@@ -181,7 +181,9 @@ func (lib *ListLibrary) makeSortStableDesc(mef cel.MacroExprFactory, target ast.
 
 func (lib *ListLibrary) makeSort(function string, mef cel.MacroExprFactory, target ast.Expr, args []ast.Expr) (ast.Expr, *cel.Error) {
 	// Create a temporary variable to bind the target expression
-	varIdent := mef.NewIdent(uuid.NewString())
+	varIdent := mef.NewIdent(fmt.Sprintf("temp_var_%d", lib.tempVarCounter))
+	lib.tempVarCounter++
+
 	mp, err := parser.MakeMap(mef, varIdent, args)
 	if err != nil {
 		return nil, err
