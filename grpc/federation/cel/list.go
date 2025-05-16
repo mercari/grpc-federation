@@ -3,6 +3,7 @@ package cel
 import (
 	"fmt"
 	"sort"
+	"sync"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/ast"
@@ -23,7 +24,9 @@ const (
 )
 
 type ListLibrary struct {
-	typeAdapter    types.Adapter
+	typeAdapter types.Adapter
+
+	mu             sync.Mutex
 	tempVarCounter int
 }
 
@@ -181,8 +184,10 @@ func (lib *ListLibrary) makeSortStableDesc(mef cel.MacroExprFactory, target ast.
 
 func (lib *ListLibrary) makeSort(function string, mef cel.MacroExprFactory, target ast.Expr, args []ast.Expr) (ast.Expr, *cel.Error) {
 	// Create a temporary variable to bind the target expression
+	lib.mu.Lock()
 	varIdent := mef.NewIdent(fmt.Sprintf("temp_var_%d", lib.tempVarCounter))
 	lib.tempVarCounter++
+	lib.mu.Unlock()
 
 	mp, err := parser.MakeMap(mef, varIdent, args)
 	if err != nil {
