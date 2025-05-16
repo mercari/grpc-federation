@@ -116,6 +116,17 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		[]api.ValueType{api.ValueTypeI32},
 	).Export("socket")
 
+	//func set_sockopt_int(fd, level, opt int, value int32)
+	net = net.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
+			if err := syscall.SetsockoptInt(int(stack[0]), int(stack[1]), int(stack[2]), int(stack[3])); err != nil {
+				fmt.Println("found error", err)
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("set_sockopt_int")
+
 	if _, err := net.Instantiate(ctx); err != nil {
 		return nil, fmt.Errorf("grpc-federation: failed to add wasi-network module: %w", err)
 	}
