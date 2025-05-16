@@ -14,11 +14,13 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -79,6 +81,33 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}
 
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
+	net := r.NewHostModuleBuilder("wasi_network")
+	net = net.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
+			stack[0] = uint64(syscall.SOL_SOCKET)
+		}),
+		[]api.ValueType{},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("get_SOL_SOCKET")
+	net = net.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
+			stack[0] = uint64(syscall.SO_REUSEADDR)
+		}),
+		[]api.ValueType{},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("get_SO_REUSEADDR")
+	net = net.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
+			stack[0] = uint64(syscall.SO_BROADCAST)
+		}),
+		[]api.ValueType{},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("get_SO_BROADCAST")
+
+	if _, err := net.Instantiate(ctx); err != nil {
+		return nil, fmt.Errorf("grpc-federation: failed to add wasi-network module: %w", err)
+	}
+
 	wasi_snapshot_preview1.MustInstantiate(ctx, r)
 
 	mod, err := r.CompileModule(ctx, wasmFile)
