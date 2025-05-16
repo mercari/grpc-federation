@@ -103,6 +103,18 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		[]api.ValueType{},
 		[]api.ValueType{api.ValueTypeI32},
 	).Export("get_SO_BROADCAST")
+	// func (proto, sotype, unused int) (fd int, err error)
+	net = net.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
+			res, err := syscall.Socket(int(stack[0]), int(stack[1]), int(stack[2]))
+			if err != nil {
+				fmt.Println("found error", err)
+			}
+			stack[0] = uint64(res)
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("socket")
 
 	if _, err := net.Instantiate(ctx); err != nil {
 		return nil, fmt.Errorf("grpc-federation: failed to add wasi-network module: %w", err)
