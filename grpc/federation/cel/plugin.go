@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"unsafe"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
@@ -103,7 +104,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		[]api.ValueType{},
 		[]api.ValueType{api.ValueTypeI32},
 	).Export("get_SO_BROADCAST")
-	// func (proto, sotype, unused int) (fd int, err error)
+
 	net = net.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
 			res, err := syscall.Socket(int(stack[0]), int(stack[1]), int(stack[2]))
@@ -116,7 +117,56 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		[]api.ValueType{api.ValueTypeI32},
 	).Export("socket")
 
-	//func set_sockopt_int(fd, level, opt int, value int32)
+	net = net.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			fd := int(stack[0])
+			ptr := stack[1]
+			n := stack[2]
+
+			bytes, ok := mod.Memory().Read(uint32(ptr), uint32(n))
+			if !ok {
+				fmt.Printf(
+					`failed to read wasm memory: (ptr, size) = (%d, %d) and memory size is %d`,
+					ptr, n, mod.Memory().Size(),
+				)
+				return
+			}
+			fmt.Println("fd", fd, "size", n, "buf", bytes)
+			p := unsafe.Pointer(&bytes)
+			_, _, e1 := syscall.Syscall(syscall.SYS_BIND, uintptr(fd), uintptr(p), uintptr(n))
+			if e1 != 0 {
+				fmt.Println("BIND ERROR", e1)
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("bind")
+
+	net = net.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			fd := int(stack[0])
+			ptr := stack[1]
+			n := stack[2]
+
+			bytes, ok := mod.Memory().Read(uint32(ptr), uint32(n))
+			if !ok {
+				fmt.Printf(
+					`failed to read wasm memory: (ptr, size) = (%d, %d) and memory size is %d`,
+					ptr, n, mod.Memory().Size(),
+				)
+				return
+			}
+			fmt.Println("fd", fd, "size", n, "buf", bytes)
+			p := unsafe.Pointer(&bytes)
+			_, _, e1 := syscall.Syscall(syscall.SYS_CONNECT, uintptr(fd), uintptr(p), uintptr(n))
+			if e1 != 0 {
+				fmt.Println("CONNECT ERROR", e1)
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("connect")
+
 	net = net.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
 			if err := syscall.SetsockoptInt(int(stack[0]), int(stack[1]), int(stack[2]), int(stack[3])); err != nil {
