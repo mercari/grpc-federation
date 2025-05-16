@@ -11,6 +11,7 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
 	"github.com/google/cel-go/parser"
+	"github.com/google/uuid"
 )
 
 const ListPackageName = "list"
@@ -179,15 +180,26 @@ func (lib *ListLibrary) makeSortStableDesc(mef cel.MacroExprFactory, target ast.
 }
 
 func (lib *ListLibrary) makeSort(function string, mef cel.MacroExprFactory, target ast.Expr, args []ast.Expr) (ast.Expr, *cel.Error) {
-	mp, err := parser.MakeMap(mef, target, args)
+	// Create a temporary variable to bind the target expression
+	varIdent := mef.NewIdent(uuid.NewString())
+	mp, err := parser.MakeMap(mef, varIdent, args)
 	if err != nil {
 		return nil, err
 	}
-	// When sort macros are called in a chain (e.g., [1, 2].sortAsc(v, v).sortDesc(v, v)), the makeSort method is called two or more times.
-	// Then, on the second and subsequent calls to the makeSort method, the call expression created by the previous makeSort method is passed to the target argument.
-	// Passing it as is to the global sort function call (e.g., grpc.federaiton.list.@sortAsc) will cause an `incompatible type already exists for expression error`.
-	// To avoid this, use mef.Copy for the target argument to assign a new set of identifiers.
-	return mef.NewCall(function, mef.Copy(target), mp), nil
+
+	// To avoid multiple evaluations of the target expression, its result is bound to a temporary variable.
+	// This approach prevents issues that can arise when the same expression is evaluated more than once,
+	// particularly in cases involving non-deterministic operations, such as retrieving unordered values (e.g., map keys),
+	// which may lead to inconsistent behavior like incorrect ordering.
+	return mef.NewComprehension(
+		mef.NewList(),
+		"#unused",
+		varIdent.AsIdent(),
+		target,
+		mef.NewLiteral(types.False),
+		mef.NewIdent(varIdent.AsIdent()),
+		mef.NewCall(function, varIdent, mp),
+	), nil
 }
 
 func (lib *ListLibrary) sortAsc(orig, expanded ref.Val) ref.Val {

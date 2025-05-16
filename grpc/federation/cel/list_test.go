@@ -161,6 +161,29 @@ grpc.federation.cel.test.Message{id: "b", inner: grpc.federation.cel.test.InnerM
 			},
 		},
 		{
+			name: "sortAsc key value",
+			expr: "{'b': 'y', 'a': 'x'}.map(v, v).sortAsc(v, v)",
+			cmp: func(got any) error {
+				lister, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := []string{"a", "b"}
+				if lister.Size().(types.Int) != types.Int(len(expected)) {
+					return fmt.Errorf("invalid size")
+				}
+
+				gotV, err := lister.ConvertToNative(reflect.TypeOf([]string{}))
+				if err != nil {
+					return fmt.Errorf("failed to convert to native: %w", err)
+				}
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
 			name: "sortDesc field selection",
 			expr: `[
 grpc.federation.cel.test.Message{id: "a"}, 
