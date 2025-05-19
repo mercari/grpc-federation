@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package example.net;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/plugin;pluginpb";
+
+option (grpc.federation.file).plugin.export = {
+  name: "net"
+  functions: [
+    {
+      name: "httpGet"
+      args {
+        name: "url"
+        type { kind: STRING }
+        desc: "url string"
+      }
+      return { kind: STRING }
+    }
+  ]
+};

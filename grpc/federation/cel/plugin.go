@@ -9,13 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
-	"syscall"
-	"unsafe"
+	"time"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
@@ -63,6 +63,21 @@ var (
 	)
 )
 
+type conn struct {
+	net.Conn
+	end bool
+	buf []byte
+	n   int64
+	err error
+}
+
+type addr struct {
+	net.Addr
+}
+
+var connMap = make(map[uint32]*conn)
+var addrMap = make(map[uint32]*addr)
+
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
 	if cfg.Wasm.Reader == nil {
 		return nil, fmt.Errorf("grpc-federation: WasmConfig.Reader field is required")
@@ -82,102 +97,250 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}
 
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
-	net := r.NewHostModuleBuilder("wasi_network")
-	net = net.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
-			stack[0] = uint64(syscall.SOL_SOCKET)
-		}),
-		[]api.ValueType{},
-		[]api.ValueType{api.ValueTypeI32},
-	).Export("get_SOL_SOCKET")
-	net = net.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
-			stack[0] = uint64(syscall.SO_REUSEADDR)
-		}),
-		[]api.ValueType{},
-		[]api.ValueType{api.ValueTypeI32},
-	).Export("get_SO_REUSEADDR")
-	net = net.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
-			stack[0] = uint64(syscall.SO_BROADCAST)
-		}),
-		[]api.ValueType{},
-		[]api.ValueType{api.ValueTypeI32},
-	).Export("get_SO_BROADCAST")
+	ptrToString := func(mod api.Module, ptr, size uint32) string {
+		bytes, _ := mod.Memory().Read(ptr, size)
+		return string(bytes)
+	}
 
-	net = net.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
-			res, err := syscall.Socket(int(stack[0]), int(stack[1]), int(stack[2]))
+	ptrToBytes := func(mod api.Module, ptr, size uint32) []byte {
+		bytes, _ := mod.Memory().Read(ptr, size)
+		return bytes
+	}
+
+	goNet := r.NewHostModuleBuilder("wasi_go_net")
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			networkPtr := uint32(stack[0])
+			networkLen := uint32(stack[1])
+			addressPtr := uint32(stack[2])
+			addressLen := uint32(stack[3])
+			network := ptrToString(mod, networkPtr, networkLen)
+			address := ptrToString(mod, addressPtr, addressLen)
+			fmt.Println("network", network, "address", address)
+			var d net.Dialer
+			c, err := d.DialContext(ctx, network, address)
 			if err != nil {
-				fmt.Println("found error", err)
+				fmt.Println("err", err)
 			}
-			stack[0] = uint64(res)
+			//fmt.Println("conn", c)
+			ret := &conn{Conn: c}
+			id := uint32(len(connMap) + 1)
+			connMap[id] = ret
+			stack[0] = uint64(id)
 		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
 		[]api.ValueType{api.ValueTypeI32},
-	).Export("socket")
-
-	net = net.NewFunctionBuilder().WithGoModuleFunction(
+	).Export("dial")
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			fd := int(stack[0])
-			ptr := stack[1]
-			n := stack[2]
-
-			bytes, ok := mod.Memory().Read(uint32(ptr), uint32(n))
-			if !ok {
-				fmt.Printf(
-					`failed to read wasm memory: (ptr, size) = (%d, %d) and memory size is %d`,
-					ptr, n, mod.Memory().Size(),
-				)
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
 				return
 			}
-			fmt.Println("fd", fd, "size", n, "buf", bytes)
-			p := unsafe.Pointer(&bytes)
-			_, _, e1 := syscall.Syscall(syscall.SYS_BIND, uintptr(fd), uintptr(p), uintptr(n))
-			if e1 != 0 {
-				fmt.Println("BIND ERROR", e1)
-			}
+			bytesPtr := uint32(stack[1])
+			bytesLen := uint32(stack[2])
+			b := ptrToBytes(mod, bytesPtr, bytesLen)
+			conn.buf = make([]byte, len(b))
+			conn.end = false
+			go func() {
+				n, err := conn.Read(conn.buf)
+				conn.n = int64(n)
+				conn.err = err
+			}()
+			/*
+				if !mod.Memory().Write(uint32(stack[1]), conn.buf) {
+					fmt.Println("failed to write buf")
+				}
+				if !mod.Memory().WriteUint32Le(uint32(stack[3]), uint32(n)) {
+					fmt.Println("failed to write n")
+				}
+			*/
 		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
 		[]api.ValueType{},
-	).Export("bind")
+	).Export("conn_read")
 
-	net = net.NewFunctionBuilder().WithGoModuleFunction(
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			fd := int(stack[0])
-			ptr := stack[1]
-			n := stack[2]
-
-			bytes, ok := mod.Memory().Read(uint32(ptr), uint32(n))
-			if !ok {
-				fmt.Printf(
-					`failed to read wasm memory: (ptr, size) = (%d, %d) and memory size is %d`,
-					ptr, n, mod.Memory().Size(),
-				)
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
 				return
 			}
-			fmt.Println("fd", fd, "size", n, "buf", bytes)
-			p := unsafe.Pointer(&bytes)
-			_, _, e1 := syscall.Syscall(syscall.SYS_CONNECT, uintptr(fd), uintptr(p), uintptr(n))
-			if e1 != 0 {
-				fmt.Println("CONNECT ERROR", e1)
+			if conn.err != nil {
+				fmt.Println("err", conn.err)
+				e := []byte(conn.err.Error())
+				if !mod.Memory().Write(uint32(stack[4]), e) {
+					fmt.Println("failed to write err content")
+				}
+				if !mod.Memory().WriteUint32Le(uint32(stack[5]), uint32(len(e))) {
+					fmt.Println("failed to write err length")
+				}
+				fmt.Println("failed to read", err)
+				return
+			}
+			if !mod.Memory().Write(uint32(stack[1]), conn.buf) {
+				fmt.Println("failed to write buf")
+			}
+			if !mod.Memory().WriteUint32Le(uint32(stack[3]), uint32(conn.n)) {
+				fmt.Println("failed to write n")
 			}
 		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
 		[]api.ValueType{},
-	).Export("connect")
+	).Export("conn_get_read")
 
-	net = net.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, _ api.Module, stack []uint64) {
-			if err := syscall.SetsockoptInt(int(stack[0]), int(stack[1]), int(stack[2]), int(stack[3])); err != nil {
-				fmt.Println("found error", err)
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
+				return
+			}
+			bytesPtr := uint32(stack[1])
+			bytesLen := uint32(stack[2])
+			b := ptrToBytes(mod, bytesPtr, bytesLen)
+			n, err := conn.Write(b)
+			if err != nil {
+				e := []byte(err.Error())
+				if !mod.Memory().Write(uint32(stack[4]), e) {
+					fmt.Println("failed to write err content")
+				}
+				if !mod.Memory().WriteUint32Le(uint32(stack[5]), uint32(len(e))) {
+					fmt.Println("failed to write err length")
+				}
+				fmt.Println("failed to write", err)
+				return
+			}
+			if !mod.Memory().WriteUint32Le(uint32(stack[3]), uint32(n)) {
+				fmt.Println("failed to write n")
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("conn_write")
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
+				return
+			}
+			if err := conn.Close(); err != nil {
+				fmt.Println("close error", err)
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("conn_close")
+
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
+				return
+			}
+			t := time.Unix(int64(stack[1]), 0)
+			if err := conn.SetDeadline(t); err != nil {
+				fmt.Println("failed to set deadline", err)
 			}
 		}),
 		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
 		[]api.ValueType{},
-	).Export("set_sockopt_int")
+	).Export("conn_set_deadline")
 
-	if _, err := net.Instantiate(ctx); err != nil {
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
+				return
+			}
+			t := time.Unix(int64(stack[1]), 0)
+			if err := conn.SetReadDeadline(t); err != nil {
+				fmt.Println("failed to set deadline", err)
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("conn_set_read_deadline")
+
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
+				return
+			}
+			t := time.Unix(int64(stack[1]), 0)
+			if err := conn.SetWriteDeadline(t); err != nil {
+				fmt.Println("failed to set deadline", err)
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("conn_set_write_deadline")
+
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
+				return
+			}
+			a := conn.LocalAddr()
+			ret := &addr{Addr: a}
+			retID := uint32(len(addrMap) + 1)
+			addrMap[retID] = ret
+			stack[0] = uint64(retID)
+		}),
+		[]api.ValueType{api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("conn_local_addr")
+
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			id := uint32(stack[0])
+			conn, exists := connMap[id]
+			if !exists {
+				fmt.Println("failed to find conn")
+				return
+			}
+			a := conn.RemoteAddr()
+			ret := &addr{Addr: a}
+			retID := uint32(len(addrMap) + 1)
+			addrMap[retID] = ret
+			stack[0] = uint64(retID)
+		}),
+		[]api.ValueType{api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("conn_remote_addr")
+
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("addr_network")
+
+	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("addr_string")
+
+	if _, err := goNet.Instantiate(ctx); err != nil {
 		return nil, fmt.Errorf("grpc-federation: failed to add wasi-network module: %w", err)
 	}
 
@@ -220,6 +383,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	stdinR, stdinW := io.Pipe()
 	stdoutR, stdoutW := io.Pipe()
 	modCfg := wazero.NewModuleConfig().
+		WithSysWalltime().
 		WithFSConfig(wazero.NewFSConfig().WithFSMount(os.DirFS("/"), "/")).
 		WithStdin(stdinR).
 		WithStdout(stdoutW).
@@ -266,6 +430,7 @@ type CELPluginInstance struct {
 	stdin            *io.PipeWriter
 	stdout           *io.PipeReader
 	instanceModErrCh chan error
+	instanceModErr   error
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
@@ -327,7 +492,7 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 
 func (i *CELPluginInstance) write(cmd []byte) error {
 	if i.closed {
-		return nil
+		return i.instanceModErr
 	}
 
 	writeCh := make(chan error)
@@ -339,7 +504,7 @@ func (i *CELPluginInstance) write(cmd []byte) error {
 	case err := <-i.instanceModErrCh:
 		// If the module instance is terminated,
 		// it is considered that the termination process has been completed.
-		i.closed = true
+		i.closeResources(err)
 		return err
 	case err := <-writeCh:
 		return err
@@ -350,12 +515,19 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	defer func() { i.closed = true }()
+	defer func() { i.closeResources(nil) }()
 	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
 	}
 	close(i.gcQueue)
 	return nil
+}
+
+func (i *CELPluginInstance) closeResources(instanceModErr error) {
+	i.instanceModErr = instanceModErr
+	i.closed = true
+	i.stdin.Close()
+	i.stdout.Close()
 }
 
 func (i *CELPluginInstance) LibraryName() string {
@@ -499,6 +671,9 @@ func (i *CELPluginInstance) recvContent() (string, error) {
 	}()
 	select {
 	case err := <-i.instanceModErrCh:
+		// If the module instance is terminated,
+		// it is considered that the termination process has been completed.
+		i.closeResources(err)
 		return "", err
 	case result := <-readCh:
 		return result.response, result.err
