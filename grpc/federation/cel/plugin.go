@@ -149,16 +149,8 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 				conn.n = int64(n)
 				conn.err = err
 			}()
-			/*
-				if !mod.Memory().Write(uint32(stack[1]), conn.buf) {
-					fmt.Println("failed to write buf")
-				}
-				if !mod.Memory().WriteUint32Le(uint32(stack[3]), uint32(n)) {
-					fmt.Println("failed to write n")
-				}
-			*/
 		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
 		[]api.ValueType{},
 	).Export("conn_read")
 
@@ -171,7 +163,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 				return
 			}
 			if conn.err != nil {
-				fmt.Println("err", conn.err)
+				fmt.Println("conn.err", conn.err)
 				e := []byte(conn.err.Error())
 				if !mod.Memory().Write(uint32(stack[4]), e) {
 					fmt.Println("failed to write err content")
@@ -179,7 +171,6 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 				if !mod.Memory().WriteUint32Le(uint32(stack[5]), uint32(len(e))) {
 					fmt.Println("failed to write err length")
 				}
-				fmt.Println("failed to read", err)
 				return
 			}
 			if !mod.Memory().Write(uint32(stack[1]), conn.buf) {
@@ -204,8 +195,11 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			bytesPtr := uint32(stack[1])
 			bytesLen := uint32(stack[2])
 			b := ptrToBytes(mod, bytesPtr, bytesLen)
+			fmt.Println("write b", len(b))
 			n, err := conn.Write(b)
+			fmt.Println("write end")
 			if err != nil {
+				fmt.Println("write err", err)
 				e := []byte(err.Error())
 				if !mod.Memory().Write(uint32(stack[4]), e) {
 					fmt.Println("failed to write err content")
@@ -225,15 +219,17 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	).Export("conn_write")
 	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			fmt.Println("called close")
 			id := uint32(stack[0])
 			conn, exists := connMap[id]
 			if !exists {
 				fmt.Println("failed to find conn")
 				return
 			}
-			if err := conn.Close(); err != nil {
-				fmt.Println("close error", err)
-			}
+			_ = conn
+			//if err := conn.Close(); err != nil {
+			//	fmt.Println("close error", err)
+			//}
 		}),
 		[]api.ValueType{api.ValueTypeI32},
 		[]api.ValueType{api.ValueTypeI32},

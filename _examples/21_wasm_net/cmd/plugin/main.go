@@ -19,7 +19,7 @@ type plugin struct{}
 func dial(networkPtr, networkLen, addressPtr, addressLen uint32) uint32
 
 //go:wasmimport wasi_go_net conn_read
-func connRead(connAddr, bytesAddr, bytesLen, retN, retErrAddr, retErrLen uint32)
+func connRead(connAddr, bytesAddr, bytesLen uint32)
 
 //go:wasmimport wasi_go_net conn_get_read
 func connGetRead(connAddr, bytesAddr, bytesLen, retN, retErrAddr, retErrLen uint32)
@@ -64,24 +64,15 @@ func (c *conn) Read(b []byte) (int, error) {
 	bytesAddr := uint32(uintptr(unsafe.Pointer(&b[0])))
 	bytesLen := uint32(len(b))
 	//bytesAddr, bytesLen := stringToPtr(string(b))
-	var (
-		n       uint32
-		errAddr uint32
-		errLen  uint32
-	)
 	fmt.Fprintf(os.Stderr, "connRead\n")
-	connRead(c.addr, bytesAddr, bytesLen,
-		uint32(uintptr(unsafe.Pointer(&n))),
-		uint32(uintptr(unsafe.Pointer(&errAddr))),
-		uint32(uintptr(unsafe.Pointer(&errLen))),
-	)
+	connRead(c.addr, bytesAddr, bytesLen)
 	for {
+		// nonblocking
 		var (
 			n       uint32
 			errAddr uint32
 			errLen  uint32
 		)
-		fmt.Fprintf(os.Stderr, "connGetRead\n")
 		connGetRead(c.addr, bytesAddr, bytesLen,
 			uint32(uintptr(unsafe.Pointer(&n))),
 			uint32(uintptr(unsafe.Pointer(&errAddr))),
@@ -91,9 +82,12 @@ func (c *conn) Read(b []byte) (int, error) {
 			fmt.Fprintf(os.Stderr, "read: n = %d errAddr = %d. errLen = %d\n", n, errAddr, errLen)
 			return int(n), nil
 		}
-		time.Sleep(3 * time.Second)
+		if errAddr != 0 {
+			fmt.Fprintln(os.Stderr, "found error", errAddr)
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
-	return int(n), nil
+	return 0, nil
 }
 
 func (c *conn) Write(b []byte) (int, error) {
@@ -109,7 +103,7 @@ func (c *conn) Write(b []byte) (int, error) {
 		uint32(uintptr(unsafe.Pointer(&errAddr))),
 		uint32(uintptr(unsafe.Pointer(&errLen))),
 	)
-	//fmt.Fprintf(os.Stderr, "write: n = %d, b = %v. errAddr = %d. errLen = %d\n", n, []byte(b), errAddr, errLen)
+	fmt.Fprintf(os.Stderr, "write: n = %d, b = %v. errAddr = %d. errLen = %d\n", n, len(b), errAddr, errLen)
 	return int(n), nil
 }
 
@@ -211,10 +205,10 @@ func (_ *plugin) Example_Net_HttpGet(ctx context.Context, url string) (string, e
 			connPtr := dial(networkPtr, networkLen, addressPtr, addressLen)
 			return &conn{addr: connPtr}, nil
 		},
-		//ForceAttemptHTTP2:     true,
+		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       5 * time.Second,
-		TLSHandshakeTimeout:   5 * time.Second,
+		TLSHandshakeTimeout:   90 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
