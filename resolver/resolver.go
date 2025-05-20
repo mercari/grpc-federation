@@ -868,6 +868,7 @@ func (r *Resolver) resolveCELPlugin(ctx *context, fileDef *descriptorpb.FileDesc
 			plugin.Functions = append(plugin.Functions, pluginFunc)
 		}
 	}
+	plugin.Capability = r.resolvePluginCapability(ctx, def.GetCapability())
 	return plugin
 }
 
@@ -1005,6 +1006,25 @@ func (r *Resolver) toPluginFunctionID(prefix string, t []*Type) string {
 		typeNames = append(typeNames, tt.FQDN())
 	}
 	return strings.ReplaceAll(strings.Join(append([]string{prefix}, typeNames...), "_"), ".", "_")
+}
+
+func (r *Resolver) resolvePluginCapability(ctx *context, def *federation.CELPluginCapability) *CELPluginCapability {
+	ret := &CELPluginCapability{}
+	if env := def.GetEnv(); env != nil {
+		ret.Env = &CELPluginEnvCapability{
+			All:   env.GetAll(),
+			Names: env.GetNames(),
+		}
+	}
+	if fs := def.GetFileSystem(); fs != nil {
+		ret.FileSystem = &CELPluginFileSystemCapability{
+			MountPath: fs.GetMountPath(),
+		}
+	}
+	if net := def.GetNetwork(); net != nil {
+		ret.Network = &CELPluginNetworkCapability{}
+	}
+	return ret
 }
 
 func (r *Resolver) resolveService(ctx *context, pkg *Package, name string, builder *source.ServiceBuilder) *Service {

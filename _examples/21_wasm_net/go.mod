@@ -5,7 +5,7 @@ go 1.23.7
 replace github.com/mercari/grpc-federation => ../../
 
 require (
-	github.com/egdaemon/wasinet/wasinet v0.0.0-20250205011224-d5f0e1da96d7
+	github.com/goccy/wasi-go-net v0.0.0-00010101000000-000000000000
 	github.com/mercari/grpc-federation v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0
@@ -21,14 +21,16 @@ require (
 	cel.dev/expr v0.19.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
-	github.com/egdaemon/wasinet/wazeronet v0.0.0-20250205011224-d5f0e1da96d7 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/cel-go v0.23.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/stealthrocket/wasi-go v0.8.0 // indirect
+	github.com/stealthrocket/wazergo v0.19.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/tetratelabs/wazero v1.8.2 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.21.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
@@ -40,3 +42,13 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240826202546-f6391c0de4c7 // indirect
 )
+
+replace github.com/stealthrocket/net => github.com/goccy/wasi-go-net v0.0.0-20250520013656-39fbf162b9c4
+
+replace github.com/stealthrocket/wasi-go => ../../../../goccy/wasi-go
+
+replace github.com/goccy/wasi-go-net => ../../../../goccy/wasi-go-net
+
+replace github.com/goccy/wasi-go => ../../../../goccy/wasi-go
+
+replace github.com/tetratelabs/wazero => ../../../../wazero

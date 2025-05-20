@@ -2,6 +2,7 @@ package cel
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,19 +11,20 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/stealthrocket/wasi-go/imports"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -46,10 +48,29 @@ type CELFunction struct {
 }
 
 type CELPluginConfig struct {
-	Name      string
-	Wasm      WasmConfig
-	Functions []*CELFunction
-	CacheDir  string
+	Name       string
+	Wasm       WasmConfig
+	Functions  []*CELFunction
+	CacheDir   string
+	Capability *CELPluginCapability
+}
+
+type CELPluginCapability struct {
+	Env        *CELPluginEnvCapability
+	FileSystem *CELPluginFileSystemCapability
+	Network    *CELPluginNetworkCapability
+}
+
+type CELPluginEnvCapability struct {
+	All   bool
+	Names []string
+}
+
+type CELPluginFileSystemCapability struct {
+	MountPath string
+}
+
+type CELPluginNetworkCapability struct {
 }
 
 type WasmConfig struct {
@@ -97,250 +118,6 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}
 
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
-	ptrToString := func(mod api.Module, ptr, size uint32) string {
-		bytes, _ := mod.Memory().Read(ptr, size)
-		return string(bytes)
-	}
-
-	ptrToBytes := func(mod api.Module, ptr, size uint32) []byte {
-		bytes, _ := mod.Memory().Read(ptr, size)
-		return bytes
-	}
-
-	goNet := r.NewHostModuleBuilder("wasi_go_net")
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			networkPtr := uint32(stack[0])
-			networkLen := uint32(stack[1])
-			addressPtr := uint32(stack[2])
-			addressLen := uint32(stack[3])
-			network := ptrToString(mod, networkPtr, networkLen)
-			address := ptrToString(mod, addressPtr, addressLen)
-			fmt.Println("network", network, "address", address)
-			var d net.Dialer
-			c, err := d.DialContext(ctx, network, address)
-			if err != nil {
-				fmt.Println("err", err)
-			}
-			//fmt.Println("conn", c)
-			ret := &conn{Conn: c}
-			id := uint32(len(connMap) + 1)
-			connMap[id] = ret
-			stack[0] = uint64(id)
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{api.ValueTypeI32},
-	).Export("dial")
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			bytesPtr := uint32(stack[1])
-			bytesLen := uint32(stack[2])
-			b := ptrToBytes(mod, bytesPtr, bytesLen)
-			conn.buf = make([]byte, len(b))
-			conn.end = false
-			go func() {
-				n, err := conn.Read(conn.buf)
-				conn.n = int64(n)
-				conn.err = err
-			}()
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("conn_read")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			if conn.err != nil {
-				fmt.Println("conn.err", conn.err)
-				e := []byte(conn.err.Error())
-				if !mod.Memory().Write(uint32(stack[4]), e) {
-					fmt.Println("failed to write err content")
-				}
-				if !mod.Memory().WriteUint32Le(uint32(stack[5]), uint32(len(e))) {
-					fmt.Println("failed to write err length")
-				}
-				return
-			}
-			if !mod.Memory().Write(uint32(stack[1]), conn.buf) {
-				fmt.Println("failed to write buf")
-			}
-			if !mod.Memory().WriteUint32Le(uint32(stack[3]), uint32(conn.n)) {
-				fmt.Println("failed to write n")
-			}
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("conn_get_read")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			bytesPtr := uint32(stack[1])
-			bytesLen := uint32(stack[2])
-			b := ptrToBytes(mod, bytesPtr, bytesLen)
-			fmt.Println("write b", len(b))
-			n, err := conn.Write(b)
-			fmt.Println("write end")
-			if err != nil {
-				fmt.Println("write err", err)
-				e := []byte(err.Error())
-				if !mod.Memory().Write(uint32(stack[4]), e) {
-					fmt.Println("failed to write err content")
-				}
-				if !mod.Memory().WriteUint32Le(uint32(stack[5]), uint32(len(e))) {
-					fmt.Println("failed to write err length")
-				}
-				fmt.Println("failed to write", err)
-				return
-			}
-			if !mod.Memory().WriteUint32Le(uint32(stack[3]), uint32(n)) {
-				fmt.Println("failed to write n")
-			}
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("conn_write")
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			fmt.Println("called close")
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			_ = conn
-			//if err := conn.Close(); err != nil {
-			//	fmt.Println("close error", err)
-			//}
-		}),
-		[]api.ValueType{api.ValueTypeI32},
-		[]api.ValueType{api.ValueTypeI32},
-	).Export("conn_close")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			t := time.Unix(int64(stack[1]), 0)
-			if err := conn.SetDeadline(t); err != nil {
-				fmt.Println("failed to set deadline", err)
-			}
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("conn_set_deadline")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			t := time.Unix(int64(stack[1]), 0)
-			if err := conn.SetReadDeadline(t); err != nil {
-				fmt.Println("failed to set deadline", err)
-			}
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("conn_set_read_deadline")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			t := time.Unix(int64(stack[1]), 0)
-			if err := conn.SetWriteDeadline(t); err != nil {
-				fmt.Println("failed to set deadline", err)
-			}
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("conn_set_write_deadline")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			a := conn.LocalAddr()
-			ret := &addr{Addr: a}
-			retID := uint32(len(addrMap) + 1)
-			addrMap[retID] = ret
-			stack[0] = uint64(retID)
-		}),
-		[]api.ValueType{api.ValueTypeI32},
-		[]api.ValueType{api.ValueTypeI32},
-	).Export("conn_local_addr")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			id := uint32(stack[0])
-			conn, exists := connMap[id]
-			if !exists {
-				fmt.Println("failed to find conn")
-				return
-			}
-			a := conn.RemoteAddr()
-			ret := &addr{Addr: a}
-			retID := uint32(len(addrMap) + 1)
-			addrMap[retID] = ret
-			stack[0] = uint64(retID)
-		}),
-		[]api.ValueType{api.ValueTypeI32},
-		[]api.ValueType{api.ValueTypeI32},
-	).Export("conn_remote_addr")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("addr_network")
-
-	goNet = goNet.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("addr_string")
-
-	if _, err := goNet.Instantiate(ctx); err != nil {
-		return nil, fmt.Errorf("grpc-federation: failed to add wasi-network module: %w", err)
-	}
-
-	wasi_snapshot_preview1.MustInstantiate(ctx, r)
 
 	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
@@ -375,19 +152,37 @@ func getCompilationCache(name, baseDir string) wazero.CompilationCache {
 	return cache
 }
 
-func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) *CELPluginInstance {
+func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) (*CELPluginInstance, error) {
 	stdinR, stdinW := io.Pipe()
 	stdoutR, stdoutW := io.Pipe()
 	modCfg := wazero.NewModuleConfig().
 		WithSysWalltime().
-		WithFSConfig(wazero.NewFSConfig().WithFSMount(os.DirFS("/"), "/")).
 		WithStdin(stdinR).
 		WithStdout(stdoutW).
 		WithStderr(os.Stderr).
 		WithArgs("plugin")
-	for _, kv := range os.Environ() {
-		i := strings.IndexByte(kv, '=')
-		modCfg = modCfg.WithEnv(kv[:i], kv[i+1:])
+
+	modCfg = p.addModuleConfigByCapability(modCfg)
+
+	readyServerAddrCh := make(chan string)
+	if p.cfg.Capability != nil || p.cfg.Capability.Network != nil {
+		var err error
+		ctx, _, err = imports.NewBuilder().WithSocketsExtension("wasmedgev2", p.mod).Instantiate(ctx, p.wasmRuntime)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := p.wasmRuntime.NewHostModuleBuilder("wasi_go_net").
+			NewFunctionBuilder().WithGoModuleFunction(
+			api.GoModuleFunc(func(_ context.Context, mod api.Module, stack []uint64) {
+				addr, _ := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
+				readyServerAddrCh <- string(addr)
+			}),
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
+			[]api.ValueType{},
+		).Export("server_is_ready").Instantiate(ctx); err != nil {
+			return nil, fmt.Errorf("grpc-federation: failed to enable network access: %w", err)
+		}
 	}
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
@@ -397,9 +192,15 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		instanceModErrCh <- err
 	}()
 
-	const gcQueueLength = 1
+	var pluginServerAddr string
+	if p.cfg.Capability != nil || p.cfg.Capability.Network != nil {
+		addr := <-readyServerAddrCh
+		pluginServerAddr = "http://" + addr
+	}
 
+	const gcQueueLength = 1
 	gcQueue := make(chan struct{}, gcQueueLength)
+
 	instance := &CELPluginInstance{
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
@@ -408,6 +209,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		stdout:           stdoutR,
 		instanceModErrCh: instanceModErrCh,
 		gcQueue:          gcQueue,
+		pluginServerAddr: pluginServerAddr,
 	}
 	// start GC thread.
 	// It is enqueued into gcQueue using the `instance.GC()` function.
@@ -416,7 +218,50 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 			instance.startGC()
 		}
 	}()
-	return instance
+	return instance, nil
+}
+
+func (p *CELPlugin) addModuleConfigByCapability(cfg wazero.ModuleConfig) wazero.ModuleConfig {
+	cfg = p.addModuleConfigByEnvCapability(cfg)
+	cfg = p.addModuleConfigByFileSystemCapability(cfg)
+	return cfg
+}
+
+func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig) wazero.ModuleConfig {
+	if p.cfg.Capability == nil || p.cfg.Capability.Env == nil {
+		return cfg
+	}
+
+	env := p.cfg.Capability.Env
+	envMap := make(map[string]string)
+	for _, kv := range os.Environ() {
+		i := strings.IndexByte(kv, '=')
+		envMap[kv[:i]] = kv[i+1:]
+	}
+	if env.All {
+		for k, v := range envMap {
+			cfg = cfg.WithEnv(k, v)
+		}
+	} else {
+		for _, name := range env.Names {
+			if v, exists := envMap[name]; exists {
+				cfg = cfg.WithEnv(name, v)
+			}
+		}
+	}
+	return cfg
+}
+
+func (p *CELPlugin) addModuleConfigByFileSystemCapability(cfg wazero.ModuleConfig) wazero.ModuleConfig {
+	if p.cfg.Capability == nil || p.cfg.Capability.FileSystem == nil {
+		return cfg
+	}
+	fs := p.cfg.Capability.FileSystem
+	mountPath := "/"
+	if fs.MountPath != "" {
+		mountPath = fs.MountPath
+	}
+	return cfg.WithFSConfig(wazero.NewFSConfig().WithFSMount(os.DirFS(mountPath), ""))
 }
 
 type CELPluginInstance struct {
@@ -430,6 +275,7 @@ type CELPluginInstance struct {
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
+	pluginServerAddr string
 }
 
 const PluginProtocolVersion = 1
@@ -446,16 +292,36 @@ var (
 	gcCommand      = "gc\n"
 )
 
-func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+func (i *CELPluginInstance) getVersionContent(ctx context.Context) ([]byte, error) {
+	if i.pluginServerAddr != "" {
+		resp, err := http.Get(i.pluginServerAddr + "/version")
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		content, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read cel protocol version content: %w", err)
+		}
+		return content, nil
+	}
 
 	if err := i.write([]byte(versionCommand)); err != nil {
-		return fmt.Errorf("failed to send cel protocol version command: %w", err)
+		return nil, fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
 	content, err := i.recvContent()
 	if err != nil {
-		return fmt.Errorf("failed to receive cel protocol version command: %w", err)
+		return nil, fmt.Errorf("failed to receive cel protocol version command: %w", err)
+	}
+	return []byte(content), nil
+}
+
+func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	content, err := i.getVersionContent(ctx)
+	if err != nil {
+		return err
 	}
 	var v PluginVersionSchema
 	if err := json.Unmarshal([]byte(content), &v); err != nil {
@@ -512,10 +378,15 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	defer i.mu.Unlock()
 
 	defer func() { i.closeResources(nil) }()
+	if i.pluginServerAddr != "" {
+		if _, err := http.Post(i.pluginServerAddr+"/exit", "application/json", bytes.NewBuffer(nil)); err != nil {
+			return fmt.Errorf("failed to exit plugin http server")
+		}
+		return nil
+	}
 	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
 	}
-	close(i.gcQueue)
 	return nil
 }
 
@@ -524,6 +395,7 @@ func (i *CELPluginInstance) closeResources(instanceModErr error) {
 	i.closed = true
 	i.stdin.Close()
 	i.stdout.Close()
+	close(i.gcQueue)
 }
 
 func (i *CELPluginInstance) LibraryName() string {
@@ -547,6 +419,11 @@ func (i *CELPluginInstance) enqueueGC() {
 func (i *CELPluginInstance) startGC() {
 	i.mu.Lock()
 	defer i.mu.Unlock()
+
+	if i.pluginServerAddr != "" {
+		_, _ = http.Post(i.pluginServerAddr+"/gc", "application/json", bytes.NewBuffer(nil))
+		return
+	}
 
 	_ = i.write([]byte(gcCommand))
 }
@@ -594,13 +471,34 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	if err := i.sendRequest(fn, md, args...); err != nil {
+	reqBody, err := i.encodeRequest(fn, md, args...)
+	if err != nil {
 		return types.NewErr(err.Error())
 	}
-	return i.recvResponse(fn)
+	if i.pluginServerAddr != "" {
+		resp, err := http.Post(i.pluginServerAddr, "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			return types.NewErr(err.Error())
+		}
+		defer resp.Body.Close()
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return types.NewErr(err.Error())
+		}
+		return i.decodeResponse(fn, b)
+	}
+
+	if err := i.write(append(reqBody, '\n')); err != nil {
+		return types.NewErr(err.Error())
+	}
+	content, err := i.recvContent()
+	if err != nil {
+		return types.NewErr(err.Error())
+	}
+	return i.decodeResponse(fn, []byte(content))
 }
 
-func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ...ref.Val) error {
+func (i *CELPluginInstance) encodeRequest(fn *CELFunction, md metadata.MD, args ...ref.Val) ([]byte, error) {
 	req := &plugin.CELPluginRequest{Method: fn.ID}
 	for key, values := range md {
 		req.Metadata = append(req.Metadata, &plugin.CELPluginGRPCMetadata{
@@ -611,29 +509,21 @@ func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ..
 	for idx, arg := range args {
 		pluginArg, err := i.refToCELPluginValue(fn.Args[idx], arg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		req.Args = append(req.Args, pluginArg)
 	}
 
 	encoded, err := protojson.Marshal(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := i.write(append(encoded, '\n')); err != nil {
-		return err
-	}
-	return nil
+	return encoded, nil
 }
 
-func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
-	content, err := i.recvContent()
-	if err != nil {
-		return types.NewErr(err.Error())
-	}
-
+func (i *CELPluginInstance) decodeResponse(fn *CELFunction, b []byte) ref.Val {
 	var res plugin.CELPluginResponse
-	if err := protojson.Unmarshal([]byte(content), &res); err != nil {
+	if err := protojson.Unmarshal(b, &res); err != nil {
 		return types.NewErr(fmt.Sprintf("grpc-federation: failed to decode response: %s", err.Error()))
 	}
 	if res.Error != "" {

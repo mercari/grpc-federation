@@ -8,6 +8,9 @@ option go_package = "example/plugin;pluginpb";
 
 option (grpc.federation.file).plugin.export = {
   name: "net"
+  capability {
+    network: {}
+  }
   functions: [
     {
       name: "httpGet"

@@ -9,7 +9,6 @@ package pluginpb
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -55,7 +54,6 @@ func RegisterNetPlugin(plug NetPlugin) {
 			_, _ = os.Stdout.Write(append(b, '\n'))
 			continue
 		}
-
 		res, err := handleNetPlugin([]byte(content), plug)
 		if err != nil {
 			res = grpcfed.ToErrorCELPluginResponse(err)
@@ -69,7 +67,7 @@ func RegisterNetPlugin(plug NetPlugin) {
 	}
 }
 
-func handleNetPlugin(content []byte, plug NetPlugin) (res *grpcfed.CELPluginResponse, e error) {
+func handleNetPlugin(content []byte, plug NetPlugin) (*grpcfed.CELPluginResponse, error) {
 	defer func() {
 		if e := recover(); e != nil {
 			res = grpcfed.ToErrorCELPluginResponse(errors.New(fmt.Sprintf("%v", e)))

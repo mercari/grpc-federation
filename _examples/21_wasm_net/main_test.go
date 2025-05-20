@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
-	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -118,6 +117,8 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		fmt.Println(res.Body)
+		if len(res.Body) == 0 {
+			t.Fatalf("failed to get body")
+		}
 	})
 }

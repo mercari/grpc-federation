@@ -342,12 +342,31 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 				},
 				{{- end }}
 			},
+			Capability: &grpcfedcel.CELPluginCapability{
+				{{- if .Capability.Env }}
+				Env: &grpcfedcel.CELPluginEnvCapability{
+					All: {{ .Capability.Env.All }},
+					Names: {{ .Capability.Env.Names }},
+				},
+				{{- end }}
+				{{- if .Capability.FileSystem }}
+				FileSystem: &grpcfedcel.CELPluginFileSystemCapability{
+					MountPath: {{ .Capability.FileSystem.MountPath }},
+				},
+				{{- end }}
+				{{- if .Capability.Network }}
+				Network: &grpcfedcel.CELPluginNetworkCapability{},
+				{{- end }}
+			},
 		})
 		if err != nil {
 			return nil, err
 		}
 		ctx := context.Background()
-		instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+		instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+		if err != nil {
+			return nil, err
+		}
 		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}
