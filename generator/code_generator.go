@@ -509,22 +509,31 @@ type Import struct {
 
 func (f *File) StandardImports() []*Import {
 	var (
-		existsServiceDef bool
-		existsPluginDef  bool
+		existsServiceDef   bool
+		existsPluginDef    bool
+		existsPluginNetDef bool
 	)
 	if len(f.File.Services) != 0 {
 		existsServiceDef = true
 	}
 	if len(f.File.CELPlugins) != 0 {
 		existsPluginDef = true
+		for _, plg := range f.File.CELPlugins {
+			if plg.Capability != nil && plg.Capability.Network != nil {
+				existsPluginNetDef = true
+				break
+			}
+		}
 	}
 
 	pkgs := []*Import{
-		{Path: "bufio", Used: existsPluginDef},
+		{Path: "bufio", Used: existsPluginDef && !existsPluginNetDef},
 		{Path: "context", Used: existsServiceDef || existsPluginDef},
+		{Path: "errors", Used: existsPluginDef},
 		{Path: "fmt", Used: existsPluginDef},
-		{Path: "io", Used: existsServiceDef},
-		{Path: "os", Used: existsPluginDef},
+		{Path: "net/http", Used: existsPluginNetDef},
+		{Path: "io", Used: existsServiceDef || existsPluginNetDef},
+		{Path: "os", Used: existsPluginDef && !existsPluginNetDef},
 		{Path: "log/slog", Used: existsServiceDef},
 		{Path: "reflect", Used: true},
 		{Path: "runtime", Used: existsPluginDef},
@@ -541,15 +550,22 @@ func (f *File) StandardImports() []*Import {
 
 func (f *File) DefaultImports() []*Import {
 	var (
-		existsServiceDef  bool
-		existsPluginDef   bool
-		existsEnumAttrDef bool
+		existsServiceDef   bool
+		existsPluginDef    bool
+		existsPluginNetDef bool
+		existsEnumAttrDef  bool
 	)
 	if len(f.File.Services) != 0 {
 		existsServiceDef = true
 	}
 	if len(f.File.CELPlugins) != 0 {
 		existsPluginDef = true
+		for _, plg := range f.File.CELPlugins {
+			if plg.Capability != nil && plg.Capability.Network != nil {
+				existsPluginNetDef = true
+				break
+			}
+		}
 	}
 	if len(f.EnumAttributes()) != 0 {
 		existsEnumAttrDef = true
@@ -557,6 +573,8 @@ func (f *File) DefaultImports() []*Import {
 	pkgs := []*Import{
 		{Alias: "grpcfed", Path: "github.com/mercari/grpc-federation/grpc/federation", Used: existsServiceDef || existsPluginDef || existsEnumAttrDef},
 		{Alias: "grpcfedcel", Path: "github.com/mercari/grpc-federation/grpc/federation/cel", Used: existsServiceDef},
+		{Alias: "grpcfednet", Path: "github.com/mercari/grpc-federation/grpc/federation/net", Used: existsPluginNetDef},
+
 		{Path: "go.opentelemetry.io/otel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel/trace", Used: existsServiceDef},
 		{Path: "google.golang.org/grpc/metadata", Used: existsPluginDef},

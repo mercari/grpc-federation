@@ -7,14 +7,16 @@
 package pluginpb
 
 import (
-	"bufio"
 	"context"
+	"errors"
 	"fmt"
-	"os"
+	"io"
+	"net/http"
 	"reflect"
 	"runtime"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	grpcfednet "github.com/mercari/grpc-federation/grpc/federation/net"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -26,48 +28,83 @@ type NetPlugin interface {
 	Example_Net_HttpGet(context.Context, string) (string, error)
 }
 
+//go:wasmimport wasi_go_net server_is_ready
+//go:noescape
+func server_is_ready(uint32, uint32)
+
+func init() {
+	http.DefaultTransport = grpcfednet.DefaultTransport()
+}
+
 func RegisterNetPlugin(plug NetPlugin) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		content, err := reader.ReadString('\n')
+	ln, err := grpcfednet.Listen("tcp", ":0")
+	if err != nil {
+		panic(err)
+	}
+	addr := ln.Addr().String()
+	http.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
+		b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
+			ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
+			FederationVersion: "(devel)",
+			Functions: []string{
+				"example_net_httpGet_string_string",
+			},
+		})
+		w.Write(b)
+	})
+
+	block := make(chan struct{})
+
+	http.HandleFunc("/exit", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		block <- struct{}{}
+	})
+
+	http.HandleFunc("/gc", func(w http.ResponseWriter, _ *http.Request) {
+		runtime.GC()
+		w.WriteHeader(http.StatusOK)
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
+		b, err := io.ReadAll(req.Body)
 		if err != nil {
-			continue
-		}
-		if content == "" {
-			continue
-		}
-		if content == "exit\n" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
 			return
 		}
-		if content == "gc\n" {
-			runtime.GC()
-			continue
-		}
-		if content == "version\n" {
-			b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
-				ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
-				FederationVersion: "(devel)",
-				Functions: []string{
-					"example_net_httpGet_string_string",
-				},
-			})
-			_, _ = os.Stdout.Write(append(b, '\n'))
-			continue
-		}
-		res, err := handleNetPlugin([]byte(content), plug)
+		res, err := handleNetPlugin(b, plug)
 		if err != nil {
 			res = grpcfed.ToErrorCELPluginResponse(err)
 		}
 		encoded, err := grpcfed.EncodeCELPluginResponse(res)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "fatal error: failed to encode cel plugin response: %s\n", err.Error())
-			os.Exit(1)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
 		}
-		_, _ = os.Stdout.Write(append(encoded, '\n'))
+		w.WriteHeader(http.StatusOK)
+		w.Write(encoded)
+	})
+	server := http.Server{}
+
+	go func() {
+		if err := server.Serve(ln); err != nil {
+			panic(err)
+		}
+	}()
+
+	for {
+		if _, err := http.Get(fmt.Sprintf("http://%s", addr)); err == nil {
+			server_is_ready(grpcfednet.StringToPtr(addr), uint32(len(addr)))
+			break
+		}
 	}
+
+	<-block
 }
 
-func handleNetPlugin(content []byte, plug NetPlugin) (*grpcfed.CELPluginResponse, error) {
+func handleNetPlugin(content []byte, plug NetPlugin) (res *grpcfed.CELPluginResponse, e error) {
 	defer func() {
 		if e := recover(); e != nil {
 			res = grpcfed.ToErrorCELPluginResponse(errors.New(fmt.Sprintf("%v", e)))

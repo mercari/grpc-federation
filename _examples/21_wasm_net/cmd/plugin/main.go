@@ -2,57 +2,17 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"runtime"
-	"time"
-	"unsafe"
 
-	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
-	"google.golang.org/grpc/metadata"
-
-	"github.com/goccy/wasi-go-net/wasip1"
-
-	_ "github.com/goccy/wasi-go-net/http"
+	pluginpb "example/plugin"
 )
 
 type plugin struct{}
 
 func (_ *plugin) Example_Net_HttpGet(ctx context.Context, url string) (string, error) {
-	/*
-		http.DefaultTransport = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: func(_ context.Context, network string, address string) (net.Conn, error) {
-				//fmt.Fprintf(os.Stderr, "called dialcontext\n")
-				networkPtr, networkLen := stringToPtr(network)
-				addressPtr, addressLen := stringToPtr(address)
-				connPtr := dial(networkPtr, networkLen, addressPtr, addressLen)
-				return &conn{addr: connPtr}, nil
-			},
-			ForceAttemptHTTP2:     true,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       5 * time.Second,
-			TLSHandshakeTimeout:   90 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-		net.DefaultResolver = &net.Resolver{
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				//fmt.Fprintln(os.Stderr, string(debug.Stack()))
-				//fmt.Fprintf(os.Stderr, "called dial\n")
-				networkPtr, networkLen := stringToPtr(network)
-				addressPtr, addressLen := stringToPtr(address)
-				connPtr := dial(networkPtr, networkLen, addressPtr, addressLen)
-				return &conn{addr: connPtr}, nil
-			},
-		}
-	*/
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -66,11 +26,11 @@ func (_ *plugin) Example_Net_HttpGet(ctx context.Context, url string) (string, e
 	return string(b), nil
 }
 
-//go:wasmimport wasi_go_net server_is_ready
-//go:noescape
-func server_is_ready(uint32, uint32)
-
 func main() {
+	pluginpb.RegisterNetPlugin(new(plugin))
+}
+
+/*
 	http.DefaultTransport = &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
 		ForceAttemptHTTP2:     true,
@@ -157,7 +117,6 @@ func main() {
 	}
 
 	<-ch
-}
 
 func handleNetPlugin(content []byte, plug *plugin) (res *grpcfed.CELPluginResponse, e error) {
 	defer func() {
@@ -192,3 +151,4 @@ func handleNetPlugin(content []byte, plug *plugin) (res *grpcfed.CELPluginRespon
 	}
 	return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
 }
+*/
