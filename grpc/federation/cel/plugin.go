@@ -2,7 +2,6 @@ package cel
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -23,7 +20,6 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	"google.golang.org/grpc/metadata"
@@ -85,21 +81,6 @@ var (
 	)
 )
 
-type conn struct {
-	net.Conn
-	end bool
-	buf []byte
-	n   int64
-	err error
-}
-
-type addr struct {
-	net.Addr
-}
-
-var connMap = make(map[uint32]*conn)
-var addrMap = make(map[uint32]*addr)
-
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
 	if cfg.Wasm.Reader == nil {
 		return nil, fmt.Errorf("grpc-federation: WasmConfig.Reader field is required")
@@ -154,8 +135,14 @@ func getCompilationCache(name, baseDir string) wazero.CompilationCache {
 }
 
 func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) (*CELPluginInstance, error) {
-	stdinR, stdinW := io.Pipe()
-	stdoutR, stdoutW := io.Pipe()
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
 
 	modCfg, networkModCfg := p.addModuleConfigByCapability(
 		wazero.NewModuleConfig().
@@ -165,29 +152,15 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 			WithStderr(os.Stderr).
 			WithArgs("plugin"),
 		imports.NewBuilder().
+			WithStdio(int(stdinR.Fd()), int(stdoutW.Fd()), int(os.Stderr.Fd())).
 			WithSocketsExtension("wasmedgev2", p.mod),
 	)
 
-	readyServerAddrCh := make(chan string)
 	if p.cfg.Capability != nil && p.cfg.Capability.Network != nil {
 		var err error
-		ctx, _, err = networkModCfg.
-			//WithStdio(stdio, stdout, os.Stderr).
-			Instantiate(ctx, p.wasmRuntime)
+		ctx, _, err = networkModCfg.Instantiate(ctx, p.wasmRuntime)
 		if err != nil {
 			return nil, err
-		}
-
-		if _, err := p.wasmRuntime.NewHostModuleBuilder("wasi_go_net").
-			NewFunctionBuilder().WithGoModuleFunction(
-			api.GoModuleFunc(func(_ context.Context, mod api.Module, stack []uint64) {
-				addr, _ := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
-				readyServerAddrCh <- string(addr)
-			}),
-			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
-			[]api.ValueType{},
-		).Export("server_is_ready").Instantiate(ctx); err != nil {
-			return nil, fmt.Errorf("grpc-federation: failed to enable network access: %w", err)
 		}
 	} else {
 		wasi_snapshot_preview1.MustInstantiate(ctx, p.wasmRuntime)
@@ -200,12 +173,6 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		instanceModErrCh <- err
 	}()
 
-	var pluginServerAddr string
-	if p.cfg.Capability != nil && p.cfg.Capability.Network != nil {
-		addr := <-readyServerAddrCh
-		pluginServerAddr = "http://" + addr
-	}
-
 	const gcQueueLength = 1
 	gcQueue := make(chan struct{}, gcQueueLength)
 
@@ -217,7 +184,6 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		stdout:           stdoutR,
 		instanceModErrCh: instanceModErrCh,
 		gcQueue:          gcQueue,
-		pluginServerAddr: pluginServerAddr,
 	}
 	// start GC thread.
 	// It is enqueued into gcQueue using the `instance.GC()` function.
@@ -281,14 +247,13 @@ type CELPluginInstance struct {
 	name             string
 	functions        []*CELFunction
 	celRegistry      *types.Registry
-	stdin            *io.PipeWriter
-	stdout           *io.PipeReader
+	stdin            *os.File
+	stdout           *os.File
 	instanceModErrCh chan error
 	instanceModErr   error
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
-	pluginServerAddr string
 }
 
 const PluginProtocolVersion = 1
@@ -308,19 +273,6 @@ var (
 const contentTypeApplicationJSON = "application/json"
 
 func (i *CELPluginInstance) getVersionContent(ctx context.Context) ([]byte, error) {
-	if i.pluginServerAddr != "" {
-		resp, err := http.Get(i.pluginServerAddr + "/version")
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-		content, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read cel protocol version content: %w", err)
-		}
-		return content, nil
-	}
-
 	if err := i.write([]byte(versionCommand)); err != nil {
 		return nil, fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
@@ -393,14 +345,6 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	defer i.mu.Unlock()
 
 	defer func() { i.closeResources(nil) }()
-	if i.pluginServerAddr != "" {
-		res, err := http.Post(i.pluginServerAddr+"/exit", contentTypeApplicationJSON, bytes.NewBuffer(nil))
-		if err != nil {
-			return fmt.Errorf("failed to exit plugin http server")
-		}
-		res.Body.Close()
-		return nil
-	}
 	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
 	}
@@ -436,15 +380,6 @@ func (i *CELPluginInstance) enqueueGC() {
 func (i *CELPluginInstance) startGC() {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-
-	if i.pluginServerAddr != "" {
-		res, err := http.Post(i.pluginServerAddr+"/gc", contentTypeApplicationJSON, bytes.NewBuffer(nil))
-		if err != nil {
-			return
-		}
-		res.Body.Close()
-		return
-	}
 
 	_ = i.write([]byte(gcCommand))
 }
@@ -496,19 +431,6 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	if err != nil {
 		return types.NewErr(err.Error())
 	}
-	if i.pluginServerAddr != "" {
-		resp, err := http.Post(i.pluginServerAddr, contentTypeApplicationJSON, bytes.NewBuffer(reqBody))
-		if err != nil {
-			return types.NewErr(err.Error())
-		}
-		defer resp.Body.Close()
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return types.NewErr(err.Error())
-		}
-		return i.decodeResponse(fn, b)
-	}
-
 	if err := i.write(append(reqBody, '\n')); err != nil {
 		return types.NewErr(err.Error())
 	}

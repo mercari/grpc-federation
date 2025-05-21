@@ -14,74 +14,8 @@ func init() {
 	http.DefaultTransport = grpcfednet.DefaultTransport()
 }
 
-func Register{{ $pluginName }}(plug {{ $pluginName }}) {
-	ln, err := grpcfednet.Listen("tcp", ":0")
-	if err != nil {
-		panic(err)
-	}
+{{- end }}
 
-	addr := ln.Addr().String()
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = grpcfednet.ReadRequestBody(r)
-		b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
-			ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
-			FederationVersion: "{{ .FederationVersion }}",
-			Functions: []string{
-				{{- range $pluginFunctions }}
-				"{{ .ExportName }}",
-				{{- end }}
-			},
-		})
-		w.Write(b)
-	})
-
-	block := make(chan struct{})
-
-	mux.HandleFunc("/exit", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = grpcfednet.ReadRequestBody(r)
-		w.WriteHeader(http.StatusOK)
-		block <- struct{}{}
-	})
-
-	mux.HandleFunc("/gc", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = grpcfednet.ReadRequestBody(r)
-		runtime.GC()
-		w.WriteHeader(http.StatusOK)
-	})
-
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		b, err := grpcfednet.ReadRequestBody(r)
-		if err != nil {
-			grpcfednet.Error(w, err)
-			return
-		}
-		res, err := handle{{ $pluginName }}(b, plug)
-		if err != nil {
-			res = grpcfed.ToErrorCELPluginResponse(err)
-		}
-		encoded, err := grpcfed.EncodeCELPluginResponse(res)
-		if err != nil {
-			grpcfednet.Error(w, err)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(encoded)
-	})
-
-	go func() {
-		if err := http.Serve(ln, mux); err != nil {
-			panic(err)
-		}
-	}()
-
-	grpcfednet.WaitForReadyPluginServer(addr)
-
-	<-block
-}
-
-{{- else }}
 func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -124,7 +58,6 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 		_, _ = os.Stdout.Write(append(encoded, '\n'))
 	}
 }
-{{- end }}
 
 func handle{{ $pluginName }}(content []byte, plug {{ $pluginName }}) (res *grpcfed.CELPluginResponse, e error) {
 	defer func() {
