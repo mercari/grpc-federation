@@ -22,8 +22,13 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_ConstantVariable represents variable definitions in "org.federation.Constant".
+type RefEnvService_Org_Federation_ConstantVariable struct {
+}
+
 // Org_Federation_ConstantArgument is argument for "org.federation.Constant" message.
 type RefEnvService_Org_Federation_ConstantArgument struct {
+	RefEnvService_Org_Federation_ConstantVariable
 }
 
 // RefEnvServiceConfig configuration required to initialize the service that use GRPC Federation.
