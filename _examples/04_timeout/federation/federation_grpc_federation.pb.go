@@ -25,22 +25,37 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Federation_GetPostResponseVariable represents variable definitions in "federation.GetPostResponse".
+type FederationService_Federation_GetPostResponseVariable struct {
+	Post *Post
+}
+
 // Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
 type FederationService_Federation_GetPostResponseArgument struct {
-	Id   string
-	Post *Post
+	Id string
+	FederationService_Federation_GetPostResponseVariable
+}
+
+// Federation_PostVariable represents variable definitions in "federation.Post".
+type FederationService_Federation_PostVariable struct {
+	Post *post.Post
+	Res  *post.GetPostResponse
 }
 
 // Federation_PostArgument is argument for "federation.Post" message.
 type FederationService_Federation_PostArgument struct {
-	Id   string
-	Post *post.Post
-	Res  *post.GetPostResponse
+	Id string
+	FederationService_Federation_PostVariable
+}
+
+// Federation_UpdatePostResponseVariable represents variable definitions in "federation.UpdatePostResponse".
+type FederationService_Federation_UpdatePostResponseVariable struct {
 }
 
 // Federation_UpdatePostResponseArgument is argument for "federation.UpdatePostResponse" message.
 type FederationService_Federation_UpdatePostResponseArgument struct {
 	Id string
+	FederationService_Federation_UpdatePostResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -298,7 +313,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.Post
+	req.FederationService_Federation_GetPostResponseVariable.Post = value.vars.Post
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -410,8 +425,8 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.Post
-	req.Res = value.vars.Res
+	req.FederationService_Federation_PostVariable.Post = value.vars.Post
+	req.FederationService_Federation_PostVariable.Res = value.vars.Res
 
 	// create a message value to be returned.
 	ret := &Post{}

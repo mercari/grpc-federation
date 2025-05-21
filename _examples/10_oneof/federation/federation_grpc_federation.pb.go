@@ -24,33 +24,67 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_CastOneofVariable represents variable definitions in "org.federation.CastOneof".
+type FederationService_Org_Federation_CastOneofVariable struct {
+}
+
 // Org_Federation_CastOneofArgument is argument for "org.federation.CastOneof" message.
 type FederationService_Org_Federation_CastOneofArgument struct {
+	FederationService_Org_Federation_CastOneofVariable
+}
+
+// Org_Federation_GetNoValueResponseVariable represents variable definitions in "org.federation.GetNoValueResponse".
+type FederationService_Org_Federation_GetNoValueResponseVariable struct {
+	NoValueSel *NoValueSelection
 }
 
 // Org_Federation_GetNoValueResponseArgument is argument for "org.federation.GetNoValueResponse" message.
 type FederationService_Org_Federation_GetNoValueResponseArgument struct {
-	NoValueSel *NoValueSelection
+	FederationService_Org_Federation_GetNoValueResponseVariable
 }
 
-// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type FederationService_Org_Federation_GetResponseArgument struct {
+// Org_Federation_GetResponseVariable represents variable definitions in "org.federation.GetResponse".
+type FederationService_Org_Federation_GetResponseVariable struct {
 	CastOneof *CastOneof
 	MsgSel    *MessageSelection
 	NestedMsg *NestedMessageSelection_Nest
 	Sel       *UserSelection
 }
 
+// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
+type FederationService_Org_Federation_GetResponseArgument struct {
+	FederationService_Org_Federation_GetResponseVariable
+}
+
+// Org_Federation_MessageSelectionVariable represents variable definitions in "org.federation.MessageSelection".
+type FederationService_Org_Federation_MessageSelectionVariable struct {
+}
+
 // Org_Federation_MessageSelectionArgument is argument for "org.federation.MessageSelection" message.
 type FederationService_Org_Federation_MessageSelectionArgument struct {
+	FederationService_Org_Federation_MessageSelectionVariable
+}
+
+// Org_Federation_NestedMessageSelection_NestVariable represents variable definitions in "org.federation.Nest".
+type FederationService_Org_Federation_NestedMessageSelection_NestVariable struct {
 }
 
 // Org_Federation_NestedMessageSelection_NestArgument is argument for "org.federation.Nest" message.
 type FederationService_Org_Federation_NestedMessageSelection_NestArgument struct {
+	FederationService_Org_Federation_NestedMessageSelection_NestVariable
+}
+
+// Org_Federation_NoValueSelectionVariable represents variable definitions in "org.federation.NoValueSelection".
+type FederationService_Org_Federation_NoValueSelectionVariable struct {
 }
 
 // Org_Federation_NoValueSelectionArgument is argument for "org.federation.NoValueSelection" message.
 type FederationService_Org_Federation_NoValueSelectionArgument struct {
+	FederationService_Org_Federation_NoValueSelectionVariable
+}
+
+// Org_Federation_UserVariable represents variable definitions in "org.federation.User".
+type FederationService_Org_Federation_UserVariable struct {
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
@@ -58,14 +92,20 @@ type FederationService_Org_Federation_UserArgument struct {
 	Bar    string
 	Foo    int64
 	UserId string
+	FederationService_Org_Federation_UserVariable
+}
+
+// Org_Federation_UserSelectionVariable represents variable definitions in "org.federation.UserSelection".
+type FederationService_Org_Federation_UserSelectionVariable struct {
+	Ua *User
+	Ub *User
+	Uc *User
 }
 
 // Org_Federation_UserSelectionArgument is argument for "org.federation.UserSelection" message.
 type FederationService_Org_Federation_UserSelectionArgument struct {
-	Ua    *User
-	Ub    *User
-	Uc    *User
 	Value string
+	FederationService_Org_Federation_UserSelectionVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -437,7 +477,7 @@ func (s *FederationService) resolve_Org_Federation_GetNoValueResponse(ctx contex
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.NoValueSel = value.vars.NoValueSel
+	req.FederationService_Org_Federation_GetNoValueResponseVariable.NoValueSel = value.vars.NoValueSel
 
 	// create a message value to be returned.
 	ret := &GetNoValueResponse{}
@@ -645,10 +685,10 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.CastOneof = value.vars.CastOneof
-	req.MsgSel = value.vars.MsgSel
-	req.NestedMsg = value.vars.NestedMsg
-	req.Sel = value.vars.Sel
+	req.FederationService_Org_Federation_GetResponseVariable.CastOneof = value.vars.CastOneof
+	req.FederationService_Org_Federation_GetResponseVariable.MsgSel = value.vars.MsgSel
+	req.FederationService_Org_Federation_GetResponseVariable.NestedMsg = value.vars.NestedMsg
+	req.FederationService_Org_Federation_GetResponseVariable.Sel = value.vars.Sel
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
@@ -1092,9 +1132,9 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.UserSelectionArgument", req)}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Ua = value.vars.Ua
-	req.Ub = value.vars.Ub
-	req.Uc = value.vars.Uc
+	req.FederationService_Org_Federation_UserSelectionVariable.Ua = value.vars.Ua
+	req.FederationService_Org_Federation_UserSelectionVariable.Ub = value.vars.Ub
+	req.FederationService_Org_Federation_UserSelectionVariable.Uc = value.vars.Uc
 
 	// create a message value to be returned.
 	ret := &UserSelection{}

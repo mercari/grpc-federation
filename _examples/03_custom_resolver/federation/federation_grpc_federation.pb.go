@@ -26,21 +26,30 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Federation_V2Dev_ForNamelessVariable represents variable definitions in "federation.v2dev.ForNameless".
+type FederationV2DevService_Federation_V2Dev_ForNamelessVariable struct {
+}
+
 // Federation_V2Dev_ForNamelessArgument is argument for "federation.v2dev.ForNameless" message.
 type FederationV2DevService_Federation_V2Dev_ForNamelessArgument struct {
 	Bar string
+	FederationV2DevService_Federation_V2Dev_ForNamelessVariable
 }
 
-// Federation_V2Dev_GetPostV2DevResponseArgument is argument for "federation.v2dev.GetPostV2devResponse" message.
-type FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument struct {
-	Id   string
+// Federation_V2Dev_GetPostV2DevResponseVariable represents variable definitions in "federation.v2dev.GetPostV2devResponse".
+type FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseVariable struct {
 	Post *PostV2Dev
 	R    *Ref
 }
 
-// Federation_V2Dev_PostV2DevArgument is argument for "federation.v2dev.PostV2dev" message.
-type FederationV2DevService_Federation_V2Dev_PostV2DevArgument struct {
-	Id        string
+// Federation_V2Dev_GetPostV2DevResponseArgument is argument for "federation.v2dev.GetPostV2devResponse" message.
+type FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument struct {
+	Id string
+	FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseVariable
+}
+
+// Federation_V2Dev_PostV2DevVariable represents variable definitions in "federation.v2dev.PostV2dev".
+type FederationV2DevService_Federation_V2Dev_PostV2DevVariable struct {
 	NullCheck bool
 	Post      *post.Post
 	Res       *post.GetPostResponse
@@ -51,32 +60,58 @@ type FederationV2DevService_Federation_V2Dev_PostV2DevArgument struct {
 	XDef7     bool
 }
 
+// Federation_V2Dev_PostV2DevArgument is argument for "federation.v2dev.PostV2dev" message.
+type FederationV2DevService_Federation_V2Dev_PostV2DevArgument struct {
+	Id string
+	FederationV2DevService_Federation_V2Dev_PostV2DevVariable
+}
+
 // Federation_V2Dev_PostV2Dev_UserArgument is custom resolver's argument for "user" field of "federation.v2dev.PostV2dev" message.
 type FederationV2DevService_Federation_V2Dev_PostV2Dev_UserArgument struct {
 	*FederationV2DevService_Federation_V2Dev_PostV2DevArgument
 }
 
+// Federation_V2Dev_RefVariable represents variable definitions in "federation.v2dev.Ref".
+type FederationV2DevService_Federation_V2Dev_RefVariable struct {
+}
+
 // Federation_V2Dev_RefArgument is argument for "federation.v2dev.Ref" message.
 type FederationV2DevService_Federation_V2Dev_RefArgument struct {
+	FederationV2DevService_Federation_V2Dev_RefVariable
+}
+
+// Federation_V2Dev_TypedNilVariable represents variable definitions in "federation.v2dev.TypedNil".
+type FederationV2DevService_Federation_V2Dev_TypedNilVariable struct {
 }
 
 // Federation_V2Dev_TypedNilArgument is argument for "federation.v2dev.TypedNil" message.
 type FederationV2DevService_Federation_V2Dev_TypedNilArgument struct {
+	FederationV2DevService_Federation_V2Dev_TypedNilVariable
+}
+
+// Federation_V2Dev_UnusedVariable represents variable definitions in "federation.v2dev.Unused".
+type FederationV2DevService_Federation_V2Dev_UnusedVariable struct {
 }
 
 // Federation_V2Dev_UnusedArgument is argument for "federation.v2dev.Unused" message.
 type FederationV2DevService_Federation_V2Dev_UnusedArgument struct {
 	Foo string
+	FederationV2DevService_Federation_V2Dev_UnusedVariable
+}
+
+// Federation_V2Dev_UserVariable represents variable definitions in "federation.v2dev.User".
+type FederationV2DevService_Federation_V2Dev_UserVariable struct {
+	Res *user.GetUserResponse
+	U   *user.User
 }
 
 // Federation_V2Dev_UserArgument is argument for "federation.v2dev.User" message.
 type FederationV2DevService_Federation_V2Dev_UserArgument struct {
 	Content string
 	Id      string
-	Res     *user.GetUserResponse
 	Title   string
-	U       *user.User
 	UserId  string
+	FederationV2DevService_Federation_V2Dev_UserVariable
 }
 
 // Federation_V2Dev_User_NameArgument is custom resolver's argument for "name" field of "federation.v2dev.User" message.
@@ -495,8 +530,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.Post
-	req.R = value.vars.R
+	req.FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseVariable.Post = value.vars.Post
+	req.FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseVariable.R = value.vars.R
 
 	// create a message value to be returned.
 	ret := &GetPostV2DevResponse{}
@@ -943,14 +978,14 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.NullCheck = value.vars.NullCheck
-	req.Post = value.vars.Post
-	req.Res = value.vars.Res
-	req.TypedNil = value.vars.TypedNil
-	req.Unused = value.vars.Unused
-	req.User = value.vars.User
-	req.XDef4 = value.vars.XDef4
-	req.XDef7 = value.vars.XDef7
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.NullCheck = value.vars.NullCheck
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.Post = value.vars.Post
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.Res = value.vars.Res
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.TypedNil = value.vars.TypedNil
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.Unused = value.vars.Unused
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.User = value.vars.User
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.XDef4 = value.vars.XDef4
+	req.FederationV2DevService_Federation_V2Dev_PostV2DevVariable.XDef7 = value.vars.XDef7
 
 	// create a message value to be returned.
 	ret := &PostV2Dev{}
@@ -1156,8 +1191,8 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.Res
-	req.U = value.vars.U
+	req.FederationV2DevService_Federation_V2Dev_UserVariable.Res = value.vars.Res
+	req.FederationV2DevService_Federation_V2Dev_UserVariable.U = value.vars.U
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
