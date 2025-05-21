@@ -25,6 +25,9 @@ var (
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
 type FederationService_Org_Federation_GetResponseArgument struct {
 	Body string
+	File string
+	Foo  string
+	Path string
 	Url  string
 }
 
@@ -105,7 +108,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
 		"grpc.federation.private.org.federation.GetResponseArgument": {
-			"url": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Url"),
+			"url":  grpcfed.NewCELFieldType(grpcfed.CELStringType, "Url"),
+			"path": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Path"),
 		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
@@ -127,8 +131,33 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 					Return:   grpcfed.CELStringType,
 					IsMethod: false,
 				},
+				{
+					Name:     "example.net.getFooEnv",
+					ID:       "example_net_getFooEnv_string",
+					Args:     []*grpcfed.CELTypeDeclare{},
+					Return:   grpcfed.CELStringType,
+					IsMethod: false,
+				},
+				{
+					Name: "example.net.getFileContent",
+					ID:   "example_net_getFileContent_string_string",
+					Args: []*grpcfed.CELTypeDeclare{
+						grpcfed.CELStringType,
+					},
+					Return:   grpcfed.CELStringType,
+					IsMethod: false,
+				},
 			},
 			Capability: &grpcfedcel.CELPluginCapability{
+				Env: &grpcfedcel.CELPluginEnvCapability{
+					All: false,
+					Names: []string{
+						"foo",
+					},
+				},
+				FileSystem: &grpcfedcel.CELPluginFileSystemCapability{
+					MountPath: "/",
+				},
 				Network: &grpcfedcel.CELPluginNetworkCapability{},
 			},
 		})
@@ -191,7 +220,8 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetResponse(ctx, &FederationService_Org_Federation_GetResponseArgument{
-		Url: req.GetUrl(),
+		Url:  req.GetUrl(),
+		Path: req.GetPath(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -212,6 +242,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		*grpcfed.LocalValue
 		vars struct {
 			Body string
+			File string
+			Foo  string
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetResponseArgument", req)}
@@ -234,13 +266,84 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		})
 	}
 
-	if err := def_body(ctx); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
+	/*
+		def {
+		  name: "foo"
+		  by: "example.net.getFooEnv()"
+		}
+	*/
+	def_foo := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+			Name: `foo`,
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.Foo = v
+				return nil
+			},
+			By:           `example.net.getFooEnv()`,
+			ByCacheIndex: 2,
+		})
+	}
+
+	/*
+		def {
+		  name: "file"
+		  by: "example.net.getFileContent($.path)"
+		}
+	*/
+	def_file := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+			Name: `file`,
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.File = v
+				return nil
+			},
+			By:           `example.net.getFileContent($.path)`,
+			ByCacheIndex: 3,
+		})
+	}
+
+	// A tree view of message dependencies is shown below.
+	/*
+	   body ─┐
+	   file ─┤
+	    foo ─┤
+	*/
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_body(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_file(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_foo(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.Body = value.vars.Body
+	req.File = value.vars.File
+	req.Foo = value.vars.Foo
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
@@ -250,9 +353,35 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `body`,
-		CacheIndex: 2,
+		CacheIndex: 4,
 		Setter: func(v string) error {
 			ret.Body = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "foo"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:      value,
+		Expr:       `foo`,
+		CacheIndex: 5,
+		Setter: func(v string) error {
+			ret.Foo = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "file"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:      value,
+		Expr:       `file`,
+		CacheIndex: 6,
+		Setter: func(v string) error {
+			ret.File = v
 			return nil
 		},
 	}); err != nil {
@@ -270,6 +399,8 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 	}
 	return slog.GroupValue(
 		slog.String("body", v.GetBody()),
+		slog.String("foo", v.GetFoo()),
+		slog.String("file", v.GetFile()),
 	)
 }
 
@@ -279,5 +410,6 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 	}
 	return slog.GroupValue(
 		slog.String("url", v.Url),
+		slog.String("path", v.Path),
 	)
 }

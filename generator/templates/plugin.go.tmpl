@@ -10,10 +10,6 @@ type {{ $pluginName }} interface {
 
 {{- if .Capability.Network }}
 
-//go:wasmimport wasi_go_net server_is_ready
-//go:noescape
-func server_is_ready(uint32, uint32)
-
 func init() {
 	http.DefaultTransport = grpcfednet.DefaultTransport()
 }
@@ -23,8 +19,12 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 	if err != nil {
 		panic(err)
 	}
+
 	addr := ln.Addr().String()
-	http.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = grpcfednet.ReadRequestBody(r)
 		b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
 			ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
 			FederationVersion: "{{ .FederationVersion }}",
@@ -39,22 +39,22 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 
 	block := make(chan struct{})
 
-	http.HandleFunc("/exit", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/exit", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = grpcfednet.ReadRequestBody(r)
 		w.WriteHeader(http.StatusOK)
 		block <- struct{}{}
 	})
 
-	http.HandleFunc("/gc", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/gc", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = grpcfednet.ReadRequestBody(r)
 		runtime.GC()
 		w.WriteHeader(http.StatusOK)
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		defer req.Body.Close()
-		b, err := io.ReadAll(req.Body)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		b, err := grpcfednet.ReadRequestBody(r)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+			grpcfednet.Error(w, err)
 			return
 		}
 		res, err := handle{{ $pluginName }}(b, plug)
@@ -63,27 +63,20 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 		}
 		encoded, err := grpcfed.EncodeCELPluginResponse(res)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+			grpcfednet.Error(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write(encoded)
 	})
-	server := http.Server{}
 
 	go func() {
-		if err := server.Serve(ln); err != nil {
+		if err := http.Serve(ln, mux); err != nil {
 			panic(err)
 		}
 	}()
 
-	for {
-		if _, err := http.Get(fmt.Sprintf("http://%s", addr)); err == nil {
-			server_is_ready(grpcfednet.StringToPtr(addr), uint32(len(addr)))
-			break
-		}
-	}
+	grpcfednet.WaitForReadyPluginServer(addr)
 
 	<-block
 }

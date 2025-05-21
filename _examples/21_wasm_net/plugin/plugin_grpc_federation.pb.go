@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -26,11 +25,9 @@ var (
 
 type NetPlugin interface {
 	Example_Net_HttpGet(context.Context, string) (string, error)
+	Example_Net_GetFooEnv(context.Context) (string, error)
+	Example_Net_GetFileContent(context.Context, string) (string, error)
 }
-
-//go:wasmimport wasi_go_net server_is_ready
-//go:noescape
-func server_is_ready(uint32, uint32)
 
 func init() {
 	http.DefaultTransport = grpcfednet.DefaultTransport()
@@ -41,13 +38,19 @@ func RegisterNetPlugin(plug NetPlugin) {
 	if err != nil {
 		panic(err)
 	}
+
 	addr := ln.Addr().String()
-	http.HandleFunc("/version", func(w http.ResponseWriter, _ *http.Request) {
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = grpcfednet.ReadRequestBody(r)
 		b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
 			ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
 			FederationVersion: "(devel)",
 			Functions: []string{
 				"example_net_httpGet_string_string",
+				"example_net_getFooEnv_string",
+				"example_net_getFileContent_string_string",
 			},
 		})
 		w.Write(b)
@@ -55,22 +58,22 @@ func RegisterNetPlugin(plug NetPlugin) {
 
 	block := make(chan struct{})
 
-	http.HandleFunc("/exit", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/exit", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = grpcfednet.ReadRequestBody(r)
 		w.WriteHeader(http.StatusOK)
 		block <- struct{}{}
 	})
 
-	http.HandleFunc("/gc", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/gc", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = grpcfednet.ReadRequestBody(r)
 		runtime.GC()
 		w.WriteHeader(http.StatusOK)
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		defer req.Body.Close()
-		b, err := io.ReadAll(req.Body)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		b, err := grpcfednet.ReadRequestBody(r)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+			grpcfednet.Error(w, err)
 			return
 		}
 		res, err := handleNetPlugin(b, plug)
@@ -79,27 +82,20 @@ func RegisterNetPlugin(plug NetPlugin) {
 		}
 		encoded, err := grpcfed.EncodeCELPluginResponse(res)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
+			grpcfednet.Error(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write(encoded)
 	})
-	server := http.Server{}
 
 	go func() {
-		if err := server.Serve(ln); err != nil {
+		if err := http.Serve(ln, mux); err != nil {
 			panic(err)
 		}
 	}()
 
-	for {
-		if _, err := http.Get(fmt.Sprintf("http://%s", addr)); err == nil {
-			server_is_ready(grpcfednet.StringToPtr(addr), uint32(len(addr)))
-			break
-		}
-	}
+	grpcfednet.WaitForReadyPluginServer(addr)
 
 	<-block
 }
@@ -130,6 +126,28 @@ func handleNetPlugin(content []byte, plug NetPlugin) (res *grpcfed.CELPluginResp
 			return nil, err
 		}
 		ret, err := plug.Example_Net_HttpGet(ctx, arg0)
+		if err != nil {
+			return nil, err
+		}
+		return grpcfed.ToStringCELPluginResponse(ret)
+	case "example_net_getFooEnv_string":
+		if len(req.GetArgs()) != 0 {
+			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
+		}
+		ret, err := plug.Example_Net_GetFooEnv(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return grpcfed.ToStringCELPluginResponse(ret)
+	case "example_net_getFileContent_string_string":
+		if len(req.GetArgs()) != 1 {
+			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
+		}
+		arg0, err := grpcfed.ToString(req.GetArgs()[0])
+		if err != nil {
+			return nil, err
+		}
+		ret, err := plug.Example_Net_GetFileContent(ctx, arg0)
 		if err != nil {
 			return nil, err
 		}

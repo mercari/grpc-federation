@@ -10,6 +10,8 @@ option (grpc.federation.file).plugin.export = {
   name: "net"
   capability {
     network: {}
+    env { names: ["foo"] }
+    file_system { mount_path: "/" }
   }
   functions: [
     {
@@ -18,6 +20,18 @@ option (grpc.federation.file).plugin.export = {
         name: "url"
         type { kind: STRING }
         desc: "url string"
+      }
+      return { kind: STRING }
+    },
+    {
+      name: "getFooEnv"
+      return { kind: STRING }
+    },
+    {
+      name: "getFileContent"
+      args {
+        name: "path"
+        type { kind: STRING }
       }
       return { kind: STRING }
     }

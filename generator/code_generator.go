@@ -532,7 +532,7 @@ func (f *File) StandardImports() []*Import {
 		{Path: "errors", Used: existsPluginDef},
 		{Path: "fmt", Used: existsPluginDef},
 		{Path: "net/http", Used: existsPluginNetDef},
-		{Path: "io", Used: existsServiceDef || existsPluginNetDef},
+		{Path: "io", Used: existsServiceDef},
 		{Path: "os", Used: existsPluginDef && !existsPluginNetDef},
 		{Path: "log/slog", Used: existsServiceDef},
 		{Path: "reflect", Used: true},

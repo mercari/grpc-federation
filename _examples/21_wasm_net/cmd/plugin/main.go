@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
 
 	pluginpb "example/plugin"
 )
@@ -21,6 +22,18 @@ func (_ *plugin) Example_Net_HttpGet(ctx context.Context, url string) (string, e
 		return "", err
 	}
 	return string(b), nil
+}
+
+func (_ *plugin) Example_Net_GetFooEnv(_ context.Context) (string, error) {
+	return os.Getenv("FOO"), nil
+}
+
+func (_ *plugin) Example_Net_GetFileContent(_ context.Context, path string) (string, error) {
+	f, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(f), nil
 }
 
 func main() {

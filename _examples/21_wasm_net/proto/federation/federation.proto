@@ -18,11 +18,16 @@ service FederationService {
 
 message GetRequest {
   string url = 1;
+  string path = 2;
 }
     
 message GetResponse {
   option (grpc.federation.message) = {
     def { name: "body" by: "example.net.httpGet($.url)" }
+    def { name: "foo" by: "example.net.getFooEnv()" }
+    def { name: "file" by: "example.net.getFileContent($.path)" }
   };
   string body = 1 [(grpc.federation.field).by = "body"];
+  string foo = 2 [(grpc.federation.field).by = "foo"];
+  string file = 3 [(grpc.federation.field).by = "file"];
 }

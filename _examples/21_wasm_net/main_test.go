@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"go.opentelemetry.io/otel"
@@ -45,6 +46,15 @@ func toSha256(v []byte) string {
 func TestFederation(t *testing.T) {
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
+
+	envValue := "TEST_ENV_CAPABILITY"
+	t.Setenv("FOO", envValue)
+
+	testFileContent := `{"hello":"world"}`
+	testFilePath := filepath.Join(t.TempDir(), "test.json")
+	if err := os.WriteFile(testFilePath, []byte(testFileContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	if os.Getenv("ENABLE_JAEGER") != "" {
 		exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
@@ -108,15 +118,21 @@ func TestFederation(t *testing.T) {
 	}()
 
 	client := federation.NewFederationServiceClient(conn)
-	t.Run("success", func(t *testing.T) {
-		res, err := client.Get(ctx, &federation.GetRequest{
-			Url: "https://example.com",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(res.Body) == 0 {
-			t.Fatalf("failed to get body")
-		}
+
+	res, err := client.Get(ctx, &federation.GetRequest{
+		Url:  "https://example.com",
+		Path: testFilePath,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Body) == 0 {
+		t.Fatalf("failed to get body")
+	}
+	if res.Foo != envValue {
+		t.Fatalf("failed to get env value: %s", res.Foo)
+	}
+	if res.File != testFileContent {
+		t.Fatalf("failed to get file content: %s", res.File)
+	}
 }

@@ -155,19 +155,24 @@ func getCompilationCache(name, baseDir string) wazero.CompilationCache {
 func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) (*CELPluginInstance, error) {
 	stdinR, stdinW := io.Pipe()
 	stdoutR, stdoutW := io.Pipe()
-	modCfg := wazero.NewModuleConfig().
-		WithSysWalltime().
-		WithStdin(stdinR).
-		WithStdout(stdoutW).
-		WithStderr(os.Stderr).
-		WithArgs("plugin")
 
-	modCfg = p.addModuleConfigByCapability(modCfg)
+	modCfg, networkModCfg := p.addModuleConfigByCapability(
+		wazero.NewModuleConfig().
+			WithSysWalltime().
+			WithStdin(stdinR).
+			WithStdout(stdoutW).
+			WithStderr(os.Stderr).
+			WithArgs("plugin"),
+		imports.NewBuilder().
+			WithSocketsExtension("wasmedgev2", p.mod),
+	)
 
 	readyServerAddrCh := make(chan string)
 	if p.cfg.Capability != nil || p.cfg.Capability.Network != nil {
 		var err error
-		ctx, _, err = imports.NewBuilder().WithSocketsExtension("wasmedgev2", p.mod).Instantiate(ctx, p.wasmRuntime)
+		ctx, _, err = networkModCfg.
+			//WithStdio(stdio, stdout, os.Stderr).
+			Instantiate(ctx, p.wasmRuntime)
 		if err != nil {
 			return nil, err
 		}
@@ -221,15 +226,15 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	return instance, nil
 }
 
-func (p *CELPlugin) addModuleConfigByCapability(cfg wazero.ModuleConfig) wazero.ModuleConfig {
-	cfg = p.addModuleConfigByEnvCapability(cfg)
-	cfg = p.addModuleConfigByFileSystemCapability(cfg)
-	return cfg
+func (p *CELPlugin) addModuleConfigByCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+	cfg, nwcfg = p.addModuleConfigByEnvCapability(cfg, nwcfg)
+	cfg, nwcfg = p.addModuleConfigByFileSystemCapability(cfg, nwcfg)
+	return cfg, nwcfg
 }
 
-func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig) wazero.ModuleConfig {
+func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
 	if p.cfg.Capability == nil || p.cfg.Capability.Env == nil {
-		return cfg
+		return cfg, nwcfg
 	}
 
 	env := p.cfg.Capability.Env
@@ -241,27 +246,32 @@ func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig) waze
 	if env.All {
 		for k, v := range envMap {
 			cfg = cfg.WithEnv(k, v)
+			nwcfg = nwcfg.WithEnv(k + "=" + v)
 		}
 	} else {
 		for _, name := range env.Names {
-			if v, exists := envMap[name]; exists {
-				cfg = cfg.WithEnv(name, v)
+			envName := strings.ToUpper(name)
+			if v, exists := envMap[envName]; exists {
+				cfg = cfg.WithEnv(envName, v)
+				nwcfg = nwcfg.WithEnv(envName + "=" + v)
 			}
 		}
 	}
-	return cfg
+	return cfg, nwcfg
 }
 
-func (p *CELPlugin) addModuleConfigByFileSystemCapability(cfg wazero.ModuleConfig) wazero.ModuleConfig {
+func (p *CELPlugin) addModuleConfigByFileSystemCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
 	if p.cfg.Capability == nil || p.cfg.Capability.FileSystem == nil {
-		return cfg
+		return cfg, nwcfg
 	}
 	fs := p.cfg.Capability.FileSystem
 	mountPath := "/"
 	if fs.MountPath != "" {
 		mountPath = fs.MountPath
 	}
-	return cfg.WithFSConfig(wazero.NewFSConfig().WithFSMount(os.DirFS(mountPath), ""))
+	return cfg.WithFSConfig(
+		wazero.NewFSConfig().WithFSMount(os.DirFS(mountPath), ""),
+	), nwcfg.WithDirs(mountPath)
 }
 
 type CELPluginInstance struct {
@@ -291,6 +301,8 @@ var (
 	exitCommand    = "exit\n"
 	gcCommand      = "gc\n"
 )
+
+const contentTypeApplicationJSON = "application/json"
 
 func (i *CELPluginInstance) getVersionContent(ctx context.Context) ([]byte, error) {
 	if i.pluginServerAddr != "" {
@@ -379,9 +391,11 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 
 	defer func() { i.closeResources(nil) }()
 	if i.pluginServerAddr != "" {
-		if _, err := http.Post(i.pluginServerAddr+"/exit", "application/json", bytes.NewBuffer(nil)); err != nil {
+		res, err := http.Post(i.pluginServerAddr+"/exit", contentTypeApplicationJSON, bytes.NewBuffer(nil))
+		if err != nil {
 			return fmt.Errorf("failed to exit plugin http server")
 		}
+		res.Body.Close()
 		return nil
 	}
 	if err := i.write([]byte(exitCommand)); err != nil {
@@ -421,7 +435,11 @@ func (i *CELPluginInstance) startGC() {
 	defer i.mu.Unlock()
 
 	if i.pluginServerAddr != "" {
-		_, _ = http.Post(i.pluginServerAddr+"/gc", "application/json", bytes.NewBuffer(nil))
+		res, err := http.Post(i.pluginServerAddr+"/gc", contentTypeApplicationJSON, bytes.NewBuffer(nil))
+		if err != nil {
+			return
+		}
+		res.Body.Close()
 		return
 	}
 
@@ -476,7 +494,7 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 		return types.NewErr(err.Error())
 	}
 	if i.pluginServerAddr != "" {
-		resp, err := http.Post(i.pluginServerAddr, "application/json", bytes.NewBuffer(reqBody))
+		resp, err := http.Post(i.pluginServerAddr, contentTypeApplicationJSON, bytes.NewBuffer(reqBody))
 		if err != nil {
 			return types.NewErr(err.Error())
 		}

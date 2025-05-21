@@ -346,12 +346,16 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 				{{- if .Capability.Env }}
 				Env: &grpcfedcel.CELPluginEnvCapability{
 					All: {{ .Capability.Env.All }},
-					Names: {{ .Capability.Env.Names }},
+					Names: []string{
+						{{- range .Capability.Env.Names }}
+						"{{ . }}",
+						{{- end }}
+					},
 				},
 				{{- end }}
 				{{- if .Capability.FileSystem }}
 				FileSystem: &grpcfedcel.CELPluginFileSystemCapability{
-					MountPath: {{ .Capability.FileSystem.MountPath }},
+					MountPath: "{{ .Capability.FileSystem.MountPath }}",
 				},
 				{{- end }}
 				{{- if .Capability.Network }}
