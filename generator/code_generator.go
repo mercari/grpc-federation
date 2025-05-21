@@ -529,7 +529,6 @@ func (f *File) StandardImports() []*Import {
 	pkgs := []*Import{
 		{Path: "bufio", Used: existsPluginDef},
 		{Path: "context", Used: existsServiceDef || existsPluginDef},
-		{Path: "errors", Used: existsPluginDef},
 		{Path: "fmt", Used: existsPluginDef},
 		{Path: "net/http", Used: existsPluginNetDef},
 		{Path: "io", Used: existsServiceDef},
