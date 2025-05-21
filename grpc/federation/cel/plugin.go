@@ -24,6 +24,7 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -168,7 +169,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	)
 
 	readyServerAddrCh := make(chan string)
-	if p.cfg.Capability != nil || p.cfg.Capability.Network != nil {
+	if p.cfg.Capability != nil && p.cfg.Capability.Network != nil {
 		var err error
 		ctx, _, err = networkModCfg.
 			//WithStdio(stdio, stdout, os.Stderr).
@@ -188,6 +189,8 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		).Export("server_is_ready").Instantiate(ctx); err != nil {
 			return nil, fmt.Errorf("grpc-federation: failed to enable network access: %w", err)
 		}
+	} else {
+		wasi_snapshot_preview1.MustInstantiate(ctx, p.wasmRuntime)
 	}
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
@@ -198,7 +201,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	}()
 
 	var pluginServerAddr string
-	if p.cfg.Capability != nil || p.cfg.Capability.Network != nil {
+	if p.cfg.Capability != nil && p.cfg.Capability.Network != nil {
 		addr := <-readyServerAddrCh
 		pluginServerAddr = "http://" + addr
 	}
