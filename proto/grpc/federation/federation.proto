@@ -654,8 +654,7 @@ message CELPluginFileSystemCapability {
 
 // CELPluginNetworkCapability sets permissions related to network access.
 // This is an experimental feature.
-message CELPluginNetworkCapability {
-}
+message CELPluginNetworkCapability {}
 
 // CELFunction represents the CEL function definition.
 message CELFunction {
