@@ -624,6 +624,37 @@ message CELPluginExport {
   repeated CELFunction functions = 4;
   // variables describe the definition of the variable you want to expose.
   repeated CELVariable variables = 5;
+  CELPluginCapability capability = 6;
+}
+
+// CELPluginCapability controls the permissions granted to the WebAssembly plugin.
+message CELPluginCapability {
+  // env is the capability for environment variable.
+  optional CELPluginEnvCapability env = 1;
+  // file_system is the capability for file system.
+  optional CELPluginFileSystemCapability file_system = 2;
+  // network is the capability for network.
+  optional CELPluginNetworkCapability network = 3;
+}
+
+// CELPluginEnvCapability controls access to the environment variable.
+message CELPluginEnvCapability {
+  // all allows access to all environment variables.
+  bool all = 1;
+  // specifies accessible names. If "all" is true, it takes precedence.
+  repeated string names = 2;
+}
+
+// CELPluginFileSystemCapability controls access to the file system.
+message CELPluginFileSystemCapability {
+  // mount_path specifies the file path of the host to mount.
+  // If not specified, the root directory will be used.
+  string mount_path = 1;
+}
+
+// CELPluginNetworkCapability sets permissions related to network access.
+// This is an experimental feature.
+message CELPluginNetworkCapability {
 }
 
 // CELFunction represents the CEL function definition.

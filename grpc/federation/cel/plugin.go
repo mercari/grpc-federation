@@ -12,13 +12,16 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 
+	"github.com/goccy/wasi-go/imports"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -42,10 +45,29 @@ type CELFunction struct {
 }
 
 type CELPluginConfig struct {
-	Name      string
-	Wasm      WasmConfig
-	Functions []*CELFunction
-	CacheDir  string
+	Name       string
+	Wasm       WasmConfig
+	Functions  []*CELFunction
+	CacheDir   string
+	Capability *CELPluginCapability
+}
+
+type CELPluginCapability struct {
+	Env        *CELPluginEnvCapability
+	FileSystem *CELPluginFileSystemCapability
+	Network    *CELPluginNetworkCapability
+}
+
+type CELPluginEnvCapability struct {
+	All   bool
+	Names []string
+}
+
+type CELPluginFileSystemCapability struct {
+	MountPath string
+}
+
+type CELPluginNetworkCapability struct {
 }
 
 type WasmConfig struct {
@@ -78,7 +100,6 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}
 
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
-	wasi_snapshot_preview1.MustInstantiate(ctx, r)
 
 	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
@@ -113,14 +134,37 @@ func getCompilationCache(name, baseDir string) wazero.CompilationCache {
 	return cache
 }
 
-func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) *CELPluginInstance {
-	stdinR, stdinW := io.Pipe()
-	stdoutR, stdoutW := io.Pipe()
-	modCfg := wazero.NewModuleConfig().
-		WithStdin(stdinR).
-		WithStdout(stdoutW).
-		WithStderr(os.Stderr).
-		WithArgs("plugin")
+func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) (*CELPluginInstance, error) {
+	stdinR, stdinW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	stdoutR, stdoutW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+
+	modCfg, networkModCfg := p.addModuleConfigByCapability(
+		wazero.NewModuleConfig().
+			WithSysWalltime().
+			WithStdin(stdinR).
+			WithStdout(stdoutW).
+			WithStderr(os.Stderr).
+			WithArgs("plugin"),
+		imports.NewBuilder().
+			WithStdio(int(stdinR.Fd()), int(stdoutW.Fd()), int(os.Stderr.Fd())).
+			WithSocketsExtension("wasmedgev2", p.mod),
+	)
+
+	if p.cfg.Capability != nil && p.cfg.Capability.Network != nil {
+		var err error
+		ctx, _, err = networkModCfg.Instantiate(ctx, p.wasmRuntime)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		wasi_snapshot_preview1.MustInstantiate(ctx, p.wasmRuntime)
+	}
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
 	instanceModErrCh := make(chan error, 1)
@@ -130,8 +174,8 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	}()
 
 	const gcQueueLength = 1
-
 	gcQueue := make(chan struct{}, gcQueueLength)
+
 	instance := &CELPluginInstance{
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
@@ -148,16 +192,65 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 			instance.startGC()
 		}
 	}()
-	return instance
+	return instance, nil
+}
+
+func (p *CELPlugin) addModuleConfigByCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+	cfg, nwcfg = p.addModuleConfigByEnvCapability(cfg, nwcfg)
+	cfg, nwcfg = p.addModuleConfigByFileSystemCapability(cfg, nwcfg)
+	return cfg, nwcfg
+}
+
+func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+	if p.cfg.Capability == nil || p.cfg.Capability.Env == nil {
+		return cfg, nwcfg
+	}
+
+	env := p.cfg.Capability.Env
+	envMap := make(map[string]string)
+	for _, kv := range os.Environ() {
+		i := strings.IndexByte(kv, '=')
+		envMap[kv[:i]] = kv[i+1:]
+	}
+	if env.All {
+		for k, v := range envMap {
+			cfg = cfg.WithEnv(k, v)
+			nwcfg = nwcfg.WithEnv(k + "=" + v)
+		}
+	} else {
+		for _, name := range env.Names {
+			envName := strings.ToUpper(name)
+			if v, exists := envMap[envName]; exists {
+				cfg = cfg.WithEnv(envName, v)
+				nwcfg = nwcfg.WithEnv(envName + "=" + v)
+			}
+		}
+	}
+	return cfg, nwcfg
+}
+
+func (p *CELPlugin) addModuleConfigByFileSystemCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+	if p.cfg.Capability == nil || p.cfg.Capability.FileSystem == nil {
+		return cfg, nwcfg
+	}
+	fs := p.cfg.Capability.FileSystem
+	mountPath := "/"
+	if fs.MountPath != "" {
+		mountPath = fs.MountPath
+	}
+	return cfg.WithFSConfig(
+		wazero.NewFSConfig().WithFSMount(os.DirFS(mountPath), ""),
+	), nwcfg.WithDirs(mountPath)
 }
 
 type CELPluginInstance struct {
 	name             string
 	functions        []*CELFunction
 	celRegistry      *types.Registry
-	stdin            *io.PipeWriter
-	stdout           *io.PipeReader
+	stdin            *os.File
+	stdout           *os.File
 	instanceModErrCh chan error
+	instanceModErr   error
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
@@ -219,7 +312,7 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 
 func (i *CELPluginInstance) write(cmd []byte) error {
 	if i.closed {
-		return nil
+		return i.instanceModErr
 	}
 
 	writeCh := make(chan error)
@@ -231,7 +324,7 @@ func (i *CELPluginInstance) write(cmd []byte) error {
 	case err := <-i.instanceModErrCh:
 		// If the module instance is terminated,
 		// it is considered that the termination process has been completed.
-		i.closed = true
+		i.closeResources(err)
 		return err
 	case err := <-writeCh:
 		return err
@@ -242,12 +335,19 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	defer func() { i.closed = true }()
+	defer func() { i.closeResources(nil) }()
 	if err := i.write([]byte(exitCommand)); err != nil {
 		return err
 	}
-	close(i.gcQueue)
 	return nil
+}
+
+func (i *CELPluginInstance) closeResources(instanceModErr error) {
+	i.instanceModErr = instanceModErr
+	i.closed = true
+	i.stdin.Close()
+	i.stdout.Close()
+	close(i.gcQueue)
 }
 
 func (i *CELPluginInstance) LibraryName() string {
@@ -391,6 +491,9 @@ func (i *CELPluginInstance) recvContent() (string, error) {
 	}()
 	select {
 	case err := <-i.instanceModErrCh:
+		// If the module instance is terminated,
+		// it is considered that the termination process has been completed.
+		i.closeResources(err)
 		return "", err
 	case result := <-readCh:
 		return result.response, result.err

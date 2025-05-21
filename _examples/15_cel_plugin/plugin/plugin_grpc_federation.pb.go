@@ -9,6 +9,7 @@ package pluginpb
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -79,7 +80,13 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 	}
 }
 
-func handleRegexpPlugin(content []byte, plug RegexpPlugin) (*grpcfed.CELPluginResponse, error) {
+func handleRegexpPlugin(content []byte, plug RegexpPlugin) (res *grpcfed.CELPluginResponse, e error) {
+	defer func() {
+		if e := recover(); e != nil {
+			res = grpcfed.ToErrorCELPluginResponse(errors.New(fmt.Sprintf("%v", e)))
+		}
+	}()
+
 	req, err := grpcfed.DecodeCELPluginRequest(content)
 	if err != nil {
 		return nil, err

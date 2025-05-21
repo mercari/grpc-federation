@@ -21,11 +21,13 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/goccy/wasi-go v0.1.0 // indirect
 	github.com/google/cel-go v0.23.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/stealthrocket/wazergo v0.19.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
-	github.com/tetratelabs/wazero v1.7.0 // indirect
+	github.com/tetratelabs/wazero v1.9.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/net v0.38.0 // indirect
