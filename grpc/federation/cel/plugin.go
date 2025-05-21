@@ -18,10 +18,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/goccy/wasi-go/imports"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
-	"github.com/stealthrocket/wasi-go/imports"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 

@@ -7,13 +7,14 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/goccy/go-yaml v1.11.2
+	github.com/goccy/wasi-go v0.1.0
+	github.com/goccy/wasi-go-net v0.1.1
 	github.com/google/cel-go v0.23.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/stealthrocket/wasi-go v0.0.0-00010101000000-000000000000
-	github.com/tetratelabs/wazero v1.7.0
+	github.com/tetratelabs/wazero v1.9.0
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2
 	go.lsp.dev/protocol v0.12.0
@@ -47,7 +48,3 @@ require (
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
-
-replace github.com/stealthrocket/wasi-go => ../../goccy/wasi-go
-
-replace github.com/tetratelabs/wazero => ../../wazero
