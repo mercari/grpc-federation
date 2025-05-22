@@ -212,8 +212,10 @@ func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcf
 		envMap[kv[:i]] = kv[i+1:]
 	}
 	if env.All {
+		fmt.Println("used env.All")
 		for k, v := range envMap {
 			cfg = cfg.WithEnv(k, v)
+			fmt.Println("k", k, "v", v)
 			nwcfg = nwcfg.WithEnv(k + "=" + v)
 		}
 	} else {
