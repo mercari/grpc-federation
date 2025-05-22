@@ -46,6 +46,10 @@ func TestProtoFormat(t *testing.T) {
         by: "org.user.Item.ItemType.value('ITEM_TYPE_2')"
       }
     }
+    def {
+      name: "id"
+      by: "100"
+    }
   }`,
 				"Post": `
   option (grpc.federation.message) = {
