@@ -214,16 +214,18 @@ func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcf
 	if env.All {
 		for k, v := range envMap {
 			cfg = cfg.WithEnv(k, v)
-			nwcfg = nwcfg.WithEnv(k + "=" + v)
 		}
+		nwcfg = nwcfg.WithEnv(os.Environ()...)
 	} else {
+		var envs []string
 		for _, name := range env.Names {
 			envName := strings.ToUpper(name)
 			if v, exists := envMap[envName]; exists {
 				cfg = cfg.WithEnv(envName, v)
-				nwcfg = nwcfg.WithEnv(envName + "=" + v)
+				envs = append(envs, envName+"="+v)
 			}
 		}
+		nwcfg = nwcfg.WithEnv(envs...)
 	}
 	return cfg, nwcfg
 }
