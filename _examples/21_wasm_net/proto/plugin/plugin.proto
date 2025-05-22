@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package example.net;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/plugin;pluginpb";
+
+option (grpc.federation.file).plugin.export = {
+  name: "net"
+  capability {
+    network: {}
+    env { names: ["foo"] }
+    file_system { mount_path: "/" }
+  }
+  functions: [
+    {
+      name: "httpGet"
+      args {
+        name: "url"
+        type { kind: STRING }
+        desc: "url string"
+      }
+      return { kind: STRING }
+    },
+    {
+      name: "getFooEnv"
+      return { kind: STRING }
+    },
+    {
+      name: "getFileContent"
+      args {
+        name: "path"
+        type { kind: STRING }
+      }
+      return { kind: STRING }
+    }
+  ]
+};

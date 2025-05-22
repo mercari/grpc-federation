@@ -18,9 +18,28 @@ type Package struct {
 }
 
 type CELPlugin struct {
-	Name      string
-	Desc      string
-	Functions []*CELFunction
+	Name       string
+	Desc       string
+	Functions  []*CELFunction
+	Capability *CELPluginCapability
+}
+
+type CELPluginCapability struct {
+	Env        *CELPluginEnvCapability
+	FileSystem *CELPluginFileSystemCapability
+	Network    *CELPluginNetworkCapability
+}
+
+type CELPluginEnvCapability struct {
+	All   bool
+	Names []string
+}
+
+type CELPluginFileSystemCapability struct {
+	MountPath string
+}
+
+type CELPluginNetworkCapability struct {
 }
 
 type CELFunction struct {

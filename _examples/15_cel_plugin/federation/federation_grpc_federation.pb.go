@@ -206,12 +206,16 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 					IsMethod: true,
 				},
 			},
+			Capability: &grpcfedcel.CELPluginCapability{},
 		})
 		if err != nil {
 			return nil, err
 		}
 		ctx := context.Background()
-		instance := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+		instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+		if err != nil {
+			return nil, err
+		}
 		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}

@@ -8,6 +8,14 @@ type {{ $pluginName }} interface {
 	{{- end }}
 }
 
+{{- if .Capability.Network }}
+
+func init() {
+	http.DefaultTransport = grpcfednet.DefaultTransport()
+}
+
+{{- end }}
+
 func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -51,7 +59,13 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 	}
 }
 
-func handle{{ $pluginName }}(content []byte, plug {{ $pluginName }}) (*grpcfed.CELPluginResponse, error) {
+func handle{{ $pluginName }}(content []byte, plug {{ $pluginName }}) (res *grpcfed.CELPluginResponse, e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			res = grpcfed.ToErrorCELPluginResponse(fmt.Errorf("%v", r))
+		}
+	}()
+
 	req, err := grpcfed.DecodeCELPluginRequest(content)
 	if err != nil {
 		return nil, err

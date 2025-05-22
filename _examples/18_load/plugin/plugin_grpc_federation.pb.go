@@ -69,7 +69,13 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 	}
 }
 
-func handleAccountPlugin(content []byte, plug AccountPlugin) (*grpcfed.CELPluginResponse, error) {
+func handleAccountPlugin(content []byte, plug AccountPlugin) (res *grpcfed.CELPluginResponse, e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			res = grpcfed.ToErrorCELPluginResponse(fmt.Errorf("%v", r))
+		}
+	}()
+
 	req, err := grpcfed.DecodeCELPluginRequest(content)
 	if err != nil {
 		return nil, err

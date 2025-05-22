@@ -79,7 +79,13 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 	}
 }
 
-func handleRegexpPlugin(content []byte, plug RegexpPlugin) (*grpcfed.CELPluginResponse, error) {
+func handleRegexpPlugin(content []byte, plug RegexpPlugin) (res *grpcfed.CELPluginResponse, e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			res = grpcfed.ToErrorCELPluginResponse(fmt.Errorf("%v", r))
+		}
+	}()
+
 	req, err := grpcfed.DecodeCELPluginRequest(content)
 	if err != nil {
 		return nil, err

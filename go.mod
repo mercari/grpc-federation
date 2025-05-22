@@ -7,12 +7,14 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/goccy/go-yaml v1.11.2
+	github.com/goccy/wasi-go v0.1.0
+	github.com/goccy/wasi-go-net v0.1.1
 	github.com/google/cel-go v0.23.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/tetratelabs/wazero v1.7.0
+	github.com/tetratelabs/wazero v1.9.0
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2
 	go.lsp.dev/protocol v0.12.0
@@ -38,6 +40,7 @@ require (
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.3.4 // indirect
+	github.com/stealthrocket/wazergo v0.19.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
