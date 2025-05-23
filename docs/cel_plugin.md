@@ -171,6 +171,24 @@ federationServer, err := federation.NewFederationService(federation.FederationSe
 })
 ```
 
+# Resource Capability
+
+By default, plugins do not have access to Environment variables, File System, or Network. This helps to run plugins securely, but there may be cases where you want to allow access to these resources.
+In such cases, you can enable access to each resource by configuring as follows:
+
+```proto
+option (grpc.federation.file).plugin.export = {
+  name: "regexp"
+  capability {
+    network: {} // enable network access via http/https
+    env { names: ["foo"] } // enable access to `FOO` environment variable
+    file_system { mount_path: "/" } // enable access to file system from mounted point by `/`
+  }
+}
+```
+
+For more details, please refer to the sample that uses this configuration in [_examples/21_wasm_net](../_examples/21_wasm_net/).
+
 # How it works
 
 Host and wasm plugin using stdio to exchange data.
