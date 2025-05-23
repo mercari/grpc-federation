@@ -293,6 +293,9 @@ func (e *CallExpr) ReferenceNames() []string {
 			names = append(names, e.Option.Trailer.Name)
 		}
 	}
+	if e.Metadata != nil {
+		names = append(names, e.Metadata.ReferenceNames()...)
+	}
 	return toUniqueReferenceNames(names)
 }
 

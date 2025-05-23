@@ -25,12 +25,13 @@ message GetPostResponse {
   option (.grpc.federation.message) = {
     def { name: "hdr" by: "grpc.federation.metadata.new()" }
     def { name: "tlr" by: "grpc.federation.metadata.new()" }
+    def { name: "md" by: "{'authorization': ['Bearer xxx']}" }
     def {
       name: "res"
       call {
         method: "post.PostService/GetPost"
         request { field: "id", by: "$.id" }
-        metadata: "{'authorization': ['Bearer xxx']}"
+        metadata: "md"
         option {
           header: "hdr"
           trailer: "tlr"

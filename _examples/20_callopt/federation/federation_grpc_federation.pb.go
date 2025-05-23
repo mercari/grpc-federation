@@ -28,6 +28,7 @@ var (
 type FederationService_Federation_GetPostResponseVariable struct {
 	Hdr     map[string][]string
 	HdrKeys []string
+	Md      map[string][]string
 	Res     *post.GetPostResponse
 	Tlr     map[string][]string
 	TlrKeys []string
@@ -201,6 +202,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		vars struct {
 			Hdr     map[string][]string
 			HdrKeys []string
+			Md      map[string][]string
 			Res     *post.GetPostResponse
 			Tlr     map[string][]string
 			TlrKeys []string
@@ -247,6 +249,25 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 
 	/*
 		def {
+		  name: "md"
+		  by: "{'authorization': ['Bearer xxx']}"
+		}
+	*/
+	def_md := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[map[string][]string, *localValueType]{
+			Name: `md`,
+			Type: grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELListType(grpcfed.CELStringType)),
+			Setter: func(value *localValueType, v map[string][]string) error {
+				value.vars.Md = v
+				return nil
+			},
+			By:           `{'authorization': ['Bearer xxx']}`,
+			ByCacheIndex: 3,
+		})
+	}
+
+	/*
+		def {
 		  name: "res"
 		  call {
 		    method: "post.PostService/GetPost"
@@ -268,7 +289,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 3,
+					CacheIndex: 4,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -279,9 +300,9 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				grpcfed.Logger(ctx).DebugContext(ctx, "call post.PostService/GetPost", slog.Any("post.GetPostRequest", s.logvalue_Post_GetPostRequest(args)))
 				md, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 					Value:      value,
-					Expr:       `{'authorization': ['Bearer xxx']}`,
+					Expr:       `md`,
 					OutType:    reflect.TypeOf(map[string][]string{}),
-					CacheIndex: 4,
+					CacheIndex: 5,
 				})
 				if err != nil {
 					return nil, err
@@ -335,7 +356,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	def_hdr_keys := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[[]string, *localValueType]{
 			If:           `res != null`,
-			IfCacheIndex: 5,
+			IfCacheIndex: 6,
 			Name:         `hdr_keys`,
 			Type:         grpcfed.CELListType(grpcfed.CELStringType),
 			Setter: func(value *localValueType, v []string) error {
@@ -343,7 +364,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `hdr.map(k, k)`,
-			ByCacheIndex: 6,
+			ByCacheIndex: 7,
 		})
 	}
 
@@ -357,7 +378,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	def_tlr_keys := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[[]string, *localValueType]{
 			If:           `res != null`,
-			IfCacheIndex: 7,
+			IfCacheIndex: 8,
 			Name:         `tlr_keys`,
 			Type:         grpcfed.CELListType(grpcfed.CELStringType),
 			Setter: func(value *localValueType, v []string) error {
@@ -365,7 +386,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `tlr.map(k, k)`,
-			ByCacheIndex: 8,
+			ByCacheIndex: 9,
 		})
 	}
 
@@ -373,10 +394,12 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	/*
 	        hdr ─┐
 	   hdr ─┐    │
+	    md ─┤    │
 	   tlr ─┤    │
 	        res ─┤
 	             hdr_keys ─┐
 	   hdr ─┐              │
+	    md ─┤              │
 	   tlr ─┤              │
 	        res ─┐         │
 	        tlr ─┤         │
@@ -397,6 +420,13 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
 			grpcfed.GoWithRecover(eg, func() (any, error) {
 				if err := def_hdr(ctx3); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
+				}
+				return nil, nil
+			})
+			grpcfed.GoWithRecover(eg, func() (any, error) {
+				if err := def_md(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
 				}
@@ -434,6 +464,13 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
 			grpcfed.GoWithRecover(eg, func() (any, error) {
 				if err := def_hdr(ctx3); err != nil {
+					grpcfed.RecordErrorToSpan(ctx3, err)
+					return nil, err
+				}
+				return nil, nil
+			})
+			grpcfed.GoWithRecover(eg, func() (any, error) {
+				if err := def_md(ctx3); err != nil {
 					grpcfed.RecordErrorToSpan(ctx3, err)
 					return nil, err
 				}
@@ -479,6 +516,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.FederationService_Federation_GetPostResponseVariable.Hdr = value.vars.Hdr
 	req.FederationService_Federation_GetPostResponseVariable.HdrKeys = value.vars.HdrKeys
+	req.FederationService_Federation_GetPostResponseVariable.Md = value.vars.Md
 	req.FederationService_Federation_GetPostResponseVariable.Res = value.vars.Res
 	req.FederationService_Federation_GetPostResponseVariable.Tlr = value.vars.Tlr
 	req.FederationService_Federation_GetPostResponseVariable.TlrKeys = value.vars.TlrKeys
@@ -491,7 +529,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `hdr_keys.sortAsc(v, v)`,
-		CacheIndex: 9,
+		CacheIndex: 10,
 		Setter: func(v []string) error {
 			ret.Header = v
 			return nil
@@ -504,7 +542,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `tlr_keys.sortAsc(v, v)`,
-		CacheIndex: 10,
+		CacheIndex: 11,
 		Setter: func(v []string) error {
 			ret.Trailer = v
 			return nil
