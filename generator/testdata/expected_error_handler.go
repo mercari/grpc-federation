@@ -466,268 +466,274 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					}
 					stat, handleErr := func() (*localStatusType, error) {
 						var stat *grpcfed.Status
-						/*
-							def {
-							  name: "id"
-							  by: "$.id"
+						{
+							/*
+								def {
+								  name: "id"
+								  by: "$.id"
+								}
+							*/
+							def_id := func(ctx context.Context) error {
+								return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+									Name: `id`,
+									Type: grpcfed.CELStringType,
+									Setter: func(value *localValueType, v string) error {
+										value.vars.Id = v
+										return nil
+									},
+									By:           `$.id`,
+									ByCacheIndex: 6,
+								})
 							}
-						*/
-						def_id := func(ctx context.Context) error {
-							return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
-								Name: `id`,
-								Type: grpcfed.CELStringType,
-								Setter: func(value *localValueType, v string) error {
-									value.vars.Id = v
+
+							if err := def_id(ctx); err != nil {
+								grpcfed.RecordErrorToSpan(ctx, err)
+								return nil, err
+							}
+							if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+								Value:      value,
+								Expr:       `error.precondition_failures.map(f, f.violations[0]).first(v, v.subject == '').?subject == optional.of('')`,
+								CacheIndex: 7,
+								Body: func(value *localValueType) error {
+									errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+										Value:      value,
+										Expr:       `'id must be not empty'`,
+										OutType:    reflect.TypeOf(""),
+										CacheIndex: 8,
+									})
+									if err != nil {
+										return err
+									}
+									errorMessage := errmsg.(string)
+									var details []grpcfed.ProtoMessage
+									if _, err := func() (any, error) {
+										/*
+											def {
+											  name: "localized_msg"
+											  message {
+											    name: "LocalizedMessage"
+											    args { name: "value", by: "id" }
+											  }
+											}
+										*/
+										def_localized_msg := func(ctx context.Context) error {
+											return grpcfed.EvalDef(ctx, value, grpcfed.Def[*LocalizedMessage, *localValueType]{
+												Name: `localized_msg`,
+												Type: grpcfed.CELObjectType("org.federation.LocalizedMessage"),
+												Setter: func(value *localValueType, v *LocalizedMessage) error {
+													value.vars.LocalizedMsg = v
+													return nil
+												},
+												Message: func(ctx context.Context, value *localValueType) (any, error) {
+													args := &FederationService_Org_Federation_LocalizedMessageArgument{}
+													// { name: "value", by: "id" }
+													if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+														Value:      value,
+														Expr:       `id`,
+														CacheIndex: 9,
+														Setter: func(v string) error {
+															args.Value = v
+															return nil
+														},
+													}); err != nil {
+														return nil, err
+													}
+													ret, err := s.resolve_Org_Federation_LocalizedMessage(ctx, args)
+													if err != nil {
+														return nil, err
+													}
+													return ret, nil
+												},
+											})
+										}
+
+										if err := def_localized_msg(ctx); err != nil {
+											grpcfed.RecordErrorToSpan(ctx, err)
+											return nil, err
+										}
+										return nil, nil
+									}(); err != nil {
+										return err
+									}
+									if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+										Value:      value,
+										Expr:       `true`,
+										CacheIndex: 10,
+										Body: func(value *localValueType) error {
+											if _, err := func() (any, error) {
+												/*
+													def {
+													  name: "_def0_err_detail0_msg0"
+													  message {
+													    name: "CustomMessage"
+													    args { name: "msg", by: "id" }
+													  }
+													}
+												*/
+												def__def0_err_detail0_msg0 := func(ctx context.Context) error {
+													return grpcfed.EvalDef(ctx, value, grpcfed.Def[*CustomMessage, *localValueType]{
+														Name: `_def0_err_detail0_msg0`,
+														Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
+														Setter: func(value *localValueType, v *CustomMessage) error {
+															value.vars.XDef0ErrDetail0Msg0 = v
+															return nil
+														},
+														Message: func(ctx context.Context, value *localValueType) (any, error) {
+															args := &FederationService_Org_Federation_CustomMessageArgument{}
+															// { name: "msg", by: "id" }
+															if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+																Value:      value,
+																Expr:       `id`,
+																CacheIndex: 11,
+																Setter: func(v string) error {
+																	args.Msg = v
+																	return nil
+																},
+															}); err != nil {
+																return nil, err
+															}
+															ret, err := s.resolve_Org_Federation_CustomMessage(ctx, args)
+															if err != nil {
+																return nil, err
+															}
+															return ret, nil
+														},
+													})
+												}
+
+												if err := def__def0_err_detail0_msg0(ctx); err != nil {
+													grpcfed.RecordErrorToSpan(ctx, err)
+													return nil, err
+												}
+												return nil, nil
+											}(); err != nil {
+												return err
+											}
+											if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
+												Value:            value,
+												MessageValueName: "_def0_err_detail0_msg0",
+												CacheIndex:       12,
+												MessageIndex:     0,
+											}); detail != nil {
+												details = append(details, detail)
+											}
+											{
+												detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+													Value:      value,
+													Expr:       `org.post.Post{id: 'foo'}`,
+													OutType:    reflect.TypeOf((*post.Post)(nil)),
+													CacheIndex: 13,
+												})
+												if err != nil {
+													grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+												}
+												if detail != nil {
+													details = append(details, detail.(grpcfed.ProtoMessage))
+												}
+											}
+											{
+												detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+													Value:      value,
+													Expr:       `org.post.CreatePost{title: 'bar'}`,
+													OutType:    reflect.TypeOf((*post.CreatePost)(nil)),
+													CacheIndex: 14,
+												})
+												if err != nil {
+													grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+												}
+												if detail != nil {
+													details = append(details, detail.(grpcfed.ProtoMessage))
+												}
+											}
+											if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFailureViolation{
+												{
+													Type:              `'some-type'`,
+													Subject:           `'some-subject'`,
+													Desc:              `'some-description'`,
+													TypeCacheIndex:    15,
+													SubjectCacheIndex: 16,
+													DescCacheIndex:    17,
+												},
+											}); detail != nil {
+												details = append(details, detail)
+											}
+											if detail := grpcfed.LocalizedMessage(ctx, &grpcfed.LocalizedMessageParam{
+												Value:      value,
+												Locale:     "en-US",
+												Message:    `localized_msg.value`,
+												CacheIndex: 18,
+											}); detail != nil {
+												details = append(details, detail)
+											}
+											return nil
+										},
+									}); err != nil {
+										return err
+									}
+
+									var code grpcfed.Code
+									code = grpcfed.FailedPreconditionCode
+									status := grpcfed.NewGRPCStatus(code, errorMessage)
+									statusWithDetails, err := status.WithDetails(details...)
+									if err != nil {
+										grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+										stat = status
+									} else {
+										stat = statusWithDetails
+									}
 									return nil
 								},
-								By:           `$.id`,
-								ByCacheIndex: 6,
-							})
+							}); err != nil {
+								return nil, err
+							}
+							if stat != nil {
+								return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
+							}
 						}
-
-						if err := def_id(ctx); err != nil {
-							grpcfed.RecordErrorToSpan(ctx, err)
-							return nil, err
-						}
-						if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-							Value:      value,
-							Expr:       `error.precondition_failures.map(f, f.violations[0]).first(v, v.subject == '').?subject == optional.of('')`,
-							CacheIndex: 7,
-							Body: func(value *localValueType) error {
-								errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-									Value:      value,
-									Expr:       `'id must be not empty'`,
-									OutType:    reflect.TypeOf(""),
-									CacheIndex: 8,
-								})
-								if err != nil {
-									return err
-								}
-								errorMessage := errmsg.(string)
-								var details []grpcfed.ProtoMessage
-								if _, err := func() (any, error) {
-									/*
-										def {
-										  name: "localized_msg"
-										  message {
-										    name: "LocalizedMessage"
-										    args { name: "value", by: "id" }
-										  }
-										}
-									*/
-									def_localized_msg := func(ctx context.Context) error {
-										return grpcfed.EvalDef(ctx, value, grpcfed.Def[*LocalizedMessage, *localValueType]{
-											Name: `localized_msg`,
-											Type: grpcfed.CELObjectType("org.federation.LocalizedMessage"),
-											Setter: func(value *localValueType, v *LocalizedMessage) error {
-												value.vars.LocalizedMsg = v
-												return nil
-											},
-											Message: func(ctx context.Context, value *localValueType) (any, error) {
-												args := &FederationService_Org_Federation_LocalizedMessageArgument{}
-												// { name: "value", by: "id" }
-												if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
-													Value:      value,
-													Expr:       `id`,
-													CacheIndex: 9,
-													Setter: func(v string) error {
-														args.Value = v
-														return nil
-													},
-												}); err != nil {
-													return nil, err
-												}
-												ret, err := s.resolve_Org_Federation_LocalizedMessage(ctx, args)
-												if err != nil {
-													return nil, err
-												}
-												return ret, nil
-											},
-										})
-									}
-
-									if err := def_localized_msg(ctx); err != nil {
-										grpcfed.RecordErrorToSpan(ctx, err)
-										return nil, err
-									}
-									return nil, nil
-								}(); err != nil {
-									return err
-								}
-								if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-									Value:      value,
-									Expr:       `true`,
-									CacheIndex: 10,
-									Body: func(value *localValueType) error {
-										if _, err := func() (any, error) {
-											/*
-												def {
-												  name: "_def0_err_detail0_msg0"
-												  message {
-												    name: "CustomMessage"
-												    args { name: "msg", by: "id" }
-												  }
-												}
-											*/
-											def__def0_err_detail0_msg0 := func(ctx context.Context) error {
-												return grpcfed.EvalDef(ctx, value, grpcfed.Def[*CustomMessage, *localValueType]{
-													Name: `_def0_err_detail0_msg0`,
-													Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
-													Setter: func(value *localValueType, v *CustomMessage) error {
-														value.vars.XDef0ErrDetail0Msg0 = v
-														return nil
-													},
-													Message: func(ctx context.Context, value *localValueType) (any, error) {
-														args := &FederationService_Org_Federation_CustomMessageArgument{}
-														// { name: "msg", by: "id" }
-														if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
-															Value:      value,
-															Expr:       `id`,
-															CacheIndex: 11,
-															Setter: func(v string) error {
-																args.Msg = v
-																return nil
-															},
-														}); err != nil {
-															return nil, err
-														}
-														ret, err := s.resolve_Org_Federation_CustomMessage(ctx, args)
-														if err != nil {
-															return nil, err
-														}
-														return ret, nil
-													},
-												})
-											}
-
-											if err := def__def0_err_detail0_msg0(ctx); err != nil {
-												grpcfed.RecordErrorToSpan(ctx, err)
-												return nil, err
-											}
-											return nil, nil
-										}(); err != nil {
-											return err
-										}
-										if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
-											Value:            value,
-											MessageValueName: "_def0_err_detail0_msg0",
-											CacheIndex:       12,
-											MessageIndex:     0,
-										}); detail != nil {
-											details = append(details, detail)
-										}
-										{
-											detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-												Value:      value,
-												Expr:       `org.post.Post{id: 'foo'}`,
-												OutType:    reflect.TypeOf((*post.Post)(nil)),
-												CacheIndex: 13,
-											})
-											if err != nil {
-												grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-											}
-											if detail != nil {
-												details = append(details, detail.(grpcfed.ProtoMessage))
-											}
-										}
-										{
-											detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-												Value:      value,
-												Expr:       `org.post.CreatePost{title: 'bar'}`,
-												OutType:    reflect.TypeOf((*post.CreatePost)(nil)),
-												CacheIndex: 14,
-											})
-											if err != nil {
-												grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-											}
-											if detail != nil {
-												details = append(details, detail.(grpcfed.ProtoMessage))
-											}
-										}
-										if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFailureViolation{
-											{
-												Type:              `'some-type'`,
-												Subject:           `'some-subject'`,
-												Desc:              `'some-description'`,
-												TypeCacheIndex:    15,
-												SubjectCacheIndex: 16,
-												DescCacheIndex:    17,
-											},
-										}); detail != nil {
-											details = append(details, detail)
-										}
-										if detail := grpcfed.LocalizedMessage(ctx, &grpcfed.LocalizedMessageParam{
-											Value:      value,
-											Locale:     "en-US",
-											Message:    `localized_msg.value`,
-											CacheIndex: 18,
-										}); detail != nil {
-											details = append(details, detail)
-										}
+						{
+							if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+								Value:      value,
+								Expr:       `error.code == google.rpc.Code.UNIMPLEMENTED`,
+								CacheIndex: 19,
+								Body: func(value *localValueType) error {
+									stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+									if err := grpcfed.IgnoreAndResponse(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
+										Name: "res",
+										Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
+										Setter: func(value *localValueType, v *post.GetPostResponse) error {
+											ret = v // assign customized response to the result value.
+											return nil
+										},
+										By:           `org.post.GetPostResponse{post: org.post.Post{id: 'anonymous', title: 'none'}}`,
+										ByCacheIndex: 20,
+									}); err != nil {
+										grpcfed.Logger(ctx).ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
 										return nil
-									},
-								}); err != nil {
-									return err
-								}
-
-								var code grpcfed.Code
-								code = grpcfed.FailedPreconditionCode
-								status := grpcfed.NewGRPCStatus(code, errorMessage)
-								statusWithDetails, err := status.WithDetails(details...)
-								if err != nil {
-									grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-									stat = status
-								} else {
-									stat = statusWithDetails
-								}
-								return nil
-							},
-						}); err != nil {
-							return nil, err
-						}
-						if stat != nil {
-							return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
-						}
-						if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-							Value:      value,
-							Expr:       `error.code == google.rpc.Code.UNIMPLEMENTED`,
-							CacheIndex: 19,
-							Body: func(value *localValueType) error {
-								stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-								if err := grpcfed.IgnoreAndResponse(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
-									Name: "res",
-									Type: grpcfed.CELObjectType("org.post.GetPostResponse"),
-									Setter: func(value *localValueType, v *post.GetPostResponse) error {
-										ret = v // assign customized response to the result value.
-										return nil
-									},
-									By:           `org.post.GetPostResponse{post: org.post.Post{id: 'anonymous', title: 'none'}}`,
-									ByCacheIndex: 20,
-								}); err != nil {
-									grpcfed.Logger(ctx).ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
+									}
 									return nil
-								}
-								return nil
-							},
-						}); err != nil {
-							return nil, err
+								},
+							}); err != nil {
+								return nil, err
+							}
+							if stat != nil {
+								return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
+							}
 						}
-						if stat != nil {
-							return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
-						}
-						if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-							Value:      value,
-							Expr:       `true`,
-							CacheIndex: 21,
-							Body: func(value *localValueType) error {
-								stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-								return nil
-							},
-						}); err != nil {
-							return nil, err
-						}
-						if stat != nil {
-							return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
+						{
+							if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+								Value:      value,
+								Expr:       `true`,
+								CacheIndex: 21,
+								Body: func(value *localValueType) error {
+									stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+									return nil
+								},
+							}); err != nil {
+								return nil, err
+							}
+							if stat != nil {
+								return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
+							}
 						}
 						return nil, nil
 					}()

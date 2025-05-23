@@ -108,9 +108,20 @@ message GetPost2Response {
         method: "post.PostService/GetPost"
         request { field: "id" by: "$.id" }
         error {
-          def { name: "code" by: "google.rpc.Code.from(error.code)" }
+          def [
+            { name: "code" by: "google.rpc.Code.from(error.code)" },
+            { name: "msg" by: "error.message" }
+          ]
           if: "code == google.rpc.Code.FAILED_PRECONDITION"
           log_level: WARN
+        }
+        error {
+          def [
+            { name: "code2" by: "google.rpc.Code.from(error.code)" },
+            { name: "msg2" by: "error.message" }
+          ]
+          if: "code2 == google.rpc.Code.INTERNAL"
+          log_level: ERROR
         }
       }
     }

@@ -32,159 +32,161 @@ type localStatusType struct {
 stat, handleErr := func() (*localStatusType, error) {
 	var stat *grpcfed.Status
 	{{- range $grpcErrors }}
-	{{- $logLevel := .LogLevelValue }}
-	{{- if .VariableDefinitionSet }}
-	{{- template "evalDefSet" .VariableDefinitionSet }}
-	{{- end }}
-	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-		Value: value,
-		Expr: `{{ .If.Expr }}`,
-		CacheIndex: {{ $def.CELCacheIndex }},
-		Body: func(value *localValueType) error {
-			{{- if .Ignore }}
-			stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-			return nil
-			{{- else if .IgnoreAndResponse }}
-			stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
-			if err := grpcfed.IgnoreAndResponse(ctx, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
-				Name: "{{ $def.Key }}",
-				Type: {{ $def.CELType }},
-				Setter: func(value *localValueType, v {{ $def.Type }}) error {
-					ret = v // assign customized response to the result value.
-					return nil
-				},
-				By: `{{ .IgnoreAndResponse.Expr }}`,
-				ByCacheIndex: {{ $def.CELCacheIndex }},
-			}); err != nil {
-				grpcfed.Logger(ctx).ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
+	{
+		{{- $logLevel := .LogLevelValue }}
+		{{- if .VariableDefinitionSet }}
+		{{- template "evalDefSet" .VariableDefinitionSet }}
+		{{- end }}
+		if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+			Value: value,
+			Expr: `{{ .If.Expr }}`,
+			CacheIndex: {{ $def.CELCacheIndex }},
+			Body: func(value *localValueType) error {
+				{{- if .Ignore }}
+				stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
 				return nil
-			}
-			return nil
-			{{- else }}
-
-			{{- if .Message }}
-			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-				Value: value,
-				Expr: `{{ .Message.Expr }}`,
-				OutType: reflect.TypeOf(""),
-				CacheIndex: {{ $def.CELCacheIndex }},
-			})
-			if err != nil {
-				return err
-			}
-			errorMessage := errmsg.(string)
-			{{- else }}
-			var errorMessage string
-			if defaultMsg != "" {
-				errorMessage = defaultMsg
-			} else {
-				errorMessage = "error"
-			}
-			{{- end }}
-
-			{{- $details := .Details }}
-			{{- if $details }}
-			var details       []grpcfed.ProtoMessage
-			{{- range $details }}
-			{{- if .VariableDefinitionSet }}
-			if _, err := func() (any, error){
-				{{- template "evalDefSet" .VariableDefinitionSet }}
-				return nil, nil
-			}(); err != nil {
-				return err
-			}
-			{{- end }}
-			if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-				Value: value,
-				Expr: `{{ .If.Expr }}`,
-				CacheIndex: {{ $def.CELCacheIndex }},
-				Body: func(value *localValueType) error {
-					{{- if .MessageSet }}
-					if _, err := func() (any, error){
-						{{- template "evalDefSet" .MessageSet }}
-						return nil, nil
-					}(); err != nil {
-						return err
-					}
-					{{- range $idx, $def := .MessageSet.Definitions }}
-					if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
-						Value: value,
-						MessageValueName: "{{ $def.Name }}",
-						CacheIndex: {{ $def.CELCacheIndex }},
-						MessageIndex: {{ $idx }},
-					}); detail != nil {
-						details = append(details, detail)
-					}
-					{{- end }}
-					{{- end }}
-
-					{{- range .By }}
-					{
-						detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-							Value: value,
-							Expr: `{{ .Expr }}`,
-							OutType: reflect.TypeOf({{ .Type }}),
-							CacheIndex: {{ $def.CELCacheIndex }},
-						})
-						if err != nil {
-							grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-						}
-						if detail != nil {
-							details = append(details, detail.(grpcfed.ProtoMessage))
-						}
-					}
-					{{- end }}
-
-					{{- range .PreconditionFailures }}
-					{{- template "preconditionFailure" . }}
-					{{- end }}
-					{{- range .BadRequests }}
-					{{- template "badRequest" . }}
-					{{- end }}
-					{{- range .LocalizedMessages }}
-					{{- template "localizedMessage" . }}
-					{{- end }}
+				{{- else if .IgnoreAndResponse }}
+				stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+				if err := grpcfed.IgnoreAndResponse(ctx, value, grpcfed.Def[{{ $def.Type }}, *localValueType]{
+					Name: "{{ $def.Key }}",
+					Type: {{ $def.CELType }},
+					Setter: func(value *localValueType, v {{ $def.Type }}) error {
+						ret = v // assign customized response to the result value.
+						return nil
+					},
+					By: `{{ .IgnoreAndResponse.Expr }}`,
+					ByCacheIndex: {{ $def.CELCacheIndex }},
+				}); err != nil {
+					grpcfed.Logger(ctx).ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
 					return nil
-				},
-			}); err != nil {
-				return err
-			}
-			{{- end }}
-			{{- end }}
+				}
+				return nil
+				{{- else }}
 
-			var code grpcfed.Code
-			{{- if .Code }}
-			code = grpcfed.{{ .GoGRPCStatusCode }}
-			{{- else }}
-			code = defaultCode
-			{{- end }}
-			{{- if $details }}
-			status := grpcfed.NewGRPCStatus(code, errorMessage)
-			statusWithDetails, err := status.WithDetails(details...)
-			if err != nil {
-				grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-				stat = status
-			} else {
-				stat = statusWithDetails
-			}
-			{{- else }}
-			status := grpcfed.NewGRPCStatus(code, errorMessage)
-			statusWithDetails, err := status.WithDetails(defaultDetails...)
-			if err != nil {
-				grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
-				stat = status
-			} else {
-				stat = statusWithDetails
-			}
-			{{- end }}
-			return nil
-			{{- end }}
-		},
-	}); err != nil {
-		return nil, err
-	}
-	if stat != nil {
-		return &localStatusType{status: stat, logLevel: {{ $logLevel }}}, nil
+				{{- if .Message }}
+				errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+					Value: value,
+					Expr: `{{ .Message.Expr }}`,
+					OutType: reflect.TypeOf(""),
+					CacheIndex: {{ $def.CELCacheIndex }},
+				})
+				if err != nil {
+					return err
+				}
+				errorMessage := errmsg.(string)
+				{{- else }}
+				var errorMessage string
+				if defaultMsg != "" {
+					errorMessage = defaultMsg
+				} else {
+					errorMessage = "error"
+				}
+				{{- end }}
+
+				{{- $details := .Details }}
+				{{- if $details }}
+				var details       []grpcfed.ProtoMessage
+				{{- range $details }}
+				{{- if .VariableDefinitionSet }}
+				if _, err := func() (any, error){
+					{{- template "evalDefSet" .VariableDefinitionSet }}
+					return nil, nil
+				}(); err != nil {
+					return err
+				}
+				{{- end }}
+				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+					Value: value,
+					Expr: `{{ .If.Expr }}`,
+					CacheIndex: {{ $def.CELCacheIndex }},
+					Body: func(value *localValueType) error {
+						{{- if .MessageSet }}
+						if _, err := func() (any, error){
+							{{- template "evalDefSet" .MessageSet }}
+							return nil, nil
+						}(); err != nil {
+							return err
+						}
+						{{- range $idx, $def := .MessageSet.Definitions }}
+						if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
+							Value: value,
+							MessageValueName: "{{ $def.Name }}",
+							CacheIndex: {{ $def.CELCacheIndex }},
+							MessageIndex: {{ $idx }},
+						}); detail != nil {
+							details = append(details, detail)
+						}
+						{{- end }}
+						{{- end }}
+
+						{{- range .By }}
+						{
+							detail, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+								Value: value,
+								Expr: `{{ .Expr }}`,
+								OutType: reflect.TypeOf({{ .Type }}),
+								CacheIndex: {{ $def.CELCacheIndex }},
+							})
+							if err != nil {
+								grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+							}
+							if detail != nil {
+								details = append(details, detail.(grpcfed.ProtoMessage))
+							}
+						}
+						{{- end }}
+
+						{{- range .PreconditionFailures }}
+						{{- template "preconditionFailure" . }}
+						{{- end }}
+						{{- range .BadRequests }}
+						{{- template "badRequest" . }}
+						{{- end }}
+						{{- range .LocalizedMessages }}
+						{{- template "localizedMessage" . }}
+						{{- end }}
+						return nil
+					},
+				}); err != nil {
+					return err
+				}
+				{{- end }}
+				{{- end }}
+
+				var code grpcfed.Code
+				{{- if .Code }}
+				code = grpcfed.{{ .GoGRPCStatusCode }}
+				{{- else }}
+				code = defaultCode
+				{{- end }}
+				{{- if $details }}
+				status := grpcfed.NewGRPCStatus(code, errorMessage)
+				statusWithDetails, err := status.WithDetails(details...)
+				if err != nil {
+					grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+					stat = status
+				} else {
+					stat = statusWithDetails
+				}
+				{{- else }}
+				status := grpcfed.NewGRPCStatus(code, errorMessage)
+				statusWithDetails, err := status.WithDetails(defaultDetails...)
+				if err != nil {
+					grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+					stat = status
+				} else {
+					stat = statusWithDetails
+				}
+				{{- end }}
+				return nil
+				{{- end }}
+			},
+		}); err != nil {
+			return nil, err
+		}
+		if stat != nil {
+			return &localStatusType{status: stat, logLevel: {{ $logLevel }}}, nil
+		}
 	}
 	{{- end }}
 	return nil, nil
