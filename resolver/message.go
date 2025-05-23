@@ -543,9 +543,11 @@ func (m *Message) CustomResolvers() []*CustomResolver {
 			})
 		}
 	}
-	for _, group := range m.Rule.DefSet.DefinitionGroups() {
-		for _, def := range group.VariableDefinitions() {
-			ret = append(ret, m.customResolvers(def)...)
+	if m.Rule != nil {
+		for _, group := range m.Rule.DefSet.DefinitionGroups() {
+			for _, def := range group.VariableDefinitions() {
+				ret = append(ret, m.customResolvers(def)...)
+			}
 		}
 	}
 	return ret
