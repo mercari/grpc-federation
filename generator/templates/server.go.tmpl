@@ -55,6 +55,15 @@ var {{ .Name }}_attrMap = grpcfed.EnumAttributeMap[{{ .Name }}]{
 
 {{- range $types }}
 
+{{- if .VariableType }}
+// {{ .VariableType.Desc }}.
+type {{ $serviceName }}_{{ .VariableType.Name }} struct {
+	{{- range .VariableType.Fields }}
+	{{ .Name }} {{ .Type }}
+	{{- end }}
+}
+{{- end }}
+
 // {{ .Desc }}.
 type {{ $serviceName }}_{{ .Name }} struct {
 	{{- range .Fields }}
@@ -63,6 +72,9 @@ type {{ $serviceName }}_{{ .Name }} struct {
 	{{- else }}
 	*{{ $serviceName }}_{{ .Type }}
 	{{- end }}
+	{{- end }}
+	{{- if .VariableType }}
+	{{ $serviceName }}_{{ .VariableType.Name }}
 	{{- end }}
 }
 

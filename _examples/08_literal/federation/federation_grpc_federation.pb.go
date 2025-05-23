@@ -24,11 +24,16 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_GetResponseVariable represents variable definitions in "org.federation.GetResponse".
+type FederationService_Org_Federation_GetResponseVariable struct {
+	Content *content.Content
+	Res     *content.GetContentResponse
+}
+
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
 type FederationService_Org_Federation_GetResponseArgument struct {
-	Content *content.Content
-	Id      string
-	Res     *content.GetContentResponse
+	Id string
+	FederationService_Org_Federation_GetResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -714,8 +719,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Content = value.vars.Content
-	req.Res = value.vars.Res
+	req.FederationService_Org_Federation_GetResponseVariable.Content = value.vars.Content
+	req.FederationService_Org_Federation_GetResponseVariable.Res = value.vars.Res
 
 	// create a message value to be returned.
 	ret := &GetResponse{}

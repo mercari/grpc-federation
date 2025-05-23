@@ -24,27 +24,47 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type FederationService_Org_Federation_GetResponseArgument struct {
+// Org_Federation_GetResponseVariable represents variable definitions in "org.federation.GetResponse".
+type FederationService_Org_Federation_GetResponseVariable struct {
 	Uid   *UserID
 	User  *User
 	User2 *User
 }
 
+// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
+type FederationService_Org_Federation_GetResponseArgument struct {
+	FederationService_Org_Federation_GetResponseVariable
+}
+
+// Org_Federation_SubVariable represents variable definitions in "org.federation.Sub".
+type FederationService_Org_Federation_SubVariable struct {
+}
+
 // Org_Federation_SubArgument is argument for "org.federation.Sub" message.
 type FederationService_Org_Federation_SubArgument struct {
+	FederationService_Org_Federation_SubVariable
+}
+
+// Org_Federation_UserVariable represents variable definitions in "org.federation.User".
+type FederationService_Org_Federation_UserVariable struct {
+	Res   *user.GetUserResponse
+	User  *user.User
+	XDef2 *Sub
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
 type FederationService_Org_Federation_UserArgument struct {
-	Res    *user.GetUserResponse
-	User   *user.User
 	UserId string
-	XDef2  *Sub
+	FederationService_Org_Federation_UserVariable
+}
+
+// Org_Federation_UserIDVariable represents variable definitions in "org.federation.UserID".
+type FederationService_Org_Federation_UserIDVariable struct {
 }
 
 // Org_Federation_UserIDArgument is argument for "org.federation.UserID" message.
 type FederationService_Org_Federation_UserIDArgument struct {
+	FederationService_Org_Federation_UserIDVariable
 }
 
 // Org_Federation_User_NameArgument is custom resolver's argument for "name" field of "org.federation.User" message.
@@ -390,9 +410,9 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Uid = value.vars.Uid
-	req.User = value.vars.User
-	req.User2 = value.vars.User2
+	req.FederationService_Org_Federation_GetResponseVariable.Uid = value.vars.Uid
+	req.FederationService_Org_Federation_GetResponseVariable.User = value.vars.User
+	req.FederationService_Org_Federation_GetResponseVariable.User2 = value.vars.User2
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
@@ -589,9 +609,9 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.Res
-	req.User = value.vars.User
-	req.XDef2 = value.vars.XDef2
+	req.FederationService_Org_Federation_UserVariable.Res = value.vars.Res
+	req.FederationService_Org_Federation_UserVariable.User = value.vars.User
+	req.FederationService_Org_Federation_UserVariable.XDef2 = value.vars.XDef2
 
 	// create a message value to be returned.
 	ret := &User{}

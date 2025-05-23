@@ -47,31 +47,45 @@ var Item_ItemType_attrMap = grpcfed.EnumAttributeMap[Item_ItemType]{
 	},
 }
 
+// Federation_AVariable represents variable definitions in "federation.A".
+type FederationService_Federation_AVariable struct {
+	B *A_B
+}
+
 // Federation_AArgument is argument for "federation.A" message.
 type FederationService_Federation_AArgument struct {
-	B *A_B
+	FederationService_Federation_AVariable
+}
+
+// Federation_A_BVariable represents variable definitions in "federation.B".
+type FederationService_Federation_A_BVariable struct {
+	Bar *A_B_C
+	Foo *A_B_C
 }
 
 // Federation_A_BArgument is argument for "federation.B" message.
 type FederationService_Federation_A_BArgument struct {
-	Bar *A_B_C
-	Foo *A_B_C
+	FederationService_Federation_A_BVariable
+}
+
+// Federation_A_B_CVariable represents variable definitions in "federation.C".
+type FederationService_Federation_A_B_CVariable struct {
 }
 
 // Federation_A_B_CArgument is argument for "federation.C" message.
 type FederationService_Federation_A_B_CArgument struct {
 	Type string
+	FederationService_Federation_A_B_CVariable
 }
 
-// Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
-type FederationService_Federation_GetPostResponseArgument struct {
+// Federation_GetPostResponseVariable represents variable definitions in "federation.GetPostResponse".
+type FederationService_Federation_GetPostResponseVariable struct {
 	A            *A
 	Date         *grpcfedcel.Time
 	E            Item_ItemType
 	FixedRand    *grpcfedcel.Rand
 	Flatten      []int64
 	Floor        float64
-	Id           string
 	JpTime       *grpcfedcel.Time
 	Loc          *grpcfedcel.Location
 	MapValue     map[int64]string
@@ -90,22 +104,38 @@ type FederationService_Federation_GetPostResponseArgument struct {
 	Value1       string
 }
 
-// Federation_PostArgument is argument for "federation.Post" message.
-type FederationService_Federation_PostArgument struct {
-	Id   string
+// Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
+type FederationService_Federation_GetPostResponseArgument struct {
+	Id string
+	FederationService_Federation_GetPostResponseVariable
+}
+
+// Federation_PostVariable represents variable definitions in "federation.Post".
+type FederationService_Federation_PostVariable struct {
 	Post *post.Post
 	Res  *post.GetPostResponse
 	User *User
+}
+
+// Federation_PostArgument is argument for "federation.Post" message.
+type FederationService_Federation_PostArgument struct {
+	Id string
+	FederationService_Federation_PostVariable
+}
+
+// Federation_UserVariable represents variable definitions in "federation.User".
+type FederationService_Federation_UserVariable struct {
+	Res  *user.GetUserResponse
+	User *user.User
 }
 
 // Federation_UserArgument is argument for "federation.User" message.
 type FederationService_Federation_UserArgument struct {
 	Content string
 	Id      string
-	Res     *user.GetUserResponse
 	Title   string
-	User    *user.User
 	UserId  string
+	FederationService_Federation_UserVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -334,7 +364,7 @@ func (s *FederationService) resolve_Federation_A(ctx context.Context, req *Feder
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.B = value.vars.B
+	req.FederationService_Federation_AVariable.B = value.vars.B
 
 	// create a message value to be returned.
 	ret := &A{}
@@ -564,8 +594,8 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Bar = value.vars.Bar
-	req.Foo = value.vars.Foo
+	req.FederationService_Federation_A_BVariable.Bar = value.vars.Bar
+	req.FederationService_Federation_A_BVariable.Foo = value.vars.Foo
 
 	// create a message value to be returned.
 	ret := &A_B{}
@@ -1347,28 +1377,28 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.A = value.vars.A
-	req.Date = value.vars.Date
-	req.E = value.vars.E
-	req.FixedRand = value.vars.FixedRand
-	req.Flatten = value.vars.Flatten
-	req.Floor = value.vars.Floor
-	req.JpTime = value.vars.JpTime
-	req.Loc = value.vars.Loc
-	req.MapValue = value.vars.MapValue
-	req.NullValue = value.vars.NullValue
-	req.ParseFloat = value.vars.ParseFloat
-	req.Post = value.vars.Post
-	req.Pow = value.vars.Pow
-	req.RandSource = value.vars.RandSource
-	req.SortedItems = value.vars.SortedItems
-	req.SortedValues = value.vars.SortedValues
-	req.SqrtDouble = value.vars.SqrtDouble
-	req.SqrtInt = value.vars.SqrtInt
-	req.StringsJoin = value.vars.StringsJoin
-	req.Url = value.vars.Url
-	req.Uuid = value.vars.Uuid
-	req.Value1 = value.vars.Value1
+	req.FederationService_Federation_GetPostResponseVariable.A = value.vars.A
+	req.FederationService_Federation_GetPostResponseVariable.Date = value.vars.Date
+	req.FederationService_Federation_GetPostResponseVariable.E = value.vars.E
+	req.FederationService_Federation_GetPostResponseVariable.FixedRand = value.vars.FixedRand
+	req.FederationService_Federation_GetPostResponseVariable.Flatten = value.vars.Flatten
+	req.FederationService_Federation_GetPostResponseVariable.Floor = value.vars.Floor
+	req.FederationService_Federation_GetPostResponseVariable.JpTime = value.vars.JpTime
+	req.FederationService_Federation_GetPostResponseVariable.Loc = value.vars.Loc
+	req.FederationService_Federation_GetPostResponseVariable.MapValue = value.vars.MapValue
+	req.FederationService_Federation_GetPostResponseVariable.NullValue = value.vars.NullValue
+	req.FederationService_Federation_GetPostResponseVariable.ParseFloat = value.vars.ParseFloat
+	req.FederationService_Federation_GetPostResponseVariable.Post = value.vars.Post
+	req.FederationService_Federation_GetPostResponseVariable.Pow = value.vars.Pow
+	req.FederationService_Federation_GetPostResponseVariable.RandSource = value.vars.RandSource
+	req.FederationService_Federation_GetPostResponseVariable.SortedItems = value.vars.SortedItems
+	req.FederationService_Federation_GetPostResponseVariable.SortedValues = value.vars.SortedValues
+	req.FederationService_Federation_GetPostResponseVariable.SqrtDouble = value.vars.SqrtDouble
+	req.FederationService_Federation_GetPostResponseVariable.SqrtInt = value.vars.SqrtInt
+	req.FederationService_Federation_GetPostResponseVariable.StringsJoin = value.vars.StringsJoin
+	req.FederationService_Federation_GetPostResponseVariable.Url = value.vars.Url
+	req.FederationService_Federation_GetPostResponseVariable.Uuid = value.vars.Uuid
+	req.FederationService_Federation_GetPostResponseVariable.Value1 = value.vars.Value1
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -2125,9 +2155,9 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.Post
-	req.Res = value.vars.Res
-	req.User = value.vars.User
+	req.FederationService_Federation_PostVariable.Post = value.vars.Post
+	req.FederationService_Federation_PostVariable.Res = value.vars.Res
+	req.FederationService_Federation_PostVariable.User = value.vars.User
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -2280,8 +2310,8 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.Res
-	req.User = value.vars.User
+	req.FederationService_Federation_UserVariable.Res = value.vars.Res
+	req.FederationService_Federation_UserVariable.User = value.vars.User
 
 	// create a message value to be returned.
 	ret := &User{}

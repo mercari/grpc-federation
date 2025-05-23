@@ -459,6 +459,11 @@ func TestSimpleAggregation(t *testing.T) {
 					resolver.StringType,
 					testutil.NewFieldRuleBuilder(resolver.NewByValue("Item.ItemType.attr(e, 'en')", resolver.StringType)).Build(t),
 				).
+				AddFieldWithRule(
+					"different_type_id",
+					resolver.Int64Type,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("id", resolver.Int64Type)).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
@@ -518,6 +523,13 @@ func TestSimpleAggregation(t *testing.T) {
 								).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("id").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("100", resolver.Int64Type).Build(t)).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
@@ -525,6 +537,7 @@ func TestSimpleAggregation(t *testing.T) {
 								Build(t),
 						).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("e")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("id")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("map_value")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("post")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("uuid")).

@@ -24,44 +24,79 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Federation_GetNameResponseVariable represents variable definitions in "federation.GetNameResponse".
+type FederationService_Federation_GetNameResponseVariable struct {
+	Foo *GetNameResponse_Foo
+}
+
 // Federation_GetNameResponseArgument is argument for "federation.GetNameResponse" message.
 type FederationService_Federation_GetNameResponseArgument struct {
-	Foo *GetNameResponse_Foo
+	FederationService_Federation_GetNameResponseVariable
+}
+
+// Federation_GetNameResponse_FooVariable represents variable definitions in "federation.Foo".
+type FederationService_Federation_GetNameResponse_FooVariable struct {
 }
 
 // Federation_GetNameResponse_FooArgument is argument for "federation.Foo" message.
 type FederationService_Federation_GetNameResponse_FooArgument struct {
+	FederationService_Federation_GetNameResponse_FooVariable
+}
+
+// Federation_GetPostResponseVariable represents variable definitions in "federation.GetPostResponse".
+type FederationService_Federation_GetPostResponseVariable struct {
+	Foo *GetPostResponse_Foo
+	P   *Post
 }
 
 // Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
 type FederationService_Federation_GetPostResponseArgument struct {
-	Foo *GetPostResponse_Foo
-	Id  string
-	P   *Post
+	Id string
+	FederationService_Federation_GetPostResponseVariable
+}
+
+// Federation_GetPostResponse_FooVariable represents variable definitions in "federation.Foo".
+type FederationService_Federation_GetPostResponse_FooVariable struct {
 }
 
 // Federation_GetPostResponse_FooArgument is argument for "federation.Foo" message.
 type FederationService_Federation_GetPostResponse_FooArgument struct {
+	FederationService_Federation_GetPostResponse_FooVariable
 }
 
-// Federation_PostArgument is argument for "federation.Post" message.
-type FederationService_Federation_PostArgument struct {
+// Federation_PostVariable represents variable definitions in "federation.Post".
+type FederationService_Federation_PostVariable struct {
 	Cmp           bool
 	FavoriteValue favorite.FavoriteType
 	Reaction      *Reaction
 	U             *User
 }
 
+// Federation_PostArgument is argument for "federation.Post" message.
+type FederationService_Federation_PostArgument struct {
+	FederationService_Federation_PostVariable
+}
+
+// Federation_ReactionVariable represents variable definitions in "federation.Reaction".
+type FederationService_Federation_ReactionVariable struct {
+	Cmp bool
+}
+
 // Federation_ReactionArgument is argument for "federation.Reaction" message.
 type FederationService_Federation_ReactionArgument struct {
-	Cmp bool
-	V   favorite.FavoriteType
+	V favorite.FavoriteType
+	FederationService_Federation_ReactionVariable
+}
+
+// Federation_UserVariable represents variable definitions in "federation.User".
+type FederationService_Federation_UserVariable struct {
 }
 
 // Federation_UserArgument is argument for "federation.User" message.
 type FederationService_Federation_UserArgument struct {
 	Id   string
 	Name string
+	FederationService_Federation_UserVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -455,7 +490,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Foo = value.vars.Foo
+	req.FederationService_Federation_GetNameResponseVariable.Foo = value.vars.Foo
 
 	// create a message value to be returned.
 	ret := &GetNameResponse{}
@@ -629,8 +664,8 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Foo = value.vars.Foo
-	req.P = value.vars.P
+	req.FederationService_Federation_GetPostResponseVariable.Foo = value.vars.Foo
+	req.FederationService_Federation_GetPostResponseVariable.P = value.vars.P
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -917,10 +952,10 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.Cmp
-	req.FavoriteValue = value.vars.FavoriteValue
-	req.Reaction = value.vars.Reaction
-	req.U = value.vars.U
+	req.FederationService_Federation_PostVariable.Cmp = value.vars.Cmp
+	req.FederationService_Federation_PostVariable.FavoriteValue = value.vars.FavoriteValue
+	req.FederationService_Federation_PostVariable.Reaction = value.vars.Reaction
+	req.FederationService_Federation_PostVariable.U = value.vars.U
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -1067,7 +1102,7 @@ func (s *FederationService) resolve_Federation_Reaction(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.Cmp
+	req.FederationService_Federation_ReactionVariable.Cmp = value.vars.Cmp
 
 	// create a message value to be returned.
 	ret := &Reaction{}
@@ -1335,44 +1370,79 @@ func (s *FederationService) logvalue_Federation_UserArgument(v *FederationServic
 	)
 }
 
+// Federation_GetNameResponseVariable represents variable definitions in "federation.GetNameResponse".
+type PrivateService_Federation_GetNameResponseVariable struct {
+	Foo *GetNameResponse_Foo
+}
+
 // Federation_GetNameResponseArgument is argument for "federation.GetNameResponse" message.
 type PrivateService_Federation_GetNameResponseArgument struct {
-	Foo *GetNameResponse_Foo
+	PrivateService_Federation_GetNameResponseVariable
+}
+
+// Federation_GetNameResponse_FooVariable represents variable definitions in "federation.Foo".
+type PrivateService_Federation_GetNameResponse_FooVariable struct {
 }
 
 // Federation_GetNameResponse_FooArgument is argument for "federation.Foo" message.
 type PrivateService_Federation_GetNameResponse_FooArgument struct {
+	PrivateService_Federation_GetNameResponse_FooVariable
+}
+
+// Federation_GetPostResponseVariable represents variable definitions in "federation.GetPostResponse".
+type PrivateService_Federation_GetPostResponseVariable struct {
+	Foo *GetPostResponse_Foo
+	P   *Post
 }
 
 // Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
 type PrivateService_Federation_GetPostResponseArgument struct {
-	Foo *GetPostResponse_Foo
-	Id  string
-	P   *Post
+	Id string
+	PrivateService_Federation_GetPostResponseVariable
+}
+
+// Federation_GetPostResponse_FooVariable represents variable definitions in "federation.Foo".
+type PrivateService_Federation_GetPostResponse_FooVariable struct {
 }
 
 // Federation_GetPostResponse_FooArgument is argument for "federation.Foo" message.
 type PrivateService_Federation_GetPostResponse_FooArgument struct {
+	PrivateService_Federation_GetPostResponse_FooVariable
 }
 
-// Federation_PostArgument is argument for "federation.Post" message.
-type PrivateService_Federation_PostArgument struct {
+// Federation_PostVariable represents variable definitions in "federation.Post".
+type PrivateService_Federation_PostVariable struct {
 	Cmp           bool
 	FavoriteValue favorite.FavoriteType
 	Reaction      *Reaction
 	U             *User
 }
 
+// Federation_PostArgument is argument for "federation.Post" message.
+type PrivateService_Federation_PostArgument struct {
+	PrivateService_Federation_PostVariable
+}
+
+// Federation_ReactionVariable represents variable definitions in "federation.Reaction".
+type PrivateService_Federation_ReactionVariable struct {
+	Cmp bool
+}
+
 // Federation_ReactionArgument is argument for "federation.Reaction" message.
 type PrivateService_Federation_ReactionArgument struct {
-	Cmp bool
-	V   favorite.FavoriteType
+	V favorite.FavoriteType
+	PrivateService_Federation_ReactionVariable
+}
+
+// Federation_UserVariable represents variable definitions in "federation.User".
+type PrivateService_Federation_UserVariable struct {
 }
 
 // Federation_UserArgument is argument for "federation.User" message.
 type PrivateService_Federation_UserArgument struct {
 	Id   string
 	Name string
+	PrivateService_Federation_UserVariable
 }
 
 // PrivateServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -1881,7 +1951,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse(ctx context.Context,
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Foo = value.vars.Foo
+	req.PrivateService_Federation_GetNameResponseVariable.Foo = value.vars.Foo
 
 	// create a message value to be returned.
 	ret := &GetNameResponse{}
@@ -2055,8 +2125,8 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Foo = value.vars.Foo
-	req.P = value.vars.P
+	req.PrivateService_Federation_GetPostResponseVariable.Foo = value.vars.Foo
+	req.PrivateService_Federation_GetPostResponseVariable.P = value.vars.P
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -2343,10 +2413,10 @@ func (s *PrivateService) resolve_Federation_Post(ctx context.Context, req *Priva
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.Cmp
-	req.FavoriteValue = value.vars.FavoriteValue
-	req.Reaction = value.vars.Reaction
-	req.U = value.vars.U
+	req.PrivateService_Federation_PostVariable.Cmp = value.vars.Cmp
+	req.PrivateService_Federation_PostVariable.FavoriteValue = value.vars.FavoriteValue
+	req.PrivateService_Federation_PostVariable.Reaction = value.vars.Reaction
+	req.PrivateService_Federation_PostVariable.U = value.vars.U
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -2493,7 +2563,7 @@ func (s *PrivateService) resolve_Federation_Reaction(ctx context.Context, req *P
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cmp = value.vars.Cmp
+	req.PrivateService_Federation_ReactionVariable.Cmp = value.vars.Cmp
 
 	// create a message value to be returned.
 	ret := &Reaction{}
@@ -2761,15 +2831,25 @@ func (s *PrivateService) logvalue_Federation_UserArgument(v *PrivateService_Fede
 	)
 }
 
+// Federation_GetStatusResponseVariable represents variable definitions in "federation.GetStatusResponse".
+type DebugService_Federation_GetStatusResponseVariable struct {
+	U *User
+}
+
 // Federation_GetStatusResponseArgument is argument for "federation.GetStatusResponse" message.
 type DebugService_Federation_GetStatusResponseArgument struct {
-	U *User
+	DebugService_Federation_GetStatusResponseVariable
+}
+
+// Federation_UserVariable represents variable definitions in "federation.User".
+type DebugService_Federation_UserVariable struct {
 }
 
 // Federation_UserArgument is argument for "federation.User" message.
 type DebugService_Federation_UserArgument struct {
 	Id   string
 	Name string
+	DebugService_Federation_UserVariable
 }
 
 // DebugServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -2978,7 +3058,7 @@ func (s *DebugService) resolve_Federation_GetStatusResponse(ctx context.Context,
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.U = value.vars.U
+	req.DebugService_Federation_GetStatusResponseVariable.U = value.vars.U
 
 	// create a message value to be returned.
 	ret := &GetStatusResponse{}

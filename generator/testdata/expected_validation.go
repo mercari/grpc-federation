@@ -22,21 +22,36 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_CustomMessageVariable represents variable definitions in "org.federation.CustomMessage".
+type FederationService_Org_Federation_CustomMessageVariable struct {
+}
+
 // Org_Federation_CustomMessageArgument is argument for "org.federation.CustomMessage" message.
 type FederationService_Org_Federation_CustomMessageArgument struct {
 	Message string
+	FederationService_Org_Federation_CustomMessageVariable
 }
 
-// Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
-type FederationService_Org_Federation_GetPostResponseArgument struct {
-	Id                  string
+// Org_Federation_GetPostResponseVariable represents variable definitions in "org.federation.GetPostResponse".
+type FederationService_Org_Federation_GetPostResponseVariable struct {
 	Post                *Post
 	XDef2ErrDetail0Msg0 *CustomMessage
 	XDef2ErrDetail0Msg1 *CustomMessage
 }
 
+// Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
+type FederationService_Org_Federation_GetPostResponseArgument struct {
+	Id string
+	FederationService_Org_Federation_GetPostResponseVariable
+}
+
+// Org_Federation_PostVariable represents variable definitions in "org.federation.Post".
+type FederationService_Org_Federation_PostVariable struct {
+}
+
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type FederationService_Org_Federation_PostArgument struct {
+	FederationService_Org_Federation_PostVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -562,9 +577,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.Post
-	req.XDef2ErrDetail0Msg0 = value.vars.XDef2ErrDetail0Msg0
-	req.XDef2ErrDetail0Msg1 = value.vars.XDef2ErrDetail0Msg1
+	req.FederationService_Org_Federation_GetPostResponseVariable.Post = value.vars.Post
+	req.FederationService_Org_Federation_GetPostResponseVariable.XDef2ErrDetail0Msg0 = value.vars.XDef2ErrDetail0Msg0
+	req.FederationService_Org_Federation_GetPostResponseVariable.XDef2ErrDetail0Msg1 = value.vars.XDef2ErrDetail0Msg1
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}

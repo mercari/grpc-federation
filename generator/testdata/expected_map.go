@@ -25,17 +25,21 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Org_Federation_GetPostsResponseArgument is argument for "org.federation.GetPostsResponse" message.
-type FederationService_Org_Federation_GetPostsResponseArgument struct {
-	Ids   []string
+// Org_Federation_GetPostsResponseVariable represents variable definitions in "org.federation.GetPostsResponse".
+type FederationService_Org_Federation_GetPostsResponseVariable struct {
 	Posts *Posts
 }
 
-// Org_Federation_PostsArgument is argument for "org.federation.Posts" message.
-type FederationService_Org_Federation_PostsArgument struct {
+// Org_Federation_GetPostsResponseArgument is argument for "org.federation.GetPostsResponse" message.
+type FederationService_Org_Federation_GetPostsResponseArgument struct {
+	Ids []string
+	FederationService_Org_Federation_GetPostsResponseVariable
+}
+
+// Org_Federation_PostsVariable represents variable definitions in "org.federation.Posts".
+type FederationService_Org_Federation_PostsVariable struct {
 	Ids             []string
 	Items           []*Posts_PostItem
-	PostIds         []string
 	Posts           []*post.Post
 	Res             *post.GetPostsResponse
 	SourceUserTypes []user.UserType
@@ -43,16 +47,32 @@ type FederationService_Org_Federation_PostsArgument struct {
 	Users           []*User
 }
 
+// Org_Federation_PostsArgument is argument for "org.federation.Posts" message.
+type FederationService_Org_Federation_PostsArgument struct {
+	PostIds []string
+	FederationService_Org_Federation_PostsVariable
+}
+
+// Org_Federation_Posts_PostItemVariable represents variable definitions in "org.federation.PostItem".
+type FederationService_Org_Federation_Posts_PostItemVariable struct {
+}
+
 // Org_Federation_Posts_PostItemArgument is argument for "org.federation.PostItem" message.
 type FederationService_Org_Federation_Posts_PostItemArgument struct {
 	Id string
+	FederationService_Org_Federation_Posts_PostItemVariable
+}
+
+// Org_Federation_UserVariable represents variable definitions in "org.federation.User".
+type FederationService_Org_Federation_UserVariable struct {
+	Res  *user.GetUserResponse
+	User *user.User
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
 type FederationService_Org_Federation_UserArgument struct {
-	Res    *user.GetUserResponse
-	User   *user.User
 	UserId string
+	FederationService_Org_Federation_UserVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -306,7 +326,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostsResponse(ctx context.
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Posts = value.vars.Posts
+	req.FederationService_Org_Federation_GetPostsResponseVariable.Posts = value.vars.Posts
 
 	// create a message value to be returned.
 	ret := &GetPostsResponse{}
@@ -674,13 +694,13 @@ func (s *FederationService) resolve_Org_Federation_Posts(ctx context.Context, re
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Ids = value.vars.Ids
-	req.Items = value.vars.Items
-	req.Posts = value.vars.Posts
-	req.Res = value.vars.Res
-	req.SourceUserTypes = value.vars.SourceUserTypes
-	req.UserTypes = value.vars.UserTypes
-	req.Users = value.vars.Users
+	req.FederationService_Org_Federation_PostsVariable.Ids = value.vars.Ids
+	req.FederationService_Org_Federation_PostsVariable.Items = value.vars.Items
+	req.FederationService_Org_Federation_PostsVariable.Posts = value.vars.Posts
+	req.FederationService_Org_Federation_PostsVariable.Res = value.vars.Res
+	req.FederationService_Org_Federation_PostsVariable.SourceUserTypes = value.vars.SourceUserTypes
+	req.FederationService_Org_Federation_PostsVariable.UserTypes = value.vars.UserTypes
+	req.FederationService_Org_Federation_PostsVariable.Users = value.vars.Users
 
 	// create a message value to be returned.
 	ret := &Posts{}
@@ -893,8 +913,8 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Res = value.vars.Res
-	req.User = value.vars.User
+	req.FederationService_Org_Federation_UserVariable.Res = value.vars.Res
+	req.FederationService_Org_Federation_UserVariable.User = value.vars.User
 
 	// create a message value to be returned.
 	// `custom_resolver = true` in "grpc.federation.message" option.
