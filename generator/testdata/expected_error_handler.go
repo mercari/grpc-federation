@@ -24,29 +24,50 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_CustomMessageVariable represents variable definitions in "org.federation.CustomMessage".
+type FederationService_Org_Federation_CustomMessageVariable struct {
+}
+
 // Org_Federation_CustomMessageArgument is argument for "org.federation.CustomMessage" message.
 type FederationService_Org_Federation_CustomMessageArgument struct {
 	Msg string
+	FederationService_Org_Federation_CustomMessageVariable
+}
+
+// Org_Federation_GetPostResponseVariable represents variable definitions in "org.federation.GetPostResponse".
+type FederationService_Org_Federation_GetPostResponseVariable struct {
+	Post *Post
 }
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type FederationService_Org_Federation_GetPostResponseArgument struct {
-	Id   string
-	Post *Post
+	Id string
+	FederationService_Org_Federation_GetPostResponseVariable
+}
+
+// Org_Federation_LocalizedMessageVariable represents variable definitions in "org.federation.LocalizedMessage".
+type FederationService_Org_Federation_LocalizedMessageVariable struct {
 }
 
 // Org_Federation_LocalizedMessageArgument is argument for "org.federation.LocalizedMessage" message.
 type FederationService_Org_Federation_LocalizedMessageArgument struct {
 	Value string
+	FederationService_Org_Federation_LocalizedMessageVariable
 }
 
-// Org_Federation_PostArgument is argument for "org.federation.Post" message.
-type FederationService_Org_Federation_PostArgument struct {
+// Org_Federation_PostVariable represents variable definitions in "org.federation.Post".
+type FederationService_Org_Federation_PostVariable struct {
 	Id                  string
 	LocalizedMsg        *LocalizedMessage
 	Post                *post.Post
 	Res                 *post.GetPostResponse
 	XDef0ErrDetail0Msg0 *CustomMessage
+}
+
+// Org_Federation_PostArgument is argument for "org.federation.Post" message.
+type FederationService_Org_Federation_PostArgument struct {
+	Id string
+	FederationService_Org_Federation_PostVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -305,7 +326,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Post = value.vars.Post
+	req.FederationService_Org_Federation_GetPostResponseVariable.Post = value.vars.Post
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -761,11 +782,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Id = value.vars.Id
-	req.LocalizedMsg = value.vars.LocalizedMsg
-	req.Post = value.vars.Post
-	req.Res = value.vars.Res
-	req.XDef0ErrDetail0Msg0 = value.vars.XDef0ErrDetail0Msg0
+	req.FederationService_Org_Federation_PostVariable.Id = value.vars.Id
+	req.FederationService_Org_Federation_PostVariable.LocalizedMsg = value.vars.LocalizedMsg
+	req.FederationService_Org_Federation_PostVariable.Post = value.vars.Post
+	req.FederationService_Org_Federation_PostVariable.Res = value.vars.Res
+	req.FederationService_Org_Federation_PostVariable.XDef0ErrDetail0Msg0 = value.vars.XDef0ErrDetail0Msg0
 
 	// create a message value to be returned.
 	ret := &Post{}

@@ -24,14 +24,19 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Example_Regexp_ExampleArgument is argument for "example.regexp.Example" message.
-type FederationService_Example_Regexp_ExampleArgument struct {
-	V     int64
-	Value int64
+// Example_Regexp_ExampleVariable represents variable definitions in "example.regexp.Example".
+type FederationService_Example_Regexp_ExampleVariable struct {
+	V int64
 }
 
-// Org_Federation_ExampleResponseArgument is argument for "org.federation.ExampleResponse" message.
-type FederationService_Org_Federation_ExampleResponseArgument struct {
+// Example_Regexp_ExampleArgument is argument for "example.regexp.Example" message.
+type FederationService_Example_Regexp_ExampleArgument struct {
+	Value int64
+	FederationService_Example_Regexp_ExampleVariable
+}
+
+// Org_Federation_ExampleResponseVariable represents variable definitions in "org.federation.ExampleResponse".
+type FederationService_Org_Federation_ExampleResponseVariable struct {
 	Exp    *pluginpb.Example
 	ExpMsg *pluginpb.Example
 	Exps   []*pluginpb.Example
@@ -39,12 +44,22 @@ type FederationService_Org_Federation_ExampleResponseArgument struct {
 	V      []*pluginpb.Example
 }
 
-// Org_Federation_IsMatchResponseArgument is argument for "org.federation.IsMatchResponse" message.
-type FederationService_Org_Federation_IsMatchResponseArgument struct {
-	Expr    string
+// Org_Federation_ExampleResponseArgument is argument for "org.federation.ExampleResponse" message.
+type FederationService_Org_Federation_ExampleResponseArgument struct {
+	FederationService_Org_Federation_ExampleResponseVariable
+}
+
+// Org_Federation_IsMatchResponseVariable represents variable definitions in "org.federation.IsMatchResponse".
+type FederationService_Org_Federation_IsMatchResponseVariable struct {
 	Matched bool
 	Re      *pluginpb.Regexp
-	Target  string
+}
+
+// Org_Federation_IsMatchResponseArgument is argument for "org.federation.IsMatchResponse" message.
+type FederationService_Org_Federation_IsMatchResponseArgument struct {
+	Expr   string
+	Target string
+	FederationService_Org_Federation_IsMatchResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -345,7 +360,7 @@ func (s *FederationService) resolve_Example_Regexp_Example(ctx context.Context, 
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.V = value.vars.V
+	req.FederationService_Example_Regexp_ExampleVariable.V = value.vars.V
 
 	// create a message value to be returned.
 	ret := &pluginpb.Example{}
@@ -550,11 +565,11 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Exp = value.vars.Exp
-	req.ExpMsg = value.vars.ExpMsg
-	req.Exps = value.vars.Exps
-	req.Str = value.vars.Str
-	req.V = value.vars.V
+	req.FederationService_Org_Federation_ExampleResponseVariable.Exp = value.vars.Exp
+	req.FederationService_Org_Federation_ExampleResponseVariable.ExpMsg = value.vars.ExpMsg
+	req.FederationService_Org_Federation_ExampleResponseVariable.Exps = value.vars.Exps
+	req.FederationService_Org_Federation_ExampleResponseVariable.Str = value.vars.Str
+	req.FederationService_Org_Federation_ExampleResponseVariable.V = value.vars.V
 
 	// create a message value to be returned.
 	ret := &ExampleResponse{}
@@ -667,8 +682,8 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Matched = value.vars.Matched
-	req.Re = value.vars.Re
+	req.FederationService_Org_Federation_IsMatchResponseVariable.Matched = value.vars.Matched
+	req.FederationService_Org_Federation_IsMatchResponseVariable.Re = value.vars.Re
 
 	// create a message value to be returned.
 	ret := &IsMatchResponse{}

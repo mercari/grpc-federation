@@ -22,10 +22,15 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type FederationService_Org_Federation_GetResponseArgument struct {
+// Org_Federation_GetResponseVariable represents variable definitions in "org.federation.GetResponse".
+type FederationService_Org_Federation_GetResponseVariable struct {
 	IdFromMetadata string
 	IdFromPlugin   string
+}
+
+// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
+type FederationService_Org_Federation_GetResponseArgument struct {
+	FederationService_Org_Federation_GetResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -283,8 +288,8 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.IdFromMetadata = value.vars.IdFromMetadata
-	req.IdFromPlugin = value.vars.IdFromPlugin
+	req.FederationService_Org_Federation_GetResponseVariable.IdFromMetadata = value.vars.IdFromMetadata
+	req.FederationService_Org_Federation_GetResponseVariable.IdFromPlugin = value.vars.IdFromPlugin
 
 	// create a message value to be returned.
 	ret := &GetResponse{}

@@ -22,10 +22,15 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_GetPostResponseVariable represents variable definitions in "org.federation.GetPostResponse".
+type FederationService_Org_Federation_GetPostResponseVariable struct {
+}
+
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type FederationService_Org_Federation_GetPostResponseArgument struct {
 	Id   string
 	Type PostType
+	FederationService_Org_Federation_GetPostResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.

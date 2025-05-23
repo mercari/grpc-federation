@@ -778,30 +778,7 @@ func newTypeDeclaresWithMessage(file *File, msg *resolver.Message) []*Type {
 		ProtoFQDN: arg.FQDN(),
 	}
 
-	genMsg := &Message{Message: msg, file: file}
 	fieldNameMap := make(map[string]struct{})
-	for _, group := range genMsg.VariableDefinitionGroups() {
-		for _, def := range group.VariableDefinitions() {
-			if def == nil {
-				continue
-			}
-			if !def.Used {
-				continue
-			}
-			fieldName := util.ToPublicGoVariable(def.Name)
-			if typ.HasField(fieldName) {
-				continue
-			}
-			if _, exists := fieldNameMap[fieldName]; exists {
-				continue
-			}
-			typ.Fields = append(typ.Fields, &Field{
-				Name: fieldName,
-				Type: file.toTypeText(def.Expr.Type),
-			})
-			fieldNameMap[fieldName] = struct{}{}
-		}
-	}
 	for _, field := range arg.Fields {
 		typ.ProtoFields = append(typ.ProtoFields, &ProtoField{Field: field})
 		fieldName := util.ToPublicGoVariable(field.Name)
@@ -824,6 +801,40 @@ func newTypeDeclaresWithMessage(file *File, msg *resolver.Message) []*Type {
 	}
 	sort.Slice(typ.Fields, func(i, j int) bool {
 		return typ.Fields[i].Name < typ.Fields[j].Name
+	})
+
+	genMsg := &Message{Message: msg, file: file}
+	varTypName := variableTypeName(msg)
+	varTyp := &VariableType{
+		Name: varTypName,
+		Desc: fmt.Sprintf(`%s represents variable definitions in %q`, varTypName, msgFQDN),
+	}
+	typ.VariableType = varTyp
+	fieldNameMap = make(map[string]struct{})
+	for _, group := range genMsg.VariableDefinitionGroups() {
+		for _, def := range group.VariableDefinitions() {
+			if def == nil {
+				continue
+			}
+			if !def.Used {
+				continue
+			}
+			fieldName := util.ToPublicGoVariable(def.Name)
+			if varTyp.HasField(fieldName) {
+				continue
+			}
+			if _, exists := fieldNameMap[fieldName]; exists {
+				continue
+			}
+			varTyp.Fields = append(varTyp.Fields, &Field{
+				Name: fieldName,
+				Type: file.toTypeText(def.Expr.Type),
+			})
+			fieldNameMap[fieldName] = struct{}{}
+		}
+	}
+	sort.Slice(varTyp.Fields, func(i, j int) bool {
+		return varTyp.Fields[i].Name < varTyp.Fields[j].Name
 	})
 
 	declTypes := []*Type{typ}
@@ -1030,24 +1041,26 @@ func (s *Service) CustomResolvers() []*CustomResolver {
 
 type Types []*Type
 
-func (t Types) HasProtoFields() bool {
-	for _, tt := range t {
-		if len(tt.ProtoFields) != 0 {
-			return true
-		}
-	}
-	return false
-}
-
 type Type struct {
-	Name        string
-	Fields      []*Field
-	ProtoFields []*ProtoField
-	Desc        string
-	ProtoFQDN   string
+	Name         string
+	Fields       []*Field
+	ProtoFields  []*ProtoField
+	Desc         string
+	ProtoFQDN    string
+	VariableType *VariableType
 }
 
-func (t *Type) HasField(fieldName string) bool {
+type VariableType struct {
+	Name   string
+	Fields []*Field
+	Desc   string
+}
+
+func variableTypeName(msg *resolver.Message) string {
+	return fmt.Sprintf("%sVariable", fullMessageName(msg))
+}
+
+func (t *VariableType) HasField(fieldName string) bool {
 	for _, field := range t.Fields {
 		if field.Name == fieldName {
 			return true
@@ -2392,7 +2405,8 @@ func (f *CastField) ToMap() *CastMap {
 }
 
 func (m *Message) CustomResolverArguments() []*Argument {
-	args := []*Argument{}
+	var args []*Argument
+	argName := variableTypeName(m.Message)
 	argNameMap := make(map[string]struct{})
 	for _, group := range m.VariableDefinitionGroups() {
 		for _, def := range group.VariableDefinitions() {
@@ -2404,7 +2418,7 @@ func (m *Message) CustomResolverArguments() []*Argument {
 				continue
 			}
 			args = append(args, &Argument{
-				Name:  util.ToPublicGoVariable(name),
+				Name:  fmt.Sprintf("%s_%s.%s", m.Service.ServiceName(), argName, util.ToPublicGoVariable(name)),
 				Value: toUserDefinedVariable(name),
 			})
 			argNameMap[name] = struct{}{}

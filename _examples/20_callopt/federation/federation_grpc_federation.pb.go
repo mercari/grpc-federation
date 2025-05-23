@@ -24,15 +24,20 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
-type FederationService_Federation_GetPostResponseArgument struct {
+// Federation_GetPostResponseVariable represents variable definitions in "federation.GetPostResponse".
+type FederationService_Federation_GetPostResponseVariable struct {
 	Hdr     map[string][]string
 	HdrKeys []string
-	Id      string
 	Md      map[string][]string
 	Res     *post.GetPostResponse
 	Tlr     map[string][]string
 	TlrKeys []string
+}
+
+// Federation_GetPostResponseArgument is argument for "federation.GetPostResponse" message.
+type FederationService_Federation_GetPostResponseArgument struct {
+	Id string
+	FederationService_Federation_GetPostResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -509,12 +514,12 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Hdr = value.vars.Hdr
-	req.HdrKeys = value.vars.HdrKeys
-	req.Md = value.vars.Md
-	req.Res = value.vars.Res
-	req.Tlr = value.vars.Tlr
-	req.TlrKeys = value.vars.TlrKeys
+	req.FederationService_Federation_GetPostResponseVariable.Hdr = value.vars.Hdr
+	req.FederationService_Federation_GetPostResponseVariable.HdrKeys = value.vars.HdrKeys
+	req.FederationService_Federation_GetPostResponseVariable.Md = value.vars.Md
+	req.FederationService_Federation_GetPostResponseVariable.Res = value.vars.Res
+	req.FederationService_Federation_GetPostResponseVariable.Tlr = value.vars.Tlr
+	req.FederationService_Federation_GetPostResponseVariable.TlrKeys = value.vars.TlrKeys
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}

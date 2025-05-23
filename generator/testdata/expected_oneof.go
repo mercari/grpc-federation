@@ -24,27 +24,47 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_GetResponseVariable represents variable definitions in "org.federation.GetResponse".
+type FederationService_Org_Federation_GetResponseVariable struct {
+	Sel *UserSelection
+}
+
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
 type FederationService_Org_Federation_GetResponseArgument struct {
-	Sel *UserSelection
+	FederationService_Org_Federation_GetResponseVariable
+}
+
+// Org_Federation_MVariable represents variable definitions in "org.federation.M".
+type FederationService_Org_Federation_MVariable struct {
 }
 
 // Org_Federation_MArgument is argument for "org.federation.M" message.
 type FederationService_Org_Federation_MArgument struct {
+	FederationService_Org_Federation_MVariable
+}
+
+// Org_Federation_UserVariable represents variable definitions in "org.federation.User".
+type FederationService_Org_Federation_UserVariable struct {
 }
 
 // Org_Federation_UserArgument is argument for "org.federation.User" message.
 type FederationService_Org_Federation_UserArgument struct {
 	UserId string
+	FederationService_Org_Federation_UserVariable
+}
+
+// Org_Federation_UserSelectionVariable represents variable definitions in "org.federation.UserSelection".
+type FederationService_Org_Federation_UserSelectionVariable struct {
+	M  *M
+	Ua *User
+	Ub *User
+	Uc *User
 }
 
 // Org_Federation_UserSelectionArgument is argument for "org.federation.UserSelection" message.
 type FederationService_Org_Federation_UserSelectionArgument struct {
-	M     *M
-	Ua    *User
-	Ub    *User
-	Uc    *User
 	Value string
+	FederationService_Org_Federation_UserSelectionVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -270,7 +290,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Sel = value.vars.Sel
+	req.FederationService_Org_Federation_GetResponseVariable.Sel = value.vars.Sel
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
@@ -510,10 +530,10 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.M = value.vars.M
-	req.Ua = value.vars.Ua
-	req.Ub = value.vars.Ub
-	req.Uc = value.vars.Uc
+	req.FederationService_Org_Federation_UserSelectionVariable.M = value.vars.M
+	req.FederationService_Org_Federation_UserSelectionVariable.Ua = value.vars.Ua
+	req.FederationService_Org_Federation_UserSelectionVariable.Ub = value.vars.Ub
+	req.FederationService_Org_Federation_UserSelectionVariable.Uc = value.vars.Uc
 
 	// create a message value to be returned.
 	ret := &UserSelection{}

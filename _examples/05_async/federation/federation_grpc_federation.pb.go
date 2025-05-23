@@ -22,50 +22,95 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_AAVariable represents variable definitions in "org.federation.AA".
+type FederationService_Org_Federation_AAVariable struct {
+}
+
 // Org_Federation_AAArgument is argument for "org.federation.AA" message.
 type FederationService_Org_Federation_AAArgument struct {
+	FederationService_Org_Federation_AAVariable
+}
+
+// Org_Federation_AVariable represents variable definitions in "org.federation.A".
+type FederationService_Org_Federation_AVariable struct {
 }
 
 // Org_Federation_AArgument is argument for "org.federation.A" message.
 type FederationService_Org_Federation_AArgument struct {
+	FederationService_Org_Federation_AVariable
+}
+
+// Org_Federation_ABVariable represents variable definitions in "org.federation.AB".
+type FederationService_Org_Federation_ABVariable struct {
 }
 
 // Org_Federation_ABArgument is argument for "org.federation.AB" message.
 type FederationService_Org_Federation_ABArgument struct {
+	FederationService_Org_Federation_ABVariable
+}
+
+// Org_Federation_BVariable represents variable definitions in "org.federation.B".
+type FederationService_Org_Federation_BVariable struct {
 }
 
 // Org_Federation_BArgument is argument for "org.federation.B" message.
 type FederationService_Org_Federation_BArgument struct {
+	FederationService_Org_Federation_BVariable
+}
+
+// Org_Federation_CVariable represents variable definitions in "org.federation.C".
+type FederationService_Org_Federation_CVariable struct {
 }
 
 // Org_Federation_CArgument is argument for "org.federation.C" message.
 type FederationService_Org_Federation_CArgument struct {
 	A string
+	FederationService_Org_Federation_CVariable
+}
+
+// Org_Federation_DVariable represents variable definitions in "org.federation.D".
+type FederationService_Org_Federation_DVariable struct {
 }
 
 // Org_Federation_DArgument is argument for "org.federation.D" message.
 type FederationService_Org_Federation_DArgument struct {
 	B string
+	FederationService_Org_Federation_DVariable
+}
+
+// Org_Federation_EVariable represents variable definitions in "org.federation.E".
+type FederationService_Org_Federation_EVariable struct {
 }
 
 // Org_Federation_EArgument is argument for "org.federation.E" message.
 type FederationService_Org_Federation_EArgument struct {
 	C string
 	D string
+	FederationService_Org_Federation_EVariable
+}
+
+// Org_Federation_FVariable represents variable definitions in "org.federation.F".
+type FederationService_Org_Federation_FVariable struct {
 }
 
 // Org_Federation_FArgument is argument for "org.federation.F" message.
 type FederationService_Org_Federation_FArgument struct {
 	C string
 	D string
+	FederationService_Org_Federation_FVariable
+}
+
+// Org_Federation_GVariable represents variable definitions in "org.federation.G".
+type FederationService_Org_Federation_GVariable struct {
 }
 
 // Org_Federation_GArgument is argument for "org.federation.G" message.
 type FederationService_Org_Federation_GArgument struct {
+	FederationService_Org_Federation_GVariable
 }
 
-// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
-type FederationService_Org_Federation_GetResponseArgument struct {
+// Org_Federation_GetResponseVariable represents variable definitions in "org.federation.GetResponse".
+type FederationService_Org_Federation_GetResponseVariable struct {
 	A *A
 	B *B
 	C *C
@@ -78,20 +123,40 @@ type FederationService_Org_Federation_GetResponseArgument struct {
 	J *J
 }
 
+// Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
+type FederationService_Org_Federation_GetResponseArgument struct {
+	FederationService_Org_Federation_GetResponseVariable
+}
+
+// Org_Federation_HVariable represents variable definitions in "org.federation.H".
+type FederationService_Org_Federation_HVariable struct {
+}
+
 // Org_Federation_HArgument is argument for "org.federation.H" message.
 type FederationService_Org_Federation_HArgument struct {
 	E string
 	F string
 	G string
+	FederationService_Org_Federation_HVariable
+}
+
+// Org_Federation_IVariable represents variable definitions in "org.federation.I".
+type FederationService_Org_Federation_IVariable struct {
 }
 
 // Org_Federation_IArgument is argument for "org.federation.I" message.
 type FederationService_Org_Federation_IArgument struct {
+	FederationService_Org_Federation_IVariable
+}
+
+// Org_Federation_JVariable represents variable definitions in "org.federation.J".
+type FederationService_Org_Federation_JVariable struct {
 }
 
 // Org_Federation_JArgument is argument for "org.federation.J" message.
 type FederationService_Org_Federation_JArgument struct {
 	I string
+	FederationService_Org_Federation_JVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -1203,16 +1268,16 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.A = value.vars.A
-	req.B = value.vars.B
-	req.C = value.vars.C
-	req.D = value.vars.D
-	req.E = value.vars.E
-	req.F = value.vars.F
-	req.G = value.vars.G
-	req.H = value.vars.H
-	req.I = value.vars.I
-	req.J = value.vars.J
+	req.FederationService_Org_Federation_GetResponseVariable.A = value.vars.A
+	req.FederationService_Org_Federation_GetResponseVariable.B = value.vars.B
+	req.FederationService_Org_Federation_GetResponseVariable.C = value.vars.C
+	req.FederationService_Org_Federation_GetResponseVariable.D = value.vars.D
+	req.FederationService_Org_Federation_GetResponseVariable.E = value.vars.E
+	req.FederationService_Org_Federation_GetResponseVariable.F = value.vars.F
+	req.FederationService_Org_Federation_GetResponseVariable.G = value.vars.G
+	req.FederationService_Org_Federation_GetResponseVariable.H = value.vars.H
+	req.FederationService_Org_Federation_GetResponseVariable.I = value.vars.I
+	req.FederationService_Org_Federation_GetResponseVariable.J = value.vars.J
 
 	// create a message value to be returned.
 	ret := &GetResponse{}

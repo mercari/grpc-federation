@@ -25,28 +25,43 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
+// Org_Federation_CreatePostVariable represents variable definitions in "org.federation.CreatePost".
+type FederationService_Org_Federation_CreatePostVariable struct {
+}
+
 // Org_Federation_CreatePostArgument is argument for "org.federation.CreatePost" message.
 type FederationService_Org_Federation_CreatePostArgument struct {
 	Content string
 	Title   string
 	Type    PostType
 	UserId  string
+	FederationService_Org_Federation_CreatePostVariable
+}
+
+// Org_Federation_CreatePostResponseVariable represents variable definitions in "org.federation.CreatePostResponse".
+type FederationService_Org_Federation_CreatePostResponseVariable struct {
+	Cp  *CreatePost
+	P   *post.Post
+	Res *post.CreatePostResponse
 }
 
 // Org_Federation_CreatePostResponseArgument is argument for "org.federation.CreatePostResponse" message.
 type FederationService_Org_Federation_CreatePostResponseArgument struct {
 	Content string
-	Cp      *CreatePost
-	P       *post.Post
-	Res     *post.CreatePostResponse
 	Title   string
 	Type    PostType
 	UserId  string
+	FederationService_Org_Federation_CreatePostResponseVariable
+}
+
+// Org_Federation_UpdatePostResponseVariable represents variable definitions in "org.federation.UpdatePostResponse".
+type FederationService_Org_Federation_UpdatePostResponseVariable struct {
 }
 
 // Org_Federation_UpdatePostResponseArgument is argument for "org.federation.UpdatePostResponse" message.
 type FederationService_Org_Federation_UpdatePostResponseArgument struct {
 	Id string
+	FederationService_Org_Federation_UpdatePostResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
@@ -518,9 +533,9 @@ func (s *FederationService) resolve_Org_Federation_CreatePostResponse(ctx contex
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.Cp = value.vars.Cp
-	req.P = value.vars.P
-	req.Res = value.vars.Res
+	req.FederationService_Org_Federation_CreatePostResponseVariable.Cp = value.vars.Cp
+	req.FederationService_Org_Federation_CreatePostResponseVariable.P = value.vars.P
+	req.FederationService_Org_Federation_CreatePostResponseVariable.Res = value.vars.Res
 
 	// create a message value to be returned.
 	ret := &CreatePostResponse{}
