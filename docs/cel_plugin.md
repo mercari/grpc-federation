@@ -171,7 +171,7 @@ federationServer, err := federation.NewFederationService(federation.FederationSe
 })
 ```
 
-# Resource Capability
+## Resource Capability
 
 By default, plugins do not have access to Environment variables, File System, or Network. This helps to run plugins securely, but there may be cases where you want to allow access to these resources.
 In such cases, you can enable access to each resource by configuring as follows:
