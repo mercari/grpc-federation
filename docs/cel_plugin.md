@@ -180,7 +180,7 @@ In such cases, you can enable access to each resource by configuring as follows:
 option (grpc.federation.file).plugin.export = {
   name: "regexp"
   capability {
-    network: {} // enable network access via http/https
+    network: {} // enable network access via HTTP/HTTPS
     env { names: ["foo"] } // enable access to `FOO` environment variable
     file_system { mount_path: "/" } // enable access to file system from mount point `/`
   }
