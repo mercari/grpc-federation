@@ -182,7 +182,7 @@ option (grpc.federation.file).plugin.export = {
   capability {
     network: {} // enable network access via http/https
     env { names: ["foo"] } // enable access to `FOO` environment variable
-    file_system { mount_path: "/" } // enable access to file system from mounted point by `/`
+    file_system { mount_path: "/" } // enable access to file system from mount point `/`
   }
 }
 ```
