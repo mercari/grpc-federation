@@ -44,7 +44,11 @@ service FederationV2devService {
           ignored: true
         }
       }
-    }    
+    }
+    var {
+      name: "federation_service_variable"
+      by: "1"
+    }
   };
   rpc GetPostV2dev(GetPostV2devRequest) returns (GetPostV2devResponse) {};
 }

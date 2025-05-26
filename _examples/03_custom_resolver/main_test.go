@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -25,6 +24,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 
 	"example/federation"
 	"example/post"
@@ -52,27 +53,56 @@ func (c *clientConfig) User_UserServiceClient(cfg federation.FederationV2DevServ
 type Resolver struct {
 }
 
-func (r *Resolver) Resolve_Federation_V2Dev_User(ctx context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_UserArgument) (*federation.User, error) {
-	grpcfed.SetLogger(ctx, grpcfed.Logger(ctx).With(slog.String("foo", "hoge")))
-	env := federation.GetFederationV2DevServiceEnv(ctx)
-	if env.A != "xxx" {
-		return nil, fmt.Errorf("failed to get environement variable for A: %v", env.A)
+func (r *Resolver) Init(ctx context.Context) error {
+	if err := r.validateEnv(ctx); err != nil {
+		return err
 	}
-	if !reflect.DeepEqual(env.B, []int64{1, 2, 3, 4}) {
-		return nil, fmt.Errorf("failed to get environement variable for B: %v", env.B)
+	if err := r.validateServiceVar(ctx); err != nil {
+		return err
 	}
-	if len(env.C) != len(envCMap) {
-		return nil, fmt.Errorf("failed to get environement variable for C: %v", env.C)
-	}
-	if env.D != 0 {
-		return nil, fmt.Errorf("failed to get environement variable for D: %v", env.D)
-	}
-	grpcfed.Logger(ctx).Debug("print env variables", slog.Any("env", env))
+	return nil
+}
 
+func (r *Resolver) Resolve_Federation_V2Dev_User(ctx context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_UserArgument) (*federation.User, error) {
+	if err := r.validateEnv(ctx); err != nil {
+		return nil, err
+	}
+	if err := r.validateServiceVar(ctx); err != nil {
+		return nil, err
+	}
 	return &federation.User{
 		Id:   arg.U.Id,
 		Name: arg.U.Name,
 	}, nil
+}
+
+func (r *Resolver) validateEnv(ctx context.Context) error {
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	env := federation.GetFederationV2DevServiceEnv(ctx)
+	if env.A != "xxx" {
+		return fmt.Errorf("failed to get environment variable for A: %v", env.A)
+	}
+	if !reflect.DeepEqual(env.B, []int64{1, 2, 3, 4}) {
+		return fmt.Errorf("failed to get environment variable for B: %v", env.B)
+	}
+	if len(env.C) != len(envCMap) {
+		return fmt.Errorf("failed to get environment variable for C: %v", env.C)
+	}
+	if env.D != 0 {
+		return fmt.Errorf("failed to get environment variable for D: %v", env.D)
+	}
+	grpcfed.Logger(ctx).Debug("print env variables", slog.Any("env", env))
+	return nil
+}
+
+func (r *Resolver) validateServiceVar(ctx context.Context) error {
+	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
+	svcVar := federation.GetFederationV2DevServiceVariable(ctx)
+	if svcVar.FederationServiceVariable != 1 {
+		return fmt.Errorf("failed to get service variable for FederationServiceVariable: %v", svcVar.FederationServiceVariable)
+	}
+	grpcfed.Logger(ctx).Debug("print service variables", slog.Any("svc_var", svcVar))
+	return nil
 }
 
 func (r *Resolver) Resolve_Federation_V2Dev_PostV2Dev_User(ctx context.Context, arg *federation.FederationV2DevService_Federation_V2Dev_PostV2Dev_UserArgument) (*federation.User, error) {
