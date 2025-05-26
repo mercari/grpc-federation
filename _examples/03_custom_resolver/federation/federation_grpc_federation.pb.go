@@ -204,6 +204,26 @@ func withFederationV2DevServiceEnv(ctx context.Context, env *FederationV2DevServ
 	return context.WithValue(ctx, keyFederationV2DevServiceEnv{}, env)
 }
 
+// FederationV2DevServiceVariable keeps the initial values.
+type FederationV2DevServiceVariable struct {
+	FederationServiceVariable int64
+}
+
+type keyFederationV2DevServiceVariable struct{}
+
+// GetFederationV2DevServiceVariable gets initial variables.
+func GetFederationV2DevServiceVariable(ctx context.Context) *FederationV2DevServiceVariable {
+	value := ctx.Value(keyFederationV2DevServiceVariable{})
+	if value == nil {
+		return nil
+	}
+	return value.(*FederationV2DevServiceVariable)
+}
+
+func withFederationV2DevServiceVariable(ctx context.Context, svcVar *FederationV2DevServiceVariable) context.Context {
+	return context.WithValue(ctx, keyFederationV2DevServiceVariable{}, svcVar)
+}
+
 // FederationV2DevServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -266,6 +286,7 @@ type FederationV2DevService struct {
 	celCacheMap        *grpcfed.CELCacheMap
 	tracer             trace.Tracer
 	env                *FederationV2DevServiceEnv
+	svcVar             *FederationV2DevServiceVariable
 	resolver           FederationV2DevServiceResolver
 	celTypeHelper      *grpcfed.CELTypeHelper
 	celEnvOpts         []grpcfed.CELEnvOption
@@ -328,12 +349,16 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 			"c": grpcfed.NewCELFieldType(grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELDurationType), "C"),
 			"d": grpcfed.NewCELFieldType(grpcfed.CELDoubleType, "D"),
 		},
+		"grpc.federation.private.ServiceVariable": {
+			"federation_service_variable": grpcfed.NewCELFieldType(grpcfed.CELIntType, "FederationServiceVariable"),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("federation.v2dev", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.v2dev.PostV2devType", PostV2DevType_value, PostV2DevType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	var env FederationV2DevServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
@@ -347,11 +372,23 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 		celCacheMap:   grpcfed.NewCELCacheMap(),
 		tracer:        otel.Tracer("federation.v2dev.FederationV2devService"),
 		env:           &env,
+		svcVar:        new(FederationV2DevServiceVariable),
 		resolver:      cfg.Resolver,
 		client: &FederationV2DevServiceDependentClientSet{
 			Post_PostServiceClient: Post_PostServiceClient,
 			User_UserServiceClient: User_UserServiceClient,
 		},
+	}
+	if err := svc.initServiceVariables(); err != nil {
+		return nil, err
+	}
+	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
+		ctx := context.Background()
+		ctx = withFederationV2DevServiceEnv(ctx, svc.env)
+		ctx = withFederationV2DevServiceVariable(ctx, svc.svcVar)
+		if err := resolver.Init(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -366,12 +403,50 @@ func (s *FederationV2DevService) cleanup(ctx context.Context) {
 		instance.Close(ctx)
 	}
 }
+func (s *FederationV2DevService) initServiceVariables() error {
+	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars *FederationV2DevServiceVariable
+	}
+	value := &localValueType{
+		LocalValue: grpcfed.NewServiceVariableLocalValue(s.celEnvOpts),
+		vars:       s.svcVar,
+	}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
+
+	/*
+		def {
+		  name: "federation_service_variable"
+		  by: "1"
+		}
+	*/
+	def_federation_service_variable := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
+			Name: `federation_service_variable`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v int64) error {
+				value.vars.FederationServiceVariable = v
+				return nil
+			},
+			By:           `1`,
+			ByCacheIndex: 1,
+		})
+	}
+	if err := def_federation_service_variable(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 // GetPostV2Dev implements "federation.v2dev.FederationV2devService/GetPostV2dev" method.
 func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV2DevRequest) (res *GetPostV2DevResponse, e error) {
 	ctx, span := s.tracer.Start(ctx, "federation.v2dev.FederationV2devService/GetPostV2dev")
 	defer span.End()
 	ctx = withFederationV2DevServiceEnv(ctx, s.env)
+	ctx = withFederationV2DevServiceVariable(ctx, s.svcVar)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -435,6 +510,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "post"
@@ -458,7 +534,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 1,
+					CacheIndex: 2,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -541,7 +617,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*PostV2Dev]{
 		Value:      value,
 		Expr:       `post`,
-		CacheIndex: 2,
+		CacheIndex: 3,
 		Setter: func(v *PostV2Dev) error {
 			ret.Post = v
 			return nil
@@ -554,7 +630,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostV2DevType]{
 		Value:      value,
 		Expr:       `PostV2devType.value('POST_V2_DEV_TYPE')`,
-		CacheIndex: 3,
+		CacheIndex: 4,
 		Setter: func(v PostV2DevType) error {
 			ret.Type = v
 			return nil
@@ -567,7 +643,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.env.a`,
-		CacheIndex: 4,
+		CacheIndex: 5,
 		Setter: func(v string) error {
 			ret.EnvA = v
 			return nil
@@ -580,7 +656,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:      value,
 		Expr:       `grpc.federation.env.b[1]`,
-		CacheIndex: 5,
+		CacheIndex: 6,
 		Setter: func(v int64) error {
 			ret.EnvB = v
 			return nil
@@ -593,7 +669,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*durationpb.Duration]{
 		Value:      value,
 		Expr:       `grpc.federation.env.c['z']`,
-		CacheIndex: 6,
+		CacheIndex: 7,
 		Setter: func(v *durationpb.Duration) error {
 			envCValueValue, err := s.cast_Google_Protobuf_Duration__to__Google_Protobuf_Duration(v)
 			if err != nil {
@@ -610,7 +686,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Ref]{
 		Value:      value,
 		Expr:       `r`,
-		CacheIndex: 7,
+		CacheIndex: 8,
 		Setter: func(v *Ref) error {
 			ret.Ref = v
 			return nil
@@ -646,6 +722,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.PostV2devArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "res"
@@ -669,7 +746,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 8,
+					CacheIndex: 9,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -705,7 +782,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			By:           `res.post`,
-			ByCacheIndex: 9,
+			ByCacheIndex: 10,
 		})
 	}
 
@@ -732,7 +809,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post.Post]{
 					Value:      value,
 					Expr:       `post`,
-					CacheIndex: 10,
+					CacheIndex: 11,
 					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
@@ -775,7 +852,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'foo'`,
-					CacheIndex: 11,
+					CacheIndex: 12,
 					Setter: func(v string) error {
 						args.Foo = v
 						return nil
@@ -815,7 +892,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'bar'`,
-					CacheIndex: 12,
+					CacheIndex: 13,
 					Setter: func(v string) error {
 						args.Bar = v
 						return nil
@@ -869,7 +946,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	def_null_check := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
 			If:           `typed_nil == null`,
-			IfCacheIndex: 13,
+			IfCacheIndex: 14,
 			Name:         `null_check`,
 			Type:         grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
@@ -877,7 +954,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			By:           `true`,
-			ByCacheIndex: 14,
+			ByCacheIndex: 15,
 		})
 	}
 
@@ -891,7 +968,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	def__def7 := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
 			If:           `typed_nil == null`,
-			IfCacheIndex: 15,
+			IfCacheIndex: 16,
 			Name:         `_def7`,
 			Type:         grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
@@ -899,7 +976,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 				return nil
 			},
 			By:           `grpc.federation.log.info('output typed_nil', {'result': typed_nil == null})`,
-			ByCacheIndex: 16,
+			ByCacheIndex: 17,
 		})
 	}
 
@@ -1010,7 +1087,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `null_check`,
-		CacheIndex: 17,
+		CacheIndex: 18,
 		Setter: func(v bool) error {
 			ret.NullCheck = v
 			return nil
@@ -1038,6 +1115,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Contex
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.RefArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 
 	// create a message value to be returned.
 	ret := &Ref{}
@@ -1047,7 +1125,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Contex
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.env.a`,
-		CacheIndex: 18,
+		CacheIndex: 19,
 		Setter: func(v string) error {
 			ret.A = v
 			return nil
@@ -1119,6 +1197,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.UserArgument", req)}
 	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	/*
 		def {
 		  name: "res"
@@ -1142,7 +1221,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.user_id`,
-					CacheIndex: 19,
+					CacheIndex: 20,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -1177,7 +1256,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 				return nil
 			},
 			By:           `res.user`,
-			ByCacheIndex: 20,
+			ByCacheIndex: 21,
 		})
 	}
 

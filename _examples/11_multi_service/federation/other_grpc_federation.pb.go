@@ -187,6 +187,12 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 		resolver:      cfg.Resolver,
 		client:        &OtherServiceDependentClientSet{},
 	}
+	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
+		ctx := context.Background()
+		if err := resolver.Init(ctx); err != nil {
+			return nil, err
+		}
+	}
 	return svc, nil
 }
 

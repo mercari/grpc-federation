@@ -207,6 +207,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			User_UserServiceClient: User_UserServiceClient,
 		},
 	}
+	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
+		ctx := context.Background()
+		if err := resolver.Init(ctx); err != nil {
+			return nil, err
+		}
+	}
 	return svc, nil
 }
 

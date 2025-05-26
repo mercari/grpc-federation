@@ -427,6 +427,20 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		return nil, err
 	}
 	{{- end }}
+	{{- if $customResolvers }}
+	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
+		ctx := context.Background()
+		{{- if $env }}
+		ctx = with{{ $serviceName }}Env(ctx, svc.env)
+		{{- end }}
+		{{- if $svcVars }}
+		ctx = with{{ $serviceName }}Variable(ctx, svc.svcVar)
+		{{- end }}
+		if err := resolver.Init(ctx); err != nil {
+			return nil, err
+		}
+	}
+	{{- end }}
 	return svc, nil
 }
 
