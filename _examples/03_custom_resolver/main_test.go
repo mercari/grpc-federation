@@ -80,16 +80,16 @@ func (r *Resolver) validateEnv(ctx context.Context) error {
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx))
 	env := federation.GetFederationV2DevServiceEnv(ctx)
 	if env.A != "xxx" {
-		return fmt.Errorf("failed to get environement variable for A: %v", env.A)
+		return fmt.Errorf("failed to get environment variable for A: %v", env.A)
 	}
 	if !reflect.DeepEqual(env.B, []int64{1, 2, 3, 4}) {
-		return fmt.Errorf("failed to get environement variable for B: %v", env.B)
+		return fmt.Errorf("failed to get environment variable for B: %v", env.B)
 	}
 	if len(env.C) != len(envCMap) {
-		return fmt.Errorf("failed to get environement variable for C: %v", env.C)
+		return fmt.Errorf("failed to get environment variable for C: %v", env.C)
 	}
 	if env.D != 0 {
-		return fmt.Errorf("failed to get environement variable for D: %v", env.D)
+		return fmt.Errorf("failed to get environment variable for D: %v", env.D)
 	}
 	grpcfed.Logger(ctx).Debug("print env variables", slog.Any("env", env))
 	return nil
