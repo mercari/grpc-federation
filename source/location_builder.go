@@ -699,6 +699,16 @@ func (b *EnumValueOptionBuilder) WithAlias() *EnumValueOptionBuilder {
 	}
 }
 
+func (b *EnumValueOptionBuilder) WithNoAlias() *EnumValueOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.NoAlias = true
+	return &EnumValueOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
 func (b *EnumValueOptionBuilder) WithDefault() *EnumValueOptionBuilder {
 	root := b.root.Clone()
 	option := b.option(root)

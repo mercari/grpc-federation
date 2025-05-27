@@ -368,8 +368,19 @@ func (f *File) findEnumValueOptionByPos(ctx *findContext, pos Position, node *as
 						}
 					}
 				}
+			case "noalias":
+				value, ok := elem.Val.(*ast.IdentNode)
+				if !ok {
+					return nil
+				}
+				if f.containsPos(value, pos) {
+					ctx.enumValueOption = &EnumValueOption{
+						NoAlias: true,
+					}
+					return f.buildLocation(ctx)
+				}
 			case "default":
-				value, ok := elem.Val.(*ast.StringLiteralNode)
+				value, ok := elem.Val.(*ast.IdentNode)
 				if !ok {
 					return nil
 				}
@@ -385,6 +396,13 @@ func (f *File) findEnumValueOptionByPos(ctx *findContext, pos Position, node *as
 		if strings.HasSuffix(f.optionName(node), "alias") {
 			if f.containsPos(n, pos) {
 				ctx.enumValueOption = &EnumValueOption{Alias: true}
+				return f.buildLocation(ctx)
+			}
+		}
+	case *ast.IdentNode:
+		if strings.HasSuffix(f.optionName(node), "noalias") {
+			if f.containsPos(n, pos) {
+				ctx.enumValueOption = &EnumValueOption{NoAlias: true}
 				return f.buildLocation(ctx)
 			}
 		}
@@ -1140,10 +1158,11 @@ func (f *File) nodeInfoByEnumValue(node *ast.EnumValueNode, value *EnumValue) *a
 
 func (f *File) nodeInfoByEnumValueOption(node *ast.OptionNode, opt *EnumValueOption) *ast.NodeInfo {
 	switch n := node.Val.(type) {
-	case *ast.StringLiteralNode:
+	case *ast.IdentNode:
 		if opt.Default && strings.HasSuffix(f.optionName(node), "default") {
 			return f.nodeInfo(n)
 		}
+	case *ast.StringLiteralNode:
 		if opt.Alias && strings.HasSuffix(f.optionName(node), "alias") {
 			return f.nodeInfo(n)
 		}
@@ -1153,6 +1172,8 @@ func (f *File) nodeInfoByEnumValueOption(node *ast.OptionNode, opt *EnumValueOpt
 			optName := elem.Name.Name.AsIdentifier()
 			switch {
 			case opt.Default && optName == "default":
+				return f.nodeInfo(elem.Val)
+			case opt.NoAlias && optName == "noalias":
 				return f.nodeInfo(elem.Val)
 			case opt.Alias && optName == "alias":
 				return f.nodeInfo(elem.Val)

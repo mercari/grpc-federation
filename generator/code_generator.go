@@ -2129,6 +2129,9 @@ func (f *CastField) ToEnum() (*CastEnum, error) {
 		if toValue.Rule == nil {
 			continue
 		}
+		if toValue.Rule.NoAlias {
+			continue
+		}
 		fromValue := fromEnum.Value(toValue.Value)
 		if fromValue == nil {
 			continue
