@@ -52,6 +52,7 @@ func TestFederation(t *testing.T) {
 
 	envValue := "TEST_ENV_CAPABILITY"
 	t.Setenv("FOO", envValue)
+	t.Setenv("GOMAXPROCS", "2")
 
 	testFileContent := `{"hello":"world"}`
 	testFilePath := filepath.Join(t.TempDir(), "test.json")

@@ -10,7 +10,7 @@ option (grpc.federation.file).plugin.export = {
   name: "net"
   capability {
     network: {}
-    env { names: ["foo"] }
+    env { all: true }
     file_system { mount_path: "/" }
   }
   functions: [
