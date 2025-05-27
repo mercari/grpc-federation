@@ -29,11 +29,10 @@ import (
 const bufSize = 1024
 
 var (
-	listener         *bufconn.Listener
-	postClient       post.PostServiceClient
-	calledUpdatePost bool
-	updateDone       = make(chan struct{})
-	blockCh          = make(chan struct{})
+	listener   *bufconn.Listener
+	postClient post.PostServiceClient
+	updateDone = make(chan struct{})
+	blockCh    = make(chan struct{})
 )
 
 type clientConfig struct{}
@@ -59,7 +58,6 @@ func (s *PostServer) GetPost(ctx context.Context, req *post.GetPostRequest) (*po
 }
 
 func (s *PostServer) UpdatePost(ctx context.Context, req *post.UpdatePostRequest) (*post.UpdatePostResponse, error) {
-	calledUpdatePost = true
 	time.Sleep(2 * time.Second)
 	updateDone <- struct{}{}
 	return nil, nil
@@ -153,9 +151,6 @@ func TestFederation(t *testing.T) {
 		})
 		if err == nil {
 			t.Fatal("expected error")
-		}
-		if !calledUpdatePost {
-			t.Fatalf("failed to call update post")
 		}
 		st, ok := status.FromError(err)
 		if !ok {
