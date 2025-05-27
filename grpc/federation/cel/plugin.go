@@ -200,32 +200,54 @@ func (p *CELPlugin) addModuleConfigByCapability(cfg wazero.ModuleConfig, nwcfg *
 	return cfg, nwcfg
 }
 
+var ignoreEnvNameMap = map[string]struct{}{
+	// If a value greater than 1 is passed to GOMAXPROCS, a panic occurs on the plugin side,
+	// so make sure not to pass it explicitly.
+	"GOMAXPROCS": struct{}{},
+}
+
 func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
 	if p.cfg.Capability == nil || p.cfg.Capability.Env == nil {
 		return cfg, nwcfg
 	}
 
-	env := p.cfg.Capability.Env
-	envMap := make(map[string]string)
-	for _, kv := range os.Environ() {
-		i := strings.IndexByte(kv, '=')
-		envMap[kv[:i]] = kv[i+1:]
+	type Env struct {
+		key   string
+		value string
 	}
-	if env.All {
-		for k, v := range envMap {
-			cfg = cfg.WithEnv(k, v)
+
+	envCfg := p.cfg.Capability.Env
+	srcEnvs := os.Environ()
+	envs := make([]Env, 0, len(srcEnvs))
+	envMap := make(map[string]Env)
+	for _, kv := range srcEnvs {
+		i := strings.IndexByte(kv, '=')
+		key := kv[:i]
+		value := kv[i+1:]
+		if _, exists := ignoreEnvNameMap[key]; exists {
+			continue
 		}
-		nwcfg = nwcfg.WithEnv(os.Environ()...)
+		env := Env{key: key, value: value}
+		envs = append(envs, env)
+		envMap[key] = env
+	}
+	if envCfg.All {
+		filteredAllEnvs := make([]string, 0, len(envs))
+		for _, env := range envs {
+			cfg = cfg.WithEnv(env.key, env.value)
+			filteredAllEnvs = append(filteredAllEnvs, env.key+"="+env.value)
+		}
+		nwcfg = nwcfg.WithEnv(filteredAllEnvs...)
 	} else {
-		var envs []string
-		for _, name := range env.Names {
+		var filteredEnvs []string
+		for _, name := range envCfg.Names {
 			envName := strings.ToUpper(name)
-			if v, exists := envMap[envName]; exists {
-				cfg = cfg.WithEnv(envName, v)
-				envs = append(envs, envName+"="+v)
+			if env, exists := envMap[envName]; exists {
+				cfg = cfg.WithEnv(env.key, env.value)
+				filteredEnvs = append(filteredEnvs, env.key+"="+env.value)
 			}
 		}
-		nwcfg = nwcfg.WithEnv(envs...)
+		nwcfg = nwcfg.WithEnv(filteredEnvs...)
 	}
 	return cfg, nwcfg
 }

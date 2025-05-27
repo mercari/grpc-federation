@@ -155,10 +155,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			},
 			Capability: &grpcfedcel.CELPluginCapability{
 				Env: &grpcfedcel.CELPluginEnvCapability{
-					All: false,
-					Names: []string{
-						"foo",
-					},
+					All:   true,
+					Names: []string{},
 				},
 				FileSystem: &grpcfedcel.CELPluginFileSystemCapability{
 					MountPath: "/",
