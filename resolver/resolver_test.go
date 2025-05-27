@@ -1669,6 +1669,7 @@ func TestAlias(t *testing.T) {
 					ref.EnumValue(t, "org.post", "PostDataType", "POST_TYPE_B"),
 					ref.EnumValue(t, "org.post", "PostDataType", "POST_TYPE_C"),
 				).
+				AddValueWithNoAlias("POST_TYPE_BAZ").
 				Build(t),
 		).
 		AddMessage(
@@ -1678,6 +1679,7 @@ func TestAlias(t *testing.T) {
 						SetAlias(ref.Enum(t, "org.post", "PostContent.Category")).
 						AddValueWithAlias("CATEGORY_A", ref.EnumValue(t, "org.post", "PostContent.Category", "CATEGORY_A")).
 						AddValueWithAlias("CATEGORY_B", ref.EnumValue(t, "org.post", "PostContent.Category", "CATEGORY_B")).
+						AddValueWithNoAlias("CATEGORY_C").
 						Build(t),
 				).
 				AddMessage(

@@ -494,6 +494,7 @@ func (e *encoder) toEnumValueRule(rule *resolver.EnumValueRule) *plugin.EnumValu
 	}
 	ret := &plugin.EnumValueRule{
 		Default: rule.Default,
+		Noalias: rule.NoAlias,
 		Aliases: e.toEnumValueAliases(rule.Aliases),
 		Attrs:   e.toEnumValueAttributes(rule.Attrs),
 	}

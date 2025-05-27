@@ -74,6 +74,7 @@ enum PostType {
   POST_TYPE_UNKNOWN = 0 [(grpc.federation.enum_value).default = true];
   POST_TYPE_FOO = 1 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_A"] }];
   POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_B", "POST_TYPE_C"] }];
+  POST_TYPE_BAZ = 3 [(grpc.federation.enum_value).noalias = true];
 }
 
 message PostData {
@@ -92,6 +93,7 @@ message PostContent {
   
     CATEGORY_A = 0;
     CATEGORY_B = 1;
+    CATEGORY_C = 2 [(grpc.federation.enum_value).noalias = true];
   };
 
   Category category = 1;

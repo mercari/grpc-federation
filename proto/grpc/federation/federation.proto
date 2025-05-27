@@ -71,6 +71,10 @@ message EnumValueRule {
   // The values specified by the name must be consistently specified for all enum values.
   // The values stored using this feature can be retrieved using the `attr()` method of the enum API.
   repeated EnumValueAttribute attr = 3;
+
+  // noalias exclude from the target of alias.
+  // This option cannot be specified simultaneously with `default` or `alias`.
+  optional bool noalias = 4;
 }
 
 message EnumValueAttribute {

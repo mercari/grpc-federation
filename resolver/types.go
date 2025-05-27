@@ -175,6 +175,7 @@ type EnumValue struct {
 
 type EnumValueRule struct {
 	Default bool
+	NoAlias bool
 	Aliases []*EnumValueAlias
 	Attrs   []*EnumValueAttribute
 }

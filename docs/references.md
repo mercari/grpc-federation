@@ -371,6 +371,7 @@ enum FooEnum {
 | ----- | ---- | ------------------- |
 | [`default`](#grpcfederationenum_valuedefault) | bool | optional |
 | [`alias`](#grpcfederationenum_valuealias) | repeated string | optional |
+| [`noalias`](#grpcfederationenum_valuenoalias) | bool | optional |
 | [`attr`](#grpcfederationenum_valueattr) | repeated EnumValueAttribute | optional |
 
 ## (grpc.federation.enum_value).default
@@ -439,6 +440,28 @@ package foopkg;
 enum FooEnum {
   FOO_VALUE_1 = 0;
   FOO_VALUE_2 = 1;
+}
+```
+
+## (grpc.federation.enum_value).noalias
+
+`noalias` exclude from the target of `alias`.
+This option cannot be specified simultaneously with `default` or `alias`.
+
+### Example
+
+- myservice.proto
+
+```proto
+package mypkg;
+
+import "foo.proto";
+
+enum FooEnum {
+  option (grpc.federation.enum).alias = "foopkg.FooEnum";
+
+  ENUM_VALUE_1 = 0 [(grpc.federation.enum_value).alias = "FOO_VALUE_1"];
+  ENUM_VALUE_2 = 1 [(grpc.federation.enum_value).noalias = true];
 }
 ```
 

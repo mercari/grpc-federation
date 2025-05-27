@@ -129,6 +129,7 @@ type EnumValue struct {
 // EnumValueOption represents grpc.federation.enum_value option location.
 type EnumValueOption struct {
 	Alias   bool
+	NoAlias bool
 	Default bool
 	Attr    *EnumValueAttribute
 }

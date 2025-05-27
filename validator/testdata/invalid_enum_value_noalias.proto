@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "federation.proto";
+
+option go_package = "example/federation;federation";
+option (grpc.federation.file) = {
+  import: ["nested_post.proto"]
+};
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "post"
+      message {
+        name: "Post"
+        args { name: "id", by: "$.id" }
+      }
+    }
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "org.post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+      }
+    }
+    def { name: "post", by: "res.post", autobind: true  }
+  };
+  string id = 1;
+  PostData data = 4;
+}
+
+enum PostType {
+  option (grpc.federation.enum).alias = "org.post.PostDataType";
+
+  POST_TYPE_A = 0 [(grpc.federation.enum_value) = { default: true, noalias: true }];
+  POST_TYPE_B = 1 [(grpc.federation.enum_value) = { noalias: true, alias: ["POST_TYPE_B"] }];
+}
+
+message PostData {
+  option (grpc.federation.message).alias = "org.post.PostData";
+
+  PostType type = 1;
+  string title = 2;
+}

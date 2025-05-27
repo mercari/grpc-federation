@@ -481,6 +481,17 @@ func (b *EnumBuilder) AddValueWithDefault(value string) *EnumBuilder {
 	return b
 }
 
+func (b *EnumBuilder) AddValueWithNoAlias(value string) *EnumBuilder {
+	b.enum.Values = append(b.enum.Values, &resolver.EnumValue{
+		Value: value,
+		Rule: &resolver.EnumValueRule{
+			NoAlias: true,
+		},
+		Enum: b.enum,
+	})
+	return b
+}
+
 func (b *EnumBuilder) AddValueWithAlias(value string, aliases ...*resolver.EnumValue) *EnumBuilder {
 	var enumValueAliases []*resolver.EnumValueAlias
 	for _, alias := range aliases {

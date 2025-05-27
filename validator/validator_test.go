@@ -149,6 +149,14 @@ invalid_enum_selector.proto:28:1: required specify alias = "org.post.PostContent
 28:  enum PostDataType {
      ^
 `},
+		{file: "invalid_enum_value_noalias.proto", expected: `
+invalid_enum_value_noalias.proto:52:77: "noalias" cannot be specified simultaneously with "default" or "alias"
+52:    POST_TYPE_A = 0 [(grpc.federation.enum_value) = { default: true, noalias: true }];
+                                                                                 ^
+invalid_enum_value_noalias.proto:53:62: "noalias" cannot be specified simultaneously with "default" or "alias"
+53:    POST_TYPE_B = 1 [(grpc.federation.enum_value) = { noalias: true, alias: ["POST_TYPE_B"] }];
+                                                                  ^
+`},
 		{file: "invalid_env.proto", expected: `
 invalid_env.proto:11:9: "message" and "var" cannot be used simultaneously
 11:      env {

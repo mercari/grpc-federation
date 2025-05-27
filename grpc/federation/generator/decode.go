@@ -1799,6 +1799,7 @@ func (d *decoder) toEnumValueRule(rule *plugin.EnumValueRule) (*resolver.EnumVal
 	attrs := d.toEnumValueAttributes(rule.GetAttrs())
 	return &resolver.EnumValueRule{
 		Default: rule.GetDefault(),
+		NoAlias: rule.GetNoalias(),
 		Aliases: aliases,
 		Attrs:   attrs,
 	}, nil

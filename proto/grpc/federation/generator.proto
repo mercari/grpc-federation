@@ -480,6 +480,7 @@ message EnumValueRule {
   bool default = 1;
   repeated EnumValueAlias aliases = 2;
   repeated EnumValueAttribute attrs = 3;
+  bool noalias = 4;
 }
 
 message EnumValueAlias {

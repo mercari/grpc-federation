@@ -711,6 +711,8 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostC
 		return slog.StringValue("CATEGORY_A")
 	case PostContent_CATEGORY_B:
 		return slog.StringValue("CATEGORY_B")
+	case PostContent_CATEGORY_C:
+		return slog.StringValue("CATEGORY_C")
 	}
 	return slog.StringValue("")
 }
@@ -745,6 +747,8 @@ func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Va
 		return slog.StringValue("POST_TYPE_FOO")
 	case PostType_POST_TYPE_BAR:
 		return slog.StringValue("POST_TYPE_BAR")
+	case PostType_POST_TYPE_BAZ:
+		return slog.StringValue("POST_TYPE_BAZ")
 	}
 	return slog.StringValue("")
 }

@@ -3173,18 +3173,29 @@ func (r *Resolver) resolveEnumValueRule(ctx *context, enum *Enum, enumValue *Enu
 	}
 
 	defaultValue := ruleDef.GetDefault()
+	noAlias := ruleDef.GetNoalias()
 	var aliases []*EnumValueAlias
 	if enum.Rule != nil && !defaultValue {
 		if len(ruleDef.GetAlias()) != 0 {
 			for _, aliasName := range ruleDef.GetAlias() {
 				aliases = append(aliases, r.resolveEnumValueAlias(ctx, enumValue.Value, aliasName, enum.Rule.Aliases)...)
 			}
-		} else {
+		} else if !noAlias {
 			aliases = r.resolveEnumValueAlias(ctx, enumValue.Value, "", enum.Rule.Aliases)
 		}
 	}
+	if noAlias && (defaultValue || len(ruleDef.GetAlias()) != 0) {
+		ctx.addError(
+			ErrWithLocation(
+				`"noalias" cannot be specified simultaneously with "default" or "alias"`,
+				builder.WithNoAlias().Location(),
+			),
+		)
+		return nil
+	}
 	return &EnumValueRule{
 		Default: defaultValue,
+		NoAlias: noAlias,
 		Aliases: aliases,
 		Attrs:   r.resolveEnumValueAttributes(ctx, ruleDef.GetAttr(), builder),
 	}
