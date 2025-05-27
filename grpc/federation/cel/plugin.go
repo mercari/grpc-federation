@@ -203,7 +203,7 @@ func (p *CELPlugin) addModuleConfigByCapability(cfg wazero.ModuleConfig, nwcfg *
 var ignoreEnvNameMap = map[string]struct{}{
 	// If a value greater than 1 is passed to GOMAXPROCS, a panic occurs on the plugin side,
 	// so make sure not to pass it explicitly.
-	"GOMAXPROCS": struct{}{},
+	"GOMAXPROCS": {},
 }
 
 func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
