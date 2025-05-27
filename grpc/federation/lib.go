@@ -39,7 +39,16 @@ func WithTimeout[T any](ctx context.Context, method string, timeout time.Duratio
 	}()
 	select {
 	case <-ctx.Done():
-		status := grpcstatus.New(grpccodes.DeadlineExceeded, ctx.Err().Error())
+		ctxErr := ctx.Err()
+
+		// If the parent context is canceled,
+		// `ctxErr` will reach this condition in the state of context.Canceled.
+		// In that case, return an error with the Cancel status.
+		if ctxErr == context.Canceled {
+			return nil, grpcstatus.New(grpccodes.Canceled, ctxErr.Error()).Err()
+		}
+
+		status := grpcstatus.New(grpccodes.DeadlineExceeded, ctxErr.Error())
 		withDetails, err := status.WithDetails(&errdetails.ErrorInfo{
 			Metadata: map[string]string{
 				"method":  method,

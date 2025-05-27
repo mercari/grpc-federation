@@ -29,10 +29,10 @@ import (
 const bufSize = 1024
 
 var (
-	listener         *bufconn.Listener
-	postClient       post.PostServiceClient
-	calledUpdatePost bool
-	blockCh          = make(chan struct{})
+	listener   *bufconn.Listener
+	postClient post.PostServiceClient
+	updateDone = make(chan struct{})
+	blockCh    = make(chan struct{})
 )
 
 type clientConfig struct{}
@@ -58,8 +58,14 @@ func (s *PostServer) GetPost(ctx context.Context, req *post.GetPostRequest) (*po
 }
 
 func (s *PostServer) UpdatePost(ctx context.Context, req *post.UpdatePostRequest) (*post.UpdatePostResponse, error) {
-	calledUpdatePost = true
+	time.Sleep(2 * time.Second)
+	updateDone <- struct{}{}
 	return nil, nil
+}
+
+func (s *PostServer) DeletePost(ctx context.Context, req *post.DeletePostRequest) (*post.DeletePostResponse, error) {
+	time.Sleep(1 * time.Second)
+	return nil, status.New(codes.Internal, "failed to delete").Err()
 }
 
 func dialer(ctx context.Context, address string) (net.Conn, error) {
@@ -140,15 +146,21 @@ func TestFederation(t *testing.T) {
 		}
 	})
 	t.Run("UpdatePost", func(t *testing.T) {
-		if _, err := client.UpdatePost(ctx, &federation.UpdatePostRequest{
+		_, err := client.UpdatePost(ctx, &federation.UpdatePostRequest{
 			Id: "foo",
-		}); err != nil {
-			t.Fatal(err)
+		})
+		if err == nil {
+			t.Fatal("expected error")
 		}
-		if !calledUpdatePost {
-			t.Fatal("failed to call UpdatePost method")
+		st, ok := status.FromError(err)
+		if !ok {
+			t.Fatal("failed to get gRPC status error")
+		}
+		if st.Code() != codes.Internal {
+			t.Fatalf("failed to get status code: %s", st.Code())
 		}
 	})
 	blockCh <- struct{}{}
+	<-updateDone
 	time.Sleep(100 * time.Millisecond)
 }

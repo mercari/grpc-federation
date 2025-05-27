@@ -7,6 +7,7 @@ option go_package = "example/post;post";
 service PostService {
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
   rpc UpdatePost(UpdatePostRequest) returns (UpdatePostResponse) {};
+  rpc DeletePost(DeletePostRequest) returns (DeletePostResponse) {};
 }
 
 message GetPostRequest {
@@ -30,4 +31,11 @@ message UpdatePostRequest {
 
 message UpdatePostResponse {
   
+}
+
+message DeletePostRequest {
+  string id = 1;
+}
+
+message DeletePostResponse {
 }

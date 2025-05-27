@@ -74,6 +74,13 @@ message UpdatePostResponse {
       call {
         method: "post.PostService/UpdatePost"
         request { field: "id" by: "$.id" }
+        timeout: "3s"
+      }
+    }
+    def {
+      call {
+        method: "post.PostService/DeletePost"
+        request { field: "id" by: "$.id" }
       }
     }
   };

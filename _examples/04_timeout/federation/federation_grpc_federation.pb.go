@@ -108,6 +108,7 @@ type FederationServiceCELPluginConfig struct {
 type FederationServiceUnimplementedResolver struct{}
 
 const (
+	FederationService_DependentMethod_Post_PostService_DeletePost = "/post.PostService/DeletePost"
 	FederationService_DependentMethod_Post_PostService_GetPost    = "/post.PostService/GetPost"
 	FederationService_DependentMethod_Post_PostService_UpdatePost = "/post.PostService/UpdatePost"
 )
@@ -451,6 +452,7 @@ func (s *FederationService) resolve_Federation_UpdatePostResponse(ctx context.Co
 		*grpcfed.LocalValue
 		vars struct {
 			XDef0 *post.UpdatePostResponse
+			XDef1 *post.DeletePostResponse
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.UpdatePostResponseArgument", req)}
@@ -486,7 +488,9 @@ func (s *FederationService) resolve_Federation_UpdatePostResponse(ctx context.Co
 					return nil, err
 				}
 				grpcfed.Logger(ctx).DebugContext(ctx, "call post.PostService/UpdatePost", slog.Any("post.UpdatePostRequest", s.logvalue_Post_UpdatePostRequest(args)))
-				ret, err := s.client.Post_PostServiceClient.UpdatePost(ctx, args)
+				ret, err := grpcfed.WithTimeout[post.UpdatePostResponse](ctx, "post.PostService/UpdatePost", 3000000000 /* 3s */, func(ctx context.Context) (*post.UpdatePostResponse, error) {
+					return s.client.Post_PostServiceClient.UpdatePost(ctx, args)
+				})
 				if err != nil {
 					if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_UpdatePost, err); err != nil {
 						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
@@ -497,8 +501,73 @@ func (s *FederationService) resolve_Federation_UpdatePostResponse(ctx context.Co
 		})
 	}
 
-	if err := def__def0(ctx); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
+	/*
+		def {
+		  name: "_def1"
+		  call {
+		    method: "post.PostService/DeletePost"
+		    request { field: "id", by: "$.id" }
+		  }
+		}
+	*/
+	def__def1 := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.DeletePostResponse, *localValueType]{
+			Name: `_def1`,
+			Type: grpcfed.CELObjectType("post.DeletePostResponse"),
+			Setter: func(value *localValueType, v *post.DeletePostResponse) error {
+				value.vars.XDef1 = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &post.DeletePostRequest{}
+				// { field: "id", by: "$.id" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:      value,
+					Expr:       `$.id`,
+					CacheIndex: 6,
+					Setter: func(v string) error {
+						args.Id = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				grpcfed.Logger(ctx).DebugContext(ctx, "call post.PostService/DeletePost", slog.Any("post.DeletePostRequest", s.logvalue_Post_DeletePostRequest(args)))
+				ret, err := s.client.Post_PostServiceClient.DeletePost(ctx, args)
+				if err != nil {
+					if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_DeletePost, err); err != nil {
+						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
+					}
+				}
+				return ret, nil
+			},
+		})
+	}
+
+	// A tree view of message dependencies is shown below.
+	/*
+	   _def0 ─┐
+	   _def1 ─┤
+	*/
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def__def0(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def__def1(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -570,6 +639,15 @@ func (s *FederationService) logvalue_Federation_UpdatePostResponseArgument(v *Fe
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
+	)
+}
+
+func (s *FederationService) logvalue_Post_DeletePostRequest(v *post.DeletePostRequest) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("id", v.GetId()),
 	)
 }
 
