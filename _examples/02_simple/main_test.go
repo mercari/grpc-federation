@@ -333,6 +333,7 @@ func TestFederation(t *testing.T) {
 		Pow:            8,
 		Floor:          1,
 		Flatten:        []int64{1, 2, 3},
+		Round:          2,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},

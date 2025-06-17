@@ -97,6 +97,24 @@ func TestMathFunctions(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name: "round",
+			expr: "grpc.federation.math.round(1.5)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Double).Value().(float64)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				const (
+					a = 1.5
+				)
+				expected := math.Round(a)
+				if diff := cmp.Diff(gotV, expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
 	}
 
 	for _, test := range tests {

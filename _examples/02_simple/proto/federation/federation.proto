@@ -53,6 +53,7 @@ message GetPostResponse {
     def { name: "pow" by: "grpc.federation.math.pow(2.0, 3.0)" }
     def { name: "floor" by: "grpc.federation.math.floor(1.51)" }
     def { name: "flatten" by: "[[1], [2], [3]].flatten()" }
+    def { name: "round" by: "grpc.federation.math.round(1.5)" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).by = "'hello'"];
@@ -95,6 +96,7 @@ message GetPostResponse {
   double pow = 39 [(grpc.federation.field).by = "pow"];
   double floor = 40 [(grpc.federation.field).by = "floor"];
   repeated int64 flatten = 41 [(grpc.federation.field).by = "flatten"];
+  double round = 42 [(grpc.federation.field).by = "round"];
 }
 
 message A {
