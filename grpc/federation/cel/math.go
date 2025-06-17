@@ -66,6 +66,14 @@ func (lib *MathLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
+		BindFunction(
+			createMathName("round"),
+			OverloadFunc(createMathID("round_double_double"), []*cel.Type{cel.DoubleType}, cel.DoubleType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Double(math.Round(float64(args[0].(types.Double))))
+				},
+			),
+		),
 	} {
 		opts = append(opts, funcOpts...)
 	}
