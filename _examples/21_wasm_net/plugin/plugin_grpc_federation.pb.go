@@ -61,7 +61,7 @@ func RegisterNetPlugin(plug NetPlugin) {
 					"example_net_getFileContent_string_string",
 				},
 			})
-			_, _ = os.Stdout.Write(append(b, '\n'))
+			grpcfed.WritePluginContent(append(b, '\n'))
 			continue
 		}
 		res, err := handleNetPlugin([]byte(content), plug)
@@ -73,7 +73,7 @@ func RegisterNetPlugin(plug NetPlugin) {
 			fmt.Fprintf(os.Stderr, "fatal error: failed to encode cel plugin response: %s\n", err.Error())
 			os.Exit(1)
 		}
-		_, _ = os.Stdout.Write(append(encoded, '\n'))
+		grpcfed.WritePluginContent(append(encoded, '\n'))
 	}
 }
 

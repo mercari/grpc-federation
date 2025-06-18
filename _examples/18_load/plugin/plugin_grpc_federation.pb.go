@@ -53,7 +53,7 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 					"example_account_get_id_string_string",
 				},
 			})
-			_, _ = os.Stdout.Write(append(b, '\n'))
+			grpcfed.WritePluginContent(append(b, '\n'))
 			continue
 		}
 		res, err := handleAccountPlugin([]byte(content), plug)
@@ -65,7 +65,7 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 			fmt.Fprintf(os.Stderr, "fatal error: failed to encode cel plugin response: %s\n", err.Error())
 			os.Exit(1)
 		}
-		_, _ = os.Stdout.Write(append(encoded, '\n'))
+		grpcfed.WritePluginContent(append(encoded, '\n'))
 	}
 }
 

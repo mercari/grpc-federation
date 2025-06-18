@@ -20,6 +20,7 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -99,7 +100,6 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}
 
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
-
 	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
 		return nil, fmt.Errorf("grpc-federation: failed to compile module: %w", err)
@@ -147,11 +147,11 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		wazero.NewModuleConfig().
 			WithSysWalltime().
 			WithStdin(stdinR).
-			WithStdout(stdoutW).
+			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			WithArgs("plugin"),
 		imports.NewBuilder().
-			WithStdio(int(stdinR.Fd()), int(stdoutW.Fd()), int(os.Stderr.Fd())).
+			WithStdio(int(stdinR.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd())).
 			WithSocketsExtension("wasmedgev2", p.mod),
 	)
 
@@ -163,6 +163,20 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		}
 	} else {
 		wasi_snapshot_preview1.MustInstantiate(ctx, p.wasmRuntime)
+	}
+
+	host := p.wasmRuntime.NewHostModuleBuilder("grpcfederation")
+	host.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			//nolint:gosec
+			b, _ := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
+			_, _ = stdoutW.Write(b)
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("grpc_federation_write")
+	if _, err := host.Instantiate(ctx); err != nil {
+		return nil, err
 	}
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
