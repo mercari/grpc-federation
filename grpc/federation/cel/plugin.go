@@ -168,6 +168,7 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	host := p.wasmRuntime.NewHostModuleBuilder("grpcfederation")
 	host.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			//nolint:gosec
 			b, _ := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
 			_, _ = stdoutW.Write(b)
 		}),
