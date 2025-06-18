@@ -43,7 +43,7 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 					{{- end }}
 				},
 			})
-			_, _ = os.Stdout.Write(append(b, '\n'))
+			grpcfed.WritePluginContent(append(b, '\n'))
 			continue
 		}
 		res, err := handle{{ $pluginName }}([]byte(content), plug)
@@ -55,7 +55,7 @@ func Register{{ $pluginName }}(plug {{ $pluginName }}) {
 			fmt.Fprintf(os.Stderr, "fatal error: failed to encode cel plugin response: %s\n", err.Error())
 			os.Exit(1)
 		}
-		_, _ = os.Stdout.Write(append(encoded, '\n'))
+		grpcfed.WritePluginContent(append(encoded, '\n'))
 	}
 }
 

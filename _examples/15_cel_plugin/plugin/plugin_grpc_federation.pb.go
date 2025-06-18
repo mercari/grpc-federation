@@ -63,7 +63,7 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 					"example_regexp_Example_mySplit_example_regexp_Example_string_string_repeated string",
 				},
 			})
-			_, _ = os.Stdout.Write(append(b, '\n'))
+			grpcfed.WritePluginContent(append(b, '\n'))
 			continue
 		}
 		res, err := handleRegexpPlugin([]byte(content), plug)
@@ -75,7 +75,7 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 			fmt.Fprintf(os.Stderr, "fatal error: failed to encode cel plugin response: %s\n", err.Error())
 			os.Exit(1)
 		}
-		_, _ = os.Stdout.Write(append(encoded, '\n'))
+		grpcfed.WritePluginContent(append(encoded, '\n'))
 	}
 }
 
