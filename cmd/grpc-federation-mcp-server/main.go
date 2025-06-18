@@ -114,7 +114,11 @@ func main() {
 			}
 			importPaths := make([]string, 0, len(importPathsArg))
 			for _, p := range importPathsArg {
-				importPaths = append(importPaths, p.(string))
+				importPath, ok := p.(string)
+				if !ok {
+					return nil, fmt.Errorf("failed to get import_paths element. required type is string but got %T", p)
+				}
+				importPaths = append(importPaths, importPath)
 			}
 			v := validator.New()
 			outs := v.Validate(context.Background(), file, validator.ImportPathOption(importPaths...))
