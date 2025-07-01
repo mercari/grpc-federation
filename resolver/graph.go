@@ -365,27 +365,70 @@ func setupVariableDependencyByReferenceName(nodes []*MessageDependencyGraphNode)
 }
 
 func setupVariableDependencyByValidation(nodes []*MessageDependencyGraphNode) {
+	setupVariableDependencyByValidationRecursive(make(map[*MessageDependencyGraphNode]struct{}), nodes)
+}
+
+func setupVariableDependencyByValidationRecursive(parentMap map[*MessageDependencyGraphNode]struct{}, nodes []*MessageDependencyGraphNode) {
 	if len(nodes) == 0 {
 		return
 	}
+	lastIdx := 0
 	for idx, node := range nodes {
+		parentMap[node] = struct{}{}
 		if !node.VariableDefinition.IsValidation() {
 			continue
 		}
 		validationNode := node
-		for i := idx + 1; i < len(nodes); i++ {
-			if _, exists := validationNode.ChildrenMap[nodes[i]]; !exists {
-				validationNode.Children = append(validationNode.Children, nodes[i])
-				validationNode.ChildrenMap[nodes[i]] = struct{}{}
-			}
-			if _, exists := nodes[i].ParentMap[validationNode]; !exists {
-				nodes[i].Parent = append(nodes[i].Parent, validationNode)
-				nodes[i].ParentMap[validationNode] = struct{}{}
+		validationParents := make([]*MessageDependencyGraphNode, 0, len(validationNode.Parent))
+		for parent := range validationNode.ParentMap {
+			if parent.VariableDefinition.IsValidation() {
+				validationParents = append(validationParents, parent)
+			} else {
+				// If a parent node exists in the parentMap, add it as a parent element of the validation node.
+				// At this time, since all child elements of the validation node are executed after the evaluation of the validation node,
+				// all parent nodes of the validation node have already been evaluated.
+				// For this reason, the parent node is removed from the parentMap.
+				// If it does not exist in the parentMap, it is determined to be an already evaluated parent element and is removed from validationNode.ParentMap.
+				if _, exists := parentMap[parent]; exists {
+					validationParents = append(validationParents, parent)
+					delete(parentMap, parent)
+				} else {
+					delete(validationNode.ParentMap, parent)
+				}
 			}
 		}
+		validationNode.Parent = validationParents
+
+		for i := idx + 1; i < len(nodes); i++ {
+			curNode := nodes[i]
+
+			// All nodes following the validationNode become child nodes of the validationNode.
+			// This indicates a sequential relationship.
+			if _, exists := validationNode.ChildrenMap[curNode]; !exists {
+				validationNode.Children = append(validationNode.Children, curNode)
+				validationNode.ChildrenMap[curNode] = struct{}{}
+			}
+
+			// If a validation node is already set as a parent node,
+			// remove all of them so that only the current validation node is set as the parent.
+			// This ensures that only the last validation node is retained as the parent.
+			curParents := make([]*MessageDependencyGraphNode, 0, len(curNode.Parent))
+			for parent := range curNode.ParentMap {
+				if parent.VariableDefinition.IsValidation() {
+					delete(curNode.ParentMap, parent)
+				} else {
+					curParents = append(curParents, parent)
+				}
+			}
+			curNode.ParentMap[validationNode] = struct{}{}
+			curParents = append(curParents, validationNode)
+			curNode.Parent = curParents
+		}
+		lastIdx = idx
 		break
 	}
-	setupVariableDependencyByValidation(nodes[1:])
+	// Recursively evaluate from the node following the last found validation node.
+	setupVariableDependencyByValidationRecursive(parentMap, nodes[lastIdx+1:])
 }
 
 func validateMessageGraph(graph *MessageDependencyGraph) *LocationError {

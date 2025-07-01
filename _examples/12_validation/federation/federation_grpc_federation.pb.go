@@ -45,9 +45,10 @@ type FederationService_Org_Federation_CustomMessageArgument struct {
 // Org_Federation_GetPostResponseVariable represents variable definitions in "org.federation.GetPostResponse".
 type FederationService_Org_Federation_GetPostResponseVariable struct {
 	Condition           bool
+	CustomMessage       *CustomMessage
 	Post                *Post
-	XDef4ErrDetail0Msg0 *CustomMessage
-	XDef4ErrDetail0Msg1 *CustomMessage
+	XDef5ErrDetail0Msg0 *CustomMessage
+	XDef5ErrDetail0Msg1 *CustomMessage
 }
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
@@ -340,16 +341,21 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			Condition           bool
-			CustomHandler       *CustomHandlerMessage
-			Post                *Post
-			XDef2               bool
-			XDef3               bool
-			XDef4               bool
-			XDef4Def0           bool
-			XDef4ErrDetail0Msg0 *CustomMessage
-			XDef4ErrDetail0Msg1 *CustomMessage
-			XDef5               bool
+			Condition               bool
+			CustomHandler           *CustomHandlerMessage
+			CustomMessage           *CustomMessage
+			CustomMessageValidation bool
+			Post                    *Post
+			XDef10                  bool
+			XDef3                   bool
+			XDef4                   bool
+			XDef5                   bool
+			XDef5Def0               bool
+			XDef5ErrDetail0Msg0     *CustomMessage
+			XDef5ErrDetail0Msg1     *CustomMessage
+			XDef6                   bool
+			XDef8                   bool
+			XDef9                   bool
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponseArgument", req)}
@@ -422,48 +428,40 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 
 	/*
 		def {
-		  name: "_def2"
-		  validation {
-		    error {
-		      code: FAILED_PRECONDITION
-		      if: "post.id != 'some-id'"
-		      message: "'validation1 failed!'"
-		    }
+		  name: "customMessage"
+		  message {
+		    name: "CustomMessage"
+		    args { name: "message", by: "'some-message'" }
 		  }
 		}
 	*/
-	def__def2 := func(ctx context.Context) error {
-		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
-			Name: `_def2`,
-			Type: grpcfed.CELBoolType,
-			Setter: func(value *localValueType, v bool) error {
-				value.vars.XDef2 = v
+	def_customMessage := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*CustomMessage, *localValueType]{
+			Name: `customMessage`,
+			Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
+			Setter: func(value *localValueType, v *CustomMessage) error {
+				value.vars.CustomMessage = v
 				return nil
 			},
-			Validation: func(ctx context.Context, value *localValueType) error {
-				var stat *grpcfed.Status
-				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &FederationService_Org_Federation_CustomMessageArgument{}
+				// { name: "message", by: "'some-message'" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
-					Expr:       `post.id != 'some-id'`,
+					Expr:       `'some-message'`,
 					CacheIndex: 4,
-					Body: func(value *localValueType) error {
-						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-							Value:      value,
-							Expr:       `'validation1 failed!'`,
-							OutType:    reflect.TypeOf(""),
-							CacheIndex: 5,
-						})
-						if err != nil {
-							return err
-						}
-						errorMessage := errmsg.(string)
-						stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage)
+					Setter: func(v string) error {
+						args.Message = v
 						return nil
 					},
 				}); err != nil {
-					return err
+					return nil, err
 				}
-				return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx))
+				ret, err := s.resolve_Org_Federation_CustomMessage(ctx, args)
+				if err != nil {
+					return nil, err
+				}
+				return ret, nil
 			},
 		})
 	}
@@ -475,7 +473,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		    error {
 		      code: FAILED_PRECONDITION
 		      if: "post.id != 'some-id'"
-		      message: "'validation2 failed!'"
+		      message: "'validation1 failed!'"
 		    }
 		  }
 		}
@@ -493,13 +491,13 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 					Value:      value,
 					Expr:       `post.id != 'some-id'`,
-					CacheIndex: 6,
+					CacheIndex: 5,
 					Body: func(value *localValueType) error {
 						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 							Value:      value,
-							Expr:       `'validation2 failed!'`,
+							Expr:       `'validation1 failed!'`,
 							OutType:    reflect.TypeOf(""),
-							CacheIndex: 7,
+							CacheIndex: 6,
 						})
 						if err != nil {
 							return err
@@ -522,6 +520,54 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		  validation {
 		    error {
 		      code: FAILED_PRECONDITION
+		      if: "post.id != 'some-id'"
+		      message: "'validation2 failed!'"
+		    }
+		  }
+		}
+	*/
+	def__def4 := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
+			Name: `_def4`,
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.XDef4 = v
+				return nil
+			},
+			Validation: func(ctx context.Context, value *localValueType) error {
+				var stat *grpcfed.Status
+				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+					Value:      value,
+					Expr:       `post.id != 'some-id'`,
+					CacheIndex: 7,
+					Body: func(value *localValueType) error {
+						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+							Value:      value,
+							Expr:       `'validation2 failed!'`,
+							OutType:    reflect.TypeOf(""),
+							CacheIndex: 8,
+						})
+						if err != nil {
+							return err
+						}
+						errorMessage := errmsg.(string)
+						stat = grpcfed.NewGRPCStatus(grpcfed.FailedPreconditionCode, errorMessage)
+						return nil
+					},
+				}); err != nil {
+					return err
+				}
+				return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx))
+			},
+		})
+	}
+
+	/*
+		def {
+		  name: "_def5"
+		  validation {
+		    error {
+		      code: FAILED_PRECONDITION
 		      if: "$.id != 'correct-id'"
 		      message: "'validation3 failed!'"
 		      details {
@@ -538,12 +584,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		  }
 		}
 	*/
-	def__def4 := func(ctx context.Context) error {
+	def__def5 := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
-			Name: `_def4`,
+			Name: `_def5`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.XDef4 = v
+				value.vars.XDef5 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -551,24 +597,24 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				if _, err := func() (any, error) {
 					/*
 						def {
-						  name: "_def4_def0"
+						  name: "_def5_def0"
 						  by: "grpc.federation.log.add({'validation3_attrs': true})"
 						}
 					*/
-					def__def4_def0 := func(ctx context.Context) error {
+					def__def5_def0 := func(ctx context.Context) error {
 						return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
-							Name: `_def4_def0`,
+							Name: `_def5_def0`,
 							Type: grpcfed.CELBoolType,
 							Setter: func(value *localValueType, v bool) error {
-								value.vars.XDef4Def0 = v
+								value.vars.XDef5Def0 = v
 								return nil
 							},
 							By:           `grpc.federation.log.add({'validation3_attrs': true})`,
-							ByCacheIndex: 8,
+							ByCacheIndex: 9,
 						})
 					}
 
-					if err := def__def4_def0(ctx); err != nil {
+					if err := def__def5_def0(ctx); err != nil {
 						grpcfed.RecordErrorToSpan(ctx, err)
 						return nil, err
 					}
@@ -579,13 +625,13 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 					Value:      value,
 					Expr:       `$.id != 'correct-id'`,
-					CacheIndex: 9,
+					CacheIndex: 10,
 					Body: func(value *localValueType) error {
 						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 							Value:      value,
 							Expr:       `'validation3 failed!'`,
 							OutType:    reflect.TypeOf(""),
-							CacheIndex: 10,
+							CacheIndex: 11,
 						})
 						if err != nil {
 							return err
@@ -595,24 +641,24 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 							Value:      value,
 							Expr:       `true`,
-							CacheIndex: 11,
+							CacheIndex: 12,
 							Body: func(value *localValueType) error {
 								if _, err := func() (any, error) {
 									/*
 										def {
-										  name: "_def4_err_detail0_msg0"
+										  name: "_def5_err_detail0_msg0"
 										  message {
 										    name: "CustomMessage"
 										    args { name: "message", by: "'message1'" }
 										  }
 										}
 									*/
-									def__def4_err_detail0_msg0 := func(ctx context.Context) error {
+									def__def5_err_detail0_msg0 := func(ctx context.Context) error {
 										return grpcfed.EvalDef(ctx, value, grpcfed.Def[*CustomMessage, *localValueType]{
-											Name: `_def4_err_detail0_msg0`,
+											Name: `_def5_err_detail0_msg0`,
 											Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
 											Setter: func(value *localValueType, v *CustomMessage) error {
-												value.vars.XDef4ErrDetail0Msg0 = v
+												value.vars.XDef5ErrDetail0Msg0 = v
 												return nil
 											},
 											Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -621,7 +667,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 												if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 													Value:      value,
 													Expr:       `'message1'`,
-													CacheIndex: 12,
+													CacheIndex: 13,
 													Setter: func(v string) error {
 														args.Message = v
 														return nil
@@ -640,19 +686,19 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 
 									/*
 										def {
-										  name: "_def4_err_detail0_msg1"
+										  name: "_def5_err_detail0_msg1"
 										  message {
 										    name: "CustomMessage"
 										    args { name: "message", by: "'message2'" }
 										  }
 										}
 									*/
-									def__def4_err_detail0_msg1 := func(ctx context.Context) error {
+									def__def5_err_detail0_msg1 := func(ctx context.Context) error {
 										return grpcfed.EvalDef(ctx, value, grpcfed.Def[*CustomMessage, *localValueType]{
-											Name: `_def4_err_detail0_msg1`,
+											Name: `_def5_err_detail0_msg1`,
 											Type: grpcfed.CELObjectType("org.federation.CustomMessage"),
 											Setter: func(value *localValueType, v *CustomMessage) error {
-												value.vars.XDef4ErrDetail0Msg1 = v
+												value.vars.XDef5ErrDetail0Msg1 = v
 												return nil
 											},
 											Message: func(ctx context.Context, value *localValueType) (any, error) {
@@ -661,7 +707,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 												if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 													Value:      value,
 													Expr:       `'message2'`,
-													CacheIndex: 13,
+													CacheIndex: 14,
 													Setter: func(v string) error {
 														args.Message = v
 														return nil
@@ -680,13 +726,13 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 
 									// A tree view of message dependencies is shown below.
 									/*
-									   _def4_err_detail0_msg0 ─┐
-									   _def4_err_detail0_msg1 ─┤
+									   _def5_err_detail0_msg0 ─┐
+									   _def5_err_detail0_msg1 ─┤
 									*/
 									eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
 									grpcfed.GoWithRecover(eg, func() (any, error) {
-										if err := def__def4_err_detail0_msg0(ctx1); err != nil {
+										if err := def__def5_err_detail0_msg0(ctx1); err != nil {
 											grpcfed.RecordErrorToSpan(ctx1, err)
 											return nil, err
 										}
@@ -694,7 +740,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									})
 
 									grpcfed.GoWithRecover(eg, func() (any, error) {
-										if err := def__def4_err_detail0_msg1(ctx1); err != nil {
+										if err := def__def5_err_detail0_msg1(ctx1); err != nil {
 											grpcfed.RecordErrorToSpan(ctx1, err)
 											return nil, err
 										}
@@ -710,16 +756,16 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 								}
 								if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
 									Value:            value,
-									MessageValueName: "_def4_err_detail0_msg0",
-									CacheIndex:       14,
+									MessageValueName: "_def5_err_detail0_msg0",
+									CacheIndex:       15,
 									MessageIndex:     0,
 								}); detail != nil {
 									details = append(details, detail)
 								}
 								if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
 									Value:            value,
-									MessageValueName: "_def4_err_detail0_msg1",
-									CacheIndex:       15,
+									MessageValueName: "_def5_err_detail0_msg1",
+									CacheIndex:       16,
 									MessageIndex:     1,
 								}); detail != nil {
 									details = append(details, detail)
@@ -729,7 +775,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										Value:      value,
 										Expr:       `CustomMessage{message: 'foo'}`,
 										OutType:    reflect.TypeOf((*CustomMessage)(nil)),
-										CacheIndex: 16,
+										CacheIndex: 17,
 									})
 									if err != nil {
 										grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -743,9 +789,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										Type:              `'type1'`,
 										Subject:           `post.id`,
 										Desc:              `'description1'`,
-										TypeCacheIndex:    17,
-										SubjectCacheIndex: 18,
-										DescCacheIndex:    19,
+										TypeCacheIndex:    18,
+										SubjectCacheIndex: 19,
+										DescCacheIndex:    20,
 									},
 								}); detail != nil {
 									details = append(details, detail)
@@ -754,8 +800,8 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									{
 										Field:           `post.id`,
 										Desc:            `'description2'`,
-										FieldCacheIndex: 20,
-										DescCacheIndex:  21,
+										FieldCacheIndex: 21,
+										DescCacheIndex:  22,
 									},
 								}); detail != nil {
 									details = append(details, detail)
@@ -764,7 +810,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 									Value:      value,
 									Locale:     "en-US",
 									Message:    `post.content`,
-									CacheIndex: 22,
+									CacheIndex: 23,
 								}); detail != nil {
 									details = append(details, detail)
 								}
@@ -793,7 +839,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 
 	/*
 		def {
-		  name: "_def5"
+		  name: "_def6"
 		  validation {
 		    error {
 		      code: FAILED_PRECONDITION
@@ -803,12 +849,12 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		  }
 		}
 	*/
-	def__def5 := func(ctx context.Context) error {
+	def__def6 := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
-			Name: `_def5`,
+			Name: `_def6`,
 			Type: grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
-				value.vars.XDef5 = v
+				value.vars.XDef6 = v
 				return nil
 			},
 			Validation: func(ctx context.Context, value *localValueType) error {
@@ -829,7 +875,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 								return nil
 							},
 							By:           `post.id != 'some-id'`,
-							ByCacheIndex: 23,
+							ByCacheIndex: 24,
 						})
 					}
 
@@ -844,13 +890,13 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 					Value:      value,
 					Expr:       `condition`,
-					CacheIndex: 24,
+					CacheIndex: 25,
 					Body: func(value *localValueType) error {
 						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 							Value:      value,
 							Expr:       `'validation4 failed!'`,
 							OutType:    reflect.TypeOf(""),
-							CacheIndex: 25,
+							CacheIndex: 26,
 						})
 						if err != nil {
 							return err
@@ -867,25 +913,211 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		})
 	}
 
+	/*
+		def {
+		  name: "customMessageValidation"
+		  validation {
+		    error {
+		      code: INTERNAL
+		      if: "customMessage.message == ''"
+		      message: "'custom message is empty'"
+		    }
+		  }
+		}
+	*/
+	def_customMessageValidation := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
+			Name: `customMessageValidation`,
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.CustomMessageValidation = v
+				return nil
+			},
+			Validation: func(ctx context.Context, value *localValueType) error {
+				var stat *grpcfed.Status
+				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+					Value:      value,
+					Expr:       `customMessage.message == ''`,
+					CacheIndex: 27,
+					Body: func(value *localValueType) error {
+						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+							Value:      value,
+							Expr:       `'custom message is empty'`,
+							OutType:    reflect.TypeOf(""),
+							CacheIndex: 28,
+						})
+						if err != nil {
+							return err
+						}
+						errorMessage := errmsg.(string)
+						stat = grpcfed.NewGRPCStatus(grpcfed.InternalCode, errorMessage)
+						return nil
+					},
+				}); err != nil {
+					return err
+				}
+				return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx))
+			},
+		})
+	}
+
+	/*
+		def {
+		  name: "_def8"
+		  validation {
+		    error {
+		      code: INTERNAL
+		      if: "post.item == null"
+		      message: "'item is null'"
+		    }
+		  }
+		}
+	*/
+	def__def8 := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
+			Name: `_def8`,
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.XDef8 = v
+				return nil
+			},
+			Validation: func(ctx context.Context, value *localValueType) error {
+				var stat *grpcfed.Status
+				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+					Value:      value,
+					Expr:       `post.item == null`,
+					CacheIndex: 29,
+					Body: func(value *localValueType) error {
+						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+							Value:      value,
+							Expr:       `'item is null'`,
+							OutType:    reflect.TypeOf(""),
+							CacheIndex: 30,
+						})
+						if err != nil {
+							return err
+						}
+						errorMessage := errmsg.(string)
+						stat = grpcfed.NewGRPCStatus(grpcfed.InternalCode, errorMessage)
+						return nil
+					},
+				}); err != nil {
+					return err
+				}
+				return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx))
+			},
+		})
+	}
+
+	/*
+		def {
+		  name: "_def9"
+		  validation {
+		    error {
+		      code: INTERNAL
+		      if: "post.item.item_id == 0"
+		      message: "'item id is zero'"
+		    }
+		  }
+		}
+	*/
+	def__def9 := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
+			Name: `_def9`,
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.XDef9 = v
+				return nil
+			},
+			Validation: func(ctx context.Context, value *localValueType) error {
+				var stat *grpcfed.Status
+				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+					Value:      value,
+					Expr:       `post.item.item_id == 0`,
+					CacheIndex: 31,
+					Body: func(value *localValueType) error {
+						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+							Value:      value,
+							Expr:       `'item id is zero'`,
+							OutType:    reflect.TypeOf(""),
+							CacheIndex: 32,
+						})
+						if err != nil {
+							return err
+						}
+						errorMessage := errmsg.(string)
+						stat = grpcfed.NewGRPCStatus(grpcfed.InternalCode, errorMessage)
+						return nil
+					},
+				}); err != nil {
+					return err
+				}
+				return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx))
+			},
+		})
+	}
+
+	/*
+		def {
+		  name: "_def10"
+		  validation {
+		    error {
+		      code: INTERNAL
+		      if: "post.item.name == ''"
+		      message: "'item name is empty'"
+		    }
+		  }
+		}
+	*/
+	def__def10 := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
+			Name: `_def10`,
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.XDef10 = v
+				return nil
+			},
+			Validation: func(ctx context.Context, value *localValueType) error {
+				var stat *grpcfed.Status
+				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+					Value:      value,
+					Expr:       `post.item.name == ''`,
+					CacheIndex: 33,
+					Body: func(value *localValueType) error {
+						errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
+							Value:      value,
+							Expr:       `'item name is empty'`,
+							OutType:    reflect.TypeOf(""),
+							CacheIndex: 34,
+						})
+						if err != nil {
+							return err
+						}
+						errorMessage := errmsg.(string)
+						stat = grpcfed.NewGRPCStatus(grpcfed.InternalCode, errorMessage)
+						return nil
+					},
+				}); err != nil {
+					return err
+				}
+				return grpcfed.NewErrorWithLogAttrs(stat.Err(), slog.LevelError, grpcfed.LogAttrs(ctx))
+			},
+		})
+	}
+
 	// A tree view of message dependencies is shown below.
 	/*
-	                 post ─┐
-	                       _def2 ─┐
-	          post ─┐             │
-	                _def2 ─┐      │
-	                 post ─┤      │
-	                       _def3 ─┤
-	          post ─┐             │
-	                _def2 ─┐      │
-	   post ─┐             │      │
-	         _def2 ─┐      │      │
-	          post ─┤      │      │
-	                _def3 ─┤      │
-	                 post ─┤      │
-	                       _def4 ─┤
-	                        post ─┤
-	                                      _def5 ─┐
-	                              customHandler ─┤
+	   post ─┐
+	         _def3 ─┐
+	                _def4 ─┐
+	                       _def5 ─┐
+	                                      _def6 ─┐
+	                              customMessage ─┤
+	                                             customMessageValidation ─┐
+	                                                                      _def8 ─┐
+	                                                                             _def9 ─┐
+	                                                                                           _def10 ─┐
+	                                                                                    customHandler ─┤
 	*/
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
@@ -896,101 +1128,26 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
 			}
-			if err := def__def2(ctx2); err != nil {
-				grpcfed.RecordErrorToSpan(ctx2, err)
-				return nil, err
-			}
-			return nil, nil
-		})
-		grpcfed.GoWithRecover(eg, func() (any, error) {
-			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
-			grpcfed.GoWithRecover(eg, func() (any, error) {
-				if err := def_post(ctx3); err != nil {
-					grpcfed.RecordErrorToSpan(ctx3, err)
-					return nil, err
-				}
-				if err := def__def2(ctx3); err != nil {
-					grpcfed.RecordErrorToSpan(ctx3, err)
-					return nil, err
-				}
-				return nil, nil
-			})
-			grpcfed.GoWithRecover(eg, func() (any, error) {
-				if err := def_post(ctx3); err != nil {
-					grpcfed.RecordErrorToSpan(ctx3, err)
-					return nil, err
-				}
-				return nil, nil
-			})
-			if err := eg.Wait(); err != nil {
-				return nil, err
-			}
 			if err := def__def3(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
-				return nil, err
-			}
-			return nil, nil
-		})
-		grpcfed.GoWithRecover(eg, func() (any, error) {
-			eg, ctx3 := grpcfed.ErrorGroupWithContext(ctx2)
-			grpcfed.GoWithRecover(eg, func() (any, error) {
-				if err := def_post(ctx3); err != nil {
-					grpcfed.RecordErrorToSpan(ctx3, err)
-					return nil, err
-				}
-				if err := def__def2(ctx3); err != nil {
-					grpcfed.RecordErrorToSpan(ctx3, err)
-					return nil, err
-				}
-				return nil, nil
-			})
-			grpcfed.GoWithRecover(eg, func() (any, error) {
-				eg, ctx4 := grpcfed.ErrorGroupWithContext(ctx3)
-				grpcfed.GoWithRecover(eg, func() (any, error) {
-					if err := def_post(ctx4); err != nil {
-						grpcfed.RecordErrorToSpan(ctx4, err)
-						return nil, err
-					}
-					if err := def__def2(ctx4); err != nil {
-						grpcfed.RecordErrorToSpan(ctx4, err)
-						return nil, err
-					}
-					return nil, nil
-				})
-				grpcfed.GoWithRecover(eg, func() (any, error) {
-					if err := def_post(ctx4); err != nil {
-						grpcfed.RecordErrorToSpan(ctx4, err)
-						return nil, err
-					}
-					return nil, nil
-				})
-				if err := eg.Wait(); err != nil {
-					return nil, err
-				}
-				if err := def__def3(ctx3); err != nil {
-					grpcfed.RecordErrorToSpan(ctx3, err)
-					return nil, err
-				}
-				return nil, nil
-			})
-			grpcfed.GoWithRecover(eg, func() (any, error) {
-				if err := def_post(ctx3); err != nil {
-					grpcfed.RecordErrorToSpan(ctx3, err)
-					return nil, err
-				}
-				return nil, nil
-			})
-			if err := eg.Wait(); err != nil {
 				return nil, err
 			}
 			if err := def__def4(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
 			}
+			if err := def__def5(ctx2); err != nil {
+				grpcfed.RecordErrorToSpan(ctx2, err)
+				return nil, err
+			}
+			if err := def__def6(ctx2); err != nil {
+				grpcfed.RecordErrorToSpan(ctx2, err)
+				return nil, err
+			}
 			return nil, nil
 		})
 		grpcfed.GoWithRecover(eg, func() (any, error) {
-			if err := def_post(ctx2); err != nil {
+			if err := def_customMessage(ctx2); err != nil {
 				grpcfed.RecordErrorToSpan(ctx2, err)
 				return nil, err
 			}
@@ -999,7 +1156,19 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		if err := eg.Wait(); err != nil {
 			return nil, err
 		}
-		if err := def__def5(ctx1); err != nil {
+		if err := def_customMessageValidation(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def__def8(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def__def9(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def__def10(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
@@ -1020,9 +1189,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.FederationService_Org_Federation_GetPostResponseVariable.Condition = value.vars.Condition
+	req.FederationService_Org_Federation_GetPostResponseVariable.CustomMessage = value.vars.CustomMessage
 	req.FederationService_Org_Federation_GetPostResponseVariable.Post = value.vars.Post
-	req.FederationService_Org_Federation_GetPostResponseVariable.XDef4ErrDetail0Msg0 = value.vars.XDef4ErrDetail0Msg0
-	req.FederationService_Org_Federation_GetPostResponseVariable.XDef4ErrDetail0Msg1 = value.vars.XDef4ErrDetail0Msg1
+	req.FederationService_Org_Federation_GetPostResponseVariable.XDef5ErrDetail0Msg0 = value.vars.XDef5ErrDetail0Msg0
+	req.FederationService_Org_Federation_GetPostResponseVariable.XDef5ErrDetail0Msg1 = value.vars.XDef5ErrDetail0Msg1
 
 	// create a message value to be returned.
 	ret := &GetPostResponse{}
@@ -1032,7 +1202,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `post`,
-		CacheIndex: 26,
+		CacheIndex: 35,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -1068,7 +1238,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'some-id'`,
-		CacheIndex: 27,
+		CacheIndex: 36,
 		Setter: func(v string) error {
 			ret.Id = v
 			return nil
@@ -1081,7 +1251,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'some-title'`,
-		CacheIndex: 28,
+		CacheIndex: 37,
 		Setter: func(v string) error {
 			ret.Title = v
 			return nil
@@ -1094,9 +1264,22 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'some-content'`,
-		CacheIndex: 29,
+		CacheIndex: 38,
 		Setter: func(v string) error {
 			ret.Content = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "Item{item_id: 2, name: 'item-name2'}"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Item]{
+		Value:      value,
+		Expr:       `Item{item_id: 2, name: 'item-name2'}`,
+		CacheIndex: 39,
+		Setter: func(v *Item) error {
+			ret.Item = v
 			return nil
 		},
 	}); err != nil {
@@ -1160,6 +1343,16 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 	)
 }
 
+func (s *FederationService) logvalue_Org_Federation_Item(v *Item) slog.Value {
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.Int64("item_id", int64(v.GetItemId())),
+		slog.String("name", v.GetName()),
+	)
+}
+
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 	if v == nil {
 		return slog.GroupValue()
@@ -1168,6 +1361,7 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
 		slog.String("content", v.GetContent()),
+		slog.Any("item", s.logvalue_Org_Federation_Item(v.GetItem())),
 	)
 }
 
