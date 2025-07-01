@@ -90,6 +90,10 @@ func TestFederation(t *testing.T) {
 					Id:      "some-id",
 					Title:   "some-title",
 					Content: "some-content",
+					Item: &federation.Item{
+						ItemId: 2,
+						Name:   "item-name2",
+					},
 				},
 			},
 		},
@@ -175,6 +179,7 @@ func TestFederation(t *testing.T) {
 			if diff := cmp.Diff(res, tc.expected, cmpopts.IgnoreUnexported(
 				federation.GetPostResponse{},
 				federation.Post{},
+				federation.Item{},
 			)); diff != "" {
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
