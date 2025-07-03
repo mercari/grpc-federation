@@ -12,7 +12,7 @@ import (
 )
 
 func evalCodeGeneratorPlugin(ctx context.Context, pluginFile []byte, req io.Reader) error {
-	runtimeCfg := wazero.NewRuntimeConfig()
+	runtimeCfg := wazero.NewRuntimeConfigInterpreter()
 	if cache := getCompilationCache(); cache != nil {
 		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 	}
