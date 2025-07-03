@@ -385,7 +385,7 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	}
 
 	// start termination process.
-	_, _ = i.stdin.Write([]byte(exitCommand))
+	_, _ = i.stdin.WriteString(exitCommand)
 	<-i.instanceModErrCh
 
 	return nil
