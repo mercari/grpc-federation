@@ -721,14 +721,16 @@ func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult
 			if err != nil {
 				return fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", plugin.Path, err)
 			}
-			hash := sha256.Sum256(wasmFile)
-			gotHash := hex.EncodeToString(hash[:])
-			if plugin.Sha256 != gotHash {
-				return fmt.Errorf(
-					`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
-					plugin.Sha256,
-					gotHash,
-				)
+			if plugin.Sha256 != "" {
+				hash := sha256.Sum256(wasmFile)
+				gotHash := hex.EncodeToString(hash[:])
+				if plugin.Sha256 != gotHash {
+					return fmt.Errorf(
+						`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
+						plugin.Sha256,
+						gotHash,
+					)
+				}
 			}
 			if err := evalCodeGeneratorPlugin(ctx, wasmFile, genReqReader); err != nil {
 				return err
@@ -837,8 +839,8 @@ func parsePluginsOption(opt *CodeGeneratorOption, value string) error {
 
 func parseFileSchemeOption(opt *CodeGeneratorOption, value string) error {
 	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+	if len(parts) == 0 || len(parts) >= 3 {
+		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" or "file://path/to/file.wasm"`)
 	}
 	path := parts[0]
 	if !filepath.IsAbs(path) {
@@ -848,41 +850,53 @@ func parseFileSchemeOption(opt *CodeGeneratorOption, value string) error {
 		}
 		path = abs
 	}
+	var sha256 string
+	if len(parts) == 2 {
+		sha256 = parts[1]
+	}
 	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
 		Path:   path,
-		Sha256: parts[1],
+		Sha256: sha256,
 	})
 	return nil
 }
 
 func parseHTTPSchemeOption(opt *CodeGeneratorOption, value string) error {
 	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+	if len(parts) == 0 || len(parts) >= 3 {
+		return fmt.Errorf(`grpc-federation: plugin option must be specified with "http://host/path/to/file.wasm:sha256hash" or "http://host/path/to/file.wasm"`)
 	}
 	file, err := downloadFile("http://" + parts[0])
 	if err != nil {
 		return err
 	}
+	var sha256 string
+	if len(parts) == 2 {
+		sha256 = parts[1]
+	}
 	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
 		Path:   file.Name(),
-		Sha256: parts[1],
+		Sha256: sha256,
 	})
 	return nil
 }
 
 func parseHTTPSSchemeOption(opt *CodeGeneratorOption, value string) error {
 	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+	if len(parts) == 0 || len(parts) >= 3 {
+		return fmt.Errorf(`grpc-federation: plugin option must be specified with "https://host/path/to/file.wasm:sha256hash" or "https://host/path/to/file.wasm"`)
 	}
 	file, err := downloadFile("https://" + parts[0])
 	if err != nil {
 		return err
 	}
+	var sha256 string
+	if len(parts) == 2 {
+		sha256 = parts[1]
+	}
 	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
 		Path:   file.Name(),
-		Sha256: parts[1],
+		Sha256: sha256,
 	})
 	return nil
 }
