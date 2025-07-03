@@ -94,10 +94,16 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	if cfg.Wasm.Sha256 != gotHash {
 		return nil, fmt.Errorf(`expected [%s] but got [%s]: %w`, cfg.Wasm.Sha256, gotHash, ErrWasmContentMismatch)
 	}
-	runtimeCfg := wazero.NewRuntimeConfig().WithCloseOnContextDone(true)
-	if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
-		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
+	var runtimeCfg wazero.RuntimeConfig
+	if cfg.CacheDir == "" {
+		runtimeCfg = wazero.NewRuntimeConfigInterpreter()
+	} else {
+		runtimeCfg = wazero.NewRuntimeConfigCompiler()
+		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
+			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
+		}
 	}
+	runtimeCfg = runtimeCfg.WithCloseOnContextDone(true)
 
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
 	mod, err := r.CompileModule(ctx, wasmFile)
