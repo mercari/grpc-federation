@@ -98,7 +98,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	if cfg.CacheDir == "" {
 		runtimeCfg = wazero.NewRuntimeConfigInterpreter()
 	} else {
-		runtimeCfg = wazero.NewRuntimeConfigCompiler()
+		runtimeCfg = wazero.NewRuntimeConfig()
 		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
 			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 		}
