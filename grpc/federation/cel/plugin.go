@@ -379,9 +379,15 @@ func (i *CELPluginInstance) Close(ctx context.Context) error {
 	defer i.mu.Unlock()
 
 	defer func() { i.closeResources(nil) }()
-	if err := i.write([]byte(exitCommand)); err != nil {
-		return err
+
+	if i.closed {
+		return i.instanceModErr
 	}
+
+	// start termination process.
+	_, _ = i.stdin.Write([]byte(exitCommand))
+	<-i.instanceModErrCh
+
 	return nil
 }
 
