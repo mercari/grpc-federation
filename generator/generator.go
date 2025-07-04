@@ -909,8 +909,22 @@ func parsePluginsOption(opt *CodeGeneratorOption, value string) error {
 }
 
 func parseFileSchemeOption(opt *CodeGeneratorOption, pluginURI *pluginURI) error {
-	path := pluginURI.parsedURL.Path
-	if path == "" {
+	// For file URLs, we need to handle both file:///path and file://path patterns
+	// file:///path -> Host: "", Path: "/path"
+	// file://path -> Host: "path", Path: ""
+	// file://hostname/path -> Host: "hostname", Path: "/path"
+
+	var path string
+	if pluginURI.parsedURL.Host != "" && pluginURI.parsedURL.Path == "" {
+		// Case: file://path (host part contains the path)
+		path = pluginURI.parsedURL.Host
+	} else if pluginURI.parsedURL.Host == "" && pluginURI.parsedURL.Path != "" {
+		// Case: file:///path (path part contains the path)
+		path = pluginURI.parsedURL.Path
+	} else if pluginURI.parsedURL.Host != "" && pluginURI.parsedURL.Path != "" {
+		// Case: file://hostname/path (UNC path or network path)
+		path = pluginURI.parsedURL.Host + pluginURI.parsedURL.Path
+	} else {
 		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" or "file://path/to/file.wasm"`)
 	}
 

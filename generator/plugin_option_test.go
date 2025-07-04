@@ -2,6 +2,7 @@ package generator
 
 import (
 	"net/url"
+	"path/filepath"
 	"testing"
 )
 
@@ -22,6 +23,15 @@ func TestParsePluginURI(t *testing.T) {
 			wantPath:        "/path/to/plugin.wasm",
 			wantHash:        "",
 			wantOriginalURL: "file:///path/to/plugin.wasm",
+			wantErr:         false,
+		},
+		{
+			name:            "file scheme without leading slash",
+			input:           "file://path/to/plugin.wasm",
+			wantScheme:      "file",
+			wantPath:        "/to/plugin.wasm",
+			wantHash:        "",
+			wantOriginalURL: "file://path/to/plugin.wasm",
 			wantErr:         false,
 		},
 		{
@@ -303,6 +313,29 @@ func TestParseFileSchemeOption(t *testing.T) {
 				}
 				if opt.Plugins[0].Sha256 != "" {
 					t.Errorf("expected empty hash, got %s", opt.Plugins[0].Sha256)
+				}
+			},
+		},
+		{
+			name: "relative path file",
+			uri: &pluginURI{
+				originalURL: "file://path/to/plugin.wasm",
+				parsedURL: &url.URL{
+					Scheme: "file",
+					Host:   "path",
+					Path:   "/to/plugin.wasm",
+				},
+				hash: "",
+			},
+			wantErr: false,
+			validate: func(t *testing.T, opt *CodeGeneratorOption) {
+				if len(opt.Plugins) != 1 {
+					t.Errorf("expected 1 plugin, got %d", len(opt.Plugins))
+					return
+				}
+				// Should be converted to absolute path
+				if !filepath.IsAbs(opt.Plugins[0].Path) {
+					t.Errorf("expected absolute path, got %s", opt.Plugins[0].Path)
 				}
 			},
 		},
