@@ -357,7 +357,7 @@ func (e *encoder) toMessageRule(rule *resolver.MessageRule) *plugin.MessageRule 
 
 func (e *encoder) toVariableDefinitionSet(fqdn string, set *resolver.VariableDefinitionSet) *plugin.VariableDefinitionSet {
 	ret := &plugin.VariableDefinitionSet{}
-	ret.DependencyGraphId = e.toMessageDependencyGraph(fqdn, set.DependencyGraph()).GetId()
+	ret.DependencyGraphId = e.toMessageDependencyGraph(set.DependencyGraph()).GetId()
 	for _, def := range e.toVariableDefinitions(fqdn, set.Definitions()) {
 		ret.VariableDefinitionIds = append(ret.VariableDefinitionIds, def.GetId())
 	}
@@ -566,8 +566,7 @@ func (e *encoder) toFieldOneofRule(field *resolver.Field, rule *resolver.FieldOn
 	ret := &plugin.FieldOneofRule{Default: rule.Default}
 	ret.If = e.toCELValue(rule.If)
 	ret.By = e.toCELValue(rule.By)
-	fqdn := strings.Join([]string{field.FQDN(), "oneof"}, "/")
-	ret.DefSet = e.toVariableDefinitionSet(fqdn, rule.DefSet)
+	ret.DefSet = e.toVariableDefinitionSet(field.FQDN()+"/oneof", rule.DefSet)
 	return ret
 }
 
@@ -780,7 +779,7 @@ func (e *encoder) toTypeKind(kind types.Kind) plugin.TypeKind {
 	return plugin.TypeKind_UNKNOWN_TYPE
 }
 
-func (e *encoder) toMessageDependencyGraph(fqdn string, graph *resolver.MessageDependencyGraph) *plugin.MessageDependencyGraph {
+func (e *encoder) toMessageDependencyGraph(graph *resolver.MessageDependencyGraph) *plugin.MessageDependencyGraph {
 	if graph == nil {
 		return nil
 	}
@@ -1147,7 +1146,7 @@ func (e *encoder) toGRPCError(fqdn string, err *resolver.GRPCError) *plugin.GRPC
 		Details:           e.toGRPCErrorDetails(fqdn, err.Details),
 		Ignore:            err.Ignore,
 		IgnoreAndResponse: e.toCELValue(err.IgnoreAndResponse),
-		LogLevel:          int32(err.LogLevel),
+		LogLevel:          int32(err.LogLevel), //nolint:gosec
 	}
 }
 
