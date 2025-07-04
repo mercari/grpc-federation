@@ -167,26 +167,26 @@ func (e *encoder) toService(svc *resolver.Service) *plugin.Service {
 		ret.CelPluginIds = append(ret.CelPluginIds, p.GetId())
 	}
 	ret.FileId = e.toFile(svc.File).GetId()
-	ret.Rule = e.toServiceRule(svc.Rule)
+	ret.Rule = e.toServiceRule(id, svc.Rule)
 	return ret
 }
 
-func (e *encoder) toServiceRule(rule *resolver.ServiceRule) *plugin.ServiceRule {
+func (e *encoder) toServiceRule(fqdn string, rule *resolver.ServiceRule) *plugin.ServiceRule {
 	if rule == nil {
 		return nil
 	}
 	env := e.toEnv(rule.Env)
-	vars := e.toServiceVariables(rule.Vars)
+	vars := e.toServiceVariables(fqdn, rule.Vars)
 	return &plugin.ServiceRule{
 		Env:  env,
 		Vars: vars,
 	}
 }
 
-func (e *encoder) toServiceVariables(vars []*resolver.ServiceVariable) []*plugin.ServiceVariable {
+func (e *encoder) toServiceVariables(fqdn string, vars []*resolver.ServiceVariable) []*plugin.ServiceVariable {
 	ret := make([]*plugin.ServiceVariable, 0, len(vars))
 	for _, svcVar := range vars {
-		v := e.toServiceVariable(svcVar)
+		v := e.toServiceVariable(fqdn, svcVar)
 		if v == nil {
 			continue
 		}
@@ -195,7 +195,7 @@ func (e *encoder) toServiceVariables(vars []*resolver.ServiceVariable) []*plugin
 	return ret
 }
 
-func (e *encoder) toServiceVariable(v *resolver.ServiceVariable) *plugin.ServiceVariable {
+func (e *encoder) toServiceVariable(fqdn string, v *resolver.ServiceVariable) *plugin.ServiceVariable {
 	if v == nil {
 		return nil
 	}
@@ -203,11 +203,11 @@ func (e *encoder) toServiceVariable(v *resolver.ServiceVariable) *plugin.Service
 		Name: v.Name,
 	}
 	ret.If = e.toCELValue(v.If)
-	ret.Expr = e.toServiceVariableExpr(v.Expr)
+	ret.Expr = e.toServiceVariableExpr(fqdn, v.Expr)
 	return ret
 }
 
-func (e *encoder) toServiceVariableExpr(expr *resolver.ServiceVariableExpr) *plugin.ServiceVariableExpr {
+func (e *encoder) toServiceVariableExpr(fqdn string, expr *resolver.ServiceVariableExpr) *plugin.ServiceVariableExpr {
 	if expr == nil {
 		return nil
 	}
@@ -221,7 +221,7 @@ func (e *encoder) toServiceVariableExpr(expr *resolver.ServiceVariableExpr) *plu
 		}
 	case expr.Map != nil:
 		ret.Expr = &plugin.ServiceVariableExpr_Map{
-			Map: e.toMapExpr(expr.Map),
+			Map: e.toMapExpr(fqdn, expr.Map),
 		}
 	case expr.Message != nil:
 		ret.Expr = &plugin.ServiceVariableExpr_Message{
@@ -351,17 +351,17 @@ func (e *encoder) toMessageRule(rule *resolver.MessageRule) *plugin.MessageRule 
 	}
 	ret.MessageArgumentId = e.toMessage(rule.MessageArgument).GetId()
 	ret.AliasIds = aliasIDs
-	ret.DefSet = e.toVariableDefinitionSet(rule.DefSet)
+	ret.DefSet = e.toVariableDefinitionSet(rule.MessageArgument.FQDN(), rule.DefSet)
 	return ret
 }
 
-func (e *encoder) toVariableDefinitionSet(set *resolver.VariableDefinitionSet) *plugin.VariableDefinitionSet {
+func (e *encoder) toVariableDefinitionSet(fqdn string, set *resolver.VariableDefinitionSet) *plugin.VariableDefinitionSet {
 	ret := &plugin.VariableDefinitionSet{}
-	ret.DependencyGraphId = e.toMessageDependencyGraph(set.DependencyGraph()).GetId()
-	for _, def := range e.toVariableDefinitions(set.Definitions()) {
+	ret.DependencyGraphId = e.toMessageDependencyGraph(fqdn, set.DependencyGraph()).GetId()
+	for _, def := range e.toVariableDefinitions(fqdn, set.Definitions()) {
 		ret.VariableDefinitionIds = append(ret.VariableDefinitionIds, def.GetId())
 	}
-	for _, group := range e.toVariableDefinitionGroups(set.DefinitionGroups()) {
+	for _, group := range e.toVariableDefinitionGroups(fqdn, set.DefinitionGroups()) {
 		ret.VariableDefinitionGroupIds = append(ret.VariableDefinitionGroupIds, group.GetId())
 	}
 	return ret
@@ -526,12 +526,12 @@ func (e *encoder) toField(field *resolver.Field) *plugin.Field {
 
 	ret.Type = e.toType(field.Type)
 	ret.OneofId = e.toOneof(field.Oneof).GetId()
-	ret.Rule = e.toFieldRule(field.Rule)
+	ret.Rule = e.toFieldRule(field, field.Rule)
 	ret.MessageId = e.toMessage(field.Message).GetId()
 	return ret
 }
 
-func (e *encoder) toFieldRule(rule *resolver.FieldRule) *plugin.FieldRule {
+func (e *encoder) toFieldRule(field *resolver.Field, rule *resolver.FieldRule) *plugin.FieldRule {
 	if rule == nil {
 		return nil
 	}
@@ -545,7 +545,7 @@ func (e *encoder) toFieldRule(rule *resolver.FieldRule) *plugin.FieldRule {
 		MessageCustomResolver: rule.MessageCustomResolver,
 		AliasIds:              aliasIds,
 		AutoBindField:         e.toAutoBindField(rule.AutoBindField),
-		OneofRule:             e.toFieldOneofRule(rule.Oneof),
+		OneofRule:             e.toFieldOneofRule(field, rule.Oneof),
 	}
 }
 
@@ -554,19 +554,20 @@ func (e *encoder) toAutoBindField(field *resolver.AutoBindField) *plugin.AutoBin
 		return nil
 	}
 	return &plugin.AutoBindField{
-		VariableDefinitionId: e.toVariableDefinition(field.VariableDefinition).GetId(),
+		VariableDefinitionId: e.toVariableDefinition(field.Field.FQDN(), field.VariableDefinition).GetId(),
 		FieldId:              e.toField(field.Field).GetId(),
 	}
 }
 
-func (e *encoder) toFieldOneofRule(rule *resolver.FieldOneofRule) *plugin.FieldOneofRule {
+func (e *encoder) toFieldOneofRule(field *resolver.Field, rule *resolver.FieldOneofRule) *plugin.FieldOneofRule {
 	if rule == nil {
 		return nil
 	}
 	ret := &plugin.FieldOneofRule{Default: rule.Default}
 	ret.If = e.toCELValue(rule.If)
 	ret.By = e.toCELValue(rule.By)
-	ret.DefSet = e.toVariableDefinitionSet(rule.DefSet)
+	fqdn := strings.Join([]string{field.FQDN(), "oneof"}, "/")
+	ret.DefSet = e.toVariableDefinitionSet(fqdn, rule.DefSet)
 	return ret
 }
 
@@ -779,7 +780,7 @@ func (e *encoder) toTypeKind(kind types.Kind) plugin.TypeKind {
 	return plugin.TypeKind_UNKNOWN_TYPE
 }
 
-func (e *encoder) toMessageDependencyGraph(graph *resolver.MessageDependencyGraph) *plugin.MessageDependencyGraph {
+func (e *encoder) toMessageDependencyGraph(fqdn string, graph *resolver.MessageDependencyGraph) *plugin.MessageDependencyGraph {
 	if graph == nil {
 		return nil
 	}
@@ -809,14 +810,14 @@ func (e *encoder) toMessageDependencyGraphNode(n *resolver.MessageDependencyGrap
 	return &plugin.MessageDependencyGraphNode{
 		Children:             e.toMessageDependencyGraphNodes(n.Children),
 		BaseMessageId:        e.toMessage(n.BaseMessage).GetId(),
-		VariableDefinitionId: e.toVariableDefinition(n.VariableDefinition).GetId(),
+		VariableDefinitionId: e.toVariableDefinition(n.BaseMessage.FQDN(), n.VariableDefinition).GetId(),
 	}
 }
 
-func (e *encoder) toVariableDefinitions(defs []*resolver.VariableDefinition) []*plugin.VariableDefinition {
+func (e *encoder) toVariableDefinitions(fqdn string, defs []*resolver.VariableDefinition) []*plugin.VariableDefinition {
 	ret := make([]*plugin.VariableDefinition, 0, len(defs))
 	for _, def := range defs {
-		d := e.toVariableDefinition(def)
+		d := e.toVariableDefinition(fqdn, def)
 		if d == nil {
 			continue
 		}
@@ -825,10 +826,10 @@ func (e *encoder) toVariableDefinitions(defs []*resolver.VariableDefinition) []*
 	return ret
 }
 
-func (e *encoder) toVariableDefinitionGroups(groups []resolver.VariableDefinitionGroup) []*plugin.VariableDefinitionGroup {
+func (e *encoder) toVariableDefinitionGroups(fqdn string, groups []resolver.VariableDefinitionGroup) []*plugin.VariableDefinitionGroup {
 	ret := make([]*plugin.VariableDefinitionGroup, 0, len(groups))
 	for _, group := range groups {
-		g := e.toVariableDefinitionGroup(group)
+		g := e.toVariableDefinitionGroup(fqdn, group)
 		if g == nil {
 			continue
 		}
@@ -837,11 +838,11 @@ func (e *encoder) toVariableDefinitionGroups(groups []resolver.VariableDefinitio
 	return ret
 }
 
-func (e *encoder) toVariableDefinition(def *resolver.VariableDefinition) *plugin.VariableDefinition {
+func (e *encoder) toVariableDefinition(fqdn string, def *resolver.VariableDefinition) *plugin.VariableDefinition {
 	if def == nil {
 		return nil
 	}
-	id := e.toVariableDefinitionID(def)
+	id := e.toVariableDefinitionID(fqdn, def)
 	if def, exists := e.ref.VariableDefinitionMap[id]; exists {
 		return def
 	}
@@ -855,15 +856,15 @@ func (e *encoder) toVariableDefinition(def *resolver.VariableDefinition) *plugin
 	e.ref.VariableDefinitionMap[id] = ret
 
 	ret.If = e.toCELValue(def.If)
-	ret.Expr = e.toVariableExpr(def.Expr)
+	ret.Expr = e.toVariableExpr(id, def.Expr)
 	return ret
 }
 
-func (e *encoder) toVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *plugin.VariableDefinitionGroup {
+func (e *encoder) toVariableDefinitionGroup(fqdn string, group resolver.VariableDefinitionGroup) *plugin.VariableDefinitionGroup {
 	if group == nil {
 		return nil
 	}
-	id := e.toVariableDefinitionGroupID(group)
+	id := e.toVariableDefinitionGroupID(fqdn, group)
 	if g, exists := e.ref.VariableDefinitionGroupMap[id]; exists {
 		return g
 	}
@@ -873,30 +874,30 @@ func (e *encoder) toVariableDefinitionGroup(group resolver.VariableDefinitionGro
 	switch group.Type() {
 	case resolver.SequentialVariableDefinitionGroupType:
 		ret.Group = &plugin.VariableDefinitionGroup_Sequential{
-			Sequential: e.toSequentialVariableDefinitionGroup(group.(*resolver.SequentialVariableDefinitionGroup)),
+			Sequential: e.toSequentialVariableDefinitionGroup(fqdn, group.(*resolver.SequentialVariableDefinitionGroup)),
 		}
 	case resolver.ConcurrentVariableDefinitionGroupType:
 		ret.Group = &plugin.VariableDefinitionGroup_Concurrent{
-			Concurrent: e.toConcurrentVariableDefinitionGroup(group.(*resolver.ConcurrentVariableDefinitionGroup)),
+			Concurrent: e.toConcurrentVariableDefinitionGroup(fqdn, group.(*resolver.ConcurrentVariableDefinitionGroup)),
 		}
 	}
 	return ret
 }
 
-func (e *encoder) toSequentialVariableDefinitionGroup(g *resolver.SequentialVariableDefinitionGroup) *plugin.SequentialVariableDefinitionGroup {
+func (e *encoder) toSequentialVariableDefinitionGroup(fqdn string, g *resolver.SequentialVariableDefinitionGroup) *plugin.SequentialVariableDefinitionGroup {
 	return &plugin.SequentialVariableDefinitionGroup{
-		Start: e.toVariableDefinitionGroup(g.Start).GetId(),
-		End:   e.toVariableDefinition(g.End).GetId(),
+		Start: e.toVariableDefinitionGroup(fqdn, g.Start).GetId(),
+		End:   e.toVariableDefinition(fqdn, g.End).GetId(),
 	}
 }
 
-func (e *encoder) toConcurrentVariableDefinitionGroup(g *resolver.ConcurrentVariableDefinitionGroup) *plugin.ConcurrentVariableDefinitionGroup {
+func (e *encoder) toConcurrentVariableDefinitionGroup(fqdn string, g *resolver.ConcurrentVariableDefinitionGroup) *plugin.ConcurrentVariableDefinitionGroup {
 	ret := &plugin.ConcurrentVariableDefinitionGroup{}
 
-	for _, group := range e.toVariableDefinitionGroups(g.Starts) {
+	for _, group := range e.toVariableDefinitionGroups(fqdn, g.Starts) {
 		ret.Starts = append(ret.Starts, group.GetId())
 	}
-	ret.End = e.toVariableDefinition(g.End).GetId()
+	ret.End = e.toVariableDefinition(fqdn, g.End).GetId()
 	return ret
 }
 
@@ -918,7 +919,7 @@ func (e *encoder) toCELValue(v *resolver.CELValue) *plugin.CELValue {
 	}
 }
 
-func (e *encoder) toVariableExpr(expr *resolver.VariableExpr) *plugin.VariableExpr {
+func (e *encoder) toVariableExpr(fqdn string, expr *resolver.VariableExpr) *plugin.VariableExpr {
 	if expr == nil {
 		return nil
 	}
@@ -932,11 +933,11 @@ func (e *encoder) toVariableExpr(expr *resolver.VariableExpr) *plugin.VariableEx
 		}
 	case expr.Map != nil:
 		ret.Expr = &plugin.VariableExpr_Map{
-			Map: e.toMapExpr(expr.Map),
+			Map: e.toMapExpr(fqdn, expr.Map),
 		}
 	case expr.Call != nil:
 		ret.Expr = &plugin.VariableExpr_Call{
-			Call: e.toCallExpr(expr.Call),
+			Call: e.toCallExpr(fqdn, expr.Call),
 		}
 	case expr.Message != nil:
 		ret.Expr = &plugin.VariableExpr_Message{
@@ -948,29 +949,29 @@ func (e *encoder) toVariableExpr(expr *resolver.VariableExpr) *plugin.VariableEx
 		}
 	case expr.Validation != nil:
 		ret.Expr = &plugin.VariableExpr_Validation{
-			Validation: e.toValidationExpr(expr.Validation),
+			Validation: e.toValidationExpr(fqdn, expr.Validation),
 		}
 	}
 	return ret
 }
 
-func (e *encoder) toMapExpr(expr *resolver.MapExpr) *plugin.MapExpr {
+func (e *encoder) toMapExpr(fqdn string, expr *resolver.MapExpr) *plugin.MapExpr {
 	if expr == nil {
 		return nil
 	}
 	return &plugin.MapExpr{
-		Iterator: e.toIterator(expr.Iterator),
+		Iterator: e.toIterator(fqdn, expr.Iterator),
 		Expr:     e.toMapIteratorExpr(expr.Expr),
 	}
 }
 
-func (e *encoder) toIterator(iter *resolver.Iterator) *plugin.Iterator {
+func (e *encoder) toIterator(fqdn string, iter *resolver.Iterator) *plugin.Iterator {
 	if iter == nil {
 		return nil
 	}
 	return &plugin.Iterator{
 		Name:     iter.Name,
-		SourceId: e.toVariableDefinitionID(iter.Source),
+		SourceId: e.toVariableDefinition(fqdn, iter.Source).Id,
 	}
 }
 
@@ -998,7 +999,7 @@ func (e *encoder) toMapIteratorExpr(expr *resolver.MapIteratorExpr) *plugin.MapI
 	return ret
 }
 
-func (e *encoder) toCallExpr(expr *resolver.CallExpr) *plugin.CallExpr {
+func (e *encoder) toCallExpr(fqdn string, expr *resolver.CallExpr) *plugin.CallExpr {
 	if expr == nil {
 		return nil
 	}
@@ -1011,9 +1012,9 @@ func (e *encoder) toCallExpr(expr *resolver.CallExpr) *plugin.CallExpr {
 		Request:  e.toRequest(expr.Request),
 		Timeout:  timeout,
 		Retry:    e.toRetryPolicy(expr.Retry),
-		Errors:   e.toGRPCErrors(expr.Errors),
+		Errors:   e.toGRPCErrors(fqdn, expr.Errors),
 		Metadata: e.toCELValue(expr.Metadata),
-		Option:   e.toGRPCCallOption(expr.Option),
+		Option:   e.toGRPCCallOption(fqdn, expr.Option),
 	}
 }
 
@@ -1118,24 +1119,24 @@ func (e *encoder) toEnumExpr(expr *resolver.EnumExpr) *plugin.EnumExpr {
 	}
 }
 
-func (e *encoder) toValidationExpr(expr *resolver.ValidationExpr) *plugin.ValidationExpr {
+func (e *encoder) toValidationExpr(fqdn string, expr *resolver.ValidationExpr) *plugin.ValidationExpr {
 	if expr == nil {
 		return nil
 	}
 	return &plugin.ValidationExpr{
-		Error: e.toGRPCError(expr.Error),
+		Error: e.toGRPCError(fmt.Sprintf("%s/err", fqdn), expr.Error),
 	}
 }
 
-func (e *encoder) toGRPCErrors(grpcErrs []*resolver.GRPCError) []*plugin.GRPCError {
+func (e *encoder) toGRPCErrors(fqdn string, grpcErrs []*resolver.GRPCError) []*plugin.GRPCError {
 	ret := make([]*plugin.GRPCError, 0, len(grpcErrs))
-	for _, grpcErr := range grpcErrs {
-		ret = append(ret, e.toGRPCError(grpcErr))
+	for idx, grpcErr := range grpcErrs {
+		ret = append(ret, e.toGRPCError(fmt.Sprintf("%s/err%d", fqdn, idx), grpcErr))
 	}
 	return ret
 }
 
-func (e *encoder) toGRPCError(err *resolver.GRPCError) *plugin.GRPCError {
+func (e *encoder) toGRPCError(fqdn string, err *resolver.GRPCError) *plugin.GRPCError {
 	if err == nil {
 		return nil
 	}
@@ -1143,32 +1144,33 @@ func (e *encoder) toGRPCError(err *resolver.GRPCError) *plugin.GRPCError {
 		Code:              err.Code,
 		If:                e.toCELValue(err.If),
 		Message:           e.toCELValue(err.Message),
-		Details:           e.toGRPCErrorDetails(err.Details),
+		Details:           e.toGRPCErrorDetails(fqdn, err.Details),
 		Ignore:            err.Ignore,
 		IgnoreAndResponse: e.toCELValue(err.IgnoreAndResponse),
+		LogLevel:          int32(err.LogLevel),
 	}
 }
 
-func (e *encoder) toGRPCErrorDetails(details []*resolver.GRPCErrorDetail) []*plugin.GRPCErrorDetail {
+func (e *encoder) toGRPCErrorDetails(fqdn string, details []*resolver.GRPCErrorDetail) []*plugin.GRPCErrorDetail {
 	ret := make([]*plugin.GRPCErrorDetail, 0, len(details))
-	for _, detail := range details {
-		ret = append(ret, e.toGRPCErrorDetail(detail))
+	for idx, detail := range details {
+		ret = append(ret, e.toGRPCErrorDetail(fmt.Sprintf("%s/errdetail%d", fqdn, idx), detail))
 	}
 	return ret
 }
 
-func (e *encoder) toGRPCErrorDetail(detail *resolver.GRPCErrorDetail) *plugin.GRPCErrorDetail {
+func (e *encoder) toGRPCErrorDetail(fqdn string, detail *resolver.GRPCErrorDetail) *plugin.GRPCErrorDetail {
 	if detail == nil {
 		return nil
 	}
 	ret := &plugin.GRPCErrorDetail{}
-	ret.DefSet = e.toVariableDefinitionSet(detail.DefSet)
+	ret.DefSet = e.toVariableDefinitionSet(fqdn, detail.DefSet)
 	ret.If = e.toCELValue(detail.If)
 	ret.By = e.toCELValues(detail.By)
 	ret.PreconditionFailures = e.toPreconditionFailures(detail.PreconditionFailures)
 	ret.BadRequests = e.toBadRequests(detail.BadRequests)
 	ret.LocalizedMessages = e.toLocalizedMessages(detail.LocalizedMessages)
-	ret.Messages = e.toVariableDefinitionSet(detail.Messages)
+	ret.Messages = e.toVariableDefinitionSet(fmt.Sprintf("%s/msg", fqdn), detail.Messages)
 	return ret
 }
 
@@ -1261,7 +1263,7 @@ func (e *encoder) toLocalizedMessage(msg *resolver.LocalizedMessage) *plugin.Loc
 	}
 }
 
-func (e *encoder) toGRPCCallOption(v *resolver.GRPCCallOption) *plugin.GRPCCallOption {
+func (e *encoder) toGRPCCallOption(fqdn string, v *resolver.GRPCCallOption) *plugin.GRPCCallOption {
 	if v == nil {
 		return nil
 	}
@@ -1273,11 +1275,11 @@ func (e *encoder) toGRPCCallOption(v *resolver.GRPCCallOption) *plugin.GRPCCallO
 		WaitForReady:       v.WaitForReady,
 	}
 	if v.Header != nil {
-		id := e.toVariableDefinitionID(v.Header)
+		id := e.toVariableDefinition(fqdn, v.Header).Id
 		ret.HeaderId = &id
 	}
 	if v.Trailer != nil {
-		id := e.toVariableDefinitionID(v.Trailer)
+		id := e.toVariableDefinition(fqdn, v.Trailer).Id
 		ret.TrailerId = &id
 	}
 	return ret
@@ -1357,20 +1359,20 @@ func (e *encoder) toDependencyGraphID(graph *resolver.MessageDependencyGraph) st
 	return strings.Join(roots, ":")
 }
 
-func (e *encoder) toVariableDefinitionID(def *resolver.VariableDefinition) string {
+func (e *encoder) toVariableDefinitionID(fqdn string, def *resolver.VariableDefinition) string {
 	if def == nil {
 		return ""
 	}
-	return def.Name
+	return fqdn + "/" + def.Name
 }
 
-func (e *encoder) toVariableDefinitionGroupID(group resolver.VariableDefinitionGroup) string {
+func (e *encoder) toVariableDefinitionGroupID(fqdn string, group resolver.VariableDefinitionGroup) string {
 	if group == nil {
 		return ""
 	}
 	var defIDs []string
 	for _, def := range group.VariableDefinitions() {
-		defIDs = append(defIDs, e.toVariableDefinitionID(def))
+		defIDs = append(defIDs, e.toVariableDefinitionID(fqdn, def))
 	}
 	return fmt.Sprintf("%s/%s", group.Type(), strings.Join(defIDs, ":"))
 }

@@ -418,6 +418,7 @@ message GRPCError {
   repeated GRPCErrorDetail details = 5;
   bool ignore = 6;
   CELValue ignore_and_response = 7;
+  int32 log_level = 8;
 }
 
 message GRPCErrorDetail {
