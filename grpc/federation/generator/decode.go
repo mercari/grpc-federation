@@ -11,13 +11,6 @@ import (
 	"github.com/mercari/grpc-federation/types"
 )
 
-type CodeGeneratorRequest struct {
-	ProtoPath           string
-	OutDir              string
-	Files               []*plugin.ProtoCodeGeneratorResponse_File
-	GRPCFederationFiles []*resolver.File
-}
-
 func ToCodeGeneratorRequest(r io.Reader) (*CodeGeneratorRequest, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
@@ -72,9 +65,30 @@ func (d *decoder) toCodeGeneratorRequest(req *plugin.CodeGeneratorRequest) (*Cod
 		return nil, err
 	}
 	return &CodeGeneratorRequest{
-		Files:               req.GetFiles(),
-		GRPCFederationFiles: grpcFederationFiles,
+		ProtoPath:            req.GetProtoPath(),
+		OutDir:               req.GetOutDir(),
+		OutputFilePathConfig: d.toOutputFilePathConfig(req.GetOutputFilePathConfig()),
+		Files:                req.GetFiles(),
+		GRPCFederationFiles:  grpcFederationFiles,
 	}, nil
+}
+
+func (d *decoder) toOutputFilePathConfig(cfg *plugin.OutputFilePathConfig) resolver.OutputFilePathConfig {
+	var mode resolver.OutputFilePathMode
+	switch cfg.GetMode() {
+	case plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_IMPORT:
+		mode = resolver.ImportMode
+	case plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_MODULE_PREFIX:
+		mode = resolver.ModulePrefixMode
+	case plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_SOURCE_RELATIVE:
+		mode = resolver.SourceRelativeMode
+	}
+	return resolver.OutputFilePathConfig{
+		Mode:        mode,
+		Prefix:      cfg.GetPrefix(),
+		FilePath:    cfg.GetFilePath(),
+		ImportPaths: cfg.GetImportPaths(),
+	}
 }
 
 func (d *decoder) toFiles(ids []string) ([]*resolver.File, error) {

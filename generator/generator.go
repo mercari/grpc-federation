@@ -181,9 +181,11 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 		}
 		results = append(results, result)
 	}
-	if err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
+	pluginResp, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption)
+	if err != nil {
 		return err
 	}
+	g.buildCacheMap[path].Responses = append(g.buildCacheMap[path].Responses, pluginResp)
 
 	if g.postProcessHandler != nil {
 		if err := g.postProcessHandler(ctx, path, results); err != nil {
@@ -349,7 +351,8 @@ func (g *Generator) setWatcher(w *Watcher) error {
 			results = append(results, result)
 		}
 		results = append(results, g.otherResults(path)...)
-		if err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
+		// TODO: Make it possible to pass the results of the code generation plugin even in watch mode.
+		if _, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
 			log.Printf("failed to run code generator plugin: %+v", err)
 		}
 		if g.postProcessHandler != nil {
@@ -646,26 +649,19 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 		fmt.Fprint(os.Stderr, validator.Format(outs))
 	}
 
-	var outDir string
-	if len(result.Files) != 0 {
-		outPath, err := outputPathResolver.OutputPath(result.Files[0])
-		if err != nil {
-			return nil, err
-		}
-		outDir = filepath.Dir(outPath)
-	}
-	if err := evalAllCodeGenerationPlugin(ctx, []*ProtoFileResult{
+	pluginResp, err := evalAllCodeGenerationPlugin(ctx, []*ProtoFileResult{
 		{
 			Type:            ProtocAction,
 			ProtoPath:       "",
-			Out:             outDir,
 			FederationFiles: result.Files,
 		},
-	}, opt); err != nil {
+	}, opt)
+	if err != nil {
 		return nil, err
 	}
 
 	var resp pluginpb.CodeGeneratorResponse
+	resp.File = append(resp.File, pluginResp.File...)
 	resp.SupportedFeatures = proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL /*| pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS*/))
 	for _, file := range result.Files {
 		out, err := NewCodeGenerator().Generate(file)
@@ -684,61 +680,62 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	return &resp, nil
 }
 
-func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult, opt *CodeGeneratorOption) error {
+func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult, opt *CodeGeneratorOption) (*pluginpb.CodeGeneratorResponse, error) {
 	if len(results) == 0 {
-		return nil
+		return &pluginpb.CodeGeneratorResponse{}, nil
 	}
 	if opt == nil || len(opt.Plugins) == 0 {
-		return nil
+		return &pluginpb.CodeGeneratorResponse{}, nil
 	}
+	var resp pluginpb.CodeGeneratorResponse
 	for _, result := range results {
 		pluginFiles := make([]*plugin.ProtoCodeGeneratorResponse_File, 0, len(result.Files))
 		for _, file := range result.Files {
 			fileBytes, err := proto.Marshal(file)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			var pluginFile plugin.ProtoCodeGeneratorResponse_File
 			if err := proto.Unmarshal(fileBytes, &pluginFile); err != nil {
-				return err
+				return nil, err
 			}
 			pluginFiles = append(pluginFiles, &pluginFile)
 		}
 		genReq := generator.CreateCodeGeneratorRequest(&generator.CodeGeneratorRequestConfig{
-			Type:                generator.ActionType(result.Type),
-			ProtoPath:           result.ProtoPath,
-			OutDir:              result.Out,
-			Files:               pluginFiles,
-			GRPCFederationFiles: result.FederationFiles,
+			Type:                 generator.ActionType(result.Type),
+			ProtoPath:            result.ProtoPath,
+			Files:                pluginFiles,
+			GRPCFederationFiles:  result.FederationFiles,
+			OutputFilePathConfig: opt.Path,
 		})
 		encodedGenReq, err := proto.Marshal(genReq)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		genReqReader := bytes.NewBuffer(encodedGenReq)
 		for _, plugin := range opt.Plugins {
 			wasmFile, err := os.ReadFile(plugin.Path)
 			if err != nil {
-				return fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", plugin.Path, err)
+				return nil, fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", plugin.Path, err)
 			}
 			if plugin.Sha256 != "" {
 				hash := sha256.Sum256(wasmFile)
 				gotHash := hex.EncodeToString(hash[:])
 				if plugin.Sha256 != gotHash {
-					return fmt.Errorf(
+					return nil, fmt.Errorf(
 						`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
 						plugin.Sha256,
 						gotHash,
 					)
 				}
 			}
-			if err := evalCodeGeneratorPlugin(ctx, wasmFile, genReqReader); err != nil {
-				return err
+			pluginRes, err := evalCodeGeneratorPlugin(ctx, wasmFile, bytes.NewBuffer(encodedGenReq))
+			if err != nil {
+				return nil, err
 			}
-			genReqReader.Reset()
+			resp.File = append(resp.File, pluginRes.File...)
 		}
 	}
-	return nil
+	return &resp, nil
 }
 
 type CodeGeneratorOption struct {

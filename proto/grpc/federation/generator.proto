@@ -54,10 +54,25 @@ message ProtoCodeGeneratorResponse {
 message CodeGeneratorRequest {
   ActionType type = 1;
   string proto_path = 2;
-  string out_dir = 3;
+  string out_dir = 3 [deprecated = true];
   repeated ProtoCodeGeneratorResponse.File files = 4;
   repeated string grpc_federation_file_ids = 5;
   Reference reference = 6;
+  OutputFilePathConfig output_file_path_config = 7;
+}
+
+message OutputFilePathConfig {
+  OutputFilePathMode mode = 1;
+  string prefix = 2;
+  string file_path = 3;
+  repeated string import_paths = 4;
+}
+
+enum OutputFilePathMode {
+  OUTPUT_FILE_PATH_MODE_UNSPECIFIED = 0;
+  OUTPUT_FILE_PATH_MODE_IMPORT = 1;
+  OUTPUT_FILE_PATH_MODE_MODULE_PREFIX = 2;
+  OUTPUT_FILE_PATH_MODE_SOURCE_RELATIVE = 3;
 }
 
 message Reference {

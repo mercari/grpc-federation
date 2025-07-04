@@ -34,38 +34,38 @@ func newEncoder() *encoder {
 	}
 }
 
-type ActionType string
-
-const (
-	KeepAction   ActionType = "keep"
-	CreateAction ActionType = "create"
-	DeleteAction ActionType = "delete"
-	UpdateAction ActionType = "update"
-	ProtocAction ActionType = "protoc"
-)
-
-type CodeGeneratorRequestConfig struct {
-	Type                ActionType
-	ProtoPath           string
-	OutDir              string
-	Files               []*plugin.ProtoCodeGeneratorResponse_File
-	GRPCFederationFiles []*resolver.File
-}
-
 func CreateCodeGeneratorRequest(cfg *CodeGeneratorRequestConfig) *plugin.CodeGeneratorRequest {
 	return newEncoder().toCodeGeneratorRequest(cfg)
 }
 
 func (e *encoder) toCodeGeneratorRequest(cfg *CodeGeneratorRequestConfig) *plugin.CodeGeneratorRequest {
 	ret := &plugin.CodeGeneratorRequest{
-		ProtoPath: cfg.ProtoPath,
-		OutDir:    cfg.OutDir,
-		Reference: e.ref,
+		ProtoPath:            cfg.ProtoPath,
+		Reference:            e.ref,
+		OutputFilePathConfig: e.toOutputFilePathConfig(cfg.OutputFilePathConfig),
 	}
 	for _, file := range e.toFiles(cfg.GRPCFederationFiles) {
 		ret.GrpcFederationFileIds = append(ret.GrpcFederationFileIds, file.GetId())
 	}
 	return ret
+}
+
+func (e *encoder) toOutputFilePathConfig(cfg resolver.OutputFilePathConfig) *plugin.OutputFilePathConfig {
+	var mode plugin.OutputFilePathMode
+	switch cfg.Mode {
+	case resolver.ImportMode:
+		mode = plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_IMPORT
+	case resolver.ModulePrefixMode:
+		mode = plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_MODULE_PREFIX
+	case resolver.SourceRelativeMode:
+		mode = plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_SOURCE_RELATIVE
+	}
+	return &plugin.OutputFilePathConfig{
+		Mode:        mode,
+		Prefix:      cfg.Prefix,
+		FilePath:    cfg.FilePath,
+		ImportPaths: cfg.ImportPaths,
+	}
 }
 
 func (e *encoder) toFile(file *resolver.File) *plugin.File {
