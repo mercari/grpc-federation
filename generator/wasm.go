@@ -8,11 +8,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/pluginpb"
-
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 func evalCodeGeneratorPlugin(ctx context.Context, pluginFile []byte, req io.Reader) (*pluginpb.CodeGeneratorResponse, error) {

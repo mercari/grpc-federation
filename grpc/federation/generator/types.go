@@ -34,6 +34,7 @@ type CodeGeneratorRequest struct {
 }
 
 type (
-	CodeGeneratorResponse      = pluginpb.CodeGeneratorResponse
+	CodeGeneratorResponse = pluginpb.CodeGeneratorResponse
+	//nolint:stylecheck
 	CodeGeneratorResponse_File = pluginpb.CodeGeneratorResponse_File
 )

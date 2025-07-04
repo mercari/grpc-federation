@@ -66,7 +66,6 @@ func (d *decoder) toCodeGeneratorRequest(req *plugin.CodeGeneratorRequest) (*Cod
 	}
 	return &CodeGeneratorRequest{
 		ProtoPath:            req.GetProtoPath(),
-		OutDir:               req.GetOutDir(),
 		OutputFilePathConfig: d.toOutputFilePathConfig(req.GetOutputFilePathConfig()),
 		Files:                req.GetFiles(),
 		GRPCFederationFiles:  grpcFederationFiles,
