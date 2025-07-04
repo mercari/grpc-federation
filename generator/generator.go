@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -181,9 +182,11 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 		}
 		results = append(results, result)
 	}
-	if err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
+	pluginResp, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption)
+	if err != nil {
 		return err
 	}
+	g.buildCacheMap[path].Responses = append(g.buildCacheMap[path].Responses, pluginResp)
 
 	if g.postProcessHandler != nil {
 		if err := g.postProcessHandler(ctx, path, results); err != nil {
@@ -349,7 +352,8 @@ func (g *Generator) setWatcher(w *Watcher) error {
 			results = append(results, result)
 		}
 		results = append(results, g.otherResults(path)...)
-		if err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
+		// TODO: Make it possible to pass the results of the code generation plugin even in watch mode.
+		if _, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
 			log.Printf("failed to run code generator plugin: %+v", err)
 		}
 		if g.postProcessHandler != nil {
@@ -646,26 +650,19 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 		fmt.Fprint(os.Stderr, validator.Format(outs))
 	}
 
-	var outDir string
-	if len(result.Files) != 0 {
-		outPath, err := outputPathResolver.OutputPath(result.Files[0])
-		if err != nil {
-			return nil, err
-		}
-		outDir = filepath.Dir(outPath)
-	}
-	if err := evalAllCodeGenerationPlugin(ctx, []*ProtoFileResult{
+	pluginResp, err := evalAllCodeGenerationPlugin(ctx, []*ProtoFileResult{
 		{
 			Type:            ProtocAction,
 			ProtoPath:       "",
-			Out:             outDir,
 			FederationFiles: result.Files,
 		},
-	}, opt); err != nil {
+	}, opt)
+	if err != nil {
 		return nil, err
 	}
 
 	var resp pluginpb.CodeGeneratorResponse
+	resp.File = append(resp.File, pluginResp.File...)
 	resp.SupportedFeatures = proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL /*| pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS*/))
 	for _, file := range result.Files {
 		out, err := NewCodeGenerator().Generate(file)
@@ -684,59 +681,62 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	return &resp, nil
 }
 
-func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult, opt *CodeGeneratorOption) error {
+func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult, opt *CodeGeneratorOption) (*pluginpb.CodeGeneratorResponse, error) {
 	if len(results) == 0 {
-		return nil
+		return &pluginpb.CodeGeneratorResponse{}, nil
 	}
 	if opt == nil || len(opt.Plugins) == 0 {
-		return nil
+		return &pluginpb.CodeGeneratorResponse{}, nil
 	}
+	var resp pluginpb.CodeGeneratorResponse
 	for _, result := range results {
 		pluginFiles := make([]*plugin.ProtoCodeGeneratorResponse_File, 0, len(result.Files))
 		for _, file := range result.Files {
 			fileBytes, err := proto.Marshal(file)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			var pluginFile plugin.ProtoCodeGeneratorResponse_File
 			if err := proto.Unmarshal(fileBytes, &pluginFile); err != nil {
-				return err
+				return nil, err
 			}
 			pluginFiles = append(pluginFiles, &pluginFile)
 		}
 		genReq := generator.CreateCodeGeneratorRequest(&generator.CodeGeneratorRequestConfig{
-			Type:                generator.ActionType(result.Type),
-			ProtoPath:           result.ProtoPath,
-			OutDir:              result.Out,
-			Files:               pluginFiles,
-			GRPCFederationFiles: result.FederationFiles,
+			Type:                 generator.ActionType(result.Type),
+			ProtoPath:            result.ProtoPath,
+			Files:                pluginFiles,
+			GRPCFederationFiles:  result.FederationFiles,
+			OutputFilePathConfig: opt.Path,
 		})
 		encodedGenReq, err := proto.Marshal(genReq)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		genReqReader := bytes.NewBuffer(encodedGenReq)
 		for _, plugin := range opt.Plugins {
 			wasmFile, err := os.ReadFile(plugin.Path)
 			if err != nil {
-				return fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", plugin.Path, err)
+				return nil, fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", plugin.Path, err)
 			}
-			hash := sha256.Sum256(wasmFile)
-			gotHash := hex.EncodeToString(hash[:])
-			if plugin.Sha256 != gotHash {
-				return fmt.Errorf(
-					`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
-					plugin.Sha256,
-					gotHash,
-				)
+			if plugin.Sha256 != "" {
+				hash := sha256.Sum256(wasmFile)
+				gotHash := hex.EncodeToString(hash[:])
+				if plugin.Sha256 != gotHash {
+					return nil, fmt.Errorf(
+						`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
+						plugin.Sha256,
+						gotHash,
+					)
+				}
 			}
-			if err := evalCodeGeneratorPlugin(ctx, wasmFile, genReqReader); err != nil {
-				return err
+			pluginRes, err := evalCodeGeneratorPlugin(ctx, wasmFile, bytes.NewBuffer(encodedGenReq))
+			if err != nil {
+				return nil, err
 			}
-			genReqReader.Reset()
+			resp.File = append(resp.File, pluginRes.File...)
 		}
 	}
-	return nil
+	return &resp, nil
 }
 
 type CodeGeneratorOption struct {
@@ -812,35 +812,131 @@ func parsePathsOption(opt *CodeGeneratorOption, value string) error {
 	return nil
 }
 
+type pluginURI struct {
+	originalURL string
+	parsedURL   *url.URL
+	hash        string
+}
+
+func parsePluginURI(value string) (*pluginURI, error) {
+	// Find the last colon to separate potential hash
+	lastColonIdx := strings.LastIndex(value, ":")
+	if lastColonIdx == -1 {
+		// No hash provided
+		parsedURL, err := url.Parse(value)
+		if err != nil {
+			return nil, fmt.Errorf("grpc-federation: invalid URI format: %w", err)
+		}
+		return &pluginURI{
+			originalURL: value,
+			parsedURL:   parsedURL,
+			hash:        "",
+		}, nil
+	}
+
+	// Try parsing with potential hash
+	uriPart := value[:lastColonIdx]
+	hashPart := value[lastColonIdx+1:]
+
+	// Validate the URI part
+	parsedURL, err := url.Parse(uriPart)
+	if err != nil {
+		// If parsing fails, maybe the colon is part of the URI (like a port)
+		parsedURL, err = url.Parse(value)
+		if err != nil {
+			return nil, fmt.Errorf("grpc-federation: invalid URI format: %w", err)
+		}
+		return &pluginURI{
+			originalURL: value,
+			parsedURL:   parsedURL,
+			hash:        "",
+		}, nil
+	}
+
+	// Check if hashPart looks like a valid SHA256 hash (64 hex characters)
+	if len(hashPart) == 64 {
+		isValidHash := true
+		for _, r := range hashPart {
+			if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+				isValidHash = false
+				break
+			}
+		}
+		if isValidHash {
+			return &pluginURI{
+				originalURL: uriPart,
+				parsedURL:   parsedURL,
+				hash:        hashPart,
+			}, nil
+		}
+	}
+
+	// Hash part is not valid, treat the whole string as URI
+	parsedURL, err = url.Parse(value)
+	if err != nil {
+		return nil, fmt.Errorf("grpc-federation: invalid URI format: %w", err)
+	}
+	return &pluginURI{
+		originalURL: value,
+		parsedURL:   parsedURL,
+		hash:        "",
+	}, nil
+}
+
 var (
-	schemeToOptionParser = map[string]func(*CodeGeneratorOption, string) error{
-		"file://":  parseFileSchemeOption,
-		"http://":  parseHTTPSchemeOption,
-		"https://": parseHTTPSSchemeOption,
+	schemeToOptionParser = map[string]func(*CodeGeneratorOption, *pluginURI) error{
+		"file":  parseFileSchemeOption,
+		"http":  parseHTTPSchemeOption,
+		"https": parseHTTPSSchemeOption,
 	}
 )
 
 func parsePluginsOption(opt *CodeGeneratorOption, value string) error {
-	for scheme, parser := range schemeToOptionParser {
-		if strings.HasPrefix(value, scheme) {
-			if err := parser(opt, strings.TrimPrefix(value, scheme)); err != nil {
-				return err
-			}
-			return nil
-		}
+	pluginURI, err := parsePluginURI(value)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf(
-		`grpc-federation: location of the plugin file must be specified with the "file://" or "http(s)://" schemes but specified %s`,
-		value,
-	)
+
+	parser, exists := schemeToOptionParser[pluginURI.parsedURL.Scheme]
+	if !exists {
+		return fmt.Errorf(
+			`grpc-federation: location of the plugin file must be specified with the "file://" or "http(s)://" schemes but specified %s`,
+			value,
+		)
+	}
+
+	return parser(opt, pluginURI)
 }
 
-func parseFileSchemeOption(opt *CodeGeneratorOption, value string) error {
-	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+func parseFileSchemeOption(opt *CodeGeneratorOption, pluginURI *pluginURI) error {
+	// For file URLs, we need to handle both file:///path and file://path patterns
+	// file:///path -> Host: "", Path: "/path"
+	// file://path -> Host: "path", Path: ""
+	// file://hostname/path -> Host: "hostname", Path: "/path"
+
+	var path string
+	if pluginURI.parsedURL.Host != "" && pluginURI.parsedURL.Path == "" {
+		// Case: file://path (host part contains the path)
+		path = pluginURI.parsedURL.Host
+	} else if pluginURI.parsedURL.Host == "" && pluginURI.parsedURL.Path != "" {
+		// Case: file:///path (path part contains the path)
+		path = pluginURI.parsedURL.Path
+	} else if pluginURI.parsedURL.Host != "" && pluginURI.parsedURL.Path != "" {
+		// Case: file://hostname/path (UNC path or network path)
+		path = pluginURI.parsedURL.Host + pluginURI.parsedURL.Path
+	} else {
+		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" or "file://path/to/file.wasm"`)
 	}
-	path := parts[0]
+
+	// Check for invalid colon in path (except Windows drive letters)
+	if strings.Contains(path, ":") {
+		// Allow Windows drive letters like /C:/ or C:/
+		if !(len(path) >= 3 && path[1] == ':' && (path[2] == '/' || path[2] == '\\')) &&
+			!(len(path) >= 4 && path[0] == '/' && path[2] == ':' && (path[3] == '/' || path[3] == '\\')) {
+			return fmt.Errorf(`grpc-federation: invalid file path contains colon: %s`, path)
+		}
+	}
+
 	if !filepath.IsAbs(path) {
 		abs, err := filepath.Abs(path)
 		if err != nil {
@@ -848,41 +944,60 @@ func parseFileSchemeOption(opt *CodeGeneratorOption, value string) error {
 		}
 		path = abs
 	}
+
 	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
 		Path:   path,
-		Sha256: parts[1],
+		Sha256: pluginURI.hash,
 	})
 	return nil
 }
 
-func parseHTTPSchemeOption(opt *CodeGeneratorOption, value string) error {
-	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+func parseHTTPSchemeOption(opt *CodeGeneratorOption, pluginURI *pluginURI) error {
+	// Validate that if a hash is provided, it's a valid SHA256 hash
+	if pluginURI.hash != "" && len(pluginURI.hash) != 64 {
+		return fmt.Errorf("grpc-federation: invalid SHA256 hash length: expected 64 characters, got %d", len(pluginURI.hash))
 	}
-	file, err := downloadFile("http://" + parts[0])
+	if pluginURI.hash != "" {
+		for _, r := range pluginURI.hash {
+			if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+				return fmt.Errorf("grpc-federation: invalid SHA256 hash: contains non-hex characters")
+			}
+		}
+	}
+
+	file, err := downloadFile(pluginURI.originalURL)
 	if err != nil {
 		return err
 	}
+
 	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
 		Path:   file.Name(),
-		Sha256: parts[1],
+		Sha256: pluginURI.hash,
 	})
 	return nil
 }
 
-func parseHTTPSSchemeOption(opt *CodeGeneratorOption, value string) error {
-	parts := strings.Split(value, ":")
-	if len(parts) != 2 {
-		return fmt.Errorf(`grpc-federation: plugin option must be specified with "file://path/to/file.wasm:sha256hash" format like "file://plugin.wasm:abcdefg"`)
+func parseHTTPSSchemeOption(opt *CodeGeneratorOption, pluginURI *pluginURI) error {
+	// Validate that if a hash is provided, it's a valid SHA256 hash
+	if pluginURI.hash != "" && len(pluginURI.hash) != 64 {
+		return fmt.Errorf("grpc-federation: invalid SHA256 hash length: expected 64 characters, got %d", len(pluginURI.hash))
 	}
-	file, err := downloadFile("https://" + parts[0])
+	if pluginURI.hash != "" {
+		for _, r := range pluginURI.hash {
+			if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+				return fmt.Errorf("grpc-federation: invalid SHA256 hash: contains non-hex characters")
+			}
+		}
+	}
+
+	file, err := downloadFile(pluginURI.originalURL)
 	if err != nil {
 		return err
 	}
+
 	opt.Plugins = append(opt.Plugins, &WasmPluginOption{
 		Path:   file.Name(),
-		Sha256: parts[1],
+		Sha256: pluginURI.hash,
 	})
 	return nil
 }

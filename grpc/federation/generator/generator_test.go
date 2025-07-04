@@ -42,6 +42,12 @@ func TestRoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			svcToDepNum := make(map[string]int)
+			for _, file := range result.Files {
+				for _, svc := range file.Services {
+					svcToDepNum[svc.Name] = len(svc.ServiceDependencies())
+				}
+			}
 			genReq := generator.CreateCodeGeneratorRequest(&generator.CodeGeneratorRequestConfig{
 				GRPCFederationFiles: result.Files,
 			})
@@ -52,6 +58,15 @@ func TestRoundTrip(t *testing.T) {
 			decoded, err := generator.ToCodeGeneratorRequest(bytes.NewBuffer(genReqBytes))
 			if err != nil {
 				t.Fatal(err)
+			}
+			gotSvcToDepNum := make(map[string]int)
+			for _, file := range decoded.GRPCFederationFiles {
+				for _, svc := range file.Services {
+					gotSvcToDepNum[svc.Name] = len(svc.ServiceDependencies())
+				}
+			}
+			if diff := cmp.Diff(svcToDepNum, gotSvcToDepNum); diff != "" {
+				t.Errorf("(-got, +want)\n%s", diff)
 			}
 			if diff := cmp.Diff(
 				decoded.GRPCFederationFiles,
