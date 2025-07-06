@@ -66,7 +66,7 @@ message GetUserReply {
 message User {
   string id = 1;
   string name = 2;
-  int age = 3;
+  int64 age = 3;
 }
 ```
 
@@ -100,8 +100,8 @@ message Post {
 
 message User {
   string id = 1;
-  string name = 3;
-  int age = 3;  
+  string name = 2;
+  int64 age = 3;  
 }
 ```
 
