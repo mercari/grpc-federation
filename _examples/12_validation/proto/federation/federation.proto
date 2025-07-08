@@ -28,6 +28,13 @@ message GetPostResponse {
         }
       },
       {
+        name: "customMessage"
+        message {
+          name: "CustomMessage",
+          args: {name: "message", by: "'some-message'"}
+        }
+      },
+      {
         validation {
           error {
             code: FAILED_PRECONDITION
@@ -112,7 +119,14 @@ message GetPostResponse {
             if: "condition"
           }
         }
-      }
+      },
+      {
+        name: "customMessageValidation"
+        validation : {error {code : INTERNAL message : "'custom message is empty'" if : "customMessage.message == ''"}}
+      },
+      {validation : {error {code : INTERNAL message : "'item is null'" if : "post.item == null"}}},
+      {validation : {error {code : INTERNAL message : "'item id is zero'" if : "post.item.item_id == 0"}}},
+      {validation : {error {code : INTERNAL message : "'item name is empty'" if : "post.item.name == ''"}}}
     ]
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
@@ -122,6 +136,12 @@ message Post {
   string id = 1 [(grpc.federation.field).by = "'some-id'"];
   string title = 2 [(grpc.federation.field).by = "'some-title'"];
   string content = 3 [(grpc.federation.field).by = "'some-content'"];
+  Item item = 4 [(grpc.federation.field).by = "Item{item_id: 2, name: 'item-name2'}"];
+}
+
+message Item {
+  int32 item_id = 1 [(grpc.federation.field).by = "1"];
+  string name = 2 [(grpc.federation.field).by = "'item-name'"];
 }
 
 message CustomMessage {

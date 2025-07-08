@@ -2757,7 +2757,6 @@ func TestValidation(t *testing.T) {
 										SetEnd(testutil.NewVariableDefinition("_def1")).
 										Build(t),
 								).
-								AddStart(testutil.NewVariableDefinitionGroupByName("post")).
 								SetEnd(testutil.NewVariableDefinition("_def2")).
 								Build(t),
 						).
