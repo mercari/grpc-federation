@@ -186,8 +186,15 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 	if err != nil {
 		return err
 	}
+	if len(pluginResp.File) != 0 {
+		results = append(results, &ProtoFileResult{
+			Type:      KeepAction,
+			ProtoPath: path,
+			Out:       g.cfg.Out,
+			Files:     pluginResp.File,
+		})
+	}
 	g.buildCacheMap[path].Responses = append(g.buildCacheMap[path].Responses, pluginResp)
-
 	if g.postProcessHandler != nil {
 		if err := g.postProcessHandler(ctx, path, results); err != nil {
 			return err
@@ -352,9 +359,17 @@ func (g *Generator) setWatcher(w *Watcher) error {
 			results = append(results, result)
 		}
 		results = append(results, g.otherResults(path)...)
-		// TODO: Make it possible to pass the results of the code generation plugin even in watch mode.
-		if _, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption); err != nil {
+		pluginResp, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption)
+		if err != nil {
 			log.Printf("failed to run code generator plugin: %+v", err)
+		}
+		if len(pluginResp.File) != 0 {
+			results = append(results, &ProtoFileResult{
+				Type:      KeepAction,
+				ProtoPath: path,
+				Out:       g.cfg.Out,
+				Files:     pluginResp.File,
+			})
 		}
 		if g.postProcessHandler != nil {
 			if err := g.postProcessHandler(ctx, path, results); err != nil {
