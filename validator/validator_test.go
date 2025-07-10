@@ -36,6 +36,9 @@ different_message_argument_type.proto:28:14: "id" argument name is declared with
                   ^
 `},
 		{file: "duplicated_variable_name.proto", expected: `
+duplicated_variable_name.proto:26:17: "code" field is required in validation
+26:            error {
+                     ^
 duplicated_variable_name.proto:27:25: found duplicated variable name "a"
 27:              def { name: "a" by: "1" }
                              ^
@@ -182,6 +185,9 @@ invalid_error_variable.proto:21:25: ERROR: <input>:1:1: undeclared reference to 
  | ^
 21:      def { name: "e" by: "error" }
                              ^
+invalid_error_variable.proto:24:15: "code" field is required in validation
+24:          error {
+                   ^
 invalid_error_variable.proto:25:15: ERROR: <input>:1:1: undeclared reference to 'error' (in container 'org.federation')
  | error.code == 0
  | ^
@@ -660,6 +666,9 @@ nested_message_cyclic_dependency.proto:55:19: recursive definition: "C" is own m
 invalid_variable_name.proto:22:15: "_def0" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
 22:        { name: "_def0" by: "0" },
                    ^
+invalid_variable_name.proto:25:17: "code" field is required in validation
+25:            error {
+                     ^
 invalid_variable_name.proto:26:25: "_def1" is invalid name. name should be in the following pattern: ^[a-zA-Z][a-zA-Z0-9_]*$
 26:              def { name: "_def1" by: "1" }
                              ^
@@ -732,6 +741,11 @@ invalid_wrapper_type_conversion.proto:48:3: cannot convert type automatically: f
 48:    google.protobuf.BytesValue bytes_wrapper_value2 = 27 [(grpc.federation.field).by = "bytes('world')"];
        ^
 `},
+		{file: "invalid_validation_code.proto", expected: `
+invalid_validation_code.proto:23:17: "code" field is required in validation
+23:            error {
+                     ^
+`},
 		{file: "invalid_validation_return_type.proto", expected: `
 invalid_validation_return_type.proto:50:17: if must always return a boolean value
 50:              if: "post.id"
@@ -774,9 +788,15 @@ invalid_validation_localized_message.proto:54:26: message must always return a s
                               ^
 `},
 		{file: "invalid_validation_with_ignore.proto", expected: `
+invalid_validation_with_ignore.proto:22:15: "code" field is required in validation
+22:          error {
+                   ^
 invalid_validation_with_ignore.proto:24:19: validation doesn't support "ignore" feature
 24:            ignore: true
                        ^
+invalid_validation_with_ignore.proto:30:15: "code" field is required in validation
+30:          error {
+                   ^
 invalid_validation_with_ignore.proto:32:32: validation doesn't support "ignore_and_response" feature
 32:            ignore_and_response: "'foo'"
                                     ^
