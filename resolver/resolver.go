@@ -2689,6 +2689,14 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr, build
 
 func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.ValidationExpr, builder *source.ValidationExprOptionBuilder) *ValidationExpr {
 	grpcErr := r.resolveGRPCError(ctx, def.GetError(), builder.WithError())
+	if grpcErr.Code == nil {
+		ctx.addError(
+			ErrWithLocation(
+				`"code" field is required in validation`,
+				builder.WithError().Location(),
+			),
+		)
+	}
 	if grpcErr.Ignore {
 		ctx.addError(
 			ErrWithLocation(
