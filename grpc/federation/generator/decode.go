@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"io"
+	"log/slog"
 
 	"google.golang.org/protobuf/proto"
 
@@ -10,13 +11,6 @@ import (
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
 )
-
-type CodeGeneratorRequest struct {
-	ProtoPath           string
-	OutDir              string
-	Files               []*plugin.ProtoCodeGeneratorResponse_File
-	GRPCFederationFiles []*resolver.File
-}
 
 func ToCodeGeneratorRequest(r io.Reader) (*CodeGeneratorRequest, error) {
 	b, err := io.ReadAll(r)
@@ -72,9 +66,29 @@ func (d *decoder) toCodeGeneratorRequest(req *plugin.CodeGeneratorRequest) (*Cod
 		return nil, err
 	}
 	return &CodeGeneratorRequest{
-		Files:               req.GetFiles(),
-		GRPCFederationFiles: grpcFederationFiles,
+		ProtoPath:            req.GetProtoPath(),
+		OutputFilePathConfig: d.toOutputFilePathConfig(req.GetOutputFilePathConfig()),
+		Files:                req.GetFiles(),
+		GRPCFederationFiles:  grpcFederationFiles,
 	}, nil
+}
+
+func (d *decoder) toOutputFilePathConfig(cfg *plugin.OutputFilePathConfig) resolver.OutputFilePathConfig {
+	var mode resolver.OutputFilePathMode
+	switch cfg.GetMode() {
+	case plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_IMPORT:
+		mode = resolver.ImportMode
+	case plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_MODULE_PREFIX:
+		mode = resolver.ModulePrefixMode
+	case plugin.OutputFilePathMode_OUTPUT_FILE_PATH_MODE_SOURCE_RELATIVE:
+		mode = resolver.SourceRelativeMode
+	}
+	return resolver.OutputFilePathConfig{
+		Mode:        mode,
+		Prefix:      cfg.GetPrefix(),
+		FilePath:    cfg.GetFilePath(),
+		ImportPaths: cfg.GetImportPaths(),
+	}
 }
 
 func (d *decoder) toFiles(ids []string) ([]*resolver.File, error) {
@@ -251,6 +265,9 @@ func (d *decoder) toServiceRule(rule *plugin.ServiceRule) (*resolver.ServiceRule
 }
 
 func (d *decoder) toEnv(env *plugin.Env) (*resolver.Env, error) {
+	if env == nil {
+		return nil, nil
+	}
 	vars, err := d.toEnvVars(env.GetVars())
 	if err != nil {
 		return nil, err
@@ -627,7 +644,7 @@ func (d *decoder) toAutoBindField(field *plugin.AutoBindField) (*resolver.AutoBi
 
 func (d *decoder) toVariableDefinitionSet(set *plugin.VariableDefinitionSet) (*resolver.VariableDefinitionSet, error) {
 	if set == nil {
-		return nil, nil
+		return &resolver.VariableDefinitionSet{}, nil
 	}
 	defs, err := d.toVariableDefinitions(set.GetVariableDefinitionIds())
 	if err != nil {
@@ -1102,9 +1119,6 @@ func (d *decoder) toRequest(req *plugin.Request) (*resolver.Request, error) {
 }
 
 func (d *decoder) toArgs(args []*plugin.Argument) ([]*resolver.Argument, error) {
-	if args == nil {
-		return nil, nil
-	}
 	ret := make([]*resolver.Argument, 0, len(args))
 	for _, arg := range args {
 		a, err := d.toArg(arg)
@@ -1259,10 +1273,15 @@ func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) 
 		return nil, nil
 	}
 	ret := &resolver.GRPCError{
-		Code:   e.Code,
-		Ignore: e.GetIgnore(),
+		Code:     e.Code,
+		Ignore:   e.GetIgnore(),
+		LogLevel: slog.Level(e.GetLogLevel()),
 	}
 
+	defSet, err := d.toVariableDefinitionSet(e.GetDefSet())
+	if err != nil {
+		return nil, err
+	}
 	ifValue, err := d.toCELValue(e.GetIf())
 	if err != nil {
 		return nil, err
@@ -1279,6 +1298,7 @@ func (d *decoder) toGRPCError(e *plugin.GRPCError) (*resolver.GRPCError, error) 
 	if err != nil {
 		return nil, err
 	}
+	ret.DefSet = defSet
 	ret.If = ifValue
 	ret.Message = msgValue
 	ret.Details = details
@@ -1707,6 +1727,9 @@ func (d *decoder) toEnumValueAliases(aliases []*plugin.EnumValueAlias) ([]*resol
 }
 
 func (d *decoder) toEnumValueAttributes(attrs []*plugin.EnumValueAttribute) []*resolver.EnumValueAttribute {
+	if len(attrs) == 0 {
+		return nil
+	}
 	ret := make([]*resolver.EnumValueAttribute, 0, len(attrs))
 	for _, attr := range attrs {
 		v := d.toEnumValueAttribute(attr)
