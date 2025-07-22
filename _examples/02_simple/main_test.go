@@ -211,46 +211,51 @@ func TestFederation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if diff := cmp.Diff(res, &federation.GetPostResponse{
-		Post: &federation.Post{
-			Id:      "foo",
-			Title:   "foo",
-			Content: "bar",
-			User: &federation.User{
-				Id:   "user:foo",
-				Name: "name_user:foo",
-				Items: []*federation.Item{
-					{
-						Name:  "item1",
-						Type:  federation.Item_ITEM_TYPE_1,
-						Value: 1,
-						Location: &federation.Item_Location{
-							Addr1: "foo",
-							Addr2: "bar",
-							Addr3: &federation.Item_Location_B{
-								B: &federation.Item_Location_AddrB{
-									Bar: 1,
-								},
+	postMsg := &federation.Post{
+		Id:      "foo",
+		Title:   "foo",
+		Content: "bar",
+		User: &federation.User{
+			Id:   "user:foo",
+			Name: "name_user:foo",
+			Items: []*federation.Item{
+				{
+					Name:  "item1",
+					Type:  federation.Item_ITEM_TYPE_1,
+					Value: 1,
+					Location: &federation.Item_Location{
+						Addr1: "foo",
+						Addr2: "bar",
+						Addr3: &federation.Item_Location_B{
+							B: &federation.Item_Location_AddrB{
+								Bar: 1,
 							},
 						},
 					},
-					{
-						Name:  "item2",
-						Type:  federation.Item_ITEM_TYPE_2,
-						Value: 2,
-					},
 				},
-				Profile: map[string]*anypb.Any{
-					"user": profile,
+				{
+					Name:  "item2",
+					Type:  federation.Item_ITEM_TYPE_2,
+					Value: 2,
 				},
-				Attr: &federation.User_B{
-					B: &federation.User_AttrB{
-						Bar: true,
-					},
+			},
+			Profile: map[string]*anypb.Any{
+				"user": profile,
+			},
+			Attr: &federation.User_B{
+				B: &federation.User_AttrB{
+					Bar: true,
 				},
 			},
 		},
+	}
+	anyMsg, err := anypb.New(postMsg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := cmp.Diff(res, &federation.GetPostResponse{
+		Post:              postMsg,
 		Str:               "hello",
 		Uuid:              "daa4728d-159f-4fc2-82cf-cae915d54e08",
 		Loc:               "Asia/Tokyo",
@@ -334,6 +339,7 @@ func TestFederation(t *testing.T) {
 		Floor:          1,
 		Flatten:        []int64{1, 2, 3},
 		Round:          2,
+		Any:            anyMsg,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},

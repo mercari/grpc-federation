@@ -81,6 +81,7 @@ type FederationService_Federation_A_B_CArgument struct {
 // Federation_GetPostResponseVariable represents variable definitions in "federation.GetPostResponse".
 type FederationService_Federation_GetPostResponseVariable struct {
 	A            *A
+	Any          *anypb.Any
 	Date         *grpcfedcel.Time
 	E            Item_ItemType
 	FixedRand    *grpcfedcel.Rand
@@ -680,6 +681,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		*grpcfed.LocalValue
 		vars struct {
 			A            *A
+			Any          *anypb.Any
 			Date         *grpcfedcel.Time
 			Dup          []int64
 			E            Item_ItemType
@@ -1225,11 +1227,32 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		})
 	}
 
+	/*
+		def {
+		  name: "any"
+		  by: "grpc.federation.any.new(post)"
+		}
+	*/
+	def_any := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*anypb.Any, *localValueType]{
+			Name: `any`,
+			Type: grpcfed.CELObjectType("google.protobuf.Any"),
+			Setter: func(value *localValueType, v *anypb.Any) error {
+				value.vars.Any = v
+				return nil
+			},
+			By:           `grpc.federation.any.new(post)`,
+			ByCacheIndex: 34,
+		})
+	}
+
 	// A tree view of message dependencies is shown below.
 	/*
 	                              post ─┐
 	                                           _def16 ─┐
 	                                                a ─┤
+	                              post ─┐              │
+	                                              any ─┤
 	                                              dup ─┤
 	                                                e ─┤
 	                                          flatten ─┤
@@ -1269,6 +1292,18 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 		if err := def_a(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_post(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_any(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
@@ -1437,6 +1472,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.FederationService_Federation_GetPostResponseVariable.A = value.vars.A
+	req.FederationService_Federation_GetPostResponseVariable.Any = value.vars.Any
 	req.FederationService_Federation_GetPostResponseVariable.Date = value.vars.Date
 	req.FederationService_Federation_GetPostResponseVariable.E = value.vars.E
 	req.FederationService_Federation_GetPostResponseVariable.FixedRand = value.vars.FixedRand
@@ -1468,7 +1504,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `post`,
-		CacheIndex: 34,
+		CacheIndex: 35,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -1481,7 +1517,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'hello'`,
-		CacheIndex: 35,
+		CacheIndex: 36,
 		Setter: func(v string) error {
 			ret.Str = v
 			return nil
@@ -1494,7 +1530,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `uuid.string()`,
-		CacheIndex: 36,
+		CacheIndex: 37,
 		Setter: func(v string) error {
 			ret.Uuid = v
 			return nil
@@ -1507,7 +1543,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `loc.string()`,
-		CacheIndex: 37,
+		CacheIndex: 38,
 		Setter: func(v string) error {
 			ret.Loc = v
 			return nil
@@ -1520,7 +1556,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `value1`,
-		CacheIndex: 38,
+		CacheIndex: 39,
 		Setter: func(v string) error {
 			ret.Value1 = v
 			return nil
@@ -1533,7 +1569,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)`,
-		CacheIndex: 39,
+		CacheIndex: 40,
 		Setter: func(v string) error {
 			ret.ItemTypeName = v
 			return nil
@@ -1546,7 +1582,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)`,
-		CacheIndex: 40,
+		CacheIndex: 41,
 		Setter: func(v string) error {
 			ret.LocationTypeName = v
 			return nil
@@ -1559,7 +1595,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)`,
-		CacheIndex: 41,
+		CacheIndex: 42,
 		Setter: func(v string) error {
 			ret.UserItemTypeName = v
 			return nil
@@ -1572,7 +1608,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.value('ITEM_TYPE_1')`,
-		CacheIndex: 42,
+		CacheIndex: 43,
 		Setter: func(v user.Item_ItemType) error {
 			itemTypeValueEnumValue, err := s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
 			if err != nil {
@@ -1589,7 +1625,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.value('ITEM_TYPE_1')`,
-		CacheIndex: 43,
+		CacheIndex: 44,
 		Setter: func(v user.Item_ItemType) error {
 			itemTypeValueIntValue, err := s.cast_User_Item_ItemType__to__int32(v)
 			if err != nil {
@@ -1606,7 +1642,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.from(1)`,
-		CacheIndex: 44,
+		CacheIndex: 45,
 		Setter: func(v user.Item_ItemType) error {
 			itemTypeValueCastValue, err := s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
 			if err != nil {
@@ -1623,7 +1659,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Item_Location_LocationType]{
 		Value:      value,
 		Expr:       `Item.Location.LocationType.value('LOCATION_TYPE_1')`,
-		CacheIndex: 45,
+		CacheIndex: 46,
 		Setter: func(v Item_Location_LocationType) error {
 			locationTypeValueValue, err := s.cast_Federation_Item_Location_LocationType__to__int32(v)
 			if err != nil {
@@ -1640,7 +1676,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.value('ITEM_TYPE_2')`,
-		CacheIndex: 46,
+		CacheIndex: 47,
 		Setter: func(v user.Item_ItemType) error {
 			userItemTypeValueValue, err := s.cast_User_Item_ItemType__to__int32(v)
 			if err != nil {
@@ -1657,7 +1693,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*A]{
 		Value:      value,
 		Expr:       `a`,
-		CacheIndex: 47,
+		CacheIndex: 48,
 		Setter: func(v *A) error {
 			ret.A = v
 			return nil
@@ -1670,7 +1706,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int32]{
 		Value:      value,
 		Expr:       `sorted_values`,
-		CacheIndex: 48,
+		CacheIndex: 49,
 		Setter: func(v []int32) error {
 			ret.SortedValues = v
 			return nil
@@ -1683,7 +1719,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]*user.Item]{
 		Value:      value,
 		Expr:       `sorted_items`,
-		CacheIndex: 49,
+		CacheIndex: 50,
 		Setter: func(v []*user.Item) error {
 			sortedItemsValue, err := s.cast_repeated_User_Item__to__repeated_Federation_Item(v)
 			if err != nil {
@@ -1700,7 +1736,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[map[int64]string]{
 		Value:      value,
 		Expr:       `map_value`,
-		CacheIndex: 50,
+		CacheIndex: 51,
 		Setter: func(v map[int64]string) error {
 			mapValueValue, err := s.cast_map_int64_string__to__map_int32_string(v)
 			if err != nil {
@@ -1717,7 +1753,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.DoubleValue]{
 		Value:      value,
 		Expr:       `google.protobuf.DoubleValue{value: 1.23}`,
-		CacheIndex: 51,
+		CacheIndex: 52,
 		Setter: func(v *wrapperspb.DoubleValue) error {
 			doubleWrapperValueValue, err := s.cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_DoubleValue(v)
 			if err != nil {
@@ -1734,7 +1770,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.DoubleValue]{
 		Value:      value,
 		Expr:       `google.protobuf.FloatValue{value: 3.45}`,
-		CacheIndex: 52,
+		CacheIndex: 53,
 		Setter: func(v *wrapperspb.DoubleValue) error {
 			floatWrapperValueValue, err := s.cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_FloatValue(v)
 			if err != nil {
@@ -1751,7 +1787,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.Int64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.Int64Value{value: 1}`,
-		CacheIndex: 53,
+		CacheIndex: 54,
 		Setter: func(v *wrapperspb.Int64Value) error {
 			i64WrapperValueValue, err := s.cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int64Value(v)
 			if err != nil {
@@ -1768,7 +1804,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.UInt64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.UInt64Value{value: uint(2)}`,
-		CacheIndex: 54,
+		CacheIndex: 55,
 		Setter: func(v *wrapperspb.UInt64Value) error {
 			u64WrapperValueValue, err := s.cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt64Value(v)
 			if err != nil {
@@ -1785,7 +1821,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.Int64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.Int32Value{value: 3}`,
-		CacheIndex: 55,
+		CacheIndex: 56,
 		Setter: func(v *wrapperspb.Int64Value) error {
 			i32WrapperValueValue, err := s.cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int32Value(v)
 			if err != nil {
@@ -1802,7 +1838,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.UInt64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.UInt32Value{value: uint(4)}`,
-		CacheIndex: 56,
+		CacheIndex: 57,
 		Setter: func(v *wrapperspb.UInt64Value) error {
 			u32WrapperValueValue, err := s.cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt32Value(v)
 			if err != nil {
@@ -1819,7 +1855,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.BoolValue]{
 		Value:      value,
 		Expr:       `google.protobuf.BoolValue{value: true}`,
-		CacheIndex: 57,
+		CacheIndex: 58,
 		Setter: func(v *wrapperspb.BoolValue) error {
 			boolWrapperValueValue, err := s.cast_Google_Protobuf_BoolValue__to__Google_Protobuf_BoolValue(v)
 			if err != nil {
@@ -1836,7 +1872,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.StringValue]{
 		Value:      value,
 		Expr:       `google.protobuf.StringValue{value: 'hello'}`,
-		CacheIndex: 58,
+		CacheIndex: 59,
 		Setter: func(v *wrapperspb.StringValue) error {
 			stringWrapperValueValue, err := s.cast_Google_Protobuf_StringValue__to__Google_Protobuf_StringValue(v)
 			if err != nil {
@@ -1853,7 +1889,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.BytesValue]{
 		Value:      value,
 		Expr:       `google.protobuf.BytesValue{value: bytes('world')}`,
-		CacheIndex: 59,
+		CacheIndex: 60,
 		Setter: func(v *wrapperspb.BytesValue) error {
 			bytesWrapperValueValue, err := s.cast_Google_Protobuf_BytesValue__to__Google_Protobuf_BytesValue(v)
 			if err != nil {
@@ -1870,7 +1906,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'hello\nworld'`,
-		CacheIndex: 60,
+		CacheIndex: 61,
 		Setter: func(v string) error {
 			ret.Hello = v
 			return nil
@@ -1883,7 +1919,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*timestamppb.Timestamp]{
 		Value:      value,
 		Expr:       `null`,
-		CacheIndex: 61,
+		CacheIndex: 62,
 		Setter: func(v *timestamppb.Timestamp) error {
 			ret.NullTimestamp = v
 			return nil
@@ -1896,7 +1932,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*timestamppb.Timestamp]{
 		Value:      value,
 		Expr:       `null_value`,
-		CacheIndex: 62,
+		CacheIndex: 63,
 		Setter: func(v *timestamppb.Timestamp) error {
 			ret.NullTimestamp2 = v
 			return nil
@@ -1909,7 +1945,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*timestamppb.Timestamp]{
 		Value:      value,
 		Expr:       `true ? null : google.protobuf.Timestamp{}`,
-		CacheIndex: 63,
+		CacheIndex: 64,
 		Setter: func(v *timestamppb.Timestamp) error {
 			ret.NullTimestamp3 = v
 			return nil
@@ -1922,7 +1958,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `jp_time.location().string()`,
-		CacheIndex: 64,
+		CacheIndex: 65,
 		Setter: func(v string) error {
 			ret.JpLoc = v
 			return nil
@@ -1935,7 +1971,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `strings_join`,
-		CacheIndex: 65,
+		CacheIndex: 66,
 		Setter: func(v string) error {
 			ret.StringsJoin = v
 			return nil
@@ -1948,7 +1984,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `parse_float`,
-		CacheIndex: 66,
+		CacheIndex: 67,
 		Setter: func(v float64) error {
 			ret.ParseFloat = v
 			return nil
@@ -1961,7 +1997,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `url.userinfo().username()`,
-		CacheIndex: 67,
+		CacheIndex: 68,
 		Setter: func(v string) error {
 			ret.UrlUserName = v
 			return nil
@@ -1974,7 +2010,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Item_ItemType]{
 		Value:      value,
 		Expr:       `e`,
-		CacheIndex: 68,
+		CacheIndex: 69,
 		Setter: func(v Item_ItemType) error {
 			ret.EnumValue = v
 			return nil
@@ -1987,7 +2023,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `Item.ItemType.attr(e, 'en')`,
-		CacheIndex: 69,
+		CacheIndex: 70,
 		Setter: func(v string) error {
 			ret.EnumValueStr = v
 			return nil
@@ -2000,7 +2036,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `sqrt_double`,
-		CacheIndex: 70,
+		CacheIndex: 71,
 		Setter: func(v float64) error {
 			ret.SqrtDouble = v
 			return nil
@@ -2013,7 +2049,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `sqrt_int`,
-		CacheIndex: 71,
+		CacheIndex: 72,
 		Setter: func(v float64) error {
 			ret.SqrtInt = v
 			return nil
@@ -2026,7 +2062,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `pow`,
-		CacheIndex: 72,
+		CacheIndex: 73,
 		Setter: func(v float64) error {
 			ret.Pow = v
 			return nil
@@ -2039,7 +2075,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `floor`,
-		CacheIndex: 73,
+		CacheIndex: 74,
 		Setter: func(v float64) error {
 			ret.Floor = v
 			return nil
@@ -2052,7 +2088,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 		Value:      value,
 		Expr:       `flatten`,
-		CacheIndex: 74,
+		CacheIndex: 75,
 		Setter: func(v []int64) error {
 			ret.Flatten = v
 			return nil
@@ -2065,9 +2101,26 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `round`,
-		CacheIndex: 75,
+		CacheIndex: 76,
 		Setter: func(v float64) error {
 			ret.Round = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "any"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*anypb.Any]{
+		Value:      value,
+		Expr:       `any`,
+		CacheIndex: 77,
+		Setter: func(v *anypb.Any) error {
+			anyValue, err := s.cast_Google_Protobuf_Any__to__Google_Protobuf_Any(v)
+			if err != nil {
+				return err
+			}
+			ret.Any = anyValue
 			return nil
 		},
 	}); err != nil {
@@ -2118,7 +2171,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 76,
+					CacheIndex: 78,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -2134,7 +2187,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[post.GetPostResponse]{
 						Value:      value,
 						If:         `true`,
-						CacheIndex: 77,
+						CacheIndex: 79,
 						BackOff:    b,
 						Body: func() (*post.GetPostResponse, error) {
 							return s.client.Post_PostServiceClient.GetPost(ctx, args)
@@ -2167,7 +2220,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				return nil
 			},
 			By:           `res.post`,
-			ByCacheIndex: 78,
+			ByCacheIndex: 80,
 		})
 	}
 
@@ -2194,7 +2247,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post.Post]{
 					Value:      value,
 					Expr:       `post`,
-					CacheIndex: 79,
+					CacheIndex: 81,
 					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
@@ -2243,7 +2296,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:      value,
 		Expr:       `user`,
-		CacheIndex: 80,
+		CacheIndex: 82,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -2298,7 +2351,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.user_id`,
-					CacheIndex: 81,
+					CacheIndex: 83,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -2310,7 +2363,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 					Value:      value,
 					Expr:       `user.Item.ItemType.value('ITEM_TYPE_1')`,
-					CacheIndex: 82,
+					CacheIndex: 84,
 					Setter: func(v user.Item_ItemType) error {
 						typeValue, err := s.cast_User_Item_ItemType__to__int32(v)
 						if err != nil {
@@ -2336,7 +2389,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 					return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[user.GetUserResponse]{
 						Value:      value,
 						If:         `true`,
-						CacheIndex: 83,
+						CacheIndex: 85,
 						BackOff:    b,
 						Body: func() (*user.GetUserResponse, error) {
 							return s.client.User_UserServiceClient.GetUser(ctx, args)
@@ -2369,7 +2422,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				return nil
 			},
 			By:           `res.user`,
-			ByCacheIndex: 84,
+			ByCacheIndex: 86,
 		})
 	}
 
@@ -2425,6 +2478,22 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 // cast_Federation_Item_Location_LocationType__to__int32 cast from "federation.Item.Location.LocationType" to "int32".
 func (s *FederationService) cast_Federation_Item_Location_LocationType__to__int32(from Item_Location_LocationType) (int32, error) {
 	return int32(from), nil
+}
+
+// cast_Google_Protobuf_Any__to__Google_Protobuf_Any cast from "google.protobuf.Any" to "google.protobuf.Any".
+func (s *FederationService) cast_Google_Protobuf_Any__to__Google_Protobuf_Any(from *anypb.Any) (*anypb.Any, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	typeUrlValue := from.GetTypeUrl()
+	valueValue := from.GetValue()
+
+	ret := &anypb.Any{
+		TypeUrl: typeUrlValue,
+		Value:   valueValue,
+	}
+	return ret, nil
 }
 
 // cast_Google_Protobuf_BoolValue__to__Google_Protobuf_BoolValue cast from "google.protobuf.BoolValue" to "google.protobuf.BoolValue".
@@ -2911,6 +2980,7 @@ func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostRespon
 		slog.Float64("floor", v.GetFloor()),
 		slog.Any("flatten", v.GetFlatten()),
 		slog.Float64("round", v.GetRound()),
+		slog.Any("any", s.logvalue_Google_Protobuf_Any(v.GetAny())),
 	)
 }
 

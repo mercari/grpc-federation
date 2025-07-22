@@ -23,6 +23,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 			NewMathLibrary(),
 			NewTimeLibrary(typeAdapter),
 			NewListLibrary(typeAdapter),
+			NewAnyLibrary(typeAdapter),
 			new(RandLibrary),
 			new(UUIDLibrary),
 			new(EnumLibrary),
