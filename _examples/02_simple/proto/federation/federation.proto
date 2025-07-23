@@ -55,6 +55,7 @@ message GetPostResponse {
     def { name: "flatten" by: "[[1], [2], [3]].flatten()" }
     def { name: "round" by: "grpc.federation.math.round(1.5)" }
     def { name: "dup" by: "[1, 2, 3, 4].filter(dup, dup % 2 == 0)"}
+    def { name: "any" by: "grpc.federation.any.new(post)" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).by = "'hello'"];
@@ -98,6 +99,7 @@ message GetPostResponse {
   double floor = 40 [(grpc.federation.field).by = "floor"];
   repeated int64 flatten = 41 [(grpc.federation.field).by = "flatten"];
   double round = 42 [(grpc.federation.field).by = "round"];
+  google.protobuf.Any any = 43 [(grpc.federation.field).by = "any"];
 }
 
 message A {
