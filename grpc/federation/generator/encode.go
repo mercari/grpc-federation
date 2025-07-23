@@ -28,6 +28,7 @@ func newEncoder() *encoder {
 			MethodMap:                  make(map[string]*plugin.Method),
 			CelPluginMap:               make(map[string]*plugin.CELPlugin),
 			GraphMap:                   make(map[string]*plugin.MessageDependencyGraph),
+			GraphNodeMap:               make(map[string]*plugin.MessageDependencyGraphNode),
 			VariableDefinitionMap:      make(map[string]*plugin.VariableDefinition),
 			VariableDefinitionGroupMap: make(map[string]*plugin.VariableDefinitionGroup),
 		},
@@ -790,7 +791,11 @@ func (e *encoder) toMessageDependencyGraph(graph *resolver.MessageDependencyGrap
 	ret := &plugin.MessageDependencyGraph{Id: id}
 	e.ref.GraphMap[id] = ret
 
-	ret.Roots = e.toMessageDependencyGraphNodes(graph.Roots)
+	rootIDs := make([]string, 0, len(graph.Roots))
+	for _, node := range e.toMessageDependencyGraphNodes(graph.Roots) {
+		rootIDs = append(rootIDs, node.Id)
+	}
+	ret.RootNodeIds = rootIDs
 	return ret
 }
 
@@ -806,11 +811,22 @@ func (e *encoder) toMessageDependencyGraphNode(n *resolver.MessageDependencyGrap
 	if n == nil {
 		return nil
 	}
-	return &plugin.MessageDependencyGraphNode{
-		Children:             e.toMessageDependencyGraphNodes(n.Children),
+	nodeID := e.toVariableDefinitionID(n.BaseMessage.FQDN(), n.VariableDefinition)
+	if node, exists := e.ref.GraphNodeMap[nodeID]; exists {
+		return node
+	}
+	ret := &plugin.MessageDependencyGraphNode{
+		Id:                   nodeID,
 		BaseMessageId:        e.toMessage(n.BaseMessage).GetId(),
 		VariableDefinitionId: e.toVariableDefinition(n.BaseMessage.FQDN(), n.VariableDefinition).GetId(),
 	}
+	e.ref.GraphNodeMap[nodeID] = ret
+	childIDs := make([]string, 0, len(n.Children))
+	for _, node := range e.toMessageDependencyGraphNodes(n.Children) {
+		childIDs = append(childIDs, node.Id)
+	}
+	ret.ChildIds = childIDs
+	return ret
 }
 
 func (e *encoder) toVariableDefinitions(fqdn string, defs []*resolver.VariableDefinition) []*plugin.VariableDefinition {
