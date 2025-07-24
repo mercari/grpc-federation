@@ -1067,6 +1067,8 @@ message MyMessage {
 If this field is omitted, it is always treated as `true` and returns defined error information.
 The return value must always be of type `boolean`.
 
+Note: Any `def` block nested in the top-level error block is evaluated before the top-level `if` statement. This is true even if the `if` statement is not dependent on the defined variables. If you don't want the `def` blocks evaluated, you must add an `if` statement inside those blocks.
+
 ## (grpc.federation.message).def.call.error.code
 
 `code` is a gRPC status code.
