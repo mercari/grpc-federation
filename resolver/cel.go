@@ -3,6 +3,7 @@ package resolver
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/google/cel-go/cel"
 	celtypes "github.com/google/cel-go/common/types"
@@ -195,8 +196,19 @@ func (r *CELRegistry) registerFileDeps(fd *descriptorpb.FileDescriptorProto, fil
 	return nil
 }
 
+var (
+	cachedStandardMessageType   = make(map[string]*Type)
+	cachedStandardMessageTypeMu sync.Mutex
+)
+
 func NewCELStandardLibraryMessageType(pkgName, msgName string) *Type {
-	return &Type{
+	cachedStandardMessageTypeMu.Lock()
+	defer cachedStandardMessageTypeMu.Unlock()
+	fqdn := fmt.Sprintf("%s.%s", pkgName, msgName)
+	if typ, exists := cachedStandardMessageType[fqdn]; exists {
+		return typ
+	}
+	ret := &Type{
 		Kind: types.Message,
 		Message: &Message{
 			File: &File{
@@ -212,6 +224,8 @@ func NewCELStandardLibraryMessageType(pkgName, msgName string) *Type {
 			Name: msgName,
 		},
 	}
+	cachedStandardMessageType[fqdn] = ret
+	return ret
 }
 
 func (plugin *CELPlugin) LibraryName() string {

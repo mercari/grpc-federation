@@ -31,7 +31,7 @@ conflict_service_variable.proto:56:11: ERROR: <input>:1:20: undefined field 'baz
 		{file: "empty_response_field.proto", expected: `
 `},
 		{file: "different_message_argument_type.proto", expected: `
-different_message_argument_type.proto:28:14: "id" argument name is declared with a different type kind. found "string" and "int64" type
+different_message_argument_type.proto:28:14: "id" argument name is declared with a different type. found "string" and "int64" type
 28:          args { name: "id" by: "1" }
                   ^
 `},
@@ -588,32 +588,35 @@ invalid_nested_message_name.proto:47:5: cannot convert type automatically: field
          ^
 `},
 		{file: "invalid_message_argument.proto", expected: `
-invalid_message_argument.proto:52:19: ERROR: <input>:1:11: type 'string' does not support field selection
+invalid_message_argument.proto:44:11: "x" argument name is declared with a different type. found "federation.Post" and "federation.User" type
+44:            { name: "x" by: "User{}" }
+               ^
+invalid_message_argument.proto:72:19: ERROR: <input>:1:11: type 'string' does not support field selection
  | __ARG__.id.invalid
  | ..........^
-52:              { by: "$.id.invalid" },
+72:              { by: "$.id.invalid" },
                        ^
-invalid_message_argument.proto:53:23: inline value is not message type
-53:              { inline: "post.id" },
+invalid_message_argument.proto:73:23: inline value is not message type
+73:              { inline: "post.id" },
                            ^
-invalid_message_argument.proto:54:19: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+invalid_message_argument.proto:74:19: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
  | ....
  | .^
-54:              { by: "...." },
+74:              { by: "...." },
                        ^
-invalid_message_argument.proto:55:23: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
+invalid_message_argument.proto:75:23: ERROR: <input>:1:2: Syntax error: no viable alternative at input '..'
  | ....
  | .^
-55:              { inline: "...." }
+75:              { inline: "...." }
                            ^
-invalid_message_argument.proto:73:36: ERROR: <input>:1:8: undefined field 'user_id'
+invalid_message_argument.proto:93:36: ERROR: <input>:1:8: undefined field 'user_id'
  | __ARG__.user_id
  | .......^
-73:          request { field: "id", by: "$.user_id" }
+93:          request { field: "id", by: "$.user_id" }
                                         ^
-invalid_message_argument.proto:88:14: "x" argument name is declared with a different type kind. found "string" and "bool" type
-88:          args { name: "x" by: "true" }
-                  ^
+invalid_message_argument.proto:108:14: "x" argument name is declared with a different type. found "string" and "bool" type
+108:          args { name: "x" by: "true" }
+                   ^
 `},
 		{file: "invalid_message_field_alias.proto", expected: `
 invalid_message_field_alias.proto:61:3: The types of "org.federation.PostData"'s "title" field ("int64") and "org.post.PostData"'s field ("string") are different. This field cannot be resolved automatically, so you must use the "grpc.federation.field" option to bind it yourself
