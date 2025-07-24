@@ -811,6 +811,7 @@ func (e *encoder) toMessageDependencyGraphNode(n *resolver.MessageDependencyGrap
 	if n == nil {
 		return nil
 	}
+	// Since a node corresponds one-to-one with a variable definition, the variable definition ID can be used as-is.
 	nodeID := e.toVariableDefinitionID(n.BaseMessage.FQDN(), n.VariableDefinition)
 	if node, exists := e.ref.GraphNodeMap[nodeID]; exists {
 		return node
