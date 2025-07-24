@@ -1636,7 +1636,7 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			// assignment of the same type is okay.
 			return
 		}
-		if !r.findMessageAliasName(fromMessage, toMessage) {
+		if !findMessageAliasName(fromMessage, toMessage) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1692,7 +1692,7 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 	}
 }
 
-func (r *Resolver) findMessageAliasName(from, to *Message) bool {
+func findMessageAliasName(from, to *Message) bool {
 	fromName := from.FQDN()
 	toName := to.FQDN()
 
@@ -1800,7 +1800,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			// assignment of the same type is okay.
 			return
 		}
-		if !r.findMessageAliasName(fromMessage, toMessage) {
+		if !findMessageAliasName(fromMessage, toMessage) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -3879,14 +3879,14 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, arg *Message, defs
 					continue
 				}
 				if typ, exists := evaluatedArgNameMap[arg.Name]; exists {
-					if isDifferentType(typ, fieldType) {
+					if isDifferentArgumentType(typ, fieldType) {
 						ctx.addError(
 							ErrWithLocation(
 								fmt.Sprintf(
-									"%q argument name is declared with a different type kind. found %q and %q type",
+									"%q argument name is declared with a different type. found %q and %q type",
 									arg.Name,
-									typ.Kind.ToString(),
-									fieldType.Kind.ToString(),
+									typ.FQDN(),
+									fieldType.FQDN(),
 								),
 								varDef.builder.WithMessage().
 									WithArgs(argIdx).Location(),
@@ -5523,6 +5523,35 @@ func isDifferentType(from, to *Type) bool {
 	}
 	if from.IsNull && (to.Repeated || to.Kind == types.Message || to.Kind == types.Bytes) {
 		return false
+	}
+	return from.Kind != to.Kind
+}
+
+func isDifferentArgumentType(from, to *Type) bool {
+	if from == nil || to == nil {
+		return false
+	}
+	if from.IsNumber() && to.IsNumber() {
+		return false
+	}
+	if from.Kind == types.Enum && to.IsNumber() {
+		// enum to number is OK.
+		return false
+	}
+	if from.IsNull && (to.Repeated || to.Kind == types.Message || to.Kind == types.Bytes) {
+		return false
+	}
+	if from.Kind == types.Message && to.Kind == types.Message {
+		if from.FQDN() == to.FQDN() {
+			return false
+		}
+		if findMessageAliasName(from.Message, to.Message) {
+			return false
+		}
+		if findMessageAliasName(to.Message, from.Message) {
+			return false
+		}
+		return true
 	}
 	return from.Kind != to.Kind
 }

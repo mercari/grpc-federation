@@ -903,32 +903,24 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 			Message: func(ctx context.Context, value *localValueType) (any, error) {
 				args := &FederationService_Org_Federation_MArgument{}
 				// { name: "x", by: "10" }
-				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
 					Value:      value,
 					Expr:       `10`,
 					CacheIndex: 21,
-					Setter: func(v int64) error {
-						xValue, err := s.cast_int64__to__uint64(v)
-						if err != nil {
-							return err
-						}
-						args.X = xValue
+					Setter: func(v uint64) error {
+						args.X = v
 						return nil
 					},
 				}); err != nil {
 					return nil, err
 				}
 				// { name: "y", by: "1" }
-				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 					Value:      value,
 					Expr:       `1`,
 					CacheIndex: 22,
-					Setter: func(v int64) error {
-						yValue, err := s.cast_int64__to__Org_User_Item_ItemType(v)
-						if err != nil {
-							return err
-						}
-						args.Y = yValue
+					Setter: func(v user.Item_ItemType) error {
+						args.Y = v
 						return nil
 					},
 				}); err != nil {

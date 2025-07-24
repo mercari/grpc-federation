@@ -29,8 +29,28 @@ message GetPostResponse {
         args { name: "id", by: "$.id" }
       }
     }
+    def {
+      message {
+        name: "Z"
+        args [
+          { name: "x" by: "Post{}" }
+        ]
+      }
+    }
+    def {
+      message {
+        name: "Z"
+        args [
+          { name: "x" by: "User{}" }
+        ]
+      }
+    }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Z {
+  option (grpc.federation.message) = {};
 }
 
 message Post {
