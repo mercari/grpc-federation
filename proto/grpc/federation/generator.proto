@@ -88,6 +88,7 @@ message Reference {
   map<string, MessageDependencyGraph> graph_map = 10;
   map<string, VariableDefinition> variable_definition_map = 11;
   map<string, VariableDefinitionGroup> variable_definition_group_map = 12;
+  map<string, MessageDependencyGraphNode> graph_node_map = 13;
 }
 
 message File {
@@ -268,13 +269,14 @@ message ConcurrentVariableDefinitionGroup {
 
 message MessageDependencyGraph {
   string id = 1;
-  repeated MessageDependencyGraphNode roots = 2;
+  repeated string root_node_ids = 2;
 }
 
 message MessageDependencyGraphNode {
-  repeated MessageDependencyGraphNode children = 1;
-  string base_message_id = 2;
-  string variable_definition_id = 3;
+  string id = 1;
+  repeated string child_ids = 2;
+  string base_message_id = 3;
+  string variable_definition_id = 4;
 }
 
 message VariableExpr {
