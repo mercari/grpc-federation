@@ -90,11 +90,23 @@ message Post {
           }
         }
       },
-      { name: "post" by: "res.post" autobind: true }
+      { name: "post" by: "res.post" autobind: true },
+      {
+         name: "invalid_res"
+         call {
+           method: "post.PostService/GetPost"
+           request { field: "id" by: "$.id" }
+           error {
+             ignore: true
+           }
+         }
+      },
+      { name: "is_invalid_res" by: "invalid_res == null" }
     ]
   };
   string id = 1;
   string title = 2;
+  bool is_invalid_res = 3 [(grpc.federation.field).by = "is_invalid_res"];
 }
 
 message LocalizedMessage {

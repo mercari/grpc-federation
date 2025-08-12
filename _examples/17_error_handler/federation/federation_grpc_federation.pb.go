@@ -71,6 +71,8 @@ type FederationService_Org_Federation_LocalizedMessageArgument struct {
 // Org_Federation_PostVariable represents variable definitions in "org.federation.Post".
 type FederationService_Org_Federation_PostVariable struct {
 	Id                  string
+	InvalidRes          *post.GetPostResponse
+	IsInvalidRes        bool
 	LocalizedMsg        *LocalizedMessage
 	Post                *post.Post
 	Res                 *post.GetPostResponse
@@ -767,6 +769,8 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		*grpcfed.LocalValue
 		vars struct {
 			Id                  string
+			InvalidRes          *post.GetPostResponse
+			IsInvalidRes        bool
 			LocalizedMsg        *LocalizedMessage
 			Post                *post.Post
 			Res                 *post.GetPostResponse
@@ -1328,17 +1332,167 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		})
 	}
 
-	if err := def_res(ctx); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
+	/*
+		def {
+		  name: "invalid_res"
+		  call {
+		    method: "post.PostService/GetPost"
+		    request { field: "id", by: "$.id" }
+		  }
+		}
+	*/
+	def_invalid_res := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*post.GetPostResponse, *localValueType]{
+			Name: `invalid_res`,
+			Type: grpcfed.CELObjectType("post.GetPostResponse"),
+			Setter: func(value *localValueType, v *post.GetPostResponse) error {
+				value.vars.InvalidRes = v
+				return nil
+			},
+			Message: func(ctx context.Context, value *localValueType) (any, error) {
+				args := &post.GetPostRequest{}
+				// { field: "id", by: "$.id" }
+				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+					Value:      value,
+					Expr:       `$.id`,
+					CacheIndex: 34,
+					Setter: func(v string) error {
+						args.Id = v
+						return nil
+					},
+				}); err != nil {
+					return nil, err
+				}
+				grpcfed.Logger(ctx).DebugContext(ctx, "call post.PostService/GetPost", slog.Any("post.GetPostRequest", s.logvalue_Post_GetPostRequest(args)))
+				ret, err := s.client.Post_PostServiceClient.GetPost(ctx, args)
+				if err != nil {
+					grpcfed.SetGRPCError(ctx, value, err)
+					var (
+						defaultMsg     string
+						defaultCode    grpcfed.Code
+						defaultDetails []grpcfed.ProtoMessage
+					)
+					if stat, exists := grpcfed.GRPCStatusFromError(err); exists {
+						defaultMsg = stat.Message()
+						defaultCode = stat.Code()
+						details := stat.Details()
+						defaultDetails = make([]grpcfed.ProtoMessage, 0, len(details))
+						for _, detail := range details {
+							msg, ok := detail.(grpcfed.ProtoMessage)
+							if ok {
+								defaultDetails = append(defaultDetails, msg)
+							}
+						}
+						_ = defaultMsg
+						_ = defaultCode
+						_ = defaultDetails
+					}
+
+					type localStatusType struct {
+						status   *grpcfed.Status
+						logLevel slog.Level
+					}
+					stat, handleErr := func() (*localStatusType, error) {
+						var stat *grpcfed.Status
+						{
+							if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+								Value:      value,
+								Expr:       `true`,
+								CacheIndex: 35,
+								Body: func(value *localValueType) error {
+									stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+									return nil
+								},
+							}); err != nil {
+								return nil, err
+							}
+							if stat != nil {
+								return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
+							}
+						}
+						return nil, nil
+					}()
+					if handleErr != nil {
+						grpcfed.Logger(ctx).ErrorContext(ctx, "failed to handle error", slog.String("error", handleErr.Error()))
+						// If it fails during error handling, return the original error.
+						if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
+							return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
+						}
+					} else if stat != nil {
+						if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, stat.status.Err()); err != nil {
+							return nil, grpcfed.NewErrorWithLogAttrs(err, stat.logLevel, grpcfed.LogAttrs(ctx))
+						}
+					} else {
+						if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
+							return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
+						}
+					}
+				}
+				return ret, nil
+			},
+		})
 	}
-	if err := def_post(ctx); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
+
+	/*
+		def {
+		  name: "is_invalid_res"
+		  by: "invalid_res == null"
+		}
+	*/
+	def_is_invalid_res := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
+			Name: `is_invalid_res`,
+			Type: grpcfed.CELBoolType,
+			Setter: func(value *localValueType, v bool) error {
+				value.vars.IsInvalidRes = v
+				return nil
+			},
+			By:           `invalid_res == null`,
+			ByCacheIndex: 36,
+		})
+	}
+
+	// A tree view of message dependencies is shown below.
+	/*
+	   invalid_res ─┐
+	                is_invalid_res ─┐
+	           res ─┐               │
+	                          post ─┤
+	*/
+	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_invalid_res(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_is_invalid_res(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_res(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_post(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.FederationService_Org_Federation_PostVariable.Id = value.vars.Id
+	req.FederationService_Org_Federation_PostVariable.InvalidRes = value.vars.InvalidRes
+	req.FederationService_Org_Federation_PostVariable.IsInvalidRes = value.vars.IsInvalidRes
 	req.FederationService_Org_Federation_PostVariable.LocalizedMsg = value.vars.LocalizedMsg
 	req.FederationService_Org_Federation_PostVariable.Post = value.vars.Post
 	req.FederationService_Org_Federation_PostVariable.Res = value.vars.Res
@@ -1350,6 +1504,19 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	// field binding section.
 	ret.Id = value.vars.Post.GetId()       // { name: "post", autobind: true }
 	ret.Title = value.vars.Post.GetTitle() // { name: "post", autobind: true }
+	// (grpc.federation.field).by = "is_invalid_res"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
+		Value:      value,
+		Expr:       `is_invalid_res`,
+		CacheIndex: 37,
+		Setter: func(v bool) error {
+			ret.IsInvalidRes = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.Post", slog.Any("org.federation.Post", s.logvalue_Org_Federation_Post(ret)))
 	return ret, nil
@@ -1384,7 +1551,7 @@ func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *F
 				return nil
 			},
 			By:           `$.error_info.code`,
-			ByCacheIndex: 34,
+			ByCacheIndex: 38,
 		})
 	}
 
@@ -1404,7 +1571,7 @@ func (s *FederationService) resolve_Org_Federation_Z(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int32]{
 		Value:      value,
 		Expr:       `code`,
-		CacheIndex: 35,
+		CacheIndex: 39,
 		Setter: func(v int32) error {
 			ret.Code = v
 			return nil
@@ -1511,6 +1678,7 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.String("title", v.GetTitle()),
+		slog.Bool("is_invalid_res", v.GetIsInvalidRes()),
 	)
 }
 
