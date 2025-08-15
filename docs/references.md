@@ -1064,7 +1064,7 @@ message MyMessage {
 ## (grpc.federation.message).def.call.error.def
 `def` defines a variable scoped to the entire error block.
 
- It is important to note that definitions scoped at the top level of the error block will be evaluated before `error.if`. To enforce conditional evaluation, a `if` field must be included in the `def` block. Alternatively, the defined variable should have the appropriate scope (e.g. defined in `error.details`).
+ It is important to note that definitions scoped at the top level of the error block will be evaluated before `error.if`.
 
 ## (grpc.federation.message).def.call.error.if
 
