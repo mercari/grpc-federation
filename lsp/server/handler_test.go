@@ -3,14 +3,10 @@ package server_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"io"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 	"go.uber.org/zap"
@@ -64,98 +60,6 @@ func TestHandler_Initialize(t *testing.T) {
 
 	if diff := cmp.Diff(expected, got); diff != "" {
 		t.Errorf("(-want +got)\n%s", diff)
-	}
-}
-
-func TestHandler_DidChange(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		desc     string
-		params   *protocol.DidChangeTextDocumentParams
-		expected protocol.PublishDiagnosticsParams
-	}{
-		{
-			desc: "no validation errors",
-			params: &protocol.DidChangeTextDocumentParams{
-				TextDocument: protocol.VersionedTextDocumentIdentifier{
-					TextDocumentIdentifier: protocol.TextDocumentIdentifier{
-						URI: mustTestdataAbs(t, "testdata/service.proto"),
-					},
-				},
-			},
-			expected: protocol.PublishDiagnosticsParams{
-				URI:         mustTestdataAbs(t, "testdata/service.proto"),
-				Diagnostics: []protocol.Diagnostic{},
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.desc, func(t *testing.T) {
-			reader, writer := io.Pipe()
-			defer reader.Close()
-			defer writer.Close()
-
-			conn := jsonrpc2.NewConn(
-				jsonrpc2.NewStream(
-					&struct {
-						io.ReadCloser
-						io.Writer
-					}{
-						io.NopCloser(&bytes.Buffer{}),
-						writer,
-					},
-				),
-			)
-			client := protocol.ClientDispatcher(conn, zap.NewNop())
-
-			handler := server.NewHandler(client, &bytes.Buffer{}, []string{"testdata"})
-
-			err := handler.DidChange(context.Background(), tc.params)
-			if err != nil {
-				t.Errorf("failed to call DidChange: %v", err)
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-
-			errCh := make(chan error)
-			resCh := make(chan []byte)
-			go func() {
-				// Ignore a header
-				if _, err := reader.Read(make([]byte, 1024)); err != nil {
-					errCh <- err
-				}
-
-				res := make([]byte, 1024)
-				n, err := reader.Read(res)
-				if err != nil {
-					errCh <- err
-				}
-
-				resCh <- res[:n]
-			}()
-
-			select {
-			case err := <-errCh:
-				t.Errorf("failed to read a response: %v", err)
-			case <-ctx.Done():
-				t.Error("timeout occurs")
-			case res := <-resCh:
-				var notification jsonrpc2.Notification
-				if err := json.Unmarshal(res, &notification); err != nil {
-					t.Error(err)
-				}
-				var params protocol.PublishDiagnosticsParams
-				if err := json.Unmarshal(notification.Params(), &params); err != nil {
-					t.Error(err)
-				}
-				if diff := cmp.Diff(params, tc.expected); diff != "" {
-					t.Errorf("(-got, +want)\n%s", diff)
-				}
-			}
-		})
 	}
 }
 

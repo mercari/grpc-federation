@@ -8,20 +8,15 @@ import (
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 
-	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/validator"
 )
 
 func (h *Handler) validateText(ctx context.Context, docURI uri.URI) {
-	path, content, err := h.getFile(docURI)
+	file, err := h.getFile(docURI)
 	if err != nil {
 		return
 	}
-	file, err := source.NewFile(path, content)
-	if err != nil {
-		return
-	}
-	errs := h.validator.Validate(ctx, file, validator.ImportPathOption(h.importPaths...))
+	errs := h.validator.Validate(ctx, file.getSource(), validator.ImportPathOption(h.importPaths...))
 	diagnostics := make([]protocol.Diagnostic, 0, len(errs))
 	for _, err := range errs {
 		start := protocol.Position{

@@ -278,6 +278,7 @@ func (o *Oneof) Clone() *Oneof {
 	return &Oneof{
 		Name:   o.Name,
 		Option: o.Option,
+		Field:  o.Field.Clone(),
 	}
 }
 

@@ -13,14 +13,12 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/parser"
 	"go.lsp.dev/protocol"
-
-	"github.com/mercari/grpc-federation/source"
 )
 
 type SemanticTokenProvider struct {
 	logger           *slog.Logger
 	tokenMap         map[ast.Token][]*SemanticToken
-	file             *source.File
+	file             *File
 	tree             *ast.FileNode
 	tokenTypeMap     map[string]uint32
 	tokenModifierMap map[string]uint32
@@ -34,12 +32,12 @@ type SemanticToken struct {
 	Modifiers []string
 }
 
-func NewSemanticTokenProvider(logger *slog.Logger, file *source.File, tokenTypeMap map[string]uint32, tokenModifierMap map[string]uint32) *SemanticTokenProvider {
+func NewSemanticTokenProvider(logger *slog.Logger, file *File, tokenTypeMap map[string]uint32, tokenModifierMap map[string]uint32) *SemanticTokenProvider {
 	return &SemanticTokenProvider{
 		logger:           logger,
 		tokenMap:         make(map[ast.Token][]*SemanticToken),
 		file:             file,
-		tree:             file.AST(),
+		tree:             file.getSource().AST(),
 		tokenTypeMap:     tokenTypeMap,
 		tokenModifierMap: tokenModifierMap,
 	}
@@ -48,10 +46,11 @@ func NewSemanticTokenProvider(logger *slog.Logger, file *source.File, tokenTypeM
 func (p *SemanticTokenProvider) createSemanticToken(tk ast.Token, tokenType string, modifiers []string) *SemanticToken {
 	info := p.tree.TokenInfo(tk)
 	pos := info.Start()
+	text := info.RawText()
 	return &SemanticToken{
 		Line:      uint32(pos.Line),
 		Col:       uint32(pos.Col),
-		Text:      info.RawText(),
+		Text:      text,
 		Type:      tokenType,
 		Modifiers: modifiers,
 	}
@@ -167,7 +166,8 @@ func (p *SemanticTokenProvider) SemanticTokens() *protocol.SemanticTokens {
 					optType = EnumOption
 				}
 				ctx := newSemanticTokenProviderContext(optType)
-				if str, ok := opt.Val.(*ast.StringLiteralNode); ok {
+				switch n := opt.Val.(type) {
+				case *ast.StringLiteralNode:
 					lastPart := opt.Name.Parts[len(opt.Name.Parts)-1]
 					tk := lastPart.Name.Start()
 					p.tokenMap[tk] = append(
@@ -176,13 +176,20 @@ func (p *SemanticTokenProvider) SemanticTokens() *protocol.SemanticTokens {
 					)
 					switch {
 					case strings.HasSuffix(optName, "by"):
-						if err := p.setCELSemanticTokens(str); err != nil {
+						if err := p.setCELSemanticTokens(n); err != nil {
 							p.logger.Error(err.Error())
 						}
 					case strings.HasSuffix(optName, "alias"):
-						p.setAliasToken(ctx, str)
+						p.setAliasToken(ctx, n)
 					}
-				} else {
+				case *ast.CompoundStringLiteralNode:
+					switch {
+					case strings.HasSuffix(optName, "by"):
+						if err := p.setCELSemanticTokens(n); err != nil {
+							p.logger.Error(err.Error())
+						}
+					}
+				default:
 					p.setFederationOptionTokens(ctx, opt.Val)
 				}
 			}
@@ -254,7 +261,26 @@ func (p *SemanticTokenProvider) SemanticTokens() *protocol.SemanticTokens {
 				for _, modifier := range token.Modifiers {
 					mod |= p.tokenModifierMap[modifier]
 				}
-				data = append(data, diffLine, diffCol, uint32(len(token.Text)), tokenNum, mod)
+				data = append(data, diffLine, diffCol, uint32(len([]rune(token.Text))), tokenNum, mod)
+			}
+
+			{
+				comments := info.TrailingComments()
+				for i := 0; i < comments.Len(); i++ {
+					comment := comments.Index(i)
+					pos := comment.Start()
+					for _, text := range strings.Split(comment.RawText(), "\n") {
+						diffLine, diffCol := p.calcLineAndCol(pos, line, col)
+						line = uint32(pos.Line)
+						col = uint32(pos.Col)
+						tokenNum := p.tokenTypeMap[string(protocol.SemanticTokenComment)]
+						data = append(data, diffLine, diffCol, uint32(len(text)), tokenNum, 0)
+						pos = ast.SourcePos{
+							Line: pos.Line + 1,
+							Col:  pos.Col,
+						}
+					}
+				}
 			}
 			return nil
 		},
@@ -284,6 +310,7 @@ const (
 type SemanticTokenProviderContext struct {
 	optionType FederationOptionType
 	message    bool
+	enum       bool
 }
 
 func newSemanticTokenProviderContext(optType FederationOptionType) *SemanticTokenProviderContext {
@@ -296,12 +323,19 @@ func (c *SemanticTokenProviderContext) clone() *SemanticTokenProviderContext {
 	ctx := new(SemanticTokenProviderContext)
 	ctx.optionType = c.optionType
 	ctx.message = c.message
+	ctx.enum = c.enum
 	return ctx
 }
 
 func (c *SemanticTokenProviderContext) withMessage() *SemanticTokenProviderContext {
 	ctx := c.clone()
 	ctx.message = true
+	return ctx
+}
+
+func (c *SemanticTokenProviderContext) withEnum() *SemanticTokenProviderContext {
+	ctx := c.clone()
+	ctx.enum = true
 	return ctx
 }
 
@@ -324,11 +358,19 @@ func (p *SemanticTokenProvider) setFederationOptionTokens(ctx *SemanticTokenProv
 
 			optName := elem.Name.Name.AsIdentifier()
 			switch optName {
+			case "enum":
+				p.setFederationOptionTokens(ctx.withEnum(), elem.Val)
 			case "message":
-				p.setFederationOptionTokens(ctx.withMessage(), elem.Val)
+				if _, ok := elem.Val.(*ast.MessageLiteralNode); ok {
+					p.setFederationOptionTokens(ctx.withMessage(), elem.Val)
+				} else {
+					if err := p.setCELSemanticTokens(elem.Val); err != nil {
+						p.logger.Error(err.Error())
+					}
+				}
 			case "name":
 				p.setNameToken(ctx, elem.Val)
-			case "by", "inline", "src":
+			case "if", "by", "inline", "src", "type", "subject", "description":
 				if err := p.setCELSemanticTokens(elem.Val); err != nil {
 					p.logger.Error(err.Error())
 				}
@@ -336,10 +378,10 @@ func (p *SemanticTokenProvider) setFederationOptionTokens(ctx *SemanticTokenProv
 				p.setAliasToken(ctx, elem.Val)
 			case "method":
 				p.setMethodToken(ctx, elem.Val)
-			case "enum":
-				p.setEnumToken(ctx, elem.Val)
 			case "field":
 				p.setFieldToken(ctx, elem.Val)
+			case "locale":
+				p.setLocaleToken(ctx, elem.Val)
 			default:
 				p.setFederationOptionTokens(ctx, elem.Val)
 			}
@@ -358,7 +400,7 @@ func (p *SemanticTokenProvider) setNameToken(ctx *SemanticTokenProviderContext, 
 	text := info.RawText()
 	name := strings.Trim(text, `"`)
 	tokenType := string(protocol.SemanticTokenVariable)
-	if ctx.message {
+	if ctx.message || ctx.enum {
 		tokenType = string(protocol.SemanticTokenType)
 	}
 	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
@@ -386,6 +428,40 @@ func (p *SemanticTokenProvider) setNameToken(ctx *SemanticTokenProviderContext, 
 		},
 	}...)
 	ctx.message = false
+	ctx.enum = false
+}
+
+func (p *SemanticTokenProvider) setLocaleToken(_ *SemanticTokenProviderContext, val ast.ValueNode) {
+	tk := val.Start()
+	info := p.tree.TokenInfo(tk)
+	pos := info.Start()
+	text := info.RawText()
+	name := strings.Trim(text, `"`)
+	tokenType := string(protocol.SemanticTokenVariable)
+	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col) + 1,
+			Text: name,
+			Type: tokenType,
+			Modifiers: []string{
+				string(protocol.SemanticTokenModifierDefinition),
+				string(protocol.SemanticTokenModifierReadonly),
+			},
+		},
+		{
+			Line: uint32(pos.Line),
+			Col:  uint32(pos.Col + len(text) - 1),
+			Text: `"`,
+			Type: string(protocol.SemanticTokenString),
+		},
+	}...)
 }
 
 func (p *SemanticTokenProvider) setMethodToken(_ *SemanticTokenProviderContext, val ast.ValueNode) {
@@ -406,37 +482,6 @@ func (p *SemanticTokenProvider) setMethodToken(_ *SemanticTokenProviderContext, 
 			Col:  uint32(pos.Col + 1),
 			Text: name,
 			Type: string(protocol.SemanticTokenMethod),
-			Modifiers: []string{
-				string(protocol.SemanticTokenModifierReadonly),
-			},
-		},
-		{
-			Line: uint32(pos.Line),
-			Col:  uint32(pos.Col + len(text) - 1),
-			Text: `"`,
-			Type: string(protocol.SemanticTokenString),
-		},
-	}...)
-}
-
-func (p *SemanticTokenProvider) setEnumToken(_ *SemanticTokenProviderContext, val ast.ValueNode) {
-	tk := val.Start()
-	info := p.tree.TokenInfo(tk)
-	pos := info.Start()
-	text := info.RawText()
-	name := strings.Trim(text, `"`)
-	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
-		{
-			Line: uint32(pos.Line),
-			Col:  uint32(pos.Col),
-			Text: `"`,
-			Type: string(protocol.SemanticTokenString),
-		},
-		{
-			Line: uint32(pos.Line),
-			Col:  uint32(pos.Col + 1),
-			Text: name,
-			Type: string(protocol.SemanticTokenEnumMember),
 			Modifiers: []string{
 				string(protocol.SemanticTokenModifierReadonly),
 			},
@@ -490,34 +535,50 @@ func (p *SemanticTokenProvider) setAliasToken(ctx *SemanticTokenProviderContext,
 	case EnumValueOption:
 		tokenType = string(protocol.SemanticTokenEnumMember)
 	}
-	tk := val.Start()
-	info := p.tree.TokenInfo(tk)
-	pos := info.Start()
-	text := info.RawText()
-	name := strings.Trim(text, `"`)
-	p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
-		{
-			Line: uint32(pos.Line),
-			Col:  uint32(pos.Col),
-			Text: `"`,
-			Type: string(protocol.SemanticTokenString),
-		},
-		{
-			Line: uint32(pos.Line),
-			Col:  uint32(pos.Col + 1),
-			Text: name,
-			Type: tokenType,
-			Modifiers: []string{
-				string(protocol.SemanticTokenModifierReadonly),
+
+	addToken := func(val *ast.StringLiteralNode) {
+		tk := val.Start()
+		info := p.tree.TokenInfo(tk)
+		pos := info.Start()
+		text := info.RawText()
+		name := strings.Trim(text, `"`)
+		p.tokenMap[tk] = append(p.tokenMap[tk], []*SemanticToken{
+			{
+				Line: uint32(pos.Line),
+				Col:  uint32(pos.Col),
+				Text: `"`,
+				Type: string(protocol.SemanticTokenString),
 			},
-		},
-		{
-			Line: uint32(pos.Line),
-			Col:  uint32(pos.Col + len(text) - 1),
-			Text: `"`,
-			Type: string(protocol.SemanticTokenString),
-		},
-	}...)
+			{
+				Line: uint32(pos.Line),
+				Col:  uint32(pos.Col + 1),
+				Text: name,
+				Type: tokenType,
+				Modifiers: []string{
+					string(protocol.SemanticTokenModifierReadonly),
+				},
+			},
+			{
+				Line: uint32(pos.Line),
+				Col:  uint32(pos.Col + len(text) - 1),
+				Text: `"`,
+				Type: string(protocol.SemanticTokenString),
+			},
+		}...)
+	}
+
+	switch n := val.(type) {
+	case *ast.StringLiteralNode:
+		addToken(n)
+	case *ast.ArrayLiteralNode:
+		for _, elem := range n.Elements {
+			val, ok := elem.(*ast.StringLiteralNode)
+			if !ok {
+				continue
+			}
+			addToken(val)
+		}
+	}
 }
 
 func (p *SemanticTokenProvider) setCELSemanticTokens(value ast.ValueNode) error {
@@ -536,14 +597,29 @@ func (p *SemanticTokenProvider) setCELSemanticTokens(value ast.ValueNode) error 
 	default:
 		return fmt.Errorf("unexpected value node type for CEL expression. type is %T", value)
 	}
-	var allTexts []string
+	var (
+		allTexts    []string
+		lineOffsets []LineOffset
+		offset      int
+	)
 	for _, str := range strs {
 		tk := str.Token()
 		info := p.tree.TokenInfo(tk)
+		pos := info.Start()
 		text := info.RawText()
-		allTexts = append(allTexts, strings.Trim(strings.Replace(text, "$", "a", -1), `"`))
+		celText := strings.Trim(strings.Replace(text, "$", "a", -1), `"`)
+		allTexts = append(allTexts, celText)
+
+		celTextLen := len([]rune(celText))
+
+		lineOffsets = append(lineOffsets, LineOffset{
+			OriginalLine: uint32(pos.Line),
+			StartOffset:  offset,
+			EndOffset:    offset + celTextLen,
+		})
+		offset += celTextLen
 	}
-	src := strings.Join(allTexts, "\n")
+	src := strings.Join(allTexts, "")
 	celParser, err := parser.NewParser(parser.EnableOptionalSyntax(true))
 	if err != nil {
 		return fmt.Errorf("failed to create CEL parser: %w", err)
@@ -552,31 +628,24 @@ func (p *SemanticTokenProvider) setCELSemanticTokens(value ast.ValueNode) error 
 	if len(errs.GetErrors()) != 0 {
 		return fmt.Errorf("failed to parse %s: %s", src, errs.ToDisplayString())
 	}
-	provider := newCELSemanticTokenProvider(celAST)
+	provider := newCELSemanticTokenProvider(celAST, lineOffsets, src)
 	lineNumToTokens := provider.SemanticTokens()
 
-	var remainTokens []*SemanticToken
-	for idx, value := range strs {
+	for _, value := range strs {
 		tk := value.Token()
 		info := p.tree.TokenInfo(tk)
 		pos := info.Start()
 		text := info.RawText()
-		tokens := lineNumToTokens[uint32(idx+1)] // line number is 1-based.
+		originalLine := uint32(pos.Line)
+		tokens := lineNumToTokens[originalLine]
+
 		p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
 			Line: uint32(pos.Line),
 			Col:  uint32(pos.Col),
 			Text: `"`,
 			Type: string(protocol.SemanticTokenString),
 		})
-		for _, remainToken := range remainTokens {
-			remainToken.Line = uint32(pos.Line)
-			// skip start quotation character.
-			// TODO: column calculation is not supported when there are multiple remainTokens.
-			remainToken.Col = uint32(pos.Col) + 1
-			p.tokenMap[tk] = append(p.tokenMap[tk], remainToken)
-		}
-		remainTokens = nil
-		lineEndCol := uint32(pos.Col + len(text) - 1)
+		lineEndCol := uint32(pos.Col + len([]rune(text)) - 1)
 		if len(tokens) == 0 {
 			p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
 				Line: uint32(pos.Line),
@@ -584,17 +653,12 @@ func (p *SemanticTokenProvider) setCELSemanticTokens(value ast.ValueNode) error 
 				Text: strings.Trim(text, `"`),
 				Type: string(protocol.SemanticTokenString),
 			})
-		} else {
-			for _, token := range tokens {
-				token.Line = uint32(pos.Line)
-				token.Col += uint32(pos.Col)
-				if token.Col > lineEndCol {
-					// This token should be the first token in the next line.
-					remainTokens = append(remainTokens, token)
-				} else {
-					p.tokenMap[tk] = append(p.tokenMap[tk], token)
-				}
-			}
+			continue
+		}
+
+		for _, token := range tokens {
+			token.Col += uint32(pos.Col)
+			p.tokenMap[tk] = append(p.tokenMap[tk], token)
 		}
 		p.tokenMap[tk] = append(p.tokenMap[tk], &SemanticToken{
 			Line: uint32(pos.Line),
@@ -610,31 +674,152 @@ type CELSemanticTokenProvider struct {
 	lineNumToTokens map[uint32][]*SemanticToken
 	tree            *celast.AST
 	info            *celast.SourceInfo
+	lineOffsets     []LineOffset
+	fullText        string // Complete concatenated string
 }
 
-func newCELSemanticTokenProvider(tree *celast.AST) *CELSemanticTokenProvider {
+type LineOffset struct {
+	OriginalLine uint32
+	StartOffset  int // Character offset (cumulative position)
+	EndOffset    int // Character offset (cumulative position)
+}
+
+func newCELSemanticTokenProvider(tree *celast.AST, lineOffsets []LineOffset, fullText string) *CELSemanticTokenProvider {
 	return &CELSemanticTokenProvider{
 		lineNumToTokens: make(map[uint32][]*SemanticToken),
 		tree:            tree,
 		info:            tree.SourceInfo(),
+		lineOffsets:     lineOffsets,
+		fullText:        fullText,
 	}
 }
 
 func (p *CELSemanticTokenProvider) SemanticTokens() map[uint32][]*SemanticToken {
 	celast.PostOrderVisit(p.tree.Expr(), p)
+
 	for _, tokens := range p.lineNumToTokens {
 		sort.Slice(tokens, func(i, j int) bool {
+			if tokens[i].Col == tokens[j].Col {
+				// For tokens at the same column position, use stable ordering
+				// Use text length as secondary sort key for consistency
+				if len(tokens[i].Text) != len(tokens[j].Text) {
+					return len(tokens[i].Text) < len(tokens[j].Text)
+				}
+				// If same length, use lexicographic ordering for consistency
+				return tokens[i].Text < tokens[j].Text
+			}
 			return tokens[i].Col < tokens[j].Col
 		})
 	}
 	return p.lineNumToTokens
 }
 
+func (p *CELSemanticTokenProvider) mapToOriginalPosition(pos common.Location) (uint32, uint32) {
+	col := pos.Column()
+	if len(p.lineOffsets) == 0 {
+		// CEL parser reports correct field position (2) for SelectKind,
+		// so adding +1 for 1-based conversion should give correct position (3)
+		return uint32(pos.Line()), uint32(col + 1)
+	}
+
+	// Calculate which original line this rune position belongs to and the position within that line
+	for _, lineOffset := range p.lineOffsets {
+		if col >= lineOffset.StartOffset && col < lineOffset.EndOffset {
+			// Calculate column position within this line
+			colFromCurLine := col - lineOffset.StartOffset
+
+			// Return 1-based column position
+			return lineOffset.OriginalLine, uint32(colFromCurLine + 1)
+		}
+	}
+
+	// Default for out-of-range cases
+	return uint32(1), uint32(col + 1)
+}
+
+// addStringTokenWithSplitCheck adds a string token and automatically splits it across line boundaries.
+func (p *CELSemanticTokenProvider) addStringTokenWithSplitCheck(line uint32, col uint32, text string, tokenType string) {
+	if len(p.lineOffsets) == 0 {
+		// Normal processing when LineOffsets are not available
+		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
+			Line: line,
+			Col:  col,
+			Text: text,
+			Type: tokenType,
+		})
+		return
+	}
+
+	textRunes := []rune(text)
+	textLen := len(textRunes)
+
+	// Find LineOffset for current line
+	var curLineOffset *LineOffset
+	for i, lineOffset := range p.lineOffsets {
+		if lineOffset.OriginalLine == line {
+			curLineOffset = &p.lineOffsets[i]
+			break
+		}
+	}
+
+	if curLineOffset == nil {
+		// Normal processing when LineOffset is not found
+		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
+			Line: line,
+			Col:  col,
+			Text: text,
+			Type: tokenType,
+		})
+		return
+	}
+
+	// Calculate actual length of each line from LineOffset
+	actualLineCount := curLineOffset.EndOffset - curLineOffset.StartOffset
+	availableSpace := actualLineCount - int(col) + 1
+
+	if availableSpace <= 0 || textLen <= availableSpace {
+		// When string fits within the line
+		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
+			Line: line,
+			Col:  col,
+			Text: text,
+			Type: tokenType,
+		})
+		return
+	}
+
+	// Split when string exceeds line
+	firstPart := string(textRunes[:availableSpace])
+	secondPart := string(textRunes[availableSpace:])
+
+	// First part to current line
+	p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
+		Line: line,
+		Col:  col,
+		Text: firstPart,
+		Type: tokenType,
+	})
+
+	// Second part to next line
+	for _, nextLineOffset := range p.lineOffsets {
+		if nextLineOffset.OriginalLine > line {
+			p.lineNumToTokens[nextLineOffset.OriginalLine] = append(p.lineNumToTokens[nextLineOffset.OriginalLine], &SemanticToken{
+				Line: nextLineOffset.OriginalLine,
+				Col:  1,
+				Text: secondPart,
+				Type: tokenType,
+			})
+			return
+		}
+	}
+}
+
 func (p *CELSemanticTokenProvider) VisitExpr(expr celast.Expr) {
 	id := expr.ID()
 	start := p.info.GetStartLocation(id)
-	line := uint32(start.Line())
-	col := uint32(start.Column() + 1)
+	originalLine, col := p.mapToOriginalPosition(start)
+	line := originalLine
+
 	switch expr.Kind() {
 	case celast.CallKind:
 		fnName := expr.AsCall().FunctionName()
@@ -645,12 +830,27 @@ func (p *CELSemanticTokenProvider) VisitExpr(expr celast.Expr) {
 			} else {
 				fnName = opName
 			}
-		} else {
-			col -= uint32(len(fnName))
 		}
+		// Don't adjust column for function names to maintain correct ordering
+		// The CEL parser position should be used as-is for consistency with other token types
+
+		// Calculate actual position of function name
+		adjustedCol := col
+		originalFnName := expr.AsCall().FunctionName()
+
+		// Adjust position only for regular function names (not operators or dummy tokens)
+		if !strings.HasPrefix(originalFnName, "_") && fnName != "*" {
+			// CEL parser reports position of '(' for CallKind,
+			// so function name is before it
+			fnNameRuneLen := len([]rune(fnName))
+			if col >= uint32(fnNameRuneLen) {
+				adjustedCol = col - uint32(fnNameRuneLen)
+			}
+		}
+
 		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
 			Line: line,
-			Col:  col,
+			Col:  adjustedCol,
 			Text: fnName,
 			Type: string(protocol.SemanticTokenMethod),
 		})
@@ -677,33 +877,73 @@ func (p *CELSemanticTokenProvider) VisitExpr(expr celast.Expr) {
 		text := fmt.Sprint(lit.Value())
 		if lit.Type() == types.StringType {
 			text = fmt.Sprintf(`'%s'`, text)
+			// Check if string length may exceed line boundaries
+			p.addStringTokenWithSplitCheck(line, col, text, string(protocol.SemanticTokenKeyword))
+		} else {
+			if rng, ok := p.info.GetOffsetRange(id); ok {
+				text := []rune(p.fullText)[rng.Start:rng.Stop]
+				p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
+					Line: line,
+					Col:  col,
+					Text: string(text),
+					Type: string(protocol.SemanticTokenKeyword),
+				})
+			} else {
+				p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
+					Line: line,
+					Col:  col,
+					Text: text,
+					Type: string(protocol.SemanticTokenKeyword),
+				})
+			}
 		}
-		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
-			Line: line,
-			Col:  col,
-			Text: text,
-			Type: string(protocol.SemanticTokenKeyword),
-		})
 	case celast.MapKind:
 		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
 			Line: line,
 			Col:  col,
 		})
 	case celast.SelectKind:
+		// For SelectKind, CEL parser reports position of dot operator,
+		// so actual position of field name needs +1
+		fieldName := expr.AsSelect().FieldName()
 		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
 			Line:      line,
-			Col:       col + 1,
-			Text:      expr.AsSelect().FieldName(),
+			Col:       col + 1, // Position after dot operator
+			Text:      fieldName,
 			Type:      string(protocol.SemanticTokenVariable),
 			Modifiers: []string{string(protocol.SemanticTokenModifierReadonly)},
 		})
 	case celast.StructKind:
+		st := expr.AsStruct()
+		// start is the left brace character's position.
+		// e.g.) typename{field: value}
+		//               ^
+		start := col - uint32(len([]rune(st.TypeName())))
+		if start < 1 {
+			start = 1
+		}
 		p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
 			Line: line,
-			Col:  col,
-			Text: expr.AsStruct().TypeName(),
+			Col:  start,
+			Text: st.TypeName(),
 			Type: string(protocol.SemanticTokenStruct),
 		})
+		for _, field := range st.Fields() {
+			sf := field.AsStructField()
+			id := field.ID()
+			// start is the colon character's position
+			// e.g.) typename{field: value}
+			//                     ^
+			start := p.info.GetStartLocation(id)
+			line, col := p.mapToOriginalPosition(start)
+			colPos := col - uint32(len([]rune(sf.Name())))
+			p.lineNumToTokens[line] = append(p.lineNumToTokens[line], &SemanticToken{
+				Line: line,
+				Col:  colPos,
+				Text: sf.Name(),
+				Type: string(protocol.SemanticTokenVariable),
+			})
+		}
 	default:
 	}
 }
@@ -713,13 +953,9 @@ func (p *CELSemanticTokenProvider) VisitEntryExpr(expr celast.EntryExpr) {
 }
 
 func (h *Handler) semanticTokensFull(params *protocol.SemanticTokensParams) (*protocol.SemanticTokens, error) {
-	path, content, err := h.getFile(params.TextDocument.URI)
+	file, err := h.getFile(params.TextDocument.URI)
 	if err != nil {
 		return nil, err
-	}
-	file, err := source.NewFile(path, content)
-	if err != nil {
-		return nil, nil
 	}
 	return NewSemanticTokenProvider(h.logger, file, h.tokenTypeMap, h.tokenModifierMap).SemanticTokens(), nil
 }

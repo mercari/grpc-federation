@@ -1,0 +1,410 @@
+syntax = "proto3";
+
+package coverage;
+
+import "federation.proto";
+
+option go_package = "example/coverage;coverage";
+option (grpc.federation.file) = {
+  import: ["multiple_import.proto", "another_import.proto"]
+};
+
+service CoverageService {
+  option (grpc.federation.service) = {
+    env {
+      message: "EnvMessage"
+      var [
+        {
+          name: "TEST_VAR"
+          type: STRING
+          option {
+            default: "test_value"
+            alternate: "alt_value"
+            required: true
+            ignored: false
+          }
+        },
+        {
+          name: "ANOTHER_VAR"
+          type: INT64
+          option {
+            required: false
+          }
+        }
+      ]
+    }
+    var [
+      {
+        name: "service_var"
+        if: "true"
+        by: "$.data"
+        validation {
+          if: "validation_needed"
+          message: "Validation error"
+        }
+      },
+      {
+        name: "mapped_var"
+        map {
+          by: "$.items"
+          message {
+            name: "ItemMapper"
+            args [
+              { name: "id", by: "$.item_id" },
+              { name: "value", by: "$.item_value", inline: "inline_data" }
+            ]
+          }
+        }
+      },
+      {
+        name: "enum_mapped_var"
+        enum {
+          name: "StatusMapper"
+          by: "$.status_code"
+        }
+      }
+    ]
+  };
+  
+  rpc GetData(DataRequest) returns (DataResponse) {
+    option (grpc.federation.method) = {
+      timeout: "30s"
+    };
+  };
+
+  rpc GetComplexData(ComplexRequest) returns (ComplexResponse) {
+    option (grpc.federation.method) = {
+      timeout: { seconds: 60 }
+      response: "complex_response_data"
+    };
+  };
+}
+
+message DataRequest {
+  string query = 1 [(grpc.federation.field) = { by: "$.input_query" }];
+  int32 limit = 2;
+}
+
+message ComplexRequest {
+  string filter = 1;
+  repeated string tags = 2;
+}
+
+message ComplexResponse {
+  option (grpc.federation.message) = {
+    def [
+      {
+        name: "retry_call"
+        call {
+          method: "service.RetryService/Process"
+          retry {
+            if: "error.code == 'UNAVAILABLE'"
+            constant {
+              interval: "1s"
+              max_retries: 3
+            }
+          }
+        }
+      },
+      {
+        name: "exponential_retry"
+        call {
+          method: "service.ExponentialService/Process"
+          retry {
+            exponential {
+              initial_interval: "100ms"
+              randomization_factor: 0.5
+              multiplier: 2.0
+              max_interval: "10s"
+              max_retries: 5
+            }
+          }
+        }
+      }
+    ]
+  };
+  string result = 1 [(grpc.federation.field) = { by: "retry_call.result" }];
+}
+
+message DataResponse {
+  option (grpc.federation.message) = {
+    alias: "Response"
+    def [
+      {
+        name: "api_result"
+        call {
+          method: "api.DataService/GetData"
+          timeout: "10s"
+          metadata: "authorization: Bearer token"
+          retry {
+            if: "error.code == 'UNAVAILABLE'"
+          }
+          option {
+            content_subtype: "json"
+            header: "x-request-id: uuid()"
+            trailer: "x-response-time: timestamp()"
+            max_call_recv_msg_size: 1024
+            max_call_send_msg_size: 512
+            static_method: true
+            wait_for_ready: false
+          }
+          request [
+            { field: "query", by: "$.query", if: "$.query != ''" }
+          ]
+          error [
+            {
+              if: "error.code == 'NOT_FOUND'"
+              message: "Data not found"
+              ignore: false
+              ignore_and_response: "empty_response"
+              def [
+                { name: "error_var", by: "error.message" }
+              ]
+              details [
+                {
+                  if: "error.has_details"
+                  by: "error_detail"
+                  def [
+                    { name: "detail_var", by: "detail.info" }
+                  ]
+                  message [
+                    { name: "detail_msg", by: "detail_var" }
+                  ]
+                  precondition_failure [
+                    {
+                      violations [
+                        { type: "field_error", subject: "user_id", description: "Invalid user ID" }
+                      ]
+                    }
+                  ]
+                  bad_request [
+                    {
+                      field_violations [
+                        { field: "email", description: "Invalid email format" }
+                      ]
+                    }
+                  ]
+                  localized_message [
+                    { locale: "en", message: "Error occurred" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  };
+  repeated DataItem items = 1 [(grpc.federation.field) = {
+    by: "api_result.items"
+    oneof {
+      if: "condition"
+      default: "default_value"
+      def [
+        { name: "oneof_var", by: "$.data" }
+      ]
+      by: "oneof_result"
+    }
+  }];
+  
+  User user = 2 [(grpc.federation.field) = {
+    oneof {
+      if: "has_user"
+      by: "user_data"
+    }
+  }];
+}
+
+message DataItem {
+  string id = 1;
+  string value = 2 [(grpc.federation.field).by = "$.item_value"];
+  ItemType type = 3;
+}
+
+enum ItemType {
+  option (grpc.federation.enum) = {
+    alias: "Type"
+  };
+  UNKNOWN = 0 [(grpc.federation.enum_value) = {
+    alias: ["unknown", "default"]
+    noalias: true
+    default: true
+    attr [
+      { name: "display", value: "Unknown Type" },
+      { name: "code", value: "0" },
+      { name: "description", value: "Default unknown type" }
+    ]
+  }];
+  TYPE_A = 1 [(grpc.federation.enum_value) = {
+    alias: "type_a"
+    attr [
+      { name: "category", value: "primary" }
+    ]
+  }];
+  TYPE_B = 2 [(grpc.federation.enum_value) = {
+    alias: ["type_b", "secondary"]
+    noalias: false
+    attr [
+      { name: "category", value: "secondary" },
+      { name: "priority", value: "high" }
+    ]
+  }];
+}
+
+enum ProcessingStatus {
+  option (grpc.federation.enum) = {
+    alias: "Status"
+  };
+  PROCESSING_UNKNOWN = 0;
+  PROCESSING_PENDING = 1 [(grpc.federation.enum_value) = {
+    alias: "pending"
+    default: false
+  }];
+  PROCESSING_ACTIVE = 2 [(grpc.federation.enum_value) = {
+    alias: "active"
+    noalias: true
+    attr [
+      { name: "state", value: "running" }
+    ]
+  }];
+}
+
+message EnvMessage {
+  string name = 1;
+}
+
+message User {
+  option (grpc.federation.message) = {
+    def [
+      {
+        name: "validated_data"
+        validation {
+          name: "user_validator"
+          error [
+            {
+              if: "validation_failed"
+              message: "User validation failed"
+              ignore: false
+              def [
+                { name: "error_details", by: "validation.error_info" }
+              ]
+              details [
+                {
+                  if: "has_error_details"
+                  by: "error_details"
+                  precondition_failure [
+                    {
+                      violations [
+                        { type: "required_field", subject: "user_id", description: "User ID is required" }
+                      ]
+                    }
+                  ]
+                  bad_request [
+                    {
+                      field_violations [
+                        { field: "email", description: "Invalid email format" }
+                      ]
+                    }
+                  ]
+                  localized_message [
+                    { locale: "en", message: "Validation failed" },
+                    { locale: "ja", message: "検証に失敗しました" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        name: "mapped_statuses"
+        map {
+          by: "status_list"
+          enum {
+            name: "StatusEnum"
+            by: "$.status"
+          }
+        }
+      },
+      {
+        name: "message_mapped"
+        map {
+          by: "message_list"
+          message {
+            name: "MessageMapper"
+            args [
+              { name: "content", by: "$.message_content" }
+            ]
+          }
+        }
+      },
+      {
+        name: "user_profile"
+        message {
+          name: "UserProfile" 
+          args [
+            { name: "id", by: "$.user_id" },
+            { name: "name", by: "$.username", inline: "profile_data" },
+            { name: "metadata", by: "$.user_metadata", inline: "meta_info" }
+          ]
+        }
+      }
+    ]
+  };
+  string id = 1;
+  string name = 2;
+  ProcessingStatus status = 3;
+}
+
+message NestedMessage {
+  oneof choice {
+    option (grpc.federation.oneof) = {};
+    string text = 1 [(grpc.federation.field) = {
+      by: "choice_text"
+      oneof {
+        if: "has_text"
+        default: "default_text"
+        by: "text_value"
+        def [
+          { name: "text_processor", by: "$.process_text" }
+        ]
+      }
+    }];
+    int32 number = 2 [(grpc.federation.field) = {
+      by: "choice_number"
+      oneof {
+        if: "has_number"
+        by: "number_value"
+        def [
+          { name: "num_validator", by: "$.validate_number" }
+        ]
+      }
+    }];
+    NestedData data = 3 [(grpc.federation.field) = {
+      by: "nested_data"
+    }];
+  }
+  
+  message NestedData {
+    string value = 1 [(grpc.federation.field).by = "$.data_value"];
+    ItemType type = 2;
+  }
+}
+
+enum Status {
+  option (grpc.federation.enum) = {
+    alias: "UserStatus"
+  };
+  STATUS_UNKNOWN = 0 [(grpc.federation.enum_value) = {
+    alias: "unknown_status"
+    default: true
+  }];
+  STATUS_ACTIVE = 1 [(grpc.federation.enum_value) = {
+    alias: ["active", "enabled"]
+    noalias: false
+    attr [
+      { name: "color", value: "green" },
+      { name: "priority", value: "high" }
+    ]
+  }];
+}
