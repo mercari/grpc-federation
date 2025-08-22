@@ -1,4 +1,4 @@
-package server_test
+package server
 
 import (
 	"context"
@@ -9,22 +9,27 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/mercari/grpc-federation/compiler"
-	"github.com/mercari/grpc-federation/lsp/server"
 	"github.com/mercari/grpc-federation/source"
 )
 
 func TestCompletion(t *testing.T) {
 	path := filepath.Join("testdata", "service.proto")
-	file, err := os.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	completer := server.NewCompleter(compiler.New(), slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	srcFile, err := source.NewFile(path, content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := newFile(path, srcFile, nil)
+	completer := NewCompleter(logger)
 	t.Run("method", func(t *testing.T) {
 		// resolver.method value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+		_, candidates, err := completer.Completion(ctx, file, []string{"testdata"}, source.Position{
 			Line: 40,
 			Col:  19,
 		})
@@ -44,7 +49,7 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("request.field", func(t *testing.T) {
 		// resolver.request.field value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+		_, candidates, err := completer.Completion(ctx, file, []string{"testdata"}, source.Position{
 			Line: 41,
 			Col:  28,
 		})
@@ -61,7 +66,7 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("request.by", func(t *testing.T) {
 		// resolver.request.by value position os Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+		_, candidates, err := completer.Completion(ctx, file, []string{"testdata"}, source.Position{
 			Line: 41,
 			Col:  38,
 		})
@@ -78,7 +83,7 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("filter response", func(t *testing.T) {
 		// resolver.response.field value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+		_, candidates, err := completer.Completion(ctx, file, []string{"testdata"}, source.Position{
 			Line: 44,
 			Col:  28,
 		})
@@ -96,7 +101,7 @@ func TestCompletion(t *testing.T) {
 
 	t.Run("message", func(t *testing.T) {
 		// def[2].message value position of Post in service.proto file
-		_, candidates, err := completer.Completion(ctx, []string{"testdata"}, path, file, source.Position{
+		_, candidates, err := completer.Completion(ctx, file, []string{"testdata"}, source.Position{
 			Line: 48,
 			Col:  17,
 		})

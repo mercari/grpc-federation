@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/url"
 
 	"go.lsp.dev/protocol"
@@ -17,12 +18,15 @@ func (h *Handler) didChange(ctx context.Context, params *protocol.DidChangeTextD
 	if parsedURI.Scheme != uri.FileScheme {
 		return fmt.Errorf("text document uri must specify the %s scheme, got %v", uri.FileScheme, parsedURI.Scheme)
 	}
-	path := parsedURI.Path
-	h.fileContentMu.Lock()
-	for _, change := range params.ContentChanges {
-		h.fileToContentMap[path] = []byte(change.Text)
+	if len(params.ContentChanges) == 0 {
+		return nil
 	}
-	h.fileContentMu.Unlock()
-	go h.validateText(ctx, params.TextDocument.URI)
+	path := parsedURI.Path
+	content := params.ContentChanges[0].Text
+	h.logger.Debug("sync text", slog.String("path", path))
+	if _, err := h.setFileCache(path, []byte(content)); err != nil {
+		return err
+	}
+	h.validateText(ctx, params.TextDocument.URI)
 	return nil
 }
