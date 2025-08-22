@@ -15,7 +15,6 @@ import (
 	"github.com/google/cel-go/common/operators"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
-	celext "github.com/google/cel-go/ext"
 	"github.com/google/cel-go/parser"
 	"golang.org/x/sync/singleflight"
 	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
@@ -261,7 +260,6 @@ func EnumAttrOption[T ~int32](enumName string, enumAttrMap EnumAttributeMap[T]) 
 func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 	opts := []cel.EnvOption{
 		cel.StdLib(),
-		celext.Strings(),
 		cel.Lib(grpcfedcel.NewLibrary(celHelper)),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(celHelper.TypeAdapter()),

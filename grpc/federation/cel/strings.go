@@ -9,6 +9,7 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/common/types/traits"
+	"github.com/google/cel-go/ext"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -39,8 +40,32 @@ func createStringsID(name string) string {
 func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 	opts := []cel.EnvOption{}
 
+	extLib := ext.Strings()
 	for _, funcOpts := range [][]cel.EnvOption{
 		// strings package functions
+
+		// define ext.Strings apis.
+		BindExtMemberFunction(extLib, "charAt", "string_char_at_int", cel.StringType, []*cel.Type{cel.IntType}, cel.StringType),
+		BindExtMemberFunction(extLib, "indexOf", "string_index_of_string", cel.StringType, []*cel.Type{cel.StringType}, cel.IntType),
+		BindExtMemberFunction(extLib, "indexOf", "string_index_of_string_int", cel.StringType, []*cel.Type{cel.StringType, cel.IntType}, cel.IntType),
+		BindExtMemberFunction(extLib, "lastIndexOf", "string_last_index_of_string", cel.StringType, []*cel.Type{cel.StringType}, cel.IntType),
+		BindExtMemberFunction(extLib, "lastIndexOf", "string_last_index_of_string_int", cel.StringType, []*cel.Type{cel.StringType, cel.IntType}, cel.IntType),
+		BindExtMemberFunction(extLib, "lowerAscii", "string_lower_ascii", cel.StringType, []*cel.Type{}, cel.StringType),
+		BindExtMemberFunction(extLib, "replace", "string_replace_string_string", cel.StringType, []*cel.Type{cel.StringType, cel.StringType}, cel.StringType),
+		BindExtMemberFunction(extLib, "replace", "string_replace_string_string_int", cel.StringType, []*cel.Type{cel.StringType, cel.StringType, cel.IntType}, cel.StringType),
+		BindExtMemberFunction(extLib, "split", "string_split_string", cel.StringType, []*cel.Type{cel.StringType}, cel.ListType(cel.StringType)),
+		BindExtMemberFunction(extLib, "split", "string_split_string_int", cel.StringType, []*cel.Type{cel.StringType, cel.IntType}, cel.ListType(cel.StringType)),
+		BindExtMemberFunction(extLib, "substring", "string_substring_int", cel.StringType, []*cel.Type{cel.IntType}, cel.StringType),
+		BindExtMemberFunction(extLib, "substring", "string_substring_int_int", cel.StringType, []*cel.Type{cel.IntType, cel.IntType}, cel.StringType),
+		BindExtMemberFunction(extLib, "trim", "string_trim", cel.StringType, []*cel.Type{}, cel.StringType),
+		BindExtMemberFunction(extLib, "upperAscii", "string_upper_ascii", cel.StringType, []*cel.Type{}, cel.StringType),
+		BindExtMemberFunction(extLib, "format", "string_format_list_string", cel.StringType, []*cel.Type{cel.ListType(cel.DynType)}, cel.StringType),
+		BindExtMemberFunction(extLib, "join", "list_join", cel.ListType(cel.StringType), []*cel.Type{}, cel.StringType),
+		BindExtMemberFunction(extLib, "join", "list_join_string", cel.ListType(cel.StringType), []*cel.Type{cel.StringType}, cel.StringType),
+		BindExtMemberFunction(extLib, "reverse", "string_reverse", cel.StringType, []*cel.Type{}, cel.StringType),
+		BindExtFunction(extLib, "strings.quote", "strings_quote", []*cel.Type{cel.StringType}, cel.StringType),
+
+		// add gRPC Federation standard apis.
 		BindFunction(
 			createStringsName("clone"),
 			OverloadFunc(createStringsID("clone_string_string"), []*cel.Type{cel.StringType}, cel.StringType,

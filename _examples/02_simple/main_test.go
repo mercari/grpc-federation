@@ -340,6 +340,7 @@ func TestFederation(t *testing.T) {
 		Flatten:        []int64{1, 2, 3},
 		Round:          2,
 		Any:            anyMsg,
+		Replaced:       "1-2-3-grpc",
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
