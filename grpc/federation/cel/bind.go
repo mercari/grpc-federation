@@ -146,7 +146,7 @@ func BindExtMemberFunction(extLib cel.EnvOption, name, signature string, self *c
 		decls = append(decls, cel.Variable(argName, typ))
 		argNames = append(argNames, argName)
 	}
-	prg, prgErr := compileExt(name, argNames, append([]cel.EnvOption{extLib}, decls...))
+	prg, prgErr := compileMemberExt(name, argNames, append([]cel.EnvOption{extLib}, decls...))
 	return BindMemberFunction(
 		name,
 		BindMemberFunctionOpt{
@@ -174,6 +174,22 @@ func BindExtMemberFunction(extLib cel.EnvOption, name, signature string, self *c
 }
 
 func compileExt(name string, argNames []string, opts []cel.EnvOption) (cel.Program, error) {
+	env, err := cel.NewEnv(opts...)
+	if err != nil {
+		return nil, err
+	}
+	ast, iss := env.Compile(fmt.Sprintf("%s(%s)", name, strings.Join(argNames, ",")))
+	if iss.Err() != nil {
+		return nil, iss.Err()
+	}
+	prg, err := env.Program(ast)
+	if err != nil {
+		return nil, err
+	}
+	return prg, nil
+}
+
+func compileMemberExt(name string, argNames []string, opts []cel.EnvOption) (cel.Program, error) {
 	env, err := cel.NewEnv(opts...)
 	if err != nil {
 		return nil, err

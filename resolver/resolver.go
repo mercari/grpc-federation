@@ -20,6 +20,7 @@ import (
 	"github.com/google/cel-go/common/overloads"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/google/cel-go/ext"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -4723,6 +4724,7 @@ func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map
 func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.Env, error) {
 	envOpts = append(envOpts, []cel.EnvOption{
 		cel.StdLib(),
+		ext.TwoVarComprehensions(),
 		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(r.celRegistry),
