@@ -44,6 +44,7 @@ func (lib *ListLibrary) CompileOptions() []cel.EnvOption {
 	listTypeO := cel.ListType(cel.TypeParamType("O"))
 	listTypeE := cel.ListType(cel.TypeParamType("E"))
 	opts := []cel.EnvOption{
+		// add gRPC Federation standard apis.
 		cel.OptionalTypes(),
 		cel.Macros(
 			// range.reduce(accumulator, current, <expr>, <init>)

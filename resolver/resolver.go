@@ -20,7 +20,7 @@ import (
 	"github.com/google/cel-go/common/overloads"
 	celtypes "github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
-	celext "github.com/google/cel-go/ext"
+	"github.com/google/cel-go/ext"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -1340,7 +1340,7 @@ func (r *Resolver) resolveMessageRules(ctx *context, msgs []*Message, builder fu
 
 func (r *Resolver) resolveFieldRules(ctx *context, msg *Message, builder *source.MessageBuilder) {
 	for _, field := range msg.Fields {
-		field.Rule = r.resolveFieldRule(ctx, msg, field, r.fieldToRuleMap[field], builder.WithField(field.Name))
+		field.Rule = r.resolveFieldRule(ctx, msg, field, r.fieldToRuleMap[field], toFieldBuilder(builder, field))
 		if msg.Rule == nil && field.Rule != nil {
 			msg.Rule = &MessageRule{DefSet: &VariableDefinitionSet{}}
 		}
@@ -1358,7 +1358,7 @@ func (r *Resolver) validateFieldsOneofRule(ctx *context, msg *Message, builder *
 		if oneof == nil {
 			continue
 		}
-		builder := builder.WithField(field.Name).WithOption().WithOneOf()
+		builder := toFieldBuilder(builder, field).WithOption().WithOneOf()
 		if oneof.Default {
 			if usedDefault {
 				ctx.addError(
@@ -1421,7 +1421,7 @@ func (r *Resolver) resolveAutoBindFields(ctx *context, msg *Message, builder *so
 		if field.HasRule() {
 			continue
 		}
-		builder := builder.WithField(field.Name)
+		builder := toFieldBuilder(builder, field)
 		autoBindFields, exists := autobindFieldMap[field.Name]
 		if !exists {
 			continue
@@ -1505,7 +1505,7 @@ func (r *Resolver) validateDuplicatedVariableName(ctx *context, msg *Message, bu
 		if field.Rule.Oneof == nil {
 			continue
 		}
-		builder := builder.WithField(field.Name).WithOption().WithOneOf()
+		builder := toFieldBuilder(builder, field).WithOption().WithOneOf()
 		for idx, def := range field.Rule.Oneof.DefSet.Definitions() {
 			r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(idx))
 		}
@@ -1556,7 +1556,7 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 		return
 	}
 	for _, field := range msg.Fields {
-		builder := builder.WithField(field.Name)
+		builder := toFieldBuilder(builder, field)
 		if !field.HasRule() {
 			ctx.addError(
 				ErrWithLocation(
@@ -1636,7 +1636,7 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 			// assignment of the same type is okay.
 			return
 		}
-		if !r.findMessageAliasName(fromMessage, toMessage) {
+		if !findMessageAliasName(fromMessage, toMessage) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -1692,7 +1692,7 @@ func (r *Resolver) validateRequestFieldType(ctx *context, fromType *Type, toFiel
 	}
 }
 
-func (r *Resolver) findMessageAliasName(from, to *Message) bool {
+func findMessageAliasName(from, to *Message) bool {
 	fromName := from.FQDN()
 	toName := to.FQDN()
 
@@ -1800,7 +1800,7 @@ func (r *Resolver) validateBindFieldType(ctx *context, fromType *Type, toField *
 			// assignment of the same type is okay.
 			return
 		}
-		if !r.findMessageAliasName(fromMessage, toMessage) {
+		if !findMessageAliasName(fromMessage, toMessage) {
 			ctx.addError(
 				ErrWithLocation(
 					fmt.Sprintf(
@@ -2689,6 +2689,14 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr, build
 
 func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.ValidationExpr, builder *source.ValidationExprOptionBuilder) *ValidationExpr {
 	grpcErr := r.resolveGRPCError(ctx, def.GetError(), builder.WithError())
+	if grpcErr.Code == nil {
+		ctx.addError(
+			ErrWithLocation(
+				`"code" field is required in validation`,
+				builder.WithError().Location(),
+			),
+		)
+	}
 	if grpcErr.Ignore {
 		ctx.addError(
 			ErrWithLocation(
@@ -3312,7 +3320,17 @@ func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDe
 	}
 	fields := make([]*Field, 0, len(fieldsDef))
 	for _, fieldDef := range fieldsDef {
-		field := r.resolveField(ctx, fieldDef, oneofs, builder.WithField(fieldDef.GetName()))
+		var (
+			fieldBuilder *source.FieldBuilder
+			oneof        *Oneof
+		)
+		if fieldDef.OneofIndex != nil {
+			oneof = oneofs[fieldDef.GetOneofIndex()]
+			fieldBuilder = builder.WithOneof(oneof.Name).WithField(fieldDef.GetName())
+		} else {
+			fieldBuilder = builder.WithField(fieldDef.GetName())
+		}
+		field := r.resolveField(ctx, fieldDef, oneof, fieldBuilder)
 		if field == nil {
 			continue
 		}
@@ -3321,7 +3339,7 @@ func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDe
 	return fields
 }
 
-func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescriptorProto, oneofs []*Oneof, builder *source.FieldBuilder) *Field {
+func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescriptorProto, oneof *Oneof, builder *source.FieldBuilder) *Field {
 	typ, err := r.resolveType(ctx, fieldDef.GetTypeName(), types.Kind(fieldDef.GetType()), fieldDef.GetLabel())
 	if err != nil {
 		ctx.addError(
@@ -3338,8 +3356,7 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 		Type:    typ,
 		Message: ctx.msg,
 	}
-	if fieldDef.OneofIndex != nil {
-		oneof := oneofs[fieldDef.GetOneofIndex()]
+	if oneof != nil {
 		oneof.Fields = append(oneof.Fields, field)
 		field.Oneof = oneof
 		typ.OneofField = &OneofField{Field: field}
@@ -3871,14 +3888,14 @@ func (r *Resolver) resolveMessageArgumentFields(ctx *context, arg *Message, defs
 					continue
 				}
 				if typ, exists := evaluatedArgNameMap[arg.Name]; exists {
-					if isDifferentType(typ, fieldType) {
+					if isDifferentArgumentType(typ, fieldType) {
 						ctx.addError(
 							ErrWithLocation(
 								fmt.Sprintf(
-									"%q argument name is declared with a different type kind. found %q and %q type",
+									"%q argument name is declared with a different type. found %q and %q type",
 									arg.Name,
-									typ.Kind.ToString(),
-									fieldType.Kind.ToString(),
+									typ.FQDN(),
+									fieldType.FQDN(),
 								),
 								varDef.builder.WithMessage().
 									WithArgs(argIdx).Location(),
@@ -3975,15 +3992,14 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		if !field.HasRule() {
 			continue
 		}
-
-		fieldBuilder := builder.WithField(field.Name).WithOption()
+		fieldOptBuilder := toFieldBuilder(builder, field).WithOption()
 
 		if field.Rule.Value != nil {
 			if err := r.resolveCELValue(ctx, env, field.Rule.Value.CEL); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
-						fieldBuilder.WithBy().Location(),
+						fieldOptBuilder.WithBy().Location(),
 					),
 				)
 			}
@@ -3991,7 +4007,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		if field.Rule.Oneof != nil {
 			fieldEnv, _ := env.Extend()
 			oneof := field.Rule.Oneof
-			oneofBuilder := fieldBuilder.WithOneOf()
+			oneofBuilder := fieldOptBuilder.WithOneOf()
 			if oneof.If != nil {
 				if err := r.resolveCELValue(ctx, fieldEnv, oneof.If); err != nil {
 					ctx.addError(
@@ -4708,7 +4724,7 @@ func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map
 func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.Env, error) {
 	envOpts = append(envOpts, []cel.EnvOption{
 		cel.StdLib(),
-		celext.Strings(),
+		ext.TwoVarComprehensions(),
 		cel.Lib(grpcfedcel.NewLibrary(r.celRegistry)),
 		cel.CrossTypeNumericComparisons(true),
 		cel.CustomTypeAdapter(r.celRegistry),
@@ -5519,6 +5535,35 @@ func isDifferentType(from, to *Type) bool {
 	return from.Kind != to.Kind
 }
 
+func isDifferentArgumentType(from, to *Type) bool {
+	if from == nil || to == nil {
+		return false
+	}
+	if from.IsNumber() && to.IsNumber() {
+		return false
+	}
+	if from.Kind == types.Enum && to.IsNumber() {
+		// enum to number is OK.
+		return false
+	}
+	if from.IsNull && (to.Repeated || to.Kind == types.Message || to.Kind == types.Bytes) {
+		return false
+	}
+	if from.Kind == types.Message && to.Kind == types.Message {
+		if from.FQDN() == to.FQDN() {
+			return false
+		}
+		if findMessageAliasName(from.Message, to.Message) {
+			return false
+		}
+		if findMessageAliasName(to.Message, from.Message) {
+			return false
+		}
+		return true
+	}
+	return from.Kind != to.Kind
+}
+
 func isExactlySameType(left, right *Type) bool {
 	if left == nil || right == nil {
 		return false
@@ -5551,6 +5596,13 @@ func isExactlySameType(left, right *Type) bool {
 		}
 	}
 	return true
+}
+
+func toFieldBuilder(builder *source.MessageBuilder, field *Field) *source.FieldBuilder {
+	if field.Oneof != nil {
+		return builder.WithOneof(field.Oneof.Name).WithField(field.Name)
+	}
+	return builder.WithField(field.Name)
 }
 
 func newMessageBuilderFromMessage(message *Message) *source.MessageBuilder {

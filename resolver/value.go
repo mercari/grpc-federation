@@ -30,12 +30,24 @@ func (v *CELValue) ReferenceNames() []string {
 	}
 
 	var refNames []string
+	iterVarMap := make(map[string]struct{})
+	if cmp := v.CheckedExpr.GetExpr().GetComprehensionExpr(); cmp != nil {
+		if iterVar := cmp.GetIterVar(); iterVar != "" {
+			iterVarMap[iterVar] = struct{}{}
+		}
+		if iterVar := cmp.GetIterVar2(); iterVar != "" {
+			iterVarMap[iterVar] = struct{}{}
+		}
+	}
 	for _, ref := range v.CheckedExpr.ReferenceMap {
 		if ref.Name == federation.MessageArgumentVariableName {
 			continue
 		}
 		// Name can be empty sting if the reference points to a function
 		if ref.Name == "" {
+			continue
+		}
+		if _, exists := iterVarMap[ref.Name]; exists {
 			continue
 		}
 		refNames = append(refNames, ref.Name)

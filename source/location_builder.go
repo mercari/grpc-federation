@@ -417,7 +417,7 @@ func (b *EnvBuilder) WithVar(idx int) *EnvVarBuilder {
 	return &EnvVarBuilder{
 		root: root,
 		envVar: func(loc *Location) *EnvVar {
-			return b.env(root).Var
+			return b.env(loc).Var
 		},
 	}
 }
@@ -868,6 +868,16 @@ func (b *FieldBuilder) Location() *Location {
 	return b.root
 }
 
+func (b *FieldBuilder) WithType() *FieldBuilder {
+	root := b.root.Clone()
+	field := b.field(root)
+	field.Type = true
+	return &FieldBuilder{
+		root:  root,
+		field: b.field,
+	}
+}
+
 func (b *FieldBuilder) WithOption() *FieldOptionBuilder {
 	root := b.root.Clone()
 	field := b.field(root)
@@ -1206,6 +1216,18 @@ type OneofBuilder struct {
 	oneof func(*Location) *Oneof
 }
 
+func (b *OneofBuilder) WithField(name string) *FieldBuilder {
+	root := b.root.Clone()
+	oneof := b.oneof(root)
+	oneof.Field = &Field{Name: name}
+	return &FieldBuilder{
+		root: root,
+		field: func(loc *Location) *Field {
+			return b.oneof(loc).Field
+		},
+	}
+}
+
 func (b *OneofBuilder) Location() *Location {
 	return b.root
 }
@@ -1410,6 +1432,10 @@ func (b *ValidationExprOptionBuilder) WithError() *GRPCErrorOptionBuilder {
 			return b.option(loc).Error
 		},
 	}
+}
+
+func (b *ValidationExprOptionBuilder) Location() *Location {
+	return b.root
 }
 
 type GRPCErrorOptionBuilder struct {

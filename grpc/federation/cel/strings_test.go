@@ -25,6 +25,282 @@ func TestStringsFunctions(t *testing.T) {
 		args map[string]any
 		cmp  func(ref.Val) error
 	}{
+		// ext library
+		{
+			name: "charAt",
+			expr: "'hello'.charAt(4)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("o")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "indexOf",
+			expr: "'hello mellow'.indexOf('ello')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Int)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.Int(1)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "indexOf",
+			expr: "'hello mellow'.indexOf('ello', 2)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Int)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.Int(7)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "lastIndexOf",
+			expr: "'hello mellow'.lastIndexOf('')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Int)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.Int(12)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "lastIndexOf",
+			expr: "'hello mellow'.lastIndexOf('ello', 6)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.Int)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.Int(1)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "lowerAscii",
+			expr: "'TacoCat'.lowerAscii()",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("tacocat")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "replace",
+			expr: "'hello hello'.replace('he', 'we')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("wello wello")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "replace",
+			expr: "'hello hello'.replace('he', 'we', 1)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("wello hello")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "split",
+			expr: "'hello hello hello'.split(' ')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				var strs []string
+				for idx := range gotV.Size().(types.Int) {
+					strs = append(strs, string(gotV.Get(idx).(types.String)))
+				}
+				if diff := cmp.Diff(strs, []string{"hello", "hello", "hello"}); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "split",
+			expr: "'hello hello hello'.split(' ', 2)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(traits.Lister)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				var strs []string
+				for idx := range gotV.Size().(types.Int) {
+					strs = append(strs, string(gotV.Get(idx).(types.String)))
+				}
+				if diff := cmp.Diff(strs, []string{"hello", "hello hello"}); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "substring",
+			expr: "'tacocat'.substring(4)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("cat")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "substring",
+			expr: "'tacocat'.substring(0, 4)",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("taco")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "trim",
+			expr: `'  \ttrim\n    '.trim()`,
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("trim")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "upperAscii",
+			expr: `'TacoCat'.upperAscii()`,
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("TACOCAT")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "format",
+			expr: `"this is a string: %s\nand an integer: %d".format(["str", 42])`,
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("this is a string: str\nand an integer: 42")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "join",
+			expr: "['hello', 'mellow'].join()",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("hellomellow")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "join",
+			expr: "['hello', 'mellow'].join(' ')",
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("hello mellow")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "reverse",
+			expr: `'gums'.reverse()`,
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String("smug")); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
+			name: "quote",
+			expr: `strings.quote('single-quote with "double quote"')`,
+			cmp: func(got ref.Val) error {
+				gotV, ok := got.(types.String)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				if diff := cmp.Diff(gotV, types.String(`"single-quote with \"double quote\""`)); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+
 		// strings package
 		{
 			name: "clone",

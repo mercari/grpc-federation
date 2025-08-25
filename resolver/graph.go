@@ -330,12 +330,11 @@ func setupVariableDependencyByReferenceName(nodes []*MessageDependencyGraphNode)
 	nameToNode := make(map[string]*MessageDependencyGraphNode)
 	for _, node := range nodes {
 		def := node.VariableDefinition
-		if def.Name != "" {
-			nameToNode[def.Name] = node
-		}
-
 		refs := def.ReferenceNames()
 		if len(refs) == 0 {
+			if def.Name != "" {
+				nameToNode[def.Name] = node
+			}
 			continue
 		}
 		var iterName string
@@ -360,6 +359,9 @@ func setupVariableDependencyByReferenceName(nodes []*MessageDependencyGraphNode)
 				node.Parent = append(node.Parent, refNode)
 				node.ParentMap[refNode] = struct{}{}
 			}
+		}
+		if def.Name != "" {
+			nameToNode[def.Name] = node
 		}
 	}
 }

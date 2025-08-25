@@ -1061,6 +1061,11 @@ message MyMessage {
 > Within the error block, the `error` variable can be used as a special variable when evaluating CEL.
 > [A detailed description of this variable is here](./cel.md#error)
 
+## (grpc.federation.message).def.call.error.def
+`def` defines a variable scoped to the entire error block.
+
+ It is important to note that definitions scoped at the top level of the error block will be evaluated before `error.if`.
+
 ## (grpc.federation.message).def.call.error.if
 
 `if` specifies condition in CEL. If the condition is `true`, it returns defined error information.

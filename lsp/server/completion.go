@@ -9,18 +9,17 @@ import (
 	"github.com/bufbuild/protocompile/ast"
 	"go.lsp.dev/protocol"
 
-	"github.com/mercari/grpc-federation/compiler"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/source"
 )
 
 func (h *Handler) completion(ctx context.Context, params *protocol.CompletionParams) (*protocol.CompletionList, error) {
-	path, content, err := h.getFile(params.TextDocument.URI)
+	file, err := h.getFile(params.TextDocument.URI)
 	if err != nil {
 		return nil, err
 	}
 	pos := source.Position{Line: int(params.Position.Line) + 1, Col: int(params.Position.Character) + 1}
-	nodeInfo, candidates, err := h.completer.Completion(ctx, h.importPaths, path, content, pos)
+	nodeInfo, candidates, err := h.completer.Completion(ctx, file, h.importPaths, pos)
 	if err != nil {
 		return nil, nil
 	}
@@ -71,28 +70,19 @@ func (h *Handler) completion(ctx context.Context, params *protocol.CompletionPar
 }
 
 type Completer struct {
-	compiler *compiler.Compiler
-	logger   *slog.Logger
+	logger *slog.Logger
 }
 
-func NewCompleter(c *compiler.Compiler, logger *slog.Logger) *Completer {
-	return &Completer{compiler: c, logger: logger}
+func NewCompleter(logger *slog.Logger) *Completer {
+	return &Completer{logger: logger}
 }
 
-func (c *Completer) Completion(ctx context.Context, importPaths []string, path string, content []byte, pos source.Position) (*ast.NodeInfo, []string, error) {
-	file, err := source.NewFile(path, content)
-	if err != nil {
-		return nil, nil, err
-	}
-	protos, err := c.compiler.Compile(ctx, file, compiler.ImportPathOption(importPaths...))
-	if err != nil {
-		return nil, nil, err
-	}
-	r := resolver.New(protos, resolver.ImportPathOption(importPaths...))
+func (c *Completer) Completion(ctx context.Context, file *File, importPaths []string, pos source.Position) (*ast.NodeInfo, []string, error) {
+	r := resolver.New(file.getCompiledProtos(), resolver.ImportPathOption(importPaths...))
 	_, _ = r.Resolve()
-	loc := file.FindLocationByPos(pos)
+	loc := file.getSource().FindLocationByPos(pos)
 	if loc == nil {
 		return nil, nil, nil
 	}
-	return file.NodeInfoByLocation(loc), r.Candidates(loc), nil
+	return file.getSource().NodeInfoByLocation(loc), r.Candidates(loc), nil
 }

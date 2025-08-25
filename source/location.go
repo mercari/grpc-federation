@@ -188,8 +188,10 @@ type FieldOneof struct {
 	By      bool
 }
 
+// Oneof represents oneof field location.
 type Oneof struct {
 	Name   string
+	Field  *Field
 	Option *OneofOption
 }
 

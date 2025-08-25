@@ -512,6 +512,23 @@ func (m *Message) TypeConversionDecls() []*TypeConversionDecl {
 		case def.Expr.Map != nil:
 			mapExpr := def.Expr.Map.Expr
 			switch {
+			case mapExpr.Message != nil:
+				msgExpr := mapExpr.Message
+				if msgExpr.Message != nil && msgExpr.Message.Rule != nil {
+					msgArg := msgExpr.Message.Rule.MessageArgument
+					for _, arg := range msgExpr.Args {
+						switch {
+						case arg.Name != "":
+							msgArgField := msgArg.Field(arg.Name)
+							decls = append(decls, typeConversionDecls(arg.Value.Type(), msgArgField.Type, convertedFQDNMap)...)
+						case arg.Value != nil && arg.Value.Inline:
+							for _, field := range arg.Value.CEL.Out.Message.Fields {
+								msgArgField := msgArg.Field(field.Name)
+								decls = append(decls, typeConversionDecls(field.Type, msgArgField.Type, convertedFQDNMap)...)
+							}
+						}
+					}
+				}
 			case mapExpr.Enum != nil:
 				from := mapExpr.Enum.By.Out.Clone()
 				from.Repeated = true

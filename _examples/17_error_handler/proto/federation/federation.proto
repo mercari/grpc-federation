@@ -33,6 +33,13 @@ message GetPostResponse {
   org.federation.Post post = 1 [(grpc.federation.field).by = "post"];
 }
 
+message Z {
+  option (grpc.federation.message) = {
+    def { name: "code" by: "$.error_info.code" }
+  };
+  int32 code = 1 [(grpc.federation.field).by = "code"];
+}
+
 message Post {
   option (grpc.federation.message) = {
     def [
@@ -43,11 +50,13 @@ message Post {
           request { field: "id" by: "$.id" }
           error {
             def { name: "id" by: "$.id" }
+            def { message { name: "Z" args { name: "error_info" by: "error" } }}
             if: "error.precondition_failures[?0].violations[?0].subject == optional.of('bar') && error.localized_messages[?0].message == optional.of('hello') && error.custom_messages[?0].id == optional.of('xxx')"
             code: FAILED_PRECONDITION
             message: "'this is custom error message'"
             details {
               def { name: "localized_msg" message { name: "LocalizedMessage" args { name: "value" by: "id" } } }
+              def { message { name: "Z" args { name: "error_info" by: "error" } }}
               message { name: "CustomMessage" args { name: "error_info" by: "error" } }
               by: "post.Post{id: 'foo'}"
               precondition_failure {

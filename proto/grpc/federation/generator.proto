@@ -54,10 +54,25 @@ message ProtoCodeGeneratorResponse {
 message CodeGeneratorRequest {
   ActionType type = 1;
   string proto_path = 2;
-  string out_dir = 3;
+  string out_dir = 3 [deprecated = true];
   repeated ProtoCodeGeneratorResponse.File files = 4;
   repeated string grpc_federation_file_ids = 5;
   Reference reference = 6;
+  OutputFilePathConfig output_file_path_config = 7;
+}
+
+message OutputFilePathConfig {
+  OutputFilePathMode mode = 1;
+  string prefix = 2;
+  string file_path = 3;
+  repeated string import_paths = 4;
+}
+
+enum OutputFilePathMode {
+  OUTPUT_FILE_PATH_MODE_UNSPECIFIED = 0;
+  OUTPUT_FILE_PATH_MODE_IMPORT = 1;
+  OUTPUT_FILE_PATH_MODE_MODULE_PREFIX = 2;
+  OUTPUT_FILE_PATH_MODE_SOURCE_RELATIVE = 3;
 }
 
 message Reference {
@@ -73,6 +88,7 @@ message Reference {
   map<string, MessageDependencyGraph> graph_map = 10;
   map<string, VariableDefinition> variable_definition_map = 11;
   map<string, VariableDefinitionGroup> variable_definition_group_map = 12;
+  map<string, MessageDependencyGraphNode> graph_node_map = 13;
 }
 
 message File {
@@ -253,13 +269,14 @@ message ConcurrentVariableDefinitionGroup {
 
 message MessageDependencyGraph {
   string id = 1;
-  repeated MessageDependencyGraphNode roots = 2;
+  repeated string root_node_ids = 2;
 }
 
 message MessageDependencyGraphNode {
-  repeated MessageDependencyGraphNode children = 1;
-  string base_message_id = 2;
-  string variable_definition_id = 3;
+  string id = 1;
+  repeated string child_ids = 2;
+  string base_message_id = 3;
+  string variable_definition_id = 4;
 }
 
 message VariableExpr {
@@ -403,6 +420,7 @@ message GRPCError {
   repeated GRPCErrorDetail details = 5;
   bool ignore = 6;
   CELValue ignore_and_response = 7;
+  int32 log_level = 8;
 }
 
 message GRPCErrorDetail {

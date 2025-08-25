@@ -3590,12 +3590,23 @@ func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*A
 			})
 		}
 	}
+
 	fromType := arg.Value.Type()
 	var toType *resolver.Type
-	if arg.Type != nil {
-		toType = arg.Type
-	} else {
-		toType = fromType
+	if msgArg != nil {
+		// If a message argument exists and there is a field corresponding to the argument name,
+		// the type of that field will be used as the destination type.
+		toField := msgArg.Field(arg.Name)
+		if toField != nil {
+			toType = toField.Type
+		}
+	}
+	if toType == nil {
+		if arg.Type != nil {
+			toType = arg.Type
+		} else {
+			toType = fromType
+		}
 	}
 
 	toText := file.toTypeText(toType)
