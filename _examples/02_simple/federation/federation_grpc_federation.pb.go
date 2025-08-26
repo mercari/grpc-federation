@@ -2573,17 +2573,19 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 		ret.Items = itemsValue
 	}
 	ret.Profile = value.vars.User.GetProfile() // { name: "user", autobind: true }
-	switch {
-	case value.vars.User.GetAttrA() != nil:
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if _, ok := value.vars.User.Attr.(*user.User_AttrA_); ok {
 
-		attrValue, err := s.cast_User_User_AttrA___to__Federation_User_AttrA_(value.vars.User.GetAttrA())
+		attrValue, err := s.cast_User_User_AttrA___to__Federation_User_AttrA_(value.vars.User.Attr.(*user.User_AttrA_))
 		if err != nil {
 			return nil, err
 		}
 		ret.Attr = attrValue
-	case value.vars.User.GetB() != nil:
+	} else if _, ok := value.vars.User.Attr.(*user.User_B); ok {
 
-		attrValue, err := s.cast_User_User_B__to__Federation_User_B(value.vars.User.GetB())
+		attrValue, err := s.cast_User_User_B__to__Federation_User_B(value.vars.User.Attr.(*user.User_B))
 		if err != nil {
 			return nil, err
 		}
@@ -2604,14 +2606,13 @@ func (s *FederationService) cast_Google_Protobuf_Any__to__Google_Protobuf_Any(fr
 	if from == nil {
 		return nil, nil
 	}
-
 	typeUrlValue := from.GetTypeUrl()
 	valueValue := from.GetValue()
-
 	ret := &anypb.Any{
 		TypeUrl: typeUrlValue,
 		Value:   valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2620,12 +2621,11 @@ func (s *FederationService) cast_Google_Protobuf_BoolValue__to__Google_Protobuf_
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue := from.GetValue()
-
 	ret := &wrapperspb.BoolValue{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2634,12 +2634,11 @@ func (s *FederationService) cast_Google_Protobuf_BytesValue__to__Google_Protobuf
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue := from.GetValue()
-
 	ret := &wrapperspb.BytesValue{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2648,12 +2647,11 @@ func (s *FederationService) cast_Google_Protobuf_DoubleValue__to__Google_Protobu
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue := from.GetValue()
-
 	ret := &wrapperspb.DoubleValue{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2662,15 +2660,14 @@ func (s *FederationService) cast_Google_Protobuf_DoubleValue__to__Google_Protobu
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue, err := s.cast_float64__to__float32(from.GetValue())
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &wrapperspb.FloatValue{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2679,15 +2676,14 @@ func (s *FederationService) cast_Google_Protobuf_Int64Value__to__Google_Protobuf
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue, err := s.cast_int64__to__int32(from.GetValue())
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &wrapperspb.Int32Value{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2696,12 +2692,11 @@ func (s *FederationService) cast_Google_Protobuf_Int64Value__to__Google_Protobuf
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue := from.GetValue()
-
 	ret := &wrapperspb.Int64Value{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2710,12 +2705,11 @@ func (s *FederationService) cast_Google_Protobuf_StringValue__to__Google_Protobu
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue := from.GetValue()
-
 	ret := &wrapperspb.StringValue{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2724,15 +2718,14 @@ func (s *FederationService) cast_Google_Protobuf_UInt64Value__to__Google_Protobu
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue, err := s.cast_uint64__to__uint32(from.GetValue())
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &wrapperspb.UInt32Value{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2741,12 +2734,11 @@ func (s *FederationService) cast_Google_Protobuf_UInt64Value__to__Google_Protobu
 	if from == nil {
 		return nil, nil
 	}
-
 	valueValue := from.GetValue()
-
 	ret := &wrapperspb.UInt64Value{
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -2774,12 +2766,12 @@ func (s *FederationService) cast_User_Item_ItemType__to__int32(from user.Item_It
 }
 
 // cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_ cast from "user.Item.Location.addr_a" to "federation.Item.Location.addr_a".
-func (s *FederationService) cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(from *user.Item_Location_AddrA) (*Item_Location_AddrA_, error) {
+func (s *FederationService) cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(from *user.Item_Location_AddrA_) (*Item_Location_AddrA_, error) {
 	if from == nil {
 		return nil, nil
 	}
 
-	addrAValue, err := s.cast_User_Item_Location_AddrA__to__Federation_Item_Location_AddrA(from)
+	addrAValue, err := s.cast_User_Item_Location_AddrA__to__Federation_Item_Location_AddrA(from.AddrA)
 	if err != nil {
 		return nil, err
 	}
@@ -2791,12 +2783,11 @@ func (s *FederationService) cast_User_Item_Location_AddrA__to__Federation_Item_L
 	if from == nil {
 		return nil, nil
 	}
-
 	fooValue := from.GetFoo()
-
 	ret := &Item_Location_AddrA{
 		Foo: fooValue,
 	}
+
 	return ret, nil
 }
 
@@ -2805,26 +2796,35 @@ func (s *FederationService) cast_User_Item_Location_AddrB__to__Federation_Item_L
 	if from == nil {
 		return nil, nil
 	}
-
 	barValue := from.GetBar()
-
 	ret := &Item_Location_AddrB{
 		Bar: barValue,
 	}
+
 	return ret, nil
 }
 
 // cast_User_Item_Location_B__to__Federation_Item_Location_B cast from "user.Item.Location.b" to "federation.Item.Location.b".
-func (s *FederationService) cast_User_Item_Location_B__to__Federation_Item_Location_B(from *user.Item_Location_AddrB) (*Item_Location_B, error) {
+func (s *FederationService) cast_User_Item_Location_B__to__Federation_Item_Location_B(from *user.Item_Location_B) (*Item_Location_B, error) {
 	if from == nil {
 		return nil, nil
 	}
 
-	bValue, err := s.cast_User_Item_Location_AddrB__to__Federation_Item_Location_AddrB(from)
+	bValue, err := s.cast_User_Item_Location_AddrB__to__Federation_Item_Location_AddrB(from.B)
 	if err != nil {
 		return nil, err
 	}
 	return &Item_Location_B{B: bValue}, nil
+}
+
+// cast_User_Item_Location_C__to__Federation_Item_Location_C cast from "user.Item.Location.c" to "federation.Item.Location.c".
+func (s *FederationService) cast_User_Item_Location_C__to__Federation_Item_Location_C(from *user.Item_Location_C) (*Item_Location_C, error) {
+	if from == nil {
+		return nil, nil
+	}
+
+	cValue := from.C
+	return &Item_Location_C{C: cValue}, nil
 }
 
 // cast_User_Item_Location__to__Federation_Item_Location cast from "user.Item.Location" to "federation.Item.Location".
@@ -2832,24 +2832,29 @@ func (s *FederationService) cast_User_Item_Location__to__Federation_Item_Locatio
 	if from == nil {
 		return nil, nil
 	}
-
 	addr1Value := from.GetAddr1()
 	addr2Value := from.GetAddr2()
-
 	ret := &Item_Location{
 		Addr1: addr1Value,
 		Addr2: addr2Value,
 	}
-	switch {
 
-	case from.GetAddrA() != nil:
-		addr3Value, err := s.cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(from.GetAddrA())
+	switch x := from.Addr3.(type) {
+
+	case *user.Item_Location_AddrA_:
+		addr3Value, err := s.cast_User_Item_Location_AddrA___to__Federation_Item_Location_AddrA_(x)
 		if err != nil {
 			return nil, err
 		}
 		ret.Addr3 = addr3Value
-	case from.GetB() != nil:
-		addr3Value, err := s.cast_User_Item_Location_B__to__Federation_Item_Location_B(from.GetB())
+	case *user.Item_Location_B:
+		addr3Value, err := s.cast_User_Item_Location_B__to__Federation_Item_Location_B(x)
+		if err != nil {
+			return nil, err
+		}
+		ret.Addr3 = addr3Value
+	case *user.Item_Location_C:
+		addr3Value, err := s.cast_User_Item_Location_C__to__Federation_Item_Location_C(x)
 		if err != nil {
 			return nil, err
 		}
@@ -2863,7 +2868,6 @@ func (s *FederationService) cast_User_Item__to__Federation_Item(from *user.Item)
 	if from == nil {
 		return nil, nil
 	}
-
 	nameValue := from.GetName()
 	typeValue, err := s.cast_User_Item_ItemType__to__Federation_Item_ItemType(from.GetType())
 	if err != nil {
@@ -2874,23 +2878,23 @@ func (s *FederationService) cast_User_Item__to__Federation_Item(from *user.Item)
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &Item{
 		Name:     nameValue,
 		Type:     typeValue,
 		Value:    valueValue,
 		Location: locationValue,
 	}
+
 	return ret, nil
 }
 
 // cast_User_User_AttrA___to__Federation_User_AttrA_ cast from "user.User.attr_a" to "federation.User.attr_a".
-func (s *FederationService) cast_User_User_AttrA___to__Federation_User_AttrA_(from *user.User_AttrA) (*User_AttrA_, error) {
+func (s *FederationService) cast_User_User_AttrA___to__Federation_User_AttrA_(from *user.User_AttrA_) (*User_AttrA_, error) {
 	if from == nil {
 		return nil, nil
 	}
 
-	attrAValue, err := s.cast_User_User_AttrA__to__Federation_User_AttrA(from)
+	attrAValue, err := s.cast_User_User_AttrA__to__Federation_User_AttrA(from.AttrA)
 	if err != nil {
 		return nil, err
 	}
@@ -2902,12 +2906,11 @@ func (s *FederationService) cast_User_User_AttrA__to__Federation_User_AttrA(from
 	if from == nil {
 		return nil, nil
 	}
-
 	fooValue := from.GetFoo()
-
 	ret := &User_AttrA{
 		Foo: fooValue,
 	}
+
 	return ret, nil
 }
 
@@ -2916,22 +2919,21 @@ func (s *FederationService) cast_User_User_AttrB__to__Federation_User_AttrB(from
 	if from == nil {
 		return nil, nil
 	}
-
 	barValue := from.GetBar()
-
 	ret := &User_AttrB{
 		Bar: barValue,
 	}
+
 	return ret, nil
 }
 
 // cast_User_User_B__to__Federation_User_B cast from "user.User.b" to "federation.User.b".
-func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.User_AttrB) (*User_B, error) {
+func (s *FederationService) cast_User_User_B__to__Federation_User_B(from *user.User_B) (*User_B, error) {
 	if from == nil {
 		return nil, nil
 	}
 
-	bValue, err := s.cast_User_User_AttrB__to__Federation_User_AttrB(from)
+	bValue, err := s.cast_User_User_AttrB__to__Federation_User_AttrB(from.B)
 	if err != nil {
 		return nil, err
 	}
@@ -3188,6 +3190,7 @@ func (s *FederationService) logvalue_Federation_Item_Location(v *Item_Location) 
 		slog.String("addr2", v.GetAddr2()),
 		slog.Any("addr_a", s.logvalue_Federation_Item_Location_AddrA(v.GetAddrA())),
 		slog.Any("b", s.logvalue_Federation_Item_Location_AddrB(v.GetB())),
+		slog.String("c", v.GetC()),
 	)
 }
 

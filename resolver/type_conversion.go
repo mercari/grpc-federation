@@ -119,6 +119,9 @@ func requiredTypeConversion(fromType, toType *Type) bool {
 	if fromType == nil || toType == nil {
 		return false
 	}
+	if fromType.OneofField != toType.OneofField {
+		return true
+	}
 	if fromType.Kind == types.Message {
 		if fromType.Message.IsMapEntry {
 			fromKey := fromType.Message.Field("key")

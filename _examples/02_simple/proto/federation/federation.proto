@@ -261,6 +261,7 @@ message Item {
     oneof addr3 {
       AddrA addr_a = 3;
       AddrB b = 4;
+      string c = 5;
     };
     message AddrA {
       option (grpc.federation.message).alias = "user.Item.Location.AddrA";

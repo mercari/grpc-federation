@@ -559,8 +559,10 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	switch {
-	case oneof_UserA.(bool):
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if oneof_UserA.(bool) {
 		/*
 			def {
 			  name: "ua"
@@ -610,14 +612,18 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Expr:       `ua`,
 			CacheIndex: 13,
 			Setter: func(v *User) error {
-				ret.User = &UserSelection_UserA{UserA: v}
+				userValue, err := s.cast_Org_Federation_User__to__Org_Federation_UserSelection_UserA(v)
+				if err != nil {
+					return err
+				}
+				ret.User = userValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	case oneof_UserB.(bool):
+	} else if oneof_UserB.(bool) {
 		/*
 			def {
 			  name: "ub"
@@ -667,14 +673,18 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Expr:       `ub`,
 			CacheIndex: 15,
 			Setter: func(v *User) error {
-				ret.User = &UserSelection_UserB{UserB: v}
+				userValue, err := s.cast_Org_Federation_User__to__Org_Federation_UserSelection_UserB(v)
+				if err != nil {
+					return err
+				}
+				ret.User = userValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	default:
+	} else {
 		/*
 			def {
 			  name: "uc"
@@ -724,7 +734,11 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Expr:       `uc`,
 			CacheIndex: 17,
 			Setter: func(v *User) error {
-				ret.User = &UserSelection_UserC{UserC: v}
+				userValue, err := s.cast_Org_Federation_User__to__Org_Federation_UserSelection_UserC(v)
+				if err != nil {
+					return err
+				}
+				ret.User = userValue
 				return nil
 			},
 		}); err != nil {
@@ -735,6 +749,51 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.UserSelection", slog.Any("org.federation.UserSelection", s.logvalue_Org_Federation_UserSelection(ret)))
 	return ret, nil
+}
+
+// cast_Org_Federation_User__to__Org_Federation_UserSelection_UserA cast from "org.federation.User" to "org.federation.UserSelection.user_a".
+func (s *FederationService) cast_Org_Federation_User__to__Org_Federation_UserSelection_UserA(from *User) (*UserSelection_UserA, error) {
+	if from == nil {
+		return nil, nil
+	}
+	idValue := from.GetId()
+	ret := &User{
+		Id: idValue,
+	}
+
+	return &UserSelection_UserA{
+		UserA: ret,
+	}, nil
+}
+
+// cast_Org_Federation_User__to__Org_Federation_UserSelection_UserB cast from "org.federation.User" to "org.federation.UserSelection.user_b".
+func (s *FederationService) cast_Org_Federation_User__to__Org_Federation_UserSelection_UserB(from *User) (*UserSelection_UserB, error) {
+	if from == nil {
+		return nil, nil
+	}
+	idValue := from.GetId()
+	ret := &User{
+		Id: idValue,
+	}
+
+	return &UserSelection_UserB{
+		UserB: ret,
+	}, nil
+}
+
+// cast_Org_Federation_User__to__Org_Federation_UserSelection_UserC cast from "org.federation.User" to "org.federation.UserSelection.user_c".
+func (s *FederationService) cast_Org_Federation_User__to__Org_Federation_UserSelection_UserC(from *User) (*UserSelection_UserC, error) {
+	if from == nil {
+		return nil, nil
+	}
+	idValue := from.GetId()
+	ret := &User{
+		Id: idValue,
+	}
+
+	return &UserSelection_UserC{
+		UserC: ret,
+	}, nil
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) slog.Value {

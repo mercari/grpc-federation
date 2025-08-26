@@ -369,8 +369,10 @@ func (s *FederationService) resolve_Org_Federation_CastOneof(ctx context.Context
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	switch {
-	case oneof_Num.(bool):
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if oneof_Num.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
 			Value:      value,
@@ -388,7 +390,7 @@ func (s *FederationService) resolve_Org_Federation_CastOneof(ctx context.Context
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	case oneof_User.(bool):
+	} else if oneof_User.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*user.User]{
 			Value:      value,
@@ -406,7 +408,7 @@ func (s *FederationService) resolve_Org_Federation_CastOneof(ctx context.Context
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	case oneof_Type.(bool):
+	} else if oneof_Type.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.UserType]{
 			Value:      value,
@@ -789,43 +791,57 @@ func (s *FederationService) resolve_Org_Federation_MessageSelection(ctx context.
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	switch {
-	case oneof_MsgA.(bool):
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if oneof_MsgA.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 			Value:      value,
 			Expr:       `'aaa'`,
 			CacheIndex: 15,
 			Setter: func(v string) error {
-				ret.Message = &MessageSelection_MsgA{MsgA: v}
+				messageValue, err := s.cast_string__to__Org_Federation_MessageSelection_MsgA(v)
+				if err != nil {
+					return err
+				}
+				ret.Message = messageValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	case oneof_MsgB.(bool):
+	} else if oneof_MsgB.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 			Value:      value,
 			Expr:       `'bbb'`,
 			CacheIndex: 16,
 			Setter: func(v string) error {
-				ret.Message = &MessageSelection_MsgB{MsgB: v}
+				messageValue, err := s.cast_string__to__Org_Federation_MessageSelection_MsgB(v)
+				if err != nil {
+					return err
+				}
+				ret.Message = messageValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	default:
+	} else {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 			Value:      value,
 			Expr:       `'ccc'`,
 			CacheIndex: 17,
 			Setter: func(v string) error {
-				ret.Message = &MessageSelection_MsgC{MsgC: v}
+				messageValue, err := s.cast_string__to__Org_Federation_MessageSelection_MsgC(v)
+				if err != nil {
+					return err
+				}
+				ret.Message = messageValue
 				return nil
 			},
 		}); err != nil {
@@ -876,29 +892,39 @@ func (s *FederationService) resolve_Org_Federation_NestedMessageSelection_Nest(c
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	switch {
-	case oneof_Int.(bool):
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if oneof_Int.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 			Value:      value,
 			Expr:       `1`,
 			CacheIndex: 20,
 			Setter: func(v int64) error {
-				ret.Value = &NestedMessageSelection_Nest_Int{Int: v}
+				valueValue, err := s.cast_int64__to__Org_Federation_NestedMessageSelection_Nest_Int(v)
+				if err != nil {
+					return err
+				}
+				ret.Value = valueValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	case oneof_Text.(bool):
+	} else if oneof_Text.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 			Value:      value,
 			Expr:       `'foo'`,
 			CacheIndex: 21,
 			Setter: func(v string) error {
-				ret.Value = &NestedMessageSelection_Nest_Text{Text: v}
+				valueValue, err := s.cast_string__to__Org_Federation_NestedMessageSelection_Nest_Text(v)
+				if err != nil {
+					return err
+				}
+				ret.Value = valueValue
 				return nil
 			},
 		}); err != nil {
@@ -949,29 +975,39 @@ func (s *FederationService) resolve_Org_Federation_NoValueSelection(ctx context.
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	switch {
-	case oneof_MA.(bool):
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if oneof_MA.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*M]{
 			Value:      value,
 			Expr:       `M{value: 'a'}`,
 			CacheIndex: 24,
 			Setter: func(v *M) error {
-				ret.NoValue = &NoValueSelection_MA{MA: v}
+				noValueValue, err := s.cast_Org_Federation_M__to__Org_Federation_NoValueSelection_MA(v)
+				if err != nil {
+					return err
+				}
+				ret.NoValue = noValueValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	case oneof_MB.(bool):
+	} else if oneof_MB.(bool) {
 
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*M]{
 			Value:      value,
 			Expr:       `M{value: 'b'}`,
 			CacheIndex: 25,
 			Setter: func(v *M) error {
-				ret.NoValue = &NoValueSelection_MB{MB: v}
+				noValueValue, err := s.cast_Org_Federation_M__to__Org_Federation_NoValueSelection_MB(v)
+				if err != nil {
+					return err
+				}
+				ret.NoValue = noValueValue
 				return nil
 			},
 		}); err != nil {
@@ -1160,8 +1196,10 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	switch {
-	case oneof_UserA.(bool):
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if oneof_UserA.(bool) {
 		/*
 			def {
 			  name: "ua"
@@ -1239,14 +1277,18 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Expr:       `ua`,
 			CacheIndex: 37,
 			Setter: func(v *User) error {
-				ret.User = &UserSelection_UserA{UserA: v}
+				userValue, err := s.cast_Org_Federation_User__to__Org_Federation_UserSelection_UserA(v)
+				if err != nil {
+					return err
+				}
+				ret.User = userValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	case oneof_UserB.(bool):
+	} else if oneof_UserB.(bool) {
 		/*
 			def {
 			  name: "ub"
@@ -1324,14 +1366,18 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Expr:       `ub`,
 			CacheIndex: 41,
 			Setter: func(v *User) error {
-				ret.User = &UserSelection_UserB{UserB: v}
+				userValue, err := s.cast_Org_Federation_User__to__Org_Federation_UserSelection_UserB(v)
+				if err != nil {
+					return err
+				}
+				ret.User = userValue
 				return nil
 			},
 		}); err != nil {
 			grpcfed.RecordErrorToSpan(ctx, err)
 			return nil, err
 		}
-	default:
+	} else {
 		/*
 			def {
 			  name: "uc"
@@ -1409,7 +1455,11 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 			Expr:       `uc`,
 			CacheIndex: 45,
 			Setter: func(v *User) error {
-				ret.User = &UserSelection_UserC{UserC: v}
+				userValue, err := s.cast_Org_Federation_User__to__Org_Federation_UserSelection_UserC(v)
+				if err != nil {
+					return err
+				}
+				ret.User = userValue
 				return nil
 			},
 		}); err != nil {
@@ -1420,6 +1470,81 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.UserSelection", slog.Any("org.federation.UserSelection", s.logvalue_Org_Federation_UserSelection(ret)))
 	return ret, nil
+}
+
+// cast_Org_Federation_M__to__Org_Federation_NoValueSelection_MA cast from "org.federation.M" to "org.federation.NoValueSelection.m_a".
+func (s *FederationService) cast_Org_Federation_M__to__Org_Federation_NoValueSelection_MA(from *M) (*NoValueSelection_MA, error) {
+	if from == nil {
+		return nil, nil
+	}
+	valueValue := from.GetValue()
+	ret := &M{
+		Value: valueValue,
+	}
+
+	return &NoValueSelection_MA{
+		MA: ret,
+	}, nil
+}
+
+// cast_Org_Federation_M__to__Org_Federation_NoValueSelection_MB cast from "org.federation.M" to "org.federation.NoValueSelection.m_b".
+func (s *FederationService) cast_Org_Federation_M__to__Org_Federation_NoValueSelection_MB(from *M) (*NoValueSelection_MB, error) {
+	if from == nil {
+		return nil, nil
+	}
+	valueValue := from.GetValue()
+	ret := &M{
+		Value: valueValue,
+	}
+
+	return &NoValueSelection_MB{
+		MB: ret,
+	}, nil
+}
+
+// cast_Org_Federation_User__to__Org_Federation_UserSelection_UserA cast from "org.federation.User" to "org.federation.UserSelection.user_a".
+func (s *FederationService) cast_Org_Federation_User__to__Org_Federation_UserSelection_UserA(from *User) (*UserSelection_UserA, error) {
+	if from == nil {
+		return nil, nil
+	}
+	idValue := from.GetId()
+	ret := &User{
+		Id: idValue,
+	}
+
+	return &UserSelection_UserA{
+		UserA: ret,
+	}, nil
+}
+
+// cast_Org_Federation_User__to__Org_Federation_UserSelection_UserB cast from "org.federation.User" to "org.federation.UserSelection.user_b".
+func (s *FederationService) cast_Org_Federation_User__to__Org_Federation_UserSelection_UserB(from *User) (*UserSelection_UserB, error) {
+	if from == nil {
+		return nil, nil
+	}
+	idValue := from.GetId()
+	ret := &User{
+		Id: idValue,
+	}
+
+	return &UserSelection_UserB{
+		UserB: ret,
+	}, nil
+}
+
+// cast_Org_Federation_User__to__Org_Federation_UserSelection_UserC cast from "org.federation.User" to "org.federation.UserSelection.user_c".
+func (s *FederationService) cast_Org_Federation_User__to__Org_Federation_UserSelection_UserC(from *User) (*UserSelection_UserC, error) {
+	if from == nil {
+		return nil, nil
+	}
+	idValue := from.GetId()
+	ret := &User{
+		Id: idValue,
+	}
+
+	return &UserSelection_UserC{
+		UserC: ret,
+	}, nil
 }
 
 // cast_User_UserType__to__Org_Federation_CastOneof_Type cast from "user.UserType" to "org.federation.CastOneof.type".
@@ -1443,14 +1568,48 @@ func (s *FederationService) cast_User_User__to__Org_Federation_CastOneof_User(fr
 	if from == nil {
 		return nil, nil
 	}
-
 	idValue := from.GetId()
-
 	ret := &User{
 		Id: idValue,
 	}
+
 	return &CastOneof_User{
 		User: ret,
+	}, nil
+}
+
+// cast_int64__to__Org_Federation_NestedMessageSelection_Nest_Int cast from "int64" to "org.federation.NestedMessageSelection.Nest.int".
+func (s *FederationService) cast_int64__to__Org_Federation_NestedMessageSelection_Nest_Int(from int64) (*NestedMessageSelection_Nest_Int, error) {
+	return &NestedMessageSelection_Nest_Int{
+		Int: int64(from),
+	}, nil
+}
+
+// cast_string__to__Org_Federation_MessageSelection_MsgA cast from "string" to "org.federation.MessageSelection.msg_a".
+func (s *FederationService) cast_string__to__Org_Federation_MessageSelection_MsgA(from string) (*MessageSelection_MsgA, error) {
+	return &MessageSelection_MsgA{
+		MsgA: string(from),
+	}, nil
+}
+
+// cast_string__to__Org_Federation_MessageSelection_MsgB cast from "string" to "org.federation.MessageSelection.msg_b".
+func (s *FederationService) cast_string__to__Org_Federation_MessageSelection_MsgB(from string) (*MessageSelection_MsgB, error) {
+	return &MessageSelection_MsgB{
+		MsgB: string(from),
+	}, nil
+}
+
+// cast_string__to__Org_Federation_MessageSelection_MsgC cast from "string" to "org.federation.MessageSelection.msg_c".
+func (s *FederationService) cast_string__to__Org_Federation_MessageSelection_MsgC(from string) (*MessageSelection_MsgC, error) {
+	return &MessageSelection_MsgC{
+		MsgC: string(from),
+	}, nil
+}
+
+// cast_string__to__Org_Federation_NestedMessageSelection_Nest_Text cast from "string" to "org.federation.NestedMessageSelection.Nest.text".
+func (s *FederationService) cast_string__to__Org_Federation_NestedMessageSelection_Nest_Text(from string) (*NestedMessageSelection_Nest_Text, error) {
+	return &NestedMessageSelection_Nest_Text{
+		Text: string(from),
 	}, nil
 }
 

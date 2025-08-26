@@ -1998,11 +1998,6 @@ type CastField struct {
 }
 
 func (f *CastField) RequestType() string {
-	if f.fromType.OneofField != nil {
-		typ := f.fromType.OneofField.Type.Clone()
-		typ.OneofField = nil
-		return f.file.toTypeText(typ)
-	}
 	return f.file.toTypeText(f.fromType)
 }
 
@@ -2256,6 +2251,7 @@ type CastOneofStruct struct {
 }
 
 type CastStructField struct {
+	FromType      string
 	ToFieldName   string
 	FromFieldName string
 	CastName      string
@@ -2325,6 +2321,7 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 			toType := toField.Type
 			requiredCast := requiredCast(fromType, toType)
 			return &CastStructField{
+				FromType:      f.file.toTypeText(fromType),
 				ToFieldName:   util.ToPublicGoVariable(toField.Name),
 				FromFieldName: util.ToPublicGoVariable(fromField.Name),
 				RequiredCast:  requiredCast,
@@ -2340,6 +2337,7 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 	toType := toField.Type
 	requiredCast := requiredCast(fromType, toType)
 	return &CastStructField{
+		FromType:      f.file.toTypeText(fromType),
 		ToFieldName:   util.ToPublicGoVariable(toField.Name),
 		FromFieldName: util.ToPublicGoVariable(fromField.Name),
 		RequiredCast:  requiredCast,
@@ -2348,10 +2346,11 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 }
 
 type CastOneof struct {
-	Name         string
-	FieldName    string
-	CastName     string
-	RequiredCast bool
+	Name          string
+	FromFieldName string
+	ToFieldName   string
+	CastName      string
+	RequiredCast  bool
 }
 
 func (f *CastField) ToOneof() *CastOneof {
@@ -2376,10 +2375,11 @@ func (f *CastField) ToOneof() *CastOneof {
 		name = fmt.Sprintf("%s.%s", f.file.getAlias(msg.GoPackage()), name)
 	}
 	return &CastOneof{
-		Name:         name,
-		FieldName:    util.ToPublicGoVariable(toField.Name),
-		RequiredCast: requiredCast,
-		CastName:     castFuncName(fromType, toType),
+		Name:          name,
+		FromFieldName: util.ToPublicGoVariable(fromField.Name),
+		ToFieldName:   util.ToPublicGoVariable(toField.Name),
+		RequiredCast:  requiredCast,
+		CastName:      castFuncName(fromType, toType),
 	}
 }
 
@@ -2482,11 +2482,20 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	}
 
 	fieldName := util.ToPublicGoVariable(field.Name)
-
 	var (
-		value    = fmt.Sprintf("value.vars.%s.Get%s()", util.ToPublicGoVariable(name), fieldName)
+		value    string
 		castFunc string
 	)
+	if field.Oneof != nil {
+		value = fmt.Sprintf(
+			"value.vars.%s.%s.(%s)",
+			util.ToPublicGoVariable(name),
+			util.ToPublicGoVariable(field.Oneof.Name),
+			m.file.toTypeText(autoBindField.Field.Type),
+		)
+	} else {
+		value = fmt.Sprintf("value.vars.%s.Get%s()", util.ToPublicGoVariable(name), fieldName)
+	}
 	if field.RequiredTypeConversion() {
 		var fromType *resolver.Type
 		for _, sourceType := range field.SourceTypes() {
@@ -2640,7 +2649,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 				castValue = fmt.Sprintf("s.%s(%s)", autoBind.CastFunc, autoBind.Value)
 			}
 			caseFields = append(caseFields, &OneofField{
-				Condition: fmt.Sprintf("%s != nil", autoBind.Value),
+				Condition: fmt.Sprintf("_, ok := %s; ok", autoBind.Value),
 				Name:      autoBind.Name,
 				Value:     autoBind.Value,
 				CastValue: castValue,
@@ -3841,6 +3850,9 @@ func fullEnumName(enum *resolver.Enum) string {
 func requiredCast(from, to *resolver.Type) bool {
 	if from == nil || to == nil {
 		return false
+	}
+	if from.OneofField != to.OneofField {
+		return true
 	}
 	if from.Kind == types.Message {
 		if from.Message.IsMapEntry && to.Message.IsMapEntry {

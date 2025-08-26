@@ -1306,14 +1306,13 @@ func (s *FederationV2DevService) cast_Google_Protobuf_Duration__to__Google_Proto
 	if from == nil {
 		return nil, nil
 	}
-
 	secondsValue := from.GetSeconds()
 	nanosValue := from.GetNanos()
-
 	ret := &durationpb.Duration{
 		Seconds: secondsValue,
 		Nanos:   nanosValue,
 	}
+
 	return ret, nil
 }
 
