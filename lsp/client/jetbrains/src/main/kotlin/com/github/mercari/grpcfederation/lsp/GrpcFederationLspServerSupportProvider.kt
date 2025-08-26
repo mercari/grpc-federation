@@ -18,13 +18,34 @@ internal class GrpcFederationLspServerSupportProvider : LspServerSupportProvider
 private class GrpcFederationLspServerDescriptor(project: Project) : ProjectWideLspServerDescriptor(project, "gRPC Federation") {
     override fun isSupportedFile(file: VirtualFile) = file.extension == "proto"
     override fun createCommandLine(): GeneralCommandLine {
-        val cmd = buildList{
-            add("grpc-federation-language-server")
-            for (p in project.projectSettings.state.importPaths) {
-                add("-I")
-                add(p)
+        val state = project.projectSettings.currentState
+        val cmd = mutableListOf<String>()
+        cmd.add("grpc-federation-language-server")
+        
+        // Use new format if available, otherwise fall back to old format
+        val paths = if (state.importPathEntries.isNotEmpty()) {
+            state.importPathEntries.filter { it.enabled }.map { it.path }
+        } else {
+            state.importPaths
+        }
+        
+        for (p in paths) {
+            if (p.isNotEmpty()) {
+                cmd.add("-I")
+                cmd.add(expandPath(project, p))
             }
         }
         return GeneralCommandLine(cmd)
+    }
+    
+    private fun expandPath(project: Project, path: String): String {
+        var expanded = path
+        if (path.startsWith("~/")) {
+            expanded = System.getProperty("user.home") + path.substring(1)
+        }
+        if (path.contains("\${PROJECT_ROOT}")) {
+            expanded = expanded.replace("\${PROJECT_ROOT}", project.basePath ?: "")
+        }
+        return expanded
     }
 }

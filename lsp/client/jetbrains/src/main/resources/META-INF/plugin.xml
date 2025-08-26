@@ -18,5 +18,5 @@
                 displayName="gRPC Federation"
                 nonDefaultProject="true"/>
     </extensions>
-    <resource-bundle>messages.Bundle</resource-bundle>
+    <resource-bundle>messages.GrpcFederationBundle</resource-bundle>
 </idea-plugin>
