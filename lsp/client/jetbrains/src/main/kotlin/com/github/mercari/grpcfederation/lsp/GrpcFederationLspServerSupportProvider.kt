@@ -1,5 +1,6 @@
 package com.github.mercari.grpcfederation.lsp
 
+import com.github.mercari.grpcfederation.settings.PathUtils
 import com.github.mercari.grpcfederation.settings.projectSettings
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.project.Project
@@ -22,30 +23,21 @@ private class GrpcFederationLspServerDescriptor(project: Project) : ProjectWideL
         val cmd = mutableListOf<String>()
         cmd.add("grpc-federation-language-server")
         
-        // Use new format if available, otherwise fall back to old format
+        // Use new format (importPathEntries) if available, otherwise fall back to legacy format
+        // TODO: Remove legacy format support in v0.3.0
         val paths = if (state.importPathEntries.isNotEmpty()) {
             state.importPathEntries.filter { it.enabled }.map { it.path }
         } else {
+            // Legacy format: all paths are considered enabled
             state.importPaths
         }
         
         for (p in paths) {
             if (p.isNotEmpty()) {
                 cmd.add("-I")
-                cmd.add(expandPath(project, p))
+                cmd.add(PathUtils.expandPath(p, project))
             }
         }
         return GeneralCommandLine(cmd)
-    }
-    
-    private fun expandPath(project: Project, path: String): String {
-        var expanded = path
-        if (path.startsWith("~/")) {
-            expanded = System.getProperty("user.home") + path.substring(1)
-        }
-        if (path.contains("\${PROJECT_ROOT}")) {
-            expanded = expanded.replace("\${PROJECT_ROOT}", project.basePath ?: "")
-        }
-        return expanded
     }
 }

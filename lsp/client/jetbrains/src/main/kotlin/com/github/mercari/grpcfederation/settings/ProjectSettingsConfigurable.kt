@@ -148,7 +148,8 @@ class ProjectSettingsConfigurable(
                 ProjectSettingsService.ImportPathEntry(it.path, it.enabled)
             })
         } else if (currentState.importPaths.isNotEmpty()) {
-            // Migrate from old format
+            // Automatic migration from legacy format: all paths are considered enabled by default
+            // Legacy format will be removed in v0.3.0
             tableModel.setEntries(currentState.importPaths.map {
                 ProjectSettingsService.ImportPathEntry(it, true)
             })
@@ -216,7 +217,7 @@ class ProjectSettingsConfigurable(
         
         for (entry in entries) {
             if (entry.enabled) {
-                val path = expandPath(entry.path)
+                val path = PathUtils.expandPath(entry.path, project)
                 val file = File(path)
                 if (!file.exists() || !file.isDirectory) {
                     invalidPaths.add(entry.path)
@@ -241,18 +242,6 @@ class ProjectSettingsConfigurable(
         }
     }
     
-    private fun expandPath(path: String): String {
-        var expanded = path
-        if (path.startsWith("~/")) {
-            expanded = System.getProperty("user.home") + path.substring(1)
-        }
-        // Could add more variable expansions here like ${PROJECT_ROOT}
-        if (path.contains("\${PROJECT_ROOT}")) {
-            expanded = expanded.replace("\${PROJECT_ROOT}", project.basePath ?: "")
-        }
-        return expanded
-    }
-    
     override fun isModified(): Boolean {
         if (isModified) return true
         
@@ -269,7 +258,10 @@ class ProjectSettingsConfigurable(
     override fun apply() {
         val entries = tableModel.getEntries()
         val newState = ProjectSettingsService.State(
+                // Maintain legacy field for backward compatibility (only enabled paths)
+                // TODO: Remove this field assignment in v0.3.0
                 importPaths = entries.filter { it.enabled }.map { it.path }.toMutableList(),
+                // Primary storage format from v0.2.0 onwards
                 importPathEntries = entries.map { 
                     ProjectSettingsService.ImportPathEntry(it.path, it.enabled) 
                 }.toMutableList()
