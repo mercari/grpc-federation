@@ -13,8 +13,11 @@ import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Component
 import java.io.File
 import javax.swing.*
+import javax.swing.table.DefaultTableCellRenderer
+import javax.swing.table.TableCellRenderer
 
 class ProjectSettingsConfigurable(
         private val project: Project,
@@ -38,10 +41,34 @@ class ProjectSettingsConfigurable(
             intercellSpacing = JBUI.emptySize()
             emptyText.text = "No import paths configured"
             
-            // Set column widths
+            // Set column widths and configure checkbox for Enabled column
             columnModel.getColumn(0).apply {
                 preferredWidth = 60
                 maxWidth = 60
+                
+                // Set up checkbox renderer
+                val checkBoxRenderer = object : TableCellRenderer {
+                    private val checkBox = JCheckBox()
+                    override fun getTableCellRendererComponent(
+                        table: JTable,
+                        value: Any?,
+                        isSelected: Boolean,
+                        hasFocus: Boolean,
+                        row: Int,
+                        column: Int
+                    ): Component {
+                        checkBox.isSelected = value as? Boolean ?: true
+                        checkBox.horizontalAlignment = SwingConstants.CENTER
+                        checkBox.background = if (isSelected) table.selectionBackground else table.background
+                        return checkBox
+                    }
+                }
+                cellRenderer = checkBoxRenderer
+                
+                // Set up checkbox editor
+                cellEditor = DefaultCellEditor(JCheckBox().apply {
+                    horizontalAlignment = SwingConstants.CENTER
+                })
             }
             columnModel.getColumn(1).preferredWidth = 400
         }
