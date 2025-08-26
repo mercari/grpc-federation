@@ -11,7 +11,7 @@ The gRPC Federation Language Server for JetBrains is a plugin designed for JetBr
 
 ## Requirements
 
-- **IntelliJ IDEA** 2023.3 or newer (Ultimate or Community Edition)
+- **IntelliJ IDEA Ultimate** 2023.3 or newer (This plugin requires Ultimate Edition)
 - **grpc-federation-language-server** installed and available in PATH
 - **Protocol Buffer** plugin (usually pre-installed)
 
