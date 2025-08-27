@@ -2496,9 +2496,10 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	} else {
 		value = fmt.Sprintf("value.vars.%s.Get%s()", util.ToPublicGoVariable(name), fieldName)
 	}
-	if field.RequiredTypeConversion() {
+	requiredCast := field.RequiredTypeConversion(resolver.FieldConversionKindAutoBind)
+	if requiredCast {
 		var fromType *resolver.Type
-		for _, sourceType := range field.SourceTypes() {
+		for _, sourceType := range field.SourceTypes(resolver.FieldConversionKindAutoBind) {
 			if typ := m.autoBindSourceType(autoBindField, sourceType); typ != nil {
 				fromType = typ
 				break
@@ -2516,7 +2517,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 	return &AutoBindReturnField{
 		Name:         fieldName,
 		Value:        value,
-		RequiredCast: field.RequiredTypeConversion(),
+		RequiredCast: requiredCast,
 		CastFunc:     castFunc,
 		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
 	}, nil
@@ -2559,12 +2560,9 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		requiredCast bool
 	)
 	switch fromType.Kind {
-	case types.Message:
+	case types.Message, types.Enum:
 		typ = fromText
-		requiredCast = field.RequiredTypeConversion()
-	case types.Enum:
-		typ = fromText
-		requiredCast = field.RequiredTypeConversion()
+		requiredCast = field.RequiredTypeConversion(resolver.FieldConversionKindValue)
 	default:
 		// Since fromType is a primitive type, type conversion is possible on the CEL side.
 		typ = toText

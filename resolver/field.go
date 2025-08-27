@@ -32,18 +32,30 @@ func (f *Field) typeConversionDecls(convertedFQDNMap map[string]struct{}) []*Typ
 	if f == nil {
 		return nil
 	}
-	if !f.RequiredTypeConversion() {
+	if !f.RequiredTypeConversion(FieldConversionKindAll) {
 		return nil
 	}
 	toType := f.Type
 	var decls []*TypeConversionDecl
-	for _, fromType := range f.SourceTypes() {
+	for _, fromType := range f.SourceTypes(FieldConversionKindAll) {
 		decls = append(decls, typeConversionDecls(fromType, toType, convertedFQDNMap)...)
 	}
 	return uniqueTypeConversionDecls(decls)
 }
 
-func (f *Field) RequiredTypeConversion() bool {
+type FieldConversionKind int
+
+const (
+	FieldConversionKindUnknown FieldConversionKind = 1 << iota
+	FieldConversionKindValue
+	FieldConversionKindAutoBind
+	FieldConversionKindAlias
+	FieldConversionKindOneof
+)
+
+var FieldConversionKindAll = FieldConversionKindValue | FieldConversionKindAutoBind | FieldConversionKindAlias | FieldConversionKindOneof
+
+func (f *Field) RequiredTypeConversion(kind FieldConversionKind) bool {
 	if f == nil {
 		return false
 	}
@@ -53,7 +65,7 @@ func (f *Field) RequiredTypeConversion() bool {
 	if f.HasCustomResolver() {
 		return false
 	}
-	for _, fromType := range f.SourceTypes() {
+	for _, fromType := range f.SourceTypes(kind) {
 		if requiredTypeConversion(fromType, f.Type) {
 			return true
 		}
@@ -61,7 +73,7 @@ func (f *Field) RequiredTypeConversion() bool {
 	return false
 }
 
-func (f *Field) SourceTypes() []*Type {
+func (f *Field) SourceTypes(kind FieldConversionKind) []*Type {
 	if f == nil {
 		return nil
 	}
@@ -70,18 +82,18 @@ func (f *Field) SourceTypes() []*Type {
 	}
 	rule := f.Rule
 	var ret []*Type
-	if rule.Value != nil {
+	if kind&FieldConversionKindValue != 0 && rule.Value != nil {
 		ret = append(ret, rule.Value.Type())
 	}
-	if len(rule.Aliases) != 0 {
+	if kind&FieldConversionKindAlias != 0 && len(rule.Aliases) != 0 {
 		for _, alias := range rule.Aliases {
 			ret = append(ret, alias.Type)
 		}
 	}
-	if rule.AutoBindField != nil {
+	if kind&FieldConversionKindAutoBind != 0 && rule.AutoBindField != nil {
 		ret = append(ret, rule.AutoBindField.Field.Type)
 	}
-	if rule.Oneof != nil {
+	if kind&FieldConversionKindOneof != 0 && rule.Oneof != nil {
 		if rule.Oneof.By != nil {
 			ret = append(ret, rule.Oneof.By.Out)
 		}
