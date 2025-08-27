@@ -277,6 +277,7 @@ func TestFederation(t *testing.T) {
 					Type: "bar",
 				},
 			},
+			Opt: &federation.A_OptC{OptC: &federation.A_B_C{}},
 		},
 		SortedValues: []int32{1, 2, 3, 4},
 		SortedItems: []*federation.Item{

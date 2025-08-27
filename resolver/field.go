@@ -69,21 +69,22 @@ func (f *Field) SourceTypes() []*Type {
 		return nil
 	}
 	rule := f.Rule
-	switch {
-	case rule.Value != nil:
-		return []*Type{rule.Value.Type()}
-	case len(rule.Aliases) != 0:
-		ret := make([]*Type, 0, len(rule.Aliases))
+	var ret []*Type
+	if rule.Value != nil {
+		ret = append(ret, rule.Value.Type())
+	}
+	if len(rule.Aliases) != 0 {
 		for _, alias := range rule.Aliases {
 			ret = append(ret, alias.Type)
 		}
-		return ret
-	case rule.AutoBindField != nil:
-		return []*Type{rule.AutoBindField.Field.Type}
-	case rule.Oneof != nil:
+	}
+	if rule.AutoBindField != nil {
+		ret = append(ret, rule.AutoBindField.Field.Type)
+	}
+	if rule.Oneof != nil {
 		if rule.Oneof.By != nil {
-			return []*Type{rule.Oneof.By.Out}
+			ret = append(ret, rule.Oneof.By.Out)
 		}
 	}
-	return nil
+	return ret
 }
