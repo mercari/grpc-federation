@@ -10,7 +10,10 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.platform.lsp.api.LspServerDescriptor
 import com.intellij.platform.lsp.api.LspServerSupportProvider
 import com.intellij.platform.lsp.api.customization.LspSemanticTokensSupport
+import com.intellij.platform.lsp.api.customization.LspDiagnosticsSupport
 import com.intellij.psi.PsiFile
+import com.intellij.openapi.util.text.StringUtil
+import org.eclipse.lsp4j.Diagnostic
 
 internal class GrpcFederationLspServerSupportProvider : LspServerSupportProvider {
     override fun fileOpened(project: Project, file: VirtualFile, serverStarter: LspServerSupportProvider.LspServerStarter) {
@@ -22,6 +25,17 @@ internal class GrpcFederationLspServerSupportProvider : LspServerSupportProvider
 
 private class GrpcFederationLspServerDescriptor(project: Project) : LspServerDescriptor(project, "gRPC Federation") {
     override fun isSupportedFile(file: VirtualFile) = file.extension == "proto"
+    
+    // Enable diagnostics support with HTML escaping
+    override val lspDiagnosticsSupport: LspDiagnosticsSupport = object : LspDiagnosticsSupport() {
+        override fun getTooltip(diagnostic: Diagnostic): String {
+            // Escape HTML/XML entities in the diagnostic message to prevent UI issues
+            // The tooltip is rendered as HTML, so we need to escape special characters
+            // Always use <pre> tag to preserve formatting and ensure consistent display
+            val escapedMessage = StringUtil.escapeXmlEntities(diagnostic.message)
+            return "<pre>$escapedMessage</pre>"
+        }
+    }
     
     // Enable semantic tokens support for gRPC Federation syntax highlighting
     override val lspSemanticTokensSupport: LspSemanticTokensSupport = object : LspSemanticTokensSupport() {
