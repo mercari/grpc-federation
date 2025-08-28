@@ -782,7 +782,6 @@ func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(fro
 	if from == nil {
 		return nil, nil
 	}
-
 	byFieldValue := from.GetByField()
 	doubleFieldValue := from.GetDoubleField()
 	doublesFieldValue := from.GetDoublesField()
@@ -832,7 +831,6 @@ func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(fro
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &Content{
 		ByField:          byFieldValue,
 		DoubleField:      doubleFieldValue,
@@ -872,6 +870,7 @@ func (s *FederationService) cast_Content_Content__to__Org_Federation_Content(fro
 		MessageField:     messageFieldValue,
 		MessagesField:    messagesFieldValue,
 	}
+
 	return ret, nil
 }
 

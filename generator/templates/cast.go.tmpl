@@ -25,8 +25,6 @@ return ret, nil
 if from == nil {
 	return nil, nil
 }
-{{ $oneofFields := .Oneofs }}
-{{- if $oneofFields }}
 {{- range .Fields }}
 {{- $fieldName := toLocalVariable .ToFieldName }}
 {{- if .RequiredCast }}
@@ -38,50 +36,33 @@ if err != nil {
 {{ $fieldName }} := from.Get{{ .FromFieldName }}()
 {{- end }}
 {{- end }}
-
 ret := &{{ .Name }}{
 	{{- range .Fields }}
 	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
 	{{- end }}
 }
-{{- range $oneofFields }}
-switch {
+
+
+{{ $oneofs := .Oneofs }}
+{{- if $oneofs }}
+{{- range $oneofs }}
+switch x := from.{{ .Name }}.(type) {
 	{{ $name := .Name }}
 	{{- $localName := toLocalVariable $name }}
 	{{- range .Fields }}
-	case from.Get{{ .FromFieldName }}() != nil:
+	case {{ .FromType }}:
 	{{- if .RequiredCast }}
-	{{ $localName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+	{{ $localName }}, err := s.{{ .CastName }}(x)
 	if err != nil {
 		return nil, err
 	}
 	{{- else }}
-	{{ $localName }} := from.Get{{ .FromFieldName }}()
+	{{ $localName }} := x
 	{{- end }}
 	ret.{{ $name }} = {{ $localName }}
 	{{- end }}
 }
 {{- end }}
-
-{{- else }}
-{{- range .Fields }}
-{{- $fieldName := toLocalVariable .ToFieldName }}
-{{- if .RequiredCast }}
-{{ $fieldName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
-if err != nil {
-	return nil, err
-}
-{{- else }}
-{{ $fieldName }} := from.Get{{ .FromFieldName }}()
-{{- end }}
-
-{{- end }}
-
-ret := &{{ .Name }}{
-	{{- range .Fields }}
-	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
-	{{- end }}
-}
 {{- end }}
 {{- $wrapper := .CastOneofWrapper }}
 {{- if $wrapper }}
@@ -98,16 +79,16 @@ return ret, nil
 if from == nil {
 	return nil, nil
 }
-{{ $fieldName := toLocalVariable .FieldName }}
+{{ $fieldName := toLocalVariable .ToFieldName }}
 {{- if .RequiredCast }}
-{{ $fieldName }}, err := s.{{ .CastName }}(from)
+{{ $fieldName }}, err := s.{{ .CastName }}(from.{{ .FromFieldName }})
 if err != nil {
 	return nil, err
 }
 {{- else }}
-{{ $fieldName }} := from
+{{ $fieldName }} := from.{{ .FromFieldName }}
 {{- end }}
-return &{{ .Name }}{ {{ .FieldName }}: {{ $fieldName }} }, nil
+return &{{ .Name }}{ {{ .ToFieldName }}: {{ $fieldName }} }, nil
 {{- end }}
 
 {{- define "castEnum" }}

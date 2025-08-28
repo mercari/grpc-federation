@@ -1248,17 +1248,19 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		ret.Items = itemsValue
 	}
 	ret.Profile = value.vars.User.GetProfile() // { name: "user", autobind: true }
-	switch {
-	case value.vars.User.GetAttrA() != nil:
+	if false {
+		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	} else if _, ok := value.vars.User.Attr.(*user.User_AttrA_); ok {
 
-		attrValue, err := s.cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(value.vars.User.GetAttrA())
+		attrValue, err := s.cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(value.vars.User.Attr.(*user.User_AttrA_))
 		if err != nil {
 			return nil, err
 		}
 		ret.Attr = attrValue
-	case value.vars.User.GetB() != nil:
+	} else if _, ok := value.vars.User.Attr.(*user.User_B); ok {
 
-		attrValue, err := s.cast_Org_User_User_B__to__Org_Federation_User_B(value.vars.User.GetB())
+		attrValue, err := s.cast_Org_User_User_B__to__Org_Federation_User_B(value.vars.User.Attr.(*user.User_B))
 		if err != nil {
 			return nil, err
 		}
@@ -1316,7 +1318,6 @@ func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *us
 	if from == nil {
 		return nil, nil
 	}
-
 	nameValue := from.GetName()
 	typeValue, err := s.cast_Org_User_Item_ItemType__to__Org_Federation_Item_ItemType(from.GetType())
 	if err != nil {
@@ -1326,12 +1327,12 @@ func (s *FederationService) cast_Org_User_Item__to__Org_Federation_Item(from *us
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &Item{
 		Name:  nameValue,
 		Type:  typeValue,
 		Value: valueValue,
 	}
+
 	return ret, nil
 }
 
@@ -1350,12 +1351,12 @@ func (s *FederationService) cast_Org_User_UserType__to__Org_Federation_UserType(
 }
 
 // cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_ cast from "org.user.User.attr_a" to "org.federation.User.attr_a".
-func (s *FederationService) cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(from *user.User_AttrA) (*User_AttrA_, error) {
+func (s *FederationService) cast_Org_User_User_AttrA___to__Org_Federation_User_AttrA_(from *user.User_AttrA_) (*User_AttrA_, error) {
 	if from == nil {
 		return nil, nil
 	}
 
-	attrAValue, err := s.cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from)
+	attrAValue, err := s.cast_Org_User_User_AttrA__to__Org_Federation_User_AttrA(from.AttrA)
 	if err != nil {
 		return nil, err
 	}
@@ -1367,12 +1368,11 @@ func (s *FederationService) cast_Org_User_User_AttrA__to__Org_Federation_User_At
 	if from == nil {
 		return nil, nil
 	}
-
 	fooValue := from.GetFoo()
-
 	ret := &User_AttrA{
 		Foo: fooValue,
 	}
+
 	return ret, nil
 }
 
@@ -1381,22 +1381,21 @@ func (s *FederationService) cast_Org_User_User_AttrB__to__Org_Federation_User_At
 	if from == nil {
 		return nil, nil
 	}
-
 	barValue := from.GetBar()
-
 	ret := &User_AttrB{
 		Bar: barValue,
 	}
+
 	return ret, nil
 }
 
 // cast_Org_User_User_B__to__Org_Federation_User_B cast from "org.user.User.b" to "org.federation.User.b".
-func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from *user.User_AttrB) (*User_B, error) {
+func (s *FederationService) cast_Org_User_User_B__to__Org_Federation_User_B(from *user.User_B) (*User_B, error) {
 	if from == nil {
 		return nil, nil
 	}
 
-	bValue, err := s.cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from)
+	bValue, err := s.cast_Org_User_User_AttrB__to__Org_Federation_User_AttrB(from.B)
 	if err != nil {
 		return nil, err
 	}

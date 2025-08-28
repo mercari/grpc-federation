@@ -771,13 +771,15 @@ if err != nil {
 }
 {{- end }}
 {{- end }}
-switch {
+if false {
+	// For code generation reasons, we're using a loop to generate the oneof conditional branches,
+	// so to avoid treating the first element specially, we always generate if branch with false condition.
 	{{- range $oneofFields }}
-case {{ .Condition }}:
+} else if {{ .Condition }} {
 	{{- template "setReturnValueByOneofField" (map "Message" $msg "Name" $name "Value" . ) }}
 	{{- end }}
 	{{- if $defaultOneofField }}
-default:
+} else {
 	{{- template "setReturnValueByOneofField" (map "Message" $msg "Value" $defaultOneofField ) }}
 	{{- end }}
 }

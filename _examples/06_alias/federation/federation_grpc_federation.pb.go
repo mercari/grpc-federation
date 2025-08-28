@@ -822,12 +822,11 @@ func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionA__to__O
 	if from == nil {
 		return nil, nil
 	}
-
 	propValue := from.GetProp()
-
 	ret := &post.PostConditionA{
 		Prop: propValue,
 	}
+
 	return ret, nil
 }
 
@@ -836,8 +835,8 @@ func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionB__to__O
 	if from == nil {
 		return nil, nil
 	}
-
 	ret := &post.PostConditionB{}
+
 	return ret, nil
 }
 
@@ -846,12 +845,11 @@ func (s *FederationService) cast_Org_Federation_M__to__Org_Post_M(from *M) (*pos
 	if from == nil {
 		return nil, nil
 	}
-
 	xValue := from.GetX()
-
 	ret := &post.M{
 		X: xValue,
 	}
+
 	return ret, nil
 }
 
@@ -874,7 +872,6 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	if from == nil {
 		return nil, nil
 	}
-
 	categoryValue, err := s.cast_Org_Post_PostContent_Category__to__Org_Federation_PostContent_Category(from.GetCategory())
 	if err != nil {
 		return nil, err
@@ -883,7 +880,6 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	bodyValue := from.GetBody()
 	dupBodyValue := from.GetBody()
 	countsValue := from.GetCounts()
-
 	ret := &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
@@ -891,6 +887,7 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 		DupBody:  dupBodyValue,
 		Counts:   countsValue,
 	}
+
 	return ret, nil
 }
 
@@ -915,7 +912,6 @@ func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(
 	if from == nil {
 		return nil, nil
 	}
-
 	typeValue, err := s.cast_Org_Post_PostDataType__to__Org_Federation_PostType(from.GetType())
 	if err != nil {
 		return nil, err
@@ -925,12 +921,12 @@ func (s *FederationService) cast_Org_Post_PostData__to__Org_Federation_PostData(
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &PostData{
 		Type:    typeValue,
 		Title:   titleValue,
 		Content: contentValue,
 	}
+
 	return ret, nil
 }
 
@@ -953,7 +949,6 @@ func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_Pos
 	if from == nil {
 		return nil, nil
 	}
-
 	categoryValue, err := s.cast_Org_Post_V2_PostContent_Category__to__Org_Federation_PostContent_Category(from.GetCategory())
 	if err != nil {
 		return nil, err
@@ -962,7 +957,6 @@ func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_Pos
 	bodyValue := from.GetBody()
 	dupBodyValue := from.GetBody()
 	countsValue := from.GetCounts()
-
 	ret := &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
@@ -970,6 +964,7 @@ func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_Pos
 		DupBody:  dupBodyValue,
 		Counts:   countsValue,
 	}
+
 	return ret, nil
 }
 
@@ -994,7 +989,6 @@ func (s *FederationService) cast_Org_Post_V2_PostData__to__Org_Federation_PostDa
 	if from == nil {
 		return nil, nil
 	}
-
 	typeValue, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(from.GetType())
 	if err != nil {
 		return nil, err
@@ -1004,12 +998,12 @@ func (s *FederationService) cast_Org_Post_V2_PostData__to__Org_Federation_PostDa
 	if err != nil {
 		return nil, err
 	}
-
 	ret := &PostData{
 		Type:    typeValue,
 		Title:   titleValue,
 		Content: contentValue,
 	}
+
 	return ret, nil
 }
 

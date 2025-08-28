@@ -127,6 +127,12 @@ message A {
     def { name: "b" message { name: "A.B" } }
   };
   B b = 1 [(grpc.federation.field).by = "b"];
+  oneof opt {
+    B.C opt_c = 2 [(grpc.federation.field).oneof = {
+      if: "true"
+      by: "A.B.C{}"
+    }];
+  }
 }
 
 message Post {
@@ -261,6 +267,7 @@ message Item {
     oneof addr3 {
       AddrA addr_a = 3;
       AddrB b = 4;
+      string c = 5;
     };
     message AddrA {
       option (grpc.federation.message).alias = "user.Item.Location.AddrA";

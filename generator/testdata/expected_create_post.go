@@ -637,7 +637,6 @@ func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreateP
 	if from == nil {
 		return nil, nil
 	}
-
 	titleValue := from.GetTitle()
 	contentValue := from.GetContent()
 	userIdValue := from.GetUserId()
@@ -646,7 +645,6 @@ func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreateP
 		return nil, err
 	}
 	postTypeValue := from.GetPostType()
-
 	ret := &post.CreatePost{
 		Title:    titleValue,
 		Content:  contentValue,
@@ -654,6 +652,7 @@ func (s *FederationService) cast_Org_Federation_CreatePost__to__Org_Post_CreateP
 		Type:     typeValue,
 		PostType: postTypeValue,
 	}
+
 	return ret, nil
 }
 
@@ -678,8 +677,24 @@ func (s *FederationService) cast_Org_Federation_UpdatePostResponse__to__Google_P
 	if from == nil {
 		return nil, nil
 	}
-
 	ret := &emptypb.Empty{}
+
+	return ret, nil
+}
+
+// cast_Org_Post_PostType__to__Org_Federation_PostType cast from "org.post.PostType" to "org.federation.PostType".
+func (s *FederationService) cast_Org_Post_PostType__to__Org_Federation_PostType(from post.PostType) (PostType, error) {
+	var ret PostType
+	switch from {
+	case post.PostType_POST_TYPE_UNKNOWN:
+		ret = PostType_TYPE_UNKNOWN
+	case post.PostType_POST_TYPE_A:
+		ret = PostType_TYPE_A
+	case post.PostType_POST_TYPE_B:
+		ret = PostType_TYPE_B
+	default:
+		ret = 0
+	}
 	return ret, nil
 }
 
@@ -688,18 +703,17 @@ func (s *FederationService) cast_Org_Post_Post__to__Org_Federation_Post(from *po
 	if from == nil {
 		return nil, nil
 	}
-
 	idValue := from.GetId()
 	titleValue := from.GetTitle()
 	contentValue := from.GetContent()
 	userIdValue := from.GetUserId()
-
 	ret := &Post{
 		Id:      idValue,
 		Title:   titleValue,
 		Content: contentValue,
 		UserId:  userIdValue,
 	}
+
 	return ret, nil
 }
 

@@ -583,8 +583,8 @@ func (s *FederationService) cast_Federation_UpdatePostResponse__to__Google_Proto
 	if from == nil {
 		return nil, nil
 	}
-
 	ret := &emptypb.Empty{}
+
 	return ret, nil
 }
 
