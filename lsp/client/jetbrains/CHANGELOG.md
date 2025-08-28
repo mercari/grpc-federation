@@ -30,6 +30,7 @@
 - Issue with paths containing spaces in the previous text field approach
 - Better handling of empty and invalid path entries
 - Checkbox display issue in the Enabled column with explicit renderer and editor
+- Diagnostic messages containing HTML tags (like `<input>`) are now properly escaped to prevent UI rendering issues
 
 ### Deprecated
 - `importPaths` field in settings storage (will be removed in v0.3.0)
