@@ -4,8 +4,6 @@
 
 ## [Unreleased]
 
-## [0.2.0]
-
 ### Added
 - New list-based UI for Proto Import Paths configuration
 - Enable/disable toggle for individual import paths
@@ -14,12 +12,19 @@
 - Variable expansion support for `~/` and `${PROJECT_ROOT}`
 - Toolbar buttons for add, remove, and reorder operations
 - "Validate Paths" button to verify all configured paths
+- Semantic tokens support for enhanced syntax highlighting of gRPC Federation annotations
+  - Token type mappings for proper colorization of proto elements
+  - Explicit semantic tokens request for proto files
 
 ### Changed
 - Redesigned settings interface from single text field to table-based UI
 - Improved path management with better visual feedback
 - Enhanced user experience for managing multiple import paths
 - Migrated settings storage format from simple string list to structured entries with enable/disable state
+- Updated to IntelliJ Platform Gradle Plugin 2.7.2 (latest)
+- Updated to Platform Version 2024.3.3 with Kotlin 2.1.0
+- Updated JVM toolchain from Java 17 to Java 21 (recommended for 2024.3.3)
+- Changed LSP server descriptor from ProjectWideLspServerDescriptor to LspServerDescriptor for proper semantic tokens support
 
 ### Fixed
 - Issue with paths containing spaces in the previous text field approach
