@@ -1,15 +1,15 @@
 package com.github.mercari.grpcfederation.settings.impl
 
+import com.github.mercari.grpcfederation.lsp.GrpcFederationLspServerSupportProvider
 import com.github.mercari.grpcfederation.settings.ProjectSettingsService
 import com.github.mercari.grpcfederation.settings.ProjectSettingsService.State
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
-import com.intellij.configurationStore.serializeObjectInto
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.StoragePathMacros
 import com.intellij.openapi.project.Project
-import com.intellij.util.xmlb.XmlSerializer
-import org.jdom.Element
+import com.intellij.platform.lsp.api.LspServerManager
+import com.intellij.util.xmlb.XmlSerializerUtil
 
 private const val serviceName: String = "GRPCFederationProjectSettings"
 
@@ -18,27 +18,26 @@ private const val serviceName: String = "GRPCFederationProjectSettings"
 )
 class ProjectSettingsServiceImpl(
         private val project: Project
-) : PersistentStateComponent<Element>, ProjectSettingsService {
+) : PersistentStateComponent<State>, ProjectSettingsService {
     @Volatile
-    private var _state: State = State()
+    private var myState: State = State()
 
-    override var state: State
-        get() = _state.copy()
+    override var currentState: State
+        get() = myState
         set(newState) {
-            if (_state != newState) {
-                _state = newState.copy()
+            if (myState != newState) {
+                XmlSerializerUtil.copyBean(newState, myState)
+                // Restart LSP server with new settings
+                LspServerManager.getInstance(project).stopAndRestartIfNeeded(GrpcFederationLspServerSupportProvider::class.java)
                 DaemonCodeAnalyzer.getInstance(project).restart()
             }
         }
 
-    override fun getState(): Element {
-        val element = Element(serviceName)
-        serializeObjectInto(_state, element)
-        return element
+    override fun getState(): State {
+        return myState
     }
 
-    override fun loadState(state: Element) {
-        val rawState = state.clone()
-        XmlSerializer.deserializeInto(_state, rawState)
+    override fun loadState(state: State) {
+        XmlSerializerUtil.copyBean(state, myState)
     }
 }
