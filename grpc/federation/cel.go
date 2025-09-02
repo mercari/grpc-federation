@@ -371,21 +371,30 @@ type localValue interface {
 	setEvalValue(string, any)
 }
 
-func (v *LocalValue) do(name string, cb func() (any, error)) (any, error) {
+func (v *LocalValue) getSingleflightCache(name string) (*singleflightCacheResult, bool) {
 	v.sgCache.mu.RLock()
-	if cache, exists := v.sgCache.resultMap[name]; exists {
-		v.sgCache.mu.RUnlock()
+	defer v.sgCache.mu.RUnlock()
+
+	cache, exists := v.sgCache.resultMap[name]
+	return cache, exists
+}
+
+func (v *LocalValue) setSingleflightCache(name string, result *singleflightCacheResult) {
+	v.sgCache.mu.Lock()
+	v.sgCache.resultMap[name] = result
+	v.sgCache.mu.Unlock()
+}
+
+func (v *LocalValue) do(name string, cb func() (any, error)) (any, error) {
+	if cache, exists := v.getSingleflightCache(name); exists {
 		return cache.result, cache.err
 	}
-	v.sgCache.mu.RUnlock()
 	ret, err, _ := v.sg.Do(name, func() (any, error) {
 		ret, err := cb()
-		v.sgCache.mu.Lock()
-		v.sgCache.resultMap[name] = &singleflightCacheResult{
+		v.setSingleflightCache(name, &singleflightCacheResult{
 			result: ret,
 			err:    err,
-		}
-		v.sgCache.mu.Unlock()
+		})
 		return ret, err
 	})
 	return ret, err
@@ -722,9 +731,6 @@ type EvalCELRequest struct {
 }
 
 func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
-	req.Value.lock()
-	defer req.Value.unlock()
-
 	if celCacheMap := getCELCacheMap(ctx); celCacheMap == nil {
 		return nil, ErrCELCacheMap
 	}
@@ -732,11 +738,16 @@ func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
 		return nil, ErrCELCacheIndex
 	}
 
-	program, err := createCELProgram(ctx, req)
+	req.Value.rlock()
+	envOpts := req.Value.getEnvOpts()
+	evalValues := req.Value.getEvalValues(ctx)
+	req.Value.runlock()
+
+	program, err := createCELProgram(ctx, req.Expr, req.CacheIndex, envOpts)
 	if err != nil {
 		return nil, err
 	}
-	out, _, err := program.ContextEval(ctx, req.Value.getEvalValues(ctx))
+	out, _, err := program.ContextEval(ctx, evalValues)
 	if err != nil {
 		return nil, err
 	}
@@ -759,16 +770,16 @@ func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
 	return out.Value(), nil
 }
 
-func createCELProgram(ctx context.Context, req *EvalCELRequest) (cel.Program, error) {
-	if program := getCELProgramCache(ctx, req.CacheIndex); program != nil {
+func createCELProgram(ctx context.Context, expr string, cacheIndex int, envOpts []cel.EnvOption) (cel.Program, error) {
+	if program := getCELProgramCache(ctx, cacheIndex); program != nil {
 		return program, nil
 	}
 
-	env, err := NewCELEnv(req.Value.getEnvOpts()...)
+	env, err := NewCELEnv(envOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cel env: %w", err)
 	}
-	ast, err := createCELAst(req, env)
+	ast, err := createCELAst(expr, env)
 	if err != nil {
 		return nil, err
 	}
@@ -777,13 +788,13 @@ func createCELProgram(ctx context.Context, req *EvalCELRequest) (cel.Program, er
 		return nil, err
 	}
 
-	setCELProgramCache(ctx, req.CacheIndex, program)
+	setCELProgramCache(ctx, cacheIndex, program)
 	return program, nil
 }
 
-func createCELAst(req *EvalCELRequest, env *cel.Env) (*cel.Ast, error) {
-	expr := strings.Replace(req.Expr, "$", MessageArgumentVariableName, -1)
-	ast, iss := env.Compile(expr)
+func createCELAst(expr string, env *cel.Env) (*cel.Ast, error) {
+	replacedExpr := strings.Replace(expr, "$", MessageArgumentVariableName, -1)
+	ast, iss := env.Compile(replacedExpr)
 	if iss.Err() != nil {
 		return nil, iss.Err()
 	}
@@ -797,7 +808,7 @@ func createCELAst(req *EvalCELRequest, env *cel.Env) (*cel.Ast, error) {
 		if err != nil {
 			return nil, err
 		}
-		expr, err = parser.Unparse(ca.Expr(), ca.SourceInfo())
+		expr, err := parser.Unparse(ca.Expr(), ca.SourceInfo())
 		if err != nil {
 			return nil, err
 		}
