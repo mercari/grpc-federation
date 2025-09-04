@@ -21,4 +21,7 @@ option (grpc.federation.file).plugin.export = {
       return { kind: STRING }
     }
   ]
+  capability {
+    network: {}
+  }
 };

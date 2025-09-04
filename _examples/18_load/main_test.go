@@ -42,7 +42,11 @@ func toSha256(v []byte) string {
 }
 
 func TestCELEvaluation(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(t,
+		goleak.IgnoreTopFunction(
+			"github.com/hashicorp/golang-lru/v2/expirable.NewLRU[...].func1",
+		),
+	)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
