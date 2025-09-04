@@ -84,15 +84,15 @@ type FederationServiceUnimplementedResolver struct{}
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg                FederationServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *FederationServiceDependentClientSet
+	cfg           FederationServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -114,7 +114,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	var celPluginInstances []*grpcfedcel.CELPluginInstance
+	var celPlugins []*grpcfedcel.CELPlugin
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
 			Name:     "account",
@@ -138,7 +138,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 					IsMethod: false,
 				},
 			},
-			Capability: &grpcfedcel.CELPluginCapability{},
+			Capability: &grpcfedcel.CELPluginCapability{
+				Network: &grpcfedcel.CELPluginNetworkCapability{},
+			},
 		})
 		if err != nil {
 			return nil, err
@@ -151,19 +153,20 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}
-		celPluginInstances = append(celPluginInstances, instance)
-		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
+		plugin.ReleaseInstance(instance)
+		celPlugins = append(celPlugins, plugin)
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 	}
 	svc := &FederationService{
-		cfg:                cfg,
-		logger:             logger,
-		errorHandler:       errorHandler,
-		celEnvOpts:         celEnvOpts,
-		celTypeHelper:      celTypeHelper,
-		celCacheMap:        grpcfed.NewCELCacheMap(),
-		tracer:             otel.Tracer("org.federation.FederationService"),
-		celPluginInstances: celPluginInstances,
-		client:             &FederationServiceDependentClientSet{},
+		cfg:           cfg,
+		logger:        logger,
+		errorHandler:  errorHandler,
+		celEnvOpts:    celEnvOpts,
+		celTypeHelper: celTypeHelper,
+		celCacheMap:   grpcfed.NewCELCacheMap(),
+		tracer:        otel.Tracer("org.federation.FederationService"),
+		celPlugins:    celPlugins,
+		client:        &FederationServiceDependentClientSet{},
 	}
 	return svc, nil
 }
@@ -174,8 +177,8 @@ func CleanupFederationService(ctx context.Context, svc *FederationService) {
 }
 
 func (s *FederationService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 
@@ -183,6 +186,10 @@ func (s *FederationService) cleanup(ctx context.Context) {
 func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetResponse, e error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/Get")
 	defer span.End()
+	ctx, pluginErr := grpcfedcel.WithCELPluginLibs(ctx, s.celPlugins, s.celTypeHelper.CELRegistry())
+	if pluginErr != nil {
+		return nil, pluginErr
+	}
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -191,13 +198,7 @@ func (s *FederationService) Get(ctx context.Context, req *GetRequest) (res *GetR
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
-	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
-		}
-	}()
+	defer grpcfedcel.CleanupPluginLibs(ctx)
 	res, err := s.resolve_Org_Federation_GetResponse(ctx, &FederationService_Org_Federation_GetResponseArgument{})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)

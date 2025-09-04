@@ -1,0 +1,13 @@
+version: '2'
+services:
+  example:
+    image: golang:1.24
+    volumes:
+      - '../../:/work/grpc-federation'
+    deploy:
+      resources:
+        limits:
+          memory: 620M
+    working_dir: /work/grpc-federation/_examples/18_load
+    command: |
+      sh -c "make bench"

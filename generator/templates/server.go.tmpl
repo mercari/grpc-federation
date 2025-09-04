@@ -238,7 +238,7 @@ type {{ $serviceName }} struct {
 	{{- end }}
 	celTypeHelper *grpcfed.CELTypeHelper
 	celEnvOpts []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
+	celPlugins []*grpcfedcel.CELPlugin
 	client *{{ $serviceName }}DependentClientSet
 }
 
@@ -331,7 +331,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
 	{{- end }}
 	{{- if $celPlugins }}
-	var celPluginInstances []*grpcfedcel.CELPluginInstance
+	var celPlugins []*grpcfedcel.CELPlugin
 	{{- end }}
 	{{- range $celPlugins }}
 	{
@@ -386,8 +386,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		if err := instance.ValidatePlugin(ctx); err != nil {
 			return nil, err
 		}
-		celPluginInstances = append(celPluginInstances, instance)
-		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(instance))
+		plugin.ReleaseInstance(instance)
+		celPlugins = append(celPlugins, plugin)
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 	}
 	{{- end }}
 	{{- if $env }}
@@ -414,7 +415,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		resolver: cfg.Resolver,
 		{{- end }}
 		{{- if $celPlugins }}
-		celPluginInstances: celPluginInstances,
+		celPlugins: celPlugins,
 		{{- end }}
 		client: &{{ $serviceName}}DependentClientSet{
 			{{- range $serviceDependencies }}
@@ -450,8 +451,8 @@ func Cleanup{{ $serviceName }}(ctx context.Context, svc *{{ $serviceName }}) {
 }
 
 func (s *{{ $serviceName }}) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 
@@ -516,6 +517,12 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 	{{- if $svcVars }}
 	ctx = with{{ $serviceName }}Variable(ctx, s.svcVar)
 	{{- end }}
+	{{- if $celPlugins }}
+	ctx, pluginErr := grpcfedcel.WithCELPluginLibs(ctx, s.celPlugins, s.celTypeHelper.CELRegistry())
+	if pluginErr != nil {
+		return nil, pluginErr
+	}
+	{{- end }}
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -524,13 +531,7 @@ func (s *{{ $serviceName }}) {{ .Name }}(ctx context.Context, req {{ .RequestTyp
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
-	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
-		}
-	}()
+	defer grpcfedcel.CleanupPluginLibs(ctx)
 
 	{{- if .UseTimeout }}
 	res, err := grpcfed.WithTimeout[{{ .ReturnTypeWithoutPtr }}](ctx, "{{ .ProtoFQDN }}", {{ .Timeout }}, func(ctx context.Context) ({{ .ReturnType }}, error) {

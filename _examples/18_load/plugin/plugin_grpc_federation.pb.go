@@ -10,11 +10,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"reflect"
 	"runtime"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	grpcfednet "github.com/mercari/grpc-federation/grpc/federation/net"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -25,6 +27,10 @@ var (
 type AccountPlugin interface {
 	Example_Account_GetId(context.Context) (string, error)
 	Example_Account_GetId2(context.Context, string) (string, error)
+}
+
+func init() {
+	http.DefaultTransport = grpcfednet.DefaultTransport()
 }
 
 func RegisterAccountPlugin(plug AccountPlugin) {

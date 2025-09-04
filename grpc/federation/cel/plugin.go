@@ -14,11 +14,13 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goccy/wasi-go/imports"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -31,9 +33,14 @@ import (
 )
 
 type CELPlugin struct {
-	cfg         CELPluginConfig
-	mod         wazero.CompiledModule
-	wasmRuntime wazero.Runtime
+	cfg              CELPluginConfig
+	mod              wazero.CompiledModule
+	wasmRuntime      wazero.Runtime
+	stdin            *os.File
+	stdout           *os.File
+	modCfg           wazero.ModuleConfig
+	instancePool     *CELPluginInstancePool
+	instancePoolOnce sync.Once
 }
 
 type CELFunction struct {
@@ -97,18 +104,41 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	var runtimeCfg wazero.RuntimeConfig
 	if cfg.CacheDir == "" {
 		runtimeCfg = wazero.NewRuntimeConfigInterpreter()
+		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
+			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
+		}
 	} else {
 		runtimeCfg = wazero.NewRuntimeConfig()
 		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
 			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 		}
 	}
-	runtimeCfg = runtimeCfg.WithCloseOnContextDone(true)
-
-	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg)
+	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg.WithDebugInfoEnabled(false))
 	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
-		return nil, fmt.Errorf("grpc-federation: failed to compile module: %w", err)
+		return nil, err
+	}
+	if cfg.Capability == nil || cfg.Capability.Network == nil {
+		wasi_snapshot_preview1.MustInstantiate(ctx, r)
+	}
+
+	host := r.NewHostModuleBuilder("grpcfederation")
+	host.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			instance := ctx.Value(instanceKey{})
+			if instance == nil {
+				panic("failed to get CELPluginInstance from context")
+			}
+			stdout := instance.(*CELPluginInstance).stdoutW
+			//nolint:gosec
+			b, _ := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
+			_, _ = stdout.Write(b)
+		}),
+		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("grpc_federation_write")
+	if _, err := host.Instantiate(ctx); err != nil {
+		return nil, err
 	}
 
 	return &CELPlugin{
@@ -139,7 +169,168 @@ func getCompilationCache(name, baseDir string) wazero.CompilationCache {
 	return cache
 }
 
+type CELPluginInstancePool struct {
+	cache    *expirable.LRU[*CELPluginInstance, *CELPluginInstance]
+	fn       func() (*CELPluginInstance, error)
+	mu       sync.Mutex
+	guardMap sync.Map
+}
+
+func newCELPluginInstancePool(fn func() (*CELPluginInstance, error)) *CELPluginInstancePool {
+	pool := &CELPluginInstancePool{
+		fn: fn,
+	}
+	pool.cache = expirable.NewLRU(1, func(_ *CELPluginInstance, v *CELPluginInstance) {
+		if _, exists := pool.guardMap.Load(v); exists {
+			return
+		}
+		v.Close()
+	}, 1*time.Minute)
+	return pool
+}
+
+func (p *CELPluginInstancePool) Get() (*CELPluginInstance, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	_, oldest, ok := p.cache.GetOldest()
+	if ok {
+		p.guardMap.Store(oldest, oldest)
+		_, removed, ok := p.cache.RemoveOldest()
+		p.guardMap.Delete(oldest)
+		if oldest == removed && ok {
+			//fmt.Printf("get: %p\n", removed)
+			return removed, nil
+		}
+	}
+	ret, err := p.fn()
+	//fmt.Printf("new: %p\n", ret)
+	return ret, err
+}
+
+func (p *CELPluginInstancePool) Put(v *CELPluginInstance) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if noCap := p.cache.Add(v, v); noCap {
+		// grow cache capacity.
+		p.cache.Resize(p.cache.Len() * 2)
+		p.cache.Add(v, v)
+		//fmt.Println("grow length", p.cache.Len())
+	}
+}
+
+func (p *CELPluginInstancePool) Close() {
+	for _, v := range p.cache.Values() {
+		v.Close()
+	}
+}
+
+type celPluginToInstanceMapKey struct{}
+
+func WithCELPluginLibs(ctx context.Context, plugins []*CELPlugin, celRegistry *types.Registry) (context.Context, error) {
+	pluginToInstanceMap := make(map[*CELPlugin]*CELPluginInstance)
+	for _, plugin := range plugins {
+		instance, err := plugin.CreateInstance(ctx, celRegistry)
+		if err != nil {
+			return nil, err
+		}
+		pluginToInstanceMap[plugin] = instance
+	}
+	return context.WithValue(ctx, celPluginToInstanceMapKey{}, pluginToInstanceMap), nil
+}
+
+func CleanupPluginLibs(ctx context.Context) {
+	value := ctx.Value(celPluginToInstanceMapKey{})
+	if value == nil {
+		return
+	}
+	for plugin, instance := range value.(map[*CELPlugin]*CELPluginInstance) {
+		plugin.ReleaseInstance(instance)
+	}
+}
+
+func (p *CELPlugin) Close() {
+	p.instancePool.Close()
+}
+
+func (p *CELPlugin) CompileOptions() []cel.EnvOption {
+	var opts []cel.EnvOption
+	for _, fn := range p.cfg.Functions {
+		fn := fn
+		if fn.IsMethod {
+			opts = append(opts,
+				BindMemberFunction(
+					fn.Name,
+					MemberOverloadFunc(fn.ID, fn.Args[0], fn.Args[1:], fn.Return, func(ctx context.Context, self ref.Val, args ...ref.Val) ref.Val {
+						md, ok := metadata.FromIncomingContext(ctx)
+						if !ok {
+							md = make(metadata.MD)
+						}
+						pluginToInstanceMap := ctx.Value(celPluginToInstanceMapKey{})
+						if pluginToInstanceMap == nil {
+							return types.NewErr("failed to find pluginToInstanceMap value from context")
+						}
+						instance := pluginToInstanceMap.(map[*CELPlugin]*CELPluginInstance)[p]
+						if instance == nil {
+							return types.NewErr("failed to find instance from plugin")
+						}
+						return instance.Call(ctx, fn, md, append([]ref.Val{self}, args...)...)
+					}),
+				)...,
+			)
+		} else {
+			opts = append(opts,
+				BindFunction(
+					fn.Name,
+					OverloadFunc(fn.ID, fn.Args, fn.Return, func(ctx context.Context, args ...ref.Val) ref.Val {
+						md, ok := metadata.FromIncomingContext(ctx)
+						if !ok {
+							md = make(metadata.MD)
+						}
+						pluginToInstanceMap := ctx.Value(celPluginToInstanceMapKey{})
+						if pluginToInstanceMap == nil {
+							return types.NewErr("failed to find pluginToInstanceMap value from context")
+						}
+						instance := pluginToInstanceMap.(map[*CELPlugin]*CELPluginInstance)[p]
+						if instance == nil {
+							return types.NewErr("failed to find instance from plugin")
+						}
+						return instance.Call(ctx, fn, md, args...)
+					}),
+				)...,
+			)
+		}
+	}
+	return opts
+}
+
+func (p *CELPlugin) ProgramOptions() []cel.ProgramOption {
+	return []cel.ProgramOption{}
+}
+
+type (
+	instanceKey struct{}
+)
+
 func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Registry) (*CELPluginInstance, error) {
+	p.instancePoolOnce.Do(func() {
+		p.instancePool = newCELPluginInstancePool(
+			func() (*CELPluginInstance, error) {
+				return p.createInstance(ctx, celRegistry)
+			},
+		)
+	})
+	return p.instancePool.Get()
+}
+
+func (p *CELPlugin) ReleaseInstance(instance *CELPluginInstance) {
+	instance.enqueueGC()
+	p.instancePool.Put(instance)
+	//fmt.Printf("put: %p\n", instance)
+}
+
+func (p *CELPlugin) createInstance(ctx context.Context, celRegistry *types.Registry) (*CELPluginInstance, error) {
 	stdinR, stdinW, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -149,7 +340,8 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		return nil, err
 	}
 
-	modCfg, networkModCfg := p.addModuleConfigByCapability(
+	modCfg, networkModCfg := addModuleConfigByCapability(
+		p.cfg.Capability,
 		wazero.NewModuleConfig().
 			WithSysWalltime().
 			WithStdin(stdinR).
@@ -167,56 +359,40 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		wasi_snapshot_preview1.MustInstantiate(ctx, p.wasmRuntime)
 	}
-
-	host := p.wasmRuntime.NewHostModuleBuilder("grpcfederation")
-	host.NewFunctionBuilder().WithGoModuleFunction(
-		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			//nolint:gosec
-			b, _ := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
-			_, _ = stdoutW.Write(b)
-		}),
-		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
-		[]api.ValueType{},
-	).Export("grpc_federation_write")
-	if _, err := host.Instantiate(ctx); err != nil {
-		return nil, err
-	}
-
-	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
-	instanceModErrCh := make(chan error, 1)
-	go func() {
-		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
-		instanceModErrCh <- err
-	}()
 
 	const gcQueueLength = 1
-	gcQueue := make(chan struct{}, gcQueueLength)
-
 	instance := &CELPluginInstance{
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
 		celRegistry:      celRegistry,
 		stdin:            stdinW,
 		stdout:           stdoutR,
-		instanceModErrCh: instanceModErrCh,
-		gcQueue:          gcQueue,
+		stdoutW:          stdoutW,
+		gcQueue:          make(chan struct{}, gcQueueLength),
+		instanceModErrCh: make(chan error, 1),
 	}
+	ctx = context.WithValue(ctx, instanceKey{}, instance)
+
+	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
+	go func() {
+		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
+		instance.instanceModErrCh <- err
+	}()
+
 	// start GC thread.
 	// It is enqueued into gcQueue using the `instance.GC()` function.
 	go func() {
-		for range gcQueue {
+		for range instance.gcQueue {
 			instance.startGC()
 		}
 	}()
 	return instance, nil
 }
 
-func (p *CELPlugin) addModuleConfigByCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
-	cfg, nwcfg = p.addModuleConfigByEnvCapability(cfg, nwcfg)
-	cfg, nwcfg = p.addModuleConfigByFileSystemCapability(cfg, nwcfg)
+func addModuleConfigByCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+	cfg, nwcfg = addModuleConfigByEnvCapability(capability, cfg, nwcfg)
+	cfg, nwcfg = addModuleConfigByFileSystemCapability(capability, cfg, nwcfg)
 	return cfg, nwcfg
 }
 
@@ -226,8 +402,8 @@ var ignoreEnvNameMap = map[string]struct{}{
 	"GOMAXPROCS": {},
 }
 
-func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
-	if p.cfg.Capability == nil || p.cfg.Capability.Env == nil {
+func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+	if capability == nil || capability.Env == nil {
 		return cfg, nwcfg
 	}
 
@@ -236,7 +412,7 @@ func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcf
 		value string
 	}
 
-	envCfg := p.cfg.Capability.Env
+	envCfg := capability.Env
 	srcEnvs := os.Environ()
 	envs := make([]Env, 0, len(srcEnvs))
 	envMap := make(map[string]Env)
@@ -272,11 +448,11 @@ func (p *CELPlugin) addModuleConfigByEnvCapability(cfg wazero.ModuleConfig, nwcf
 	return cfg, nwcfg
 }
 
-func (p *CELPlugin) addModuleConfigByFileSystemCapability(cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
-	if p.cfg.Capability == nil || p.cfg.Capability.FileSystem == nil {
+func addModuleConfigByFileSystemCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+	if capability == nil || capability.FileSystem == nil {
 		return cfg, nwcfg
 	}
-	fs := p.cfg.Capability.FileSystem
+	fs := capability.FileSystem
 	mountPath := "/"
 	if fs.MountPath != "" {
 		mountPath = fs.MountPath
@@ -292,6 +468,7 @@ type CELPluginInstance struct {
 	celRegistry      *types.Registry
 	stdin            *os.File
 	stdout           *os.File
+	stdoutW          *os.File
 	instanceModErrCh chan error
 	instanceModErr   error
 	closed           bool
@@ -374,7 +551,7 @@ func (i *CELPluginInstance) write(cmd []byte) error {
 	}
 }
 
-func (i *CELPluginInstance) Close(ctx context.Context) error {
+func (i *CELPluginInstance) Close() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -403,12 +580,6 @@ func (i *CELPluginInstance) LibraryName() string {
 	return i.name
 }
 
-// Trigger GC command.
-// The execution of GC is managed by queue, and if it exceeds the capacity of the queue, it will be ignored.
-func (i *CELPluginInstance) GC() {
-	i.enqueueGC()
-}
-
 func (i *CELPluginInstance) enqueueGC() {
 	select {
 	case i.gcQueue <- struct{}{}:
@@ -422,45 +593,6 @@ func (i *CELPluginInstance) startGC() {
 	defer i.mu.Unlock()
 
 	_ = i.write([]byte(gcCommand))
-}
-
-func (i *CELPluginInstance) CompileOptions() []cel.EnvOption {
-	var opts []cel.EnvOption
-	for _, fn := range i.functions {
-		fn := fn
-		if fn.IsMethod {
-			opts = append(opts,
-				BindMemberFunction(
-					fn.Name,
-					MemberOverloadFunc(fn.ID, fn.Args[0], fn.Args[1:], fn.Return, func(ctx context.Context, self ref.Val, args ...ref.Val) ref.Val {
-						md, ok := metadata.FromIncomingContext(ctx)
-						if !ok {
-							md = make(metadata.MD)
-						}
-						return i.Call(ctx, fn, md, append([]ref.Val{self}, args...)...)
-					}),
-				)...,
-			)
-		} else {
-			opts = append(opts,
-				BindFunction(
-					fn.Name,
-					OverloadFunc(fn.ID, fn.Args, fn.Return, func(ctx context.Context, args ...ref.Val) ref.Val {
-						md, ok := metadata.FromIncomingContext(ctx)
-						if !ok {
-							md = make(metadata.MD)
-						}
-						return i.Call(ctx, fn, md, args...)
-					}),
-				)...,
-			)
-		}
-	}
-	return opts
-}
-
-func (i *CELPluginInstance) ProgramOptions() []cel.ProgramOption {
-	return []cel.ProgramOption{}
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {

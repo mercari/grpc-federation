@@ -22,8 +22,10 @@ require (
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/goccy/wasi-go v0.2.0 // indirect
+	github.com/goccy/wasi-go-net v0.1.1 // indirect
 	github.com/google/cel-go v0.23.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/stealthrocket/wazergo v0.19.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
