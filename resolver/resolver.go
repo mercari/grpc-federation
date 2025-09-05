@@ -528,6 +528,9 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(ct
 				maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(v.Type))
 			}
 		}
+		if s.Rule != nil && s.Rule.Vars != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromServiceVariables(ctx, s.Rule.Vars))
+		}
 	}
 
 	for _, msg := range file.Messages {
@@ -538,6 +541,7 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(ct
 		ctx := ctx.withEnum(enum)
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromEnum(ctx, enum))
 	}
+
 	return pkgNameMap
 }
 
@@ -547,10 +551,17 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 		for _, a := range msg.Rule.Aliases {
 			pkgNameMap[a.PackageName()] = struct{}{}
 		}
+		if msg.Rule.MessageArgument != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage(ctx, msg.Rule.MessageArgument))
+		}
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(ctx, msg.Rule.DefSet))
 	}
 
 	for _, field := range msg.Fields {
+		if field.Type != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(field.Type))
+		}
+
 		rule := field.Rule
 		if rule == nil {
 			continue
@@ -709,6 +720,53 @@ func (r *Resolver) lookupPackageNameMapFromMessageArguments(ctx *context, args [
 			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, arg.Value.CEL))
 		}
 		maps.Copy(pkgNameMap, r.lookupPackageNameMapRecursiveFromType(arg.Type))
+	}
+	return pkgNameMap
+}
+
+// lookupPackageNameMapFromServiceVariables processes ServiceVariable dependencies
+func (r *Resolver) lookupPackageNameMapFromServiceVariables(ctx *context, vars []*ServiceVariable) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	for _, v := range vars {
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromServiceVariableExpr(ctx, v.Expr))
+	}
+	return pkgNameMap
+}
+
+// lookupPackageNameMapFromServiceVariableExpr processes ServiceVariableExpr dependencies
+func (r *Resolver) lookupPackageNameMapFromServiceVariableExpr(ctx *context, expr *ServiceVariableExpr) map[string]struct{} {
+	pkgNameMap := map[string]struct{}{}
+	if expr == nil {
+		return pkgNameMap
+	}
+
+	switch {
+	case expr.By != nil:
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, expr.By))
+	case expr.Message != nil:
+		if expr.Message.Message != nil {
+			pkgNameMap[expr.Message.Message.PackageName()] = struct{}{}
+		}
+		maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(ctx, expr.Message.Args))
+	case expr.Enum != nil:
+		if expr.Enum.Enum != nil {
+			pkgNameMap[expr.Enum.Enum.PackageName()] = struct{}{}
+		}
+	case expr.Map != nil:
+		if expr.Map.Expr != nil {
+			mapExpr := expr.Map.Expr
+			if mapExpr.By != nil {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, mapExpr.By))
+			}
+			if mapExpr.Message != nil && mapExpr.Message.Message != nil {
+				pkgNameMap[mapExpr.Message.Message.PackageName()] = struct{}{}
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromMessageArguments(ctx, mapExpr.Message.Args))
+			}
+		}
+	case expr.Validation != nil:
+		if expr.Validation.Message != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, expr.Validation.Message))
+		}
 	}
 	return pkgNameMap
 }
