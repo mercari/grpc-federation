@@ -731,7 +731,7 @@ func (r *Resolver) lookupPackageNameMapFromMessageArguments(ctx *context, args [
 	return pkgNameMap
 }
 
-// lookupPackageNameMapFromServiceVariables processes ServiceVariable dependencies
+// lookupPackageNameMapFromServiceVariables processes ServiceVariable dependencies.
 func (r *Resolver) lookupPackageNameMapFromServiceVariables(ctx *context, vars []*ServiceVariable) map[string]struct{} {
 	pkgNameMap := map[string]struct{}{}
 	for _, v := range vars {
@@ -740,7 +740,7 @@ func (r *Resolver) lookupPackageNameMapFromServiceVariables(ctx *context, vars [
 	return pkgNameMap
 }
 
-// lookupPackageNameMapFromServiceVariableExpr processes ServiceVariableExpr dependencies
+// lookupPackageNameMapFromServiceVariableExpr processes ServiceVariableExpr dependencies.
 func (r *Resolver) lookupPackageNameMapFromServiceVariableExpr(ctx *context, expr *ServiceVariableExpr) map[string]struct{} {
 	pkgNameMap := map[string]struct{}{}
 	if expr == nil {
