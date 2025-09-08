@@ -531,6 +531,11 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromFile(ct
 		if s.Rule != nil && s.Rule.Vars != nil {
 			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromServiceVariables(ctx, s.Rule.Vars))
 		}
+		for _, method := range s.Methods {
+			if method.Rule != nil && method.Rule.Response != nil {
+				pkgNameMap[method.Rule.Response.PackageName()] = struct{}{}
+			}
+		}
 	}
 
 	for _, msg := range file.Messages {
@@ -576,7 +581,9 @@ func (r *Resolver) lookupPackageNameMapUsedInGRPCFederationDefinitionFromMessage
 			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, rule.Value.CEL))
 		}
 		if rule.Oneof != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, rule.Oneof.If))
 			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, rule.Oneof.By))
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromVariableDefinitionSet(ctx, rule.Oneof.DefSet))
 		}
 	}
 
