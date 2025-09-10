@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goccy/wasi-go/imports"
 	"github.com/google/cel-go/cel"
@@ -96,10 +97,13 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	}
 	var runtimeCfg wazero.RuntimeConfig
 	if cfg.CacheDir == "" {
+		fmt.Println("use interpreter mode")
 		runtimeCfg = wazero.NewRuntimeConfigInterpreter()
 	} else {
+		fmt.Println("use compile mode")
 		runtimeCfg = wazero.NewRuntimeConfig()
 		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
+			fmt.Println("use compilation cache")
 			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 		}
 	}
@@ -464,6 +468,10 @@ func (i *CELPluginInstance) ProgramOptions() []cel.ProgramOption {
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+	now := time.Now()
+	defer func() {
+		fmt.Println("call elapsed time", time.Since(now))
+	}()
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
