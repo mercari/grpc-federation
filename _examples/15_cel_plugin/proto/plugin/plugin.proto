@@ -77,6 +77,11 @@ option (grpc.federation.file).plugin.export = {
       name: "filterExamples"
       args {type {repeated {message: "Example"}}}
       return { repeated {message: "Example"} }
+    },
+    {
+      name: "block"
+      desc: "test timeout"
+      return { kind: BOOL }
     }
   ]
   variables: [
