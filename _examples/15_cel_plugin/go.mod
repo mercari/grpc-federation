@@ -6,6 +6,7 @@ replace github.com/mercari/grpc-federation => ../../
 
 require (
 	github.com/google/go-cmp v0.6.0
+	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/mercari/grpc-federation v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0
@@ -27,7 +28,10 @@ require (
 	github.com/google/cel-go v0.23.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/stealthrocket/wazergo v0.19.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect

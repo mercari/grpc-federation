@@ -79,6 +79,9 @@ var (
 	ErrWasmContentMismatch = errors.New(
 		`grpc-federation: wasm file content mismatch`,
 	)
+	ErrCanceledPluginExecution = errors.New(
+		`grpc-federation: cancel plugin execution`,
+	)
 )
 
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
@@ -320,7 +323,7 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 	if err := i.write([]byte(versionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
-	content, err := i.recvContent()
+	content, err := i.recvContent(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to receive cel protocol version command: %w", err)
 	}
@@ -470,7 +473,7 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	if err := i.sendRequest(fn, md, args...); err != nil {
 		return types.NewErr(err.Error())
 	}
-	return i.recvResponse(fn)
+	return i.recvResponse(ctx, fn)
 }
 
 func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ...ref.Val) error {
@@ -499,8 +502,8 @@ func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ..
 	return nil
 }
 
-func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
-	content, err := i.recvContent()
+func (i *CELPluginInstance) recvResponse(ctx context.Context, fn *CELFunction) ref.Val {
+	content, err := i.recvContent(ctx)
 	if err != nil {
 		return types.NewErr(err.Error())
 	}
@@ -515,7 +518,7 @@ func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
 	return i.celPluginValueToRef(fn, fn.Return, res.Value)
 }
 
-func (i *CELPluginInstance) recvContent() (string, error) {
+func (i *CELPluginInstance) recvContent(ctx context.Context) (string, error) {
 	if i.closed {
 		return "", errors.New("grpc-federation: plugin has already been closed")
 	}
@@ -544,6 +547,8 @@ func (i *CELPluginInstance) recvContent() (string, error) {
 		// it is considered that the termination process has been completed.
 		i.closeResources(err)
 		return "", err
+	case <-ctx.Done():
+		return "", fmt.Errorf("%s: %w", ErrCanceledPluginExecution, ctx.Err())
 	case result := <-readCh:
 		return result.response, result.err
 	}

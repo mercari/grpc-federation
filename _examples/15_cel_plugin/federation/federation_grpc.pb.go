@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	FederationService_IsMatch_FullMethodName = "/org.federation.FederationService/IsMatch"
 	FederationService_Example_FullMethodName = "/org.federation.FederationService/Example"
+	FederationService_Block_FullMethodName   = "/org.federation.FederationService/Block"
 )
 
 // FederationServiceClient is the client API for FederationService service.
@@ -29,6 +30,7 @@ const (
 type FederationServiceClient interface {
 	IsMatch(ctx context.Context, in *IsMatchRequest, opts ...grpc.CallOption) (*IsMatchResponse, error)
 	Example(ctx context.Context, in *ExampleRequest, opts ...grpc.CallOption) (*ExampleResponse, error)
+	Block(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockResponse, error)
 }
 
 type federationServiceClient struct {
@@ -57,12 +59,22 @@ func (c *federationServiceClient) Example(ctx context.Context, in *ExampleReques
 	return out, nil
 }
 
+func (c *federationServiceClient) Block(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockResponse, error) {
+	out := new(BlockResponse)
+	err := c.cc.Invoke(ctx, FederationService_Block_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationServiceServer is the server API for FederationService service.
 // All implementations must embed UnimplementedFederationServiceServer
 // for forward compatibility
 type FederationServiceServer interface {
 	IsMatch(context.Context, *IsMatchRequest) (*IsMatchResponse, error)
 	Example(context.Context, *ExampleRequest) (*ExampleResponse, error)
+	Block(context.Context, *BlockRequest) (*BlockResponse, error)
 	mustEmbedUnimplementedFederationServiceServer()
 }
 
@@ -75,6 +87,9 @@ func (UnimplementedFederationServiceServer) IsMatch(context.Context, *IsMatchReq
 }
 func (UnimplementedFederationServiceServer) Example(context.Context, *ExampleRequest) (*ExampleResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Example not implemented")
+}
+func (UnimplementedFederationServiceServer) Block(context.Context, *BlockRequest) (*BlockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Block not implemented")
 }
 func (UnimplementedFederationServiceServer) mustEmbedUnimplementedFederationServiceServer() {}
 
@@ -125,6 +140,24 @@ func _FederationService_Example_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationService_Block_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BlockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationServiceServer).Block(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationService_Block_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationServiceServer).Block(ctx, req.(*BlockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationService_ServiceDesc is the grpc.ServiceDesc for FederationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -139,6 +172,10 @@ var FederationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Example",
 			Handler:    _FederationService_Example_Handler,
+		},
+		{
+			MethodName: "Block",
+			Handler:    _FederationService_Block_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

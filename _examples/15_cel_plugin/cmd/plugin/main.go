@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 	"unsafe"
 
 	"google.golang.org/grpc/metadata"
@@ -54,6 +55,11 @@ func (_ *plugin) Example_Regexp_Example_Concat(_ context.Context, _ *pluginpb.Ex
 
 func (_ *plugin) Example_Regexp_Example_MySplit(_ context.Context, _ *pluginpb.Example, s string, sep string) ([]string, error) {
 	return strings.Split(s, sep), nil
+}
+
+func (_ *plugin) Example_Regexp_Block(ctx context.Context) (bool, error) {
+	time.Sleep(100 * time.Second)
+	return true, nil
 }
 
 func main() {

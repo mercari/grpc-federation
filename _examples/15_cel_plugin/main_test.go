@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -46,7 +47,10 @@ func toSha256(v []byte) string {
 }
 
 func TestFederation(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer goleak.VerifyNone(
+		t,
+		goleak.IgnoreTopFunction("github.com/mercari/grpc-federation/grpc/federation/cel.(*CELPluginInstance).recvContent.func1"),
+	)
 	ctx := context.Background()
 	listener = bufconn.Listen(bufSize)
 
@@ -151,6 +155,15 @@ func TestFederation(t *testing.T) {
 			federation.ExampleResponse{},
 		)); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
+		}
+	})
+	t.Run("timeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+		if _, err := client.Block(ctx, &federation.BlockRequest{}); err == nil {
+			t.Fatalf("expected error")
+		} else {
+			t.Log(err)
 		}
 	})
 }
