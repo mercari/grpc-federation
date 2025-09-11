@@ -553,7 +553,7 @@ func (i *CELPluginInstance) recvContent(ctx context.Context) (string, error) {
 		i.closeResources(err)
 		return "", err
 	case <-ctx.Done():
-		return "", fmt.Errorf("%s: %w", ErrCanceledPluginExecution, ctx.Err())
+		return "", fmt.Errorf("%w: %w", ErrCanceledPluginExecution, ctx.Err())
 	case result := <-readCh:
 		return result.response, result.err
 	}
