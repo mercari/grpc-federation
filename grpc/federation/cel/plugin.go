@@ -521,11 +521,11 @@ func (i *CELPluginInstance) Close() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	defer func() { i.closeResources(nil) }()
-
 	if i.closed {
 		return i.instanceModErr
 	}
+
+	defer func() { i.closeResources(nil) }()
 
 	// start termination process.
 	_, _ = i.inW.WriteString(exitCommand)
