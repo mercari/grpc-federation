@@ -329,6 +329,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
 		celRegistry:      p.celRegistry,
+		inR:              inR,
 		inW:              inW,
 		outR:             outR,
 		outW:             outW,
@@ -428,6 +429,7 @@ type CELPluginInstance struct {
 	name             string
 	functions        []*CELFunction
 	celRegistry      *types.Registry
+	inR              *os.File
 	inW              *os.File
 	outR             *os.File
 	outW             *os.File
