@@ -189,17 +189,17 @@ type FederationServiceUnimplementedResolver struct{}
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg                FederationServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	env                *FederationServiceEnv
-	svcVar             *FederationServiceVariable
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *FederationServiceDependentClientSet
+	cfg           FederationServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	env           *FederationServiceEnv
+	svcVar        *FederationServiceVariable
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -273,8 +273,8 @@ func CleanupFederationService(ctx context.Context, svc *FederationService) {
 }
 
 func (s *FederationService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 func (s *FederationService) initServiceVariables() error {
@@ -393,11 +393,9 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Federation_GetPostResponse(ctx, &FederationService_Federation_GetPostResponseArgument{
@@ -425,11 +423,9 @@ func (s *FederationService) GetName(ctx context.Context, req *GetNameRequest) (r
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Federation_GetNameResponse(ctx, &FederationService_Federation_GetNameResponseArgument{})
@@ -1537,17 +1533,17 @@ type PrivateServiceUnimplementedResolver struct{}
 // PrivateService represents Federation Service.
 type PrivateService struct {
 	UnimplementedPrivateServiceServer
-	cfg                PrivateServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	env                *PrivateServiceEnv
-	svcVar             *PrivateServiceVariable
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *PrivateServiceDependentClientSet
+	cfg           PrivateServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	env           *PrivateServiceEnv
+	svcVar        *PrivateServiceVariable
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *PrivateServiceDependentClientSet
 }
 
 // NewPrivateService creates PrivateService instance by PrivateServiceConfig.
@@ -1623,8 +1619,8 @@ func CleanupPrivateService(ctx context.Context, svc *PrivateService) {
 }
 
 func (s *PrivateService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 func (s *PrivateService) initServiceVariables() error {
@@ -1854,11 +1850,9 @@ func (s *PrivateService) GetPost(ctx context.Context, req *GetPostRequest) (res 
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Federation_GetPostResponse(ctx, &PrivateService_Federation_GetPostResponseArgument{
@@ -1886,11 +1880,9 @@ func (s *PrivateService) GetName(ctx context.Context, req *GetNameRequest) (res 
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Federation_GetNameResponse(ctx, &PrivateService_Federation_GetNameResponseArgument{})
@@ -2898,15 +2890,15 @@ type DebugServiceUnimplementedResolver struct{}
 // DebugService represents Federation Service.
 type DebugService struct {
 	UnimplementedDebugServiceServer
-	cfg                DebugServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *DebugServiceDependentClientSet
+	cfg           DebugServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *DebugServiceDependentClientSet
 }
 
 // NewDebugService creates DebugService instance by DebugServiceConfig.
@@ -2950,8 +2942,8 @@ func CleanupDebugService(ctx context.Context, svc *DebugService) {
 }
 
 func (s *DebugService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 
@@ -2967,11 +2959,9 @@ func (s *DebugService) GetStatus(ctx context.Context, req *GetStatusRequest) (re
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Federation_GetStatusResponse(ctx, &DebugService_Federation_GetStatusResponseArgument{})

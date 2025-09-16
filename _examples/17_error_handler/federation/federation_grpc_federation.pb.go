@@ -150,15 +150,15 @@ const (
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg                FederationServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *FederationServiceDependentClientSet
+	cfg           FederationServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -224,8 +224,8 @@ func CleanupFederationService(ctx context.Context, svc *FederationService) {
 }
 
 func (s *FederationService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 
@@ -241,11 +241,9 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &FederationService_Org_Federation_GetPostResponseArgument{
@@ -271,11 +269,9 @@ func (s *FederationService) GetPost2(ctx context.Context, req *GetPost2Request) 
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPost2Response(ctx, &FederationService_Org_Federation_GetPost2ResponseArgument{

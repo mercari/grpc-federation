@@ -120,17 +120,17 @@ type RefEnvServiceUnimplementedResolver struct{}
 // RefEnvService represents Federation Service.
 type RefEnvService struct {
 	UnimplementedRefEnvServiceServer
-	cfg                RefEnvServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	env                *RefEnvServiceEnv
-	svcVar             *RefEnvServiceVariable
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *RefEnvServiceDependentClientSet
+	cfg           RefEnvServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	env           *RefEnvServiceEnv
+	svcVar        *RefEnvServiceVariable
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *RefEnvServiceDependentClientSet
 }
 
 // NewRefEnvService creates RefEnvService instance by RefEnvServiceConfig.
@@ -188,8 +188,8 @@ func CleanupRefEnvService(ctx context.Context, svc *RefEnvService) {
 }
 
 func (s *RefEnvService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 func (s *RefEnvService) initServiceVariables() error {

@@ -10,7 +10,6 @@ import (
 	"net"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -155,15 +154,6 @@ func TestFederation(t *testing.T) {
 			federation.ExampleResponse{},
 		)); diff != "" {
 			t.Errorf("(-got, +want)\n%s", diff)
-		}
-	})
-	t.Run("timeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-		defer cancel()
-		if _, err := client.Block(ctx, &federation.BlockRequest{}); err == nil {
-			t.Fatalf("expected error")
-		} else {
-			t.Log(err)
 		}
 	})
 }
