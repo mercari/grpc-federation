@@ -133,16 +133,16 @@ func (OtherServiceUnimplementedResolver) Resolve_Federation_GetResponse_Post(con
 // OtherService represents Federation Service.
 type OtherService struct {
 	UnimplementedOtherServiceServer
-	cfg                OtherServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	resolver           OtherServiceResolver
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *OtherServiceDependentClientSet
+	cfg           OtherServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	resolver      OtherServiceResolver
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *OtherServiceDependentClientSet
 }
 
 // NewOtherService creates OtherService instance by OtherServiceConfig.
@@ -202,8 +202,8 @@ func CleanupOtherService(ctx context.Context, svc *OtherService) {
 }
 
 func (s *OtherService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 
@@ -219,11 +219,9 @@ func (s *OtherService) Get(ctx context.Context, req *GetRequest) (res *GetRespon
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Federation_GetResponse(ctx, &OtherService_Federation_GetResponseArgument{

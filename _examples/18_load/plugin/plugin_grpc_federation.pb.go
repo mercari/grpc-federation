@@ -32,10 +32,10 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 	for {
 		content, err := reader.ReadString('\n')
 		if err != nil {
-			continue
+			panic(err)
 		}
 		if content == "" {
-			continue
+			panic("receive empty buffer from ReadString")
 		}
 		if content == "exit\n" {
 			return
@@ -62,8 +62,7 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 		}
 		encoded, err := grpcfed.EncodeCELPluginResponse(res)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "fatal error: failed to encode cel plugin response: %s\n", err.Error())
-			os.Exit(1)
+			panic(fmt.Sprintf("failed to encode cel plugin response: %s", err.Error()))
 		}
 		grpcfed.WritePluginContent(append(encoded, '\n'))
 	}

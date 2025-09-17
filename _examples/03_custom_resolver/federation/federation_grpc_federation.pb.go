@@ -280,18 +280,18 @@ const (
 // FederationV2DevService represents Federation Service.
 type FederationV2DevService struct {
 	UnimplementedFederationV2DevServiceServer
-	cfg                FederationV2DevServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	env                *FederationV2DevServiceEnv
-	svcVar             *FederationV2DevServiceVariable
-	resolver           FederationV2DevServiceResolver
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *FederationV2DevServiceDependentClientSet
+	cfg           FederationV2DevServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	env           *FederationV2DevServiceEnv
+	svcVar        *FederationV2DevServiceVariable
+	resolver      FederationV2DevServiceResolver
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *FederationV2DevServiceDependentClientSet
 }
 
 // NewFederationV2DevService creates FederationV2DevService instance by FederationV2DevServiceConfig.
@@ -399,8 +399,8 @@ func CleanupFederationV2DevService(ctx context.Context, svc *FederationV2DevServ
 }
 
 func (s *FederationV2DevService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 func (s *FederationV2DevService) initServiceVariables() error {
@@ -455,11 +455,9 @@ func (s *FederationV2DevService) GetPostV2Dev(ctx context.Context, req *GetPostV
 			grpcfed.OutputErrorLog(ctx, e)
 		}
 	}()
-
 	defer func() {
-		// cleanup plugin instance memory.
-		for _, instance := range s.celPluginInstances {
-			instance.GC()
+		for _, celPlugin := range s.celPlugins {
+			celPlugin.Cleanup()
 		}
 	}()
 	res, err := s.resolve_Federation_V2Dev_GetPostV2DevResponse(ctx, &FederationV2DevService_Federation_V2Dev_GetPostV2DevResponseArgument{

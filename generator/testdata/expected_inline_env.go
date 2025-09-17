@@ -112,17 +112,17 @@ type InlineEnvServiceUnimplementedResolver struct{}
 // InlineEnvService represents Federation Service.
 type InlineEnvService struct {
 	UnimplementedInlineEnvServiceServer
-	cfg                InlineEnvServiceConfig
-	logger             *slog.Logger
-	errorHandler       grpcfed.ErrorHandler
-	celCacheMap        *grpcfed.CELCacheMap
-	tracer             trace.Tracer
-	env                *InlineEnvServiceEnv
-	svcVar             *InlineEnvServiceVariable
-	celTypeHelper      *grpcfed.CELTypeHelper
-	celEnvOpts         []grpcfed.CELEnvOption
-	celPluginInstances []*grpcfedcel.CELPluginInstance
-	client             *InlineEnvServiceDependentClientSet
+	cfg           InlineEnvServiceConfig
+	logger        *slog.Logger
+	errorHandler  grpcfed.ErrorHandler
+	celCacheMap   *grpcfed.CELCacheMap
+	tracer        trace.Tracer
+	env           *InlineEnvServiceEnv
+	svcVar        *InlineEnvServiceVariable
+	celTypeHelper *grpcfed.CELTypeHelper
+	celEnvOpts    []grpcfed.CELEnvOption
+	celPlugins    []*grpcfedcel.CELPlugin
+	client        *InlineEnvServiceDependentClientSet
 }
 
 // NewInlineEnvService creates InlineEnvService instance by InlineEnvServiceConfig.
@@ -180,8 +180,8 @@ func CleanupInlineEnvService(ctx context.Context, svc *InlineEnvService) {
 }
 
 func (s *InlineEnvService) cleanup(ctx context.Context) {
-	for _, instance := range s.celPluginInstances {
-		instance.Close(ctx)
+	for _, plugin := range s.celPlugins {
+		plugin.Close()
 	}
 }
 func (s *InlineEnvService) initServiceVariables() error {
