@@ -12,6 +12,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -69,13 +70,17 @@ func TestCELEvaluation(t *testing.T) {
 				Reader: bytes.NewReader(wasm),
 				Sha256: toSha256(wasm),
 			},
+			RefreshDuration: 10 * time.Millisecond,
 		},
 		Logger: logger,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer federation.CleanupFederationService(ctx, federationServer)
+	defer func() {
+		federation.CleanupFederationService(ctx, federationServer)
+		time.Sleep(2 * time.Second)
+	}()
 
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 
@@ -137,6 +142,7 @@ func Benchmark_CELEvaluation(b *testing.B) {
 				Reader: bytes.NewReader(wasm),
 				Sha256: toSha256(wasm),
 			},
+			RefreshDuration: time.Second,
 		},
 		Logger: logger,
 	})

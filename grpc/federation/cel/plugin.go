@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/goccy/wasi-go/imports"
 	"github.com/google/cel-go/cel"
@@ -38,6 +40,9 @@ type CELPlugin struct {
 	backupInstance chan *CELPluginInstance
 	instanceMu     sync.RWMutex
 	celRegistry    *types.Registry
+	stopRefresh    chan struct{}
+	refreshStopped chan struct{}
+	oldInstances   []*CELPluginInstance
 }
 
 type CELFunction struct {
@@ -54,6 +59,13 @@ type CELPluginConfig struct {
 	Functions  []*CELFunction
 	CacheDir   string
 	Capability *CELPluginCapability
+
+	// RefreshDuration sets the interval for periodically recreating the plugin instance.
+	// This is only effective if the time required to create the plugin instance is shorter than the RefreshDuration.
+	// If the creation time exceeds the specified duration, the instance will be replaced immediately after creation.
+	// If the plugin instance becomes unstable over extended periods of operation, this option may help improve stability.
+	// By default, instance recreation is not performed automatically.
+	RefreshDuration time.Duration
 }
 
 type CELPluginCapability struct {
@@ -124,14 +136,16 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		mod:            mod,
 		wasmRuntime:    r,
 		backupInstance: make(chan *CELPluginInstance, 1),
+		stopRefresh:    make(chan struct{}),
+		refreshStopped: make(chan struct{}),
 	}
 
 	host := r.NewHostModuleBuilder("grpcfederation")
 	host.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			instance, err := ret.getInstance(ctx)
-			if err != nil {
-				panic(err)
+			instance := getInstanceFromContext(ctx)
+			if instance == nil {
+				panic("grpc-federation: failed to get instance from context")
 			}
 			outW := instance.outW
 			//nolint:gosec
@@ -150,6 +164,20 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		return nil, err
 	}
 	return ret, nil
+}
+
+type instanceKey struct{}
+
+func getInstanceFromContext(ctx context.Context) *CELPluginInstance {
+	v := ctx.Value(instanceKey{})
+	if v == nil {
+		return nil
+	}
+	return v.(*CELPluginInstance)
+}
+
+func withInstance(ctx context.Context, instance *CELPluginInstance) context.Context {
+	return context.WithValue(ctx, instanceKey{}, instance)
 }
 
 func getCompilationCache(name, baseDir string) wazero.CompilationCache {
@@ -174,10 +202,16 @@ func getCompilationCache(name, baseDir string) wazero.CompilationCache {
 }
 
 func (p *CELPlugin) Close() {
-	p.instanceMu.Lock()
-	p.instance.Close()
-	p.instanceMu.Unlock()
+	if p.cfg.RefreshDuration > 0 {
+		// Stop refresh goroutine if running
+		close(p.stopRefresh)
+		<-p.refreshStopped
 
+		for _, instance := range p.oldInstances {
+			instance.Close()
+		}
+	}
+	p.instance.Close()
 	backup := <-p.backupInstance
 	backup.Close()
 }
@@ -202,6 +236,8 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 						if err != nil {
 							return types.NewErr(err.Error())
 						}
+						defer instance.release()
+
 						return instance.Call(ctx, fn, md, append([]ref.Val{self}, args...)...)
 					}),
 				)...,
@@ -219,6 +255,8 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 						if err != nil {
 							return types.NewErr(err.Error())
 						}
+						defer instance.release()
+
 						return instance.Call(ctx, fn, md, args...)
 					}),
 				)...,
@@ -245,11 +283,18 @@ func (p *CELPlugin) CreateInstance(ctx context.Context, celRegistry *types.Regis
 	p.instanceMu.Unlock()
 
 	p.createBackupInstance(ctx)
+
+	// Start periodic refresh if RefreshDuration is configured
+	if p.cfg.RefreshDuration > 0 {
+		p.startPeriodicRefresh(ctx)
+	}
+
 	return instance, nil
 }
 
 func (p *CELPlugin) Cleanup() {
 	if instance := p.getCurrentInstance(); instance != nil {
+		defer instance.release()
 		instance.enqueueGC()
 	}
 }
@@ -265,6 +310,56 @@ func (p *CELPlugin) createBackupInstance(ctx context.Context) {
 	}()
 }
 
+func (p *CELPlugin) startPeriodicRefresh(ctx context.Context) {
+	go func() {
+		defer close(p.refreshStopped)
+
+		ticker := time.NewTicker(p.cfg.RefreshDuration)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-p.stopRefresh:
+				return
+			case <-ticker.C:
+				p.refreshInstance(ctx)
+			}
+		}
+	}()
+}
+
+func (p *CELPlugin) refreshInstance(ctx context.Context) {
+	backup := <-p.backupInstance
+	if backup == nil {
+		// If backup creation failed, create a new backup and return
+		p.createBackupInstance(ctx)
+		return
+	}
+
+	// Replace current instance with backup and close old instance atomically.
+	p.instanceMu.Lock()
+	remainOldInstances := make([]*CELPluginInstance, 0, len(p.oldInstances))
+	for _, instance := range p.oldInstances {
+		if instance.isUnused() {
+			instance.Close()
+			continue
+		}
+		remainOldInstances = append(remainOldInstances, instance)
+	}
+	oldInstance := p.instance
+	if oldInstance.isUnused() {
+		oldInstance.Close()
+	} else {
+		remainOldInstances = append(remainOldInstances, oldInstance)
+	}
+	p.instance = backup
+	p.oldInstances = remainOldInstances
+	p.instanceMu.Unlock()
+
+	// Create a new backup instance
+	p.createBackupInstance(ctx)
+}
+
 func (p *CELPlugin) getInstance(ctx context.Context) (*CELPluginInstance, error) {
 	if instance := p.getCurrentInstance(); instance != nil {
 		return instance, nil
@@ -276,6 +371,7 @@ func (p *CELPlugin) getInstance(ctx context.Context) (*CELPluginInstance, error)
 	}
 
 	p.instanceMu.Lock()
+	instance.use()
 	p.instance = instance
 	p.instanceMu.Unlock()
 
@@ -284,10 +380,11 @@ func (p *CELPlugin) getInstance(ctx context.Context) (*CELPluginInstance, error)
 }
 
 func (p *CELPlugin) getCurrentInstance() *CELPluginInstance {
-	p.instanceMu.RLock()
-	defer p.instanceMu.RUnlock()
+	p.instanceMu.Lock()
+	defer p.instanceMu.Unlock()
 
 	if p.instance != nil && !p.instance.closed {
+		p.instance.use()
 		return p.instance
 	}
 	return nil
@@ -326,20 +423,20 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 
 	const gcQueueLength = 1
 	instance := &CELPluginInstance{
-		name:             p.cfg.Name,
-		functions:        p.cfg.Functions,
-		celRegistry:      p.celRegistry,
-		inR:              inR,
-		inW:              inW,
-		outR:             outR,
-		outW:             outW,
-		gcQueue:          make(chan struct{}, gcQueueLength),
+		name:        p.cfg.Name,
+		functions:   p.cfg.Functions,
+		celRegistry: p.celRegistry,
+		inR:         inR,
+		inW:         inW,
+		outR:        outR,
+		outW:        outW,
+		gcQueue:     make(chan struct{}, gcQueueLength),
+		// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
 		instanceModErrCh: make(chan error, 1),
 	}
 
-	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
 	go func() {
-		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
+		_, err := p.wasmRuntime.InstantiateModule(withInstance(ctx, instance), p.mod, modCfg)
 		instance.instanceModErrCh <- err
 	}()
 
@@ -350,6 +447,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 			instance.startGC()
 		}
 	}()
+
 	return instance, nil
 }
 
@@ -438,6 +536,7 @@ type CELPluginInstance struct {
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
+	refCount         atomic.Int64
 }
 
 const PluginProtocolVersion = 1
@@ -494,6 +593,18 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 	return nil
 }
 
+func (i *CELPluginInstance) isUnused() bool {
+	return i.refCount.Load() <= 0
+}
+
+func (i *CELPluginInstance) use() {
+	i.refCount.Add(1)
+}
+
+func (i *CELPluginInstance) release() {
+	i.refCount.Add(-1)
+}
+
 func (i *CELPluginInstance) write(cmd []byte) error {
 	if i.closed {
 		return i.instanceModErr
@@ -532,13 +643,13 @@ func (i *CELPluginInstance) Close() error {
 	// start termination process.
 	_, _ = i.inW.WriteString(exitCommand)
 	<-i.instanceModErrCh
-
 	return nil
 }
 
 func (i *CELPluginInstance) closeResources(instanceModErr error) {
 	i.instanceModErr = instanceModErr
 	i.closed = true
+	i.inR.Close()
 	i.inW.Close()
 	i.outR.Close()
 	i.outW.Close()

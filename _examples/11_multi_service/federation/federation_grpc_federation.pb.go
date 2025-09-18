@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"time"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -133,7 +134,8 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
-	CacheDir string
+	CacheDir        string
+	RefreshDuration time.Duration
 }
 
 // FederationServiceEnv keeps the values read from environment variables.
@@ -1475,7 +1477,8 @@ type PrivateServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // PrivateServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type PrivateServiceCELPluginConfig struct {
-	CacheDir string
+	CacheDir        string
+	RefreshDuration time.Duration
 }
 
 // PrivateServiceEnv keeps the values read from environment variables.
@@ -2878,7 +2881,8 @@ type DebugServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // DebugServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type DebugServiceCELPluginConfig struct {
-	CacheDir string
+	CacheDir        string
+	RefreshDuration time.Duration
 }
 
 // DebugServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.

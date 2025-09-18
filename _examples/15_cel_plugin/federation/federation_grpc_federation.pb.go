@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"time"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -100,8 +101,9 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
-	Regexp   FederationServiceCELPluginWasmConfig
-	CacheDir string
+	Regexp          FederationServiceCELPluginWasmConfig
+	CacheDir        string
+	RefreshDuration time.Duration
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -153,9 +155,10 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celPlugins []*grpcfedcel.CELPlugin
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
-			Name:     "regexp",
-			Wasm:     cfg.CELPlugin.Regexp,
-			CacheDir: cfg.CELPlugin.CacheDir,
+			Name:            "regexp",
+			Wasm:            cfg.CELPlugin.Regexp,
+			CacheDir:        cfg.CELPlugin.CacheDir,
+			RefreshDuration: cfg.CELPlugin.RefreshDuration,
 			Functions: []*grpcfedcel.CELFunction{
 				{
 					Name: "example.regexp.compile",
