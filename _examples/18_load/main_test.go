@@ -77,10 +77,7 @@ func TestCELEvaluation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		federation.CleanupFederationService(ctx, federationServer)
-		time.Sleep(2 * time.Second)
-	}()
+	defer federation.CleanupFederationService(ctx, federationServer)
 
 	federation.RegisterFederationServiceServer(grpcServer, federationServer)
 
