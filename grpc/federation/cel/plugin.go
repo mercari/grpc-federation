@@ -550,6 +550,9 @@ func (i *CELPluginInstance) LibraryName() string {
 }
 
 func (i *CELPluginInstance) enqueueGC() {
+	return
+
+	//nolint:govet
 	select {
 	case i.gcQueue <- struct{}{}:
 	default:
