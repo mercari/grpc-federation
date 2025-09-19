@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"time"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -71,8 +72,9 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
-	Account  FederationServiceCELPluginWasmConfig
-	CacheDir string
+	Account         FederationServiceCELPluginWasmConfig
+	CacheDir        string
+	RefreshDuration time.Duration
 }
 
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
@@ -117,9 +119,10 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celPlugins []*grpcfedcel.CELPlugin
 	{
 		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
-			Name:     "account",
-			Wasm:     cfg.CELPlugin.Account,
-			CacheDir: cfg.CELPlugin.CacheDir,
+			Name:            "account",
+			Wasm:            cfg.CELPlugin.Account,
+			CacheDir:        cfg.CELPlugin.CacheDir,
+			RefreshDuration: cfg.CELPlugin.RefreshDuration,
 			Functions: []*grpcfedcel.CELFunction{
 				{
 					Name:     "example.account.get_id",

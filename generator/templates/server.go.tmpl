@@ -145,6 +145,7 @@ type {{ $serviceName }}CELPluginConfig struct {
 	{{ .FieldName }} {{ $serviceName }}CELPluginWasmConfig
 	{{- end }}
 	CacheDir string
+	RefreshDuration time.Duration
 }
 
 {{- if $env }}
@@ -339,6 +340,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 			Name: "{{ .Name }}",
 			Wasm: cfg.CELPlugin.{{ .FieldName }},
 			CacheDir: cfg.CELPlugin.CacheDir,
+			RefreshDuration: cfg.CELPlugin.RefreshDuration,
 			Functions: []*grpcfedcel.CELFunction{
 				{{- range .Functions }}
 				{

@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"time"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -65,7 +66,8 @@ type RefEnvServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // RefEnvServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type RefEnvServiceCELPluginConfig struct {
-	CacheDir string
+	CacheDir        string
+	RefreshDuration time.Duration
 }
 
 // RefEnvServiceEnv keeps the values read from environment variables.

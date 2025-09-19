@@ -11,6 +11,7 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"time"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -114,7 +115,8 @@ type OtherServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // OtherServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type OtherServiceCELPluginConfig struct {
-	CacheDir string
+	CacheDir        string
+	RefreshDuration time.Duration
 }
 
 // OtherServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
