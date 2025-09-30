@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package org.federation.test;
+
+import "grpc/federation/federation.proto";
+import "dependency_base_message.proto";
+
+option go_package = "example/federation;federation";
+
+option (grpc.federation.file) = {
+  import: ["dependency_base_message.proto"]
+};
+
+// This service uses FieldOneofRule with If condition and DefSet
+// Before the fix: dependency_base_message.proto would be incorrectly reported as "unused"
+// After the fix: dependency_base_message.proto dependency is correctly detected
+service OneofTestService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse);
+}
+
+message GetRequest {
+  bool use_message = 1;
+}
+
+message GetResponse {
+  option (grpc.federation.message) = {};
+
+  oneof result {
+    string error = 1 [
+      (grpc.federation.field).oneof = {
+        if: "!$.use_message"
+        by: "'no message requested'"
+      }
+    ];
+
+    MessageResult message_result = 2 [
+      (grpc.federation.field).oneof = {
+        // If condition references external package
+        if: "$.use_message"
+        // DefSet creates message from external package (org.dep.base.SimpleMessage)
+        def {
+          name: "msg"
+          message {
+            name: "org.dep.base.SimpleMessage"
+          }
+        }
+        by: "msg"
+      }
+    ];
+  }
+}
+
+message MessageResult {
+  option (grpc.federation.message) = {
+    def {
+      name: "value"
+      by: "'result from oneof'"
+    }
+  };
+
+  string value = 1 [(grpc.federation.field).by = "value"];
+}

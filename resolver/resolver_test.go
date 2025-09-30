@@ -4414,3 +4414,69 @@ func newInt64Value(i int64) *resolver.Value {
 		},
 	}
 }
+
+// TestDependencyDetectionFixes verifies that the dependency detection fixes
+// correctly identify package dependencies that were previously missed.
+// These tests ensure that imports are NOT incorrectly flagged as "unused".
+func TestDependencyDetectionFixes(t *testing.T) {
+	t.Parallel()
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+
+	tests := []struct {
+		name        string
+		fileName    string
+		description string
+	}{
+		{
+			name:     "method_response",
+			fileName: "dependency_method_response.proto",
+			description: "Method.Rule.Response dependency detection. " +
+				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
+				"After fix: dependency_base_message.proto dependency is correctly detected.",
+		},
+		{
+			name:     "oneof_if_and_defset",
+			fileName: "dependency_oneof.proto",
+			description: "FieldOneofRule If condition and DefSet dependency detection. " +
+				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
+				"After fix: dependency_base_message.proto dependency is correctly detected.",
+		},
+		{
+			name:     "service_variable",
+			fileName: "dependency_service_variable.proto",
+			description: "ServiceVariable message/enum expression dependency detection. " +
+				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
+				"After fix: dependency_base_message.proto dependency is correctly detected.",
+		},
+		{
+			name:     "message_argument",
+			fileName: "dependency_message_argument.proto",
+			description: "MessageArgument dependency detection. " +
+				"When a child message receives an external package message as an argument, " +
+				"the MessageArgument contains fields from the external package. " +
+				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
+				"After fix: dependency_base_message.proto dependency is correctly detected through MessageArgument.",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			fileName := filepath.Join(testdataDir, tt.fileName)
+			r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
+			result, err := r.Resolve()
+			if err != nil {
+				t.Fatalf("Resolve failed: %v", err)
+			}
+
+			// Verify dependency_base_message.proto is NOT reported as unused
+			for _, warning := range result.Warnings {
+				if warning.Message == "Import dependency_base_message.proto is unused for the definition of grpc federation." {
+					t.Errorf("%s: dependency_base_message.proto incorrectly reported as unused", tt.name)
+				}
+			}
+		})
+	}
+}

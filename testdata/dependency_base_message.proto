@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package org.dep.base;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/dep/base;base";
+
+message SimpleMessage {
+  option (grpc.federation.message) = {
+    def {
+      name: "value"
+      by: "'test'"
+    }
+  };
+
+  string value = 1 [(grpc.federation.field).by = "value"];
+}

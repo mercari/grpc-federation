@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package org.federation.test;
+
+import "grpc/federation/federation.proto";
+import "dependency_base_message.proto";
+
+option go_package = "example/federation;federation";
+
+option (grpc.federation.file) = {
+  import: ["dependency_base_message.proto"]
+};
+
+// This service uses Method.Rule.Response to specify custom response type
+// Before the fix: dependency_base_message.proto would be incorrectly reported as "unused"
+// After the fix: dependency_base_message.proto dependency is correctly detected
+service MethodResponseTestService {
+  option (grpc.federation.service) = {};
+
+  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse) {
+    option (grpc.federation.method) = {
+      response: "org.dep.base.SimpleMessage"
+    };
+  }
+}
+
+message GetMessageRequest {}
+
+message GetMessageResponse {
+  string value = 1;
+}

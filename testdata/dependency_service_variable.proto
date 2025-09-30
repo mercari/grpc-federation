@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package org.federation.test;
+
+import "grpc/federation/federation.proto";
+import "dependency_base_message.proto";
+
+option go_package = "example/federation;federation";
+
+option (grpc.federation.file) = {
+  import: ["dependency_base_message.proto"]
+};
+
+// This service uses ServiceVariable with message/enum expressions from external packages
+// Before the fix: dependency_base_message.proto would be incorrectly reported as "unused"
+// After the fix: dependency_base_message.proto dependency is correctly detected
+service ServiceVariableTestService {
+  option (grpc.federation.service) = {
+    // ServiceVariable referencing external message
+    var {
+      name: "external_msg"
+      message {
+        name: "org.dep.base.SimpleMessage"
+      }
+    }
+  };
+  rpc Get(GetRequest) returns (GetResponse);
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "value"
+      by: "grpc.federation.var.external_msg.value"
+    }
+  };
+
+  string value = 1 [(grpc.federation.field).by = "value"];
+}
