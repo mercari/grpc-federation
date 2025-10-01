@@ -21,7 +21,6 @@ import (
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -101,22 +100,16 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	var runtimeCfg wazero.RuntimeConfig
 	if cfg.CacheDir == "" {
 		runtimeCfg = wazero.NewRuntimeConfigInterpreter()
-		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
-			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
-		}
 	} else {
 		runtimeCfg = wazero.NewRuntimeConfig()
-		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
-			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
-		}
+	}
+	if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
+		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 	}
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg.WithDebugInfoEnabled(false))
 	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
 		return nil, err
-	}
-	if cfg.Capability == nil || cfg.Capability.Network == nil {
-		wasi_snapshot_preview1.MustInstantiate(ctx, r)
 	}
 
 	ret := &CELPlugin{
@@ -303,26 +296,18 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		return nil, err
 	}
 
-	modCfg, networkModCfg := addModuleConfigByCapability(
+	modCfg := addModuleConfigByCapability(
 		p.cfg.Capability,
-		wazero.NewModuleConfig().
-			WithSysWalltime().
-			WithStdin(inR).
-			WithStdout(os.Stdout).
-			WithStderr(os.Stderr).
-			WithArgs("plugin"),
 		imports.NewBuilder().
 			WithStdio(int(inR.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd())).
 			WithSocketsExtension("wasmedgev2", p.mod),
 	)
 
-	if p.cfg.Capability != nil && p.cfg.Capability.Network != nil {
-		var err error
-		ctx, _, err = networkModCfg.Instantiate(ctx, p.wasmRuntime)
-		if err != nil {
-			return nil, err
-		}
+	ctx, sys, err := modCfg.Instantiate(ctx, p.wasmRuntime)
+	if err != nil {
+		return nil, err
 	}
+	_ = sys
 
 	const gcQueueLength = 1
 	instance := &CELPluginInstance{
@@ -339,7 +324,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
 	go func() {
-		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
+		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, wazero.NewModuleConfig())
 		instance.instanceModErrCh <- err
 	}()
 
@@ -353,10 +338,10 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 	return instance, nil
 }
 
-func addModuleConfigByCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
-	cfg, nwcfg = addModuleConfigByEnvCapability(capability, cfg, nwcfg)
-	cfg, nwcfg = addModuleConfigByFileSystemCapability(capability, cfg, nwcfg)
-	return cfg, nwcfg
+func addModuleConfigByCapability(capability *CELPluginCapability, cfg *imports.Builder) *imports.Builder {
+	cfg = addModuleConfigByEnvCapability(capability, cfg)
+	cfg = addModuleConfigByFileSystemCapability(capability, cfg)
+	return cfg
 }
 
 var ignoreEnvNameMap = map[string]struct{}{
@@ -365,9 +350,9 @@ var ignoreEnvNameMap = map[string]struct{}{
 	"GOMAXPROCS": {},
 }
 
-func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg *imports.Builder) *imports.Builder {
 	if capability == nil || capability.Env == nil {
-		return cfg, nwcfg
+		return cfg
 	}
 
 	type Env struct {
@@ -393,36 +378,32 @@ func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.
 	if envCfg.All {
 		filteredAllEnvs := make([]string, 0, len(envs))
 		for _, env := range envs {
-			cfg = cfg.WithEnv(env.key, env.value)
 			filteredAllEnvs = append(filteredAllEnvs, env.key+"="+env.value)
 		}
-		nwcfg = nwcfg.WithEnv(filteredAllEnvs...)
+		cfg = cfg.WithEnv(filteredAllEnvs...)
 	} else {
 		var filteredEnvs []string
 		for _, name := range envCfg.Names {
 			envName := strings.ToUpper(name)
 			if env, exists := envMap[envName]; exists {
-				cfg = cfg.WithEnv(env.key, env.value)
 				filteredEnvs = append(filteredEnvs, env.key+"="+env.value)
 			}
 		}
-		nwcfg = nwcfg.WithEnv(filteredEnvs...)
+		cfg = cfg.WithEnv(filteredEnvs...)
 	}
-	return cfg, nwcfg
+	return cfg
 }
 
-func addModuleConfigByFileSystemCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+func addModuleConfigByFileSystemCapability(capability *CELPluginCapability, cfg *imports.Builder) *imports.Builder {
 	if capability == nil || capability.FileSystem == nil {
-		return cfg, nwcfg
+		return cfg
 	}
 	fs := capability.FileSystem
 	mountPath := "/"
 	if fs.MountPath != "" {
 		mountPath = fs.MountPath
 	}
-	return cfg.WithFSConfig(
-		wazero.NewFSConfig().WithFSMount(os.DirFS(mountPath), ""),
-	), nwcfg.WithDirs(mountPath)
+	return cfg.WithDirs(mountPath)
 }
 
 type CELPluginInstance struct {
