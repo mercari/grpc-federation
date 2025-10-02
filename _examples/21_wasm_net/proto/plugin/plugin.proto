@@ -28,6 +28,10 @@ option (grpc.federation.file).plugin.export = {
       return { kind: STRING }
     },
     {
+      name: "getGOGCEnv"
+      return { kind: STRING }
+    },
+    {
       name: "getFileContent"
       args {
         name: "path"

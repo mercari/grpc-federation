@@ -27,6 +27,7 @@ type FederationService_Org_Federation_GetResponseVariable struct {
 	Body string
 	File string
 	Foo  string
+	Gogc string
 }
 
 // Org_Federation_GetResponseArgument is argument for "org.federation.GetResponse" message.
@@ -144,6 +145,13 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 					IsMethod: false,
 				},
 				{
+					Name:     "example.net.getGOGCEnv",
+					ID:       "example_net_getGOGCEnv_string",
+					Args:     []*grpcfed.CELTypeDeclare{},
+					Return:   grpcfed.CELStringType,
+					IsMethod: false,
+				},
+				{
 					Name: "example.net.getFileContent",
 					ID:   "example_net_getFileContent_string_string",
 					Args: []*grpcfed.CELTypeDeclare{
@@ -245,6 +253,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 			Body string
 			File string
 			Foo  string
+			Gogc string
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetResponseArgument", req)}
@@ -288,6 +297,25 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 
 	/*
 		def {
+		  name: "gogc"
+		  by: "example.net.getGOGCEnv()"
+		}
+	*/
+	def_gogc := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+			Name: `gogc`,
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.Gogc = v
+				return nil
+			},
+			By:           `example.net.getGOGCEnv()`,
+			ByCacheIndex: 3,
+		})
+	}
+
+	/*
+		def {
 		  name: "file"
 		  by: "example.net.getFileContent($.path)"
 		}
@@ -301,7 +329,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				return nil
 			},
 			By:           `example.net.getFileContent($.path)`,
-			ByCacheIndex: 3,
+			ByCacheIndex: 4,
 		})
 	}
 
@@ -310,6 +338,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	   body ─┐
 	   file ─┤
 	    foo ─┤
+	   gogc ─┤
 	*/
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
 
@@ -337,6 +366,14 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		return nil, nil
 	})
 
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_gogc(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
@@ -345,6 +382,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	req.FederationService_Org_Federation_GetResponseVariable.Body = value.vars.Body
 	req.FederationService_Org_Federation_GetResponseVariable.File = value.vars.File
 	req.FederationService_Org_Federation_GetResponseVariable.Foo = value.vars.Foo
+	req.FederationService_Org_Federation_GetResponseVariable.Gogc = value.vars.Gogc
 
 	// create a message value to be returned.
 	ret := &GetResponse{}
@@ -354,7 +392,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `body`,
-		CacheIndex: 4,
+		CacheIndex: 5,
 		Setter: func(v string) error {
 			ret.Body = v
 			return nil
@@ -367,7 +405,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `foo`,
-		CacheIndex: 5,
+		CacheIndex: 6,
 		Setter: func(v string) error {
 			ret.Foo = v
 			return nil
@@ -380,9 +418,22 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `file`,
-		CacheIndex: 6,
+		CacheIndex: 7,
 		Setter: func(v string) error {
 			ret.File = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "gogc"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:      value,
+		Expr:       `gogc`,
+		CacheIndex: 8,
+		Setter: func(v string) error {
+			ret.Gogc = v
 			return nil
 		},
 	}); err != nil {
@@ -402,6 +453,7 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 		slog.String("body", v.GetBody()),
 		slog.String("foo", v.GetFoo()),
 		slog.String("file", v.GetFile()),
+		slog.String("gogc", v.GetGogc()),
 	)
 }
 

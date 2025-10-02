@@ -27,6 +27,7 @@ var (
 type NetPlugin interface {
 	Example_Net_HttpGet(context.Context, string) (string, error)
 	Example_Net_GetFooEnv(context.Context) (string, error)
+	Example_Net_GetGOGCEnv(context.Context) (string, error)
 	Example_Net_GetFileContent(context.Context, string) (string, error)
 }
 
@@ -58,6 +59,7 @@ func RegisterNetPlugin(plug NetPlugin) {
 				Functions: []string{
 					"example_net_httpGet_string_string",
 					"example_net_getFooEnv_string",
+					"example_net_getGOGCEnv_string",
 					"example_net_getFileContent_string_string",
 				},
 			})
@@ -111,6 +113,15 @@ func handleNetPlugin(content []byte, plug NetPlugin) (res *grpcfed.CELPluginResp
 			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
 		}
 		ret, err := plug.Example_Net_GetFooEnv(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return grpcfed.ToStringCELPluginResponse(ret)
+	case "example_net_getGOGCEnv_string":
+		if len(req.GetArgs()) != 0 {
+			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
+		}
+		ret, err := plug.Example_Net_GetGOGCEnv(ctx)
 		if err != nil {
 			return nil, err
 		}

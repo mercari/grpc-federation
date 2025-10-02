@@ -25,9 +25,11 @@ message GetResponse {
   option (grpc.federation.message) = {
     def { name: "body" by: "example.net.httpGet($.url)" }
     def { name: "foo" by: "example.net.getFooEnv()" }
+    def { name: "gogc" by: "example.net.getGOGCEnv()" }
     def { name: "file" by: "example.net.getFileContent($.path)" }
   };
   string body = 1 [(grpc.federation.field).by = "body"];
   string foo = 2 [(grpc.federation.field).by = "foo"];
   string file = 3 [(grpc.federation.field).by = "file"];
+  string gogc = 4 [(grpc.federation.field).by = "gogc"];
 }
