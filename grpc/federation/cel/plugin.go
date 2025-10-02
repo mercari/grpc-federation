@@ -412,11 +412,11 @@ func getEnvs() Envs {
 		// If the prefix is GRPC_FEDERATION_PLUGIN_, the environment variable will be set for the plugin with that prefix removed.
 		// If an environment variable with the same name is already set, it will be overwritten.
 		if strings.HasPrefix(key, pluginEnvPrefix) {
-			key := strings.TrimPrefix(key, pluginEnvPrefix)
-			if _, exists := ignoreEnvNameMap[key]; exists {
+			renamedKey := strings.TrimPrefix(key, pluginEnvPrefix)
+			if _, exists := ignoreEnvNameMap[renamedKey]; exists {
 				continue
 			}
-			envMap[key] = &Env{key: key, value: value}
+			envMap[key] = &Env{key: renamedKey, value: value}
 		} else if _, exists := envMap[key]; exists {
 			continue
 		} else if _, exists := ignoreEnvNameMap[key]; exists {
