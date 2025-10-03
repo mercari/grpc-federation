@@ -175,7 +175,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 
 			// instance.req is always initialized with the correct value inside the `read_length` host function.
 			// The `read_length` host function and the `read` host function are always executed sequentially.
-			if ok := mod.Memory().WriteString(uint32(stack[0]), instance.req); !ok {
+			if ok := mod.Memory().WriteString(uint32(stack[0]), instance.req); !ok { //nolint:gosec
 				panic("failed to write plugin request content")
 			}
 		}),
