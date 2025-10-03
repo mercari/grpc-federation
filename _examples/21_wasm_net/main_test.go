@@ -53,6 +53,7 @@ func TestFederation(t *testing.T) {
 	envValue := "TEST_ENV_CAPABILITY"
 	t.Setenv("FOO", envValue)
 	t.Setenv("GOMAXPROCS", "2")
+	t.Setenv("GRPC_FEDERATION_PLUGIN_GOGC", "off")
 
 	testFileContent := `{"hello":"world"}`
 	testFilePath := filepath.Join(t.TempDir(), "test.json")
@@ -135,6 +136,9 @@ func TestFederation(t *testing.T) {
 	}
 	if res.Foo != envValue {
 		t.Fatalf("failed to get env value: %s", res.Foo)
+	}
+	if res.Gogc != "off" {
+		t.Fatalf("failed to get gogc value: %s", res.Gogc)
 	}
 	if res.File != testFileContent {
 		t.Fatalf("failed to get file content: %s", res.File)

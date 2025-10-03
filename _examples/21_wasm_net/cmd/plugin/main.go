@@ -28,6 +28,10 @@ func (_ *plugin) Example_Net_GetFooEnv(_ context.Context) (string, error) {
 	return os.Getenv("FOO"), nil
 }
 
+func (_ *plugin) Example_Net_GetGOGCEnv(_ context.Context) (string, error) {
+	return os.Getenv("GOGC"), nil
+}
+
 func (_ *plugin) Example_Net_GetFileContent(_ context.Context, path string) (string, error) {
 	f, err := os.ReadFile(path)
 	if err != nil {

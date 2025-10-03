@@ -303,6 +303,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		return nil, err
 	}
 
+	envs := getEnvs()
 	modCfg, networkModCfg := addModuleConfigByCapability(
 		p.cfg.Capability,
 		wazero.NewModuleConfig().
@@ -314,6 +315,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		imports.NewBuilder().
 			WithStdio(int(inR.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd())).
 			WithSocketsExtension("wasmedgev2", p.mod),
+		envs,
 	)
 
 	if p.cfg.Capability != nil && p.cfg.Capability.Network != nil {
@@ -335,6 +337,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		outW:             outW,
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
+		isNoGC:           envs.IsNoGC(),
 	}
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
@@ -353,8 +356,8 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 	return instance, nil
 }
 
-func addModuleConfigByCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
-	cfg, nwcfg = addModuleConfigByEnvCapability(capability, cfg, nwcfg)
+func addModuleConfigByCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder, envs Envs) (wazero.ModuleConfig, *imports.Builder) {
+	cfg, nwcfg = addModuleConfigByEnvCapability(capability, cfg, nwcfg, envs)
 	cfg, nwcfg = addModuleConfigByFileSystemCapability(capability, cfg, nwcfg)
 	return cfg, nwcfg
 }
@@ -365,46 +368,94 @@ var ignoreEnvNameMap = map[string]struct{}{
 	"GOMAXPROCS": {},
 }
 
-func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder) (wazero.ModuleConfig, *imports.Builder) {
+type Envs []*Env
+
+func (e Envs) IsNoGC() bool {
+	for _, env := range e {
+		if env.key != "GOGC" {
+			continue
+		}
+		if env.value == "off" || env.value == "0" {
+			return true
+		}
+	}
+	return false
+}
+
+func (e Envs) Strings() []string {
+	ret := make([]string, 0, len(e))
+	for _, env := range e {
+		ret = append(ret, env.String())
+	}
+	return ret
+}
+
+type Env struct {
+	key   string
+	value string
+}
+
+const pluginEnvPrefix = "GRPC_FEDERATION_PLUGIN_"
+
+func (e *Env) String() string {
+	return e.key + "=" + e.value
+}
+
+func getEnvs() Envs {
+	envs := os.Environ()
+	envMap := make(map[string]*Env)
+	for _, kv := range envs {
+		i := strings.IndexByte(kv, '=')
+		key := kv[:i]
+		value := kv[i+1:]
+
+		// If the prefix is GRPC_FEDERATION_PLUGIN_, the environment variable will be set for the plugin with that prefix removed.
+		// If an environment variable with the same name is already set, it will be overwritten.
+		if strings.HasPrefix(key, pluginEnvPrefix) {
+			renamedKey := strings.TrimPrefix(key, pluginEnvPrefix)
+			if _, exists := ignoreEnvNameMap[renamedKey]; exists {
+				continue
+			}
+			envMap[key] = &Env{key: renamedKey, value: value}
+		} else if _, exists := envMap[key]; exists {
+			continue
+		} else if _, exists := ignoreEnvNameMap[key]; exists {
+			continue
+		} else {
+			envMap[key] = &Env{key: key, value: value}
+		}
+	}
+	ret := make(Envs, 0, len(envMap))
+	for _, env := range envMap {
+		ret = append(ret, env)
+	}
+	return ret
+}
+
+func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder, envs Envs) (wazero.ModuleConfig, *imports.Builder) {
 	if capability == nil || capability.Env == nil {
 		return cfg, nwcfg
 	}
 
-	type Env struct {
-		key   string
-		value string
-	}
-
 	envCfg := capability.Env
-	srcEnvs := os.Environ()
-	envs := make([]Env, 0, len(srcEnvs))
-	envMap := make(map[string]Env)
-	for _, kv := range srcEnvs {
-		i := strings.IndexByte(kv, '=')
-		key := kv[:i]
-		value := kv[i+1:]
-		if _, exists := ignoreEnvNameMap[key]; exists {
-			continue
-		}
-		env := Env{key: key, value: value}
-		envs = append(envs, env)
-		envMap[key] = env
+	envNameMap := make(map[string]struct{})
+	for _, name := range envCfg.Names {
+		envName := strings.ToUpper(name)
+		envNameMap[envName] = struct{}{}
 	}
 	if envCfg.All {
-		filteredAllEnvs := make([]string, 0, len(envs))
 		for _, env := range envs {
 			cfg = cfg.WithEnv(env.key, env.value)
-			filteredAllEnvs = append(filteredAllEnvs, env.key+"="+env.value)
 		}
-		nwcfg = nwcfg.WithEnv(filteredAllEnvs...)
+		nwcfg = nwcfg.WithEnv(envs.Strings()...)
 	} else {
 		var filteredEnvs []string
-		for _, name := range envCfg.Names {
-			envName := strings.ToUpper(name)
-			if env, exists := envMap[envName]; exists {
-				cfg = cfg.WithEnv(env.key, env.value)
-				filteredEnvs = append(filteredEnvs, env.key+"="+env.value)
+		for _, env := range envs {
+			if _, exists := envNameMap[env.key]; !exists {
+				continue
 			}
+			cfg = cfg.WithEnv(env.key, env.value)
+			filteredEnvs = append(filteredEnvs, env.String())
 		}
 		nwcfg = nwcfg.WithEnv(filteredEnvs...)
 	}
@@ -438,6 +489,7 @@ type CELPluginInstance struct {
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
+	isNoGC           bool
 }
 
 const PluginProtocolVersion = 1
@@ -550,6 +602,10 @@ func (i *CELPluginInstance) LibraryName() string {
 }
 
 func (i *CELPluginInstance) enqueueGC() {
+	if i.isNoGC {
+		return
+	}
+
 	select {
 	case i.gcQueue <- struct{}{}:
 	default:

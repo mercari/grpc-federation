@@ -189,6 +189,35 @@ option (grpc.federation.file).plugin.export = {
 
 For more details, please refer to the sample that uses this configuration in [_examples/21_wasm_net](../_examples/21_wasm_net/).
 
+### Env
+
+If the prefix is `GRPC_FEDERATION_PLUGIN_` , the environment variable will be set for the plugin with that prefix removed. If an environment variable with the same name is already set, it will be overwritten.
+Since setting `GOMAXPROCS` to 2 or higher causes a panic, it is always set to 1.
+
+For example, if you want to turn off GC for the plugin only, set it like this: `GRPC_FEDERATION_PLUGIN_GOGC=off`
+At the same time, you need to allow all environment variables via capability, or allow them using a whitelist format.
+
+```proto
+option (grpc.federation.file).plugin.export = {
+  name: "example"
+  capability {
+    env { names: ["gogc"] } // enable access to `GOGC` environment variable
+  }
+}
+```
+
+or
+
+```proto
+option (grpc.federation.file).plugin.export = {
+  name: "example"
+  capability {
+    env { all: true } // enable all environment variable
+  }
+}
+```
+
+
 # How it works
 
 Host and wasm plugin using stdio to exchange data.
