@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -4412,5 +4413,61 @@ func newInt64Value(i int64) *resolver.Value {
 			Expr: strconv.FormatInt(i, 10),
 			Out:  resolver.Int64Type,
 		},
+	}
+}
+
+// TestDependencyDetection verifies that the dependency detection fixes
+// correctly identify package dependencies that were previously missed.
+// These tests ensure that imports are NOT incorrectly flagged as "unused".
+func TestDependencyDetection(t *testing.T) {
+	t.Parallel()
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+
+	tests := []struct {
+		name     string
+		fileName string
+	}{
+		{
+			// Method.Rule.Response dependency detection.
+			name:     "method_response",
+			fileName: "dependency_method_response.proto",
+		},
+		{
+			name:     "oneof_if_and_defset",
+			fileName: "dependency_oneof.proto",
+		},
+		{
+			// ServiceVariable message/enum expression dependency detection.
+			name:     "service_variable",
+			fileName: "dependency_service_variable.proto",
+		},
+		{
+			// MessageArgument dependency detection.
+			// When a child message receives an external package message as an argument,
+			// the MessageArgument contains fields from the external package.
+			name:     "message_argument",
+			fileName: "dependency_message_argument.proto",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			fileName := filepath.Join(testdataDir, tt.fileName)
+			r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
+			result, err := r.Resolve()
+			if err != nil {
+				t.Fatalf("Resolve failed: %v", err)
+			}
+
+			// Verify dependency_base_message.proto is NOT reported as unused
+			for _, warning := range result.Warnings {
+				if strings.Contains(warning.Message, "is unused for the definition of grpc federation.") {
+					t.Errorf("%s: imported file incorrectly reported as unused", tt.name)
+				}
+			}
+		})
 	}
 }

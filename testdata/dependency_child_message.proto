@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package org.federation.test;
+
+import "grpc/federation/federation.proto";
+import "dependency_base_message.proto";
+
+option go_package = "example/federation;federation";
+
+option (grpc.federation.file) = {
+  import: ["dependency_base_message.proto"]
+};
+
+// ChildMessage is defined in a separate file
+// Its MessageArgument will contain org.dep.base.SimpleMessage type
+// When this file is processed independently, the dependency detection
+// must recursively analyze MessageArgument to find the external package dependency
+message ChildMessage {
+  option (grpc.federation.message) = {
+    def {
+      name: "value"
+      // Access external package field via MessageArgument
+      by: "$.nested_ext.value"
+    }
+  };
+  string value = 1 [(grpc.federation.field).by = "value"];
+}

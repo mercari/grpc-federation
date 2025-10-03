@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package org.federation.test;
+
+import "grpc/federation/federation.proto";
+import "dependency_base_message.proto";
+import "dependency_child_message.proto";
+
+option go_package = "example/federation;federation";
+
+option (grpc.federation.file) = {
+  import: ["dependency_base_message.proto", "dependency_child_message.proto"]
+};
+
+// This service tests MessageArgument dependency detection across files
+// ChildMessage is defined in dependency_child_message.proto (separate file)
+// When ChildMessage's file is processed, it must detect the dependency on
+// org.dep.base.SimpleMessage through its MessageArgument's field types
+// Before the fix: dependency_base_message.proto would be incorrectly reported as "unused"
+//                 in dependency_child_message.proto
+// After the fix: dependency_base_message.proto dependency is correctly detected
+//                through MessageArgument field type analysis
+service MessageArgumentTestService {
+  option (grpc.federation.service) = {};
+  rpc Get(GetRequest) returns (GetResponse);
+}
+
+message GetRequest {}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    // Create external message
+    def {
+      name: "external"
+      message {
+        name: "org.dep.base.SimpleMessage"
+      }
+    }
+    // Pass external message to ChildMessage (defined in separate file)
+    def {
+      name: "child"
+      message {
+        name: "ChildMessage"
+        args { name: "nested_ext" by: "external" }
+      }
+    }
+  };
+  ChildMessage result = 1 [(grpc.federation.field).by = "child"];
+}
