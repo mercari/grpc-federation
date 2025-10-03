@@ -132,13 +132,12 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
-			outW := instance.outW
 			//nolint:gosec
 			b, ok := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
 			if !ok {
 				panic("failed to read memory from plugin")
 			}
-			if _, err := outW.Write(b); err != nil {
+			if _, err := instance.resWriter.Write(b); err != nil {
 				panic(fmt.Sprintf("failed to write plugin response to host buffer: %s", err))
 			}
 		}),
@@ -151,7 +150,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
-			req, err := bufio.NewReader(instance.inR).ReadString('\n')
+			req, err := instance.reqReader.ReadString('\n')
 			if err != nil {
 				panic(err)
 			}
@@ -344,11 +343,11 @@ func (p *CELPlugin) getCurrentInstance() *CELPluginInstance {
 }
 
 func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, error) {
-	inR, inW, err := os.Pipe()
+	reqR, reqW, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-	outR, outW, err := os.Pipe()
+	resR, resW, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
@@ -358,12 +357,11 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		p.cfg.Capability,
 		wazero.NewModuleConfig().
 			WithSysWalltime().
-			WithStdin(inR).
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			WithArgs("plugin"),
 		imports.NewBuilder().
-			WithStdio(int(inR.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd())).
+			WithStdio(-1, int(os.Stdout.Fd()), int(os.Stderr.Fd())).
 			WithSocketsExtension("wasmedgev2", p.mod),
 		envs,
 	)
@@ -381,10 +379,10 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
 		celRegistry:      p.celRegistry,
-		inR:              inR,
-		inW:              inW,
-		outR:             outR,
-		outW:             outW,
+		reqReader:        bufio.NewReader(reqR),
+		resReader:        bufio.NewReader(resR),
+		reqWriter:        reqW,
+		resWriter:        resW,
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
 		isNoGC:           envs.IsNoGC(),
@@ -531,10 +529,10 @@ type CELPluginInstance struct {
 	functions        []*CELFunction
 	celRegistry      *types.Registry
 	req              string
-	inR              *os.File
-	inW              *os.File
-	outR             *os.File
-	outW             *os.File
+	reqReader        *bufio.Reader
+	resReader        *bufio.Reader
+	reqWriter        *os.File
+	resWriter        *os.File
 	instanceModErrCh chan error
 	instanceModErr   error
 	closed           bool
@@ -601,7 +599,7 @@ func (i *CELPluginInstance) write(cmd []byte) error {
 	if i.closed {
 		return i.instanceModErr
 	}
-	if _, err := i.inW.Write(cmd); err != nil {
+	if _, err := i.reqWriter.Write(cmd); err != nil {
 		return fmt.Errorf("failed to write plugin command: %w", err)
 	}
 	return nil
@@ -622,7 +620,7 @@ func (i *CELPluginInstance) Close() error {
 	defer func() { i.closeResources(nil) }()
 
 	// start termination process.
-	_, _ = i.inW.WriteString(exitCommand)
+	_, _ = i.reqWriter.WriteString(exitCommand)
 	<-i.instanceModErrCh
 
 	return nil
@@ -631,9 +629,8 @@ func (i *CELPluginInstance) Close() error {
 func (i *CELPluginInstance) closeResources(instanceModErr error) {
 	i.instanceModErr = instanceModErr
 	i.closed = true
-	i.inW.Close()
-	i.outR.Close()
-	i.outW.Close()
+	i.reqWriter.Close()
+	i.resWriter.Close()
 	close(i.gcQueue)
 }
 
@@ -723,8 +720,7 @@ func (i *CELPluginInstance) recvContent() (string, error) {
 	}
 	readCh := make(chan readResult)
 	go func() {
-		reader := bufio.NewReader(i.outR)
-		content, err := reader.ReadString('\n')
+		content, err := i.resReader.ReadString('\n')
 		if err != nil {
 			readCh <- readResult{err: fmt.Errorf("grpc-federation: failed to receive response from wasm plugin: %w", err)}
 			return
