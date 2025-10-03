@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -4415,47 +4416,37 @@ func newInt64Value(i int64) *resolver.Value {
 	}
 }
 
-// TestDependencyDetectionFixes verifies that the dependency detection fixes
+// TestDependencyDetection verifies that the dependency detection fixes
 // correctly identify package dependencies that were previously missed.
 // These tests ensure that imports are NOT incorrectly flagged as "unused".
-func TestDependencyDetectionFixes(t *testing.T) {
+func TestDependencyDetection(t *testing.T) {
 	t.Parallel()
 	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
 
 	tests := []struct {
-		name        string
-		fileName    string
-		description string
+		name     string
+		fileName string
 	}{
 		{
+			// Method.Rule.Response dependency detection.
 			name:     "method_response",
 			fileName: "dependency_method_response.proto",
-			description: "Method.Rule.Response dependency detection. " +
-				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
-				"After fix: dependency_base_message.proto dependency is correctly detected.",
 		},
 		{
 			name:     "oneof_if_and_defset",
 			fileName: "dependency_oneof.proto",
-			description: "FieldOneofRule If condition and DefSet dependency detection. " +
-				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
-				"After fix: dependency_base_message.proto dependency is correctly detected.",
 		},
 		{
+			// ServiceVariable message/enum expression dependency detection.
 			name:     "service_variable",
 			fileName: "dependency_service_variable.proto",
-			description: "ServiceVariable message/enum expression dependency detection. " +
-				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
-				"After fix: dependency_base_message.proto dependency is correctly detected.",
 		},
 		{
+			// MessageArgument dependency detection.
+			// When a child message receives an external package message as an argument,
+			// the MessageArgument contains fields from the external package.
 			name:     "message_argument",
 			fileName: "dependency_message_argument.proto",
-			description: "MessageArgument dependency detection. " +
-				"When a child message receives an external package message as an argument, " +
-				"the MessageArgument contains fields from the external package. " +
-				"Before fix: dependency_base_message.proto would be incorrectly reported as unused. " +
-				"After fix: dependency_base_message.proto dependency is correctly detected through MessageArgument.",
 		},
 	}
 
@@ -4473,8 +4464,8 @@ func TestDependencyDetectionFixes(t *testing.T) {
 
 			// Verify dependency_base_message.proto is NOT reported as unused
 			for _, warning := range result.Warnings {
-				if warning.Message == "Import dependency_base_message.proto is unused for the definition of grpc federation." {
-					t.Errorf("%s: dependency_base_message.proto incorrectly reported as unused", tt.name)
+				if strings.Contains(warning.Message, "is unused for the definition of grpc federation.") {
+					t.Errorf("%s: imported file incorrectly reported as unused", tt.name)
 				}
 			}
 		})
