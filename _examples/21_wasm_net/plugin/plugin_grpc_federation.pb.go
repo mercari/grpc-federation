@@ -7,11 +7,9 @@
 package pluginpb
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"reflect"
 	"runtime"
 
@@ -36,15 +34,8 @@ func init() {
 }
 
 func RegisterNetPlugin(plug NetPlugin) {
-	reader := bufio.NewReader(os.Stdin)
 	for {
-		content, err := reader.ReadString('\n')
-		if err != nil {
-			panic(err)
-		}
-		if content == "" {
-			panic("receive empty buffer from ReadString")
-		}
+		content := grpcfed.ReadPluginContent()
 		if content == "exit\n" {
 			return
 		}

@@ -7,10 +7,8 @@
 package pluginpb
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"runtime"
 
@@ -28,15 +26,8 @@ type AccountPlugin interface {
 }
 
 func RegisterAccountPlugin(plug AccountPlugin) {
-	reader := bufio.NewReader(os.Stdin)
 	for {
-		content, err := reader.ReadString('\n')
-		if err != nil {
-			panic(err)
-		}
-		if content == "" {
-			panic("receive empty buffer from ReadString")
-		}
+		content := grpcfed.ReadPluginContent()
 		if content == "exit\n" {
 			return
 		}

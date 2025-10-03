@@ -101,14 +101,11 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	var runtimeCfg wazero.RuntimeConfig
 	if cfg.CacheDir == "" {
 		runtimeCfg = wazero.NewRuntimeConfigInterpreter()
-		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
-			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
-		}
 	} else {
 		runtimeCfg = wazero.NewRuntimeConfig()
-		if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
-			runtimeCfg = runtimeCfg.WithCompilationCache(cache)
-		}
+	}
+	if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
+		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 	}
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg.WithDebugInfoEnabled(false))
 	mod, err := r.CompileModule(ctx, wasmFile)
@@ -126,30 +123,82 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 		backupInstance: make(chan *CELPluginInstance, 1),
 	}
 
+	// These host functions serve as bridge functions for exchanging requests and responses between the host and guest.
+	// By using these functions along with the pipe functionality, it is possible to exchange properly serialized strings between the host and guest.
 	host := r.NewHostModuleBuilder("grpcfederation")
 	host.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
-			instance, err := ret.getInstance(ctx)
-			if err != nil {
-				panic(err)
+			instance := getInstanceFromContext(ctx)
+			if instance == nil {
+				panic("failed to get instance from context")
 			}
-			outW := instance.outW
 			//nolint:gosec
 			b, ok := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
 			if !ok {
 				panic("failed to read memory from plugin")
 			}
-			if _, err := outW.Write(b); err != nil {
+			if _, err := instance.resWriter.Write(b); err != nil {
 				panic(fmt.Sprintf("failed to write plugin response to host buffer: %s", err))
 			}
 		}),
 		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
 		[]api.ValueType{},
-	).Export("grpc_federation_write")
+	).Export("write")
+	host.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			instance := getInstanceFromContext(ctx)
+			if instance == nil {
+				panic("failed to get instance from context")
+			}
+			req, err := instance.reqReader.ReadString('\n')
+			if err != nil {
+				panic(err)
+			}
+			if req == "" {
+				panic("received empty buffer as a plugin request")
+			}
+			// Since the request needs to be referenced again in the `read` host function, it is stored in instance.req.
+			// These functions are evaluated sequentially, so they are thread-safe.
+			instance.req = req
+			stack[0] = uint64(len(req))
+		}),
+		[]api.ValueType{},
+		[]api.ValueType{api.ValueTypeI32},
+	).Export("read_length")
+	host.NewFunctionBuilder().WithGoModuleFunction(
+		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			instance := getInstanceFromContext(ctx)
+			if instance == nil {
+				panic("failed to get instance from context")
+			}
+
+			// instance.req is always initialized with the correct value inside the `read_length` host function.
+			// The `read_length` host function and the `read` host function are always executed sequentially.
+			if ok := mod.Memory().WriteString(uint32(stack[0]), instance.req); !ok { //nolint:gosec
+				panic("failed to write plugin request content")
+			}
+		}),
+		[]api.ValueType{api.ValueTypeI32},
+		[]api.ValueType{},
+	).Export("read")
 	if _, err := host.Instantiate(ctx); err != nil {
 		return nil, err
 	}
 	return ret, nil
+}
+
+type instanceKey struct{}
+
+func getInstanceFromContext(ctx context.Context) *CELPluginInstance {
+	v := ctx.Value(instanceKey{})
+	if v == nil {
+		return nil
+	}
+	return v.(*CELPluginInstance)
+}
+
+func withInstance(ctx context.Context, instance *CELPluginInstance) context.Context {
+	return context.WithValue(ctx, instanceKey{}, instance)
 }
 
 func getCompilationCache(name, baseDir string) wazero.CompilationCache {
@@ -294,11 +343,11 @@ func (p *CELPlugin) getCurrentInstance() *CELPluginInstance {
 }
 
 func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, error) {
-	inR, inW, err := os.Pipe()
+	reqR, reqW, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-	outR, outW, err := os.Pipe()
+	resR, resW, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
@@ -308,12 +357,11 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		p.cfg.Capability,
 		wazero.NewModuleConfig().
 			WithSysWalltime().
-			WithStdin(inR).
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			WithArgs("plugin"),
 		imports.NewBuilder().
-			WithStdio(int(inR.Fd()), int(os.Stdout.Fd()), int(os.Stderr.Fd())).
+			WithStdio(-1, int(os.Stdout.Fd()), int(os.Stderr.Fd())).
 			WithSocketsExtension("wasmedgev2", p.mod),
 		envs,
 	)
@@ -331,10 +379,10 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
 		celRegistry:      p.celRegistry,
-		inR:              inR,
-		inW:              inW,
-		outR:             outR,
-		outW:             outW,
+		reqReader:        bufio.NewReader(reqR),
+		resReader:        bufio.NewReader(resR),
+		reqWriter:        reqW,
+		resWriter:        resW,
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
 		isNoGC:           envs.IsNoGC(),
@@ -342,7 +390,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
 	go func() {
-		_, err := p.wasmRuntime.InstantiateModule(ctx, p.mod, modCfg)
+		_, err := p.wasmRuntime.InstantiateModule(withInstance(ctx, instance), p.mod, modCfg)
 		instance.instanceModErrCh <- err
 	}()
 
@@ -480,10 +528,11 @@ type CELPluginInstance struct {
 	name             string
 	functions        []*CELFunction
 	celRegistry      *types.Registry
-	inR              *os.File
-	inW              *os.File
-	outR             *os.File
-	outW             *os.File
+	req              string
+	reqReader        *bufio.Reader
+	resReader        *bufio.Reader
+	reqWriter        *os.File
+	resWriter        *os.File
 	instanceModErrCh chan error
 	instanceModErr   error
 	closed           bool
@@ -550,21 +599,10 @@ func (i *CELPluginInstance) write(cmd []byte) error {
 	if i.closed {
 		return i.instanceModErr
 	}
-
-	writeCh := make(chan error)
-	go func() {
-		_, err := i.inW.Write(cmd)
-		writeCh <- err
-	}()
-	select {
-	case err := <-i.instanceModErrCh:
-		// If the module instance is terminated,
-		// it is considered that the termination process has been completed.
-		i.closeResources(err)
-		return err
-	case err := <-writeCh:
-		return err
+	if _, err := i.reqWriter.Write(cmd); err != nil {
+		return fmt.Errorf("failed to write plugin command: %w", err)
 	}
+	return nil
 }
 
 func (i *CELPluginInstance) Close() error {
@@ -582,7 +620,7 @@ func (i *CELPluginInstance) Close() error {
 	defer func() { i.closeResources(nil) }()
 
 	// start termination process.
-	_, _ = i.inW.WriteString(exitCommand)
+	_, _ = i.reqWriter.WriteString(exitCommand)
 	<-i.instanceModErrCh
 
 	return nil
@@ -591,9 +629,8 @@ func (i *CELPluginInstance) Close() error {
 func (i *CELPluginInstance) closeResources(instanceModErr error) {
 	i.instanceModErr = instanceModErr
 	i.closed = true
-	i.inW.Close()
-	i.outR.Close()
-	i.outW.Close()
+	i.reqWriter.Close()
+	i.resWriter.Close()
 	close(i.gcQueue)
 }
 
@@ -683,8 +720,7 @@ func (i *CELPluginInstance) recvContent() (string, error) {
 	}
 	readCh := make(chan readResult)
 	go func() {
-		reader := bufio.NewReader(i.outR)
-		content, err := reader.ReadString('\n')
+		content, err := i.resReader.ReadString('\n')
 		if err != nil {
 			readCh <- readResult{err: fmt.Errorf("grpc-federation: failed to receive response from wasm plugin: %w", err)}
 			return
