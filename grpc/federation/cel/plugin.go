@@ -385,7 +385,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		resWriter:        resW,
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
-		isNoGC:           envs.IsNoGC(),
+		isNoGC:           true, //envs.IsNoGC(),
 	}
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
