@@ -545,7 +545,7 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 		return fmt.Errorf("failed to receive cel protocol version command: %w", err)
 	}
 	var v PluginVersionSchema
-	if err := json.Unmarshal([]byte(content), &v); err != nil {
+	if err := json.Unmarshal(content, &v); err != nil {
 		return fmt.Errorf("failed to decode cel plugin's version schema: %w", err)
 	}
 	if v.ProtocolVersion != PluginProtocolVersion {
