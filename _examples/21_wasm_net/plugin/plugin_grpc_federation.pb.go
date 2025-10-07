@@ -41,6 +41,7 @@ func RegisterNetPlugin(plug NetPlugin) {
 		}
 		if content == "gc\n" {
 			runtime.GC()
+			grpcfed.WritePluginContent([]byte{'\n'})
 			continue
 		}
 		if content == "version\n" {

@@ -38,6 +38,7 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 		}
 		if content == "gc\n" {
 			runtime.GC()
+			grpcfed.WritePluginContent([]byte{'\n'})
 			continue
 		}
 		if content == "version\n" {
