@@ -33,6 +33,7 @@ func RegisterAccountPlugin(plug AccountPlugin) {
 		}
 		if content == "gc\n" {
 			runtime.GC()
+			grpcfed.WritePluginContent([]byte{'\n'})
 			continue
 		}
 		if content == "version\n" {
