@@ -21,6 +21,7 @@ import (
 
 	post "example/post"
 	user "example/user"
+
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -203,15 +204,16 @@ const (
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg             FederationServiceConfig
+	logger          *slog.Logger
+	isLogLevelDebug bool
+	errorHandler    grpcfed.ErrorHandler
+	celCacheMap     *grpcfed.CELCacheMap
+	tracer          trace.Tracer
+	celTypeHelper   *grpcfed.CELTypeHelper
+	celEnvOpts      []grpcfed.CELEnvOption
+	celPlugins      []*grpcfedcel.CELPlugin
+	client          *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -274,13 +276,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.Item.Location.LocationType", Item_Location_LocationType_value, Item_Location_LocationType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	svc := &FederationService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("federation.FederationService"),
+		cfg:             cfg,
+		logger:          logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
+		errorHandler:    errorHandler,
+		celEnvOpts:      celEnvOpts,
+		celTypeHelper:   celTypeHelper,
+		celCacheMap:     grpcfed.NewCELCacheMap(),
+		tracer:          otel.Tracer("federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
 			Post_PostServiceClient: Post_PostServiceClient,
 			User_UserServiceClient: User_UserServiceClient,
@@ -3074,6 +3077,9 @@ func (s *FederationService) cast_uint64__to__uint32(from uint64) (uint32, error)
 }
 
 func (s *FederationService) logvalue_Federation_A(v *A) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3084,6 +3090,9 @@ func (s *FederationService) logvalue_Federation_A(v *A) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_AArgument(v *FederationService_Federation_AArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3091,6 +3100,9 @@ func (s *FederationService) logvalue_Federation_AArgument(v *FederationService_F
 }
 
 func (s *FederationService) logvalue_Federation_A_B(v *A_B) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3101,6 +3113,9 @@ func (s *FederationService) logvalue_Federation_A_B(v *A_B) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_A_BArgument(v *FederationService_Federation_A_BArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3108,6 +3123,9 @@ func (s *FederationService) logvalue_Federation_A_BArgument(v *FederationService
 }
 
 func (s *FederationService) logvalue_Federation_A_B_C(v *A_B_C) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3117,6 +3135,9 @@ func (s *FederationService) logvalue_Federation_A_B_C(v *A_B_C) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_A_B_CArgument(v *FederationService_Federation_A_B_CArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3126,6 +3147,9 @@ func (s *FederationService) logvalue_Federation_A_B_CArgument(v *FederationServi
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3179,6 +3203,9 @@ func (s *FederationService) logvalue_Federation_GetPostResponse(v *GetPostRespon
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *FederationService_Federation_GetPostResponseArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3188,6 +3215,9 @@ func (s *FederationService) logvalue_Federation_GetPostResponseArgument(v *Feder
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse_ListToMapEntry(v map[int32]int32) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{
@@ -3199,6 +3229,9 @@ func (s *FederationService) logvalue_Federation_GetPostResponse_ListToMapEntry(v
 }
 
 func (s *FederationService) logvalue_Federation_GetPostResponse_MapValueEntry(v map[int32]string) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{
@@ -3210,6 +3243,9 @@ func (s *FederationService) logvalue_Federation_GetPostResponse_MapValueEntry(v 
 }
 
 func (s *FederationService) logvalue_Federation_Item(v *Item) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3222,6 +3258,9 @@ func (s *FederationService) logvalue_Federation_Item(v *Item) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_Item_ItemType(v Item_ItemType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	case Item_ITEM_TYPE_UNSPECIFIED:
 		return slog.StringValue("ITEM_TYPE_UNSPECIFIED")
@@ -3236,6 +3275,9 @@ func (s *FederationService) logvalue_Federation_Item_ItemType(v Item_ItemType) s
 }
 
 func (s *FederationService) logvalue_Federation_Item_Location(v *Item_Location) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3249,6 +3291,9 @@ func (s *FederationService) logvalue_Federation_Item_Location(v *Item_Location) 
 }
 
 func (s *FederationService) logvalue_Federation_Item_Location_AddrA(v *Item_Location_AddrA) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3258,6 +3303,9 @@ func (s *FederationService) logvalue_Federation_Item_Location_AddrA(v *Item_Loca
 }
 
 func (s *FederationService) logvalue_Federation_Item_Location_AddrB(v *Item_Location_AddrB) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3267,6 +3315,9 @@ func (s *FederationService) logvalue_Federation_Item_Location_AddrB(v *Item_Loca
 }
 
 func (s *FederationService) logvalue_Federation_Item_Location_LocationType(v Item_Location_LocationType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	case Item_Location_LOCATION_TYPE_0:
 		return slog.StringValue("LOCATION_TYPE_0")
@@ -3277,6 +3328,9 @@ func (s *FederationService) logvalue_Federation_Item_Location_LocationType(v Ite
 }
 
 func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3289,6 +3343,9 @@ func (s *FederationService) logvalue_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_PostArgument(v *FederationService_Federation_PostArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3298,6 +3355,9 @@ func (s *FederationService) logvalue_Federation_PostArgument(v *FederationServic
 }
 
 func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3312,6 +3372,9 @@ func (s *FederationService) logvalue_Federation_User(v *User) slog.Value {
 }
 
 func (s *FederationService) logvalue_Federation_UserArgument(v *FederationService_Federation_UserArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3324,6 +3387,9 @@ func (s *FederationService) logvalue_Federation_UserArgument(v *FederationServic
 }
 
 func (s *FederationService) logvalue_Federation_User_AttrA(v *User_AttrA) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3333,6 +3399,9 @@ func (s *FederationService) logvalue_Federation_User_AttrA(v *User_AttrA) slog.V
 }
 
 func (s *FederationService) logvalue_Federation_User_AttrB(v *User_AttrB) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3342,6 +3411,9 @@ func (s *FederationService) logvalue_Federation_User_AttrB(v *User_AttrB) slog.V
 }
 
 func (s *FederationService) logvalue_Federation_User_ProfileEntry(v map[string]*anypb.Any) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{
@@ -3353,6 +3425,9 @@ func (s *FederationService) logvalue_Federation_User_ProfileEntry(v map[string]*
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3363,6 +3438,9 @@ func (s *FederationService) logvalue_Google_Protobuf_Any(v *anypb.Any) slog.Valu
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_BoolValue(v *wrapperspb.BoolValue) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3372,6 +3450,9 @@ func (s *FederationService) logvalue_Google_Protobuf_BoolValue(v *wrapperspb.Boo
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_BytesValue(v *wrapperspb.BytesValue) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3381,6 +3462,9 @@ func (s *FederationService) logvalue_Google_Protobuf_BytesValue(v *wrapperspb.By
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_DoubleValue(v *wrapperspb.DoubleValue) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3390,6 +3474,9 @@ func (s *FederationService) logvalue_Google_Protobuf_DoubleValue(v *wrapperspb.D
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_FloatValue(v *wrapperspb.FloatValue) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3399,6 +3486,9 @@ func (s *FederationService) logvalue_Google_Protobuf_FloatValue(v *wrapperspb.Fl
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Int32Value(v *wrapperspb.Int32Value) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3408,6 +3498,9 @@ func (s *FederationService) logvalue_Google_Protobuf_Int32Value(v *wrapperspb.In
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Int64Value(v *wrapperspb.Int64Value) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3417,6 +3510,9 @@ func (s *FederationService) logvalue_Google_Protobuf_Int64Value(v *wrapperspb.In
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_StringValue(v *wrapperspb.StringValue) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3426,6 +3522,9 @@ func (s *FederationService) logvalue_Google_Protobuf_StringValue(v *wrapperspb.S
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_Timestamp(v *timestamppb.Timestamp) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3436,6 +3535,9 @@ func (s *FederationService) logvalue_Google_Protobuf_Timestamp(v *timestamppb.Ti
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_UInt32Value(v *wrapperspb.UInt32Value) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3445,6 +3547,9 @@ func (s *FederationService) logvalue_Google_Protobuf_UInt32Value(v *wrapperspb.U
 }
 
 func (s *FederationService) logvalue_Google_Protobuf_UInt64Value(v *wrapperspb.UInt64Value) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3454,6 +3559,9 @@ func (s *FederationService) logvalue_Google_Protobuf_UInt64Value(v *wrapperspb.U
 }
 
 func (s *FederationService) logvalue_Post_GetPostRequest(v *post.GetPostRequest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3463,6 +3571,9 @@ func (s *FederationService) logvalue_Post_GetPostRequest(v *post.GetPostRequest)
 }
 
 func (s *FederationService) logvalue_Post_GetPostsRequest(v *post.GetPostsRequest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3472,6 +3583,9 @@ func (s *FederationService) logvalue_Post_GetPostsRequest(v *post.GetPostsReques
 }
 
 func (s *FederationService) logvalue_User_GetUserRequest(v *user.GetUserRequest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3482,6 +3596,9 @@ func (s *FederationService) logvalue_User_GetUserRequest(v *user.GetUserRequest)
 }
 
 func (s *FederationService) logvalue_User_GetUsersRequest(v *user.GetUsersRequest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -3491,6 +3608,9 @@ func (s *FederationService) logvalue_User_GetUsersRequest(v *user.GetUsersReques
 }
 
 func (s *FederationService) logvalue_repeated_Federation_Item(v []*Item) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{

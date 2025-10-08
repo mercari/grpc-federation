@@ -224,6 +224,7 @@ type {{ $serviceName }} struct {
 	Unimplemented{{ $serviceName }}Server
 	cfg {{ $serviceName }}Config
 	logger *slog.Logger
+	isLogLevelDebug bool
 	errorHandler grpcfed.ErrorHandler
 	celCacheMap *grpcfed.CELCacheMap
 	tracer trace.Tracer
@@ -399,6 +400,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	svc := &{{ $serviceName }}{
 		cfg: cfg,
 		logger: logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
 		errorHandler: errorHandler,
 		celEnvOpts: celEnvOpts,
 		celTypeHelper: celTypeHelper,
@@ -681,6 +683,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(from {{ .RequestType }}) ({{ .ResponseT
 {{ range .LogValues }}
 {{- if .IsRepeated }}
 func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{
@@ -692,6 +697,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 }
 {{- else if .IsMap }}
 func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{
@@ -703,6 +711,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 }
 {{- else if .IsMessage }}
 func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -714,6 +725,9 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 }
 {{- else }}
 func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	{{- range .Attrs }}
 	case {{ .Value }}:

@@ -113,15 +113,16 @@ type FederationServiceUnimplementedResolver struct{}
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg             FederationServiceConfig
+	logger          *slog.Logger
+	isLogLevelDebug bool
+	errorHandler    grpcfed.ErrorHandler
+	celCacheMap     *grpcfed.CELCacheMap
+	tracer          trace.Tracer
+	celTypeHelper   *grpcfed.CELTypeHelper
+	celEnvOpts      []grpcfed.CELEnvOption
+	celPlugins      []*grpcfedcel.CELPlugin
+	client          *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -238,15 +239,16 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 	}
 	svc := &FederationService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("org.federation.FederationService"),
-		celPlugins:    celPlugins,
-		client:        &FederationServiceDependentClientSet{},
+		cfg:             cfg,
+		logger:          logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
+		errorHandler:    errorHandler,
+		celEnvOpts:      celEnvOpts,
+		celTypeHelper:   celTypeHelper,
+		celCacheMap:     grpcfed.NewCELCacheMap(),
+		tracer:          otel.Tracer("org.federation.FederationService"),
+		celPlugins:      celPlugins,
+		client:          &FederationServiceDependentClientSet{},
 	}
 	return svc, nil
 }
@@ -704,6 +706,9 @@ func (s *FederationService) resolve_Org_Federation_IsMatchResponse(ctx context.C
 }
 
 func (s *FederationService) logvalue_Example_Regexp_Example(v *pluginpb.Example) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -713,6 +718,9 @@ func (s *FederationService) logvalue_Example_Regexp_Example(v *pluginpb.Example)
 }
 
 func (s *FederationService) logvalue_Example_Regexp_ExampleArgument(v *FederationService_Example_Regexp_ExampleArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -722,6 +730,9 @@ func (s *FederationService) logvalue_Example_Regexp_ExampleArgument(v *Federatio
 }
 
 func (s *FederationService) logvalue_Org_Federation_ExampleResponse(v *ExampleResponse) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -733,6 +744,9 @@ func (s *FederationService) logvalue_Org_Federation_ExampleResponse(v *ExampleRe
 }
 
 func (s *FederationService) logvalue_Org_Federation_ExampleResponseArgument(v *FederationService_Org_Federation_ExampleResponseArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -740,6 +754,9 @@ func (s *FederationService) logvalue_Org_Federation_ExampleResponseArgument(v *F
 }
 
 func (s *FederationService) logvalue_Org_Federation_IsMatchResponse(v *IsMatchResponse) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -749,6 +766,9 @@ func (s *FederationService) logvalue_Org_Federation_IsMatchResponse(v *IsMatchRe
 }
 
 func (s *FederationService) logvalue_Org_Federation_IsMatchResponseArgument(v *FederationService_Org_Federation_IsMatchResponseArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
