@@ -112,17 +112,18 @@ type InlineEnvServiceUnimplementedResolver struct{}
 // InlineEnvService represents Federation Service.
 type InlineEnvService struct {
 	UnimplementedInlineEnvServiceServer
-	cfg           InlineEnvServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	env           *InlineEnvServiceEnv
-	svcVar        *InlineEnvServiceVariable
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *InlineEnvServiceDependentClientSet
+	cfg             InlineEnvServiceConfig
+	logger          *slog.Logger
+	isLogLevelDebug bool
+	errorHandler    grpcfed.ErrorHandler
+	celCacheMap     *grpcfed.CELCacheMap
+	tracer          trace.Tracer
+	env             *InlineEnvServiceEnv
+	svcVar          *InlineEnvServiceVariable
+	celTypeHelper   *grpcfed.CELTypeHelper
+	celEnvOpts      []grpcfed.CELEnvOption
+	celPlugins      []*grpcfedcel.CELPlugin
+	client          *InlineEnvServiceDependentClientSet
 }
 
 // NewInlineEnvService creates InlineEnvService instance by InlineEnvServiceConfig.
@@ -157,16 +158,17 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 		return nil, err
 	}
 	svc := &InlineEnvService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("org.federation.InlineEnvService"),
-		env:           &env,
-		svcVar:        new(InlineEnvServiceVariable),
-		client:        &InlineEnvServiceDependentClientSet{},
+		cfg:             cfg,
+		logger:          logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
+		errorHandler:    errorHandler,
+		celEnvOpts:      celEnvOpts,
+		celTypeHelper:   celTypeHelper,
+		celCacheMap:     grpcfed.NewCELCacheMap(),
+		tracer:          otel.Tracer("org.federation.InlineEnvService"),
+		env:             &env,
+		svcVar:          new(InlineEnvServiceVariable),
+		client:          &InlineEnvServiceDependentClientSet{},
 	}
 	if err := svc.initServiceVariables(); err != nil {
 		return nil, err

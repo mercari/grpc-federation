@@ -164,15 +164,16 @@ const (
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg             FederationServiceConfig
+	logger          *slog.Logger
+	isLogLevelDebug bool
+	errorHandler    grpcfed.ErrorHandler
+	celCacheMap     *grpcfed.CELCacheMap
+	tracer          trace.Tracer
+	celTypeHelper   *grpcfed.CELTypeHelper
+	celEnvOpts      []grpcfed.CELEnvOption
+	celPlugins      []*grpcfedcel.CELPlugin
+	client          *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -240,13 +241,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.UserType", UserType_value, UserType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("user.UserType", user.UserType_value, user.UserType_name)...)
 	svc := &FederationService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("org.federation.FederationService"),
+		cfg:             cfg,
+		logger:          logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
+		errorHandler:    errorHandler,
+		celEnvOpts:      celEnvOpts,
+		celTypeHelper:   celTypeHelper,
+		celCacheMap:     grpcfed.NewCELCacheMap(),
+		tracer:          otel.Tracer("org.federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
 			User_UserServiceClient: User_UserServiceClient,
 		},
@@ -1621,6 +1623,9 @@ func (s *FederationService) cast_uint64__to__Org_Federation_CastOneof_Num(from u
 }
 
 func (s *FederationService) logvalue_Org_Federation_CastOneof(v *CastOneof) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1632,6 +1637,9 @@ func (s *FederationService) logvalue_Org_Federation_CastOneof(v *CastOneof) slog
 }
 
 func (s *FederationService) logvalue_Org_Federation_CastOneofArgument(v *FederationService_Org_Federation_CastOneofArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1639,6 +1647,9 @@ func (s *FederationService) logvalue_Org_Federation_CastOneofArgument(v *Federat
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetNoValueResponse(v *GetNoValueResponse) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1648,6 +1659,9 @@ func (s *FederationService) logvalue_Org_Federation_GetNoValueResponse(v *GetNoV
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetNoValueResponseArgument(v *FederationService_Org_Federation_GetNoValueResponseArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1655,6 +1669,9 @@ func (s *FederationService) logvalue_Org_Federation_GetNoValueResponseArgument(v
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1667,6 +1684,9 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *FederationService_Org_Federation_GetResponseArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1674,6 +1694,9 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 }
 
 func (s *FederationService) logvalue_Org_Federation_M(v *M) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1683,6 +1706,9 @@ func (s *FederationService) logvalue_Org_Federation_M(v *M) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_MessageSelection(v *MessageSelection) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1694,6 +1720,9 @@ func (s *FederationService) logvalue_Org_Federation_MessageSelection(v *MessageS
 }
 
 func (s *FederationService) logvalue_Org_Federation_MessageSelectionArgument(v *FederationService_Org_Federation_MessageSelectionArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1701,6 +1730,9 @@ func (s *FederationService) logvalue_Org_Federation_MessageSelectionArgument(v *
 }
 
 func (s *FederationService) logvalue_Org_Federation_NestedMessageSelection_Nest(v *NestedMessageSelection_Nest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1711,6 +1743,9 @@ func (s *FederationService) logvalue_Org_Federation_NestedMessageSelection_Nest(
 }
 
 func (s *FederationService) logvalue_Org_Federation_NestedMessageSelection_NestArgument(v *FederationService_Org_Federation_NestedMessageSelection_NestArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1718,6 +1753,9 @@ func (s *FederationService) logvalue_Org_Federation_NestedMessageSelection_NestA
 }
 
 func (s *FederationService) logvalue_Org_Federation_NoValueSelection(v *NoValueSelection) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1728,6 +1766,9 @@ func (s *FederationService) logvalue_Org_Federation_NoValueSelection(v *NoValueS
 }
 
 func (s *FederationService) logvalue_Org_Federation_NoValueSelectionArgument(v *FederationService_Org_Federation_NoValueSelectionArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1735,6 +1776,9 @@ func (s *FederationService) logvalue_Org_Federation_NoValueSelectionArgument(v *
 }
 
 func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1744,6 +1788,9 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_UserArgument(v *FederationService_Org_Federation_UserArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1755,6 +1802,9 @@ func (s *FederationService) logvalue_Org_Federation_UserArgument(v *FederationSe
 }
 
 func (s *FederationService) logvalue_Org_Federation_UserSelection(v *UserSelection) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1766,6 +1816,9 @@ func (s *FederationService) logvalue_Org_Federation_UserSelection(v *UserSelecti
 }
 
 func (s *FederationService) logvalue_Org_Federation_UserSelectionArgument(v *FederationService_Org_Federation_UserSelectionArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1775,6 +1828,9 @@ func (s *FederationService) logvalue_Org_Federation_UserSelectionArgument(v *Fed
 }
 
 func (s *FederationService) logvalue_Org_Federation_UserType(v UserType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	case UserType_USER_TYPE_UNSPECIFIED:
 		return slog.StringValue("USER_TYPE_UNSPECIFIED")
@@ -1785,6 +1841,9 @@ func (s *FederationService) logvalue_Org_Federation_UserType(v UserType) slog.Va
 }
 
 func (s *FederationService) logvalue_User_GetUserRequest(v *user.GetUserRequest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}

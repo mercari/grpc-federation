@@ -107,15 +107,16 @@ const (
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg             FederationServiceConfig
+	logger          *slog.Logger
+	isLogLevelDebug bool
+	errorHandler    grpcfed.ErrorHandler
+	celCacheMap     *grpcfed.CELCacheMap
+	tracer          trace.Tracer
+	celTypeHelper   *grpcfed.CELTypeHelper
+	celEnvOpts      []grpcfed.CELEnvOption
+	celPlugins      []*grpcfedcel.CELPlugin
+	client          *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -157,13 +158,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostContent.Category", post.PostContent_Category_value, post.PostContent_Category_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostDataType", post.PostDataType_value, post.PostDataType_name)...)
 	svc := &FederationService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("org.federation.FederationService"),
+		cfg:             cfg,
+		logger:          logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
+		errorHandler:    errorHandler,
+		celEnvOpts:      celEnvOpts,
+		celTypeHelper:   celTypeHelper,
+		celCacheMap:     grpcfed.NewCELCacheMap(),
+		tracer:          otel.Tracer("org.federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
@@ -619,6 +621,9 @@ func (s *FederationService) cast_map_int64_int64__to__map_int32_int32(from map[i
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionA(v *GetPostRequest_ConditionA) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -628,6 +633,9 @@ func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionA(v 
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionB(v *GetPostRequest_ConditionB) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -635,6 +643,9 @@ func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionB(v 
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -644,6 +655,9 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *FederationService_Org_Federation_GetPostResponseArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -655,6 +669,9 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 }
 
 func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -665,6 +682,9 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostArgument(v *FederationService_Org_Federation_PostArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -676,6 +696,9 @@ func (s *FederationService) logvalue_Org_Federation_PostArgument(v *FederationSe
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostContent(v *PostContent) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -690,6 +713,9 @@ func (s *FederationService) logvalue_Org_Federation_PostContent(v *PostContent) 
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostContent_CastCountsEntry(v map[int32]int32) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{
@@ -701,6 +727,9 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_CastCountsEntry(
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostContent_Category) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	case PostContent_CATEGORY_A:
 		return slog.StringValue("CATEGORY_A")
@@ -713,6 +742,9 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostC
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostContent_CountsEntry(v map[int32]int32) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for key, value := range v {
 		attrs = append(attrs, slog.Attr{
@@ -724,6 +756,9 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_CountsEntry(v ma
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostData(v *PostData) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -735,6 +770,9 @@ func (s *FederationService) logvalue_Org_Federation_PostData(v *PostData) slog.V
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	case PostType_POST_TYPE_UNKNOWN:
 		return slog.StringValue("POST_TYPE_UNKNOWN")
@@ -749,6 +787,9 @@ func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Va
 }
 
 func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -760,6 +801,9 @@ func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequ
 }
 
 func (s *FederationService) logvalue_Org_Post_PostConditionA(v *post.PostConditionA) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -769,6 +813,9 @@ func (s *FederationService) logvalue_Org_Post_PostConditionA(v *post.PostConditi
 }
 
 func (s *FederationService) logvalue_Org_Post_PostConditionB(v *post.PostConditionB) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}

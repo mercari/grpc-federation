@@ -120,17 +120,18 @@ type RefEnvServiceUnimplementedResolver struct{}
 // RefEnvService represents Federation Service.
 type RefEnvService struct {
 	UnimplementedRefEnvServiceServer
-	cfg           RefEnvServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	env           *RefEnvServiceEnv
-	svcVar        *RefEnvServiceVariable
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *RefEnvServiceDependentClientSet
+	cfg             RefEnvServiceConfig
+	logger          *slog.Logger
+	isLogLevelDebug bool
+	errorHandler    grpcfed.ErrorHandler
+	celCacheMap     *grpcfed.CELCacheMap
+	tracer          trace.Tracer
+	env             *RefEnvServiceEnv
+	svcVar          *RefEnvServiceVariable
+	celTypeHelper   *grpcfed.CELTypeHelper
+	celEnvOpts      []grpcfed.CELEnvOption
+	celPlugins      []*grpcfedcel.CELPlugin
+	client          *RefEnvServiceDependentClientSet
 }
 
 // NewRefEnvService creates RefEnvService instance by RefEnvServiceConfig.
@@ -165,16 +166,17 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		return nil, err
 	}
 	svc := &RefEnvService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("org.federation.RefEnvService"),
-		env:           &env,
-		svcVar:        new(RefEnvServiceVariable),
-		client:        &RefEnvServiceDependentClientSet{},
+		cfg:             cfg,
+		logger:          logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
+		errorHandler:    errorHandler,
+		celEnvOpts:      celEnvOpts,
+		celTypeHelper:   celTypeHelper,
+		celCacheMap:     grpcfed.NewCELCacheMap(),
+		tracer:          otel.Tracer("org.federation.RefEnvService"),
+		env:             &env,
+		svcVar:          new(RefEnvServiceVariable),
+		client:          &RefEnvServiceDependentClientSet{},
 	}
 	if err := svc.initServiceVariables(); err != nil {
 		return nil, err
@@ -277,6 +279,9 @@ func (s *RefEnvService) resolve_Org_Federation_Constant(ctx context.Context, req
 }
 
 func (s *RefEnvService) logvalue_Org_Federation_Constant(v *Constant) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -286,6 +291,9 @@ func (s *RefEnvService) logvalue_Org_Federation_Constant(v *Constant) slog.Value
 }
 
 func (s *RefEnvService) logvalue_Org_Federation_ConstantArgument(v *RefEnvService_Org_Federation_ConstantArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}

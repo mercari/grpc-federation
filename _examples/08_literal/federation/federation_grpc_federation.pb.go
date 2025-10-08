@@ -92,15 +92,16 @@ const (
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
-	cfg           FederationServiceConfig
-	logger        *slog.Logger
-	errorHandler  grpcfed.ErrorHandler
-	celCacheMap   *grpcfed.CELCacheMap
-	tracer        trace.Tracer
-	celTypeHelper *grpcfed.CELTypeHelper
-	celEnvOpts    []grpcfed.CELEnvOption
-	celPlugins    []*grpcfedcel.CELPlugin
-	client        *FederationServiceDependentClientSet
+	cfg             FederationServiceConfig
+	logger          *slog.Logger
+	isLogLevelDebug bool
+	errorHandler    grpcfed.ErrorHandler
+	celCacheMap     *grpcfed.CELCacheMap
+	tracer          trace.Tracer
+	celTypeHelper   *grpcfed.CELTypeHelper
+	celEnvOpts      []grpcfed.CELEnvOption
+	celPlugins      []*grpcfedcel.CELPlugin
+	client          *FederationServiceDependentClientSet
 }
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
@@ -133,13 +134,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("content.ContentType", content.ContentType_value, content.ContentType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.ContentType", ContentType_value, ContentType_name)...)
 	svc := &FederationService{
-		cfg:           cfg,
-		logger:        logger,
-		errorHandler:  errorHandler,
-		celEnvOpts:    celEnvOpts,
-		celTypeHelper: celTypeHelper,
-		celCacheMap:   grpcfed.NewCELCacheMap(),
-		tracer:        otel.Tracer("org.federation.FederationService"),
+		cfg:             cfg,
+		logger:          logger,
+		isLogLevelDebug: logger.Enabled(context.Background(), slog.LevelDebug),
+		errorHandler:    errorHandler,
+		celEnvOpts:      celEnvOpts,
+		celTypeHelper:   celTypeHelper,
+		celCacheMap:     grpcfed.NewCELCacheMap(),
+		tracer:          otel.Tracer("org.federation.FederationService"),
 		client: &FederationServiceDependentClientSet{
 			Content_ContentServiceClient: Content_ContentServiceClient,
 		},
@@ -1011,6 +1013,9 @@ func (s *FederationService) cast_uint64__to__uint64(from uint64) (uint64, error)
 }
 
 func (s *FederationService) logvalue_Content_Content(v *content.Content) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1056,6 +1061,9 @@ func (s *FederationService) logvalue_Content_Content(v *content.Content) slog.Va
 }
 
 func (s *FederationService) logvalue_Content_ContentType(v content.ContentType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	case content.ContentType_CONTENT_TYPE_1:
 		return slog.StringValue("CONTENT_TYPE_1")
@@ -1068,6 +1076,9 @@ func (s *FederationService) logvalue_Content_ContentType(v content.ContentType) 
 }
 
 func (s *FederationService) logvalue_Content_GetContentRequest(v *content.GetContentRequest) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1113,6 +1124,9 @@ func (s *FederationService) logvalue_Content_GetContentRequest(v *content.GetCon
 }
 
 func (s *FederationService) logvalue_Org_Federation_Content(v *Content) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1158,6 +1172,9 @@ func (s *FederationService) logvalue_Org_Federation_Content(v *Content) slog.Val
 }
 
 func (s *FederationService) logvalue_Org_Federation_ContentType(v ContentType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	switch v {
 	case ContentType_CONTENT_TYPE_1:
 		return slog.StringValue("CONTENT_TYPE_1")
@@ -1170,6 +1187,9 @@ func (s *FederationService) logvalue_Org_Federation_ContentType(v ContentType) s
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1180,6 +1200,9 @@ func (s *FederationService) logvalue_Org_Federation_GetResponse(v *GetResponse) 
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *FederationService_Org_Federation_GetResponseArgument) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	if v == nil {
 		return slog.GroupValue()
 	}
@@ -1189,6 +1212,9 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 }
 
 func (s *FederationService) logvalue_repeated_Content_Content(v []*content.Content) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{
@@ -1200,6 +1226,9 @@ func (s *FederationService) logvalue_repeated_Content_Content(v []*content.Conte
 }
 
 func (s *FederationService) logvalue_repeated_Content_ContentType(v []content.ContentType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{
@@ -1211,6 +1240,9 @@ func (s *FederationService) logvalue_repeated_Content_ContentType(v []content.Co
 }
 
 func (s *FederationService) logvalue_repeated_Org_Federation_Content(v []*Content) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{
@@ -1222,6 +1254,9 @@ func (s *FederationService) logvalue_repeated_Org_Federation_Content(v []*Conten
 }
 
 func (s *FederationService) logvalue_repeated_Org_Federation_ContentType(v []ContentType) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
 	attrs := make([]slog.Attr, 0, len(v))
 	for idx, vv := range v {
 		attrs = append(attrs, slog.Attr{
