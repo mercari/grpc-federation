@@ -21,7 +21,6 @@ import (
 
 	post "example/post"
 	user "example/user"
-
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
