@@ -657,7 +657,7 @@ func (i *CELPluginInstance) enqueueGC() {
 }
 
 func (i *CELPluginInstance) startGC(ctx context.Context) {
-	ctx, span := trace.Trace(ctx, "startGC")
+	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
 
 	i.mu.Lock()
