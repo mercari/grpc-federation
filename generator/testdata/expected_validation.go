@@ -118,6 +118,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("org.federation.FederationService")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -142,7 +145,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celEnvOpts:      celEnvOpts,
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
-		tracer:          otel.Tracer("org.federation.FederationService"),
+		tracer:          tracer,
 		client:          &FederationServiceDependentClientSet{},
 	}
 	return svc, nil

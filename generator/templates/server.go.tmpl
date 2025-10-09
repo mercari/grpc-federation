@@ -272,6 +272,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("{{ .FQDN }}")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -336,7 +339,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	{{- end }}
 	{{- range $celPlugins }}
 	{
-		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
+		plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
 			Name: "{{ .Name }}",
 			Wasm: cfg.CELPlugin.{{ .FieldName }},
 			CacheDir: cfg.CELPlugin.CacheDir,
@@ -379,7 +382,6 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		if err != nil {
 			return nil, err
 		}
-		ctx := context.Background()
 		instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
 		if err != nil {
 			return nil, err
@@ -405,7 +407,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		celEnvOpts: celEnvOpts,
 		celTypeHelper: celTypeHelper,
 		celCacheMap: grpcfed.NewCELCacheMap(),
-		tracer: otel.Tracer("{{ .FQDN }}"),
+		tracer: tracer,
 		{{- if $env }}
 		env: &env,
 		{{- end }}
@@ -425,7 +427,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		},
 	}
 	{{- if $svcVars }}
-	if err := svc.initServiceVariables(); err != nil {
+	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
 	{{- end }}
@@ -458,8 +460,8 @@ func (s *{{ $serviceName }}) cleanup(ctx context.Context) {
 }
 
 {{- if $svcVars }}
-func (s *{{ $serviceName }}) initServiceVariables() error {
-	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+func (s *{{ $serviceName }}) initServiceVariables(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars *{{ $serviceName }}Variable
