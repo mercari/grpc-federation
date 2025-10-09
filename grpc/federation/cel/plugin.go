@@ -134,7 +134,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			}
 			req := <-instance.reqCh
 
-			ctx, span := trace.Trace(instance.reqCtx, "HostFunction.read_length")
+			_, span := trace.Trace(instance.reqCtx, "HostFunction.read_length")
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			defer span.End()
 
@@ -153,7 +153,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
-			ctx, span := trace.Trace(instance.reqCtx, "HostFunction.read")
+			_, span := trace.Trace(instance.reqCtx, "HostFunction.read")
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			defer span.End()
 
@@ -174,7 +174,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
-			ctx, span := trace.Trace(instance.reqCtx, "HostFunction.write")
+			_, span := trace.Trace(instance.reqCtx, "HostFunction.write")
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			defer span.End()
 
@@ -734,7 +734,7 @@ func (i *CELPluginInstance) recvResponse(ctx context.Context, fn *CELFunction) r
 }
 
 func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
-	ctx, span := trace.Trace(ctx, "recv")
+	_, span := trace.Trace(ctx, "recv")
 	defer span.End()
 
 	if i.closed {
