@@ -140,6 +140,9 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("org.federation.RefEnvService")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -173,12 +176,12 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		celEnvOpts:      celEnvOpts,
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
-		tracer:          otel.Tracer("org.federation.RefEnvService"),
+		tracer:          tracer,
 		env:             &env,
 		svcVar:          new(RefEnvServiceVariable),
 		client:          &RefEnvServiceDependentClientSet{},
 	}
-	if err := svc.initServiceVariables(); err != nil {
+	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
 	return svc, nil
@@ -194,8 +197,8 @@ func (s *RefEnvService) cleanup(ctx context.Context) {
 		plugin.Close()
 	}
 }
-func (s *RefEnvService) initServiceVariables() error {
-	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+func (s *RefEnvService) initServiceVariables(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars *RefEnvServiceVariable

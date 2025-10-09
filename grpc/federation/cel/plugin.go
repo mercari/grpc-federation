@@ -27,6 +27,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
+	"github.com/mercari/grpc-federation/grpc/federation/trace"
 )
 
 type CELPlugin struct {
@@ -132,6 +133,12 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 				panic("failed to get instance from context")
 			}
 			req := <-instance.reqCh
+
+			ctx, span := trace.Trace(instance.reqCtx, "HostFunction.read_length")
+			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
+			defer span.End()
+
+			span.AddEvent(fmt.Sprintf("request=%q", req))
 			instance.req = req
 			// Since the request needs to be referenced again in the `read` host function, it is stored in instance.req.
 			// These functions are evaluated sequentially, so they are thread-safe.
@@ -146,6 +153,11 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
+			ctx, span := trace.Trace(instance.reqCtx, "HostFunction.read")
+			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
+			defer span.End()
+
+			span.AddEvent(fmt.Sprintf("request=%q", instance.req))
 
 			// instance.req is always initialized with the correct value inside the `read_length` host function.
 			// The `read_length` host function and the `read` host function are always executed sequentially.
@@ -162,11 +174,16 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
+			ctx, span := trace.Trace(instance.reqCtx, "HostFunction.write")
+			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
+			defer span.End()
+
 			//nolint:gosec
 			b, ok := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
 			if !ok {
 				panic("failed to read memory from plugin")
 			}
+			span.AddEvent(fmt.Sprintf("response=%q", b))
 			instance.resCh <- b
 		}),
 		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
@@ -234,6 +251,9 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 				BindMemberFunction(
 					fn.Name,
 					MemberOverloadFunc(fn.ID, fn.Args[0], fn.Args[1:], fn.Return, func(ctx context.Context, self ref.Val, args ...ref.Val) ref.Val {
+						ctx, span := trace.Trace(ctx, fn.ID)
+						defer span.End()
+
 						md, ok := metadata.FromIncomingContext(ctx)
 						if !ok {
 							md = make(metadata.MD)
@@ -242,6 +262,7 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 						if err != nil {
 							return types.NewErr(err.Error())
 						}
+						span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 						return instance.Call(ctx, fn, md, append([]ref.Val{self}, args...)...)
 					}),
 				)...,
@@ -251,6 +272,9 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 				BindFunction(
 					fn.Name,
 					OverloadFunc(fn.ID, fn.Args, fn.Return, func(ctx context.Context, args ...ref.Val) ref.Val {
+						ctx, span := trace.Trace(ctx, fn.ID)
+						defer span.End()
+
 						md, ok := metadata.FromIncomingContext(ctx)
 						if !ok {
 							md = make(metadata.MD)
@@ -259,6 +283,7 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 						if err != nil {
 							return types.NewErr(err.Error())
 						}
+						span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 						return instance.Call(ctx, fn, md, args...)
 					}),
 				)...,
@@ -361,12 +386,14 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		name:             p.cfg.Name,
 		functions:        p.cfg.Functions,
 		celRegistry:      p.celRegistry,
-		reqCh:            make(chan []byte, 1),
-		resCh:            make(chan []byte, 1),
+		reqCtx:           ctx,
+		reqCh:            make(chan []byte),
+		resCh:            make(chan []byte),
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
 		isNoGC:           envs.IsNoGC(),
 	}
+	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
 	// setting the buffer size to 1 ensures that the function can exit even if there is no receiver.
 	go func() {
@@ -378,7 +405,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 	// It is enqueued into gcQueue using the `instance.GC()` function.
 	go func() {
 		for range instance.gcQueue {
-			instance.startGC()
+			instance.startGC(ctx)
 		}
 	}()
 	return instance, nil
@@ -505,9 +532,11 @@ func addModuleConfigByFileSystemCapability(capability *CELPluginCapability, cfg 
 }
 
 type CELPluginInstance struct {
+	id               string
 	name             string
 	functions        []*CELFunction
 	celRegistry      *types.Registry
+	reqCtx           context.Context
 	req              []byte
 	reqCh            chan []byte
 	resCh            chan []byte
@@ -534,13 +563,16 @@ var (
 )
 
 func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
+	ctx, span := trace.Trace(ctx, "ValidatePlugin")
+	defer span.End()
+
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	if err := i.write([]byte(versionCommand)); err != nil {
+	if err := i.write(ctx, []byte(versionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
-	content, err := i.recvContent()
+	content, err := i.recv(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to receive cel protocol version command: %w", err)
 	}
@@ -573,10 +605,15 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 	return nil
 }
 
-func (i *CELPluginInstance) write(cmd []byte) error {
+func (i *CELPluginInstance) write(ctx context.Context, cmd []byte) error {
+	ctx, span := trace.Trace(ctx, "write")
+	defer span.End()
+
 	if i.closed {
 		return i.instanceModErr
 	}
+	span.AddEvent(fmt.Sprintf("request=%q", cmd))
+	i.reqCtx = ctx
 	i.reqCh <- cmd
 	return nil
 }
@@ -624,25 +661,34 @@ func (i *CELPluginInstance) enqueueGC() {
 	}
 }
 
-func (i *CELPluginInstance) startGC() {
+func (i *CELPluginInstance) startGC(ctx context.Context) {
+	ctx, span := trace.Trace(ctx, "startGC")
+	defer span.End()
+
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	_ = i.write([]byte(gcCommand))
-	_, _ = i.recvContent()
+	_ = i.write(ctx, []byte(gcCommand))
+	_, _ = i.recv(ctx)
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+	ctx, span := trace.Trace(ctx, "Call")
+	defer span.End()
+
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	if err := i.sendRequest(fn, md, args...); err != nil {
+	if err := i.sendRequest(ctx, fn, md, args...); err != nil {
 		return types.NewErr(err.Error())
 	}
-	return i.recvResponse(fn)
+	return i.recvResponse(ctx, fn)
 }
 
-func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ...ref.Val) error {
+func (i *CELPluginInstance) sendRequest(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) error {
+	ctx, span := trace.Trace(ctx, "sendRequest")
+	defer span.End()
+
 	req := &plugin.CELPluginRequest{Method: fn.ID}
 	for key, values := range md {
 		req.Metadata = append(req.Metadata, &plugin.CELPluginGRPCMetadata{
@@ -662,14 +708,17 @@ func (i *CELPluginInstance) sendRequest(fn *CELFunction, md metadata.MD, args ..
 	if err != nil {
 		return err
 	}
-	if err := i.write(append(encoded, '\n')); err != nil {
+	if err := i.write(ctx, append(encoded, '\n')); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
-	content, err := i.recvContent()
+func (i *CELPluginInstance) recvResponse(ctx context.Context, fn *CELFunction) ref.Val {
+	ctx, span := trace.Trace(ctx, "recvResponse")
+	defer span.End()
+
+	content, err := i.recv(ctx)
 	if err != nil {
 		return types.NewErr(err.Error())
 	}
@@ -684,7 +733,10 @@ func (i *CELPluginInstance) recvResponse(fn *CELFunction) ref.Val {
 	return i.celPluginValueToRef(fn, fn.Return, res.Value)
 }
 
-func (i *CELPluginInstance) recvContent() ([]byte, error) {
+func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
+	ctx, span := trace.Trace(ctx, "recv")
+	defer span.End()
+
 	if i.closed {
 		return nil, errors.New("grpc-federation: plugin has already been closed")
 	}

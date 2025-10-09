@@ -132,6 +132,9 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("org.federation.InlineEnvService")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -165,12 +168,12 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 		celEnvOpts:      celEnvOpts,
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
-		tracer:          otel.Tracer("org.federation.InlineEnvService"),
+		tracer:          tracer,
 		env:             &env,
 		svcVar:          new(InlineEnvServiceVariable),
 		client:          &InlineEnvServiceDependentClientSet{},
 	}
-	if err := svc.initServiceVariables(); err != nil {
+	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
 	return svc, nil
@@ -186,8 +189,8 @@ func (s *InlineEnvService) cleanup(ctx context.Context) {
 		plugin.Close()
 	}
 }
-func (s *InlineEnvService) initServiceVariables() error {
-	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+func (s *InlineEnvService) initServiceVariables(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars *InlineEnvServiceVariable

@@ -105,6 +105,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("org.federation.FederationService")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -117,7 +120,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	var celPlugins []*grpcfedcel.CELPlugin
 	{
-		plugin, err := grpcfedcel.NewCELPlugin(context.Background(), grpcfedcel.CELPluginConfig{
+		plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
 			Name:     "account",
 			Wasm:     cfg.CELPlugin.Account,
 			CacheDir: cfg.CELPlugin.CacheDir,
@@ -144,7 +147,6 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		if err != nil {
 			return nil, err
 		}
-		ctx := context.Background()
 		instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
 		if err != nil {
 			return nil, err
@@ -163,7 +165,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celEnvOpts:      celEnvOpts,
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
-		tracer:          otel.Tracer("org.federation.FederationService"),
+		tracer:          tracer,
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
 	}

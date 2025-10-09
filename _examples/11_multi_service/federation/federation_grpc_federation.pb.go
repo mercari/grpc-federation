@@ -209,6 +209,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("federation.FederationService")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -258,12 +261,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celEnvOpts:      celEnvOpts,
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
-		tracer:          otel.Tracer("federation.FederationService"),
+		tracer:          tracer,
 		env:             &env,
 		svcVar:          new(FederationServiceVariable),
 		client:          &FederationServiceDependentClientSet{},
 	}
-	if err := svc.initServiceVariables(); err != nil {
+	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
 	return svc, nil
@@ -279,8 +282,8 @@ func (s *FederationService) cleanup(ctx context.Context) {
 		plugin.Close()
 	}
 }
-func (s *FederationService) initServiceVariables() error {
-	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+func (s *FederationService) initServiceVariables(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars *FederationServiceVariable
@@ -1603,6 +1606,9 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("federation.PrivateService")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -1654,12 +1660,12 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 		celEnvOpts:      celEnvOpts,
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
-		tracer:          otel.Tracer("federation.PrivateService"),
+		tracer:          tracer,
 		env:             &env,
 		svcVar:          new(PrivateServiceVariable),
 		client:          &PrivateServiceDependentClientSet{},
 	}
-	if err := svc.initServiceVariables(); err != nil {
+	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
 	return svc, nil
@@ -1675,8 +1681,8 @@ func (s *PrivateService) cleanup(ctx context.Context) {
 		plugin.Close()
 	}
 }
-func (s *PrivateService) initServiceVariables() error {
-	ctx := grpcfed.WithCELCacheMap(grpcfed.WithLogger(context.Background(), s.logger), s.celCacheMap)
+func (s *PrivateService) initServiceVariables(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars *PrivateServiceVariable
@@ -3008,6 +3014,9 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
 	}
+	tracer := otel.Tracer("federation.DebugService")
+	ctx := grpcfed.WithLogger(context.Background(), logger)
+	ctx = grpcfed.WithTracer(ctx, tracer)
 	errorHandler := cfg.ErrorHandler
 	if errorHandler == nil {
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
@@ -3032,7 +3041,7 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 		celEnvOpts:      celEnvOpts,
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
-		tracer:          otel.Tracer("federation.DebugService"),
+		tracer:          tracer,
 		client:          &DebugServiceDependentClientSet{},
 	}
 	return svc, nil
