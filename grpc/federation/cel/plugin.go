@@ -387,7 +387,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		resCh:            make(chan []byte),
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
-		isNoGC:           envs.IsNoGC(),
+		isNoGC:           true,
 	}
 	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
