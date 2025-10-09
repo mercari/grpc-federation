@@ -138,7 +138,6 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			defer span.End()
 
-			span.AddEvent(fmt.Sprintf("request=%q", req))
 			instance.req = req
 			// Since the request needs to be referenced again in the `read` host function, it is stored in instance.req.
 			// These functions are evaluated sequentially, so they are thread-safe.
@@ -156,8 +155,6 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			_, span := trace.Trace(instance.reqCtx, "HostFunction.read")
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			defer span.End()
-
-			span.AddEvent(fmt.Sprintf("request=%q", instance.req))
 
 			// instance.req is always initialized with the correct value inside the `read_length` host function.
 			// The `read_length` host function and the `read` host function are always executed sequentially.
@@ -183,7 +180,6 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if !ok {
 				panic("failed to read memory from plugin")
 			}
-			span.AddEvent(fmt.Sprintf("response=%q", b))
 			instance.resCh <- b
 		}),
 		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
@@ -612,7 +608,6 @@ func (i *CELPluginInstance) write(ctx context.Context, cmd []byte) error {
 	if i.closed {
 		return i.instanceModErr
 	}
-	span.AddEvent(fmt.Sprintf("request=%q", cmd))
 	i.reqCtx = ctx
 	i.reqCh <- cmd
 	return nil
