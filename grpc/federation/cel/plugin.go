@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,6 +28,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
+	"github.com/mercari/grpc-federation/grpc/federation/log"
 	"github.com/mercari/grpc-federation/grpc/federation/trace"
 )
 
@@ -85,6 +87,8 @@ var (
 	)
 )
 
+var debugMode = os.Getenv("GRPC_FEDERATION_PLUGIN_DEBUG") != ""
+
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
 	if cfg.Wasm.Reader == nil {
 		return nil, fmt.Errorf("grpc-federation: WasmConfig.Reader field is required")
@@ -128,11 +132,33 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	host := r.NewHostModuleBuilder("grpcfederation")
 	host.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, `called 'read_length' host function`,
+					slog.String("role", "guest"),
+				)
+			}
+
 			instance := getInstanceFromContext(ctx)
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, "waiting for request",
+					slog.String("instance", instance.id),
+					slog.String("role", "guest"),
+				)
+			}
 			req := <-instance.reqCh
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, "received request",
+					slog.String("instance", instance.id),
+					slog.String("role", "guest"),
+					slog.String("request", string(req)),
+				)
+			}
 
 			_, span := trace.Trace(instance.reqCtx, "HostFunction.read_length")
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
@@ -148,6 +174,13 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	).Export("read_length")
 	host.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, `called 'read' host function`,
+					slog.String("role", "guest"),
+				)
+			}
+
 			instance := getInstanceFromContext(ctx)
 			if instance == nil {
 				panic("failed to get instance from context")
@@ -156,10 +189,27 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			defer span.End()
 
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, "write request to guest buffer",
+					slog.String("instance", instance.id),
+					slog.String("role", "guest"),
+					slog.String("address", fmt.Sprintf("%#x", stack[0])),
+					slog.String("request", string(instance.req)),
+				)
+			}
 			// instance.req is always initialized with the correct value inside the `read_length` host function.
 			// The `read_length` host function and the `read` host function are always executed sequentially.
 			if ok := mod.Memory().Write(uint32(stack[0]), instance.req); !ok { //nolint:gosec
 				panic("failed to write plugin request content")
+			}
+
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, "written successfully",
+					slog.String("instance", instance.id),
+					slog.String("role", "guest"),
+				)
 			}
 		}),
 		[]api.ValueType{api.ValueTypeI32},
@@ -167,20 +217,57 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	).Export("read")
 	host.NewFunctionBuilder().WithGoModuleFunction(
 		api.GoModuleFunc(func(ctx context.Context, mod api.Module, stack []uint64) {
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, `called 'write' host function`,
+					slog.String("role", "guest"),
+				)
+			}
+
 			instance := getInstanceFromContext(ctx)
 			if instance == nil {
 				panic("failed to get instance from context")
 			}
+
 			_, span := trace.Trace(instance.reqCtx, "HostFunction.write")
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			defer span.End()
+
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, "get response from guest memory",
+					slog.String("instance", instance.id),
+					slog.String("role", "guest"),
+					slog.String("address", fmt.Sprintf("%#x", stack[0])),
+					slog.Int("length", int(stack[1])),
+				)
+			}
 
 			//nolint:gosec
 			b, ok := mod.Memory().Read(uint32(stack[0]), uint32(stack[1]))
 			if !ok {
 				panic("failed to read memory from plugin")
 			}
+
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, "write response to channel",
+					slog.String("instance", instance.id),
+					slog.String("role", "guest"),
+					slog.String("response", string(b)),
+				)
+			}
+
 			instance.resCh <- b
+
+			if debugMode {
+				log.Logger(ctx).WarnContext(
+					ctx, "wrote response",
+					slog.String("instance", instance.id),
+					slog.String("role", "guest"),
+					slog.String("response", string(b)),
+				)
+			}
 		}),
 		[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
 		[]api.ValueType{},
@@ -387,7 +474,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		resCh:            make(chan []byte),
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
-		isNoGC:           envs.IsNoGC(),
+		isNoGC:           !debugMode || envs.IsNoGC(),
 	}
 	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
@@ -602,6 +689,15 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 }
 
 func (i *CELPluginInstance) write(ctx context.Context, cmd []byte) error {
+	if debugMode {
+		log.Logger(ctx).WarnContext(
+			ctx, "called write function for cel plugin",
+			slog.String("instance", i.id),
+			slog.String("role", "host"),
+			slog.String("request", string(cmd)),
+		)
+	}
+
 	ctx, span := trace.Trace(ctx, "write")
 	defer span.End()
 
@@ -609,7 +705,26 @@ func (i *CELPluginInstance) write(ctx context.Context, cmd []byte) error {
 		return i.instanceModErr
 	}
 	i.reqCtx = ctx
+
+	if debugMode {
+		log.Logger(ctx).WarnContext(
+			ctx, "send command to request channel",
+			slog.String("instance", i.id),
+			slog.String("role", "host"),
+			slog.String("request", string(cmd)),
+		)
+	}
+
 	i.reqCh <- cmd
+
+	if debugMode {
+		log.Logger(ctx).WarnContext(
+			ctx, "sent successfully",
+			slog.String("instance", i.id),
+			slog.String("role", "host"),
+			slog.String("request", string(cmd)),
+		)
+	}
 	return nil
 }
 
@@ -630,7 +745,6 @@ func (i *CELPluginInstance) Close() error {
 	// start termination process.
 	i.reqCh <- []byte(exitCommand)
 	<-i.instanceModErrCh
-
 	return nil
 }
 
@@ -657,6 +771,14 @@ func (i *CELPluginInstance) enqueueGC() {
 }
 
 func (i *CELPluginInstance) startGC(ctx context.Context) {
+	if debugMode {
+		log.Logger(ctx).WarnContext(
+			ctx, "called startGC",
+			slog.String("instance", i.id),
+			slog.String("role", "host"),
+		)
+	}
+
 	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
 
@@ -668,6 +790,15 @@ func (i *CELPluginInstance) startGC(ctx context.Context) {
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+	if debugMode {
+		log.Logger(ctx).WarnContext(
+			ctx, "called Call method for cel plugin",
+			slog.String("instance", i.id),
+			slog.String("role", "host"),
+			slog.String("method", fn.ID),
+		)
+	}
+
 	ctx, span := trace.Trace(ctx, "Call")
 	defer span.End()
 
@@ -729,6 +860,14 @@ func (i *CELPluginInstance) recvResponse(ctx context.Context, fn *CELFunction) r
 }
 
 func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
+	if debugMode {
+		log.Logger(ctx).WarnContext(
+			ctx, "called recv",
+			slog.String("instance", i.id),
+			slog.String("role", "host"),
+		)
+	}
+
 	_, span := trace.Trace(ctx, "recv")
 	defer span.End()
 
@@ -736,13 +875,38 @@ func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
 		return nil, errors.New("grpc-federation: plugin has already been closed")
 	}
 
+	if debugMode {
+		log.Logger(ctx).WarnContext(
+			ctx, "waiting for response",
+			slog.String("instance", i.id),
+			slog.String("role", "host"),
+		)
+	}
+
 	select {
 	case err := <-i.instanceModErrCh:
+		if debugMode {
+			log.Logger(ctx).WarnContext(
+				ctx, "got response from instanceModErrCh",
+				slog.String("instance", i.id),
+				slog.String("role", "host"),
+				slog.String("error", err.Error()),
+			)
+		}
+
 		// If the module instance is terminated,
 		// it is considered that the termination process has been completed.
 		i.closeResources(err)
 		return nil, err
 	case res := <-i.resCh:
+		if debugMode {
+			log.Logger(ctx).WarnContext(
+				ctx, "got response",
+				slog.String("instance", i.id),
+				slog.String("role", "host"),
+				slog.String("response", string(res)),
+			)
+		}
 		return res, nil
 	}
 }
