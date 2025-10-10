@@ -135,6 +135,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, `called 'read_length' host function`,
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("role", "guest"),
 				)
 			}
@@ -146,6 +147,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, "waiting for request",
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("instance", instance.id),
 					slog.String("role", "guest"),
 				)
@@ -154,6 +156,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, "received request",
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("instance", instance.id),
 					slog.String("role", "guest"),
 					slog.String("request", string(req)),
@@ -177,6 +180,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, `called 'read' host function`,
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("role", "guest"),
 				)
 			}
@@ -192,6 +196,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, "write request to guest buffer",
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("instance", instance.id),
 					slog.String("role", "guest"),
 					slog.String("address", fmt.Sprintf("%#x", stack[0])),
@@ -207,6 +212,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, "written successfully",
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("instance", instance.id),
 					slog.String("role", "guest"),
 				)
@@ -220,6 +226,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, `called 'write' host function`,
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("role", "guest"),
 				)
 			}
@@ -236,6 +243,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, "get response from guest memory",
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("instance", instance.id),
 					slog.String("role", "guest"),
 					slog.String("address", fmt.Sprintf("%#x", stack[0])),
@@ -252,6 +260,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, "write response to channel",
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("instance", instance.id),
 					slog.String("role", "guest"),
 					slog.String("response", string(b)),
@@ -263,6 +272,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 			if debugMode {
 				log.Logger(ctx).WarnContext(
 					ctx, "wrote response",
+					slog.Bool("grpc-federation-cel-plugin", true),
 					slog.String("instance", instance.id),
 					slog.String("role", "guest"),
 					slog.String("response", string(b)),
@@ -692,6 +702,7 @@ func (i *CELPluginInstance) write(ctx context.Context, cmd []byte) error {
 	if debugMode {
 		log.Logger(ctx).WarnContext(
 			ctx, "called write function for cel plugin",
+			slog.Bool("grpc-federation-cel-plugin", true),
 			slog.String("instance", i.id),
 			slog.String("role", "host"),
 			slog.String("request", string(cmd)),
@@ -709,6 +720,7 @@ func (i *CELPluginInstance) write(ctx context.Context, cmd []byte) error {
 	if debugMode {
 		log.Logger(ctx).WarnContext(
 			ctx, "send command to request channel",
+			slog.Bool("grpc-federation-cel-plugin", true),
 			slog.String("instance", i.id),
 			slog.String("role", "host"),
 			slog.String("request", string(cmd)),
@@ -720,6 +732,7 @@ func (i *CELPluginInstance) write(ctx context.Context, cmd []byte) error {
 	if debugMode {
 		log.Logger(ctx).WarnContext(
 			ctx, "sent successfully",
+			slog.Bool("grpc-federation-cel-plugin", true),
 			slog.String("instance", i.id),
 			slog.String("role", "host"),
 			slog.String("request", string(cmd)),
@@ -774,6 +787,7 @@ func (i *CELPluginInstance) startGC(ctx context.Context) {
 	if debugMode {
 		log.Logger(ctx).WarnContext(
 			ctx, "called startGC",
+			slog.Bool("grpc-federation-cel-plugin", true),
 			slog.String("instance", i.id),
 			slog.String("role", "host"),
 		)
@@ -790,15 +804,6 @@ func (i *CELPluginInstance) startGC(ctx context.Context) {
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
-	if debugMode {
-		log.Logger(ctx).WarnContext(
-			ctx, "called Call method for cel plugin",
-			slog.String("instance", i.id),
-			slog.String("role", "host"),
-			slog.String("method", fn.ID),
-		)
-	}
-
 	ctx, span := trace.Trace(ctx, "Call")
 	defer span.End()
 
@@ -863,6 +868,7 @@ func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
 	if debugMode {
 		log.Logger(ctx).WarnContext(
 			ctx, "called recv",
+			slog.Bool("grpc-federation-cel-plugin", true),
 			slog.String("instance", i.id),
 			slog.String("role", "host"),
 		)
@@ -878,6 +884,7 @@ func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
 	if debugMode {
 		log.Logger(ctx).WarnContext(
 			ctx, "waiting for response",
+			slog.Bool("grpc-federation-cel-plugin", true),
 			slog.String("instance", i.id),
 			slog.String("role", "host"),
 		)
@@ -888,6 +895,7 @@ func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
 		if debugMode {
 			log.Logger(ctx).WarnContext(
 				ctx, "got response from instanceModErrCh",
+				slog.Bool("grpc-federation-cel-plugin", true),
 				slog.String("instance", i.id),
 				slog.String("role", "host"),
 				slog.String("error", err.Error()),
@@ -902,6 +910,7 @@ func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
 		if debugMode {
 			log.Logger(ctx).WarnContext(
 				ctx, "got response",
+				slog.Bool("grpc-federation-cel-plugin", true),
 				slog.String("instance", i.id),
 				slog.String("role", "host"),
 				slog.String("response", string(res)),
