@@ -362,6 +362,8 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		p.cfg.Capability,
 		wazero.NewModuleConfig().
 			WithSysWalltime().
+			WithSysNanosleep().
+			WithSysNanotime().
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			WithArgs("plugin"),
@@ -644,6 +646,10 @@ func (i *CELPluginInstance) LibraryName() string {
 }
 
 func (i *CELPluginInstance) enqueueGC() {
+	if i.closed {
+		return
+	}
+
 	select {
 	case i.gcQueue <- struct{}{}:
 	default:
@@ -654,6 +660,10 @@ func (i *CELPluginInstance) enqueueGC() {
 func (i *CELPluginInstance) startGC(ctx context.Context) {
 	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
+
+	if i.closed {
+		return
+	}
 
 	i.mu.Lock()
 	defer i.mu.Unlock()
