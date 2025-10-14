@@ -457,6 +457,8 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		p.cfg.Capability,
 		wazero.NewModuleConfig().
 			WithSysWalltime().
+			WithSysNanosleep().
+			WithSysNanotime().
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			WithArgs("plugin"),
@@ -514,6 +516,12 @@ var ignoreEnvNameMap = map[string]struct{}{
 	// If a value greater than 1 is passed to GOMAXPROCS, a panic occurs on the plugin side,
 	// so make sure not to pass it explicitly.
 	"GOMAXPROCS": {},
+
+	// There is a bug in Go's GC that can cause processing to hang and never return,
+	// so we always turn off GOGC and disable the automatic GC trigger.
+	// Instead, we choose a workaround where the host side periodically forces a GC execution,
+	// and in case of any issues, we recover by switching to a backup instance.
+	"GOGC": {},
 }
 
 type Envs []*Env
@@ -573,6 +581,9 @@ func getEnvs() Envs {
 			envMap[key] = &Env{key: key, value: value}
 		}
 	}
+	if debugMode {
+		envMap["GOGC"] = &Env{key: "GOGC", value: "off"}
+	}
 	ret := make(Envs, 0, len(envMap))
 	for _, env := range envMap {
 		ret = append(ret, env)
@@ -582,6 +593,9 @@ func getEnvs() Envs {
 
 func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder, envs Envs) (wazero.ModuleConfig, *imports.Builder) {
 	if capability == nil || capability.Env == nil {
+		if debugMode {
+			return cfg.WithEnv("GOGC", "off"), nwcfg.WithEnv("GOGC=off")
+		}
 		return cfg, nwcfg
 	}
 
