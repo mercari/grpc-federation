@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goccy/wasi-go/imports"
 	"github.com/google/cel-go/cel"
@@ -27,6 +28,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
+	"github.com/mercari/grpc-federation/grpc/federation/log"
 	"github.com/mercari/grpc-federation/grpc/federation/trace"
 )
 
@@ -387,7 +389,6 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		resCh:            make(chan []byte),
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		instanceModErrCh: make(chan error, 1),
-		isNoGC:           envs.IsNoGC(),
 	}
 	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
@@ -417,21 +418,15 @@ var ignoreEnvNameMap = map[string]struct{}{
 	// If a value greater than 1 is passed to GOMAXPROCS, a panic occurs on the plugin side,
 	// so make sure not to pass it explicitly.
 	"GOMAXPROCS": {},
+
+	// There is a bug in Go's GC that can cause processing to hang and never return,
+	// so we always turn off GOGC and disable the automatic GC trigger.
+	// Instead, we choose a workaround where the host side periodically forces a GC execution,
+	// and in case of any issues, we recover by switching to a backup instance.
+	"GOGC": {},
 }
 
 type Envs []*Env
-
-func (e Envs) IsNoGC() bool {
-	for _, env := range e {
-		if env.key != "GOGC" {
-			continue
-		}
-		if env.value == "off" || env.value == "0" {
-			return true
-		}
-	}
-	return false
-}
 
 func (e Envs) Strings() []string {
 	ret := make([]string, 0, len(e))
@@ -476,6 +471,7 @@ func getEnvs() Envs {
 			envMap[key] = &Env{key: key, value: value}
 		}
 	}
+	envMap["GOGC"] = &Env{key: "GOGC", value: "off"}
 	ret := make(Envs, 0, len(envMap))
 	for _, env := range envMap {
 		ret = append(ret, env)
@@ -485,7 +481,7 @@ func getEnvs() Envs {
 
 func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder, envs Envs) (wazero.ModuleConfig, *imports.Builder) {
 	if capability == nil || capability.Env == nil {
-		return cfg, nwcfg
+		return cfg.WithEnv("GOGC", "off"), nwcfg.WithEnv("GOGC=off")
 	}
 
 	envCfg := capability.Env
@@ -541,7 +537,6 @@ type CELPluginInstance struct {
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
-	isNoGC           bool
 }
 
 const PluginProtocolVersion = 1
@@ -621,6 +616,10 @@ func (i *CELPluginInstance) Close() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
+	return i.close()
+}
+
+func (i *CELPluginInstance) close() error {
 	if i.closed {
 		return i.instanceModErr
 	}
@@ -645,10 +644,6 @@ func (i *CELPluginInstance) LibraryName() string {
 }
 
 func (i *CELPluginInstance) enqueueGC() {
-	if i.isNoGC {
-		return
-	}
-
 	select {
 	case i.gcQueue <- struct{}{}:
 	default:
@@ -663,8 +658,24 @@ func (i *CELPluginInstance) startGC(ctx context.Context) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
+	// set the timeout for runtime.GC() to 1 second.
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
 	_ = i.write(ctx, []byte(gcCommand))
-	_, _ = i.recv(ctx)
+
+	select {
+	case <-ctx.Done():
+		err := errors.New("cel plugin's GC is taking too long, so will switch to a backup instance")
+		log.Logger(ctx).WarnContext(ctx, err.Error())
+		i.instanceModErr = err
+		i.closed = true
+	case err := <-i.instanceModErrCh:
+		// If the module instance is terminated,
+		// it is considered that the termination process has been completed.
+		i.closeResources(err)
+	case <-i.resCh:
+	}
 }
 
 func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
