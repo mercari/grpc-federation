@@ -401,10 +401,12 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 
 	const gcQueueLength = 1
 	instance := &CELPluginInstance{
-		name:             p.cfg.Name,
-		functions:        p.cfg.Functions,
-		celRegistry:      p.celRegistry,
-		reqCtx:           ctx,
+		name:        p.cfg.Name,
+		functions:   p.cfg.Functions,
+		celRegistry: p.celRegistry,
+		reqCtx:      ctx,
+		// To prevent the write() function from blocking,
+		// a channel with capacity is used instead of an unbuffered channel.
 		reqCh:            make(chan []byte, 1),
 		resCh:            make(chan []byte),
 		gcQueue:          make(chan struct{}, gcQueueLength),
@@ -654,10 +656,11 @@ func (i *CELPluginInstance) close() error {
 	// start termination process.
 	i.reqCh <- []byte(exitCommand)
 	select {
-	case <-i.instanceModErrCh:
-	case <-i.gcErrCh:
+	case err := <-i.instanceModErrCh:
+		return err
+	case err := <-i.gcErrCh:
+		return err
 	}
-	return nil
 }
 
 func (i *CELPluginInstance) closeResources(instanceModErr error) {
@@ -682,7 +685,7 @@ func (i *CELPluginInstance) enqueueGC() {
 	}
 }
 
-// timeout for runtime.GC() to 10 second.
+// timeout for runtime.GC() to 10 seconds.
 var gcWaitTimeout = 10 * time.Second
 
 func (i *CELPluginInstance) startGC(ctx context.Context) error {
