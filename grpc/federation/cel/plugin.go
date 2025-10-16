@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/goccy/wasi-go/imports"
 	"github.com/google/cel-go/cel"
@@ -27,6 +28,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/mercari/grpc-federation/grpc/federation/cel/plugin"
+	"github.com/mercari/grpc-federation/grpc/federation/log"
 	"github.com/mercari/grpc-federation/grpc/federation/trace"
 )
 
@@ -83,6 +85,9 @@ var (
 	ErrWasmContentMismatch = errors.New(
 		`grpc-federation: wasm file content mismatch`,
 	)
+	ErrWasmGCHang = errors.New(
+		`grpc-federation: cel plugin's GC is taking too long, so active instance will switch to a backup instance`,
+	)
 )
 
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
@@ -107,7 +112,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
 		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 	}
-	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg.WithDebugInfoEnabled(false))
+	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg.WithDebugInfoEnabled(false).WithCloseOnContextDone(true))
 	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
 		return nil, err
@@ -247,19 +252,7 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 				BindMemberFunction(
 					fn.Name,
 					MemberOverloadFunc(fn.ID, fn.Args[0], fn.Args[1:], fn.Return, func(ctx context.Context, self ref.Val, args ...ref.Val) ref.Val {
-						ctx, span := trace.Trace(ctx, fn.ID)
-						defer span.End()
-
-						md, ok := metadata.FromIncomingContext(ctx)
-						if !ok {
-							md = make(metadata.MD)
-						}
-						instance, err := p.getInstance(ctx)
-						if err != nil {
-							return types.NewErr(err.Error())
-						}
-						span.SetAttributes(trace.StringAttr("instance_id", instance.id))
-						return instance.Call(ctx, fn, md, append([]ref.Val{self}, args...)...)
+						return p.Call(ctx, fn, append([]ref.Val{self}, args...)...)
 					}),
 				)...,
 			)
@@ -268,25 +261,52 @@ func (p *CELPlugin) CompileOptions() []cel.EnvOption {
 				BindFunction(
 					fn.Name,
 					OverloadFunc(fn.ID, fn.Args, fn.Return, func(ctx context.Context, args ...ref.Val) ref.Val {
-						ctx, span := trace.Trace(ctx, fn.ID)
-						defer span.End()
-
-						md, ok := metadata.FromIncomingContext(ctx)
-						if !ok {
-							md = make(metadata.MD)
-						}
-						instance, err := p.getInstance(ctx)
-						if err != nil {
-							return types.NewErr(err.Error())
-						}
-						span.SetAttributes(trace.StringAttr("instance_id", instance.id))
-						return instance.Call(ctx, fn, md, args...)
+						return p.Call(ctx, fn, args...)
 					}),
 				)...,
 			)
 		}
 	}
 	return opts
+}
+
+func (p *CELPlugin) Call(ctx context.Context, fn *CELFunction, args ...ref.Val) ref.Val {
+	ctx, span := trace.Trace(ctx, fn.ID)
+	defer span.End()
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = make(metadata.MD)
+	}
+	instance, err := p.getInstance(ctx)
+	if err != nil {
+		return types.NewErr(err.Error())
+	}
+	span.SetAttributes(trace.StringAttr("instance_id", instance.id))
+	ret, err := instance.Call(ctx, fn, md, args...)
+	if err != nil {
+		// If an error is returned from instance.Call(), it indicates either an issue with the plugin's encode/decode logic or a problem with the instance itself.
+		// Since both are critical errors, the system will attempt to recover by switching to a backup instance.
+
+		// Basically, the problematic instance should have already been closed at this point.
+		// Therefore, processing with the backup instance is attempted only if the instance has indeed been closed.
+		if instance.closed {
+			// Since getInstance() always returns an available instance, it will return the backup instance if the active instance has been closed.
+			instance, err := p.getInstance(ctx)
+			if err != nil {
+				return types.NewErr(err.Error())
+			}
+			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
+			retryRet, err := instance.Call(ctx, fn, md, args...)
+			if err != nil {
+				return types.NewErr(err.Error())
+			}
+			return retryRet
+		} else {
+			return types.NewErr(err.Error())
+		}
+	}
+	return ret
 }
 
 func (p *CELPlugin) ProgramOptions() []cel.ProgramOption {
@@ -360,6 +380,8 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		p.cfg.Capability,
 		wazero.NewModuleConfig().
 			WithSysWalltime().
+			WithSysNanosleep().
+			WithSysNanotime().
 			WithStdout(os.Stdout).
 			WithStderr(os.Stderr).
 			WithArgs("plugin"),
@@ -377,17 +399,22 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+
 	const gcQueueLength = 1
 	instance := &CELPluginInstance{
-		name:             p.cfg.Name,
-		functions:        p.cfg.Functions,
-		celRegistry:      p.celRegistry,
-		reqCtx:           ctx,
-		reqCh:            make(chan []byte),
+		name:        p.cfg.Name,
+		functions:   p.cfg.Functions,
+		celRegistry: p.celRegistry,
+		reqCtx:      ctx,
+		// To prevent the write() function from blocking,
+		// a channel with capacity is used instead of an unbuffered channel.
+		reqCh:            make(chan []byte, 1),
 		resCh:            make(chan []byte),
 		gcQueue:          make(chan struct{}, gcQueueLength),
+		gcErrCh:          make(chan error, 1),
 		instanceModErrCh: make(chan error, 1),
-		isNoGC:           envs.IsNoGC(),
+		cancelFn:         cancel,
 	}
 	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
@@ -401,7 +428,11 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 	// It is enqueued into gcQueue using the `instance.GC()` function.
 	go func() {
 		for range instance.gcQueue {
-			instance.startGC(ctx)
+			if err := instance.startGC(ctx); err != nil {
+				// If a problem occurs in startGC, the instance is not immediately closed,
+				// so it is essential to always use break to ensure that startGC is not called.
+				break
+			}
 		}
 	}()
 	return instance, nil
@@ -417,21 +448,15 @@ var ignoreEnvNameMap = map[string]struct{}{
 	// If a value greater than 1 is passed to GOMAXPROCS, a panic occurs on the plugin side,
 	// so make sure not to pass it explicitly.
 	"GOMAXPROCS": {},
+
+	// There is a bug in Go's GC that can cause processing to hang and never return,
+	// so we always turn off GOGC and disable the automatic GC trigger.
+	// Instead, we choose a workaround where the host side periodically forces a GC execution,
+	// and in case of any issues, we recover by switching to a backup instance.
+	"GOGC": {},
 }
 
 type Envs []*Env
-
-func (e Envs) IsNoGC() bool {
-	for _, env := range e {
-		if env.key != "GOGC" {
-			continue
-		}
-		if env.value == "off" || env.value == "0" {
-			return true
-		}
-	}
-	return false
-}
 
 func (e Envs) Strings() []string {
 	ret := make([]string, 0, len(e))
@@ -476,6 +501,7 @@ func getEnvs() Envs {
 			envMap[key] = &Env{key: key, value: value}
 		}
 	}
+	envMap["GOGC"] = &Env{key: "GOGC", value: "off"}
 	ret := make(Envs, 0, len(envMap))
 	for _, env := range envMap {
 		ret = append(ret, env)
@@ -485,7 +511,7 @@ func getEnvs() Envs {
 
 func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder, envs Envs) (wazero.ModuleConfig, *imports.Builder) {
 	if capability == nil || capability.Env == nil {
-		return cfg, nwcfg
+		return cfg.WithEnv("GOGC", "off"), nwcfg.WithEnv("GOGC=off")
 	}
 
 	envCfg := capability.Env
@@ -538,10 +564,11 @@ type CELPluginInstance struct {
 	resCh            chan []byte
 	instanceModErrCh chan error
 	instanceModErr   error
+	gcErrCh          chan error
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
-	isNoGC           bool
+	cancelFn         context.CancelFunc
 }
 
 const PluginProtocolVersion = 1
@@ -621,6 +648,10 @@ func (i *CELPluginInstance) Close() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
+	return i.close()
+}
+
+func (i *CELPluginInstance) close() error {
 	if i.closed {
 		return i.instanceModErr
 	}
@@ -629,9 +660,12 @@ func (i *CELPluginInstance) Close() error {
 
 	// start termination process.
 	i.reqCh <- []byte(exitCommand)
-	<-i.instanceModErrCh
-
-	return nil
+	select {
+	case err := <-i.instanceModErrCh:
+		return err
+	case err := <-i.gcErrCh:
+		return err
+	}
 }
 
 func (i *CELPluginInstance) closeResources(instanceModErr error) {
@@ -645,7 +679,7 @@ func (i *CELPluginInstance) LibraryName() string {
 }
 
 func (i *CELPluginInstance) enqueueGC() {
-	if i.isNoGC {
+	if i.closed {
 		return
 	}
 
@@ -656,18 +690,53 @@ func (i *CELPluginInstance) enqueueGC() {
 	}
 }
 
-func (i *CELPluginInstance) startGC(ctx context.Context) {
+// timeout for runtime.GC() to 10 seconds.
+var gcWaitTimeout = 10 * time.Second
+
+func (i *CELPluginInstance) startGC(ctx context.Context) error {
 	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
+
+	if i.closed {
+		return nil
+	}
 
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
+	ctx, cancel := context.WithTimeout(ctx, gcWaitTimeout)
+	defer cancel()
+
 	_ = i.write(ctx, []byte(gcCommand))
-	_, _ = i.recv(ctx)
+
+	select {
+	case <-ctx.Done():
+		err := ErrWasmGCHang
+
+		// To track inexplicable errors, they are output as warnings.
+		log.Logger(ctx).WarnContext(ctx, err.Error())
+
+		// To forcibly terminate the instance, we will call cancel function.
+		// However, it's unclear whether this will be effective if the process is stuck at runtime.GC().
+		// Therefore, we will use gcErrCh to handle errors appropriately.
+		// If the instance can be shut down properly, we can avoid memory leaks.
+		i.cancelFn()
+
+		// If a value is sent to resCh after a cancel, it cannot be received correctly.
+		// Therefore, to prevent waiting for a value on resCh in the next plugin request,
+		// an error is sent to gcErrCh, and the system prioritizes waiting on gcErrCh over resCh.
+		// This prevents invalid reception from resCh.
+		// Please see recv() method.
+		i.gcErrCh <- err
+		return err
+	case err := <-i.instanceModErrCh:
+		return err
+	case <-i.resCh:
+		return nil
+	}
 }
 
-func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) ref.Val {
+func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metadata.MD, args ...ref.Val) (ref.Val, error) {
 	ctx, span := trace.Trace(ctx, "Call")
 	defer span.End()
 
@@ -675,7 +744,7 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	defer i.mu.Unlock()
 
 	if err := i.sendRequest(ctx, fn, md, args...); err != nil {
-		return types.NewErr(err.Error())
+		return nil, err
 	}
 	return i.recvResponse(ctx, fn)
 }
@@ -709,23 +778,23 @@ func (i *CELPluginInstance) sendRequest(ctx context.Context, fn *CELFunction, md
 	return nil
 }
 
-func (i *CELPluginInstance) recvResponse(ctx context.Context, fn *CELFunction) ref.Val {
+func (i *CELPluginInstance) recvResponse(ctx context.Context, fn *CELFunction) (ref.Val, error) {
 	ctx, span := trace.Trace(ctx, "recvResponse")
 	defer span.End()
 
 	content, err := i.recv(ctx)
 	if err != nil {
-		return types.NewErr(err.Error())
+		return nil, err
 	}
 
 	var res plugin.CELPluginResponse
 	if err := protojson.Unmarshal(content, &res); err != nil {
-		return types.NewErr(fmt.Sprintf("grpc-federation: failed to decode response: %s", err.Error()))
+		return nil, fmt.Errorf("grpc-federation: failed to decode response: %w", err)
 	}
 	if res.Error != "" {
-		return types.NewErr(res.Error)
+		return types.NewErr(res.Error), nil
 	}
-	return i.celPluginValueToRef(fn, fn.Return, res.Value)
+	return i.celPluginValueToRef(fn, fn.Return, res.Value), nil
 }
 
 func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
@@ -742,7 +811,12 @@ func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
 		// it is considered that the termination process has been completed.
 		i.closeResources(err)
 		return nil, err
-	case res := <-i.resCh:
+	case err := <-i.gcErrCh:
+		i.closeResources(err)
+		return nil, err
+	default:
+		// We explicitly lower the priority by using "default" so that resCh is only awaited when no error has occurred.
+		res := <-i.resCh
 		return res, nil
 	}
 }
