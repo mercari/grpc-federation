@@ -112,7 +112,7 @@ func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) 
 	if cache := getCompilationCache(cfg.Name, cfg.CacheDir); cache != nil {
 		runtimeCfg = runtimeCfg.WithCompilationCache(cache)
 	}
-	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg.WithDebugInfoEnabled(false))
+	r := wazero.NewRuntimeWithConfig(ctx, runtimeCfg.WithDebugInfoEnabled(false).WithCloseOnContextDone(true))
 	mod, err := r.CompileModule(ctx, wasmFile)
 	if err != nil {
 		return nil, err
@@ -399,6 +399,8 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+
 	const gcQueueLength = 1
 	instance := &CELPluginInstance{
 		name:        p.cfg.Name,
@@ -412,6 +414,7 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		gcErrCh:          make(chan error, 1),
 		instanceModErrCh: make(chan error, 1),
+		cancelFn:         cancel,
 	}
 	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
@@ -565,6 +568,7 @@ type CELPluginInstance struct {
 	closed           bool
 	mu               sync.Mutex
 	gcQueue          chan struct{}
+	cancelFn         context.CancelFunc
 }
 
 const PluginProtocolVersion = 1
@@ -711,6 +715,12 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 
 		// To track inexplicable errors, they are output as warnings.
 		log.Logger(ctx).WarnContext(ctx, err.Error())
+
+		// To forcibly terminate the instance, we will call cancel function.
+		// However, it's unclear whether this will be effective if the process is stuck at runtime.GC().
+		// Therefore, we will use gcErrCh to handle errors appropriately.
+		// If the instance can be shut down properly, we can avoid memory leaks.
+		i.cancelFn()
 
 		// If a value is sent to resCh after a cancel, it cannot be received correctly.
 		// Therefore, to prevent waiting for a value on resCh in the next plugin request,
