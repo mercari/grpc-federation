@@ -503,7 +503,7 @@ func getEnvs() Envs {
 			envMap[key] = &Env{key: key, value: value}
 		}
 	}
-	if !debugMode {
+	if debugMode {
 		envMap["GOGC"] = &Env{key: "GOGC", value: "off"}
 	}
 	ret := make(Envs, 0, len(envMap))
@@ -516,9 +516,9 @@ func getEnvs() Envs {
 func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder, envs Envs) (wazero.ModuleConfig, *imports.Builder) {
 	if capability == nil || capability.Env == nil {
 		if debugMode {
-			return cfg, nwcfg
+			return cfg.WithEnv("GOGC", "off"), nwcfg.WithEnv("GOGC=off")
 		}
-		return cfg.WithEnv("GOGC", "off"), nwcfg.WithEnv("GOGC=off")
+		return cfg, nwcfg
 	}
 
 	envCfg := capability.Env
@@ -686,7 +686,7 @@ func (i *CELPluginInstance) LibraryName() string {
 }
 
 func (i *CELPluginInstance) enqueueGC() {
-	if debugMode {
+	if !debugMode {
 		return
 	}
 
