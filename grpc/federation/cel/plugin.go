@@ -426,7 +426,8 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 	go func() {
 		for range instance.gcQueue {
 			if err := instance.startGC(ctx); err != nil {
-				instance.gcErrCh <- err
+				// If a problem occurs in startGC, the instance is not immediately closed,
+				// so it is essential to always use break to ensure that startGC is not called.
 				break
 			}
 		}
@@ -706,8 +707,18 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		log.Logger(ctx).WarnContext(ctx, ErrWasmGCHang.Error())
-		return ErrWasmGCHang
+		err := ErrWasmGCHang
+
+		// To track inexplicable errors, they are output as warnings.
+		log.Logger(ctx).WarnContext(ctx, err.Error())
+
+		// If a value is sent to resCh after a cancel, it cannot be received correctly.
+		// Therefore, to prevent waiting for a value on resCh in the next plugin request,
+		// an error is sent to gcErrCh, and the system prioritizes waiting on gcErrCh over resCh.
+		// This prevents invalid reception from resCh.
+		// Please see recv() method.
+		i.gcErrCh <- err
+		return err
 	case err := <-i.instanceModErrCh:
 		return err
 	case <-i.resCh:
@@ -793,7 +804,9 @@ func (i *CELPluginInstance) recv(ctx context.Context) ([]byte, error) {
 	case err := <-i.gcErrCh:
 		i.closeResources(err)
 		return nil, err
-	case res := <-i.resCh:
+	default:
+		// We explicitly lower the priority by using "default" so that resCh is only awaited when no error has occurred.
+		res := <-i.resCh
 		return res, nil
 	}
 }
