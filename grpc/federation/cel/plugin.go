@@ -90,6 +90,8 @@ var (
 	)
 )
 
+var debugMode = os.Getenv("GRPC_FEDERATION_PLUGIN_DEBUG") != ""
+
 func NewCELPlugin(ctx context.Context, cfg CELPluginConfig) (*CELPlugin, error) {
 	if cfg.Wasm.Reader == nil {
 		return nil, fmt.Errorf("grpc-federation: WasmConfig.Reader field is required")
@@ -501,7 +503,9 @@ func getEnvs() Envs {
 			envMap[key] = &Env{key: key, value: value}
 		}
 	}
-	envMap["GOGC"] = &Env{key: "GOGC", value: "off"}
+	if !debugMode {
+		envMap["GOGC"] = &Env{key: "GOGC", value: "off"}
+	}
 	ret := make(Envs, 0, len(envMap))
 	for _, env := range envMap {
 		ret = append(ret, env)
@@ -511,6 +515,9 @@ func getEnvs() Envs {
 
 func addModuleConfigByEnvCapability(capability *CELPluginCapability, cfg wazero.ModuleConfig, nwcfg *imports.Builder, envs Envs) (wazero.ModuleConfig, *imports.Builder) {
 	if capability == nil || capability.Env == nil {
+		if debugMode {
+			return cfg, nwcfg
+		}
 		return cfg.WithEnv("GOGC", "off"), nwcfg.WithEnv("GOGC=off")
 	}
 
@@ -679,6 +686,10 @@ func (i *CELPluginInstance) LibraryName() string {
 }
 
 func (i *CELPluginInstance) enqueueGC() {
+	if debugMode {
+		return
+	}
+
 	if i.closed {
 		return
 	}
