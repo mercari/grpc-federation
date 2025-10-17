@@ -38,12 +38,13 @@ func TestPlugin(t *testing.T) {
 	plugin, err := NewCELPlugin(ctx, CELPluginConfig{
 		Name: "test",
 		Wasm: WasmConfig{
-			Reader: bytes.NewBuffer(f),
+			Reader: bytes.NewReader(f),
 			Sha256: hex.EncodeToString(hash[:]),
 		},
 		Functions: []*CELFunction{fn},
-		CacheDir:  "testdata",
+		CacheDir:  t.TempDir(),
 		Capability: &CELPluginCapability{
+			// enable wasi-go host function.
 			Network: &CELPluginNetworkCapability{},
 		},
 	})
@@ -54,7 +55,11 @@ func TestPlugin(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := plugin.Call(ctx, fn)
-	if int(v.(types.Int)) != 10 {
-		t.Fatalf("failed to get response value: %v", v)
+	iv, ok := v.(types.Int)
+	if !ok {
+		t.Fatalf("unexpected return type %T; want types.Int", v)
+	}
+	if int(iv) != 10 {
+		t.Fatalf("failed to get response value: %v", iv)
 	}
 }
