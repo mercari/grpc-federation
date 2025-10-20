@@ -669,10 +669,6 @@ func (f *File) getAlias(pkg *resolver.GoPackage) string {
 	return pkg.Name
 }
 
-func (f *File) UseMethods() []*resolver.Method {
-	return f.UseMethods()
-}
-
 type Enum struct {
 	ProtoName     string
 	GoName        string

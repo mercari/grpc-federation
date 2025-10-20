@@ -480,7 +480,7 @@ func (v *LocalValue) getEnvOpts() []cel.EnvOption {
 func (v *LocalValue) getEvalValues(ctx context.Context) map[string]any {
 	ret := map[string]any{ContextVariableName: grpcfedcel.NewContextValue(ctx)}
 	if grpcErr := getGRPCErrorValue(ctx); grpcErr != nil {
-		ret["error"] = getGRPCErrorValue(ctx)
+		ret["error"] = grpcErr
 	}
 	for k, v := range v.evalValues {
 		ret[k] = v
