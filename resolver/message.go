@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"sort"
 	"strings"
 
 	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
@@ -185,12 +186,37 @@ func (m *Message) AllVariableDefinitions() VariableDefinitions {
 	if m == nil {
 		return nil
 	}
-
-	var defs VariableDefinitions
-	for _, group := range m.VariableDefinitionGroups() {
-		defs = append(defs, group.VariableDefinitions()...)
+	if m.Rule == nil {
+		return nil
 	}
-	return defs
+
+	defs := m.Rule.DefSet.Definitions()
+	ret := defs
+	for _, def := range defs {
+		if def.Expr == nil {
+			continue
+		}
+		switch {
+		case def.Expr.Call != nil:
+			for _, err := range def.Expr.Call.Errors {
+				ret = append(ret, err.Definitions()...)
+			}
+		case def.Expr.Validation != nil:
+			if def.Expr.Validation.Error != nil {
+				ret = append(ret, def.Expr.Validation.Error.Definitions()...)
+			}
+		}
+	}
+	for _, field := range m.Fields {
+		if field.Rule == nil {
+			continue
+		}
+		if field.Rule.Oneof == nil {
+			continue
+		}
+		ret = append(ret, field.Rule.Oneof.DefSet.Definitions()...)
+	}
+	return ret
 }
 
 func (m *Message) HasCELValue() bool {
@@ -639,44 +665,64 @@ func (m *Message) DependServices() []*Service {
 	if m == nil {
 		return nil
 	}
-
-	return m.dependServices(make(map[*VariableDefinition]struct{}))
-}
-
-func (m *Message) dependServices(defMap map[*VariableDefinition]struct{}) []*Service {
-	if m == nil {
-		return nil
+	svcMap := make(map[*Service]struct{})
+	for _, mtd := range m.dependMethods(make(map[*VariableDefinition]struct{})) {
+		svcMap[mtd.Service] = struct{}{}
 	}
-
-	var svcs []*Service
-	for _, def := range m.AllVariableDefinitions() {
-		svcs = append(svcs, dependServicesByDefinition(def, defMap)...)
+	svcs := make([]*Service, 0, len(svcMap))
+	for svc := range svcMap {
+		svcs = append(svcs, svc)
 	}
+	sort.Slice(svcs, func(i, j int) bool {
+		return svcs[i].FQDN() < svcs[j].FQDN()
+	})
 	return svcs
 }
 
-func dependServicesByDefinition(def *VariableDefinition, defMap map[*VariableDefinition]struct{}) []*Service {
-	if _, found := defMap[def]; found {
+func (m *Message) DependMethods() []*Method {
+	if m == nil {
 		return nil
 	}
-	defMap[def] = struct{}{}
+	mtdMap := make(map[*Method]struct{})
+	for _, mtd := range m.dependMethods(make(map[*VariableDefinition]struct{})) {
+		mtdMap[mtd] = struct{}{}
+	}
+	mtds := make([]*Method, 0, len(mtdMap))
+	for mtd := range mtdMap {
+		mtds = append(mtds, mtd)
+	}
+	sort.Slice(mtds, func(i, j int) bool {
+		return mtds[i].FQDN() < mtds[j].FQDN()
+	})
+	return mtds
+}
 
-	if def == nil {
+func (m *Message) dependMethods(defMap map[*VariableDefinition]struct{}) []*Method {
+	if m == nil {
 		return nil
 	}
-
-	expr := def.Expr
-	if expr == nil {
-		return nil
-	}
-	if expr.Call != nil {
-		return []*Service{expr.Call.Method.Service}
-	}
-	var ret []*Service
-	for _, msgExpr := range def.MessageExprs() {
-		if msgExpr.Message != nil {
-			ret = append(ret, msgExpr.Message.dependServices(defMap)...)
+	var mtds []*Method
+	for _, def := range m.AllVariableDefinitions() {
+		if def == nil {
+			continue
+		}
+		if _, exists := defMap[def]; exists {
+			continue
+		}
+		defMap[def] = struct{}{}
+		expr := def.Expr
+		if expr == nil {
+			continue
+		}
+		if expr.Call != nil {
+			mtds = append(mtds, expr.Call.Method)
+		} else {
+			for _, msgExpr := range def.MessageExprs() {
+				if msgExpr.Message != nil {
+					mtds = append(mtds, msgExpr.Message.dependMethods(defMap)...)
+				}
+			}
 		}
 	}
-	return ret
+	return mtds
 }

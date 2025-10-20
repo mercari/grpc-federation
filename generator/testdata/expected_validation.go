@@ -203,6 +203,7 @@ func (s *FederationService) resolve_Org_Federation_CustomMessage(ctx context.Con
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.CustomMessageArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &CustomMessage{}
@@ -244,6 +245,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "post"
@@ -605,6 +607,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.PostArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &Post{}

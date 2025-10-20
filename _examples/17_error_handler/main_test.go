@@ -170,7 +170,13 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if diff := cmp.Diff(res, &federation.GetPostResponse{Post: &federation.Post{Id: "anonymous"}},
+		if diff := cmp.Diff(res,
+			&federation.GetPostResponse{
+				Post: &federation.Post{
+					Id:   "anonymous",
+					Code: int32(codes.Unimplemented),
+				},
+			},
 			cmpopts.IgnoreUnexported(
 				federation.GetPostResponse{},
 				federation.Post{},
@@ -187,7 +193,12 @@ func TestFederation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if diff := cmp.Diff(res, &federation.GetPostResponse{Post: &federation.Post{}},
+		if diff := cmp.Diff(res,
+			&federation.GetPostResponse{
+				Post: &federation.Post{
+					Code: int32(codes.FailedPrecondition),
+				},
+			},
 			cmpopts.IgnoreUnexported(
 				federation.GetPostResponse{},
 				federation.Post{},

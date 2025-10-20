@@ -669,6 +669,10 @@ func (f *File) getAlias(pkg *resolver.GoPackage) string {
 	return pkg.Name
 }
 
+func (f *File) UseMethods() []*resolver.Method {
+	return f.UseMethods()
+}
+
 type Enum struct {
 	ProtoName     string
 	GoName        string
@@ -3297,6 +3301,10 @@ func (d *VariableDefinition) ProtoComment() string {
 
 func (d *VariableDefinition) Type() string {
 	return d.file.toTypeText(d.VariableDefinition.Expr.Type)
+}
+
+func (d *VariableDefinition) TypeWithoutPtr() string {
+	return strings.TrimPrefix(d.Type(), "*")
 }
 
 func (d *VariableDefinition) EnumCastFunc() string {

@@ -107,7 +107,7 @@ func WithRetry[T any](ctx context.Context, param *RetryParam[T]) (*T, error) {
 	if err := backoff.Retry(func() (err error) {
 		result, err := param.Body()
 		if err != nil {
-			SetGRPCError(ctx, param.Value, err)
+			ctx = WithGRPCError(ctx, ToGRPCError(ctx, err))
 			cond, evalErr := EvalCEL(ctx, &EvalCELRequest{
 				Value:      param.Value,
 				Expr:       param.If,

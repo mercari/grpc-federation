@@ -209,6 +209,7 @@ func (s *RefEnvService) initServiceVariables(ctx context.Context) error {
 	}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	/*
 		def {
@@ -258,6 +259,7 @@ func (s *RefEnvService) resolve_Org_Federation_Constant(ctx context.Context, req
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.ConstantArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &Constant{}

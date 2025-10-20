@@ -254,6 +254,7 @@ func (s *OtherService) resolve_Federation_GetResponse(ctx context.Context, req *
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "p"
@@ -327,6 +328,7 @@ func (s *OtherService) resolve_Federation_Post(ctx context.Context, req *OtherSe
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.PostArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "u"
@@ -630,6 +632,7 @@ func (s *OtherService) resolve_Federation_Reaction(ctx context.Context, req *Oth
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.ReactionArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "cmp"
@@ -718,6 +721,7 @@ func (s *OtherService) resolve_Federation_User(ctx context.Context, req *OtherSe
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.UserArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &User{}

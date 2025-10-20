@@ -164,6 +164,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "post.GetPostResponse")...)
 	svc := &FederationService{
 		cfg:             cfg,
 		logger:          logger,
@@ -269,6 +270,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetPostResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "post"
@@ -354,6 +356,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.PostArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "res"
@@ -457,6 +460,7 @@ func (s *FederationService) resolve_Federation_UpdatePostResponse(ctx context.Co
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.UpdatePostResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "_def0"

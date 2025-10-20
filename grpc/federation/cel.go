@@ -239,6 +239,42 @@ func EnumAccessorOptions(enumName string, nameToValue map[string]int32, valueToN
 	}
 }
 
+func GRPCErrorAccessorOptions(adapter celtypes.Adapter, protoName string) []cel.EnvOption {
+	var opts []cel.EnvOption
+	opts = append(opts,
+		grpcfedcel.BindMemberFunction(
+			"hasIgnoredError",
+			grpcfedcel.MemberOverloadFunc(fmt.Sprintf("%s_has_ignored_error", protoName), cel.ObjectType(protoName), []*cel.Type{}, cel.BoolType,
+				func(ctx context.Context, self ref.Val, _ ...ref.Val) ref.Val {
+					v := self.Value()
+					value := localValueFromContext(ctx)
+					if value == nil {
+						return celtypes.Bool(false)
+					}
+					return celtypes.Bool(value.grpcError(v) != nil)
+				},
+			),
+		)...,
+	)
+	opts = append(opts,
+		grpcfedcel.BindMemberFunction(
+			"ignoredError",
+			grpcfedcel.MemberOverloadFunc(
+				fmt.Sprintf("%s_ignored_error", protoName), cel.ObjectType(protoName), []*cel.Type{}, cel.ObjectType("grpc.federation.private.Error"),
+				func(ctx context.Context, self ref.Val, _ ...ref.Val) ref.Val {
+					v := self.Value()
+					value := localValueFromContext(ctx)
+					if value == nil {
+						return nil
+					}
+					return adapter.NativeToValue(value.grpcError(v))
+				},
+			),
+		)...,
+	)
+	return opts
+}
+
 type EnumAttributeMap[T ~int32] map[T]EnumValueAttributeMap
 
 type EnumValueAttributeMap map[string]string
@@ -313,6 +349,7 @@ type LocalValue struct {
 	mu         sync.RWMutex
 	envOpts    []cel.EnvOption
 	evalValues map[string]any
+	grpcErrMap map[any]*grpcfedcel.Error
 }
 
 type singleflightCache struct {
@@ -337,6 +374,7 @@ func NewLocalValue(ctx context.Context, envOpts []cel.EnvOption, argName string,
 		},
 		envOpts:    newEnvOpts,
 		evalValues: map[string]any{MessageArgumentVariableName: arg},
+		grpcErrMap: make(map[any]*grpcfedcel.Error),
 	}
 }
 
@@ -357,6 +395,19 @@ func (v *LocalValue) AddEnv(env any) {
 
 func (v *LocalValue) AddServiceVariable(env any) {
 	v.setEvalValue("grpc.federation.var", env)
+}
+
+func (v *LocalValue) SetGRPCError(retVal any, err *grpcfedcel.Error) {
+	v.lock()
+	v.grpcErrMap[retVal] = err
+	v.unlock()
+}
+
+func (v *LocalValue) grpcError(retVal any) *grpcfedcel.Error {
+	v.rlock()
+	err := v.grpcErrMap[retVal]
+	v.runlock()
+	return err
 }
 
 type localValue interface {
@@ -428,6 +479,9 @@ func (v *LocalValue) getEnvOpts() []cel.EnvOption {
 
 func (v *LocalValue) getEvalValues(ctx context.Context) map[string]any {
 	ret := map[string]any{ContextVariableName: grpcfedcel.NewContextValue(ctx)}
+	if grpcErr := getGRPCErrorValue(ctx); grpcErr != nil {
+		ret["error"] = getGRPCErrorValue(ctx)
+	}
 	for k, v := range v.evalValues {
 		ret[k] = v
 	}
@@ -832,10 +886,10 @@ func setCELProgramCache(ctx context.Context, cacheIndex int, program cel.Program
 	getCELCacheMap(ctx).set(cacheIndex, &CELCache{program: program})
 }
 
-func SetGRPCError(ctx context.Context, value localValue, err error) {
+func ToGRPCError(ctx context.Context, err error) *grpcfedcel.Error {
 	stat, ok := grpcstatus.FromError(err)
 	if !ok {
-		return
+		return nil
 	}
 	grpcErr := &grpcfedcel.Error{
 		Code:    int32(stat.Code()), //nolint:gosec
@@ -886,9 +940,7 @@ func SetGRPCError(ctx context.Context, value localValue, err error) {
 			grpcErr.CustomMessages = append(grpcErr.CustomMessages, anyValue)
 		}
 	}
-	value.lock()
-	value.setEvalValue("error", grpcErr)
-	value.unlock()
+	return grpcErr
 }
 
 type SetCELValueParam[T any] struct {

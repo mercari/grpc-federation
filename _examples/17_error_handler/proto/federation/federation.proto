@@ -90,11 +90,13 @@ message Post {
           }
         }
       },
-      { name: "post" by: "res.post" autobind: true }
+      { name: "post" by: "res.post" autobind: true },
+      { if: "res.hasIgnoredError()" name: "code" by: "res.ignoredError().code" }
     ]
   };
   string id = 1;
   string title = 2;
+  int32 code = 3 [(grpc.federation.field).by = "code"];
 }
 
 message LocalizedMessage {

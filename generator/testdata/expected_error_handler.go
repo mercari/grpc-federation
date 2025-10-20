@@ -177,6 +177,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "org.post.GetPostResponse")...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostType", post.PostType_value, post.PostType_name)...)
 	svc := &FederationService{
 		cfg:             cfg,
@@ -246,6 +247,7 @@ func (s *FederationService) resolve_Org_Federation_CustomMessage(ctx context.Con
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.CustomMessageArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &CustomMessage{}
@@ -283,6 +285,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "post"
@@ -366,6 +369,7 @@ func (s *FederationService) resolve_Org_Federation_LocalizedMessage(ctx context.
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.LocalizedMessageArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &LocalizedMessage{}
@@ -407,6 +411,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.PostArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "res"
@@ -441,7 +446,8 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				grpcfed.Logger(ctx).DebugContext(ctx, "call org.post.PostService/GetPost", slog.Any("org.post.GetPostRequest", s.logvalue_Org_Post_GetPostRequest(args)))
 				ret, err := s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
 				if err != nil {
-					grpcfed.SetGRPCError(ctx, value, err)
+					grpcErr := grpcfed.ToGRPCError(ctx, err)
+					ctx = grpcfed.WithGRPCError(ctx, grpcErr)
 					var (
 						defaultMsg     string
 						defaultCode    grpcfed.Code
@@ -729,6 +735,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 								CacheIndex: 21,
 								Body: func(value *localValueType) error {
 									stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+									ret = &post.GetPostResponse{}
 									return nil
 								},
 							}); err != nil {
@@ -755,6 +762,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 							return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 						}
 					}
+					value.SetGRPCError(ret, grpcErr)
 				}
 				return ret, nil
 			},
