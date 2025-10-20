@@ -1084,8 +1084,8 @@ If omitted, the message will be auto-generated from the configurations.
 ## (grpc.federation.message).def.call.error.ignore
 
 `ignore` ignore the error if the condition in the `if` field is `true` and `ignore` field is set to `true`.
-When an error is ignored, the returned response is always `null` value.
-If you want to return a response that is not `null`, please use `ignore_and_response` feature.
+When an error is ignored, the returned response is always empty value.
+If you want to return a response that is not empty, please use `ignore_and_response` feature.
 Therefore, `ignore` and `ignore_and_response` cannot be specified same.
 
 ### Example
@@ -1103,6 +1103,41 @@ message MyMessage {
           ignore: true
         }
       }
+    }
+  };
+}
+```
+
+If you want to define custom processing using the original error value when an error is ignored,
+you can retrieve the contents of the error by calling the `ignoredError()` method on the return value.
+Additionally, you can check whether `ignoredError()` can be used by calling `hasIgnoredError()`.
+
+### Example
+
+```proto
+message MyMessage {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "foopkg.FooService/GetFoo"
+
+        error {
+          // dscribe the condition for ignoring error.
+          if: "error.code == google.rpc.Code.UNAVAILABLE"
+          ignore: true
+        }
+      }
+    }
+    def {
+      // It returns true if the error was being ignored.
+      if: "res.hasIgnoredError()"
+
+      // Binds error code to code variable ( google.rpc.Code.UNAVAILABLE )
+      name: "code"
+
+      // Get original error variable by ignoredError method.
+      by: "res.ignoredError().code"
     }
   };
 }
