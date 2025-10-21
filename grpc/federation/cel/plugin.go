@@ -697,12 +697,12 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
 
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	if i.closed {
 		return nil
 	}
-
-	i.mu.Lock()
-	defer i.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(ctx, gcWaitTimeout)
 	defer cancel()

@@ -201,6 +201,7 @@ func (s *InlineEnvService) initServiceVariables(ctx context.Context) error {
 	}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	/*
 		def {

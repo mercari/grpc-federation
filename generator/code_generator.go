@@ -3299,6 +3299,10 @@ func (d *VariableDefinition) Type() string {
 	return d.file.toTypeText(d.VariableDefinition.Expr.Type)
 }
 
+func (d *VariableDefinition) TypeWithoutPtr() string {
+	return strings.TrimPrefix(d.Type(), "*")
+}
+
 func (d *VariableDefinition) EnumCastFunc() string {
 	typ := d.Enum().By.Out
 	if typ == nil {

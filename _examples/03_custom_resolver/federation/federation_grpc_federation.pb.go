@@ -360,6 +360,8 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 	celTypeHelper := grpcfed.NewCELTypeHelper("federation.v2dev", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "post.GetPostResponse")...)
+	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "user.GetUserResponse")...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.v2dev.PostV2devType", PostV2DevType_value, PostV2DevType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
@@ -420,6 +422,7 @@ func (s *FederationV2DevService) initServiceVariables(ctx context.Context) error
 	}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	/*
 		def {
@@ -514,6 +517,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_GetPostV2DevResponse(c
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "post"
@@ -726,6 +730,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_PostV2Dev(ctx context.
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.PostV2devArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "res"
@@ -1119,6 +1124,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_Ref(ctx context.Contex
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.RefArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &Ref{}
@@ -1201,6 +1207,7 @@ func (s *FederationV2DevService) resolve_Federation_V2Dev_User(ctx context.Conte
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.v2dev.UserArgument", req)}
 	value.AddEnv(s.env)
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "res"

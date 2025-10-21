@@ -27,6 +27,7 @@ var (
 
 {{- $pkgName := .Package.Name }}
 {{- $enums := .Enums }}
+{{- $useMethods := .AllUseMethods }}
 
 {{- range .EnumAttributes }}
 
@@ -322,6 +323,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	celTypeHelper := grpcfed.NewCELTypeHelper("{{ $pkgName }}", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	{{- range $useMethods }}
+	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "{{ .Response.FQDN }}")...)
+	{{- end }}
 	{{- range $enums }}
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("{{ .ProtoName }}", {{ .GoName }}_value, {{ .GoName }}_name)...)
 	{{- if .EnumAttribute }}
@@ -474,6 +478,7 @@ func (s *{{ $serviceName }}) initServiceVariables(ctx context.Context) error {
 	value.AddEnv(s.env)
 	{{- end }}
 	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	{{ range $svcVars.Defs }}
 	{{- if .IsValidation }}
@@ -610,6 +615,7 @@ func (s *{{ $serviceName }}) {{ .ResolverName }}(ctx context.Context, req *{{ $s
 	{{- if $svcVars }}
 	value.AddServiceVariable(s.svcVar)
 	{{- end }}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	{{- end }}
 	{{- template "evalDefSet" .VariableDefinitionSet }}
 

@@ -25,6 +25,18 @@ func (set *VariableDefinitionSet) DependencyGraph() *MessageDependencyGraph {
 	return set.Graph
 }
 
+func (e *GRPCError) Definitions() VariableDefinitions {
+	var ret VariableDefinitions
+	if e.DefSet != nil {
+		ret = append(ret, e.DefSet.Definitions()...)
+	}
+	for _, detail := range e.Details {
+		ret = append(ret, detail.DefSet.Definitions()...)
+		ret = append(ret, detail.Messages.Definitions()...)
+	}
+	return ret
+}
+
 func (e *GRPCError) DefinitionGroups() []VariableDefinitionGroup {
 	var ret []VariableDefinitionGroup
 	if e.DefSet != nil {

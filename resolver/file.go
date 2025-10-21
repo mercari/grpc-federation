@@ -48,6 +48,24 @@ func (f *File) AllEnumsIncludeDeps() []*Enum {
 	return f.allEnumsIncludeDeps(make(map[string][]*Enum))
 }
 
+// AllUseMethods list of methods that the Services included in the file depend on.
+func (f *File) AllUseMethods() []*Method {
+	mtdMap := map[*Method]struct{}{}
+	for _, svc := range f.Services {
+		for _, mtd := range svc.UseMethods() {
+			mtdMap[mtd] = struct{}{}
+		}
+	}
+	mtds := make([]*Method, 0, len(mtdMap))
+	for mtd := range mtdMap {
+		mtds = append(mtds, mtd)
+	}
+	sort.Slice(mtds, func(i, j int) bool {
+		return mtds[i].FQDN() < mtds[j].FQDN()
+	})
+	return mtds
+}
+
 func (f *File) AllCELPlugins() []*CELPlugin {
 	pluginMap := make(map[string]*CELPlugin)
 	for _, plugin := range f.CELPlugins {

@@ -3,7 +3,8 @@
 {{- if $def.HasErrorHandler }}
 {{- $grpcErrors := $def.GRPCErrors }}
 {{- if $grpcErrors }}
-grpcfed.SetGRPCError(ctx, value, err)
+grpcErr := grpcfed.ToGRPCError(ctx, err)
+ctx = grpcfed.WithGRPCError(ctx, grpcErr)
 var (
 	defaultMsg string
 	defaultCode grpcfed.Code
@@ -44,6 +45,7 @@ stat, handleErr := func() (*localStatusType, error) {
 			Body: func(value *localValueType) error {
 				{{- if .Ignore }}
 				stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
+				ret = &{{ $def.TypeWithoutPtr }}{}
 				return nil
 				{{- else if .IgnoreAndResponse }}
 				stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
@@ -206,6 +208,7 @@ if handleErr != nil {
 		return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
 	}
 }
+value.SetGRPCError(ret, grpcErr)
 {{- else }}
 if err := s.errorHandler(ctx, {{ $def.ServiceName }}_DependentMethod_{{ $def.DependentMethodName }}, err); err != nil {
 	return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))

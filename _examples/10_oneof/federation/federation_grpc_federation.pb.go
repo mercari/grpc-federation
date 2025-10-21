@@ -241,6 +241,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "user.GetUserResponse")...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.UserType", UserType_value, UserType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("user.UserType", user.UserType_value, user.UserType_name)...)
 	svc := &FederationService{
@@ -335,6 +336,7 @@ func (s *FederationService) resolve_Org_Federation_CastOneof(ctx context.Context
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.CastOneofArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &CastOneof{}
@@ -447,6 +449,7 @@ func (s *FederationService) resolve_Org_Federation_GetNoValueResponse(ctx contex
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetNoValueResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "no_value_sel"
@@ -521,6 +524,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "sel"
@@ -767,6 +771,7 @@ func (s *FederationService) resolve_Org_Federation_MessageSelection(ctx context.
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.MessageSelectionArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &MessageSelection{}
@@ -868,6 +873,7 @@ func (s *FederationService) resolve_Org_Federation_NestedMessageSelection_Nest(c
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.NestedMessageSelection_NestArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &NestedMessageSelection_Nest{}
@@ -951,6 +957,7 @@ func (s *FederationService) resolve_Org_Federation_NoValueSelection(ctx context.
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.NoValueSelectionArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// create a message value to be returned.
 	ret := &NoValueSelection{}
@@ -1035,6 +1042,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.UserArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
 		def {
 		  name: "_def0"
@@ -1167,6 +1175,7 @@ func (s *FederationService) resolve_Org_Federation_UserSelection(ctx context.Con
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.UserSelectionArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 
 	// assign named parameters to message arguments to pass to the custom resolver.
 	req.FederationService_Org_Federation_UserSelectionVariable.Ua = value.vars.Ua

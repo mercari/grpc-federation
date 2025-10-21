@@ -53,14 +53,15 @@ type Resolver struct {
 	fieldToRuleMap     map[*Field]*federation.FieldRule
 	oneofToRuleMap     map[*Oneof]*federation.OneofRule
 
-	cachedFileMap         map[string]*File
-	cachedMessageMap      map[string]*Message
-	cachedEnumMap         map[string]*Enum
-	cachedEnumValueMap    map[string]*EnumValue
-	cachedMethodMap       map[string]*Method
-	cachedServiceMap      map[string]*Service
-	cachedFileAllEnumMap  map[string][]*Enum
-	cachedEnumAccessorMap map[string][]cel.EnvOption
+	cachedFileMap              map[string]*File
+	cachedMessageMap           map[string]*Message
+	cachedEnumMap              map[string]*Enum
+	cachedEnumValueMap         map[string]*EnumValue
+	cachedMethodMap            map[string]*Method
+	cachedServiceMap           map[string]*Service
+	cachedFileAllEnumMap       map[string][]*Enum
+	cachedEnumAccessorMap      map[string][]cel.EnvOption
+	cachedGRPCErrorAccessorMap map[string][]cel.EnvOption
 }
 
 type Option func(*option)
@@ -103,14 +104,15 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		fieldToRuleMap:     make(map[*Field]*federation.FieldRule),
 		oneofToRuleMap:     make(map[*Oneof]*federation.OneofRule),
 
-		cachedFileMap:         make(map[string]*File),
-		cachedMessageMap:      msgMap,
-		cachedEnumMap:         make(map[string]*Enum),
-		cachedEnumValueMap:    enumValueMap,
-		cachedMethodMap:       make(map[string]*Method),
-		cachedServiceMap:      make(map[string]*Service),
-		cachedFileAllEnumMap:  make(map[string][]*Enum),
-		cachedEnumAccessorMap: make(map[string][]cel.EnvOption),
+		cachedFileMap:              make(map[string]*File),
+		cachedMessageMap:           msgMap,
+		cachedEnumMap:              make(map[string]*Enum),
+		cachedEnumValueMap:         enumValueMap,
+		cachedMethodMap:            make(map[string]*Method),
+		cachedServiceMap:           make(map[string]*Service),
+		cachedFileAllEnumMap:       make(map[string][]*Enum),
+		cachedEnumAccessorMap:      make(map[string][]cel.EnvOption),
+		cachedGRPCErrorAccessorMap: make(map[string][]cel.EnvOption),
 	}
 }
 
@@ -4798,6 +4800,7 @@ func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.En
 		cel.Variable(federation.ContextVariableName, cel.ObjectType(federation.ContextTypeName)),
 	}...)
 	envOpts = append(envOpts, r.createEnumAccessors(ctx.file())...)
+	envOpts = append(envOpts, r.createGRPCErrorAccessors(ctx.file())...)
 	envOpts = append(envOpts, r.enumOperators()...)
 	for _, plugin := range ctx.file().AllCELPlugins() {
 		envOpts = append(envOpts, cel.Lib(plugin))
@@ -5042,6 +5045,40 @@ func (r *Resolver) createEnumAccessors(file *File) []cel.EnvOption {
 		}
 	}
 	r.cachedEnumAccessorMap[file.Name] = ret
+	return ret
+}
+
+func (r *Resolver) createGRPCErrorAccessors(file *File) []cel.EnvOption {
+	if opts, exists := r.cachedGRPCErrorAccessorMap[file.Name]; exists {
+		return opts
+	}
+
+	mtds := file.AllUseMethods()
+	ret := make([]cel.EnvOption, 0, len(mtds))
+	for _, mtd := range mtds {
+		name := mtd.Response.FQDN()
+		ret = append(ret, []cel.EnvOption{
+			cel.Function(
+				"hasIgnoredError",
+				cel.MemberOverload(
+					fmt.Sprintf("%s_has_ignored_error", name),
+					[]*cel.Type{cel.ObjectType(name)},
+					cel.BoolType,
+					cel.FunctionBinding(func(_ ...ref.Val) ref.Val { return nil }),
+				),
+			),
+			cel.Function(
+				"ignoredError",
+				cel.MemberOverload(
+					fmt.Sprintf("%s_ignored_error", name),
+					[]*cel.Type{cel.ObjectType(name)},
+					cel.ObjectType("grpc.federation.private.Error"),
+					cel.FunctionBinding(func(_ ...ref.Val) ref.Val { return nil }),
+				),
+			),
+		}...)
+	}
+	r.cachedGRPCErrorAccessorMap[file.Name] = ret
 	return ret
 }
 
