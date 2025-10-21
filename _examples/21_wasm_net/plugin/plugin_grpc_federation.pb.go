@@ -11,11 +11,9 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"runtime"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 	grpcfednet "github.com/mercari/grpc-federation/grpc/federation/net"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -34,103 +32,65 @@ func init() {
 }
 
 func RegisterNetPlugin(plug NetPlugin) {
-	for {
-		content := grpcfed.ReadPluginContent()
-		if content == "exit\n" {
-			return
-		}
-		if content == "gc\n" {
-			runtime.GC()
-			grpcfed.WritePluginContent([]byte{'\n'})
-			continue
-		}
-		if content == "version\n" {
-			b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
-				ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
-				FederationVersion: "(devel)",
-				Functions: []string{
-					"example_net_httpGet_string_string",
-					"example_net_getFooEnv_string",
-					"example_net_getGOGCEnv_string",
-					"example_net_getFileContent_string_string",
-				},
-			})
-			grpcfed.WritePluginContent(append(b, '\n'))
-			continue
-		}
-		res, err := handleNetPlugin([]byte(content), plug)
-		if err != nil {
-			res = grpcfed.ToErrorCELPluginResponse(err)
-		}
-		encoded, err := grpcfed.EncodeCELPluginResponse(res)
-		if err != nil {
-			panic(fmt.Sprintf("failed to encode cel plugin response: %s", err.Error()))
-		}
-		grpcfed.WritePluginContent(append(encoded, '\n'))
-	}
-}
-
-func handleNetPlugin(content []byte, plug NetPlugin) (res *grpcfed.CELPluginResponse, e error) {
-	defer func() {
-		if r := recover(); r != nil {
-			res = grpcfed.ToErrorCELPluginResponse(fmt.Errorf("%v", r))
-		}
-	}()
-
-	req, err := grpcfed.DecodeCELPluginRequest(content)
-	if err != nil {
-		return nil, err
-	}
-	md := make(metadata.MD)
-	for _, m := range req.GetMetadata() {
-		md[m.GetKey()] = m.GetValues()
-	}
-	ctx := metadata.NewIncomingContext(context.Background(), md)
-	switch req.GetMethod() {
-	case "example_net_httpGet_string_string":
-		if len(req.GetArgs()) != 1 {
-			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
-		}
-		arg0, err := grpcfed.ToString(req.GetArgs()[0])
-		if err != nil {
-			return nil, err
-		}
-		ret, err := plug.Example_Net_HttpGet(ctx, arg0)
-		if err != nil {
-			return nil, err
-		}
-		return grpcfed.ToStringCELPluginResponse(ret)
-	case "example_net_getFooEnv_string":
-		if len(req.GetArgs()) != 0 {
-			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
-		}
-		ret, err := plug.Example_Net_GetFooEnv(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return grpcfed.ToStringCELPluginResponse(ret)
-	case "example_net_getGOGCEnv_string":
-		if len(req.GetArgs()) != 0 {
-			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
-		}
-		ret, err := plug.Example_Net_GetGOGCEnv(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return grpcfed.ToStringCELPluginResponse(ret)
-	case "example_net_getFileContent_string_string":
-		if len(req.GetArgs()) != 1 {
-			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
-		}
-		arg0, err := grpcfed.ToString(req.GetArgs()[0])
-		if err != nil {
-			return nil, err
-		}
-		ret, err := plug.Example_Net_GetFileContent(ctx, arg0)
-		if err != nil {
-			return nil, err
-		}
-		return grpcfed.ToStringCELPluginResponse(ret)
-	}
-	return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
+	grpcfed.PluginMainLoop(
+		grpcfed.CELPluginVersionSchema{
+			ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
+			FederationVersion: "(devel)",
+			Functions: []string{
+				"example_net_httpGet_string_string",
+				"example_net_getFooEnv_string",
+				"example_net_getGOGCEnv_string",
+				"example_net_getFileContent_string_string",
+			},
+		},
+		func(ctx context.Context, req *grpcfed.CELPluginRequest) (*grpcfed.CELPluginResponse, error) {
+			switch req.GetMethod() {
+			case "example_net_httpGet_string_string":
+				if len(req.GetArgs()) != 1 {
+					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
+				}
+				arg0, err := grpcfed.ToString(req.GetArgs()[0])
+				if err != nil {
+					return nil, err
+				}
+				ret, err := plug.Example_Net_HttpGet(ctx, arg0)
+				if err != nil {
+					return nil, err
+				}
+				return grpcfed.ToStringCELPluginResponse(ret)
+			case "example_net_getFooEnv_string":
+				if len(req.GetArgs()) != 0 {
+					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
+				}
+				ret, err := plug.Example_Net_GetFooEnv(ctx)
+				if err != nil {
+					return nil, err
+				}
+				return grpcfed.ToStringCELPluginResponse(ret)
+			case "example_net_getGOGCEnv_string":
+				if len(req.GetArgs()) != 0 {
+					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
+				}
+				ret, err := plug.Example_Net_GetGOGCEnv(ctx)
+				if err != nil {
+					return nil, err
+				}
+				return grpcfed.ToStringCELPluginResponse(ret)
+			case "example_net_getFileContent_string_string":
+				if len(req.GetArgs()) != 1 {
+					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
+				}
+				arg0, err := grpcfed.ToString(req.GetArgs()[0])
+				if err != nil {
+					return nil, err
+				}
+				ret, err := plug.Example_Net_GetFileContent(ctx, arg0)
+				if err != nil {
+					return nil, err
+				}
+				return grpcfed.ToStringCELPluginResponse(ret)
+			}
+			return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
+		},
+	)
 }

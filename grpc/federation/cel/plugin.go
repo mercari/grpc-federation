@@ -571,7 +571,7 @@ type CELPluginInstance struct {
 	cancelFn         context.CancelFunc
 }
 
-const PluginProtocolVersion = 1
+const PluginProtocolVersion = 2
 
 type PluginVersionSchema struct {
 	ProtocolVersion   int      `json:"protocolVersion"`
@@ -579,10 +579,10 @@ type PluginVersionSchema struct {
 	Functions         []string `json:"functions"`
 }
 
-var (
-	versionCommand = "version\n"
-	exitCommand    = "exit\n"
-	gcCommand      = "gc\n"
+const (
+	VersionCommand = "version"
+	ExitCommand    = "exit"
+	GCCommand      = "gc"
 )
 
 func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
@@ -592,7 +592,7 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	if err := i.write(ctx, []byte(versionCommand)); err != nil {
+	if err := i.write(ctx, []byte(VersionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
 	}
 	content, err := i.recv(ctx)
@@ -659,7 +659,7 @@ func (i *CELPluginInstance) close() error {
 	defer func() { i.closeResources(nil) }()
 
 	// start termination process.
-	i.reqCh <- []byte(exitCommand)
+	i.reqCh <- []byte(ExitCommand)
 	select {
 	case err := <-i.instanceModErrCh:
 		return err
@@ -707,7 +707,7 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, gcWaitTimeout)
 	defer cancel()
 
-	_ = i.write(ctx, []byte(gcCommand))
+	_ = i.write(ctx, []byte(GCCommand))
 
 	select {
 	case <-ctx.Done():
