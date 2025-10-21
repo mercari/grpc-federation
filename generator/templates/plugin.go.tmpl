@@ -17,78 +17,40 @@ func init() {
 {{- end }}
 
 func Register{{ $pluginName }}(plug {{ $pluginName }}) {
-	for {
-		content := grpcfed.ReadPluginContent()
-		if content == "exit\n" {
-			return
-		}
-		if content == "gc\n" {
-			runtime.GC()
-			grpcfed.WritePluginContent([]byte{'\n'})
-			continue
-		}
-		if content == "version\n" {
-			b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
-				ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
-				FederationVersion: "{{ .FederationVersion }}",
-				Functions: []string{
-					{{- range $pluginFunctions }}
-					"{{ .ExportName }}",
-					{{- end }}
-				},
-			})
-			grpcfed.WritePluginContent(append(b, '\n'))
-			continue
-		}
-		res, err := handle{{ $pluginName }}([]byte(content), plug)
-		if err != nil {
-			res = grpcfed.ToErrorCELPluginResponse(err)
-		}
-		encoded, err := grpcfed.EncodeCELPluginResponse(res)
-		if err != nil {
-			panic(fmt.Sprintf("failed to encode cel plugin response: %s", err.Error()))
-		}
-		grpcfed.WritePluginContent(append(encoded, '\n'))
-	}
-}
-
-func handle{{ $pluginName }}(content []byte, plug {{ $pluginName }}) (res *grpcfed.CELPluginResponse, e error) {
-	defer func() {
-		if r := recover(); r != nil {
-			res = grpcfed.ToErrorCELPluginResponse(fmt.Errorf("%v", r))
-		}
-	}()
-
-	req, err := grpcfed.DecodeCELPluginRequest(content)
-	if err != nil {
-		return nil, err
-	}
-	md := make(metadata.MD)
-	for _, m := range req.GetMetadata() {
-		md[m.GetKey()] = m.GetValues()
-	}
-	ctx := metadata.NewIncomingContext(context.Background(), md)
-	switch req.GetMethod() {
-	{{- range $pluginFunctions }}
-	case "{{ .ExportName }}":
-		{{- $argLen := len .Args }}
-		if len(req.GetArgs()) != {{ $argLen }} {
-			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), {{ $argLen }})
-		}
-		{{- range $idx, $arg := .Args }}
-		arg{{ $idx }}, err := grpcfed.{{ $arg.Converter }}(req.GetArgs()[{{ $idx }}])
-		if err != nil {
-			return nil, err
-		}
-		{{- end }}
-		ret, err := plug.{{ .GoName }}(ctx, {{- range $idx, $arg := .Args }}arg{{ $idx }},{{- end }})
-		if err != nil {
-			return nil, err
-		}
-		return grpcfed.{{ .Return.Converter }}(ret)
-	{{- end }}
-	}
-	return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
+	grpcfed.PluginMainLoop(
+		grpcfed.CELPluginVersionSchema{
+			ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
+			FederationVersion: "{{ .FederationVersion }}",
+			Functions: []string{
+				{{- range $pluginFunctions }}
+				"{{ .ExportName }}",
+				{{- end }}
+			},
+		},
+		func(ctx context.Context, req *grpcfed.CELPluginRequest) (*grpcfed.CELPluginResponse, error) {
+			switch req.GetMethod() {
+			{{- range $pluginFunctions }}
+			case "{{ .ExportName }}":
+				{{- $argLen := len .Args }}
+				if len(req.GetArgs()) != {{ $argLen }} {
+					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), {{ $argLen }})
+				}
+				{{- range $idx, $arg := .Args }}
+				arg{{ $idx }}, err := grpcfed.{{ $arg.Converter }}(req.GetArgs()[{{ $idx }}])
+				if err != nil {
+					return nil, err
+				}
+				{{- end }}
+				ret, err := plug.{{ .GoName }}(ctx, {{- range $idx, $arg := .Args }}arg{{ $idx }},{{- end }})
+				if err != nil {
+					return nil, err
+				}
+				return grpcfed.{{ .Return.Converter }}(ret)
+			{{- end }}
+			}
+			return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
+		},
+	)
 }
 {{- end }}
 {{- end }}

@@ -533,7 +533,6 @@ func (f *File) StandardImports() []*Import {
 		{Path: "io", Used: existsServiceDef},
 		{Path: "log/slog", Used: existsServiceDef},
 		{Path: "reflect", Used: true},
-		{Path: "runtime", Used: existsPluginDef},
 	}
 	usedPkgs := make([]*Import, 0, len(pkgs))
 	for _, pkg := range pkgs {
@@ -574,7 +573,6 @@ func (f *File) DefaultImports() []*Import {
 
 		{Path: "go.opentelemetry.io/otel", Used: existsServiceDef},
 		{Path: "go.opentelemetry.io/otel/trace", Used: existsServiceDef},
-		{Path: "google.golang.org/grpc/metadata", Used: existsPluginDef},
 
 		{Path: "google.golang.org/protobuf/types/descriptorpb"},
 		{Path: "google.golang.org/protobuf/types/known/dynamicpb"},

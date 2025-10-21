@@ -10,10 +10,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"runtime"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -26,79 +24,41 @@ type AccountPlugin interface {
 }
 
 func RegisterAccountPlugin(plug AccountPlugin) {
-	for {
-		content := grpcfed.ReadPluginContent()
-		if content == "exit\n" {
-			return
-		}
-		if content == "gc\n" {
-			runtime.GC()
-			grpcfed.WritePluginContent([]byte{'\n'})
-			continue
-		}
-		if content == "version\n" {
-			b, _ := grpcfed.EncodeCELPluginVersion(grpcfed.CELPluginVersionSchema{
-				ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
-				FederationVersion: "(devel)",
-				Functions: []string{
-					"example_account_get_id_string",
-					"example_account_get_id_string_string",
-				},
-			})
-			grpcfed.WritePluginContent(append(b, '\n'))
-			continue
-		}
-		res, err := handleAccountPlugin([]byte(content), plug)
-		if err != nil {
-			res = grpcfed.ToErrorCELPluginResponse(err)
-		}
-		encoded, err := grpcfed.EncodeCELPluginResponse(res)
-		if err != nil {
-			panic(fmt.Sprintf("failed to encode cel plugin response: %s", err.Error()))
-		}
-		grpcfed.WritePluginContent(append(encoded, '\n'))
-	}
-}
-
-func handleAccountPlugin(content []byte, plug AccountPlugin) (res *grpcfed.CELPluginResponse, e error) {
-	defer func() {
-		if r := recover(); r != nil {
-			res = grpcfed.ToErrorCELPluginResponse(fmt.Errorf("%v", r))
-		}
-	}()
-
-	req, err := grpcfed.DecodeCELPluginRequest(content)
-	if err != nil {
-		return nil, err
-	}
-	md := make(metadata.MD)
-	for _, m := range req.GetMetadata() {
-		md[m.GetKey()] = m.GetValues()
-	}
-	ctx := metadata.NewIncomingContext(context.Background(), md)
-	switch req.GetMethod() {
-	case "example_account_get_id_string":
-		if len(req.GetArgs()) != 0 {
-			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
-		}
-		ret, err := plug.Example_Account_GetId(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return grpcfed.ToStringCELPluginResponse(ret)
-	case "example_account_get_id_string_string":
-		if len(req.GetArgs()) != 1 {
-			return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
-		}
-		arg0, err := grpcfed.ToString(req.GetArgs()[0])
-		if err != nil {
-			return nil, err
-		}
-		ret, err := plug.Example_Account_GetId2(ctx, arg0)
-		if err != nil {
-			return nil, err
-		}
-		return grpcfed.ToStringCELPluginResponse(ret)
-	}
-	return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
+	grpcfed.PluginMainLoop(
+		grpcfed.CELPluginVersionSchema{
+			ProtocolVersion:   grpcfed.CELPluginProtocolVersion,
+			FederationVersion: "(devel)",
+			Functions: []string{
+				"example_account_get_id_string",
+				"example_account_get_id_string_string",
+			},
+		},
+		func(ctx context.Context, req *grpcfed.CELPluginRequest) (*grpcfed.CELPluginResponse, error) {
+			switch req.GetMethod() {
+			case "example_account_get_id_string":
+				if len(req.GetArgs()) != 0 {
+					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 0)
+				}
+				ret, err := plug.Example_Account_GetId(ctx)
+				if err != nil {
+					return nil, err
+				}
+				return grpcfed.ToStringCELPluginResponse(ret)
+			case "example_account_get_id_string_string":
+				if len(req.GetArgs()) != 1 {
+					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 1)
+				}
+				arg0, err := grpcfed.ToString(req.GetArgs()[0])
+				if err != nil {
+					return nil, err
+				}
+				ret, err := plug.Example_Account_GetId2(ctx, arg0)
+				if err != nil {
+					return nil, err
+				}
+				return grpcfed.ToStringCELPluginResponse(ret)
+			}
+			return nil, fmt.Errorf("unexpected method name: %s", req.GetMethod())
+		},
+	)
 }
