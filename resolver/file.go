@@ -51,8 +51,8 @@ func (f *File) AllEnumsIncludeDeps() []*Enum {
 // AllUseMethods list of methods that the Services included in the file depend on.
 func (f *File) AllUseMethods() []*Method {
 	mtdMap := map[*Method]struct{}{}
-	for _, svc := range f.Services {
-		for _, mtd := range svc.UseMethods() {
+	for _, msg := range f.Messages {
+		for _, mtd := range msg.DependMethods() {
 			mtdMap[mtd] = struct{}{}
 		}
 	}
