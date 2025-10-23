@@ -73,7 +73,7 @@ func (s *EnumSelector) ConvertToNative(typeDesc reflect.Type) (any, error) {
 }
 
 func (s *EnumSelector) ConvertToType(typeValue ref.Type) ref.Val {
-	return celtypes.NewErr(fmt.Sprintf("%s: type conversion does not support", EnumSelectorFQDN))
+	return celtypes.NewErr("%s: type conversion does not support", EnumSelectorFQDN)
 }
 
 func (s *EnumSelector) Equal(other ref.Val) ref.Val {
@@ -130,12 +130,12 @@ func (v *enumValidator) Validate(_ *cel.Env, _ cel.ValidatorConfig, a *ast.AST, 
 		dupKey1 := v.getKey(funcName, expr1, a)
 		dupKey2 := v.getKey(funcName, expr2, a)
 		if err := v.validateType(type1, candidateTypes...); err != nil {
-			iss.ReportErrorAtID(expr1.ID(), err.Error())
+			iss.ReportErrorAtID(expr1.ID(), "%s", err.Error())
 			dupErrs[dupKey1] = struct{}{}
 			continue
 		}
 		if err := v.validateType(type2, candidateTypes...); err != nil {
-			iss.ReportErrorAtID(expr2.ID(), err.Error())
+			iss.ReportErrorAtID(expr2.ID(), "%s", err.Error())
 			dupErrs[dupKey2] = struct{}{}
 			continue
 		}

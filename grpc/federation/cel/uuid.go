@@ -25,7 +25,7 @@ func (u *UUID) ConvertToNative(typeDesc reflect.Type) (any, error) {
 }
 
 func (u *UUID) ConvertToType(typeValue ref.Type) ref.Val {
-	return types.NewErr("grpc.federation.uuid: uuid type conversion does not support")
+	return types.NewErrFromString("grpc.federation.uuid: uuid type conversion does not support")
 }
 
 func (u *UUID) Equal(other ref.Val) ref.Val {
@@ -78,7 +78,7 @@ func (lib *UUIDLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, _ ...ref.Val) ref.Val {
 					id, err := uuid.NewRandom()
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return &UUID{UUID: id}
 				},
@@ -90,7 +90,7 @@ func (lib *UUIDLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					id, err := uuid.NewRandomFromReader(args[0].(*Rand))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return &UUID{UUID: id}
 				},

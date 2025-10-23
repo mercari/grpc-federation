@@ -26,7 +26,7 @@ func (s *Source) ConvertToNative(typeDesc reflect.Type) (any, error) {
 }
 
 func (s *Source) ConvertToType(typeValue ref.Type) ref.Val {
-	return types.NewErr("grpc.federation.rand: source type conversion does not support")
+	return types.NewErrFromString("grpc.federation.rand: source type conversion does not support")
 }
 
 func (s *Source) Equal(other ref.Val) ref.Val {
@@ -53,7 +53,7 @@ func (r *Rand) ConvertToNative(typeDesc reflect.Type) (any, error) {
 }
 
 func (r *Rand) ConvertToType(typeValue ref.Type) ref.Val {
-	return types.NewErr("grpc.federation.rand: rand type conversion does not support")
+	return types.NewErrFromString("grpc.federation.rand: rand type conversion does not support")
 }
 
 func (r *Rand) Equal(other ref.Val) ref.Val {
