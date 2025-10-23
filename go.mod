@@ -1,16 +1,16 @@
 module github.com/mercari/grpc-federation
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/bufbuild/protocompile v0.9.0
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/goccy/go-yaml v1.11.2
-	github.com/goccy/wasi-go v0.2.0
-	github.com/goccy/wasi-go-net v0.1.1
+	github.com/goccy/wasi-go v0.3.1
+	github.com/goccy/wasi-go-net v0.3.0
 	github.com/google/cel-go v0.23.1
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -50,6 +50,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
