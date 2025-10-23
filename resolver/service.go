@@ -173,26 +173,6 @@ func (s *Service) UseServices() []*Service {
 	return svcs
 }
 
-func (s *Service) UseMethods() []*Method {
-	if s == nil {
-		return nil
-	}
-	mtdMap := map[*Method]struct{}{}
-	for _, method := range s.Methods {
-		for _, mtd := range method.Response.DependMethods() {
-			mtdMap[mtd] = struct{}{}
-		}
-	}
-	mtds := make([]*Method, 0, len(mtdMap))
-	for mtd := range mtdMap {
-		mtds = append(mtds, mtd)
-	}
-	sort.Slice(mtds, func(i, j int) bool {
-		return mtds[i].FQDN() < mtds[j].FQDN()
-	})
-	return mtds
-}
-
 func (sv *ServiceVariable) MessageExprs() []*MessageExpr {
 	if sv.Expr == nil {
 		return nil
