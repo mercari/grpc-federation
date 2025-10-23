@@ -1,6 +1,6 @@
 module example
 
-go 1.24.9
+go 1.24.0
 
 replace github.com/mercari/grpc-federation => ../../
 
