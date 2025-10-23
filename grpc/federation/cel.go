@@ -286,7 +286,7 @@ func EnumAttrOption[T ~int32](enumName string, enumAttrMap EnumAttributeMap[T]) 
 			cel.BinaryBinding(func(enumValue, key ref.Val) ref.Val {
 				enumValueAttrMap := enumAttrMap[T(enumValue.(celtypes.Int))]
 				if enumValueAttrMap == nil {
-					return celtypes.NewErr(fmt.Sprintf(`could not find enum value attribute map from %q`, enumName))
+					return celtypes.NewErr(`could not find enum value attribute map from %q`, enumName)
 				}
 				return celtypes.String(enumValueAttrMap[string(key.(celtypes.String))])
 			}),

@@ -123,7 +123,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 
 					result, err := url.JoinPath(base, paths...)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(result)
 				},
@@ -143,7 +143,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					result, err := url.PathUnescape(string(args[0].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(result)
 				},
@@ -163,7 +163,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					result, err := url.QueryUnescape(string(args[0].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(result)
 				},
@@ -177,7 +177,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					v, err := url.Parse(string(args[0].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toURLValue(*v)
 				},
@@ -189,7 +189,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					v, err := url.ParseRequestURI(string(args[0].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toURLValue(*v)
 				},
@@ -347,7 +347,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 					var err error
 					v.Path, err = url.JoinPath(v.Path, paths...)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 
 					return lib.toURLValue(v)
@@ -362,7 +362,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 
 					b, err := v.MarshalBinary()
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 
 					return types.Bytes(b)
@@ -377,7 +377,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 
 					u, err := v.Parse(string(args[0].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 
 					return lib.toURLValue(*u)
@@ -458,7 +458,7 @@ func (lib *URLLibrary) CompileOptions() []cel.EnvOption {
 					var u url.URL
 					err := u.UnmarshalBinary(args[0].(types.Bytes))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toURLValue(u)
 				},

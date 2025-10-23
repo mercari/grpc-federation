@@ -280,7 +280,7 @@ func (p *CELPlugin) Call(ctx context.Context, fn *CELFunction, args ...ref.Val) 
 	}
 	instance, err := p.getInstance(ctx)
 	if err != nil {
-		return types.NewErr(err.Error())
+		return types.NewErrFromString(err.Error())
 	}
 	span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 	ret, err := instance.Call(ctx, fn, md, args...)
@@ -294,16 +294,16 @@ func (p *CELPlugin) Call(ctx context.Context, fn *CELFunction, args ...ref.Val) 
 			// Since getInstance() always returns an available instance, it will return the backup instance if the active instance has been closed.
 			instance, err := p.getInstance(ctx)
 			if err != nil {
-				return types.NewErr(err.Error())
+				return types.NewErrFromString(err.Error())
 			}
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			retryRet, err := instance.Call(ctx, fn, md, args...)
 			if err != nil {
-				return types.NewErr(err.Error())
+				return types.NewErrFromString(err.Error())
 			}
 			return retryRet
 		} else {
-			return types.NewErr(err.Error())
+			return types.NewErrFromString(err.Error())
 		}
 	}
 	return ret
@@ -792,7 +792,7 @@ func (i *CELPluginInstance) recvResponse(ctx context.Context, fn *CELFunction) (
 		return nil, fmt.Errorf("grpc-federation: failed to decode response: %w", err)
 	}
 	if res.Error != "" {
-		return types.NewErr(res.Error), nil
+		return types.NewErrFromString(res.Error), nil
 	}
 	return i.celPluginValueToRef(fn, fn.Return, res.Value), nil
 }
@@ -933,7 +933,7 @@ func (i *CELPluginInstance) celPluginValueToRef(fn *CELFunction, typ *cel.Type, 
 	case types.DoubleKind:
 		return types.Double(v.GetDouble())
 	case types.ErrorKind:
-		return types.NewErr(v.GetString_())
+		return types.NewErrFromString(v.GetString_())
 	case types.IntKind:
 		return types.Int(v.GetInt64())
 	case types.StringKind:

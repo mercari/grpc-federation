@@ -241,7 +241,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					d, err := time.ParseDuration(string(args[0].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Duration{Duration: d}
 				},
@@ -253,7 +253,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(args[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Duration{
 						Duration: time.Since(v),
@@ -267,7 +267,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(args[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Duration{
 						Duration: time.Until(v),
@@ -396,7 +396,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					loc, err := time.LoadLocation(string(args[0].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toLocationValue(loc.String(), 0)
 				},
@@ -408,7 +408,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					loc, err := time.LoadLocationFromTZData(string(args[0].(types.String)), []byte(args[1].(types.Bytes)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toLocationValue(loc.String(), 0)
 				},
@@ -420,7 +420,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					loc, err := self.Value().(*Location).GoLocation()
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(loc.String())
 				},
@@ -447,7 +447,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					loc, err := args[7].Value().(*Location).GoLocation()
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(
 						time.Date(
@@ -478,7 +478,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					t, err := time.Parse(string(args[0].(types.String)), string(args[1].(types.String)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(t)
 				},
@@ -490,11 +490,11 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					loc, err := args[2].Value().(*Location).GoLocation()
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					t, err := time.ParseInLocation(string(args[0].(types.String)), string(args[1].(types.String)), loc)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(t)
 				},
@@ -530,7 +530,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(
 						v.Add(time.Duration(args[0].(types.Int))),
@@ -541,7 +541,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(
 						v.Add(args[0].(types.Duration).Duration),
@@ -555,7 +555,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(
 						v.AddDate(int(args[0].(types.Int)), int(args[1].(types.Int)), int(args[2].(types.Int))),
@@ -569,11 +569,11 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					a0, err := lib.refToGoTimeValue(args[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bool(v.After(a0))
 				},
@@ -585,7 +585,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bytes(
 						v.AppendFormat(
@@ -599,7 +599,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bytes(
 						v.AppendFormat(
@@ -616,11 +616,11 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					a0, err := lib.refToGoTimeValue(args[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bool(v.Before(a0))
 				},
@@ -632,11 +632,11 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					a0, err := lib.refToGoTimeValue(args[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Compare(a0))
 				},
@@ -648,7 +648,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Day())
 				},
@@ -660,11 +660,11 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					a0, err := lib.refToGoTimeValue(args[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bool(v.Equal(a0))
 				},
@@ -676,7 +676,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(v.Format(string(args[0].(types.String))))
 				},
@@ -688,7 +688,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Hour())
 				},
@@ -700,11 +700,11 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					loc, err := args[0].Value().(*Location).GoLocation()
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(v.In(loc))
 				},
@@ -716,7 +716,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bool(v.IsDST())
 				},
@@ -728,7 +728,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bool(v.IsZero())
 				},
@@ -740,7 +740,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(v.Local())
 				},
@@ -752,7 +752,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					name, offset := v.Zone()
 					return lib.toLocationValue(name, offset)
@@ -765,7 +765,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Minute())
 				},
@@ -777,7 +777,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Month())
 				},
@@ -789,7 +789,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Nanosecond())
 				},
@@ -801,7 +801,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(v.Round(time.Duration(args[0].(types.Int))))
 				},
@@ -810,7 +810,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(v.Round(args[0].(types.Duration).Duration))
 				},
@@ -822,7 +822,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Second())
 				},
@@ -834,7 +834,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(v.String())
 				},
@@ -846,11 +846,11 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					a0, err := lib.refToGoTimeValue(args[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Duration{
 						Duration: v.Sub(a0),
@@ -864,7 +864,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(v.Truncate(time.Duration(args[0].(types.Int))))
 				},
@@ -873,7 +873,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(v.Truncate(args[0].(types.Duration).Duration))
 				},
@@ -885,7 +885,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return lib.toTimeValue(v.UTC())
 				},
@@ -897,7 +897,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Unix())
 				},
@@ -909,7 +909,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.UnixMicro())
 				},
@@ -921,7 +921,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.UnixMilli())
 				},
@@ -933,7 +933,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.UnixNano())
 				},
@@ -945,7 +945,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Weekday())
 				},
@@ -957,7 +957,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.Year())
 				},
@@ -969,7 +969,7 @@ func (lib *TimeLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, self ref.Val, args ...ref.Val) ref.Val {
 					v, err := lib.refToGoTimeValue(self)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(v.YearDay())
 				},

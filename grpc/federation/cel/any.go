@@ -77,11 +77,11 @@ func (lib *AnyLibrary) CompileOptions() []cel.EnvOption {
 						// google.protobuf.Timestamppb
 						msg = timestamppb.New(v)
 					default:
-						return types.NewErr("specified type as an argument must be a Protocol Buffers message type")
+						return types.NewErrFromString("specified type as an argument must be a Protocol Buffers message type")
 					}
 					anymsg, err := anypb.New(msg)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return &Any{Any: anymsg}
 				},

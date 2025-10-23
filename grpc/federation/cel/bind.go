@@ -121,7 +121,7 @@ func BindExtFunction(extLib cel.EnvOption, name, signature string, args []*cel.T
 				result,
 				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
 					if prgErr != nil {
-						return types.NewErr(prgErr.Error())
+						return types.NewErrFromString(prgErr.Error())
 					}
 					args := map[string]any{}
 					for idx, value := range values[1:] {
@@ -129,7 +129,7 @@ func BindExtFunction(extLib cel.EnvOption, name, signature string, args []*cel.T
 					}
 					out, _, err := prg.Eval(args)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return out
 				}),
@@ -155,7 +155,7 @@ func BindExtMemberFunction(extLib cel.EnvOption, name, signature string, self *c
 				result,
 				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
 					if prgErr != nil {
-						return types.NewErr(prgErr.Error())
+						return types.NewErrFromString(prgErr.Error())
 					}
 					self := values[0]
 					args := map[string]any{"self": self}
@@ -164,7 +164,7 @@ func BindExtMemberFunction(extLib cel.EnvOption, name, signature string, self *c
 					}
 					out, _, err := prg.Eval(args)
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return out
 				}),

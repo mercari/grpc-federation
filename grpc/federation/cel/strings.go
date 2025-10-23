@@ -559,7 +559,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					i, err := strconv.Atoi(args[0].(types.String).Value().(string))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(i)
 				},
@@ -655,7 +655,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					b, err := strconv.ParseBool(args[0].(types.String).Value().(string))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Bool(b)
 				},
@@ -667,7 +667,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					c, err := strconv.ParseComplex(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.NewDynamicList(types.DefaultTypeAdapter, []ref.Val{types.Double(real(c)), types.Double(imag(c))})
 				},
@@ -679,7 +679,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					f, err := strconv.ParseFloat(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Double(f)
 				},
@@ -691,7 +691,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					i, err := strconv.ParseInt(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)), int(args[2].(types.Int).Value().(int64)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Int(i)
 				},
@@ -703,7 +703,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					u, err := strconv.ParseUint(args[0].(types.String).Value().(string), int(args[1].(types.Int).Value().(int64)), int(args[2].(types.Int).Value().(int64)))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.Uint(u)
 				},
@@ -763,7 +763,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					s, err := strconv.QuotedPrefix(args[0].(types.String).Value().(string))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(s)
 				},
@@ -775,7 +775,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					s, err := strconv.Unquote(args[0].(types.String).Value().(string))
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.String(s)
 				},
@@ -787,7 +787,7 @@ func (lib *StringsLibrary) CompileOptions() []cel.EnvOption {
 				func(_ context.Context, args ...ref.Val) ref.Val {
 					s, b, t, err := strconv.UnquoteChar(args[0].(types.String).Value().(string), args[1].(types.String).Value().(string)[0])
 					if err != nil {
-						return types.NewErr(err.Error())
+						return types.NewErrFromString(err.Error())
 					}
 					return types.NewDynamicList(types.DefaultTypeAdapter, []ref.Val{types.String(s), types.Bool(b), types.String(t)})
 				},
