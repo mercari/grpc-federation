@@ -7,7 +7,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/goccy/go-yaml v1.11.2
-	github.com/goccy/wasi-go v0.3.1
+	github.com/goccy/wasi-go v0.3.2
 	github.com/goccy/wasi-go-net v0.3.0
 	github.com/google/cel-go v0.23.1
 	github.com/google/go-cmp v0.7.0
