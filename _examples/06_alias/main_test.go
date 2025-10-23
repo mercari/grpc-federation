@@ -186,6 +186,8 @@ func TestFederation(t *testing.T) {
 			M:     &post.M{X: "xxx"},
 			Type:  federation.PostType_POST_TYPE_BAR,
 			Type2: federation.PostType_POST_TYPE_BAR,
+			Type3: federation.PostType_POST_TYPE_BAR,
+			Type4: federation.PostType_POST_TYPE_FOO,
 		},
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},

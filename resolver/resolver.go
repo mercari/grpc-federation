@@ -1941,6 +1941,11 @@ func (r *Resolver) validateEnumMultipleAliases(fromType *Type, toField *Field) e
 	if fromType.Enum == toType.Enum {
 		return nil
 	}
+	for _, alias := range toType.Enum.Rule.Aliases {
+		if fromType.Enum == alias {
+			return nil
+		}
+	}
 	if fromType.IsEnumSelector() {
 		return nil
 	}
