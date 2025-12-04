@@ -15,7 +15,7 @@ require (
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mark3labs/mcp-go v0.32.0
-	github.com/tetratelabs/wazero v1.9.0
+	github.com/tetratelabs/wazero v1.10.1
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/pkg v0.0.0-20210717090340-384b27a52fb2
 	go.lsp.dev/protocol v0.12.0
