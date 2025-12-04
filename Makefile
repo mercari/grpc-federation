@@ -93,7 +93,10 @@ generate/examples/%:
 	$(MAKE) -C $* generate
 
 .PHONY: build
-build: build/protoc-gen-grpc-federation build/grpc-federation-linter build/grpc-federation-language-server build/grpc-federation-generator
+build: build/grpcfedctl build/protoc-gen-grpc-federation build/grpc-federation-linter build/grpc-federation-language-server build/grpc-federation-generator
+
+build/grpcfedctl:
+	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/grpcfedctl ./cmd/grpcfedctl
 
 build/protoc-gen-grpc-federation:
 	go build -ldflags "$(LDFLAGS)" -o $(GOBIN)/protoc-gen-grpc-federation ./cmd/protoc-gen-grpc-federation
