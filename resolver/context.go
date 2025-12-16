@@ -87,10 +87,6 @@ func (c *context) withErrDetailIndex(idx int) *context {
 	return ctx
 }
 
-func (c *context) clearVariableDefinitions() {
-	c.variableMap = make(map[string]*VariableDefinition)
-}
-
 func (c *context) addVariableDefinition(def *VariableDefinition) {
 	c.variableMap[def.Name] = def
 }
