@@ -1,5 +1,9 @@
 package resolver
 
+import (
+	"maps"
+)
+
 type context struct {
 	errorBuilder *errorBuilder
 	allWarnings  *allWarnings
@@ -37,6 +41,14 @@ func (c *context) clone() *context {
 		errDetailIdx: c.errDetailIdx,
 		variableMap:  c.variableMap,
 	}
+}
+
+func (c *context) withVariableMap() *context {
+	ctx := c.clone()
+	variableMap := make(map[string]*VariableDefinition)
+	maps.Copy(variableMap, c.variableMap)
+	ctx.variableMap = variableMap
+	return ctx
 }
 
 func (c *context) withFile(file *File) *context {

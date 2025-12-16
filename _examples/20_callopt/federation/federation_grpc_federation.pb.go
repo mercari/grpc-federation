@@ -204,12 +204,13 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			Hdr     map[string][]string
-			HdrKeys []string
-			Md      map[string][]string
-			Res     *post.GetPostResponse
-			Tlr     map[string][]string
-			TlrKeys []string
+			Hdr       map[string][]string
+			HdrKeys   []string
+			Md        map[string][]string
+			Res       *post.GetPostResponse
+			Tlr       map[string][]string
+			TlrKeys   []string
+			XDef3Def0 int64
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.federation.GetPostResponseArgument", req)}
@@ -342,9 +343,108 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 					}
 				})
 				if err != nil {
-					if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
-						return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
+					grpcErr := grpcfed.ToGRPCError(ctx, err)
+					ctx = grpcfed.WithGRPCError(ctx, grpcErr)
+					var (
+						defaultMsg     string
+						defaultCode    grpcfed.Code
+						defaultDetails []grpcfed.ProtoMessage
+					)
+					if stat, exists := grpcfed.GRPCStatusFromError(err); exists {
+						defaultMsg = stat.Message()
+						defaultCode = stat.Code()
+						details := stat.Details()
+						defaultDetails = make([]grpcfed.ProtoMessage, 0, len(details))
+						for _, detail := range details {
+							msg, ok := detail.(grpcfed.ProtoMessage)
+							if ok {
+								defaultDetails = append(defaultDetails, msg)
+							}
+						}
+						_ = defaultMsg
+						_ = defaultCode
+						_ = defaultDetails
 					}
+
+					type localStatusType struct {
+						status   *grpcfed.Status
+						logLevel slog.Level
+					}
+					stat, handleErr := func() (*localStatusType, error) {
+						var stat *grpcfed.Status
+						{
+							/*
+								def {
+								  name: "_def3_def0"
+								  by: "1"
+								}
+							*/
+							def__def3_def0 := func(ctx context.Context) error {
+								return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
+									Name: `_def3_def0`,
+									Type: grpcfed.CELIntType,
+									Setter: func(value *localValueType, v int64) error {
+										value.vars.XDef3Def0 = v
+										return nil
+									},
+									By:           `1`,
+									ByCacheIndex: 6,
+								})
+							}
+
+							if err := def__def3_def0(ctx); err != nil {
+								grpcfed.RecordErrorToSpan(ctx, err)
+								return nil, err
+							}
+							if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
+								Value:      value,
+								Expr:       `true`,
+								CacheIndex: 7,
+								Body: func(value *localValueType) error {
+									var errorMessage string
+									if defaultMsg != "" {
+										errorMessage = defaultMsg
+									} else {
+										errorMessage = "error"
+									}
+
+									var code grpcfed.Code
+									code = defaultCode
+									status := grpcfed.NewGRPCStatus(code, errorMessage)
+									statusWithDetails, err := status.WithDetails(defaultDetails...)
+									if err != nil {
+										grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
+										stat = status
+									} else {
+										stat = statusWithDetails
+									}
+									return nil
+								},
+							}); err != nil {
+								return nil, err
+							}
+							if stat != nil {
+								return &localStatusType{status: stat, logLevel: slog.LevelError}, nil
+							}
+						}
+						return nil, nil
+					}()
+					if handleErr != nil {
+						grpcfed.Logger(ctx).ErrorContext(ctx, "failed to handle error", slog.String("error", handleErr.Error()))
+						// If it fails during error handling, return the original error.
+						if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
+							return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
+						}
+					} else if stat != nil {
+						if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, stat.status.Err()); err != nil {
+							return nil, grpcfed.NewErrorWithLogAttrs(err, stat.logLevel, grpcfed.LogAttrs(ctx))
+						}
+					} else {
+						if err := s.errorHandler(ctx, FederationService_DependentMethod_Post_PostService_GetPost, err); err != nil {
+							return nil, grpcfed.NewErrorWithLogAttrs(err, slog.LevelError, grpcfed.LogAttrs(ctx))
+						}
+					}
+					value.SetGRPCError(ret, grpcErr)
 				}
 				return ret, nil
 			},
@@ -361,7 +461,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	def_hdr_keys := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[[]string, *localValueType]{
 			If:           `res != null`,
-			IfCacheIndex: 6,
+			IfCacheIndex: 8,
 			Name:         `hdr_keys`,
 			Type:         grpcfed.CELListType(grpcfed.CELStringType),
 			Setter: func(value *localValueType, v []string) error {
@@ -369,7 +469,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `hdr.map(k, k)`,
-			ByCacheIndex: 7,
+			ByCacheIndex: 9,
 		})
 	}
 
@@ -383,7 +483,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	def_tlr_keys := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[[]string, *localValueType]{
 			If:           `res != null`,
-			IfCacheIndex: 8,
+			IfCacheIndex: 10,
 			Name:         `tlr_keys`,
 			Type:         grpcfed.CELListType(grpcfed.CELStringType),
 			Setter: func(value *localValueType, v []string) error {
@@ -391,7 +491,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `tlr.map(k, k)`,
-			ByCacheIndex: 9,
+			ByCacheIndex: 11,
 		})
 	}
 
@@ -534,7 +634,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `hdr_keys.sortAsc(v, v)`,
-		CacheIndex: 10,
+		CacheIndex: 12,
 		Setter: func(v []string) error {
 			ret.Header = v
 			return nil
@@ -547,7 +647,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `tlr_keys.sortAsc(v, v)`,
-		CacheIndex: 11,
+		CacheIndex: 13,
 		Setter: func(v []string) error {
 			ret.Trailer = v
 			return nil
