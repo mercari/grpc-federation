@@ -43,7 +43,7 @@ func (c *PluginCacheCreateCommand) Execute(args []string) error {
 	}
 	if _, err := wazero.NewRuntimeWithConfig(
 		ctx,
-		wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache),
+		wazero.NewRuntimeConfigCompiler().WithCompilationCache(cache).WithCloseOnContextDone(true),
 	).CompileModule(ctx, f); err != nil {
 		return fmt.Errorf("failed to compile wasm file: %w", err)
 	}
