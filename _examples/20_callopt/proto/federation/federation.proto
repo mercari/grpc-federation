@@ -40,6 +40,9 @@ message GetPostResponse {
           max_call_recv_msg_size: 100
           max_call_send_msg_size: 100
         }
+        error {
+          def { by: "1" }
+        }
       }
     }
     def {name: "hdr_keys" by: "hdr.map(k, k)" if: "res != null"}

@@ -1990,8 +1990,7 @@ func (r *Resolver) resolveServiceRule(ctx *context, svc *Service, def *federatio
 		return nil
 	}
 	env := r.resolveEnv(ctx, def.GetEnv(), builder.WithEnv())
-	vars := r.resolveServiceVariables(ctx, svc, env, def.GetVar(), builder)
-	ctx.clearVariableDefinitions()
+	vars := r.resolveServiceVariables(ctx.withVariableMap(), svc, env, def.GetVar(), builder)
 	return &ServiceRule{
 		Env:  env,
 		Vars: vars,
@@ -2476,7 +2475,7 @@ func (r *Resolver) resolveMessageRule(ctx *context, msg *Message, ruleDef *feder
 	}
 	msg.Rule = &MessageRule{
 		DefSet: &VariableDefinitionSet{
-			Defs: r.resolveVariableDefinitions(ctx, ruleDef.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+			Defs: r.resolveVariableDefinitions(ctx.withVariableMap(), ruleDef.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 				return builder.WithDef(idx)
 			}),
 		},
@@ -2516,8 +2515,6 @@ func (r *Resolver) resolveMessageAliases(ctx *context, aliasNames []string, buil
 }
 
 func (r *Resolver) resolveVariableDefinitions(ctx *context, varDefs []*federation.VariableDefinition, builderFn func(idx int) *source.VariableDefinitionOptionBuilder) []*VariableDefinition {
-	ctx.clearVariableDefinitions()
-
 	var ret []*VariableDefinition
 	for idx, varDef := range varDefs {
 		ctx := ctx.withDefIndex(idx)
@@ -2739,7 +2736,6 @@ func (r *Resolver) resolveCallExpr(ctx *context, def *federation.CallExpr, build
 			timeout = &duration
 		}
 	}
-
 	var grpcErrs []*GRPCError
 	for idx, grpcErr := range def.GetError() {
 		grpcErrs = append(grpcErrs, r.resolveGRPCError(ctx, grpcErr, builder.WithError(idx)))
@@ -2834,7 +2830,7 @@ func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, bui
 	}
 	return &GRPCError{
 		DefSet: &VariableDefinitionSet{
-			Defs: r.resolveVariableDefinitions(ctx, def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+			Defs: r.resolveVariableDefinitions(ctx.withVariableMap(), def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 				return builder.WithDef(idx)
 			}),
 		},
@@ -2898,7 +2894,7 @@ func (r *Resolver) resolveGRPCErrorDetails(ctx *context, details []*federation.G
 		result = append(result, &GRPCErrorDetail{
 			If: r.resolveGRPCErrorIf(detail.GetIf()),
 			DefSet: &VariableDefinitionSet{
-				Defs: r.resolveVariableDefinitions(ctx, detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+				Defs: r.resolveVariableDefinitions(ctx.withVariableMap(), detail.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 					return builder.WithDef(idx)
 				}),
 			},
@@ -2931,7 +2927,7 @@ func (r *Resolver) resolveGRPCDetailMessages(ctx *context, messages []*federatio
 		})
 	}
 	defs := make([]*VariableDefinition, 0, len(msgs))
-	for _, def := range r.resolveVariableDefinitions(ctx, msgs, builderFn) {
+	for _, def := range r.resolveVariableDefinitions(ctx.withVariableMap(), msgs, builderFn) {
 		def.Used = true
 		defs = append(defs, def)
 	}
@@ -3126,7 +3122,7 @@ func (r *Resolver) resolveFieldOneofRule(ctx *context, field *Field, def *federa
 		If:      ifValue,
 		Default: def.GetDefault(),
 		DefSet: &VariableDefinitionSet{
-			Defs: r.resolveVariableDefinitions(ctx, def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+			Defs: r.resolveVariableDefinitions(ctx.withVariableMap(), def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
 				return oneofBuilder.WithDef(idx)
 			}),
 		},
