@@ -59,6 +59,7 @@ message GetPostResponse {
     def { name: "fmt" by: "'%d-%d-%d-world'.format([1, 2, 3])" }
     def { name: "replaced" by: "fmt.replace('world', 'grpc')" }
     def { name: "list_to_map" by: "[1, 2, 3].transformMap(idx, v, idx % 2 == 0, (idx * v) + v)" }
+    def { name: "uuid_parse" by: "grpc.federation.uuid.parse(uuid.string())" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).by = "'hello'"];
@@ -105,6 +106,7 @@ message GetPostResponse {
   google.protobuf.Any any = 43 [(grpc.federation.field).by = "any"];
   string replaced = 44 [(grpc.federation.field).by = "replaced"];
   map<int32, int32> list_to_map = 45 [(grpc.federation.field).by = "list_to_map"];
+  string uuid_parse = 46 [(grpc.federation.field).by = "uuid_parse.string()"];
 }
 
 message A {

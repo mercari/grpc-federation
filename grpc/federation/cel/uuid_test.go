@@ -73,6 +73,21 @@ func TestUUID(t *testing.T) {
 			},
 		},
 		{
+			name: "parse",
+			expr: `grpc.federation.uuid.parse('823dd8a3-0b49-4438-9917-2da83105bcb2')`,
+			cmp: func(got any) error {
+				gotV, ok := got.(*cellib.UUID)
+				if !ok {
+					return fmt.Errorf("invalid result type: %T", got)
+				}
+				expected := "823dd8a3-0b49-4438-9917-2da83105bcb2"
+				if diff := cmp.Diff(gotV.UUID.String(), expected); diff != "" {
+					return fmt.Errorf("(-got, +want)\n%s", diff)
+				}
+				return nil
+			},
+		},
+		{
 			name: "domain",
 			expr: "grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(grpc.federation.time.date(2023, 12, 25, 12, 0, 0, 0, grpc.federation.time.UTC()).unix()))).domain()",
 			cmp: func(got any) error {

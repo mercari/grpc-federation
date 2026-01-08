@@ -78,6 +78,25 @@ Create UUID from fixed seed value.
 grpc.federation.uuid.newRandomFromRand(grpc.federation.rand.new(grpc.federation.rand.newSource(10)))
 ```
 
+## parse
+
+`parse` returns a `UUID` parsed from x.
+
+FYI: https://pkg.go.dev/github.com/google/uuid#Parse
+
+### Parameters
+
+`parse(x string) UUID`
+
+- `x`: a string
+
+### Examples
+
+```cel
+grpc.federation.uuid.parse('daa4728d-159f-4fc2-82cf-cae915d54e08')
+gprc.federation.uuid.parse(gprc.federation.uuid.new().string())
+```
+
 ## UUID.domain
 
 `domain` returns the domain for a Version 2 UUID. Domains are only defined for Version 2 UUIDs.
