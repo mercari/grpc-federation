@@ -9,6 +9,8 @@ The API for this package was created based on Go's [`google/uuid`](https://pkg.g
 - [`new`](#new)
 - [`newRandom`](#newrandom)
 - [`newRandomFromRand`](#newrandomfromrand)
+- [`parse`](#parse)
+- [`validate`](#validate)
 - [`UUID.domain`](#uuiddomain)
 - [`UUID.id`](#uuidid)
 - [`UUID.time`](#uuidtime)
@@ -95,6 +97,25 @@ FYI: https://pkg.go.dev/github.com/google/uuid#Parse
 ```cel
 grpc.federation.uuid.parse('daa4728d-159f-4fc2-82cf-cae915d54e08')
 gprc.federation.uuid.parse(gprc.federation.uuid.new().string())
+```
+
+## validate
+
+`validate` returns a bool indicating whether the string is a valid UUID.
+
+FYI: https://pkg.go.dev/github.com/google/uuid#Validate
+
+### Parameters
+
+`validate(x string) bool`
+
+- `x`: a string
+
+### Examples
+
+```cel
+grpc.federation.uuid.validate('daa4728d-159f-4fc2-82cf-cae915d54e08')
+grpc.federation.uuid.validate('invalid-uuid')
 ```
 
 ## UUID.domain

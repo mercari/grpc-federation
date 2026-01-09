@@ -344,6 +344,7 @@ func TestFederation(t *testing.T) {
 		Replaced:       "1-2-3-grpc",
 		ListToMap:      map[int32]int32{0: 1, 2: 9},
 		UuidParse:      "daa4728d-159f-4fc2-82cf-cae915d54e08",
+		UuidValidate:   true,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 		federation.Post{},
