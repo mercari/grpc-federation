@@ -96,6 +96,26 @@ func (lib *UUIDLibrary) CompileOptions() []cel.EnvOption {
 				},
 			),
 		),
+		BindFunction(
+			createUUIDName("parse"),
+			OverloadFunc(createUUIDID("parse"), []*cel.Type{cel.StringType}, UUIDType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					id, err := uuid.Parse(string(args[0].(types.String)))
+					if err != nil {
+						return types.NewErrFromString(err.Error())
+					}
+					return &UUID{UUID: id}
+				},
+			),
+		),
+		BindFunction(
+			createUUIDName("validate"),
+			OverloadFunc(createUUIDID("validate"), []*cel.Type{cel.StringType}, cel.BoolType,
+				func(_ context.Context, args ...ref.Val) ref.Val {
+					return types.Bool(uuid.Validate(string(args[0].(types.String))) == nil)
+				},
+			),
+		),
 		BindMemberFunction(
 			"domain",
 			MemberOverloadFunc(createRandID("domain_uuid_string"), UUIDType, []*cel.Type{}, cel.UintType,
