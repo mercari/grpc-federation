@@ -60,7 +60,7 @@ func TestRegexp(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := regexp.QuoteMeta("\\w+\\d[0-5]")
+				expected := regexp.QuoteMeta("[a-z]+\\d")
 				if diff := cmp.Diff(string(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -79,7 +79,7 @@ func TestRegexp(t *testing.T) {
 				if err != nil {
 					return fmt.Errorf("failed to convert to native: %w", err)
 				}
-				expected := regexp.MustCompile(`(\w+)\d(\d)`).FindStringSubmatch("abc123")
+				expected := regexp.MustCompile(`([a-z]+)\d(\d)`).FindStringSubmatch("abc123")
 				if diff := cmp.Diff(gotV, expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
@@ -124,7 +124,7 @@ func TestRegexp(t *testing.T) {
 				if !ok {
 					return fmt.Errorf("invalid result type: %T", got)
 				}
-				expected := regexp.MustCompile(`\w+\d\d`).String()
+				expected := regexp.MustCompile(`[a-z]+\d\d`).String()
 				if diff := cmp.Diff(string(gotV), expected); diff != "" {
 					return fmt.Errorf("(-got, +want)\n%s", diff)
 				}
