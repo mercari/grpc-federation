@@ -214,8 +214,8 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 					IsMethod: true,
 				},
 				{
-					Name: "mySplit",
-					ID:   "example_regexp_Example_mySplit_example_regexp_Example_string_string_repeated string",
+					Name: "split",
+					ID:   "example_regexp_Example_split_example_regexp_Example_string_string_repeated string",
 					Args: []*grpcfed.CELTypeDeclare{
 						grpcfed.NewCELObjectType("example.regexp.Example"),
 						grpcfed.CELStringType,
@@ -464,7 +464,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 	/*
 		def {
 		  name: "str"
-		  by: "exp.concat(exp.mySplit('/a/b/c', '/'))"
+		  by: "exp.concat(exp.split('/a/b/c', '/'))"
 		}
 	*/
 	def_str := func(ctx context.Context) error {
@@ -475,7 +475,7 @@ func (s *FederationService) resolve_Org_Federation_ExampleResponse(ctx context.C
 				value.vars.Str = v
 				return nil
 			},
-			By:           `exp.concat(exp.mySplit('/a/b/c', '/'))`,
+			By:           `exp.concat(exp.split('/a/b/c', '/'))`,
 			ByCacheIndex: 6,
 		})
 	}

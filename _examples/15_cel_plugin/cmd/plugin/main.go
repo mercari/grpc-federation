@@ -53,7 +53,7 @@ func (_ *plugin) Example_Regexp_Example_Concat(_ context.Context, _ *pluginpb.Ex
 	return strings.Join(v, ""), nil
 }
 
-func (_ *plugin) Example_Regexp_Example_MySplit(_ context.Context, _ *pluginpb.Example, s string, sep string) ([]string, error) {
+func (_ *plugin) Example_Regexp_Example_Split(_ context.Context, _ *pluginpb.Example, s string, sep string) ([]string, error) {
 	return strings.Split(s, sep), nil
 }
 
