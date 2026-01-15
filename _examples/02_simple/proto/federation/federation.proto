@@ -59,6 +59,12 @@ message GetPostResponse {
     def { name: "fmt" by: "'%d-%d-%d-world'.format([1, 2, 3])" }
     def { name: "replaced" by: "fmt.replace('world', 'grpc')" }
     def { name: "list_to_map" by: "[1, 2, 3].transformMap(idx, v, idx % 2 == 0, (idx * v) + v)" }
+    def { name: "compile" by: "grpc.federation.regexp.compile('[a-z]+\\\\d\\\\d')" }
+    def { name: "must_compile" by: "grpc.federation.regexp.mustCompile('([a-z]+)\\\\d(\\\\d)')" }
+    def { name: "quote_meta" by: "grpc.federation.regexp.quoteMeta('[a-z]+\\\\d')" }
+    def { name: "find_string_submatch" by: "must_compile.findStringSubmatch('abc123')" }
+    def { name: "match_string" by: "compile.matchString('abc12')" }
+    def { name: "replace_all_string" by: "grpc.federation.regexp.compile('mackerel').replaceAllString('mackerel is tasty', 'salmon')" }
   };
   Post post = 1 [(grpc.federation.field).by = "post"];
   string str = 2 [(grpc.federation.field).by = "'hello'"];
@@ -105,6 +111,12 @@ message GetPostResponse {
   google.protobuf.Any any = 43 [(grpc.federation.field).by = "any"];
   string replaced = 44 [(grpc.federation.field).by = "replaced"];
   map<int32, int32> list_to_map = 45 [(grpc.federation.field).by = "list_to_map"];
+  string compile = 46 [(grpc.federation.field).by = "compile.string()"];
+  string must_compile = 47 [(grpc.federation.field).by = "must_compile.string()"];
+  string quote_meta = 48 [(grpc.federation.field).by = "quote_meta"];
+  repeated string find_string_submatch = 49 [(grpc.federation.field).by = "find_string_submatch"];
+  bool match_string = 50 [(grpc.federation.field).by = "match_string"];
+  string replace_all_string = 51 [(grpc.federation.field).by = "replace_all_string"];
 }
 
 message A {
