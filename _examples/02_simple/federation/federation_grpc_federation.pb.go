@@ -1762,6 +1762,34 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
+		if err := def_uuid_parse(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		return nil, nil
+	})
+
+	grpcfed.GoWithRecover(eg, func() (any, error) {
+		if err := def_date(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_rand_source(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_fixed_rand(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_uuid(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
+		if err := def_uuid_validate(ctx1); err != nil {
+			grpcfed.RecordErrorToSpan(ctx1, err)
+			return nil, err
+		}
 		return nil, nil
 	})
 
@@ -1810,6 +1838,8 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	req.FederationService_Federation_GetPostResponseVariable.StringsJoin = value.vars.StringsJoin
 	req.FederationService_Federation_GetPostResponseVariable.Url = value.vars.Url
 	req.FederationService_Federation_GetPostResponseVariable.Uuid = value.vars.Uuid
+	req.FederationService_Federation_GetPostResponseVariable.UuidParse = value.vars.UuidParse
+	req.FederationService_Federation_GetPostResponseVariable.UuidValidate = value.vars.UuidValidate
 	req.FederationService_Federation_GetPostResponseVariable.Value1 = value.vars.Value1
 
 	// create a message value to be returned.
