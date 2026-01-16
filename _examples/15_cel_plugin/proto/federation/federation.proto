@@ -37,7 +37,7 @@ message ExampleResponse {
     def { name: "exps" by: "example.regexp.newExamples()" }
     def { name: "v" by: "example.regexp.filterExamples(exps)" }
     def { name: "exp" by: "example.regexp.newExample()"}
-    def { name: "str" by: "exp.concat(exp.mySplit('/a/b/c', '/'))"}
+    def { name: "str" by: "exp.concat(exp.split('/a/b/c', '/'))"}
     def { name: "exp_msg" message { name: "example.regexp.Example" args { name: "value" by: "2" } }}
   };
   int64 size = 1 [(grpc.federation.field).by = "v.size()"];

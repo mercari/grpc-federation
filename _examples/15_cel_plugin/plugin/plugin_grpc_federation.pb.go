@@ -25,7 +25,7 @@ type RegexpPlugin interface {
 	Example_Regexp_FilterExamples(context.Context, []*Example) ([]*Example, error)
 	Example_Regexp_Regexp_MatchString(context.Context, *Regexp, string) (bool, error)
 	Example_Regexp_Example_Concat(context.Context, *Example, []string) (string, error)
-	Example_Regexp_Example_MySplit(context.Context, *Example, string, string) ([]string, error)
+	Example_Regexp_Example_Split(context.Context, *Example, string, string) ([]string, error)
 }
 
 func RegisterRegexpPlugin(plug RegexpPlugin) {
@@ -40,7 +40,7 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 				"example_regexp_filterExamples_repeated example_regexp_Example_repeated example_regexp_Example",
 				"example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool",
 				"example_regexp_Example_concat_example_regexp_Example_repeated string_string",
-				"example_regexp_Example_mySplit_example_regexp_Example_string_string_repeated string",
+				"example_regexp_Example_split_example_regexp_Example_string_string_repeated string",
 			},
 		},
 		func(ctx context.Context, req *grpcfed.CELPluginRequest) (*grpcfed.CELPluginResponse, error) {
@@ -123,7 +123,7 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 					return nil, err
 				}
 				return grpcfed.ToStringCELPluginResponse(ret)
-			case "example_regexp_Example_mySplit_example_regexp_Example_string_string_repeated string":
+			case "example_regexp_Example_split_example_regexp_Example_string_string_repeated string":
 				if len(req.GetArgs()) != 3 {
 					return nil, fmt.Errorf("%s: invalid argument number: %d. expected number is %d", req.GetMethod(), len(req.GetArgs()), 3)
 				}
@@ -139,7 +139,7 @@ func RegisterRegexpPlugin(plug RegexpPlugin) {
 				if err != nil {
 					return nil, err
 				}
-				ret, err := plug.Example_Regexp_Example_MySplit(ctx, arg0, arg1, arg2)
+				ret, err := plug.Example_Regexp_Example_Split(ctx, arg0, arg1, arg2)
 				if err != nil {
 					return nil, err
 				}
