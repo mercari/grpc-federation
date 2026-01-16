@@ -30,6 +30,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 			mdLib,
 			logLib,
 			new(CastLibrary),
+			new(RegexpLibrary),
 		},
 	}
 }

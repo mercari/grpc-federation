@@ -8,15 +8,16 @@ For more information on CEL, [please see here](https://github.com/google/cel-spe
 
 In addition to the standard CEL operations, the gRPC Federation supports a number of its own APIs. This page introduces those APIs.
 
+- [grpc.federation.any APIs](./cel/any.md)
+- [grpc.federation.enum APIs](./cel/enum.md)
 - [grpc.federation.list APIs](./cel/list.md)
-- [grpc.federation.rand APIs](./cel/rand.md)
-- [grpc.federation.time APIs](./cel/time.md)
-- [grpc.federation.uuid APIs](./cel/uuid.md)
 - [grpc.federation.log APIs](./cel/log.md)
 - [grpc.federation.math APIs](./cel/math.md)
-- [grpc.federation.enum APIs](./cel/enum.md)
 - [grpc.federation.metadata APIs](./cel/metadata.md)
-- [grpc.federation.any APIs](./cel/any.md)
+- [grpc.federation.rand APIs](./cel/rand.md)
+- [grpc.federation.regexp APIs](./cel/regexp.md)
+- [grpc.federation.time APIs](./cel/time.md)
+- [grpc.federation.uuid APIs](./cel/uuid.md)
 
 ## Refer to the defined variable
 
