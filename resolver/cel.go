@@ -294,18 +294,34 @@ func (f *CELFunction) toSignatureID(t []*Type) string {
 
 func (plugin *CELPlugin) CompileOptions() []cel.EnvOption {
 	var opts []cel.EnvOption
+	bindFunc := cel.FunctionBinding(func(args ...ref.Val) ref.Val { return nil })
+
 	for _, fn := range plugin.Functions {
-		var (
-			overload cel.FunctionOpt
-			bindFunc = cel.FunctionBinding(func(args ...ref.Val) ref.Val { return nil })
-		)
-		for _, sig := range fn.Signatures() {
-			if fn.Receiver != nil {
-				overload = cel.MemberOverload(sig.ID, sig.Args, sig.Return, bindFunc)
-			} else {
-				overload = cel.Overload(sig.ID, sig.Args, sig.Return, bindFunc)
+		if fn.Receiver != nil {
+			// For member functions, sig.Args already includes receiver as first element
+			// We need to insert context AFTER receiver: [receiver, context, arg1, arg2, ...]
+			var memberOpts []grpcfedcel.BindMemberFunctionOpt
+			for _, sig := range fn.Signatures() {
+				if len(sig.Args) == 0 {
+					continue
+				}
+				argsWithContext := append([]*cel.Type{sig.Args[0], cel.ObjectType(grpcfedcel.ContextTypeName)}, sig.Args[1:]...)
+				memberOpts = append(memberOpts, grpcfedcel.BindMemberFunctionOpt{
+					FunctionOpt: cel.MemberOverload(sig.ID, argsWithContext, sig.Return, bindFunc),
+				})
 			}
-			opts = append(opts, cel.Function(fn.Name, overload))
+			opts = append(opts, grpcfedcel.BindMemberFunction(fn.Name, memberOpts...)...)
+		} else {
+			// For regular functions, insert context at the beginning
+			var funcOpts []grpcfedcel.BindFunctionOpt
+			for _, sig := range fn.Signatures() {
+				// Regular function signature: [context, arg1, arg2, ...]
+				argsWithContext := append([]*cel.Type{cel.ObjectType(grpcfedcel.ContextTypeName)}, sig.Args...)
+				funcOpts = append(funcOpts, grpcfedcel.BindFunctionOpt{
+					FunctionOpt: cel.Overload(sig.ID, argsWithContext, sig.Return, bindFunc),
+				})
+			}
+			opts = append(opts, grpcfedcel.BindFunction(fn.Name, funcOpts...)...)
 		}
 	}
 	return opts

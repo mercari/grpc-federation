@@ -17,10 +17,10 @@ import (
 const ListPackageName = "list"
 
 const (
-	listSortAscFunc        = "grpc.federaiton.list.@sortAsc"
-	listSortDescFunc       = "grpc.federaiton.list.@sortDesc"
-	listSortStableAscFunc  = "grpc.federaiton.list.@sortStableAsc"
-	listSortStableDescFunc = "grpc.federaiton.list.@sortStableDesc"
+	listSortAscFunc        = "grpc.federation.list.@sortAsc"
+	listSortDescFunc       = "grpc.federation.list.@sortDesc"
+	listSortStableAscFunc  = "grpc.federation.list.@sortStableAsc"
+	listSortStableDescFunc = "grpc.federation.list.@sortStableDesc"
 )
 
 type ListLibrary struct {

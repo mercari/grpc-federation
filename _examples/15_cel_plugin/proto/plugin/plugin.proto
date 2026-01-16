@@ -46,7 +46,7 @@ option (grpc.federation.file).plugin.export = {
           return { kind: STRING }
         },
         {
-          name: "mySplit"
+          name: "split"
           args { name: "s" type {kind: STRING} }
           args { name: "sep" type {kind: STRING} }
           return { repeated {kind: STRING} }
