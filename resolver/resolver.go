@@ -5157,6 +5157,9 @@ func (r *Resolver) fromCELType(ctx *context, typ *cel.Type) (*Type, error) {
 		if err != nil {
 			return nil, err
 		}
+		if typ.Repeated {
+			return nil, fmt.Errorf("nested list is unsupported")
+		}
 		typ = typ.Clone()
 		typ.Repeated = true
 		return typ, nil

@@ -850,6 +850,11 @@ invalid_file_import.proto:12:5: [WARN] Import user.proto is unused for the defin
 12:      "user.proto"
          ^
 `},
+		{file: "nested_list.proto", expected: `
+nested_list.proto:20:35: nested list is unsupported
+20:      def { name: "nested_list" by: "[[1]]" }
+                                       ^
+`},
 	}
 	for _, test := range tests {
 		test := test
