@@ -17,7 +17,7 @@ message GetPostRequest {
 
 message GetPostResponse {
   option (.grpc.federation.message) = {
-    def { name: "list_of_lists" by: "[[1]]" }
+    def { name: "nested_list" by: "[[1]]" }
   };
-  repeated int32 list = 1 [(grpc.federation.field).by = "list_of_lists[0]"];
+  // repeated int32 list = 1 [(grpc.federation.field).by = "list_of_lists[0]"];
 }
