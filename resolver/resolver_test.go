@@ -4471,3 +4471,17 @@ func TestDependencyDetection(t *testing.T) {
 		})
 	}
 }
+
+func TestNestedList(t *testing.T) {
+	t.Parallel()
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "nested_list.proto")
+	r := resolver.New(testutil.Compile(t, fileName))
+	_, err := r.Resolve()
+	if err == nil {
+		t.Fatalf("Resolve should fail")
+	}
+	if !strings.Contains(err.Error(), "nested list is unsupported") {
+		t.Fatalf("Resolve should fail with nested list is unsupported error, but got: %v", err)
+	}
+}
