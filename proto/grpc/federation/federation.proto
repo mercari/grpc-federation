@@ -134,6 +134,9 @@ message ServiceVariable {
 
     // enum gets with cel value.
     EnumExpr enum = 15;
+
+    // switch provides conditional evaluation with multiple branches.
+    SwitchExpr switch = 16;
   }
 }
 
@@ -276,6 +279,9 @@ message VariableDefinition {
 
     // enum gets with cel value.
     EnumExpr enum = 16;
+
+    // switch provides conditional evaluation with multiple branches.
+    SwitchExpr switch = 17;
   }
 }
 
@@ -349,6 +355,40 @@ message CallExpr {
   // metadata specify outgoing metadata with CEL value.
   // The specified type must always be of type map<string, repeated string>.
   optional string metadata = 7;
+}
+
+// SwitchExpr represents a switch statement. At least one "case" must be defined. All case.if
+// expressions must evaluate to a boolean value. All case.by expressions, and default.if, if default
+// is defined, must evaluate to the same type (the return type).
+//
+// When executed, the case.if expressions are evaluated in order, and, for the first case whose
+// case.if expression evaluates to true, its case.by is evaluated to make the return value of the
+// SwitchExpr.
+// If no case.if evaluates to true, and there is a default expression, default.by is evaluated
+// to make the return value. If there is no default expression, the default value of the return
+// type is the return value of the SwitchExpr.
+message SwitchExpr {
+  // Cases for the switch expression.
+  repeated SwitchCaseExpr case = 1;
+  // The default case, if none of the "case.if" expressions evaluate to true.
+  optional SwitchDefaultExpr default = 2;
+}
+
+// SwitchCaseExpr represents a single case for a switch expression.
+message SwitchCaseExpr {
+  string if = 1;
+  // expr specify the value to return for the case.
+  oneof expr {
+    string by = 11;
+  }
+}
+
+// SwitchDefaultExpr represents the default case for a switch expression.
+message SwitchDefaultExpr {
+  // expr specify the value to return for the default case.
+  oneof expr {
+    string by = 11;
+  }
 }
 
 // GRPCError create gRPC status value.
