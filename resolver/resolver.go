@@ -2815,7 +2815,6 @@ func (r *Resolver) resolveSwitchExpr(ctx *context, def *federation.SwitchExpr, b
 		}),
 		Default: r.resolveSwitchDefaultExpr(ctx, def.GetDefault(), builder.WithDefault()),
 	}
-
 }
 
 func (r *Resolver) resolveSwitchCases(ctx *context, cases []*federation.SwitchCaseExpr, builderFn func(int) *source.SwitchCaseExprOptionBuilder) []*SwitchCaseExpr {
