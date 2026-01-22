@@ -262,6 +262,7 @@ type VariableExpr struct {
 	Message    *MessageExpr
 	Enum       *EnumExpr
 	Validation *ValidationExpr
+	Switch     *SwitchExpr
 }
 
 type CallExpr struct {
@@ -314,6 +315,21 @@ type EnumExpr struct {
 type ValidationExpr struct {
 	Name  string
 	Error *GRPCError
+}
+
+type SwitchExpr struct {
+	Type    *Type
+	Cases   []*SwitchCaseExpr
+	Default *SwitchDefaultExpr
+}
+
+type SwitchCaseExpr struct {
+	If *CELValue
+	By *CELValue
+}
+
+type SwitchDefaultExpr struct {
+	By *CELValue
 }
 
 type GRPCError struct {

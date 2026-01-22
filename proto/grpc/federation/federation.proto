@@ -357,21 +357,19 @@ message CallExpr {
   optional string metadata = 7;
 }
 
-// SwitchExpr represents a switch statement. At least one "case" must be defined. All case.if
-// expressions must evaluate to a boolean value. All case.by expressions, and default.if, if default
-// is defined, must evaluate to the same type (the return type).
+// SwitchExpr represents a switch statement. At least one "case", and "default", must be defined. All
+// case.if expressions must evaluate to a boolean value. All case.by expressions, and default.by, must
+// evaluate to the same type (the return type).
 //
 // When executed, the case.if expressions are evaluated in order, and, for the first case whose
 // case.if expression evaluates to true, its case.by is evaluated to make the return value of the
 // SwitchExpr.
-// If no case.if evaluates to true, and there is a default expression, default.by is evaluated
-// to make the return value. If there is no default expression, the default value of the return
-// type is the return value of the SwitchExpr.
+// If no case.if evaluates to true, default.by is evaluated to make the return value.
 message SwitchExpr {
   // Cases for the switch expression.
   repeated SwitchCaseExpr case = 1;
   // The default case, if none of the "case.if" expressions evaluate to true.
-  optional SwitchDefaultExpr default = 2;
+  SwitchDefaultExpr default = 2;
 }
 
 // SwitchCaseExpr represents a single case for a switch expression.

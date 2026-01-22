@@ -2554,6 +2554,8 @@ func (r *Resolver) resolveVariableExpr(ctx *context, varDef *federation.Variable
 		return &VariableExpr{Call: r.resolveCallExpr(ctx, varDef.GetCall(), builder.WithCall())}
 	case *federation.VariableDefinition_Validation:
 		return &VariableExpr{Validation: r.resolveValidationExpr(ctx, varDef.GetValidation(), builder.WithValidation())}
+	case *federation.VariableDefinition_Switch:
+		return &VariableExpr{Switch: r.resolveSwitchExpr(ctx, varDef.GetSwitch(), builder.WithSwitch())}
 	}
 	return nil
 }
@@ -2785,6 +2787,55 @@ func (r *Resolver) resolveValidationExpr(ctx *context, def *federation.Validatio
 		Name:  def.GetName(),
 		Error: grpcErr,
 	}
+}
+
+func (r *Resolver) resolveSwitchExpr(ctx *context, def *federation.SwitchExpr, builder *source.SwitchExprOptionBuilder) *SwitchExpr {
+	if def == nil {
+		return nil
+	}
+	if len(def.GetCase()) == 0 {
+		ctx.addError(
+			ErrWithLocation(
+				`at least one "case" must be defined`,
+				builder.Location(),
+			),
+		)
+	}
+	if def.GetDefault() == nil {
+		ctx.addError(
+			ErrWithLocation(
+				`"default" must be defined`,
+				builder.Location(),
+			),
+		)
+	}
+	return &SwitchExpr{
+		Cases: r.resolveSwitchCases(ctx, def.GetCase(), func(idx int) *source.SwitchCaseExprOptionBuilder {
+			return builder.WithCase(idx)
+		}),
+		Default: r.resolveSwitchDefaultExpr(ctx, def.GetDefault(), builder.WithDefault()),
+	}
+
+}
+
+func (r *Resolver) resolveSwitchCases(ctx *context, cases []*federation.SwitchCaseExpr, builderFn func(int) *source.SwitchCaseExprOptionBuilder) []*SwitchCaseExpr {
+	result := make([]*SwitchCaseExpr, 0, len(cases))
+
+	for idx, caseDef := range cases {
+		result = append(result, r.resolveSwitchCaseExpr(ctx, caseDef, builderFn(idx)))
+	}
+	return result
+}
+
+func (r *Resolver) resolveSwitchCaseExpr(_ *context, def *federation.SwitchCaseExpr, _ *source.SwitchCaseExprOptionBuilder) *SwitchCaseExpr {
+	return &SwitchCaseExpr{
+		If: &CELValue{Expr: def.GetIf()},
+		By: &CELValue{Expr: def.GetBy()},
+	}
+}
+
+func (r *Resolver) resolveSwitchDefaultExpr(_ *context, def *federation.SwitchDefaultExpr, _ *source.SwitchDefaultExprOptionBuilder) *SwitchDefaultExpr {
+	return &SwitchDefaultExpr{By: &CELValue{Expr: def.GetBy()}}
 }
 
 func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, builder *source.GRPCErrorOptionBuilder) *GRPCError {
@@ -4179,6 +4230,8 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		r.resolveGRPCErrorCELValues(ctx, env, expr.Validation.Error, nil, validationBuilder.WithError())
 		// This is a dummy type since the output from the validation is not supposed to be used (at least for now)
 		expr.Type = BoolType
+	case expr.Switch != nil:
+		expr.Type = r.resolveSwitchExprCELValues(ctx, env, expr.Switch, builder.WithSwitch())
 	}
 }
 
@@ -4683,6 +4736,62 @@ func (r *Resolver) resolveEnumExprCELValues(ctx *context, env *cel.Env, expr *En
 		}
 	}
 	return enumType
+}
+
+func (r *Resolver) resolveSwitchExprCELValues(ctx *context, env *cel.Env, expr *SwitchExpr, builder *source.SwitchExprOptionBuilder) *Type {
+	for idx, cse := range expr.Cases {
+		if err := r.resolveCELValue(ctx, env, cse.If); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithCase(idx).WithIf().Location(),
+				),
+			)
+		}
+		if cse.If.Out != nil && cse.If.Out.Kind != types.Bool {
+			ctx.addError(
+				ErrWithLocation(
+					"if must always return a boolean value",
+					builder.WithCase(idx).WithIf().Location(),
+				),
+			)
+		}
+		if err := r.resolveCELValue(ctx, env, cse.By); err != nil {
+			ctx.addError(
+				ErrWithLocation(
+					err.Error(),
+					builder.WithCase(idx).WithBy().Location(),
+				),
+			)
+		}
+		if expr.Type != nil && !isExactlySameType(expr.Type, cse.By.Out) {
+			ctx.addError(
+				ErrWithLocation(
+					fmt.Sprintf("case %d: all cases must return the same type, by must return a %q type, but got %q type", idx, expr.Type.FQDN(), cse.By.Out.FQDN()),
+					builder.WithCase(idx).WithBy().Location(),
+				),
+			)
+		} else {
+			expr.Type = cse.By.Out
+		}
+	}
+	if err := r.resolveCELValue(ctx, env, expr.Default.By); err != nil {
+		ctx.addError(
+			ErrWithLocation(
+				err.Error(),
+				builder.WithDefault().WithBy().Location(),
+			),
+		)
+	}
+	if expr.Default.By.Out != nil && !isExactlySameType(expr.Type, expr.Default.By.Out) {
+		ctx.addError(
+			ErrWithLocation(
+				fmt.Sprintf("default: all cases must return the same type, by must return a %q type, but got %q type", expr.Type.FQDN(), expr.Default.By.Out.FQDN()),
+				builder.WithDefault().WithBy().Location(),
+			),
+		)
+	}
+	return expr.Type
 }
 
 func (r *Resolver) resolveUsedNameReference(msg *Message) {

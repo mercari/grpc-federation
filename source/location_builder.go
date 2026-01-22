@@ -1077,6 +1077,18 @@ func (b *VariableDefinitionOptionBuilder) WithMap() *MapExprOptionBuilder {
 	}
 }
 
+func (b *VariableDefinitionOptionBuilder) WithSwitch() *SwitchExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Switch = &SwitchExprOption{}
+	return &SwitchExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *SwitchExprOption {
+			return b.option(loc).Switch
+		},
+	}
+}
+
 func (b *VariableDefinitionOptionBuilder) Location() *Location {
 	return b.root
 }
@@ -1758,5 +1770,86 @@ func (b *MapExprOptionBuilder) WithEnum() *EnumExprOptionBuilder {
 }
 
 func (b *MapExprOptionBuilder) Location() *Location {
+	return b.root
+}
+
+type SwitchExprOptionBuilder struct {
+	root   *Location
+	option func(*Location) *SwitchExprOption
+}
+
+func (b *SwitchExprOptionBuilder) WithCase(idx int) *SwitchCaseExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Case = &SwitchCaseExprOption{Idx: idx}
+	return &SwitchCaseExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *SwitchCaseExprOption {
+			return b.option(loc).Case
+		},
+	}
+}
+
+func (b *SwitchExprOptionBuilder) WithDefault() *SwitchDefaultExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Default = &SwitchDefaultExprOption{}
+	return &SwitchDefaultExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *SwitchDefaultExprOption {
+			return b.option(loc).Default
+		},
+	}
+}
+
+func (b *SwitchExprOptionBuilder) Location() *Location {
+	return b.root
+}
+
+type SwitchCaseExprOptionBuilder struct {
+	root   *Location
+	option func(*Location) *SwitchCaseExprOption
+}
+
+func (b *SwitchCaseExprOptionBuilder) WithIf() *SwitchCaseExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.If = true
+	return &SwitchCaseExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *SwitchCaseExprOptionBuilder) WithBy() *SwitchCaseExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &SwitchCaseExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *SwitchCaseExprOptionBuilder) Location() *Location {
+	return b.root
+}
+
+type SwitchDefaultExprOptionBuilder struct {
+	root   *Location
+	option func(*Location) *SwitchDefaultExprOption
+}
+
+func (b *SwitchDefaultExprOptionBuilder) WithBy() *SwitchDefaultExprOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.By = true
+	return &SwitchDefaultExprOptionBuilder{
+		root:   root,
+		option: b.option,
+	}
+}
+
+func (b *SwitchDefaultExprOptionBuilder) Location() *Location {
 	return b.root
 }

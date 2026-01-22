@@ -4471,3 +4471,94 @@ func TestDependencyDetection(t *testing.T) {
 		})
 	}
 }
+
+func TestSwitch(t *testing.T) {
+	t.Parallel()
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "switch.proto")
+	fb := testutil.NewFileBuilder(fileName)
+	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponse").
+				AddFieldWithRule(
+					"switch",
+					resolver.Int64Type,
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "GetPostResponseArgument"), resolver.Int64Type, "switch").Build(t),
+					).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("switch").
+								SetUsed(true).
+								SetSwitch(testutil.NewSwitchExprBuilder().
+									SetType(resolver.Int64Type).
+									AddCase(testutil.NewSwitchCaseExprBuilder().
+										SetIf(testutil.NewCELValueBuilder("$.id == 'blue'", resolver.BoolType).Build(t)).
+										SetBy(testutil.NewCELValueBuilder("1", resolver.Int64Type).Build(t)).
+										Build(t),
+									).
+									AddCase(testutil.NewSwitchCaseExprBuilder().
+										SetIf(testutil.NewCELValueBuilder("$.id == 'red'", resolver.BoolType).Build(t)).
+										SetBy(testutil.NewCELValueBuilder("2", resolver.Int64Type).Build(t)).
+										Build(t),
+									).
+									SetDefault(testutil.NewSwitchDefaultExprBuilder().
+										SetBy(testutil.NewCELValueBuilder("3", resolver.Int64Type).Build(t)).
+										Build(t),
+									).
+									Build(t)).
+								Build(t),
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "GetPostRequest")).
+								Build(t),
+						).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("switch")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod("GetPost", ref.Message(t, "org.federation", "GetPostRequest"), ref.Message(t, "org.federation", "GetPostResponse"), nil).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
+				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
+				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+	federationService := federationFile.Services[0]
+
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
+	}
+	if len(result.Files[0].Services) != 1 {
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
+	}
+	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}

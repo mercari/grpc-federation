@@ -215,6 +215,7 @@ type VariableDefinitionOption struct {
 	Message    *MessageExprOption
 	Enum       *EnumExprOption
 	Validation *ValidationExprOption
+	Switch     *SwitchExprOption
 }
 
 // MapExprOption represents def.map location of grpc.federation.message option.
@@ -353,6 +354,21 @@ type GRPCErrorDetailBadRequestFieldViolationOption struct {
 type GRPCErrorDetailLocalizedMessageOption struct {
 	Idx       int
 	FieldName string
+}
+
+type SwitchExprOption struct {
+	Case    *SwitchCaseExprOption
+	Default *SwitchDefaultExprOption
+}
+
+type SwitchCaseExprOption struct {
+	Idx int
+	If  bool
+	By  bool
+}
+
+type SwitchDefaultExprOption struct {
+	By bool
 }
 
 // Position represents source position in proto file.
