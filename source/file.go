@@ -1698,6 +1698,12 @@ func (f *File) nodeInfoByDef(list []*ast.MessageLiteralNode, def *VariableDefini
 				return nil
 			}
 			return f.nodeInfoByValidationExpr(value, def.Validation)
+		case def.Switch != nil && fieldName == "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoBySwitchExpr(value, def.Switch)
 		}
 	}
 	return f.nodeInfo(node)
@@ -2089,6 +2095,67 @@ func (f *File) nodeInfoByGRPCErrorDetail(list []*ast.MessageLiteralNode, detail 
 		return f.nodeInfoByLocalizedMessage(localizedMessages, detail.LocalizedMessage)
 	}
 
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoBySwitchExpr(node *ast.MessageLiteralNode, opt *SwitchExprOption) *ast.NodeInfo {
+	caseCount := 0
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.Case != nil && fieldName == "case":
+			if caseCount == opt.Case.Idx {
+				value, ok := elem.Val.(*ast.MessageLiteralNode)
+				if !ok {
+					return nil
+				}
+				return f.nodeInfoBySwitchCaseExpr(value, opt.Case)
+			}
+			caseCount++
+		case opt.Default != nil && fieldName == "default":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoBySwitchDefaultExpr(value, opt.Default)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoBySwitchCaseExpr(node *ast.MessageLiteralNode, opt *SwitchCaseExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.If && fieldName == "if":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoBySwitchDefaultExpr(node *ast.MessageLiteralNode, opt *SwitchDefaultExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
+	}
 	return f.nodeInfo(node)
 }
 
