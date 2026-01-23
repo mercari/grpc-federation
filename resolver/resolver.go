@@ -4782,7 +4782,7 @@ func (r *Resolver) resolveSwitchExprCELValues(ctx *context, env *cel.Env, expr *
 			),
 		)
 	}
-	if expr.Default.By.Out != nil && !isExactlySameType(expr.Type, expr.Default.By.Out) {
+	if expr.Type != nil && expr.Default.By.Out != nil && !isExactlySameType(expr.Type, expr.Default.By.Out) {
 		ctx.addError(
 			ErrWithLocation(
 				fmt.Sprintf("default: all cases must return the same type, by must return a %q type, but got %q type", expr.Type.FQDN(), expr.Default.By.Out.FQDN()),
