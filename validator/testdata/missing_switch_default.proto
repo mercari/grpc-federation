@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (.grpc.federation.message) = {
+    def {
+      name: "switch"
+      switch {
+        case { if: "$.id == 'blue'" by: "1" }
+        case { if: "$.id == 'red'" by: "2" }
+      }
+    }
+  };
+}
