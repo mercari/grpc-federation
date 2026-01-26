@@ -89,6 +89,24 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		Validation:  func(ctx context.Context, value *localValueType) error {
 			{{- template "messageValidation" (map "Ctx" "ctx" "Error" .ValidationError) }}
 		},
+		{{- else if .IsSwitch }}
+		Switch: func(ctx context.Context, value *localValueType) (any, error) {
+			{{- $switch := .Switch }}
+			{{- $cases := $switch.Cases }}
+			cases := []*grpcfed.EvalSwitchCase{}
+			{{- range $cases }}
+			cases = append(cases, &grpcfed.EvalSwitchCase{
+				If: `{{ .If.Expr }}`,
+				IfCacheIndex: {{ $switch.CELCacheIndex }},
+				By: `{{ .By.Expr }}`,
+				ByCacheIndex: {{ $switch.CELCacheIndex }},
+			})
+			{{- end }}
+			return grpcfed.EvalSwitch[{{ .Type }}](ctx, value, cases, &grpcfed.EvalSwitchDefault{
+				By: `{{ $switch.Default.By.Expr }}`,
+				ByCacheIndex: {{ $switch.CELCacheIndex }},
+			})
+		},
 		{{- else if .IsEnum }}
 		Enum: func(ctx context.Context, value *localValueType) ({{ .Type }}, error) {
 			{{- $enumSelector := .EnumSelector }}
