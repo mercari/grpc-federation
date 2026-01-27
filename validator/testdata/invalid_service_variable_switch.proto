@@ -8,14 +8,11 @@ option go_package = "example/federation;federation";
 
 service FederationService {
   option (grpc.federation.service) = {
-    env {
-      var { name: "a" type { kind: STRING } option { default: "none" } }
-    }
     var {
       name: "svar"
       switch {
-        case { if: "grpc.federation.env.a == 'red'" by: "1" }
-        default { by: "2" }
+        case { if: "true" by: "1" }
+        default { by: "true" }
       }
     }
   };
@@ -27,16 +24,5 @@ message GetPostRequest {
 }
 
 message GetPostResponse {
-  option (.grpc.federation.message) = {
-    def {
-      name: "switch"
-      switch {
-        case { if: "$.id == 'blue'" by: "3" }
-        case { if: "$.id == 'red'" by: "4" }
-        default { by: "5" }
-      }
-    }
-  };
   int64 svar = 1 [(grpc.federation.field).by = "grpc.federation.var.svar"];
-  int64 switch = 2 [(grpc.federation.field).by = "switch"];
 }

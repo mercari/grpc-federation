@@ -761,6 +761,18 @@ func (r *Resolver) lookupPackageNameMapFromServiceVariableExpr(ctx *context, exp
 		if expr.Enum.Enum != nil {
 			pkgNameMap[expr.Enum.Enum.PackageName()] = struct{}{}
 		}
+	case expr.Switch != nil:
+		for _, caseExpr := range expr.Switch.Cases {
+			if caseExpr.If != nil {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, caseExpr.If))
+			}
+			if caseExpr.By != nil {
+				maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, caseExpr.By))
+			}
+		}
+		if expr.Switch.Default != nil && expr.Switch.Default.By != nil {
+			maps.Copy(pkgNameMap, r.lookupPackageNameMapFromCELValue(ctx, expr.Switch.Default.By))
+		}
 	case expr.Map != nil:
 		if expr.Map.Expr != nil {
 			mapExpr := expr.Map.Expr
@@ -2298,6 +2310,8 @@ func (r *Resolver) resolveServiceVariable(ctx *context, env *cel.Env, def *feder
 		expr.Type = r.resolveEnumExprCELValues(ctx, env, expr.Enum, builder.WithEnum())
 	case expr.Map != nil:
 		expr.Type = r.resolveMapExprCELValues(ctx, env, expr.Map, builder.WithMap())
+	case expr.Switch != nil:
+		expr.Type = r.resolveSwitchExprCELValues(ctx, env, expr.Switch, builder.WithSwitch())
 	case expr.Validation != nil:
 		validationIfValue := expr.Validation.If
 		builder := builder.WithValidation()
@@ -2361,6 +2375,8 @@ func (r *Resolver) resolveServiceVariableExpr(ctx *context, def *federation.Serv
 		return &ServiceVariableExpr{Message: r.resolveMessageExpr(ctx, def.GetMessage(), builder.WithMessage())}
 	case *federation.ServiceVariable_Enum:
 		return &ServiceVariableExpr{Enum: r.resolveEnumExpr(ctx, def.GetEnum(), builder.WithEnum())}
+	case *federation.ServiceVariable_Switch:
+		return &ServiceVariableExpr{Switch: r.resolveSwitchExpr(ctx, def.GetSwitch(), builder.WithSwitch())}
 	case *federation.ServiceVariable_Validation:
 		return &ServiceVariableExpr{Validation: r.resolveServiceVariableValidationExpr(ctx, def.GetValidation(), builder.WithValidation())}
 	}
@@ -2552,10 +2568,10 @@ func (r *Resolver) resolveVariableExpr(ctx *context, varDef *federation.Variable
 		return &VariableExpr{Enum: r.resolveEnumExpr(ctx, varDef.GetEnum(), builder.WithEnum())}
 	case *federation.VariableDefinition_Call:
 		return &VariableExpr{Call: r.resolveCallExpr(ctx, varDef.GetCall(), builder.WithCall())}
-	case *federation.VariableDefinition_Validation:
-		return &VariableExpr{Validation: r.resolveValidationExpr(ctx, varDef.GetValidation(), builder.WithValidation())}
 	case *federation.VariableDefinition_Switch:
 		return &VariableExpr{Switch: r.resolveSwitchExpr(ctx, varDef.GetSwitch(), builder.WithSwitch())}
+	case *federation.VariableDefinition_Validation:
+		return &VariableExpr{Validation: r.resolveValidationExpr(ctx, varDef.GetValidation(), builder.WithValidation())}
 	}
 	return nil
 }

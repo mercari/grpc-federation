@@ -134,6 +134,8 @@ func (e *VariableExpr) ProtoFormat(opt *ProtoFormatOption) string {
 		return e.Enum.ProtoFormat(opt)
 	case e.Map != nil:
 		return e.Map.ProtoFormat(opt)
+	case e.Switch != nil:
+		return e.Switch.ProtoFormat(opt)
 	case e.Validation != nil:
 		return e.Validation.ProtoFormat(opt)
 	}
@@ -284,6 +286,51 @@ func (m *Method) ProtoFormat(opt *ProtoFormatOption) string {
 		return ""
 	}
 	return opt.indentFormat() + fmt.Sprintf("method: %q", m.FQDN())
+}
+
+func (e *SwitchExpr) ProtoFormat(opt *ProtoFormatOption) string {
+	if e == nil {
+		return ""
+	}
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	for _, c := range e.Cases {
+		elems = append(elems, c.ProtoFormat(nextOpt))
+	}
+	if e.Default != nil {
+		elems = append(elems, e.Default.ProtoFormat(nextOpt))
+	}
+	return indent + fmt.Sprintf("switch {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
+func (c *SwitchCaseExpr) ProtoFormat(opt *ProtoFormatOption) string {
+	if c == nil {
+		return ""
+	}
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	if c.If != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", c.If.Expr))
+	}
+	if c.By != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("by: %q", c.By.Expr))
+	}
+	return indent + fmt.Sprintf("case {\n%s\n%s}", strings.Join(elems, "\n"), indent)
+}
+
+func (d *SwitchDefaultExpr) ProtoFormat(opt *ProtoFormatOption) string {
+	if d == nil {
+		return ""
+	}
+	indent := opt.indentFormat()
+	nextOpt := opt.toNextIndentLevel()
+	var elems []string
+	if d.By != nil {
+		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("by: %q", d.By.Expr))
+	}
+	return indent + fmt.Sprintf("default {\n%s\n%s}", strings.Join(elems, "\n"), indent)
 }
 
 func (r *Request) ProtoFormat(opt *ProtoFormatOption) string {

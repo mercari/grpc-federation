@@ -301,6 +301,30 @@ func TestProtoFormat(t *testing.T) {
   }`,
 			},
 		},
+		{
+			name: "switch.proto",
+			messageOptionToFormatMap: map[string]string{
+				"GetPostResponse": `
+  option (grpc.federation.message) = {
+    def {
+      name: "switch"
+      switch {
+        case {
+          if: "$.id == 'blue'"
+          by: "1"
+        }
+        case {
+          if: "$.id == 'red'"
+          by: "2"
+        }
+        default {
+          by: "3"
+        }
+      }
+    }
+  }`,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

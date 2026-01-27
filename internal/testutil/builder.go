@@ -1802,6 +1802,14 @@ func (b *ServiceVariableBuilder) SetEnum(v *resolver.EnumExpr) *ServiceVariableB
 	return b
 }
 
+func (b *ServiceVariableBuilder) SetSwitch(v *resolver.SwitchExpr) *ServiceVariableBuilder {
+	b.svcVar.Expr = &resolver.ServiceVariableExpr{
+		Switch: v,
+		Type:   v.Type,
+	}
+	return b
+}
+
 func (b *ServiceVariableBuilder) SetValidation(v *resolver.ServiceVariableValidationExpr) *ServiceVariableBuilder {
 	b.svcVar.Expr = &resolver.ServiceVariableExpr{
 		Validation: v,

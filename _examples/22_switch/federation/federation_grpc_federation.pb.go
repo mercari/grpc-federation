@@ -70,6 +70,46 @@ type FederationServiceCELPluginConfig struct {
 	CacheDir string
 }
 
+// FederationServiceEnv keeps the values read from environment variables.
+type FederationServiceEnv struct {
+	A string `envconfig:"A" default:"none"`
+}
+
+type keyFederationServiceEnv struct{}
+
+// GetFederationServiceEnv gets environment variables.
+func GetFederationServiceEnv(ctx context.Context) *FederationServiceEnv {
+	value := ctx.Value(keyFederationServiceEnv{})
+	if value == nil {
+		return nil
+	}
+	return value.(*FederationServiceEnv)
+}
+
+func withFederationServiceEnv(ctx context.Context, env *FederationServiceEnv) context.Context {
+	return context.WithValue(ctx, keyFederationServiceEnv{}, env)
+}
+
+// FederationServiceVariable keeps the initial values.
+type FederationServiceVariable struct {
+	Svar int64
+}
+
+type keyFederationServiceVariable struct{}
+
+// GetFederationServiceVariable gets initial variables.
+func GetFederationServiceVariable(ctx context.Context) *FederationServiceVariable {
+	value := ctx.Value(keyFederationServiceVariable{})
+	if value == nil {
+		return nil
+	}
+	return value.(*FederationServiceVariable)
+}
+
+func withFederationServiceVariable(ctx context.Context, svcVar *FederationServiceVariable) context.Context {
+	return context.WithValue(ctx, keyFederationServiceVariable{}, svcVar)
+}
+
 // FederationServiceUnimplementedResolver a structure implemented to satisfy the Resolver interface.
 // An Unimplemented error is always returned.
 // This is intended for use when there are many Resolver interfaces that do not need to be implemented,
@@ -85,6 +125,8 @@ type FederationService struct {
 	errorHandler    grpcfed.ErrorHandler
 	celCacheMap     *grpcfed.CELCacheMap
 	tracer          trace.Tracer
+	env             *FederationServiceEnv
+	svcVar          *FederationServiceVariable
 	celTypeHelper   *grpcfed.CELTypeHelper
 	celEnvOpts      []grpcfed.CELEnvOption
 	celPlugins      []*grpcfedcel.CELPlugin
@@ -108,10 +150,22 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		"grpc.federation.private.org.federation.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
+		"grpc.federation.private.Env": {
+			"a": grpcfed.NewCELFieldType(grpcfed.CELStringType, "A"),
+		},
+		"grpc.federation.private.ServiceVariable": {
+			"svar": grpcfed.NewCELFieldType(grpcfed.CELIntType, "Svar"),
+		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
+	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
+	var env FederationServiceEnv
+	if err := grpcfed.LoadEnv("", &env); err != nil {
+		return nil, err
+	}
 	svc := &FederationService{
 		cfg:             cfg,
 		logger:          logger,
@@ -121,7 +175,12 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
+		env:             &env,
+		svcVar:          new(FederationServiceVariable),
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if err := svc.initServiceVariables(ctx); err != nil {
+		return nil, err
 	}
 	return svc, nil
 }
@@ -136,11 +195,70 @@ func (s *FederationService) cleanup(ctx context.Context) {
 		plugin.Close()
 	}
 }
+func (s *FederationService) initServiceVariables(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars *FederationServiceVariable
+	}
+	value := &localValueType{
+		LocalValue: grpcfed.NewServiceVariableLocalValue(s.celEnvOpts),
+		vars:       s.svcVar,
+	}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
+
+	/*
+		def {
+		  name: "svar"
+		  switch {
+		    case {
+		      if: "grpc.federation.env.a == 'red'"
+		      by: "1"
+		    }
+		    default {
+		      by: "2"
+		    }
+		  }
+		}
+	*/
+	def_svar := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
+			Name: `svar`,
+			Type: grpcfed.CELIntType,
+			Setter: func(value *localValueType, v int64) error {
+				value.vars.Svar = v
+				return nil
+			},
+			Switch: func(ctx context.Context, value *localValueType) (any, error) {
+				cases := []*grpcfed.EvalSwitchCase{}
+				cases = append(cases, &grpcfed.EvalSwitchCase{
+					If:           `grpc.federation.env.a == 'red'`,
+					IfCacheIndex: 1,
+					By:           `1`,
+					ByCacheIndex: 2,
+				})
+				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault{
+					By:           `2`,
+					ByCacheIndex: 3,
+				})
+			},
+		})
+	}
+	if err := def_svar(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 // GetPost implements "org.federation.FederationService/GetPost" method.
 func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
 	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/GetPost")
 	defer span.End()
+	ctx = withFederationServiceEnv(ctx, s.env)
+	ctx = withFederationServiceVariable(ctx, s.svcVar)
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	defer func() {
@@ -179,12 +297,26 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponseArgument", req)}
+	value.AddEnv(s.env)
+	value.AddServiceVariable(s.svcVar)
 	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
-	   	def {
-	   	  name: "switch"
-
-	   }
+		def {
+		  name: "switch"
+		  switch {
+		    case {
+		      if: "$.id == 'blue'"
+		      by: "3"
+		    }
+		    case {
+		      if: "$.id == 'red'"
+		      by: "4"
+		    }
+		    default {
+		      by: "5"
+		    }
+		  }
+		}
 	*/
 	def_switch := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
@@ -198,19 +330,19 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				cases := []*grpcfed.EvalSwitchCase{}
 				cases = append(cases, &grpcfed.EvalSwitchCase{
 					If:           `$.id == 'blue'`,
-					IfCacheIndex: 1,
-					By:           `1`,
-					ByCacheIndex: 2,
+					IfCacheIndex: 4,
+					By:           `3`,
+					ByCacheIndex: 5,
 				})
 				cases = append(cases, &grpcfed.EvalSwitchCase{
 					If:           `$.id == 'red'`,
-					IfCacheIndex: 3,
-					By:           `2`,
-					ByCacheIndex: 4,
+					IfCacheIndex: 6,
+					By:           `4`,
+					ByCacheIndex: 7,
 				})
 				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault{
-					By:           `3`,
-					ByCacheIndex: 5,
+					By:           `5`,
+					ByCacheIndex: 8,
 				})
 			},
 		})
@@ -228,11 +360,24 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	ret := &GetPostResponse{}
 
 	// field binding section.
+	// (grpc.federation.field).by = "grpc.federation.var.svar"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:      value,
+		Expr:       `grpc.federation.var.svar`,
+		CacheIndex: 9,
+		Setter: func(v int64) error {
+			ret.Svar = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 	// (grpc.federation.field).by = "switch"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:      value,
 		Expr:       `switch`,
-		CacheIndex: 6,
+		CacheIndex: 10,
 		Setter: func(v int64) error {
 			ret.Switch = v
 			return nil
@@ -254,6 +399,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
+		slog.Int64("svar", v.GetSvar()),
 		slog.Int64("switch", v.GetSwitch()),
 	)
 }

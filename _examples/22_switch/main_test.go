@@ -106,7 +106,8 @@ func TestFederation(t *testing.T) {
 	}
 
 	if diff := cmp.Diff(res, &federation.GetPostResponse{
-		Switch: 2,
+		Svar:   2,
+		Switch: 4,
 	}, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
 	)); diff != "" {

@@ -124,6 +124,7 @@ type ServiceVariableExpr struct {
 	Map        *MapExpr
 	Message    *MessageExpr
 	Enum       *EnumExpr
+	Switch     *SwitchExpr
 	Validation *ServiceVariableValidationExpr
 }
 
@@ -261,8 +262,8 @@ type VariableExpr struct {
 	Call       *CallExpr
 	Message    *MessageExpr
 	Enum       *EnumExpr
-	Validation *ValidationExpr
 	Switch     *SwitchExpr
+	Validation *ValidationExpr
 }
 
 type CallExpr struct {

@@ -855,6 +855,11 @@ nested_list.proto:20:35: nested list is unsupported
 20:      def { name: "nested_list" by: "[[1]]" }
                                        ^
 `},
+		{file: "invalid_service_variable_switch.proto", expected: `
+invalid_service_variable_switch.proto:15:23: default: all cases must return the same type, by must return a "int64" type, but got "bool" type
+15:          default { by: "true" }
+                           ^
+`},
 		{file: "missing_switch_case.proto", expected: `
 missing_switch_case.proto:22:14: at least one "case" must be defined
 22:        switch {

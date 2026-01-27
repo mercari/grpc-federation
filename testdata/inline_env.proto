@@ -42,6 +42,13 @@ service InlineEnvService {
     }
     var [
       { name: "x" by: "grpc.federation.env.aaa" },
+      {
+        name: "y"
+        switch {
+          case { if: "grpc.federation.env.aaa == 'xxx'" by: "grpc.federation.env.bbb" }
+          default { by: "[0, 0]" }
+        }
+      },
       { validation { if: "grpc.federation.env.bbb == 1" message: "'error'" } }
     ]
   };

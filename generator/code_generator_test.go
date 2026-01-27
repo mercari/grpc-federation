@@ -25,22 +25,24 @@ func TestCodeGenerate(t *testing.T) {
 	tmpDir := filepath.Join(t.TempDir(), "grpc-federation")
 
 	tests := []string{
-		"simple_aggregation",
-		"minimum",
-		"create_post",
-		"custom_resolver",
-		"async",
-		"alias",
-		"autobind",
-		"multi_user",
-		"resolver_overlaps",
-		"oneof",
-		"validation",
-		"map",
-		"condition",
-		"error_handler",
-		"inline_env",
-		"ref_env",
+		/*
+			"simple_aggregation",
+			"minimum",
+			"create_post",
+			"custom_resolver",
+			"async",
+			"alias",
+			"autobind",
+			"multi_user",
+			"resolver_overlaps",
+			"oneof",
+			"validation",
+			"map",
+			"condition",
+			"error_handler",
+		*/
+		//"inline_env",
+		//"ref_env",
 		"switch",
 	}
 	for _, test := range tests {

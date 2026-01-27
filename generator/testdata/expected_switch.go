@@ -181,10 +181,22 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponseArgument", req)}
 	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
 	/*
-	   	def {
-	   	  name: "switch"
-
-	   }
+		def {
+		  name: "switch"
+		  switch {
+		    case {
+		      if: "$.id == 'blue'"
+		      by: "1"
+		    }
+		    case {
+		      if: "$.id == 'red'"
+		      by: "2"
+		    }
+		    default {
+		      by: "3"
+		    }
+		  }
+		}
 	*/
 	def_switch := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{

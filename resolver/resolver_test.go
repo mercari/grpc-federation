@@ -3811,6 +3811,22 @@ func TestInlineEnv(t *testing.T) {
 						).
 						AddVar(
 							testutil.NewServiceVariableBuilder().
+								SetName("y").
+								SetSwitch(testutil.NewSwitchExprBuilder().
+									SetType(resolver.Int64RepeatedType).
+									AddCase(testutil.NewSwitchCaseExprBuilder().
+										SetIf(testutil.NewCELValueBuilder("grpc.federation.env.aaa == 'xxx'", resolver.BoolType).Build(t)).
+										SetBy(testutil.NewCELValueBuilder("grpc.federation.env.bbb", resolver.Int64RepeatedType).Build(t)).
+										Build(t),
+									).
+									SetDefault(testutil.NewSwitchDefaultExprBuilder().
+										SetBy(testutil.NewCELValueBuilder("[0, 0]", resolver.Int64RepeatedType).Build(t)).
+										Build(t)).
+									Build(t)).
+								Build(t),
+						).
+						AddVar(
+							testutil.NewServiceVariableBuilder().
 								SetValidation(&resolver.ServiceVariableValidationExpr{
 									If:      testutil.NewCELValueBuilder("grpc.federation.env.bbb == 1", resolver.BoolType).Build(t),
 									Message: testutil.NewCELValueBuilder("'error'", resolver.StringType).Build(t),
