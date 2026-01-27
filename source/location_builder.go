@@ -587,6 +587,18 @@ func (b *ServiceVariableBuilder) WithEnum() *EnumExprOptionBuilder {
 	}
 }
 
+func (b *ServiceVariableBuilder) WithSwitch() *SwitchExprOptionBuilder {
+	root := b.root.Clone()
+	svcvar := b.svcvar(root)
+	svcvar.Switch = &SwitchExprOption{}
+	return &SwitchExprOptionBuilder{
+		root: root,
+		option: func(loc *Location) *SwitchExprOption {
+			return b.svcvar(loc).Switch
+		},
+	}
+}
+
 func (b *ServiceVariableBuilder) WithValidation() *ServiceVariableValidationExprBuilder {
 	root := b.root.Clone()
 	svcvar := b.svcvar(root)

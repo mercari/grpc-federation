@@ -148,6 +148,7 @@ func (sv *ServiceVariable) Clone() *ServiceVariable {
 		Map:        sv.Map.Clone(),
 		Message:    sv.Message.Clone(),
 		Enum:       sv.Enum.Clone(),
+		Switch:     sv.Switch.Clone(),
 		Validation: sv.Validation.Clone(),
 	}
 }
@@ -312,8 +313,8 @@ func (o *VariableDefinitionOption) Clone() *VariableDefinitionOption {
 		Call:       o.Call.Clone(),
 		Message:    o.Message.Clone(),
 		Enum:       o.Enum.Clone(),
-		Validation: o.Validation.Clone(),
 		Switch:     o.Switch.Clone(),
+		Validation: o.Validation.Clone(),
 	}
 }
 

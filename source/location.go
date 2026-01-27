@@ -93,6 +93,7 @@ type ServiceVariable struct {
 	Map        *MapExprOption
 	Message    *MessageExprOption
 	Enum       *EnumExprOption
+	Switch     *SwitchExprOption
 	Validation *ServiceVariableValidationExpr
 }
 
@@ -214,8 +215,8 @@ type VariableDefinitionOption struct {
 	Call       *CallExprOption
 	Message    *MessageExprOption
 	Enum       *EnumExprOption
-	Validation *ValidationExprOption
 	Switch     *SwitchExprOption
+	Validation *ValidationExprOption
 }
 
 // MapExprOption represents def.map location of grpc.federation.message option.

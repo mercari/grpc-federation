@@ -589,6 +589,17 @@ func (f *File) findDefByPos(builder *VariableDefinitionOptionBuilder, pos Positi
 			); found != nil {
 				return found
 			}
+		case "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			if found := f.findSwitchExprByPos(
+				builder.WithSwitch(),
+				pos, value,
+			); found != nil {
+				return found
+			}
 		case "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
@@ -657,6 +668,28 @@ func (f *File) findEnumExprByPos(builder *EnumExprOptionBuilder, pos Position, n
 		case "by":
 			if f.containsPos(elem.Val, pos) {
 				return builder.WithBy().Location()
+			}
+		}
+	}
+	if f.containsPos(node, pos) {
+		return builder.Location()
+	}
+	return nil
+}
+
+func (f *File) findSwitchExprByPos(builder *SwitchExprOptionBuilder, pos Position, node *ast.MessageLiteralNode) *Location {
+	caseCount := 0
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch fieldName {
+		case "case":
+			if f.containsPos(elem.Val, pos) {
+				return builder.WithCase(caseCount).Location()
+			}
+			caseCount++
+		case "default":
+			if f.containsPos(elem.Val, pos) {
+				return builder.WithDefault().Location()
 			}
 		}
 	}
@@ -1125,6 +1158,17 @@ func (f *File) findServiceVariableByPos(builder *ServiceVariableBuilder, pos Pos
 			}
 			if found := f.findEnumExprByPos(
 				builder.WithEnum(),
+				pos, value,
+			); found != nil {
+				return found
+			}
+		case "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			if found := f.findSwitchExprByPos(
+				builder.WithSwitch(),
 				pos, value,
 			); found != nil {
 				return found
@@ -1692,18 +1736,18 @@ func (f *File) nodeInfoByDef(list []*ast.MessageLiteralNode, def *VariableDefini
 				return nil
 			}
 			return f.nodeInfoByEnumExpr(value, def.Enum)
-		case def.Validation != nil && fieldName == "validation":
-			value, ok := elem.Val.(*ast.MessageLiteralNode)
-			if !ok {
-				return nil
-			}
-			return f.nodeInfoByValidationExpr(value, def.Validation)
 		case def.Switch != nil && fieldName == "switch":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
 				return nil
 			}
 			return f.nodeInfoBySwitchExpr(value, def.Switch)
+		case def.Validation != nil && fieldName == "validation":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoByValidationExpr(value, def.Validation)
 		}
 	}
 	return f.nodeInfo(node)
@@ -2477,6 +2521,12 @@ func (f *File) nodeInfoByServiceVariable(list []*ast.MessageLiteralNode, svcVar 
 				return nil
 			}
 			return f.nodeInfoByEnumExpr(value, svcVar.Enum)
+		case svcVar.Switch != nil && fieldName == "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoBySwitchExpr(value, svcVar.Switch)
 		case svcVar.Validation != nil && fieldName == "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
