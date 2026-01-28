@@ -232,6 +232,10 @@ func (e *encoder) toServiceVariableExpr(fqdn string, expr *resolver.ServiceVaria
 		ret.Expr = &plugin.ServiceVariableExpr_Enum{
 			Enum: e.toEnumExpr(expr.Enum),
 		}
+	case expr.Switch != nil:
+		ret.Expr = &plugin.ServiceVariableExpr_Switch{
+			Switch: e.toSwitchExpr(expr.Switch),
+		}
 	case expr.Validation != nil:
 		ret.Expr = &plugin.ServiceVariableExpr_Validation{
 			Validation: e.toServiceVariableValidationExpr(expr.Validation),
@@ -963,6 +967,10 @@ func (e *encoder) toVariableExpr(fqdn string, expr *resolver.VariableExpr) *plug
 		ret.Expr = &plugin.VariableExpr_Enum{
 			Enum: e.toEnumExpr(expr.Enum),
 		}
+	case expr.Switch != nil:
+		ret.Expr = &plugin.VariableExpr_Switch{
+			Switch: e.toSwitchExpr(expr.Switch),
+		}
 	case expr.Validation != nil:
 		ret.Expr = &plugin.VariableExpr_Validation{
 			Validation: e.toValidationExpr(fqdn, expr.Validation),
@@ -1132,6 +1140,44 @@ func (e *encoder) toEnumExpr(expr *resolver.EnumExpr) *plugin.EnumExpr {
 	return &plugin.EnumExpr{
 		EnumId: e.toEnum(expr.Enum).GetId(),
 		By:     e.toCELValue(expr.By),
+	}
+}
+
+func (e *encoder) toSwitchExpr(expr *resolver.SwitchExpr) *plugin.SwitchExpr {
+	if expr == nil {
+		return nil
+	}
+	return &plugin.SwitchExpr{
+		Type:    e.toType(expr.Type),
+		Cases:   e.toSwitchCases(expr.Cases),
+		Default: e.toSwitchDefault(expr.Default),
+	}
+}
+
+func (e *encoder) toSwitchCases(cases []*resolver.SwitchCaseExpr) []*plugin.SwitchCase {
+	ret := make([]*plugin.SwitchCase, 0, len(cases))
+	for _, cse := range cases {
+		ret = append(ret, e.toSwitchCase(cse))
+	}
+	return ret
+}
+
+func (e *encoder) toSwitchCase(cse *resolver.SwitchCaseExpr) *plugin.SwitchCase {
+	if cse == nil {
+		return nil
+	}
+	return &plugin.SwitchCase{
+		If: e.toCELValue(cse.If),
+		By: e.toCELValue(cse.By),
+	}
+}
+
+func (e *encoder) toSwitchDefault(def *resolver.SwitchDefaultExpr) *plugin.SwitchDefault {
+	if def == nil {
+		return nil
+	}
+	return &plugin.SwitchDefault{
+		By: e.toCELValue(def.By),
 	}
 }
 
