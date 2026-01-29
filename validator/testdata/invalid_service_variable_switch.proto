@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    var {
+      name: "svar"
+      switch {
+        case { if: "true" by: "1" }
+        default { by: "true" }
+      }
+    }
+  };
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  int64 svar = 1 [(grpc.federation.field).by = "grpc.federation.var.svar"];
+}

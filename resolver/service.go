@@ -211,6 +211,7 @@ func (sv *ServiceVariable) ToVariableDefinition() *VariableDefinition {
 		Map:        expr.Map,
 		Message:    expr.Message,
 		Enum:       expr.Enum,
+		Switch:     expr.Switch,
 		Validation: validationExpr,
 	}
 	return def

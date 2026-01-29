@@ -85,6 +85,7 @@ func withInlineEnvServiceEnv(ctx context.Context, env *InlineEnvServiceEnv) cont
 // InlineEnvServiceVariable keeps the initial values.
 type InlineEnvServiceVariable struct {
 	X string
+	Y []int64
 	bool
 }
 
@@ -148,6 +149,7 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 		},
 		"grpc.federation.private.ServiceVariable": {
 			"x": grpcfed.NewCELFieldType(grpcfed.CELStringType, "X"),
+			"y": grpcfed.NewCELFieldType(grpcfed.NewCELListType(grpcfed.CELIntType), "Y"),
 			"":  grpcfed.NewCELFieldType(grpcfed.CELBoolType, ""),
 		},
 	}
@@ -225,16 +227,57 @@ func (s *InlineEnvService) initServiceVariables(ctx context.Context) error {
 		return err
 	}
 
+	/*
+		def {
+		  name: "y"
+		  switch {
+		    case {
+		      if: "grpc.federation.env.aaa == 'xxx'"
+		      by: "grpc.federation.env.bbb"
+		    }
+		    default {
+		      by: "[0, 0]"
+		    }
+		  }
+		}
+	*/
+	def_y := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[[]int64, *localValueType]{
+			Name: `y`,
+			Type: grpcfed.CELListType(grpcfed.CELIntType),
+			Setter: func(value *localValueType, v []int64) error {
+				value.vars.Y = v
+				return nil
+			},
+			Switch: func(ctx context.Context, value *localValueType) (any, error) {
+				cases := []*grpcfed.EvalSwitchCase{}
+				cases = append(cases, &grpcfed.EvalSwitchCase{
+					If:           `grpc.federation.env.aaa == 'xxx'`,
+					IfCacheIndex: 2,
+					By:           `grpc.federation.env.bbb`,
+					ByCacheIndex: 3,
+				})
+				return grpcfed.EvalSwitch[[]int64](ctx, value, cases, &grpcfed.EvalSwitchDefault{
+					By:           `[0, 0]`,
+					ByCacheIndex: 4,
+				})
+			},
+		})
+	}
+	if err := def_y(ctx); err != nil {
+		return err
+	}
+
 	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 		Value:      value,
 		Expr:       `grpc.federation.env.bbb == 1`,
-		CacheIndex: 2,
+		CacheIndex: 5,
 		Body: func(value *localValueType) error {
 			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 				Value:      value,
 				Expr:       `'error'`,
 				OutType:    reflect.TypeOf(""),
-				CacheIndex: 3,
+				CacheIndex: 6,
 			})
 			if err != nil {
 				return err

@@ -3236,6 +3236,10 @@ func (d *VariableDefinition) IsBy() bool {
 	return d.VariableDefinition.Expr.By != nil
 }
 
+func (d *VariableDefinition) IsSwitch() bool {
+	return d.VariableDefinition.Expr.Switch != nil
+}
+
 func (d *VariableDefinition) IsEnum() bool {
 	return d.VariableDefinition.Expr.Enum != nil
 }
@@ -3253,6 +3257,14 @@ func (d *VariableDefinition) MapResolver() *MapResolver {
 		Service: d.Service,
 		MapExpr: d.VariableDefinition.Expr.Map,
 		file:    d.file,
+	}
+}
+
+func (d *VariableDefinition) Switch() *SwitchResolver {
+	return &SwitchResolver{
+		Service:    d.Service,
+		SwitchExpr: d.VariableDefinition.Expr.Switch,
+		file:       d.file,
 	}
 }
 
@@ -3472,6 +3484,28 @@ func (r *MapResolver) RequestType() string {
 		return fmt.Sprintf("%sArgument", msgName)
 	}
 	return ""
+}
+
+type SwitchResolver struct {
+	Service    *Service
+	SwitchExpr *resolver.SwitchExpr
+	file       *File
+}
+
+func (r *SwitchResolver) Type() string {
+	return r.file.toTypeText(r.SwitchExpr.Type)
+}
+
+func (r *SwitchResolver) CELCacheIndex() int {
+	return r.Service.CELCacheIndex()
+}
+
+func (r *SwitchResolver) Cases() []*resolver.SwitchCaseExpr {
+	return r.SwitchExpr.Cases
+}
+
+func (r *SwitchResolver) Default() *resolver.SwitchDefaultExpr {
+	return r.SwitchExpr.Default
 }
 
 func toCELNativeType(t *resolver.Type) string {

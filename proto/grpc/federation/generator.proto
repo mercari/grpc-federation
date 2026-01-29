@@ -161,6 +161,7 @@ message ServiceVariableExpr {
     MessageExpr message = 4;
     ServiceVariableValidationExpr validation = 5;
     EnumExpr enum = 6;
+    SwitchExpr switch = 7;
   }
 }
 
@@ -288,6 +289,7 @@ message VariableExpr {
     MessageExpr message = 5;
     ValidationExpr validation = 6;
     EnumExpr enum = 7;
+    SwitchExpr switch = 8;
   }
 }
 
@@ -405,6 +407,21 @@ message Argument {
 message Value {
   bool inline = 1;
   CELValue cel = 2;
+}
+
+message SwitchExpr {
+  Type type = 1;
+  repeated SwitchCase cases = 2;
+  SwitchDefault default = 3;
+}
+
+message SwitchCase {
+  CELValue if = 1;
+  CELValue by = 2;
+}
+
+message SwitchDefault {
+  CELValue by = 1;
 }
 
 message ValidationExpr {

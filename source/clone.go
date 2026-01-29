@@ -148,6 +148,7 @@ func (sv *ServiceVariable) Clone() *ServiceVariable {
 		Map:        sv.Map.Clone(),
 		Message:    sv.Message.Clone(),
 		Enum:       sv.Enum.Clone(),
+		Switch:     sv.Switch.Clone(),
 		Validation: sv.Validation.Clone(),
 	}
 }
@@ -312,6 +313,7 @@ func (o *VariableDefinitionOption) Clone() *VariableDefinitionOption {
 		Call:       o.Call.Clone(),
 		Message:    o.Message.Clone(),
 		Enum:       o.Enum.Clone(),
+		Switch:     o.Switch.Clone(),
 		Validation: o.Validation.Clone(),
 	}
 }
@@ -511,5 +513,35 @@ func (o *GRPCErrorDetailLocalizedMessageOption) Clone() *GRPCErrorDetailLocalize
 	return &GRPCErrorDetailLocalizedMessageOption{
 		Idx:       o.Idx,
 		FieldName: o.FieldName,
+	}
+}
+
+func (o *SwitchExprOption) Clone() *SwitchExprOption {
+	if o == nil {
+		return nil
+	}
+	return &SwitchExprOption{
+		Case:    o.Case.Clone(),
+		Default: o.Default.Clone(),
+	}
+}
+
+func (o *SwitchCaseExprOption) Clone() *SwitchCaseExprOption {
+	if o == nil {
+		return nil
+	}
+	return &SwitchCaseExprOption{
+		Idx: o.Idx,
+		If:  o.If,
+		By:  o.By,
+	}
+}
+
+func (o *SwitchDefaultExprOption) Clone() *SwitchDefaultExprOption {
+	if o == nil {
+		return nil
+	}
+	return &SwitchDefaultExprOption{
+		By: o.By,
 	}
 }

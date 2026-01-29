@@ -387,6 +387,10 @@ func (d *decoder) toServiceVariableExpr(expr *plugin.ServiceVariableExpr) (*reso
 	if err != nil {
 		return nil, err
 	}
+	switchExpr, err := d.toSwitchExpr(expr.GetSwitch())
+	if err != nil {
+		return nil, err
+	}
 	validationExpr, err := d.toServiceVariableValidationExpr(expr.GetValidation())
 	if err != nil {
 		return nil, err
@@ -397,6 +401,7 @@ func (d *decoder) toServiceVariableExpr(expr *plugin.ServiceVariableExpr) (*reso
 	ret.Map = mapExpr
 	ret.Message = msgExpr
 	ret.Enum = enumExpr
+	ret.Switch = switchExpr
 	ret.Validation = validationExpr
 	return ret, nil
 }
@@ -989,6 +994,10 @@ func (d *decoder) toVariableExpr(expr *plugin.VariableExpr) (*resolver.VariableE
 	if err != nil {
 		return nil, err
 	}
+	switchExpr, err := d.toSwitchExpr(expr.GetSwitch())
+	if err != nil {
+		return nil, err
+	}
 	validationExpr, err := d.toValidationExpr(expr.GetValidation())
 	if err != nil {
 		return nil, err
@@ -1000,6 +1009,7 @@ func (d *decoder) toVariableExpr(expr *plugin.VariableExpr) (*resolver.VariableE
 	ret.Call = callExpr
 	ret.Message = msgExpr
 	ret.Enum = enumExpr
+	ret.Switch = switchExpr
 	ret.Validation = validationExpr
 	return ret, nil
 }
@@ -1246,6 +1256,76 @@ func (d *decoder) toEnumExpr(expr *plugin.EnumExpr) (*resolver.EnumExpr, error) 
 	ret.Enum = enum
 	ret.By = by
 	return ret, nil
+}
+
+func (d *decoder) toSwitchExpr(expr *plugin.SwitchExpr) (*resolver.SwitchExpr, error) {
+	if expr == nil {
+		return nil, nil
+	}
+	typ, err := d.toType(expr.GetType())
+	if err != nil {
+		return nil, err
+	}
+	cases, err := d.toSwitchCases(expr.GetCases())
+	if err != nil {
+		return nil, err
+	}
+	deflt, err := d.toSwitchDefault(expr.GetDefault())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.SwitchExpr{
+		Type:    typ,
+		Cases:   cases,
+		Default: deflt,
+	}, nil
+}
+
+func (d *decoder) toSwitchCases(cases []*plugin.SwitchCase) ([]*resolver.SwitchCaseExpr, error) {
+	if cases == nil {
+		return nil, nil
+	}
+	ret := make([]*resolver.SwitchCaseExpr, 0, len(cases))
+	for _, cse := range cases {
+		cse, err := d.toSwitchCase(cse)
+		if err != nil {
+			return nil, err
+		}
+		if cse == nil {
+			continue
+		}
+		ret = append(ret, cse)
+	}
+	return ret, nil
+}
+
+func (d *decoder) toSwitchCase(cse *plugin.SwitchCase) (*resolver.SwitchCaseExpr, error) {
+	if cse == nil {
+		return nil, nil
+	}
+	ifValue, err := d.toCELValue(cse.GetIf())
+	if err != nil {
+		return nil, err
+	}
+	by, err := d.toCELValue(cse.GetBy())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.SwitchCaseExpr{
+		If: ifValue,
+		By: by,
+	}, nil
+}
+
+func (d *decoder) toSwitchDefault(def *plugin.SwitchDefault) (*resolver.SwitchDefaultExpr, error) {
+	if def == nil {
+		return nil, nil
+	}
+	by, err := d.toCELValue(def.GetBy())
+	if err != nil {
+		return nil, err
+	}
+	return &resolver.SwitchDefaultExpr{By: by}, nil
 }
 
 func (d *decoder) toValidationExpr(expr *plugin.ValidationExpr) (*resolver.ValidationExpr, error) {

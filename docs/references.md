@@ -205,6 +205,7 @@ The defined variables can be used across all messages that the service depends o
 | [`map`](#grpcfederationservicevarmap) | MapExpr | optional |
 | [`message`](#grpcfederationservicevarmessage) | MessageExpr | optional |
 | [`enum`](#grpcfederationservicevarenum) | EnumExpr | optional |
+| [`switch`](#grpcfederationservicevarswitch) | SwitchExpr | optional |
 | [`validation`](#grpcfederationservicevarvalidation) | ServiceVariableValidationExpr | optional |
 
 ### Example
@@ -263,6 +264,10 @@ Please see [(grpc.federation.message).def.message](#grpcfederationmessagedefmess
 ## (grpc.federation.service).var.enum
 
 Please see [(grpc.federation.message).def.enum](#grpcfederationmessagedefenum).
+
+## (grpc.federation.service).var.switch
+
+Please see [(grpc.federation.message).def.switch](#grpcfederationmessagedefswitch).
 
 ## (grpc.federation.service).var.validation
 
@@ -528,6 +533,7 @@ The value to be assigned to a variable can be created with the following feature
 | [`message`](#grpcfederationmessagedefmessage) | MessageExpr | optional |
 | [`enum`](#grpcfederationmessagedefenum) | EnumExpr | optional |
 | [`map`](#grpcfederationmessagedefmap) | MapExpr | optional |
+| [`switch`](#grpcfederationmessagedefswitch) | SwitchExpr | optional |
 | [`validation`](#grpcfederationmessagedefvalidation) | ValidationExpr | optional |
 
 
@@ -1394,6 +1400,68 @@ Create map elements using `message` value by referencing variables created with 
 ## (grpc.federation.message).def.map.enum
 
 Create map elements using `enum` value by referencing variables created with `iterator` section.
+
+## (grpc.federation.message).def.switch
+
+`switch` evaluates cases in order and returns the value from the first matching case, or the default case, if no case matches.
+
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`case`](#grpcfederationmessagedefswitchcase) | repeated SwitchCaseExpr | optional |
+| [`default`](#grpcfederationmessagedefswitchdefault) | SwitchDefaultExpr | required |
+
+### Example
+
+```proto
+message MyMessage {
+  option (.grpc.federation.message) = {
+    def {
+      name: "status"
+      switch {
+        case { 
+          if: "$.activation_status == 'active'" 
+          by: "'enabled'" 
+        }
+        case { 
+          if: "$.activation_status == 'inactive'" 
+          by: "'disabled'" 
+        }
+        default { by: "'unknown'" }
+      }
+    }
+  };
+  string status = 1 [(grpc.federation.field).by = "status"];
+}
+```
+
+## (grpc.federation.message).def.switch.case
+
+A single case in a `switch` expression. Cases are evaluated in order, and the first case whose `if` condition evaluates to `true` will have its `by` expression evaluated and the resulting value returned as the value of the `switch`.
+
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`if`](#grpcfederationmessagedefswitchcaseif) | [CEL](./cel.md) | required |
+| [`by`](#grpcfederationmessagedefswitchcaseby) | [CEL](./cel.md) | required |
+
+## (grpc.federation.message).def.switch.case.if
+
+A condition in [CEL](./cel.md) that determines whether this case matches. The return value must always be of type boolean. If the condition evaluates to `true`, the case matches and its `by` expression is evaluated.
+
+## (grpc.federation.message).def.switch.case.by
+
+A [CEL](./cel.md) expression that is evaluated when this case matches. The result of this expression is returned as the value of the `switch` expression.
+
+## (grpc.federation.message).def.switch.default
+
+The default case that is evaluated when none of the switch cases match.
+
+| field | type | required or optional |
+| ----- | ---- | -------------------- |
+| [`by`](#grpcfederationmessagedefswitchdefaultby) | [CEL](./cel.md) | required |
+
+## (grpc.federation.message).def.switch.default.by
+
+A [CEL](./cel.md) expression that is evaluated when no switch case matches. The result of this expression is returned as the value of the `switch` expression.
 
 ## (grpc.federation.message).def.validation
 

@@ -41,6 +41,7 @@ func TestCodeGenerate(t *testing.T) {
 		"error_handler",
 		"inline_env",
 		"ref_env",
+		"switch",
 	}
 	for _, test := range tests {
 		test := test
