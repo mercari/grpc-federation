@@ -1822,7 +1822,7 @@ func (x *CallExpr) GetMetadata() string {
 
 // SwitchExpr represents a switch statement. At least one "case", and "default", must be defined. All
 // case.if expressions must evaluate to a boolean value. All case.by expressions, and default.by, must
-// evaluate to the same type (the return type).
+// evaluate to the same type (the return type of the switch).
 //
 // When executed, the case.if expressions are evaluated in order, and, for the first case whose
 // case.if expression evaluates to true, its case.by is evaluated to make the return value of the
