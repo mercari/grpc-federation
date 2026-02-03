@@ -97,7 +97,6 @@ func TestFederation(t *testing.T) {
 	}()
 
 	client := federation.NewFederationServiceClient(conn)
-	ctx = metadata.AppendToOutgoingContext(ctx, "key1", "value1")
 	res, err := client.GetPost(ctx, &federation.GetPostRequest{
 		Id: "red",
 	})
