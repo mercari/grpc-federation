@@ -589,6 +589,17 @@ func (f *File) findDefByPos(builder *VariableDefinitionOptionBuilder, pos Positi
 			); found != nil {
 				return found
 			}
+		case "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			if found := f.findSwitchExprByPos(
+				builder.WithSwitch(),
+				pos, value,
+			); found != nil {
+				return found
+			}
 		case "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
@@ -657,6 +668,28 @@ func (f *File) findEnumExprByPos(builder *EnumExprOptionBuilder, pos Position, n
 		case "by":
 			if f.containsPos(elem.Val, pos) {
 				return builder.WithBy().Location()
+			}
+		}
+	}
+	if f.containsPos(node, pos) {
+		return builder.Location()
+	}
+	return nil
+}
+
+func (f *File) findSwitchExprByPos(builder *SwitchExprOptionBuilder, pos Position, node *ast.MessageLiteralNode) *Location {
+	caseCount := 0
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch fieldName {
+		case "case":
+			if f.containsPos(elem.Val, pos) {
+				return builder.WithCase(caseCount).Location()
+			}
+			caseCount++
+		case "default":
+			if f.containsPos(elem.Val, pos) {
+				return builder.WithDefault().Location()
 			}
 		}
 	}
@@ -1125,6 +1158,17 @@ func (f *File) findServiceVariableByPos(builder *ServiceVariableBuilder, pos Pos
 			}
 			if found := f.findEnumExprByPos(
 				builder.WithEnum(),
+				pos, value,
+			); found != nil {
+				return found
+			}
+		case "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			if found := f.findSwitchExprByPos(
+				builder.WithSwitch(),
 				pos, value,
 			); found != nil {
 				return found
@@ -1692,6 +1736,12 @@ func (f *File) nodeInfoByDef(list []*ast.MessageLiteralNode, def *VariableDefini
 				return nil
 			}
 			return f.nodeInfoByEnumExpr(value, def.Enum)
+		case def.Switch != nil && fieldName == "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoBySwitchExpr(value, def.Switch)
 		case def.Validation != nil && fieldName == "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {
@@ -2092,6 +2142,67 @@ func (f *File) nodeInfoByGRPCErrorDetail(list []*ast.MessageLiteralNode, detail 
 	return f.nodeInfo(node)
 }
 
+func (f *File) nodeInfoBySwitchExpr(node *ast.MessageLiteralNode, opt *SwitchExprOption) *ast.NodeInfo {
+	caseCount := 0
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.Case != nil && fieldName == "case":
+			if caseCount == opt.Case.Idx {
+				value, ok := elem.Val.(*ast.MessageLiteralNode)
+				if !ok {
+					return nil
+				}
+				return f.nodeInfoBySwitchCaseExpr(value, opt.Case)
+			}
+			caseCount++
+		case opt.Default != nil && fieldName == "default":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoBySwitchDefaultExpr(value, opt.Default)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoBySwitchCaseExpr(node *ast.MessageLiteralNode, opt *SwitchCaseExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.If && fieldName == "if":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		case opt.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
+func (f *File) nodeInfoBySwitchDefaultExpr(node *ast.MessageLiteralNode, opt *SwitchDefaultExprOption) *ast.NodeInfo {
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch {
+		case opt.By && fieldName == "by":
+			value, ok := elem.Val.(*ast.StringLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfo(value)
+		}
+	}
+	return f.nodeInfo(node)
+}
+
 func (f *File) nodeInfoByPreconditionFailure(list []*ast.MessageLiteralNode, failure *GRPCErrorDetailPreconditionFailureOption) *ast.NodeInfo {
 	if failure.Idx >= len(list) {
 		return nil
@@ -2410,6 +2521,12 @@ func (f *File) nodeInfoByServiceVariable(list []*ast.MessageLiteralNode, svcVar 
 				return nil
 			}
 			return f.nodeInfoByEnumExpr(value, svcVar.Enum)
+		case svcVar.Switch != nil && fieldName == "switch":
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			return f.nodeInfoBySwitchExpr(value, svcVar.Switch)
 		case svcVar.Validation != nil && fieldName == "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
 			if !ok {

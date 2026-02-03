@@ -240,6 +240,8 @@ func (e *VariableExpr) ReferenceNames() []string {
 		return e.Enum.ReferenceNames()
 	case e.Validation != nil:
 		return e.Validation.Error.ReferenceNames()
+	case e.Switch != nil:
+		return e.Switch.ReferenceNames()
 	}
 	return nil
 }
@@ -341,6 +343,19 @@ func (e *MapIteratorExpr) ReferenceNames() []string {
 	case e.Message != nil:
 		names = append(names, e.Message.ReferenceNames()...)
 	}
+	return toUniqueReferenceNames(names)
+}
+
+func (e *SwitchExpr) ReferenceNames() []string {
+	if e == nil {
+		return nil
+	}
+	var names []string
+	for _, cse := range e.Cases {
+		names = append(names, cse.If.ReferenceNames()...)
+		names = append(names, cse.By.ReferenceNames()...)
+	}
+	names = append(names, e.Default.By.ReferenceNames()...)
 	return toUniqueReferenceNames(names)
 }
 

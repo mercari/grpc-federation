@@ -558,6 +558,7 @@ type Def[T any, U localValue] struct {
 	ByCacheIndex int
 	Message      func(context.Context, U) (any, error)
 	Enum         func(context.Context, U) (T, error)
+	Switch       func(context.Context, U) (any, error)
 	Validation   func(context.Context, U) error
 }
 
@@ -622,6 +623,8 @@ func evalDef[T any, U localValue](ctx context.Context, value U, def Def[T, U]) e
 				return def.Message(ctx, value)
 			case def.Enum != nil:
 				return def.Enum(ctx, value)
+			case def.Switch != nil:
+				return def.Switch(ctx, value)
 			case def.Validation != nil:
 				if err := def.Validation(ctx, value); err != nil {
 					if _, ok := grpcstatus.FromError(err); ok {
@@ -775,6 +778,55 @@ func If[T localValue](ctx context.Context, param *IfParam[T]) error {
 		return param.Body(param.Value)
 	}
 	return nil
+}
+
+type EvalSwitchCase struct {
+	If           string // CEL expression
+	IfCacheIndex int
+	By           string // CEL expression
+	ByCacheIndex int
+}
+
+type EvalSwitchDefault struct {
+	By           string // CEL expression
+	ByCacheIndex int
+}
+
+func EvalSwitch[T any, V localValue](ctx context.Context, value V, cases []*EvalSwitchCase, defaultCase *EvalSwitchDefault) (any, error) {
+	var v T
+	for _, c := range cases {
+		cond, err := EvalCEL(ctx, &EvalCELRequest{
+			Value:      value,
+			Expr:       c.If,
+			OutType:    reflect.TypeOf(false),
+			CacheIndex: c.IfCacheIndex,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if cond.(bool) {
+			by, err := EvalCEL(ctx, &EvalCELRequest{
+				Value:      value,
+				Expr:       c.By,
+				OutType:    reflect.TypeOf(v),
+				CacheIndex: c.ByCacheIndex,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return by.(T), nil
+		}
+	}
+	by, err := EvalCEL(ctx, &EvalCELRequest{
+		Value:      value,
+		Expr:       defaultCase.By,
+		OutType:    reflect.TypeOf(v),
+		CacheIndex: defaultCase.ByCacheIndex,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return by.(T), nil
 }
 
 type EvalCELRequest struct {

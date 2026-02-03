@@ -855,6 +855,47 @@ nested_list.proto:20:35: nested list is unsupported
 20:      def { name: "nested_list" by: "[[1]]" }
                                        ^
 `},
+		{file: "invalid_service_variable_switch.proto", expected: `
+invalid_service_variable_switch.proto:15:23: default: all cases must return the same type, by must return a "int64" type, but got "bool" type
+15:          default { by: "true" }
+                           ^
+`},
+		{file: "missing_switch_case.proto", expected: `
+missing_switch_case.proto:22:14: at least one "case" must be defined
+22:        switch {
+                  ^
+`},
+		{file: "missing_switch_default.proto", expected: `
+missing_switch_default.proto:22:14: "default" must be defined
+22:        switch {
+                  ^
+missing_switch_default.proto:22:14: ERROR: <input>:1:0: Syntax error: mismatched input '<EOF>' expecting {'[', '{', '(', '.', '-', '!', 'true', 'false', 'null', NUM_FLOAT, NUM_INT, NUM_UINT, STRING, BYTES, IDENTIFIER}
+22:        switch {
+                  ^
+`},
+		{file: "repeated_switch_default.proto", expected: `
+repeated_switch_default.proto:26:9: message org.federation.GetPostResponse: option (grpc.federation.message): non-repeated option field default already set
+`},
+		{file: "invalid_switch_case_if_type.proto", expected: `
+invalid_switch_case_if_type.proto:23:20: if must always return a boolean value
+23:          case { if: "$.id" by: "1" }
+                        ^
+`},
+		{file: "invalid_switch_case_by_type.proto", expected: `
+invalid_switch_case_by_type.proto:24:40: case 1: all cases must return the same type, by must return a "int64" type, but got "string" type
+24:          case { if: "$.id == 'red'" by: "'mackerel'" }
+                                            ^
+`},
+		{file: "invalid_switch_default_by_type.proto", expected: `
+invalid_switch_default_by_type.proto:25:23: default: all cases must return the same type, by must return a "int64" type, but got "string" type
+25:          default { by: "'mackerel'" }
+                           ^
+`},
+		{file: "invalid_field_type_by_switch.proto", expected: `
+invalid_field_type_by_switch.proto:29:3: cannot convert type automatically: field type is "string" but specified value type is "int64"
+29:    string switch = 1 [(grpc.federation.field).by = "switch"];
+       ^
+`},
 	}
 	for _, test := range tests {
 		test := test

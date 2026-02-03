@@ -93,6 +93,7 @@ type ServiceVariable struct {
 	Map        *MapExprOption
 	Message    *MessageExprOption
 	Enum       *EnumExprOption
+	Switch     *SwitchExprOption
 	Validation *ServiceVariableValidationExpr
 }
 
@@ -214,6 +215,7 @@ type VariableDefinitionOption struct {
 	Call       *CallExprOption
 	Message    *MessageExprOption
 	Enum       *EnumExprOption
+	Switch     *SwitchExprOption
 	Validation *ValidationExprOption
 }
 
@@ -353,6 +355,21 @@ type GRPCErrorDetailBadRequestFieldViolationOption struct {
 type GRPCErrorDetailLocalizedMessageOption struct {
 	Idx       int
 	FieldName string
+}
+
+type SwitchExprOption struct {
+	Case    *SwitchCaseExprOption
+	Default *SwitchDefaultExprOption
+}
+
+type SwitchCaseExprOption struct {
+	Idx int
+	If  bool
+	By  bool
+}
+
+type SwitchDefaultExprOption struct {
+	By bool
 }
 
 // Position represents source position in proto file.

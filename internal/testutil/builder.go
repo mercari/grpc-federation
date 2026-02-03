@@ -770,6 +770,14 @@ func (b *VariableDefinitionBuilder) SetValidation(v *resolver.ValidationExpr) *V
 	return b
 }
 
+func (b *VariableDefinitionBuilder) SetSwitch(v *resolver.SwitchExpr) *VariableDefinitionBuilder {
+	b.def.Expr = &resolver.VariableExpr{
+		Switch: v,
+		Type:   v.Type,
+	}
+	return b
+}
+
 func (b *VariableDefinitionBuilder) Build(t *testing.T) *resolver.VariableDefinition {
 	t.Helper()
 	return b.def
@@ -1169,6 +1177,81 @@ func (b *GRPCErrorDetailBuilder) AddLocalizedMessage(v *resolver.LocalizedMessag
 func (b *GRPCErrorDetailBuilder) Build(t *testing.T) *resolver.GRPCErrorDetail {
 	t.Helper()
 	return b.detail
+}
+
+type SwitchExprBuilder struct {
+	expr *resolver.SwitchExpr
+}
+
+func NewSwitchExprBuilder() *SwitchExprBuilder {
+	return &SwitchExprBuilder{
+		expr: &resolver.SwitchExpr{},
+	}
+}
+
+func (b *SwitchExprBuilder) SetType(v *resolver.Type) *SwitchExprBuilder {
+	b.expr.Type = v
+	return b
+}
+
+func (b *SwitchExprBuilder) AddCase(v *resolver.SwitchCaseExpr) *SwitchExprBuilder {
+	b.expr.Cases = append(b.expr.Cases, v)
+	return b
+}
+
+func (b *SwitchExprBuilder) SetDefault(v *resolver.SwitchDefaultExpr) *SwitchExprBuilder {
+	b.expr.Default = v
+	return b
+}
+
+func (b *SwitchExprBuilder) Build(t *testing.T) *resolver.SwitchExpr {
+	t.Helper()
+	return b.expr
+}
+
+type SwitchCaseExprBuilder struct {
+	expr *resolver.SwitchCaseExpr
+}
+
+func NewSwitchCaseExprBuilder() *SwitchCaseExprBuilder {
+	return &SwitchCaseExprBuilder{
+		expr: &resolver.SwitchCaseExpr{},
+	}
+}
+
+func (b *SwitchCaseExprBuilder) SetIf(v *resolver.CELValue) *SwitchCaseExprBuilder {
+	b.expr.If = v
+	return b
+}
+
+func (b *SwitchCaseExprBuilder) SetBy(v *resolver.CELValue) *SwitchCaseExprBuilder {
+	b.expr.By = v
+	return b
+}
+
+func (b *SwitchCaseExprBuilder) Build(t *testing.T) *resolver.SwitchCaseExpr {
+	t.Helper()
+	return b.expr
+}
+
+type SwitchDefaultExprBuilder struct {
+	expr *resolver.SwitchDefaultExpr
+}
+
+func NewSwitchDefaultExprBuilder() *SwitchDefaultExprBuilder {
+	return &SwitchDefaultExprBuilder{
+		expr: &resolver.SwitchDefaultExpr{},
+	}
+}
+
+func (b *SwitchDefaultExprBuilder) SetBy(v *resolver.CELValue) *SwitchDefaultExprBuilder {
+	b.expr.By = v
+	return b
+}
+
+func (b *SwitchDefaultExprBuilder) Build(t *testing.T) *resolver.SwitchDefaultExpr {
+	t.Helper()
+	return b.expr
 }
 
 type VariableDefinitionGroupBuilder struct {
@@ -1715,6 +1798,14 @@ func (b *ServiceVariableBuilder) SetEnum(v *resolver.EnumExpr) *ServiceVariableB
 	b.svcVar.Expr = &resolver.ServiceVariableExpr{
 		Enum: v,
 		Type: resolver.NewEnumType(v.Enum, false),
+	}
+	return b
+}
+
+func (b *ServiceVariableBuilder) SetSwitch(v *resolver.SwitchExpr) *ServiceVariableBuilder {
+	b.svcVar.Expr = &resolver.ServiceVariableExpr{
+		Switch: v,
+		Type:   v.Type,
 	}
 	return b
 }

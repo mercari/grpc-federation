@@ -124,6 +124,7 @@ type ServiceVariableExpr struct {
 	Map        *MapExpr
 	Message    *MessageExpr
 	Enum       *EnumExpr
+	Switch     *SwitchExpr
 	Validation *ServiceVariableValidationExpr
 }
 
@@ -261,6 +262,7 @@ type VariableExpr struct {
 	Call       *CallExpr
 	Message    *MessageExpr
 	Enum       *EnumExpr
+	Switch     *SwitchExpr
 	Validation *ValidationExpr
 }
 
@@ -314,6 +316,21 @@ type EnumExpr struct {
 type ValidationExpr struct {
 	Name  string
 	Error *GRPCError
+}
+
+type SwitchExpr struct {
+	Type    *Type
+	Cases   []*SwitchCaseExpr
+	Default *SwitchDefaultExpr
+}
+
+type SwitchCaseExpr struct {
+	If *CELValue
+	By *CELValue
+}
+
+type SwitchDefaultExpr struct {
+	By *CELValue
 }
 
 type GRPCError struct {
