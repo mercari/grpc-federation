@@ -374,9 +374,12 @@ message SwitchExpr {
 
 // SwitchCaseExpr represents a single case for a switch expression.
 message SwitchCaseExpr {
+  // if specify the condition for evaluating expr.
+  // this value evaluated by CEL and it must return a boolean value.
   string if = 1;
   // expr specify the value to return for the case.
   oneof expr {
+    // `by` evaluates with CEL.
     string by = 11;
   }
 }
@@ -385,6 +388,7 @@ message SwitchCaseExpr {
 message SwitchDefaultExpr {
   // expr specify the value to return for the default case.
   oneof expr {
+    // `by` evaluates with CEL.
     string by = 11;
   }
 }

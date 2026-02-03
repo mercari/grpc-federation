@@ -1891,6 +1891,8 @@ type SwitchCaseExpr struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// if specify the condition for evaluating expr.
+	// this value evaluated by CEL and it must return a boolean value.
 	If string `protobuf:"bytes,1,opt,name=if,proto3" json:"if,omitempty"`
 	// expr specify the value to return for the case.
 	//
@@ -1958,6 +1960,7 @@ type isSwitchCaseExpr_Expr interface {
 }
 
 type SwitchCaseExpr_By struct {
+	// `by` evaluates with CEL.
 	By string `protobuf:"bytes,11,opt,name=by,proto3,oneof"`
 }
 
@@ -2028,6 +2031,7 @@ type isSwitchDefaultExpr_Expr interface {
 }
 
 type SwitchDefaultExpr_By struct {
+	// `by` evaluates with CEL.
 	By string `protobuf:"bytes,11,opt,name=by,proto3,oneof"`
 }
 
