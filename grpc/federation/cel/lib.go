@@ -31,6 +31,7 @@ func NewLibrary(typeAdapter types.Adapter) *Library {
 			logLib,
 			new(CastLibrary),
 			new(RegexpLibrary),
+			NewJSONLibrary(typeAdapter),
 		},
 	}
 }
