@@ -1823,6 +1823,18 @@ type SwitchCaseExprOptionBuilder struct {
 	option func(*Location) *SwitchCaseExprOption
 }
 
+func (b *SwitchCaseExprOptionBuilder) WithDef(idx int) *VariableDefinitionOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Def = &VariableDefinitionOption{Idx: idx}
+	return &VariableDefinitionOptionBuilder{
+		root: root,
+		option: func(loc *Location) *VariableDefinitionOption {
+			return b.option(loc).Def
+		},
+	}
+}
+
 func (b *SwitchCaseExprOptionBuilder) WithIf() *SwitchCaseExprOptionBuilder {
 	root := b.root.Clone()
 	option := b.option(root)
@@ -1850,6 +1862,18 @@ func (b *SwitchCaseExprOptionBuilder) Location() *Location {
 type SwitchDefaultExprOptionBuilder struct {
 	root   *Location
 	option func(*Location) *SwitchDefaultExprOption
+}
+
+func (b *SwitchDefaultExprOptionBuilder) WithDef(idx int) *VariableDefinitionOptionBuilder {
+	root := b.root.Clone()
+	option := b.option(root)
+	option.Def = &VariableDefinitionOption{Idx: idx}
+	return &VariableDefinitionOptionBuilder{
+		root: root,
+		option: func(loc *Location) *VariableDefinitionOption {
+			return b.option(loc).Def
+		},
+	}
 }
 
 func (b *SwitchDefaultExprOptionBuilder) WithBy() *SwitchDefaultExprOptionBuilder {

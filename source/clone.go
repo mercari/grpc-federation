@@ -532,6 +532,7 @@ func (o *SwitchCaseExprOption) Clone() *SwitchCaseExprOption {
 	}
 	return &SwitchCaseExprOption{
 		Idx: o.Idx,
+		Def: o.Def.Clone(),
 		If:  o.If,
 		By:  o.By,
 	}
@@ -542,6 +543,7 @@ func (o *SwitchDefaultExprOption) Clone() *SwitchDefaultExprOption {
 		return nil
 	}
 	return &SwitchDefaultExprOption{
-		By: o.By,
+		Def: o.Def.Clone(),
+		By:  o.By,
 	}
 }
