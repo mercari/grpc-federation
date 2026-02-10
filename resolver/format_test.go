@@ -273,6 +273,10 @@ func TestProtoFormat(t *testing.T) {
       validation {
         error {
           code: FAILED_PRECONDITION
+          def {
+            name: "a"
+            by: "73"
+          }
           if: "post.id != 'some-id'"
           message: "'validation message 1'"
         }
@@ -286,6 +290,10 @@ func TestProtoFormat(t *testing.T) {
           if: "true"
           message: "'validation message 2'"
           details {
+            def {
+              name: "b"
+              by: "'mackerel'"
+            }
             if: "post.title != 'some-title'"
             message: [
               {...},

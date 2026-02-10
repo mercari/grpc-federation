@@ -393,6 +393,10 @@ func (e *GRPCError) ProtoFormat(opt *ProtoFormatOption) string {
 	elems := []string{
 		nextOpt.indentFormat() + fmt.Sprintf("code: %s", e.Code),
 	}
+	varDefs := e.DefSet.Definitions().ProtoFormat(nextOpt)
+	if varDefs != "" {
+		elems = append(elems, varDefs)
+	}
 	if val := e.If; val != nil {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", val.Expr))
 	}
@@ -420,9 +424,13 @@ func (d GRPCErrorDetails) ProtoFormat(opt *ProtoFormatOption) string {
 
 func (detail *GRPCErrorDetail) ProtoFormat(opt *ProtoFormatOption) string {
 	nextOpt := opt.toNextIndentLevel()
-	elems := []string{
-		nextOpt.indentFormat() + fmt.Sprintf("if: %q", detail.If.Expr),
+
+	var elems []string
+	varDefs := detail.DefSet.Definitions().ProtoFormat(nextOpt)
+	if varDefs != "" {
+		elems = append(elems, varDefs)
 	}
+	elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", detail.If.Expr))
 	if s := len(detail.Messages.Definitions()); s != 0 {
 		elems = append(elems, detail.protoFormatDetails(nextOpt, "message", s))
 	}
