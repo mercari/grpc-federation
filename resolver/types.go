@@ -325,12 +325,14 @@ type SwitchExpr struct {
 }
 
 type SwitchCaseExpr struct {
-	If *CELValue
-	By *CELValue
+	DefSet *VariableDefinitionSet
+	If     *CELValue
+	By     *CELValue
 }
 
 type SwitchDefaultExpr struct {
-	By *CELValue
+	DefSet *VariableDefinitionSet
+	By     *CELValue
 }
 
 type GRPCError struct {
