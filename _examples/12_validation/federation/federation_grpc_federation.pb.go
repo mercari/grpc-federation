@@ -574,6 +574,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		  validation {
 		    error {
 		      code: FAILED_PRECONDITION
+		      def {
+		        name: "_def5_def0"
+		        by: "grpc.federation.log.add({'validation3_attrs': true})"
+		      }
 		      if: "$.id != 'correct-id'"
 		      message: "'validation3 failed!'"
 		      details {
@@ -849,6 +853,10 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		  validation {
 		    error {
 		      code: FAILED_PRECONDITION
+		      def {
+		        name: "condition"
+		        by: "post.id != 'some-id'"
+		      }
 		      if: "condition"
 		      message: "'validation4 failed!'"
 		    }
