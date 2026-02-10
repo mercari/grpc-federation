@@ -20,9 +20,15 @@ message GetPostResponse {
     def {
       name: "switch"
       switch {
-        case { if: "$.id == 'blue'" by: "1" }
+        case {
+          def { name: "unused" by: "73" }
+          if: "$.id == 'blue'" by: "1"
+        }
         case { if: "$.id == 'red'" by: "2" }
-        default { by: "3" }
+        default {
+          def { name: "unused2" by: "'mackerel'" }
+          by: "3"
+        }
       }
     }
   };

@@ -25,6 +25,7 @@ message GetPostResponse {
           error {
             code: FAILED_PRECONDITION
             message: "'validation message 1'"
+            def { name: "a" by: "73" }
             if: "post.id != 'some-id'"
           }
         }
@@ -37,6 +38,7 @@ message GetPostResponse {
             message: "'validation message 2'"
             details {
               if: "post.title != 'some-title'"
+              def { name: "b" by: "'mackerel'" }
               message: [
                 {
                   name: "CustomMessage",
