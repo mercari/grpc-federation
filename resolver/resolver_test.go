@@ -2660,6 +2660,12 @@ func TestValidation(t *testing.T) {
 									testutil.NewValidationExprBuilder().
 										SetError(
 											testutil.NewGRPCErrorBuilder().
+												AddVariableDefinition(
+													testutil.NewVariableDefinitionBuilder().
+														SetName("a").
+														SetBy(testutil.NewCELValueBuilder("73", resolver.Int64Type).Build(t)).
+														Build(t),
+												).
 												SetCode(code.Code_FAILED_PRECONDITION).
 												SetMessage("'validation message 1'").
 												SetIf("post.id != 'some-id'").
@@ -2681,6 +2687,12 @@ func TestValidation(t *testing.T) {
 												SetMessage("'validation message 2'").
 												AddDetail(
 													testutil.NewGRPCErrorDetailBuilder().
+														AddDef(
+															testutil.NewVariableDefinitionBuilder().
+																SetName("b").
+																SetBy(testutil.NewCELValueBuilder("'mackerel'", resolver.StringType).Build(t)).
+																Build(t),
+														).
 														SetIf("post.title != 'some-title'").
 														AddMessage(
 															testutil.NewVariableDefinitionBuilder().
