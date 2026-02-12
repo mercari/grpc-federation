@@ -1613,6 +1613,8 @@ func (r *Resolver) validateDuplicatedVariableNameWithDef(ctx *context, nameMap m
 		for idx, grpcErr := range expr.Call.Errors {
 			r.validateDuplicatedVariableNameWithGRPCError(ctx, nameMap, grpcErr, builder.WithError(idx))
 		}
+	case expr.Switch != nil:
+		r.validateDuplicatedVariableNameWithSwitch(ctx, nameMap, expr.Switch, builder.WithSwitch())
 	case expr.Validation != nil:
 		r.validateDuplicatedVariableNameWithGRPCError(ctx, nameMap, expr.Validation.Error, builder.WithValidation().WithError())
 	}
@@ -1627,6 +1629,25 @@ func (r *Resolver) validateDuplicatedVariableNameWithGRPCError(ctx *context, nam
 		for defIdx, def := range detail.DefSet.Definitions() {
 			r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(defIdx))
 		}
+	}
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithSwitch(ctx *context, nameMap map[string]struct{}, expr *SwitchExpr, builder *source.SwitchExprOptionBuilder) {
+	for idx, cse := range expr.Cases {
+		r.validateDuplicatedVariableNameWithSwitchCase(ctx, nameMap, cse, builder.WithCase(idx))
+	}
+	r.validateDuplicatedVariableNameWithSwitchDefault(ctx, nameMap, expr.Default, builder.WithDefault())
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithSwitchCase(ctx *context, nameMap map[string]struct{}, cse *SwitchCaseExpr, builder *source.SwitchCaseExprOptionBuilder) {
+	for idx, def := range cse.DefSet.Definitions() {
+		r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(idx))
+	}
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithSwitchDefault(ctx *context, nameMap map[string]struct{}, def *SwitchDefaultExpr, builder *source.SwitchDefaultExprOptionBuilder) {
+	for idx, def := range def.DefSet.Definitions() {
+		r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(idx))
 	}
 }
 

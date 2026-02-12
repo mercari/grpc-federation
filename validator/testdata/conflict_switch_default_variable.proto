@@ -17,20 +17,17 @@ message GetPostRequest {
 
 message GetPostResponse {
   option (.grpc.federation.message) = {
+    def { name: "a" by: "20" }
     def {
       name: "switch"
       switch {
-        case {
-          def { name: "blue" by: "73" }
-          if: "$.id == 'blue'" by: "blue"
-        }
+        case { if: "$.id == 'blue'" by: "1" }
         case { if: "$.id == 'red'" by: "2" }
         default {
-          def { name: "default" by: "3" }
-          by: "default"
+          def { name: "a" by: "1" }
+          by: "3"
         }
       }
     }
   };
-  int64 switch = 1 [(grpc.federation.field).by = "switch"];
 }
