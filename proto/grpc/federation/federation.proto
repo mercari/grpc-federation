@@ -377,6 +377,8 @@ message SwitchCaseExpr {
   // if specify the condition for evaluating expr.
   // this value evaluated by CEL and it must return a boolean value.
   string if = 1;
+  // def define variables in current scope.
+  repeated VariableDefinition def = 2;
   // expr specify the value to return for the case.
   oneof expr {
     // `by` evaluates with CEL.
@@ -386,6 +388,8 @@ message SwitchCaseExpr {
 
 // SwitchDefaultExpr represents the default case for a switch expression.
 message SwitchDefaultExpr {
+  // def define variables in current scope.
+  repeated VariableDefinition def = 1;
   // expr specify the value to return for the default case.
   oneof expr {
     // `by` evaluates with CEL.

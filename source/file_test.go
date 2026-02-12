@@ -823,6 +823,150 @@ func TestFile_FindLocationByPos(t *testing.T) {
 				},
 			},
 		},
+		// Switch expression option test cases (using testdata/switch.proto)
+		{
+			desc: "find def with switch (switch keyword)",
+			file: "switch.proto",
+			pos: source.Position{
+				Line: 22,
+				Col:  7,
+			},
+			expected: &source.Location{
+				FileName: "testdata/switch.proto",
+				Message: &source.Message{
+					Name: "GetPostResponse",
+					Option: &source.MessageOption{
+						Def: &source.VariableDefinitionOption{
+							Idx:    0,
+							Switch: &source.SwitchExprOption{},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "find first case if condition",
+			file: "switch.proto",
+			pos: source.Position{
+				Line: 25,
+				Col:  16,
+			},
+			expected: &source.Location{
+				FileName: "testdata/switch.proto",
+				Message: &source.Message{
+					Name: "GetPostResponse",
+					Option: &source.MessageOption{
+						Def: &source.VariableDefinitionOption{
+							Idx: 0,
+							Switch: &source.SwitchExprOption{
+								Case: &source.SwitchCaseExprOption{
+									Idx: 0,
+									If:  true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "find first case by expression",
+			file: "switch.proto",
+			pos: source.Position{
+				Line: 25,
+				Col:  36,
+			},
+			expected: &source.Location{
+				FileName: "testdata/switch.proto",
+				Message: &source.Message{
+					Name: "GetPostResponse",
+					Option: &source.MessageOption{
+						Def: &source.VariableDefinitionOption{
+							Idx: 0,
+							Switch: &source.SwitchExprOption{
+								Case: &source.SwitchCaseExprOption{
+									Idx: 0,
+									By:  true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "find first case def",
+			file: "switch.proto",
+			pos: source.Position{
+				Line: 24,
+				Col:  18,
+			},
+			expected: &source.Location{
+				FileName: "testdata/switch.proto",
+				Message: &source.Message{
+					Name: "GetPostResponse",
+					Option: &source.MessageOption{
+						Def: &source.VariableDefinitionOption{
+							Idx: 0,
+							Switch: &source.SwitchExprOption{
+								Case: &source.SwitchCaseExprOption{
+									Idx: 0,
+									Def: &source.VariableDefinitionOption{Idx: 0},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "find default by expression",
+			file: "switch.proto",
+			pos: source.Position{
+				Line: 30,
+				Col:  15,
+			},
+			expected: &source.Location{
+				FileName: "testdata/switch.proto",
+				Message: &source.Message{
+					Name: "GetPostResponse",
+					Option: &source.MessageOption{
+						Def: &source.VariableDefinitionOption{
+							Idx: 0,
+							Switch: &source.SwitchExprOption{
+								Default: &source.SwitchDefaultExprOption{
+									By: true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			desc: "find default def",
+			file: "switch.proto",
+			pos: source.Position{
+				Line: 29,
+				Col:  18,
+			},
+			expected: &source.Location{
+				FileName: "testdata/switch.proto",
+				Message: &source.Message{
+					Name: "GetPostResponse",
+					Option: &source.MessageOption{
+						Def: &source.VariableDefinitionOption{
+							Idx: 0,
+							Switch: &source.SwitchExprOption{
+								Default: &source.SwitchDefaultExprOption{
+									Def: &source.VariableDefinitionOption{Idx: 0},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {

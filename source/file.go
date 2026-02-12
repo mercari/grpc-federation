@@ -594,11 +594,16 @@ func (f *File) findDefByPos(builder *VariableDefinitionOptionBuilder, pos Positi
 			if !ok {
 				return nil
 			}
+			switchBuilder := builder.WithSwitch()
 			if found := f.findSwitchExprByPos(
-				builder.WithSwitch(),
+				switchBuilder,
 				pos, value,
 			); found != nil {
 				return found
+			}
+			// Position is on "switch" field name or inside switch block but not in a case/default
+			if f.containsPos(elem, pos) {
+				return switchBuilder.Location()
 			}
 		case "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
@@ -678,23 +683,88 @@ func (f *File) findEnumExprByPos(builder *EnumExprOptionBuilder, pos Position, n
 }
 
 func (f *File) findSwitchExprByPos(builder *SwitchExprOptionBuilder, pos Position, node *ast.MessageLiteralNode) *Location {
-	caseCount := 0
+	var cases []*ast.MessageLiteralNode
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch fieldName {
 		case "case":
-			if f.containsPos(elem.Val, pos) {
-				return builder.WithCase(caseCount).Location()
-			}
-			caseCount++
+			cases = append(cases, f.getMessageListFromNode(elem.Val)...)
 		case "default":
-			if f.containsPos(elem.Val, pos) {
-				return builder.WithDefault().Location()
+			value, ok := elem.Val.(*ast.MessageLiteralNode)
+			if !ok {
+				return nil
+			}
+			if found := f.findSwitchDefaultExprByPos(
+				builder.WithDefault(),
+				pos, value,
+			); found != nil {
+				return found
 			}
 		}
 	}
+	for idx, n := range cases {
+		if found := f.findSwitchCaseExprByPos(
+			builder.WithCase(idx),
+			pos, n,
+		); found != nil {
+			return found
+		}
+	}
+
 	if f.containsPos(node, pos) {
 		return builder.Location()
+	}
+	return nil
+}
+
+func (f *File) findSwitchCaseExprByPos(builder *SwitchCaseExprOptionBuilder, pos Position, node *ast.MessageLiteralNode) *Location {
+	var defs []*ast.MessageLiteralNode
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch fieldName {
+		case "def":
+			defs = append(defs, f.getMessageListFromNode(elem.Val)...)
+		case "if":
+			if f.containsPos(elem.Val, pos) {
+				return builder.WithIf().Location()
+			}
+		case "by":
+			if f.containsPos(elem.Val, pos) {
+				return builder.WithBy().Location()
+			}
+		}
+	}
+	for idx, n := range defs {
+		if found := f.findDefByPos(
+			builder.WithDef(idx),
+			pos, n,
+		); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+func (f *File) findSwitchDefaultExprByPos(builder *SwitchDefaultExprOptionBuilder, pos Position, node *ast.MessageLiteralNode) *Location {
+	var defs []*ast.MessageLiteralNode
+	for _, elem := range node.Elements {
+		fieldName := elem.Name.Name.AsIdentifier()
+		switch fieldName {
+		case "def":
+			defs = append(defs, f.getMessageListFromNode(elem.Val)...)
+		case "by":
+			if f.containsPos(elem.Val, pos) {
+				return builder.WithBy().Location()
+			}
+		}
+	}
+	for idx, n := range defs {
+		if found := f.findDefByPos(
+			builder.WithDef(idx),
+			pos, n,
+		); found != nil {
+			return found
+		}
 	}
 	return nil
 }
@@ -1167,11 +1237,15 @@ func (f *File) findServiceVariableByPos(builder *ServiceVariableBuilder, pos Pos
 			if !ok {
 				return nil
 			}
+			switchBuilder := builder.WithSwitch()
 			if found := f.findSwitchExprByPos(
-				builder.WithSwitch(),
+				switchBuilder,
 				pos, value,
 			); found != nil {
 				return found
+			}
+			if f.containsPos(elem, pos) {
+				return switchBuilder.Location()
 			}
 		case "validation":
 			value, ok := elem.Val.(*ast.MessageLiteralNode)
@@ -2168,9 +2242,12 @@ func (f *File) nodeInfoBySwitchExpr(node *ast.MessageLiteralNode, opt *SwitchExp
 }
 
 func (f *File) nodeInfoBySwitchCaseExpr(node *ast.MessageLiteralNode, opt *SwitchCaseExprOption) *ast.NodeInfo {
+	var defs []*ast.MessageLiteralNode
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
+		case opt.Def != nil && fieldName == "def":
+			defs = append(defs, f.getMessageListFromNode(elem.Val)...)
 		case opt.If && fieldName == "if":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
@@ -2185,13 +2262,19 @@ func (f *File) nodeInfoBySwitchCaseExpr(node *ast.MessageLiteralNode, opt *Switc
 			return f.nodeInfo(value)
 		}
 	}
+	if len(defs) != 0 {
+		return f.nodeInfoByDef(defs, opt.Def)
+	}
 	return f.nodeInfo(node)
 }
 
 func (f *File) nodeInfoBySwitchDefaultExpr(node *ast.MessageLiteralNode, opt *SwitchDefaultExprOption) *ast.NodeInfo {
+	var defs []*ast.MessageLiteralNode
 	for _, elem := range node.Elements {
 		fieldName := elem.Name.Name.AsIdentifier()
 		switch {
+		case opt.Def != nil && fieldName == "def":
+			defs = append(defs, f.getMessageListFromNode(elem.Val)...)
 		case opt.By && fieldName == "by":
 			value, ok := elem.Val.(*ast.StringLiteralNode)
 			if !ok {
@@ -2199,6 +2282,9 @@ func (f *File) nodeInfoBySwitchDefaultExpr(node *ast.MessageLiteralNode, opt *Sw
 			}
 			return f.nodeInfo(value)
 		}
+	}
+	if len(defs) != 0 {
+		return f.nodeInfoByDef(defs, opt.Def)
 	}
 	return f.nodeInfo(node)
 }

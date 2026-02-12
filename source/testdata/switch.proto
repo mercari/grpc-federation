@@ -21,13 +21,13 @@ message GetPostResponse {
       name: "switch"
       switch {
         case {
-          def { name: "blue" by: "73" }
-          if: "$.id == 'blue'" by: "blue"
+          def { name: "unused" by: "73" }
+          if: "$.id == 'blue'" by: "1"
         }
         case { if: "$.id == 'red'" by: "2" }
         default {
-          def { name: "default" by: "3" }
-          by: "default"
+          def { name: "unused2" by: "'mackerel'" }
+          by: "3"
         }
       }
     }

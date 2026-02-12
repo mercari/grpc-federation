@@ -896,6 +896,16 @@ invalid_field_type_by_switch.proto:29:3: cannot convert type automatically: fiel
 29:    string switch = 1 [(grpc.federation.field).by = "switch"];
        ^
 `},
+		{file: "conflict_switch_case_variable.proto", expected: `
+conflict_switch_case_variable.proto:25:23: found duplicated variable name "a"
+25:            def { name: "a" by: "1" }
+                           ^
+`},
+		{file: "conflict_switch_default_variable.proto", expected: `
+conflict_switch_default_variable.proto:27:23: found duplicated variable name "a"
+27:            def { name: "a" by: "1" }
+                           ^
+`},
 	}
 	for _, test := range tests {
 		test := test
