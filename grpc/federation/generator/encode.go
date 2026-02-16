@@ -234,7 +234,7 @@ func (e *encoder) toServiceVariableExpr(fqdn string, expr *resolver.ServiceVaria
 		}
 	case expr.Switch != nil:
 		ret.Expr = &plugin.ServiceVariableExpr_Switch{
-			Switch: e.toSwitchExpr(expr.Switch),
+			Switch: e.toSwitchExpr(fqdn, expr.Switch),
 		}
 	case expr.Validation != nil:
 		ret.Expr = &plugin.ServiceVariableExpr_Validation{
@@ -969,7 +969,7 @@ func (e *encoder) toVariableExpr(fqdn string, expr *resolver.VariableExpr) *plug
 		}
 	case expr.Switch != nil:
 		ret.Expr = &plugin.VariableExpr_Switch{
-			Switch: e.toSwitchExpr(expr.Switch),
+			Switch: e.toSwitchExpr(fqdn, expr.Switch),
 		}
 	case expr.Validation != nil:
 		ret.Expr = &plugin.VariableExpr_Validation{
@@ -1143,41 +1143,43 @@ func (e *encoder) toEnumExpr(expr *resolver.EnumExpr) *plugin.EnumExpr {
 	}
 }
 
-func (e *encoder) toSwitchExpr(expr *resolver.SwitchExpr) *plugin.SwitchExpr {
+func (e *encoder) toSwitchExpr(fqdn string, expr *resolver.SwitchExpr) *plugin.SwitchExpr {
 	if expr == nil {
 		return nil
 	}
 	return &plugin.SwitchExpr{
 		Type:    e.toType(expr.Type),
-		Cases:   e.toSwitchCases(expr.Cases),
-		Default: e.toSwitchDefault(expr.Default),
+		Cases:   e.toSwitchCases(fqdn, expr.Cases),
+		Default: e.toSwitchDefault(fqdn, expr.Default),
 	}
 }
 
-func (e *encoder) toSwitchCases(cases []*resolver.SwitchCaseExpr) []*plugin.SwitchCase {
+func (e *encoder) toSwitchCases(fdqn string, cases []*resolver.SwitchCaseExpr) []*plugin.SwitchCase {
 	ret := make([]*plugin.SwitchCase, 0, len(cases))
 	for _, cse := range cases {
-		ret = append(ret, e.toSwitchCase(cse))
+		ret = append(ret, e.toSwitchCase(fdqn, cse))
 	}
 	return ret
 }
 
-func (e *encoder) toSwitchCase(cse *resolver.SwitchCaseExpr) *plugin.SwitchCase {
+func (e *encoder) toSwitchCase(fqdn string, cse *resolver.SwitchCaseExpr) *plugin.SwitchCase {
 	if cse == nil {
 		return nil
 	}
 	return &plugin.SwitchCase{
-		If: e.toCELValue(cse.If),
-		By: e.toCELValue(cse.By),
+		DefSet: e.toVariableDefinitionSet(fqdn, cse.DefSet),
+		If:     e.toCELValue(cse.If),
+		By:     e.toCELValue(cse.By),
 	}
 }
 
-func (e *encoder) toSwitchDefault(def *resolver.SwitchDefaultExpr) *plugin.SwitchDefault {
+func (e *encoder) toSwitchDefault(fqdn string, def *resolver.SwitchDefaultExpr) *plugin.SwitchDefault {
 	if def == nil {
 		return nil
 	}
 	return &plugin.SwitchDefault{
-		By: e.toCELValue(def.By),
+		DefSet: e.toVariableDefinitionSet(fqdn, def.DefSet),
+		By:     e.toCELValue(def.By),
 	}
 }
 

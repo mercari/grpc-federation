@@ -1303,6 +1303,10 @@ func (d *decoder) toSwitchCase(cse *plugin.SwitchCase) (*resolver.SwitchCaseExpr
 	if cse == nil {
 		return nil, nil
 	}
+	defSet, err := d.toVariableDefinitionSet(cse.GetDefSet())
+	if err != nil {
+		return nil, err
+	}
 	ifValue, err := d.toCELValue(cse.GetIf())
 	if err != nil {
 		return nil, err
@@ -1312,8 +1316,9 @@ func (d *decoder) toSwitchCase(cse *plugin.SwitchCase) (*resolver.SwitchCaseExpr
 		return nil, err
 	}
 	return &resolver.SwitchCaseExpr{
-		If: ifValue,
-		By: by,
+		DefSet: defSet,
+		If:     ifValue,
+		By:     by,
 	}, nil
 }
 
@@ -1321,11 +1326,18 @@ func (d *decoder) toSwitchDefault(def *plugin.SwitchDefault) (*resolver.SwitchDe
 	if def == nil {
 		return nil, nil
 	}
+	defSet, err := d.toVariableDefinitionSet(def.GetDefSet())
+	if err != nil {
+		return nil, err
+	}
 	by, err := d.toCELValue(def.GetBy())
 	if err != nil {
 		return nil, err
 	}
-	return &resolver.SwitchDefaultExpr{By: by}, nil
+	return &resolver.SwitchDefaultExpr{
+		DefSet: defSet,
+		By:     by,
+	}, nil
 }
 
 func (d *decoder) toValidationExpr(expr *plugin.ValidationExpr) (*resolver.ValidationExpr, error) {

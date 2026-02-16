@@ -164,6 +164,8 @@ func (m *Message) VariableDefinitionGroups() []VariableDefinitionGroup {
 			for _, err := range def.Expr.Call.Errors {
 				ret = append(ret, err.DefinitionGroups()...)
 			}
+		case def.Expr.Switch != nil:
+			ret = append(ret, def.Expr.Switch.DefinitionGroups()...)
 		case def.Expr.Validation != nil:
 			if def.Expr.Validation.Error != nil {
 				ret = append(ret, def.Expr.Validation.Error.DefinitionGroups()...)

@@ -1,0 +1,25 @@
+{{ define "declSwitch" }}
+	{{- $switch := .Switch }}
+	{{- $cases := $switch.Cases }}
+	cases := []*grpcfed.EvalSwitchCase[*localValueType]{}
+	{{- range $cases }}
+	cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
+		Defs: func(ctx context.Context, value *localValueType) (any, error) {
+			{{- template "evalDefSet" .DefSet }}
+            return nil, nil
+		},
+		If: `{{ .If.Expr }}`,
+		IfCacheIndex: {{ $switch.CELCacheIndex }},
+		By: `{{ .By.Expr }}`,
+		ByCacheIndex: {{ $switch.CELCacheIndex }},
+	})
+	{{- end }}
+	return grpcfed.EvalSwitch[{{ .Type }}](ctx, value, cases, &grpcfed.EvalSwitchDefault[*localValueType]{
+		Defs: func(ctx context.Context, value *localValueType) (any, error) {
+			{{- template "evalDefSet" $switch.Default.DefSet }}
+			return nil, nil
+		},
+		By: `{{ $switch.Default.By.Expr }}`,
+		ByCacheIndex: {{ $switch.CELCacheIndex }},
+	})
+{{ end }}

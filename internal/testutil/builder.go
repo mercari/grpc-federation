@@ -1215,8 +1215,15 @@ type SwitchCaseExprBuilder struct {
 
 func NewSwitchCaseExprBuilder() *SwitchCaseExprBuilder {
 	return &SwitchCaseExprBuilder{
-		expr: &resolver.SwitchCaseExpr{},
+		expr: &resolver.SwitchCaseExpr{
+			DefSet: &resolver.VariableDefinitionSet{},
+		},
 	}
+}
+
+func (b *SwitchCaseExprBuilder) AddDef(v *resolver.VariableDefinition) *SwitchCaseExprBuilder {
+	b.expr.DefSet.Defs = append(b.expr.DefSet.Defs, v)
+	return b
 }
 
 func (b *SwitchCaseExprBuilder) SetIf(v *resolver.CELValue) *SwitchCaseExprBuilder {
@@ -1240,8 +1247,15 @@ type SwitchDefaultExprBuilder struct {
 
 func NewSwitchDefaultExprBuilder() *SwitchDefaultExprBuilder {
 	return &SwitchDefaultExprBuilder{
-		expr: &resolver.SwitchDefaultExpr{},
+		expr: &resolver.SwitchDefaultExpr{
+			DefSet: &resolver.VariableDefinitionSet{},
+		},
 	}
+}
+
+func (b *SwitchDefaultExprBuilder) AddDef(v *resolver.VariableDefinition) *SwitchDefaultExprBuilder {
+	b.expr.DefSet.Defs = append(b.expr.DefSet.Defs, v)
+	return b
 }
 
 func (b *SwitchDefaultExprBuilder) SetBy(v *resolver.CELValue) *SwitchDefaultExprBuilder {

@@ -49,6 +49,24 @@ func (e *GRPCError) DefinitionGroups() []VariableDefinitionGroup {
 	return ret
 }
 
+func (s *SwitchExpr) Definitions() VariableDefinitions {
+	var defs VariableDefinitions
+	for _, cse := range s.Cases {
+		defs = append(defs, cse.DefSet.Definitions()...)
+	}
+	defs = append(defs, s.Default.DefSet.Definitions()...)
+	return defs
+}
+
+func (s *SwitchExpr) DefinitionGroups() []VariableDefinitionGroup {
+	var groups []VariableDefinitionGroup
+	for _, cse := range s.Cases {
+		groups = append(groups, cse.DefSet.DefinitionGroups()...)
+	}
+	groups = append(groups, s.Default.DefSet.DefinitionGroups()...)
+	return groups
+}
+
 func (g *SequentialVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
 	var defs VariableDefinitions
 	if g.Start != nil {

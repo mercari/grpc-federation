@@ -5609,6 +5609,11 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 				for _, grpcErr := range expr.Call.Errors {
 					r.resolveGRPCErrorMessageDependencies(ctx, msg, grpcErr)
 				}
+			case expr.Switch != nil:
+				for _, cse := range expr.Switch.Cases {
+					setupVariableDefinitionSet(ctx, msg, cse.DefSet)
+				}
+				setupVariableDefinitionSet(ctx, msg, expr.Switch.Default.DefSet)
 			case expr.Validation != nil:
 				r.resolveGRPCErrorMessageDependencies(ctx, msg, expr.Validation.Error)
 			}
