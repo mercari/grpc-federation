@@ -39,7 +39,6 @@ message GetPostResponse {
             details {
               def { name: "b" by: "'mackerel'" }
               if: "post.title != 'some-title'"
-              def { name: "b" by: "'mackerel'" }
               message: [
                 {
                   name: "CustomMessage",
