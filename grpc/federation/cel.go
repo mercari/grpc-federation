@@ -780,21 +780,26 @@ func If[T localValue](ctx context.Context, param *IfParam[T]) error {
 	return nil
 }
 
-type EvalSwitchCase struct {
+type EvalSwitchCase[T localValue] struct {
+	Defs         func(ctx context.Context, value T) (any, error)
 	If           string // CEL expression
 	IfCacheIndex int
 	By           string // CEL expression
 	ByCacheIndex int
 }
 
-type EvalSwitchDefault struct {
+type EvalSwitchDefault[T localValue] struct {
+	Defs         func(ctx context.Context, value T) (any, error)
 	By           string // CEL expression
 	ByCacheIndex int
 }
 
-func EvalSwitch[T any, V localValue](ctx context.Context, value V, cases []*EvalSwitchCase, defaultCase *EvalSwitchDefault) (any, error) {
+func EvalSwitch[T any, V localValue](ctx context.Context, value V, cases []*EvalSwitchCase[V], defaultCase *EvalSwitchDefault[V]) (any, error) {
 	var v T
 	for _, c := range cases {
+		if _, err := c.Defs(ctx, value); err != nil {
+			return nil, err
+		}
 		cond, err := EvalCEL(ctx, &EvalCELRequest{
 			Value:      value,
 			Expr:       c.If,
@@ -816,6 +821,9 @@ func EvalSwitch[T any, V localValue](ctx context.Context, value V, cases []*Eval
 			}
 			return by.(T), nil
 		}
+	}
+	if _, err := defaultCase.Defs(ctx, value); err != nil {
+		return nil, err
 	}
 	by, err := EvalCEL(ctx, &EvalCELRequest{
 		Value:      value,
