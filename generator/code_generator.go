@@ -3529,6 +3529,9 @@ func (r *SwitchResolver) Default() *SwitchDefaultResolver {
 }
 
 func (r *SwitchCaseResolver) DefSet() *VariableDefinitionSet {
+	if r.SwitchCase.DefSet == nil || len(r.SwitchCase.DefSet.Defs) == 0 {
+		return nil
+	}
 	return &VariableDefinitionSet{
 		VariableDefinitionSet: r.SwitchCase.DefSet,
 		svc:                   r.Service,
@@ -3544,6 +3547,9 @@ func (r *SwitchCaseResolver) By() *resolver.CELValue {
 }
 
 func (r *SwitchDefaultResolver) DefSet() *VariableDefinitionSet {
+	if r.SwitchDefault.DefSet == nil || len(r.SwitchDefault.DefSet.Defs) == 0 {
+		return nil
+	}
 	return &VariableDefinitionSet{
 		VariableDefinitionSet: r.SwitchDefault.DefSet,
 		svc:                   r.Service,

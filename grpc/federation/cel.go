@@ -797,8 +797,10 @@ type EvalSwitchDefault[T localValue] struct {
 func EvalSwitch[T any, V localValue](ctx context.Context, value V, cases []*EvalSwitchCase[V], defaultCase *EvalSwitchDefault[V]) (any, error) {
 	var v T
 	for _, c := range cases {
-		if _, err := c.Defs(ctx, value); err != nil {
-			return nil, err
+		if c.Defs != nil {
+			if _, err := c.Defs(ctx, value); err != nil {
+				return nil, err
+			}
 		}
 		cond, err := EvalCEL(ctx, &EvalCELRequest{
 			Value:      value,

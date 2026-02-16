@@ -250,14 +250,14 @@ func (s *InlineEnvService) initServiceVariables(ctx context.Context) error {
 				return nil
 			},
 			Switch: func(ctx context.Context, value *localValueType) (any, error) {
-				cases := []*grpcfed.EvalSwitchCase{}
-				cases = append(cases, &grpcfed.EvalSwitchCase{
+				cases := []*grpcfed.EvalSwitchCase[*localValueType]{}
+				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
 					If:           `grpc.federation.env.aaa == 'xxx'`,
 					IfCacheIndex: 2,
 					By:           `grpc.federation.env.bbb`,
 					ByCacheIndex: 3,
 				})
-				return grpcfed.EvalSwitch[[]int64](ctx, value, cases, &grpcfed.EvalSwitchDefault{
+				return grpcfed.EvalSwitch[[]int64](ctx, value, cases, &grpcfed.EvalSwitchDefault[*localValueType]{
 					By:           `[0, 0]`,
 					ByCacheIndex: 4,
 				})

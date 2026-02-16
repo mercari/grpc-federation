@@ -253,10 +253,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					ByCacheIndex: 3,
 				})
 				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
-					Defs: func(ctx context.Context, value *localValueType) (any, error) {
-
-						return nil, nil
-					},
 					If:           `$.id == 'red'`,
 					IfCacheIndex: 4,
 					By:           `2`,
@@ -292,7 +288,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					By:           `default`,
 					ByCacheIndex: 7,
 				})
-
 			},
 		})
 	}
