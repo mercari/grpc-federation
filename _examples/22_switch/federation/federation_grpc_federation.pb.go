@@ -236,24 +236,15 @@ func (s *FederationService) initServiceVariables(ctx context.Context) error {
 			Switch: func(ctx context.Context, value *localValueType) (any, error) {
 				cases := []*grpcfed.EvalSwitchCase[*localValueType]{}
 				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
-					Defs: func(ctx context.Context, value *localValueType) (any, error) {
-
-						return nil, nil
-					},
 					If:           `grpc.federation.env.a == 'red'`,
 					IfCacheIndex: 1,
 					By:           `1`,
 					ByCacheIndex: 2,
 				})
 				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault[*localValueType]{
-					Defs: func(ctx context.Context, value *localValueType) (any, error) {
-
-						return nil, nil
-					},
 					By:           `2`,
 					ByCacheIndex: 3,
 				})
-
 			},
 		})
 	}
@@ -350,10 +341,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 			Switch: func(ctx context.Context, value *localValueType) (any, error) {
 				cases := []*grpcfed.EvalSwitchCase[*localValueType]{}
 				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
-					Defs: func(ctx context.Context, value *localValueType) (any, error) {
-
-						return nil, nil
-					},
 					If:           `$.id == 'blue'`,
 					IfCacheIndex: 4,
 					By:           `3`,
@@ -421,7 +408,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					By:           `default`,
 					ByCacheIndex: 10,
 				})
-
 			},
 		})
 	}
