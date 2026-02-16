@@ -32,8 +32,15 @@ message GetPostResponse {
       name: "switch"
       switch {
         case { if: "$.id == 'blue'" by: "3" }
-        case { if: "$.id == 'red'" by: "4" }
-        default { by: "5" }
+        case {
+          def { name: "red" by: "4" }
+          if: "$.id == 'red'"
+          by: "red"
+        }
+        default {
+          def { name: "default" by: "5" }
+          by: "default"
+        }
       }
     }
   };
