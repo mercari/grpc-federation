@@ -95,20 +95,39 @@ func TestFederation(t *testing.T) {
 		}
 	}()
 
-	client := federation.NewFederationServiceClient(conn)
-	res, err := client.GetPost(ctx, &federation.GetPostRequest{
-		Id: "red",
-	})
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		desc string
+		req  *federation.GetPostRequest
+		want *federation.GetPostResponse
+	}{
+		{
+			desc: "blue",
+			req:  &federation.GetPostRequest{Id: "blue"},
+			want: &federation.GetPostResponse{Svar: 2, Switch: 3},
+		},
+		{
+			desc: "red",
+			req:  &federation.GetPostRequest{Id: "red"},
+			want: &federation.GetPostResponse{Svar: 2, Switch: 4},
+		},
+		{
+			desc: "default",
+			req:  &federation.GetPostRequest{Id: "green"},
+			want: &federation.GetPostResponse{Svar: 2, Switch: 5},
+		},
 	}
-
-	if diff := cmp.Diff(res, &federation.GetPostResponse{
-		Svar:   2,
-		Switch: 4,
-	}, cmpopts.IgnoreUnexported(
-		federation.GetPostResponse{},
-	)); diff != "" {
-		t.Errorf("(-got, +want)\n%s", diff)
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			client := federation.NewFederationServiceClient(conn)
+			res, err := client.GetPost(ctx, tt.req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(res, tt.want, cmpopts.IgnoreUnexported(
+				federation.GetPostResponse{},
+			)); diff != "" {
+				t.Errorf("(-got, +want)\n%s", diff)
+			}
+		})
 	}
 }
