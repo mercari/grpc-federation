@@ -57,8 +57,7 @@ message GetPostResponse {
           error: {
             log_level: WARN
             def [
-              { by: "grpc.federation.log.add({'validation3_attrs': true})" },
-              { name: "condition" by: "33" }
+              { by: "grpc.federation.log.add({'validation3_attrs': true})" }
             ]
             code: FAILED_PRECONDITION,
             message: "'validation3 failed!'",
