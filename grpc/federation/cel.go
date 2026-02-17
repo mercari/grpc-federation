@@ -824,8 +824,10 @@ func EvalSwitch[T any, V localValue](ctx context.Context, value V, cases []*Eval
 			return by.(T), nil
 		}
 	}
-	if _, err := defaultCase.Defs(ctx, value); err != nil {
-		return nil, err
+	if defaultCase.Defs != nil {
+		if _, err := defaultCase.Defs(ctx, value); err != nil {
+			return nil, err
+		}
 	}
 	by, err := EvalCEL(ctx, &EvalCELRequest{
 		Value:      value,
