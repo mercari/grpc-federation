@@ -1405,10 +1405,10 @@ Create map elements using `enum` value by referencing variables created with `it
 
 `switch` evaluates cases in order and returns the value from the first matching case, or the default case, if no case matches.
 
-| field | type | required or optional |
-| ----- | ---- | -------------------- |
-| [`case`](#grpcfederationmessagedefswitchcase) | repeated SwitchCaseExpr | optional |
-| [`default`](#grpcfederationmessagedefswitchdefault) | SwitchDefaultExpr | required |
+| field                                               | type                    | required or optional |
+| --------------------------------------------------- | ----------------------- | -------------------- |
+| [`case`](#grpcfederationmessagedefswitchcase)       | repeated SwitchCaseExpr | optional             |
+| [`default`](#grpcfederationmessagedefswitchdefault) | SwitchDefaultExpr       | required             |
 
 ### Example
 
@@ -1436,12 +1436,13 @@ message MyMessage {
 
 ## (grpc.federation.message).def.switch.case
 
-A single case in a `switch` expression. Cases are evaluated in order, and the first case whose `if` condition evaluates to `true` will have its `by` expression evaluated and the resulting value returned as the value of the `switch`.
+A single case in a `switch` expression. Cases are evaluated in order, and the first case whose `if` condition evaluates to `true` will have its `by` expression evaluated and the resulting value returned as the value of the `switch`. Variables local to the scope of this case can be defined in `def`.
 
-| field | type | required or optional |
-| ----- | ---- | -------------------- |
-| [`if`](#grpcfederationmessagedefswitchcaseif) | [CEL](./cel.md) | required |
-| [`by`](#grpcfederationmessagedefswitchcaseby) | [CEL](./cel.md) | required |
+| field                                         | type                        | required or optional |
+| --------------------------------------------- | --------------------------- | -------------------- |
+| [`def`](#grpcfederationmessagedef)            | repeated VariableDefinition | optional             |
+| [`if`](#grpcfederationmessagedefswitchcaseif) | [CEL](./cel.md)             | required             |
+| [`by`](#grpcfederationmessagedefswitchcaseby) | [CEL](./cel.md)             | required             |
 
 ## (grpc.federation.message).def.switch.case.if
 
@@ -1453,11 +1454,12 @@ A [CEL](./cel.md) expression that is evaluated when this case matches. The resul
 
 ## (grpc.federation.message).def.switch.default
 
-The default case that is evaluated when none of the switch cases match.
+The default case that is evaluated when none of the switch cases match. Variables local to the scope of the default case can be defined in `def`.
 
-| field | type | required or optional |
-| ----- | ---- | -------------------- |
-| [`by`](#grpcfederationmessagedefswitchdefaultby) | [CEL](./cel.md) | required |
+| field                                            | type                        | required or optional |
+| ------------------------------------------------ | --------------------------- | -------------------- |
+| [`def`](#grpcfederationmessagedef)               | repeated VariableDefinition | optional             |
+| [`by`](#grpcfederationmessagedefswitchdefaultby) | [CEL](./cel.md)             | required             |
 
 ## (grpc.federation.message).def.switch.default.by
 
@@ -1479,13 +1481,14 @@ If omitted, the validation error type will be ValidationError.
 
 ## (grpc.federation.message).def.validation.error
 
-A validation rule and validation error to be returned.
+A validation rule and validation error to be returned. Variables local to the scope of the validation error can be defined with `def`.
 
 | field                                                        | type                           | required or optional |
 |--------------------------------------------------------------|--------------------------------|----------------------|
+| [`def`](#grpcfederationmessagedef)                           | repeated VariableDefinition    | optional             | 
 | [`code`](#grpcfederationmessagedefvalidationerrorcode)       | [google.rpc.Code](../proto_deps/google/rpc/code.proto) | required |
 | [`message`](#grpcfederationmessagedefvalidationerrormessage) | string                         | optional             |
-| [`if`](#grpcfederationmessagedefvalidationerrorif)           | [CEL](./cel.md)                            | optional             |
+| [`if`](#grpcfederationmessagedefvalidationerrorif)           | [CEL](./cel.md)                | optional             |
 | [`details`](#grpcfederationmessagedefvalidationerrordetails) | repeated ValidationErrorDetail | optional             |
 
 ## (grpc.federation.message).def.validation.error.code
@@ -1523,8 +1526,11 @@ message MyMessage {
 `details` is a list of validation rules and error details. If the validation fails, the corresponding error details are set.
 Either `if` or `details` must be specified. The other error detail types will be supported soon.
 
+Variables local to the scope of the validation error detail can be defined with `def`.
+
 | field                                                                                        | type                                    | required or optional |
 |----------------------------------------------------------------------------------------------|-----------------------------------------|----------------------|
+| [`def`](#grpcfederationmessagedef)                           | repeated VariableDefinition   | optional                                | 
 | [`if`](#grpcfederationmessagedefvalidationerrordetailsif)                                    | [CEL](./cel.md)                                     | required             |
 | [`by`](#grpcfederationmessagedefvalidationerrordetailsby)                                    | repeated [CEL](./cel.md)                         | optional             |
 | [`message`](#grpcfederationmessagedefvalidationerrordetailsmessage)                          | repeated MessageExpr                    | optional             |
