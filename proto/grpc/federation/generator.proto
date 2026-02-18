@@ -418,10 +418,12 @@ message SwitchExpr {
 message SwitchCase {
   CELValue if = 1;
   CELValue by = 2;
+  VariableDefinitionSet def_set = 3;
 }
 
 message SwitchDefault {
   CELValue by = 1;
+  VariableDefinitionSet def_set = 2;
 }
 
 message ValidationExpr {

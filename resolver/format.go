@@ -311,6 +311,10 @@ func (c *SwitchCaseExpr) ProtoFormat(opt *ProtoFormatOption) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	var elems []string
+	varDefs := c.DefSet.Definitions().ProtoFormat(nextOpt)
+	if varDefs != "" {
+		elems = append(elems, varDefs)
+	}
 	if c.If != nil {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("if: %q", c.If.Expr))
 	}
@@ -327,6 +331,10 @@ func (d *SwitchDefaultExpr) ProtoFormat(opt *ProtoFormatOption) string {
 	indent := opt.indentFormat()
 	nextOpt := opt.toNextIndentLevel()
 	var elems []string
+	varDefs := d.DefSet.Definitions().ProtoFormat(nextOpt)
+	if varDefs != "" {
+		elems = append(elems, varDefs)
+	}
 	if d.By != nil {
 		elems = append(elems, nextOpt.indentFormat()+fmt.Sprintf("by: %q", d.By.Expr))
 	}

@@ -1613,6 +1613,8 @@ func (r *Resolver) validateDuplicatedVariableNameWithDef(ctx *context, nameMap m
 		for idx, grpcErr := range expr.Call.Errors {
 			r.validateDuplicatedVariableNameWithGRPCError(ctx, nameMap, grpcErr, builder.WithError(idx))
 		}
+	case expr.Switch != nil:
+		r.validateDuplicatedVariableNameWithSwitch(ctx, nameMap, expr.Switch, builder.WithSwitch())
 	case expr.Validation != nil:
 		r.validateDuplicatedVariableNameWithGRPCError(ctx, nameMap, expr.Validation.Error, builder.WithValidation().WithError())
 	}
@@ -1627,6 +1629,25 @@ func (r *Resolver) validateDuplicatedVariableNameWithGRPCError(ctx *context, nam
 		for defIdx, def := range detail.DefSet.Definitions() {
 			r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(defIdx))
 		}
+	}
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithSwitch(ctx *context, nameMap map[string]struct{}, expr *SwitchExpr, builder *source.SwitchExprOptionBuilder) {
+	for idx, cse := range expr.Cases {
+		r.validateDuplicatedVariableNameWithSwitchCase(ctx, nameMap, cse, builder.WithCase(idx))
+	}
+	r.validateDuplicatedVariableNameWithSwitchDefault(ctx, nameMap, expr.Default, builder.WithDefault())
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithSwitchCase(ctx *context, nameMap map[string]struct{}, cse *SwitchCaseExpr, builder *source.SwitchCaseExprOptionBuilder) {
+	for idx, def := range cse.DefSet.Definitions() {
+		r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(idx))
+	}
+}
+
+func (r *Resolver) validateDuplicatedVariableNameWithSwitchDefault(ctx *context, nameMap map[string]struct{}, def *SwitchDefaultExpr, builder *source.SwitchDefaultExprOptionBuilder) {
+	for idx, def := range def.DefSet.Definitions() {
+		r.validateDuplicatedVariableNameWithDef(ctx, nameMap, def, builder.WithDef(idx))
 	}
 }
 
@@ -2837,20 +2858,65 @@ func (r *Resolver) resolveSwitchCases(ctx *context, cases []*federation.SwitchCa
 	result := make([]*SwitchCaseExpr, 0, len(cases))
 
 	for idx, caseDef := range cases {
-		result = append(result, r.resolveSwitchCaseExpr(ctx, caseDef, builderFn(idx)))
+		result = append(result, r.resolveSwitchCaseExpr(ctx, caseDef, idx, builderFn(idx)))
 	}
 	return result
 }
 
-func (r *Resolver) resolveSwitchCaseExpr(_ *context, def *federation.SwitchCaseExpr, _ *source.SwitchCaseExprOptionBuilder) *SwitchCaseExpr {
+func (r *Resolver) resolveSwitchCaseExpr(ctx *context, def *federation.SwitchCaseExpr, caseIdx int, builder *source.SwitchCaseExprOptionBuilder) *SwitchCaseExpr {
+	for defIdx, d := range def.GetDef() {
+		name := d.GetName()
+		if name == "" {
+			n := fmt.Sprintf("_def%d_case%d_def%d", ctx.defIndex(), caseIdx, defIdx)
+			d.Name = &n
+		} else {
+			if err := r.validateName(name); err != nil {
+				empty := ""
+				d.Name = &empty
+				ctx.addError(ErrWithLocation(
+					err.Error(),
+					builder.WithDef(defIdx).WithName().Location(),
+				))
+			}
+		}
+	}
+
 	return &SwitchCaseExpr{
+		DefSet: &VariableDefinitionSet{
+			Defs: r.resolveVariableDefinitions(ctx.withVariableMap(), def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+				return builder.WithDef(idx)
+			}),
+		},
 		If: &CELValue{Expr: def.GetIf()},
 		By: &CELValue{Expr: def.GetBy()},
 	}
 }
 
-func (r *Resolver) resolveSwitchDefaultExpr(_ *context, def *federation.SwitchDefaultExpr, _ *source.SwitchDefaultExprOptionBuilder) *SwitchDefaultExpr {
-	return &SwitchDefaultExpr{By: &CELValue{Expr: def.GetBy()}}
+func (r *Resolver) resolveSwitchDefaultExpr(ctx *context, def *federation.SwitchDefaultExpr, builder *source.SwitchDefaultExprOptionBuilder) *SwitchDefaultExpr {
+	for idx, d := range def.GetDef() {
+		name := d.GetName()
+		if name == "" {
+			n := fmt.Sprintf("_def%d_default_def%d", ctx.defIndex(), idx)
+			d.Name = &n
+		} else {
+			if err := r.validateName(name); err != nil {
+				empty := ""
+				d.Name = &empty
+				ctx.addError(ErrWithLocation(
+					err.Error(),
+					builder.WithDef(idx).WithName().Location(),
+				))
+			}
+		}
+	}
+	return &SwitchDefaultExpr{
+		DefSet: &VariableDefinitionSet{
+			Defs: r.resolveVariableDefinitions(ctx.withVariableMap(), def.GetDef(), func(idx int) *source.VariableDefinitionOptionBuilder {
+				return builder.WithDef(idx)
+			}),
+		},
+		By: &CELValue{Expr: def.GetBy()},
+	}
 }
 
 func (r *Resolver) resolveGRPCError(ctx *context, def *federation.GRPCError, builder *source.GRPCErrorOptionBuilder) *GRPCError {
@@ -4755,6 +4821,9 @@ func (r *Resolver) resolveEnumExprCELValues(ctx *context, env *cel.Env, expr *En
 
 func (r *Resolver) resolveSwitchExprCELValues(ctx *context, env *cel.Env, expr *SwitchExpr, builder *source.SwitchExprOptionBuilder) *Type {
 	for idx, cse := range expr.Cases {
+		for defIdx, def := range cse.DefSet.Definitions() {
+			env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithCase(idx).WithDef(defIdx))
+		}
 		if err := r.resolveCELValue(ctx, env, cse.If); err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -4789,6 +4858,9 @@ func (r *Resolver) resolveSwitchExprCELValues(ctx *context, env *cel.Env, expr *
 		} else {
 			expr.Type = cse.By.Out
 		}
+	}
+	for defIdx, def := range expr.Default.DefSet.Definitions() {
+		env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithDefault().WithDef(defIdx))
 	}
 	if err := r.resolveCELValue(ctx, env, expr.Default.By); err != nil {
 		ctx.addError(
@@ -5537,6 +5609,11 @@ func (r *Resolver) resolveMessageDependencies(ctx *context, files []*File) {
 				for _, grpcErr := range expr.Call.Errors {
 					r.resolveGRPCErrorMessageDependencies(ctx, msg, grpcErr)
 				}
+			case expr.Switch != nil:
+				for _, cse := range expr.Switch.Cases {
+					setupVariableDefinitionSet(ctx, msg, cse.DefSet)
+				}
+				setupVariableDefinitionSet(ctx, msg, expr.Switch.Default.DefSet)
 			case expr.Validation != nil:
 				r.resolveGRPCErrorMessageDependencies(ctx, msg, expr.Validation.Error)
 			}

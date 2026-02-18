@@ -49,6 +49,24 @@ func (e *GRPCError) DefinitionGroups() []VariableDefinitionGroup {
 	return ret
 }
 
+func (e *SwitchExpr) Definitions() VariableDefinitions {
+	var defs VariableDefinitions
+	for _, cse := range e.Cases {
+		defs = append(defs, cse.DefSet.Definitions()...)
+	}
+	defs = append(defs, e.Default.DefSet.Definitions()...)
+	return defs
+}
+
+func (e *SwitchExpr) DefinitionGroups() []VariableDefinitionGroup {
+	var groups []VariableDefinitionGroup
+	for _, cse := range e.Cases {
+		groups = append(groups, cse.DefSet.DefinitionGroups()...)
+	}
+	groups = append(groups, e.Default.DefSet.DefinitionGroups()...)
+	return groups
+}
+
 func (g *SequentialVariableDefinitionGroup) VariableDefinitions() VariableDefinitions {
 	var defs VariableDefinitions
 	if g.Start != nil {
@@ -101,6 +119,8 @@ func (def *VariableDefinition) MessageToDefsMap() map[*Message]VariableDefinitio
 		return map[*Message]VariableDefinitions{msgExpr.Message: {def}}
 	case expr.Call != nil:
 		return expr.Call.MessageToDefsMap()
+	case expr.Switch != nil:
+		return expr.Switch.MessageToDefsMap()
 	case expr.Validation != nil:
 		return expr.Validation.MessageToDefsMap()
 	}
@@ -111,6 +131,16 @@ func (e *CallExpr) MessageToDefsMap() map[*Message]VariableDefinitions {
 	ret := make(map[*Message]VariableDefinitions)
 	for _, grpcErr := range e.Errors {
 		for k, v := range grpcErr.MessageToDefsMap() {
+			ret[k] = append(ret[k], v...)
+		}
+	}
+	return ret
+}
+
+func (e *SwitchExpr) MessageToDefsMap() map[*Message]VariableDefinitions {
+	ret := e.Default.DefSet.MessageToDefsMap()
+	for _, cse := range e.Cases {
+		for k, v := range cse.DefSet.MessageToDefsMap() {
 			ret[k] = append(ret[k], v...)
 		}
 	}
@@ -166,6 +196,8 @@ func (def *VariableDefinition) MessageExprs() []*MessageExpr {
 		return expr.Map.MessageExprs()
 	case expr.Message != nil:
 		return []*MessageExpr{expr.Message}
+	case expr.Switch != nil:
+		return expr.Switch.MessageExprs()
 	case expr.Validation != nil:
 		return expr.Validation.MessageExprs()
 	}
@@ -188,6 +220,15 @@ func (e *MapExpr) MessageExprs() []*MessageExpr {
 		return nil
 	}
 	return []*MessageExpr{e.Expr.Message}
+}
+
+func (e *SwitchExpr) MessageExprs() []*MessageExpr {
+	var ret []*MessageExpr
+	for _, cse := range e.Cases {
+		ret = append(ret, cse.DefSet.MessageExprs()...)
+	}
+	ret = append(ret, e.Default.DefSet.MessageExprs()...)
+	return ret
 }
 
 func (e *ValidationExpr) MessageExprs() []*MessageExpr {
@@ -352,9 +393,11 @@ func (e *SwitchExpr) ReferenceNames() []string {
 	}
 	var names []string
 	for _, cse := range e.Cases {
+		names = append(names, cse.DefSet.ReferenceNames()...)
 		names = append(names, cse.If.ReferenceNames()...)
 		names = append(names, cse.By.ReferenceNames()...)
 	}
+	names = append(names, e.Default.DefSet.ReferenceNames()...)
 	names = append(names, e.Default.By.ReferenceNames()...)
 	return toUniqueReferenceNames(names)
 }
@@ -378,6 +421,8 @@ func (def *VariableDefinition) MarkUsed(nameRefMap map[string]struct{}) {
 		expr.Call.MarkUsed(nameRefMap)
 	case expr.Map != nil:
 		expr.Map.MarkUsed(nameRefMap)
+	case expr.Switch != nil:
+		expr.Switch.MarkUsed(nameRefMap)
 	case expr.Validation != nil:
 		expr.Validation.MarkUsed(nameRefMap)
 	}
@@ -390,6 +435,13 @@ func (e *CallExpr) MarkUsed(nameRefMap map[string]struct{}) {
 }
 
 func (e *MapExpr) MarkUsed(_ map[string]struct{}) {}
+
+func (e *SwitchExpr) MarkUsed(nameRefMap map[string]struct{}) {
+	for _, cse := range e.Cases {
+		cse.DefSet.MarkUsed(nameRefMap)
+	}
+	e.Default.DefSet.MarkUsed(nameRefMap)
+}
 
 func (e *ValidationExpr) MarkUsed(nameRefMap map[string]struct{}) {
 	e.Error.MarkUsed(nameRefMap)

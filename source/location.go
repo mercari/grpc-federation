@@ -364,12 +364,14 @@ type SwitchExprOption struct {
 
 type SwitchCaseExprOption struct {
 	Idx int
+	Def *VariableDefinitionOption
 	If  bool
 	By  bool
 }
 
 type SwitchDefaultExprOption struct {
-	By bool
+	Def *VariableDefinitionOption
+	By  bool
 }
 
 // Position represents source position in proto file.

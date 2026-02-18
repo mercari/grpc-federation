@@ -24,7 +24,9 @@ var (
 
 // Org_Federation_GetPostResponseVariable represents variable definitions in "org.federation.GetPostResponse".
 type FederationService_Org_Federation_GetPostResponseVariable struct {
-	Switch int64
+	Blue    int64
+	Default int64
+	Switch  int64
 }
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
@@ -175,7 +177,9 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			Switch int64
+			Blue    int64
+			Default int64
+			Switch  int64
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GetPostResponseArgument", req)}
@@ -185,15 +189,23 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		  name: "switch"
 		  switch {
 		    case {
+		      def {
+		        name: "blue"
+		        by: "73"
+		      }
 		      if: "$.id == 'blue'"
-		      by: "1"
+		      by: "blue"
 		    }
 		    case {
 		      if: "$.id == 'red'"
 		      by: "2"
 		    }
 		    default {
-		      by: "3"
+		      def {
+		        name: "default"
+		        by: "3"
+		      }
+		      by: "default"
 		    }
 		  }
 		}
@@ -207,22 +219,74 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil
 			},
 			Switch: func(ctx context.Context, value *localValueType) (any, error) {
-				cases := []*grpcfed.EvalSwitchCase{}
-				cases = append(cases, &grpcfed.EvalSwitchCase{
+				cases := []*grpcfed.EvalSwitchCase[*localValueType]{}
+				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
+					Defs: func(ctx context.Context, value *localValueType) (any, error) {
+						/*
+							def {
+							  name: "blue"
+							  by: "73"
+							}
+						*/
+						def_blue := func(ctx context.Context) error {
+							return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
+								Name: `blue`,
+								Type: grpcfed.CELIntType,
+								Setter: func(value *localValueType, v int64) error {
+									value.vars.Blue = v
+									return nil
+								},
+								By:           `73`,
+								ByCacheIndex: 1,
+							})
+						}
+
+						if err := def_blue(ctx); err != nil {
+							grpcfed.RecordErrorToSpan(ctx, err)
+							return nil, err
+						}
+						return nil, nil
+					},
 					If:           `$.id == 'blue'`,
-					IfCacheIndex: 1,
-					By:           `1`,
-					ByCacheIndex: 2,
+					IfCacheIndex: 2,
+					By:           `blue`,
+					ByCacheIndex: 3,
 				})
-				cases = append(cases, &grpcfed.EvalSwitchCase{
+				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
 					If:           `$.id == 'red'`,
-					IfCacheIndex: 3,
+					IfCacheIndex: 4,
 					By:           `2`,
-					ByCacheIndex: 4,
-				})
-				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault{
-					By:           `3`,
 					ByCacheIndex: 5,
+				})
+				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault[*localValueType]{
+					Defs: func(ctx context.Context, value *localValueType) (any, error) {
+						/*
+							def {
+							  name: "default"
+							  by: "3"
+							}
+						*/
+						def_default := func(ctx context.Context) error {
+							return grpcfed.EvalDef(ctx, value, grpcfed.Def[int64, *localValueType]{
+								Name: `default`,
+								Type: grpcfed.CELIntType,
+								Setter: func(value *localValueType, v int64) error {
+									value.vars.Default = v
+									return nil
+								},
+								By:           `3`,
+								ByCacheIndex: 6,
+							})
+						}
+
+						if err := def_default(ctx); err != nil {
+							grpcfed.RecordErrorToSpan(ctx, err)
+							return nil, err
+						}
+						return nil, nil
+					},
+					By:           `default`,
+					ByCacheIndex: 7,
 				})
 			},
 		})
@@ -234,6 +298,8 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
+	req.FederationService_Org_Federation_GetPostResponseVariable.Blue = value.vars.Blue
+	req.FederationService_Org_Federation_GetPostResponseVariable.Default = value.vars.Default
 	req.FederationService_Org_Federation_GetPostResponseVariable.Switch = value.vars.Switch
 
 	// create a message value to be returned.
@@ -244,7 +310,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:      value,
 		Expr:       `switch`,
-		CacheIndex: 6,
+		CacheIndex: 8,
 		Setter: func(v int64) error {
 			ret.Switch = v
 			return nil

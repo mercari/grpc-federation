@@ -3500,12 +3500,64 @@ func (r *SwitchResolver) CELCacheIndex() int {
 	return r.Service.CELCacheIndex()
 }
 
-func (r *SwitchResolver) Cases() []*resolver.SwitchCaseExpr {
-	return r.SwitchExpr.Cases
+type SwitchCaseResolver struct {
+	Service    *Service
+	SwitchCase *resolver.SwitchCaseExpr
 }
 
-func (r *SwitchResolver) Default() *resolver.SwitchDefaultExpr {
-	return r.SwitchExpr.Default
+type SwitchDefaultResolver struct {
+	Service       *Service
+	SwitchDefault *resolver.SwitchDefaultExpr
+}
+
+func (r *SwitchResolver) Cases() []*SwitchCaseResolver {
+	ret := make([]*SwitchCaseResolver, 0, len(r.SwitchExpr.Cases))
+	for _, cse := range r.SwitchExpr.Cases {
+		ret = append(ret, &SwitchCaseResolver{
+			Service:    r.Service,
+			SwitchCase: cse,
+		})
+	}
+	return ret
+}
+
+func (r *SwitchResolver) Default() *SwitchDefaultResolver {
+	return &SwitchDefaultResolver{
+		Service:       r.Service,
+		SwitchDefault: r.SwitchExpr.Default,
+	}
+}
+
+func (r *SwitchCaseResolver) DefSet() *VariableDefinitionSet {
+	if r.SwitchCase.DefSet == nil || len(r.SwitchCase.DefSet.Defs) == 0 {
+		return nil
+	}
+	return &VariableDefinitionSet{
+		VariableDefinitionSet: r.SwitchCase.DefSet,
+		svc:                   r.Service,
+	}
+}
+
+func (r *SwitchCaseResolver) If() *resolver.CELValue {
+	return r.SwitchCase.If
+}
+
+func (r *SwitchCaseResolver) By() *resolver.CELValue {
+	return r.SwitchCase.By
+}
+
+func (r *SwitchDefaultResolver) DefSet() *VariableDefinitionSet {
+	if r.SwitchDefault.DefSet == nil || len(r.SwitchDefault.DefSet.Defs) == 0 {
+		return nil
+	}
+	return &VariableDefinitionSet{
+		VariableDefinitionSet: r.SwitchDefault.DefSet,
+		svc:                   r.Service,
+	}
+}
+
+func (r *SwitchDefaultResolver) By() *resolver.CELValue {
+	return r.SwitchDefault.By
 }
 
 func toCELNativeType(t *resolver.Type) string {

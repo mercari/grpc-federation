@@ -4537,8 +4537,26 @@ func TestSwitch(t *testing.T) {
 								SetSwitch(testutil.NewSwitchExprBuilder().
 									SetType(resolver.Int64Type).
 									AddCase(testutil.NewSwitchCaseExprBuilder().
+										AddDef(testutil.NewVariableDefinitionBuilder().
+											SetName("blue").
+											SetUsed(true).
+											SetBy(testutil.NewCELValueBuilder("73", resolver.Int64Type).Build(t)).
+											Build(t)).
+										AddVariableDefinitionGroup(
+											testutil.NewVariableDefinitionGroupBuilder().
+												SetEnd(testutil.NewVariableDefinitionBuilder().
+													SetName("blue").
+													SetUsed(true).
+													SetBy(testutil.NewCELValueBuilder("73", resolver.Int64Type).Build(t)).
+													Build(t)).
+												Build(t)).
+										SetDependencyGraph(
+											testutil.NewDependencyGraphBuilder().
+												Add(ref.Message(t, "org.federation", "GetPostRequest")).
+												Build(t),
+										).
 										SetIf(testutil.NewCELValueBuilder("$.id == 'blue'", resolver.BoolType).Build(t)).
-										SetBy(testutil.NewCELValueBuilder("1", resolver.Int64Type).Build(t)).
+										SetBy(testutil.NewCELValueBuilder("blue", resolver.Int64Type).Build(t)).
 										Build(t),
 									).
 									AddCase(testutil.NewSwitchCaseExprBuilder().
@@ -4547,7 +4565,25 @@ func TestSwitch(t *testing.T) {
 										Build(t),
 									).
 									SetDefault(testutil.NewSwitchDefaultExprBuilder().
-										SetBy(testutil.NewCELValueBuilder("3", resolver.Int64Type).Build(t)).
+										AddDef(testutil.NewVariableDefinitionBuilder().
+											SetName("default").
+											SetUsed(true).
+											SetBy(testutil.NewCELValueBuilder("3", resolver.Int64Type).Build(t)).
+											Build(t)).
+										AddVariableDefinitionGroup(
+											testutil.NewVariableDefinitionGroupBuilder().
+												SetEnd(testutil.NewVariableDefinitionBuilder().
+													SetName("default").
+													SetUsed(true).
+													SetBy(testutil.NewCELValueBuilder("3", resolver.Int64Type).Build(t)).
+													Build(t)).
+												Build(t)).
+										SetDependencyGraph(
+											testutil.NewDependencyGraphBuilder().
+												Add(ref.Message(t, "org.federation", "GetPostRequest")).
+												Build(t),
+										).
+										SetBy(testutil.NewCELValueBuilder("default", resolver.Int64Type).Build(t)).
 										Build(t),
 									).
 									Build(t)).
