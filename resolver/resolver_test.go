@@ -4542,6 +4542,19 @@ func TestSwitch(t *testing.T) {
 											SetUsed(true).
 											SetBy(testutil.NewCELValueBuilder("73", resolver.Int64Type).Build(t)).
 											Build(t)).
+										AddVariableDefinitionGroup(
+											testutil.NewVariableDefinitionGroupBuilder().
+												SetEnd(testutil.NewVariableDefinitionBuilder().
+													SetName("blue").
+													SetUsed(true).
+													SetBy(testutil.NewCELValueBuilder("73", resolver.Int64Type).Build(t)).
+													Build(t)).
+												Build(t)).
+										SetDependencyGraph(
+											testutil.NewDependencyGraphBuilder().
+												Add(ref.Message(t, "org.federation", "GetPostRequest")).
+												Build(t),
+										).
 										SetIf(testutil.NewCELValueBuilder("$.id == 'blue'", resolver.BoolType).Build(t)).
 										SetBy(testutil.NewCELValueBuilder("blue", resolver.Int64Type).Build(t)).
 										Build(t),
@@ -4557,6 +4570,19 @@ func TestSwitch(t *testing.T) {
 											SetUsed(true).
 											SetBy(testutil.NewCELValueBuilder("3", resolver.Int64Type).Build(t)).
 											Build(t)).
+										AddVariableDefinitionGroup(
+											testutil.NewVariableDefinitionGroupBuilder().
+												SetEnd(testutil.NewVariableDefinitionBuilder().
+													SetName("default").
+													SetUsed(true).
+													SetBy(testutil.NewCELValueBuilder("3", resolver.Int64Type).Build(t)).
+													Build(t)).
+												Build(t)).
+										SetDependencyGraph(
+											testutil.NewDependencyGraphBuilder().
+												Add(ref.Message(t, "org.federation", "GetPostRequest")).
+												Build(t),
+										).
 										SetBy(testutil.NewCELValueBuilder("default", resolver.Int64Type).Build(t)).
 										Build(t),
 									).

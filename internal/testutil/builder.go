@@ -1226,6 +1226,16 @@ func (b *SwitchCaseExprBuilder) AddDef(v *resolver.VariableDefinition) *SwitchCa
 	return b
 }
 
+func (b *SwitchCaseExprBuilder) SetDependencyGraph(graph *resolver.MessageDependencyGraph) *SwitchCaseExprBuilder {
+	b.expr.DefSet.Graph = graph
+	return b
+}
+
+func (b *SwitchCaseExprBuilder) AddVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *SwitchCaseExprBuilder {
+	b.expr.DefSet.Groups = append(b.expr.DefSet.Groups, group)
+	return b
+}
+
 func (b *SwitchCaseExprBuilder) SetIf(v *resolver.CELValue) *SwitchCaseExprBuilder {
 	b.expr.If = v
 	return b
@@ -1260,6 +1270,16 @@ func (b *SwitchDefaultExprBuilder) AddDef(v *resolver.VariableDefinition) *Switc
 
 func (b *SwitchDefaultExprBuilder) SetBy(v *resolver.CELValue) *SwitchDefaultExprBuilder {
 	b.expr.By = v
+	return b
+}
+
+func (b *SwitchDefaultExprBuilder) AddVariableDefinitionGroup(group resolver.VariableDefinitionGroup) *SwitchDefaultExprBuilder {
+	b.expr.DefSet.Groups = append(b.expr.DefSet.Groups, group)
+	return b
+}
+
+func (b *SwitchDefaultExprBuilder) SetDependencyGraph(graph *resolver.MessageDependencyGraph) *SwitchDefaultExprBuilder {
+	b.expr.DefSet.Graph = graph
 	return b
 }
 
