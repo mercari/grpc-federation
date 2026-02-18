@@ -319,11 +319,11 @@ func TestProtoFormat(t *testing.T) {
       switch {
         case {
           def {
-            name: "unused"
+            name: "blue"
             by: "73"
           }
           if: "$.id == 'blue'"
-          by: "1"
+          by: "blue"
         }
         case {
           if: "$.id == 'red'"
@@ -331,10 +331,10 @@ func TestProtoFormat(t *testing.T) {
         }
         default {
           def {
-            name: "unused2"
-            by: "'mackerel'"
+            name: "default"
+            by: "3"
           }
-          by: "3"
+          by: "default"
         }
       }
     }
