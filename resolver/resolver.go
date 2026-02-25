@@ -1283,7 +1283,13 @@ func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string, build
 		oneofs = append(oneofs, oneof)
 	}
 	msg.Fields = r.resolveFields(ctx, msgDef.GetField(), oneofs, builder)
-	msg.Oneofs = oneofs
+	var nonEmptyOneofs []*Oneof
+	for _, oneof := range oneofs {
+		if len(oneof.Fields) > 0 {
+			nonEmptyOneofs = append(nonEmptyOneofs, oneof)
+		}
+	}
+	msg.Oneofs = nonEmptyOneofs
 	return msg
 }
 
@@ -3524,7 +3530,9 @@ func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDe
 			fieldBuilder *source.FieldBuilder
 			oneof        *Oneof
 		)
-		if fieldDef.OneofIndex != nil {
+		// A Proto3 optional fields is converted into a oneof field (with a hidden oneof type descriptor) by the protoc-gen-go compiler.
+		// But it should be treated as a regular, non-oneof field for the purposes of grpc-federation.
+		if fieldDef.OneofIndex != nil && !fieldDef.GetProto3Optional() {
 			oneof = oneofs[fieldDef.GetOneofIndex()]
 			fieldBuilder = builder.WithOneof(oneof.Name).WithField(fieldDef.GetName())
 		} else {
@@ -3551,15 +3559,15 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 		return nil
 	}
 	field := &Field{
-		Name:    fieldDef.GetName(),
-		Desc:    fieldDef,
-		Type:    typ,
-		Message: ctx.msg,
+		Name:           fieldDef.GetName(),
+		Desc:           fieldDef,
+		Type:           typ,
+		Message:        ctx.msg,
+		Proto3Optional: fieldDef.GetProto3Optional(),
 	}
 	if oneof != nil {
 		oneof.Fields = append(oneof.Fields, field)
 		field.Oneof = oneof
-		typ.OneofField = &OneofField{Field: field}
 	}
 	rule, err := getExtensionRule[*federation.FieldRule](fieldDef.GetOptions(), federation.E_Field)
 	if err != nil {

@@ -1914,6 +1914,7 @@ type SetterParam struct {
 	EnumSelector   *EnumSelectorSetterParam
 	OneofTypeName  string
 	OneofFieldName string
+	Proto3Optional bool
 }
 
 type EnumSelectorSetterParam struct {
@@ -2571,11 +2572,12 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		}),
 		Type: typ,
 		SetterParam: &SetterParam{
-			Name:         util.ToPublicGoVariable(field.Name),
-			Value:        "v",
-			RequiredCast: requiredCast,
-			EnumSelector: enumSelectorSetterParam,
-			CastFunc:     castFuncName(fromType, toType),
+			Name:           util.ToPublicGoVariable(field.Name),
+			Value:          "v",
+			RequiredCast:   requiredCast,
+			EnumSelector:   enumSelectorSetterParam,
+			CastFunc:       castFuncName(fromType, toType),
+			Proto3Optional: field.Proto3Optional,
 		},
 	}
 }

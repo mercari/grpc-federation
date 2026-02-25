@@ -152,14 +152,6 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		"grpc.federation.private.org.federation.GetPostResponseArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
-		"org.federation.GetPostResponse": {
-			"_svar": grpcfed.NewOneofSelectorFieldType(
-				grpcfed.CELIntType, "XSvar",
-				[]reflect.Type{reflect.TypeOf((*GetPostResponse_Svar)(nil))},
-				[]string{"GetSvar"},
-				reflect.Zero(reflect.TypeOf(int64(0))),
-			),
-		},
 		"grpc.federation.private.Env": {
 			"a": grpcfed.NewCELFieldType(grpcfed.CELStringType, "A"),
 		},
@@ -434,33 +426,35 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	ret := &GetPostResponse{}
 
 	// field binding section.
-	// (grpc.federation.field).by = "switch"
+	// (grpc.federation.field).by = "grpc.federation.var.svar"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:      value,
-		Expr:       `switch`,
+		Expr:       `grpc.federation.var.svar`,
 		CacheIndex: 11,
 		Setter: func(v int64) error {
-			ret.Switch = v
+			ret.Svar = v
 			return nil
 		},
 	}); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
-	if false {
-		// For code generation reasons, we're using a loop to generate the oneof conditional branches,
-		// so to avoid treating the first element specially, we always generate if branch with false condition.
+	// (grpc.federation.field).by = "switch"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:      value,
+		Expr:       `switch`,
+		CacheIndex: 12,
+		Setter: func(v int64) error {
+			ret.Switch = &v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
 	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GetPostResponse", slog.Any("org.federation.GetPostResponse", s.logvalue_Org_Federation_GetPostResponse(ret)))
 	return ret, nil
-}
-
-// cast_int64__to__Org_Federation_GetPostResponse_Svar cast from "int64" to "org.federation.GetPostResponse.svar".
-func (s *FederationService) cast_int64__to__Org_Federation_GetPostResponse_Svar(from int64) (*GetPostResponse_Svar, error) {
-	return &GetPostResponse_Svar{
-		Svar: int64(from),
-	}, nil
 }
 
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {

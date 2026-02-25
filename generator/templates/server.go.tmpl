@@ -880,7 +880,11 @@ if err != nil {
 }
 ret.{{ $name }} = {{ toLocalVariable $name }}
 {{- else }}
+{{- if .Proto3Optional }}
+ret.{{ $name }} = &{{ $v }}
+{{- else }}
 ret.{{ $name }} = {{ $v }}
+{{- end }}
 {{- end }}
 {{- end -}}
 
