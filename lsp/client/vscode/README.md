@@ -45,7 +45,7 @@ $ go install github.com/mercari/grpc-federation/cmd/grpc-federation-language-ser
 
 The following options can be set in `.vscode/settings.json` .
 
-The example settings is here.
+Example settings are below.
 
 ```json
 {
