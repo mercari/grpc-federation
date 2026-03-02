@@ -251,7 +251,7 @@ In `def`, besides getting the message, you can call the gRPC method and assign t
 
 The first `def` in the `Post` message calls `post.PostService`'s `GetPost` method and assigns the result to the `res` variable.  
 
-The second `def` in the `Post` message access `post` field of `res` variable and use `autobind` feature for easy field binding.
+The second `def` in the `Post` message accesses `post` field of `res` variable and uses `autobind` feature for easy field binding.
 
 > [!TIP]
 > [`autobind`](https://github.com/mercari/grpc-federation/blob/main/docs/references.md#grpcfederationmessagedefautobind)
