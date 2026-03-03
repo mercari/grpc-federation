@@ -3,8 +3,6 @@ package generator
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -25,7 +23,6 @@ import (
 
 	"github.com/mercari/grpc-federation/compiler"
 	"github.com/mercari/grpc-federation/grpc/federation/generator"
-	"github.com/mercari/grpc-federation/grpc/federation/generator/plugin"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/source"
 	"github.com/mercari/grpc-federation/validator"
@@ -47,6 +44,7 @@ type Generator struct {
 	postProcessHandler        PostProcessHandler
 	buildCacheMap             BuildCacheMap
 	absPathToRelativePath     map[string]string
+	wasmPluginCache           *wasmPluginCache
 }
 
 type Option func(*Generator) error
@@ -135,6 +133,14 @@ func New(cfg Config) *Generator {
 		validator:             validator.New(),
 		importPaths:           cfg.Imports,
 		absPathToRelativePath: make(map[string]string),
+		wasmPluginCache:       newWasmPluginCache(),
+	}
+}
+
+// Close releases resources held by the Generator, including cached WASM plugin runtimes.
+func (g *Generator) Close(ctx context.Context) {
+	if g.wasmPluginCache != nil {
+		g.wasmPluginCache.Close(ctx)
 	}
 }
 
@@ -182,7 +188,7 @@ func (g *Generator) Generate(ctx context.Context, protoPath string, opts ...Opti
 		}
 		results = append(results, result)
 	}
-	pluginResp, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption)
+	pluginResp, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption, g.wasmPluginCache)
 	if err != nil {
 		return err
 	}
@@ -359,7 +365,7 @@ func (g *Generator) setWatcher(w *Watcher) error {
 			results = append(results, result)
 		}
 		results = append(results, g.otherResults(path)...)
-		pluginResp, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption)
+		pluginResp, err := evalAllCodeGenerationPlugin(ctx, results, g.federationGeneratorOption, g.wasmPluginCache)
 		if err != nil {
 			log.Printf("failed to run code generator plugin: %+v", err)
 		}
@@ -664,14 +670,19 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 		}
 		fmt.Fprint(os.Stderr, validator.Format(outs))
 	}
+	if len(result.Files) == 0 {
+		return nil, nil
+	}
 
+	cache := newWasmPluginCache()
+	defer cache.Close(ctx)
 	pluginResp, err := evalAllCodeGenerationPlugin(ctx, []*ProtoFileResult{
 		{
 			Type:            ProtocAction,
 			ProtoPath:       "",
 			FederationFiles: result.Files,
 		},
-	}, opt)
+	}, opt, cache)
 	if err != nil {
 		return nil, err
 	}
@@ -696,61 +707,38 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	return &resp, nil
 }
 
-func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult, opt *CodeGeneratorOption) (*pluginpb.CodeGeneratorResponse, error) {
+func evalAllCodeGenerationPlugin(ctx context.Context, results []*ProtoFileResult, opt *CodeGeneratorOption, cache *wasmPluginCache) (*pluginpb.CodeGeneratorResponse, error) {
 	if len(results) == 0 {
 		return &pluginpb.CodeGeneratorResponse{}, nil
 	}
 	if opt == nil || len(opt.Plugins) == 0 {
 		return &pluginpb.CodeGeneratorResponse{}, nil
 	}
+
 	var resp pluginpb.CodeGeneratorResponse
 	for _, result := range results {
-		pluginFiles := make([]*plugin.ProtoCodeGeneratorResponse_File, 0, len(result.Files))
-		for _, file := range result.Files {
-			fileBytes, err := proto.Marshal(file)
+		for _, p := range opt.Plugins {
+			wp, err := cache.getOrCreate(ctx, p)
 			if err != nil {
 				return nil, err
 			}
-			var pluginFile plugin.ProtoCodeGeneratorResponse_File
-			if err := proto.Unmarshal(fileBytes, &pluginFile); err != nil {
+			genReq := generator.CreateCodeGeneratorRequest(&generator.CodeGeneratorRequestConfig{
+				ProtoPath:            result.ProtoPath,
+				GRPCFederationFiles:  result.FederationFiles,
+				OutputFilePathConfig: opt.Path,
+			})
+			encodedGenReq, err := proto.Marshal(genReq)
+			if err != nil {
 				return nil, err
 			}
-			pluginFiles = append(pluginFiles, &pluginFile)
-		}
-		genReq := generator.CreateCodeGeneratorRequest(&generator.CodeGeneratorRequestConfig{
-			Type:                 generator.ActionType(result.Type),
-			ProtoPath:            result.ProtoPath,
-			Files:                pluginFiles,
-			GRPCFederationFiles:  result.FederationFiles,
-			OutputFilePathConfig: opt.Path,
-		})
-		encodedGenReq, err := proto.Marshal(genReq)
-		if err != nil {
-			return nil, err
-		}
-		for _, plugin := range opt.Plugins {
-			wasmFile, err := os.ReadFile(plugin.Path)
-			if err != nil {
-				return nil, fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", plugin.Path, err)
-			}
-			if plugin.Sha256 != "" {
-				hash := sha256.Sum256(wasmFile)
-				gotHash := hex.EncodeToString(hash[:])
-				if plugin.Sha256 != gotHash {
-					return nil, fmt.Errorf(
-						`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
-						plugin.Sha256,
-						gotHash,
-					)
-				}
-			}
-			pluginRes, err := evalCodeGeneratorPlugin(ctx, wasmFile, bytes.NewBuffer(encodedGenReq))
+			pluginRes, err := wp.Execute(ctx, bytes.NewBuffer(encodedGenReq))
 			if err != nil {
 				return nil, err
 			}
 			resp.File = append(resp.File, pluginRes.File...)
 		}
 	}
+
 	return &resp, nil
 }
 
