@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -88,7 +89,8 @@ func newWasmPluginCache() *wasmPluginCache {
 }
 
 func (c *wasmPluginCache) getOrCreate(ctx context.Context, opt *WasmPluginOption) (*wasmPlugin, error) {
-	if wp, ok := c.plugins[opt.Path]; ok {
+	cacheKey := opt.Path + "\x00" + opt.Sha256
+	if wp, ok := c.plugins[cacheKey]; ok {
 		return wp, nil
 	}
 	wasmFile, err := os.ReadFile(opt.Path)
@@ -110,14 +112,18 @@ func (c *wasmPluginCache) getOrCreate(ctx context.Context, opt *WasmPluginOption
 	if err != nil {
 		return nil, err
 	}
-	c.plugins[opt.Path] = wp
+	c.plugins[cacheKey] = wp
 	return wp, nil
 }
 
-func (c *wasmPluginCache) Close(ctx context.Context) {
+func (c *wasmPluginCache) Close(ctx context.Context) error {
+	var errs []error
 	for _, wp := range c.plugins {
-		wp.Close(ctx)
+		if err := wp.Close(ctx); err != nil {
+			errs = append(errs, err)
+		}
 	}
+	return errors.Join(errs...)
 }
 
 func getCompilationCache() wazero.CompilationCache {

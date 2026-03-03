@@ -138,10 +138,11 @@ func New(cfg Config) *Generator {
 }
 
 // Close releases resources held by the Generator, including cached WASM plugin runtimes.
-func (g *Generator) Close(ctx context.Context) {
+func (g *Generator) Close(ctx context.Context) error {
 	if g.wasmPluginCache != nil {
-		g.wasmPluginCache.Close(ctx)
+		return g.wasmPluginCache.Close(ctx)
 	}
+	return nil
 }
 
 func (g *Generator) SetPostProcessHandler(postProcessHandler func(ctx context.Context, path string, result Result) error) {
@@ -657,7 +658,7 @@ func (g *Generator) fileNameWithoutExt(name string) string {
 	return name[:len(name)-len(filepath.Ext(name))]
 }
 
-func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
+func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGeneratorRequest) (_ *pluginpb.CodeGeneratorResponse, err error) {
 	opt, err := parseOptString(req.GetParameter())
 	if err != nil {
 		return nil, err
@@ -675,7 +676,11 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	}
 
 	cache := newWasmPluginCache()
-	defer cache.Close(ctx)
+	defer func() {
+		if closeErr := cache.Close(ctx); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
+	}()
 	pluginResp, err := evalAllCodeGenerationPlugin(ctx, []*ProtoFileResult{
 		{
 			Type:            ProtocAction,
