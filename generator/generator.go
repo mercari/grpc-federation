@@ -673,6 +673,9 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	}
 
 	var resp pluginpb.CodeGeneratorResponse
+	// TODO: Since we don’t currently support editions, we will comment it out.
+	// Strictly speaking, proto3 optional is also not fully supported, but because it cannot be used together when other plugins support proto3 optional,
+	// we have enabled it for the time being.
 	resp.SupportedFeatures = proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL /*| pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS*/))
 
 	if len(result.Files) == 0 {

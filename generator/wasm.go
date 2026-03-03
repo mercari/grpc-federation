@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -25,7 +24,6 @@ import (
 type wasmPlugin struct {
 	runtime  wazero.Runtime
 	compiled wazero.CompiledModule
-	counter  atomic.Int64
 }
 
 func newWasmPlugin(ctx context.Context, wasmBytes []byte) (*wasmPlugin, error) {
@@ -48,15 +46,12 @@ func newWasmPlugin(ctx context.Context, wasmBytes []byte) (*wasmPlugin, error) {
 }
 
 func (p *wasmPlugin) Execute(ctx context.Context, req io.Reader) (*pluginpb.CodeGeneratorResponse, error) {
-	name := fmt.Sprintf("plugin_%d", p.counter.Add(1))
-
 	buf := new(bytes.Buffer)
 	modCfg := wazero.NewModuleConfig().
 		WithFSConfig(wazero.NewFSConfig().WithDirMount(".", "/")).
 		WithStdin(req).
 		WithStdout(buf).
 		WithStderr(os.Stderr).
-		WithName(name).
 		WithArgs("wasi")
 
 	mod, err := p.runtime.InstantiateModule(ctx, p.compiled, modCfg)
