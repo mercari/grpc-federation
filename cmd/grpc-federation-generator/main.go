@@ -43,6 +43,7 @@ func _main(ctx context.Context, args []string, opt *option) error {
 		protoPath = args[0]
 	}
 	g := generator.New(cfg)
+	defer g.Close(ctx)
 	var opts []generator.Option
 	if opt.WatchMode {
 		opts = append(opts, generator.WatchMode())

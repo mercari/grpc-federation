@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 
 	"github.com/tetratelabs/wazero"
@@ -81,6 +82,7 @@ func (p *wasmPlugin) Close(ctx context.Context) error {
 // wasmPluginCache caches compiled WASM plugins so that the expensive
 // compilation step is performed only once per plugin path.
 type wasmPluginCache struct {
+	mu      sync.RWMutex
 	plugins map[string]*wasmPlugin
 }
 
@@ -89,24 +91,34 @@ func newWasmPluginCache() *wasmPluginCache {
 }
 
 func (c *wasmPluginCache) getOrCreate(ctx context.Context, opt *WasmPluginOption) (*wasmPlugin, error) {
-	cacheKey := opt.Path + "\x00" + opt.Sha256
-	if wp, ok := c.plugins[cacheKey]; ok {
-		return wp, nil
-	}
 	wasmFile, err := os.ReadFile(opt.Path)
 	if err != nil {
 		return nil, fmt.Errorf("grpc-federation: failed to read plugin file: %s: %w", opt.Path, err)
 	}
-	if opt.Sha256 != "" {
-		hash := sha256.Sum256(wasmFile)
-		gotHash := hex.EncodeToString(hash[:])
-		if opt.Sha256 != gotHash {
-			return nil, fmt.Errorf(
-				`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
-				opt.Sha256,
-				gotHash,
-			)
-		}
+	hash := sha256.Sum256(wasmFile)
+	gotHash := hex.EncodeToString(hash[:])
+	if opt.Sha256 != "" && opt.Sha256 != gotHash {
+		return nil, fmt.Errorf(
+			`grpc-federation: expected plugin sha256 value is [%s] but got [%s]`,
+			opt.Sha256,
+			gotHash,
+		)
+	}
+	cacheKey := opt.Path + ":" + gotHash
+
+	c.mu.RLock()
+	if wp, ok := c.plugins[cacheKey]; ok {
+		c.mu.RUnlock()
+		return wp, nil
+	}
+	c.mu.RUnlock()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Double-check after acquiring write lock.
+	if wp, ok := c.plugins[cacheKey]; ok {
+		return wp, nil
 	}
 	wp, err := newWasmPlugin(ctx, wasmFile)
 	if err != nil {
@@ -117,11 +129,12 @@ func (c *wasmPluginCache) getOrCreate(ctx context.Context, opt *WasmPluginOption
 }
 
 func (c *wasmPluginCache) Close(ctx context.Context) error {
-	var errs []error
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	errs := make([]error, 0, len(c.plugins))
 	for _, wp := range c.plugins {
-		if err := wp.Close(ctx); err != nil {
-			errs = append(errs, err)
-		}
+		errs = append(errs, wp.Close(ctx))
 	}
 	return errors.Join(errs...)
 }

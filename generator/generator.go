@@ -671,8 +671,12 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 		}
 		fmt.Fprint(os.Stderr, validator.Format(outs))
 	}
+
+	var resp pluginpb.CodeGeneratorResponse
+	resp.SupportedFeatures = proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL /*| pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS*/))
+
 	if len(result.Files) == 0 {
-		return nil, nil
+		return &resp, nil
 	}
 
 	cache := newWasmPluginCache()
@@ -691,10 +695,7 @@ func CreateCodeGeneratorResponse(ctx context.Context, req *pluginpb.CodeGenerato
 	if err != nil {
 		return nil, err
 	}
-
-	var resp pluginpb.CodeGeneratorResponse
 	resp.File = append(resp.File, pluginResp.File...)
-	resp.SupportedFeatures = proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL /*| pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS*/))
 	for _, file := range result.Files {
 		out, err := NewCodeGenerator().Generate(file)
 		if err != nil {
