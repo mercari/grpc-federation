@@ -4648,7 +4648,7 @@ func TestOptional(t *testing.T) {
 		).
 		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponse").
-				AddFieldWithRule(
+				AddProto3OptionalFieldWithRule(
 					"optional_int",
 					resolver.Int64Type,
 					testutil.NewFieldRuleBuilder(

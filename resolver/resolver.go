@@ -3568,6 +3568,7 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 	if oneof != nil {
 		oneof.Fields = append(oneof.Fields, field)
 		field.Oneof = oneof
+		typ.OneofField = &OneofField{Field: field}
 	}
 	rule, err := getExtensionRule[*federation.FieldRule](fieldDef.GetOptions(), federation.E_Field)
 	if err != nil {
