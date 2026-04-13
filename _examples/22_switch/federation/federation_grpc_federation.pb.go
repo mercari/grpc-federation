@@ -232,14 +232,14 @@ func (s *FederationService) initServiceVariables(ctx context.Context) error {
 				return nil
 			},
 			Switch: func(ctx context.Context, value *localValueType) (any, error) {
-				cases := []*grpcfed.EvalSwitchCase{}
-				cases = append(cases, &grpcfed.EvalSwitchCase{
+				cases := []*grpcfed.EvalSwitchCase[*localValueType]{}
+				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
 					If:           `grpc.federation.env.a == 'red'`,
 					IfCacheIndex: 1,
 					By:           `1`,
 					ByCacheIndex: 2,
 				})
-				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault{
+				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault[*localValueType]{
 					By:           `2`,
 					ByCacheIndex: 3,
 				})
@@ -327,20 +327,20 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil
 			},
 			Switch: func(ctx context.Context, value *localValueType) (any, error) {
-				cases := []*grpcfed.EvalSwitchCase{}
-				cases = append(cases, &grpcfed.EvalSwitchCase{
+				cases := []*grpcfed.EvalSwitchCase[*localValueType]{}
+				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
 					If:           `$.id == 'blue'`,
 					IfCacheIndex: 4,
 					By:           `3`,
 					ByCacheIndex: 5,
 				})
-				cases = append(cases, &grpcfed.EvalSwitchCase{
+				cases = append(cases, &grpcfed.EvalSwitchCase[*localValueType]{
 					If:           `$.id == 'red'`,
 					IfCacheIndex: 6,
 					By:           `4`,
 					ByCacheIndex: 7,
 				})
-				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault{
+				return grpcfed.EvalSwitch[int64](ctx, value, cases, &grpcfed.EvalSwitchDefault[*localValueType]{
 					By:           `5`,
 					ByCacheIndex: 8,
 				})
