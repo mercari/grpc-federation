@@ -32,18 +32,11 @@ message GetPostResponse {
       name: "switch"
       switch {
         case { if: "$.id == 'blue'" by: "3" }
-        case {
-          def { name: "red" by: "4" }
-          if: "$.id == 'red'"
-          by: "red"
-        }
-        default {
-          def { name: "default" by: "5" }
-          by: "default"
-        }
+        case { if: "$.id == 'red'" by: "4" }
+        default { by: "5" }
       }
     }
   };
   int64 svar = 1 [(grpc.federation.field).by = "grpc.federation.var.svar"];
-  optional int64 switch = 2 [(grpc.federation.field).by = "switch"];
+  int64 switch = 2 [(grpc.federation.field).by = "switch"];
 }
