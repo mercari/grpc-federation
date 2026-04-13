@@ -45,5 +45,5 @@ message GetPostResponse {
     }
   };
   int64 svar = 1 [(grpc.federation.field).by = "grpc.federation.var.svar"];
-  optional int64 switch = 2 [(grpc.federation.field).by = "switch"];
+  int64 switch = 2 [(grpc.federation.field).by = "switch"];
 }

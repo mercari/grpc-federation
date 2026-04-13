@@ -445,7 +445,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		Expr:       `switch`,
 		CacheIndex: 12,
 		Setter: func(v int64) error {
-			ret.Switch = &v
+			ret.Switch = v
 			return nil
 		},
 	}); err != nil {
