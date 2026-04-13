@@ -1,0 +1,546 @@
+syntax = "proto3";
+
+package grpc.federation.generator.plugin;
+
+import "google/protobuf/duration.proto";
+import "google/rpc/code.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation/generator/plugin;plugin";
+
+enum ActionType {
+  GENERATE_ACTION = 0;
+  KEEP_ACTION = 1;
+  CREATE_ACTION = 2;
+  DELETE_ACTION = 3;
+  UPDATE_ACTION = 4;
+}
+
+message ProtoCodeGeneratorResponse {
+  message GeneratedCodeInfo {
+    repeated Annotation annotation = 1;
+    message Annotation {
+      repeated int32 path = 1 [packed = true];
+      optional string source_file = 2;
+      optional int32 begin = 3;
+      optional int32 end = 4;
+      enum Semantic {
+        NONE = 0;
+        SET = 1;
+        ALIAS = 2;
+      }
+      optional Semantic semantic = 5;
+    }
+  }
+  optional string error = 1;
+  optional uint64 supported_features = 2;
+  enum Feature {
+    FEATURE_NONE = 0;
+    FEATURE_PROTO3_OPTIONAL = 1;
+    FEATURE_SUPPORTS_EDITIONS = 2;
+  }
+  optional int32 minimum_edition = 3;
+  optional int32 maximum_edition = 4;
+
+  message File {
+    optional string name = 1;
+    optional string insertion_point = 2;
+    optional string content = 15;
+    optional GeneratedCodeInfo generated_code_info = 16;
+  }
+  repeated File file = 15;
+}
+
+// CodeGeneratorRequest.
+message CodeGeneratorRequest {
+  ActionType type = 1;
+  string proto_path = 2;
+  string out_dir = 3 [deprecated = true];
+  repeated ProtoCodeGeneratorResponse.File files = 4;
+  repeated string grpc_federation_file_ids = 5;
+  Reference reference = 6;
+  OutputFilePathConfig output_file_path_config = 7;
+}
+
+message OutputFilePathConfig {
+  OutputFilePathMode mode = 1;
+  string prefix = 2;
+  string file_path = 3;
+  repeated string import_paths = 4;
+}
+
+enum OutputFilePathMode {
+  OUTPUT_FILE_PATH_MODE_UNSPECIFIED = 0;
+  OUTPUT_FILE_PATH_MODE_IMPORT = 1;
+  OUTPUT_FILE_PATH_MODE_MODULE_PREFIX = 2;
+  OUTPUT_FILE_PATH_MODE_SOURCE_RELATIVE = 3;
+}
+
+message Reference {
+  map<string, File> file_map = 1;
+  map<string, Service> service_map = 2;
+  map<string, Method> method_map = 3;
+  map<string, Message> message_map = 4;
+  map<string, Field> field_map = 5;
+  map<string, Enum> enum_map = 6;
+  map<string, EnumValue> enum_value_map = 7;
+  map<string, Oneof> oneof_map = 8;
+  map<string, CELPlugin> cel_plugin_map = 9;
+  map<string, MessageDependencyGraph> graph_map = 10;
+  map<string, VariableDefinition> variable_definition_map = 11;
+  map<string, VariableDefinitionGroup> variable_definition_group_map = 12;
+  map<string, MessageDependencyGraphNode> graph_node_map = 13;
+}
+
+message File {
+  string id = 1;
+  Package package = 2;
+  GoPackage go_package = 3;
+  string name = 4;
+  repeated string service_ids = 5;
+  repeated string message_ids = 6;
+  repeated string enum_ids = 7;
+  repeated string cel_plugin_ids = 8;
+  repeated string import_file_ids = 9;
+}
+
+message Package {
+  string name = 1;
+  repeated string file_ids = 2;
+}
+
+message GoPackage {
+  string name = 1;
+  string import_path = 2;
+  string alias_name = 3;
+}
+
+message Service {
+  string id = 1;
+  string name = 2;
+  repeated string method_ids = 3;
+  string file_id = 4;
+  repeated string message_ids = 5;
+  repeated string message_arg_ids = 6;
+  repeated string cel_plugin_ids = 7;
+  ServiceRule rule = 8;
+}
+
+message ServiceRule {
+  Env env = 1;
+  repeated ServiceVariable vars = 2;
+}
+
+message Env {
+  repeated EnvVar vars = 1;
+}
+
+message EnvVar {
+  string name = 1;
+  Type type = 2;
+  EnvVarOption option = 3;
+}
+
+message EnvVarOption {
+  string alternate = 1;
+  string default = 2;
+  bool required = 3;
+  bool ignored = 4;
+}
+
+message ServiceVariable {
+  string name = 1;
+  CELValue if = 2;
+  ServiceVariableExpr expr = 3;
+}
+
+message ServiceVariableExpr {
+  Type type = 1;
+  oneof expr {
+    CELValue by = 2;
+    MapExpr map = 3;
+    MessageExpr message = 4;
+    ServiceVariableValidationExpr validation = 5;
+    EnumExpr enum = 6;
+    SwitchExpr switch = 7;
+  }
+}
+
+message ServiceVariableValidationExpr {
+  CELValue if = 1;
+  CELValue message = 2;
+}
+
+message Method {
+  string id = 1;
+  string name = 2;
+  string request_id = 3;
+  string response_id = 4;
+  string service_id = 5;
+  MethodRule rule = 6;
+}
+
+message MethodRule {
+  google.protobuf.Duration timeout = 1;
+  string response_id = 2;
+}
+
+message Message {
+  string id = 1;
+  string name = 2;
+  bool is_map_entry = 3;
+  string file_id = 4;
+  string parent_message_id = 5;
+  repeated string nested_message_ids = 6;
+  repeated string enum_ids = 7;
+  repeated string field_ids = 8;
+  repeated string oneof_ids = 9;
+  MessageRule rule = 10;
+}
+
+message MessageRule {
+  string message_argument_id = 1;
+  bool custom_resolver = 2;
+  repeated string alias_ids = 3;
+  VariableDefinitionSet def_set = 4;
+}
+
+message VariableDefinitionSet {
+  repeated string variable_definition_ids = 1;
+  repeated string variable_definition_group_ids = 2;
+  string dependency_graph_id = 3;
+}
+
+message VariableDefinition {
+  string id = 1;
+  int64 index = 2;
+  string name = 3;
+  CELValue if = 4;
+  bool auto_bind = 5;
+  bool used = 6;
+  VariableExpr expr = 7;
+}
+
+message Field {
+  string id = 1;
+  string name = 2;
+  Type type = 3;
+  string oneof_id = 4;
+  FieldRule rule = 5;
+  string message_id = 6;
+}
+
+message FieldRule {
+  Value value = 1;
+  bool custom_resolver = 2;
+  bool message_custom_resolver = 3;
+  repeated string alias_ids = 4;
+  AutoBindField auto_bind_field = 5;
+  FieldOneofRule oneof_rule = 6;
+}
+
+message AutoBindField {
+  string variable_definition_id = 1;
+  string field_id = 2;
+}
+
+message FieldOneofRule {
+  CELValue if = 1;
+  bool default = 2;
+  CELValue by = 3;
+  VariableDefinitionSet def_set = 4;
+}
+
+message VariableDefinitionGroup {
+  string id = 1;
+  oneof group {
+    SequentialVariableDefinitionGroup sequential = 2;
+    ConcurrentVariableDefinitionGroup concurrent = 3;
+  }
+}
+
+message SequentialVariableDefinitionGroup {
+  string start = 1;
+  string end = 2;
+}
+
+message ConcurrentVariableDefinitionGroup {
+  repeated string starts = 1;
+  string end = 2;
+}
+
+message MessageDependencyGraph {
+  string id = 1;
+  repeated string root_node_ids = 2;
+}
+
+message MessageDependencyGraphNode {
+  string id = 1;
+  repeated string child_ids = 2;
+  string base_message_id = 3;
+  string variable_definition_id = 4;
+}
+
+message VariableExpr {
+  Type type = 1;
+  oneof expr {
+    CELValue by = 2;
+    MapExpr map = 3;
+    CallExpr call = 4;
+    MessageExpr message = 5;
+    ValidationExpr validation = 6;
+    EnumExpr enum = 7;
+    SwitchExpr switch = 8;
+  }
+}
+
+enum TypeKind {
+  UNKNOWN_TYPE = 0;
+  DOUBLE_TYPE = 1;
+  FLOAT_TYPE = 2;
+  INT64_TYPE = 3;
+  UINT64_TYPE = 4;
+  INT32_TYPE = 5;
+  FIXED64_TYPE = 6;
+  FIXED32_TYPE = 7;
+  BOOL_TYPE = 8;
+  STRING_TYPE = 9;
+  GROUP_TYPE = 10;
+  MESSAGE_TYPE = 11;
+  BYTES_TYPE = 12;
+  UINT32_TYPE = 13;
+  ENUM_TYPE = 14;
+  SFIXED32_TYPE = 15;
+  SFIXED64_TYPE = 16;
+  SINT32_TYPE = 17;
+  SINT64_TYPE = 18;
+}
+
+message Type {
+  TypeKind kind = 1;
+  bool repeated = 2;
+  bool is_null = 3;
+  oneof ref {
+    string message_id = 4;
+    string enum_id = 5;
+    string oneof_field_id = 6;
+  }
+}
+
+message CELValue {
+  string expr = 1;
+  Type out = 2;
+}
+
+message MapExpr {
+  Iterator iterator = 1;
+  MapIteratorExpr expr = 2;
+}
+
+message Iterator {
+  string name = 1;
+  string source_id = 2;
+}
+
+message MapIteratorExpr {
+  Type type = 1;
+  oneof expr {
+    CELValue by = 2;
+    MessageExpr message = 3;
+    EnumExpr enum = 4;
+  }
+}
+
+message CallExpr {
+  string method_id = 1;
+  Request request = 2;
+  google.protobuf.Duration timeout = 3;
+  RetryPolicy retry = 4;
+  repeated GRPCError errors = 5;
+  GRPCCallOption option = 6;
+  CELValue metadata = 7;
+}
+
+message RetryPolicy {
+  oneof policy {
+    RetryPolicyConstant constant = 1;
+    RetryPolicyExponential exponential = 2;
+  }
+  CELValue if = 3;
+}
+
+message RetryPolicyConstant {
+  google.protobuf.Duration interval = 1;
+  uint64 max_retries = 2;
+}
+
+message RetryPolicyExponential {
+  google.protobuf.Duration initial_interval = 1;
+  double randomization_factor = 2;
+  double multiplier = 3;
+  google.protobuf.Duration max_interval = 4;
+  uint64 max_retries = 5;
+  google.protobuf.Duration max_elapsed_time = 6;
+}
+
+message Request {
+  repeated Argument args = 1;
+  string type_id = 2;
+}
+
+message MessageExpr {
+  string message_id = 1;
+  repeated Argument args = 2;
+}
+
+message EnumExpr {
+  string enum_id = 1;
+  CELValue by = 2;
+}
+
+message Argument {
+  string name = 1;
+  Type type = 2;
+  Value value = 3;
+  CELValue if = 4;
+}
+
+message Value {
+  bool inline = 1;
+  CELValue cel = 2;
+}
+
+message SwitchExpr {
+  Type type = 1;
+  repeated SwitchCase cases = 2;
+  SwitchDefault default = 3;
+}
+
+message SwitchCase {
+  CELValue if = 1;
+  CELValue by = 2;
+  VariableDefinitionSet def_set = 3;
+}
+
+message SwitchDefault {
+  CELValue by = 1;
+  VariableDefinitionSet def_set = 2;
+}
+
+message ValidationExpr {
+  string name = 1;
+  GRPCError error = 2;
+}
+
+message GRPCError {
+  VariableDefinitionSet def_set = 1;
+  CELValue if = 2;
+  optional google.rpc.Code code = 3;
+  CELValue message = 4;
+  repeated GRPCErrorDetail details = 5;
+  bool ignore = 6;
+  CELValue ignore_and_response = 7;
+  int32 log_level = 8;
+}
+
+message GRPCErrorDetail {
+  VariableDefinitionSet def_set = 1;
+  CELValue if = 2;
+  VariableDefinitionSet messages = 3;
+  repeated PreconditionFailure precondition_failures = 4;
+  repeated BadRequest bad_requests = 5;
+  repeated LocalizedMessage localized_messages = 6;
+  repeated CELValue by = 7;
+}
+
+message PreconditionFailure {
+  repeated PreconditionFailureViolation violations = 1;
+}
+
+message PreconditionFailureViolation {
+  CELValue type = 1;
+  CELValue subject = 2;
+  CELValue description = 3;
+}
+
+message BadRequest {
+  repeated BadRequestFieldViolation field_violations = 1;
+}
+
+message BadRequestFieldViolation {
+  CELValue field = 1;
+  CELValue description = 2;
+}
+
+message LocalizedMessage {
+  string locale = 1;
+  CELValue message = 2;
+}
+
+message GRPCCallOption {
+  optional string content_subtype = 1;
+  optional string header_id = 2;
+  optional int64 max_call_recv_msg_size = 3;
+  optional int64 max_call_send_msg_size = 4;
+  optional bool static_method = 5;
+  optional string trailer_id = 6;
+  optional bool wait_for_ready = 7;
+}
+
+message Oneof {
+  string id = 1;
+  string name = 2;
+  string message_id = 3;
+  repeated string field_ids = 4;
+}
+
+message Enum {
+  string id = 1;
+  string name = 2;
+  repeated string value_ids = 3;
+  string message_id = 4;
+  string file_id = 5;
+  EnumRule rule = 6;
+}
+
+message EnumValue {
+  string id = 1;
+  string value = 2;
+  string enum_id = 3;
+  EnumValueRule rule = 4;
+}
+
+message EnumRule {
+  repeated string alias_ids = 1;
+}
+
+message EnumValueRule {
+  bool default = 1;
+  repeated EnumValueAlias aliases = 2;
+  repeated EnumValueAttribute attrs = 3;
+  bool noalias = 4;
+}
+
+message EnumValueAlias {
+  string enum_alias_id = 1;
+  repeated string alias_ids = 2;
+}
+
+message EnumValueAttribute {
+  string name = 1;
+  string value = 2;
+}
+
+message CELPlugin {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated CELFunction functions = 4;
+}
+
+message CELFunction {
+  string name = 1;
+  string id = 2;
+  repeated Type args = 3;
+  Type return = 4;
+  string receiver_id = 5;
+}
