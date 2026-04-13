@@ -421,6 +421,12 @@ func (b *MessageBuilder) AddFieldWithRule(name string, typ *resolver.Type, rule 
 	return b
 }
 
+func (b *MessageBuilder) AddProto3OptionalFieldWithRule(name string, typ *resolver.Type, rule *resolver.FieldRule) *MessageBuilder {
+	field := &resolver.Field{Name: name, Type: typ, Rule: rule, Proto3Optional: true}
+	b.msg.Fields = append(b.msg.Fields, field)
+	return b
+}
+
 func (b *MessageBuilder) SetRule(rule *resolver.MessageRule) *MessageBuilder {
 	b.msg.Rule = rule
 	return b
