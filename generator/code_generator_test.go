@@ -31,6 +31,7 @@ func TestCodeGenerate(t *testing.T) {
 		"custom_resolver",
 		"async",
 		"alias",
+		"alias_multifile",
 		"autobind",
 		"multi_user",
 		"resolver_overlaps",
