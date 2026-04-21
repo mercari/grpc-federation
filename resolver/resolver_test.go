@@ -4655,6 +4655,13 @@ func TestOptional(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("SubMsg").
+				AddFieldWithRule("value", resolver.StringType,
+					&resolver.FieldRule{Value: &resolver.Value{CEL: &resolver.CELValue{Expr: "$.value"}}},
+				).
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponse").
 				AddProto3OptionalFieldWithRule(
 					"opt_int",
@@ -4669,6 +4676,11 @@ func TestOptional(t *testing.T) {
 					testutil.NewFieldRuleBuilder(
 						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "GetPostResponseArgument"), resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false), "opt_color").Build(t),
 					).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_msg",
+					resolver.NewMessageType(ref.Message(t, "org.federation", "SubMsg"), false),
+					testutil.NewFieldRuleBuilder(nil).SetCustomResolver(true).Build(t),
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().

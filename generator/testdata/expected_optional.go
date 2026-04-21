@@ -34,8 +34,16 @@ type FederationService_Org_Federation_GetPostResponseArgument struct {
 	FederationService_Org_Federation_GetPostResponseVariable
 }
 
+// Org_Federation_GetPostResponse_OptMsgArgument is custom resolver's argument for "opt_msg" field of "org.federation.GetPostResponse" message.
+type FederationService_Org_Federation_GetPostResponse_OptMsgArgument struct {
+	*FederationService_Org_Federation_GetPostResponseArgument
+}
+
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
+	// Resolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
+	// If this interface is not provided, an error is returned during initialization.
+	Resolver FederationServiceResolver // required
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -61,6 +69,8 @@ type FederationServiceDependentClientSet struct {
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
+	// Resolve_Org_Federation_GetPostResponse_OptMsg implements resolver for "org.federation.GetPostResponse.opt_msg".
+	Resolve_Org_Federation_GetPostResponse_OptMsg(context.Context, *FederationService_Org_Federation_GetPostResponse_OptMsgArgument) (*SubMsg, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -77,6 +87,13 @@ type FederationServiceCELPluginConfig struct {
 // by embedding them in a resolver structure that you have created.
 type FederationServiceUnimplementedResolver struct{}
 
+// Resolve_Org_Federation_GetPostResponse_OptMsg resolve "org.federation.GetPostResponse.opt_msg".
+// This method always returns Unimplemented error.
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResponse_OptMsg(context.Context, *FederationService_Org_Federation_GetPostResponse_OptMsgArgument) (ret *SubMsg, e error) {
+	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_GetPostResponse_OptMsg not implemented")
+	return
+}
+
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
@@ -86,6 +103,7 @@ type FederationService struct {
 	errorHandler    grpcfed.ErrorHandler
 	celCacheMap     *grpcfed.CELCacheMap
 	tracer          trace.Tracer
+	resolver        FederationServiceResolver
 	celTypeHelper   *grpcfed.CELTypeHelper
 	celEnvOpts      []grpcfed.CELEnvOption
 	celPlugins      []*grpcfedcel.CELPlugin
@@ -94,6 +112,9 @@ type FederationService struct {
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
+	if cfg.Resolver == nil {
+		return nil, grpcfed.ErrResolverConfig
+	}
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
@@ -123,7 +144,14 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
+		resolver:        cfg.Resolver,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
+		ctx := context.Background()
+		if err := resolver.Init(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -282,6 +310,18 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	{
+		// (grpc.federation.field).custom_resolver = true
+		ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
+		var err error
+		ret.OptMsg, err = s.resolver.Resolve_Org_Federation_GetPostResponse_OptMsg(ctx, &FederationService_Org_Federation_GetPostResponse_OptMsgArgument{
+			FederationService_Org_Federation_GetPostResponseArgument: req,
+		})
+		if err != nil {
+			grpcfed.RecordErrorToSpan(ctx, err)
+			return nil, err
+		}
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GetPostResponse", slog.Any("org.federation.GetPostResponse", s.logvalue_Org_Federation_GetPostResponse(ret)))
 	return ret, nil
@@ -314,6 +354,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 	return slog.GroupValue(
 		slog.Int64("opt_int", v.GetOptInt()),
 		slog.String("opt_color", s.logvalue_Org_Federation_Color(v.GetOptColor()).String()),
+		slog.Any("opt_msg", s.logvalue_Org_Federation_SubMsg(v.GetOptMsg())),
 	)
 }
 
@@ -326,5 +367,17 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
+	)
+}
+
+func (s *FederationService) logvalue_Org_Federation_SubMsg(v *SubMsg) slog.Value {
+	if !s.isLogLevelDebug {
+		return slog.GroupValue()
+	}
+	if v == nil {
+		return slog.GroupValue()
+	}
+	return slog.GroupValue(
+		slog.String("value", v.GetValue()),
 	)
 }

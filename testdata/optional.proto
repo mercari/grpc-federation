@@ -22,6 +22,11 @@ message GetPostRequest {
   string id = 1;
 }
 
+message SubMsg {
+  option (grpc.federation.message) = {};
+  string value = 1 [(grpc.federation.field).by = "$.value"];
+}
+
 message GetPostResponse {
   option (.grpc.federation.message) = {
     def { name: "opt_int" by: "7" }
@@ -29,4 +34,5 @@ message GetPostResponse {
   };
   optional int64 opt_int = 1 [(grpc.federation.field).by = "opt_int"];
   optional Color opt_color = 2 [(grpc.federation.field).by = "opt_color"];
+  optional SubMsg opt_msg = 3 [(grpc.federation.field).custom_resolver = true];
 }
