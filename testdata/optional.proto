@@ -6,6 +6,13 @@ import "grpc/federation/federation.proto";
 
 option go_package = "example/federation;federation";
 
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1;
+  COLOR_GREEN = 2;
+  COLOR_BLUE = 3;
+}
+
 service FederationService {
   option (grpc.federation.service) = {};
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
@@ -17,7 +24,9 @@ message GetPostRequest {
 
 message GetPostResponse {
   option (.grpc.federation.message) = {
-    def { name: "optional_int" by: "7" }
+    def { name: "opt_int" by: "7" }
+    def { name: "opt_color" by: "org.federation.Color.value('COLOR_RED')" }
   };
-  optional int64 optional_int = 1 [(grpc.federation.field).by = "optional_int"];
+  optional int64 opt_int = 1 [(grpc.federation.field).by = "opt_int"];
+  optional Color opt_color = 2 [(grpc.federation.field).by = "opt_color"];
 }

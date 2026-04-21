@@ -1938,11 +1938,12 @@ type CustomResolverReturnField struct {
 }
 
 type AutoBindReturnField struct {
-	Name         string
-	Value        string
-	RequiredCast bool
-	CastFunc     string
-	ProtoComment string
+	Name           string
+	Value          string
+	RequiredCast   bool
+	CastFunc       string
+	ProtoComment   string
+	Proto3Optional bool
 }
 
 func (f *OneofReturnField) HasFieldOneofRule() bool {
@@ -2512,11 +2513,12 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		castFunc = castFuncName(fromType, field.Type)
 	}
 	return &AutoBindReturnField{
-		Name:         fieldName,
-		Value:        value,
-		RequiredCast: requiredCast,
-		CastFunc:     castFunc,
-		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
+		Name:           fieldName,
+		Value:          value,
+		RequiredCast:   requiredCast,
+		CastFunc:       castFunc,
+		ProtoComment:   fmt.Sprintf(`// { name: %q, autobind: true }`, name),
+		Proto3Optional: field.Proto3Optional && field.Type.Kind != types.Message,
 	}, nil
 }
 
@@ -2577,7 +2579,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 			RequiredCast:   requiredCast,
 			EnumSelector:   enumSelectorSetterParam,
 			CastFunc:       castFuncName(fromType, toType),
-			Proto3Optional: field.Proto3Optional,
+			Proto3Optional: field.Proto3Optional && field.Type.Kind != types.Message,
 		},
 	}
 }

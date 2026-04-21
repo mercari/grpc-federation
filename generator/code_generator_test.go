@@ -42,6 +42,7 @@ func TestCodeGenerate(t *testing.T) {
 		"inline_env",
 		"ref_env",
 		"switch",
+		"optional",
 	}
 	for _, test := range tests {
 		test := test

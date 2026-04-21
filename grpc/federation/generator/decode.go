@@ -548,6 +548,7 @@ func (d *decoder) toField(id string) (*resolver.Field, error) {
 	ret.Oneof = oneof
 	ret.Message = msg
 	ret.Rule = rule
+	ret.Proto3Optional = field.GetProto3Optional()
 	return ret, nil
 }
 

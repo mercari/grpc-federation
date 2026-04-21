@@ -227,6 +227,7 @@ message Field {
   string oneof_id = 4;
   FieldRule rule = 5;
   string message_id = 6;
+  bool proto3_optional = 7;
 }
 
 message FieldRule {

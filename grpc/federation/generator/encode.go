@@ -533,6 +533,7 @@ func (e *encoder) toField(field *resolver.Field) *plugin.Field {
 	ret.OneofId = e.toOneof(field.Oneof).GetId()
 	ret.Rule = e.toFieldRule(field, field.Rule)
 	ret.MessageId = e.toMessage(field.Message).GetId()
+	ret.Proto3Optional = field.Proto3Optional
 	return ret
 }
 

@@ -906,6 +906,11 @@ conflict_switch_default_variable.proto:27:23: found duplicated variable name "a"
 27:            def { name: "a" by: "1" }
                            ^
 `},
+		{file: "invalid_optional_custom_resolver.proto", expected: `
+invalid_optional_custom_resolver.proto:20:3: "score" field in "federation.GetPostResponse" message: custom_resolver is not supported on proto3 optional scalar/enum fields
+20:    optional int64 score = 1 [(grpc.federation.field).custom_resolver = true];
+       ^
+`},
 	}
 	for _, test := range tests {
 		test := test

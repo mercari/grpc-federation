@@ -4636,6 +4636,14 @@ func TestOptional(t *testing.T) {
 
 	fb.SetPackage("org.federation").
 		SetGoPackage("example/federation", "federation").
+		AddEnum(
+			testutil.NewEnumBuilder("Color").
+				AddValue("COLOR_UNSPECIFIED").
+				AddValue("COLOR_RED").
+				AddValue("COLOR_GREEN").
+				AddValue("COLOR_BLUE").
+				Build(t),
+		).
 		AddMessage(
 			testutil.NewMessageBuilder("GetPostRequest").
 				AddField("id", resolver.StringType).
@@ -4649,19 +4657,33 @@ func TestOptional(t *testing.T) {
 		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponse").
 				AddProto3OptionalFieldWithRule(
-					"optional_int",
+					"opt_int",
 					resolver.Int64Type,
 					testutil.NewFieldRuleBuilder(
-						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "GetPostResponseArgument"), resolver.Int64Type, "switch").Build(t),
+						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "GetPostResponseArgument"), resolver.Int64Type, "opt_int").Build(t),
+					).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_color",
+					resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "GetPostResponseArgument"), resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false), "opt_color").Build(t),
 					).Build(t),
 				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
 							testutil.NewVariableDefinitionBuilder().
-								SetName("optional_int").
+								SetName("opt_int").
 								SetUsed(true).
 								SetBy(testutil.NewCELValueBuilder("7", resolver.Int64Type).Build(t)).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("opt_color").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("org.federation.Color.value('COLOR_RED')", resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false)).Build(t)).
 								Build(t),
 						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
@@ -4670,7 +4692,8 @@ func TestOptional(t *testing.T) {
 								Add(ref.Message(t, "org.federation", "GetPostRequest")).
 								Build(t),
 						).
-						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("optional_int")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("opt_color")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("opt_int")).
 						Build(t),
 				).
 				Build(t),

@@ -1673,6 +1673,14 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 			continue
 		}
 		if field.HasMessageCustomResolver() || field.HasCustomResolver() {
+			if field.HasCustomResolver() && field.Proto3Optional && field.Type.Kind != types.Message {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`%q field in %q message: custom_resolver is not supported on proto3 optional scalar/enum fields`, field.Name, msg.FQDN()),
+						builder.Location(),
+					),
+				)
+			}
 			continue
 		}
 		if field.Type == nil {

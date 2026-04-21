@@ -31,8 +31,6 @@ var (
 	listener *bufconn.Listener
 )
 
-type clientConfig struct{}
-
 func dialer(ctx context.Context, address string) (net.Conn, error) {
 	return listener.Dial()
 }
@@ -53,7 +51,7 @@ func TestFederation(t *testing.T) {
 			sdktrace.WithResource(
 				resource.NewWithAttributes(
 					semconv.SchemaURL,
-					semconv.ServiceNameKey.String("example22/switch"),
+					semconv.ServiceNameKey.String("example23/optional"),
 					semconv.ServiceVersionKey.String("1.0.0"),
 					attribute.String("environment", "dev"),
 				),
@@ -96,39 +94,21 @@ func TestFederation(t *testing.T) {
 		}
 	}()
 
-	tests := []struct {
-		desc string
-		req  *federation.GetPostRequest
-		want *federation.GetPostResponse
-	}{
-		{
-			desc: "blue",
-			req:  &federation.GetPostRequest{Id: "blue"},
-			want: &federation.GetPostResponse{Svar: 2, Switch: proto.Int64(3)},
-		},
-		{
-			desc: "red",
-			req:  &federation.GetPostRequest{Id: "red"},
-			want: &federation.GetPostResponse{Svar: 2, Switch: proto.Int64(4)},
-		},
-		{
-			desc: "default",
-			req:  &federation.GetPostRequest{Id: "green"},
-			want: &federation.GetPostResponse{Svar: 2, Switch: proto.Int64(5)},
-		},
+	optColor := federation.Color_COLOR_RED
+	client := federation.NewFederationServiceClient(conn)
+	res, err := client.GetPost(ctx, &federation.GetPostRequest{Id: "test"})
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.desc, func(t *testing.T) {
-			client := federation.NewFederationServiceClient(conn)
-			res, err := client.GetPost(ctx, tt.req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if diff := cmp.Diff(res, tt.want, cmpopts.IgnoreUnexported(
-				federation.GetPostResponse{},
-			)); diff != "" {
-				t.Errorf("(-got, +want)\n%s", diff)
-			}
-		})
+	want := &federation.GetPostResponse{
+		OptInt:   proto.Int64(42),
+		OptColor: &optColor,
+		OptMsg:   &federation.SubMsg{Value: "hello"},
+	}
+	if diff := cmp.Diff(res, want, cmpopts.IgnoreUnexported(
+		federation.GetPostResponse{},
+		federation.SubMsg{},
+	)); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }
