@@ -4655,7 +4655,7 @@ func TestOptional(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
-			testutil.NewMessageBuilder("SubMsg").
+			testutil.NewMessageBuilder("SubMessage").
 				AddFieldWithRule("value", resolver.StringType,
 					&resolver.FieldRule{Value: &resolver.Value{CEL: &resolver.CELValue{Expr: "$.value"}}},
 				).
@@ -4679,7 +4679,7 @@ func TestOptional(t *testing.T) {
 				).
 				AddProto3OptionalFieldWithRule(
 					"opt_msg",
-					resolver.NewMessageType(ref.Message(t, "org.federation", "SubMsg"), false),
+					resolver.NewMessageType(ref.Message(t, "org.federation", "SubMessage"), false),
 					testutil.NewFieldRuleBuilder(nil).SetCustomResolver(true).Build(t),
 				).
 				SetRule(

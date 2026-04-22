@@ -70,7 +70,7 @@ type FederationServiceDependentClientSet struct {
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
 	// Resolve_Org_Federation_GetPostResponse_OptMsg implements resolver for "org.federation.GetPostResponse.opt_msg".
-	Resolve_Org_Federation_GetPostResponse_OptMsg(context.Context, *FederationService_Org_Federation_GetPostResponse_OptMsgArgument) (*SubMsg, error)
+	Resolve_Org_Federation_GetPostResponse_OptMsg(context.Context, *FederationService_Org_Federation_GetPostResponse_OptMsgArgument) (*SubMessage, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -89,7 +89,7 @@ type FederationServiceUnimplementedResolver struct{}
 
 // Resolve_Org_Federation_GetPostResponse_OptMsg resolve "org.federation.GetPostResponse.opt_msg".
 // This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResponse_OptMsg(context.Context, *FederationService_Org_Federation_GetPostResponse_OptMsgArgument) (ret *SubMsg, e error) {
+func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResponse_OptMsg(context.Context, *FederationService_Org_Federation_GetPostResponse_OptMsgArgument) (ret *SubMessage, e error) {
 	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_GetPostResponse_OptMsg not implemented")
 	return
 }
@@ -354,7 +354,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 	return slog.GroupValue(
 		slog.Int64("opt_int", v.GetOptInt()),
 		slog.String("opt_color", s.logvalue_Org_Federation_Color(v.GetOptColor()).String()),
-		slog.Any("opt_msg", s.logvalue_Org_Federation_SubMsg(v.GetOptMsg())),
+		slog.Any("opt_msg", s.logvalue_Org_Federation_SubMessage(v.GetOptMsg())),
 	)
 }
 
@@ -370,7 +370,7 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_SubMsg(v *SubMsg) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_SubMessage(v *SubMessage) slog.Value {
 	if !s.isLogLevelDebug {
 		return slog.GroupValue()
 	}
