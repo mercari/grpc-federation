@@ -3,7 +3,7 @@
 //
 //	protoc-gen-grpc-federation: (devel)
 //
-// source: federation/federation.proto
+// source: alias_multifile.proto
 package federation
 
 import (
@@ -32,28 +32,21 @@ type FederationService_Org_Federation_GetPostResponseVariable struct {
 
 // Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
 type FederationService_Org_Federation_GetPostResponseArgument struct {
-	A          *GetPostRequest_ConditionA
-	ConditionB *GetPostRequest_ConditionB
-	Id         string
+	Id string
 	FederationService_Org_Federation_GetPostResponseVariable
 }
 
 // Org_Federation_PostVariable represents variable definitions in "org.federation.Post".
 type FederationService_Org_Federation_PostVariable struct {
-	Data2     *post1.PostData
-	DataType  *grpcfedcel.EnumSelector
-	DataType2 *grpcfedcel.EnumSelector
-	Post      *post.Post
-	Res       *post.GetPostResponse
-	Res2      *post1.GetPostResponse
-	TypeFed   PostType
-	TypeFed2  PostType
+	Post   *post.Post
+	Res    *post.GetPostResponse
+	Res2   *post1.GetPostResponse
+	V2Data *post1.PostData
+	V2Post *post1.Post
 }
 
 // Org_Federation_PostArgument is argument for "org.federation.Post" message.
 type FederationService_Org_Federation_PostArgument struct {
-	A  *GetPostRequest_ConditionA
-	B  *GetPostRequest_ConditionB
 	Id string
 	FederationService_Org_Federation_PostVariable
 }
@@ -160,14 +153,10 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
 		"grpc.federation.private.org.federation.GetPostResponseArgument": {
-			"id":          grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
-			"a":           grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionA"), "A"),
-			"condition_b": grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionB"), "ConditionB"),
+			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
 		},
 		"grpc.federation.private.org.federation.PostArgument": {
 			"id": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
-			"a":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionA"), "A"),
-			"b":  grpcfed.NewCELFieldType(grpcfed.NewCELObjectType("org.federation.GetPostRequest.ConditionB"), "B"),
 		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
@@ -175,6 +164,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "org.post.GetPostResponse")...)
 	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "org.post.v2.GetPostResponse")...)
+	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.ExtraKind", ExtraKind_value, ExtraKind_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.PostContent.Category", PostContent_Category_value, PostContent_Category_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostContent.Category", post.PostContent_Category_value, post.PostContent_Category_name)...)
@@ -228,9 +218,7 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 		}
 	}()
 	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &FederationService_Org_Federation_GetPostResponseArgument{
-		Id:         req.GetId(),
-		A:          req.GetA(),
-		ConditionB: req.GetConditionB(),
+		Id: req.GetId(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -260,11 +248,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		  name: "post"
 		  message {
 		    name: "Post"
-		    args: [
-		      { name: "id", by: "$.id" },
-		      { name: "a", by: "$.a" },
-		      { name: "b", by: "$.condition_b" }
-		    ]
+		    args { name: "id", by: "$.id" }
 		  }
 		}
 	*/
@@ -285,30 +269,6 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 					CacheIndex: 1,
 					Setter: func(v string) error {
 						args.Id = v
-						return nil
-					},
-				}); err != nil {
-					return nil, err
-				}
-				// { name: "a", by: "$.a" }
-				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionA]{
-					Value:      value,
-					Expr:       `$.a`,
-					CacheIndex: 2,
-					Setter: func(v *GetPostRequest_ConditionA) error {
-						args.A = v
-						return nil
-					},
-				}); err != nil {
-					return nil, err
-				}
-				// { name: "b", by: "$.condition_b" }
-				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionB]{
-					Value:      value,
-					Expr:       `$.condition_b`,
-					CacheIndex: 3,
-					Setter: func(v *GetPostRequest_ConditionB) error {
-						args.B = v
 						return nil
 					},
 				}); err != nil {
@@ -339,7 +299,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `post`,
-		CacheIndex: 4,
+		CacheIndex: 2,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -363,14 +323,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	type localValueType struct {
 		*grpcfed.LocalValue
 		vars struct {
-			Data2     *post1.PostData
-			DataType  *grpcfedcel.EnumSelector
-			DataType2 *grpcfedcel.EnumSelector
-			Post      *post.Post
-			Res       *post.GetPostResponse
-			Res2      *post1.GetPostResponse
-			TypeFed   PostType
-			TypeFed2  PostType
+			Post   *post.Post
+			Res    *post.GetPostResponse
+			Res2   *post1.GetPostResponse
+			V2Data *post1.PostData
+			V2Post *post1.Post
 		}
 	}
 	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.PostArgument", req)}
@@ -380,11 +337,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		  name: "res"
 		  call {
 		    method: "org.post.PostService/GetPost"
-		    request: [
-		      { field: "id", by: "$.id" },
-		      { field: "a", by: "$.a", if: "$.a != null" },
-		      { field: "b", by: "$.b", if: "$.b != null" }
-		    ]
+		    request { field: "id", by: "$.id" }
 		  }
 		}
 	*/
@@ -402,60 +355,10 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 5,
+					CacheIndex: 3,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
-					},
-				}); err != nil {
-					return nil, err
-				}
-				// { field: "a", by: "$.a", if: "$.a != null" }
-				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-					Value:      value,
-					Expr:       `$.a != null`,
-					CacheIndex: 6,
-					Body: func(value *localValueType) error {
-						return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionA]{
-							Value:      value,
-							Expr:       `$.a`,
-							CacheIndex: 7,
-							Setter: func(v *GetPostRequest_ConditionA) error {
-								aValue, err := s.cast_Org_Federation_GetPostRequest_ConditionA__to__Org_Post_PostConditionA(v)
-								if err != nil {
-									return err
-								}
-								args.Condition = &post.GetPostRequest_A{
-									A: aValue,
-								}
-								return nil
-							},
-						})
-					},
-				}); err != nil {
-					return nil, err
-				}
-				// { field: "b", by: "$.b", if: "$.b != null" }
-				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
-					Value:      value,
-					Expr:       `$.b != null`,
-					CacheIndex: 8,
-					Body: func(value *localValueType) error {
-						return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionB]{
-							Value:      value,
-							Expr:       `$.b`,
-							CacheIndex: 9,
-							Setter: func(v *GetPostRequest_ConditionB) error {
-								bValue, err := s.cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB(v)
-								if err != nil {
-									return err
-								}
-								args.Condition = &post.GetPostRequest_B{
-									B: bValue,
-								}
-								return nil
-							},
-						})
 					},
 				}); err != nil {
 					return nil, err
@@ -488,7 +391,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				return nil
 			},
 			By:           `res.post`,
-			ByCacheIndex: 10,
+			ByCacheIndex: 4,
 		})
 	}
 
@@ -515,7 +418,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 11,
+					CacheIndex: 5,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -537,183 +440,51 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 
 	/*
 		def {
-		  name: "data2"
-		  by: "res2.post.data"
+		  name: "v2post"
+		  by: "res2.post"
 		}
 	*/
-	def_data2 := func(ctx context.Context) error {
+	def_v2post := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*post1.Post, *localValueType]{
+			Name: `v2post`,
+			Type: grpcfed.CELObjectType("org.post.v2.Post"),
+			Setter: func(value *localValueType, v *post1.Post) error {
+				value.vars.V2Post = v
+				return nil
+			},
+			By:           `res2.post`,
+			ByCacheIndex: 6,
+		})
+	}
+
+	/*
+		def {
+		  name: "v2data"
+		  by: "v2post.data"
+		}
+	*/
+	def_v2data := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*post1.PostData, *localValueType]{
-			Name: `data2`,
+			Name: `v2data`,
 			Type: grpcfed.CELObjectType("org.post.v2.PostData"),
 			Setter: func(value *localValueType, v *post1.PostData) error {
-				value.vars.Data2 = v
+				value.vars.V2Data = v
 				return nil
 			},
-			By:           `res2.post.data`,
-			ByCacheIndex: 12,
-		})
-	}
-
-	/*
-		def {
-		  name: "data_type"
-		  by: "grpc.federation.enum.select(true, org.post.PostDataType.from(org.post.PostDataType.POST_TYPE_B), org.post.v2.PostDataType.value('POST_V2_TYPE_B'))"
-		}
-	*/
-	def_data_type := func(ctx context.Context) error {
-		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*grpcfedcel.EnumSelector, *localValueType]{
-			Name: `data_type`,
-			Type: grpcfed.CELObjectType("grpc.federation.private.EnumSelector"),
-			Setter: func(value *localValueType, v *grpcfedcel.EnumSelector) error {
-				value.vars.DataType = v
-				return nil
-			},
-			By:           `grpc.federation.enum.select(true, org.post.PostDataType.from(org.post.PostDataType.POST_TYPE_B), org.post.v2.PostDataType.value('POST_V2_TYPE_B'))`,
-			ByCacheIndex: 13,
-		})
-	}
-
-	/*
-		def {
-		  name: "data_type2"
-		  by: "grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.value('POST_V2_TYPE_C'))"
-		}
-	*/
-	def_data_type2 := func(ctx context.Context) error {
-		return grpcfed.EvalDef(ctx, value, grpcfed.Def[*grpcfedcel.EnumSelector, *localValueType]{
-			Name: `data_type2`,
-			Type: grpcfed.CELObjectType("grpc.federation.private.EnumSelector"),
-			Setter: func(value *localValueType, v *grpcfedcel.EnumSelector) error {
-				value.vars.DataType2 = v
-				return nil
-			},
-			By:           `grpc.federation.enum.select(true, data_type, org.post.v2.PostDataType.value('POST_V2_TYPE_C'))`,
-			ByCacheIndex: 14,
-		})
-	}
-
-	/*
-		def {
-		  name: "type_fed"
-		  enum {
-		    name: "org.federation.PostType"
-		    by: "data_type2"
-		  }
-		}
-	*/
-	def_type_fed := func(ctx context.Context) error {
-		return grpcfed.EvalDef(ctx, value, grpcfed.Def[PostType, *localValueType]{
-			Name: `type_fed`,
-			Type: grpcfed.CELIntType,
-			Setter: func(value *localValueType, v PostType) error {
-				value.vars.TypeFed = v
-				return nil
-			},
-			Enum: func(ctx context.Context, value *localValueType) (PostType, error) {
-				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-					Value:      value,
-					Expr:       `data_type2`,
-					OutType:    reflect.TypeOf((*grpcfedcel.EnumSelector)(nil)),
-					CacheIndex: 15,
-				})
-				if err != nil {
-					return 0, err
-				}
-				v := src.(*grpcfedcel.EnumSelector)
-				var dst PostType
-				if err := func() error {
-					if v.GetCond() {
-						if err := func(v *grpcfedcel.EnumSelector) error {
-							if v.GetCond() {
-								casted, err := s.cast_Org_Post_PostDataType__to__Org_Federation_PostType(post.PostDataType(v.GetTrueValue()))
-								if err != nil {
-									return err
-								}
-								dst = casted
-							} else {
-								casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
-								if err != nil {
-									return err
-								}
-								dst = casted
-							}
-							return nil
-						}(v.GetTrueSelector()); err != nil {
-							return err
-						}
-					} else {
-						casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
-						if err != nil {
-							return err
-						}
-						dst = casted
-					}
-					return nil
-				}(); err != nil {
-					return 0, err
-				}
-				return dst, nil
-			},
-		})
-	}
-
-	/*
-		def {
-		  name: "type_fed2"
-		  enum {
-		    name: "org.federation.PostType"
-		    by: "org.post.PostDataType.value('POST_TYPE_A')"
-		  }
-		}
-	*/
-	def_type_fed2 := func(ctx context.Context) error {
-		return grpcfed.EvalDef(ctx, value, grpcfed.Def[PostType, *localValueType]{
-			Name: `type_fed2`,
-			Type: grpcfed.CELIntType,
-			Setter: func(value *localValueType, v PostType) error {
-				value.vars.TypeFed2 = v
-				return nil
-			},
-			Enum: func(ctx context.Context, value *localValueType) (PostType, error) {
-				src, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
-					Value:      value,
-					Expr:       `org.post.PostDataType.value('POST_TYPE_A')`,
-					OutType:    reflect.TypeOf(post.PostDataType(0)),
-					CacheIndex: 16,
-				})
-				if err != nil {
-					return 0, err
-				}
-				v := src.(post.PostDataType)
-				return s.cast_Org_Post_PostDataType__to__Org_Federation_PostType(v)
-			},
+			By:           `v2post.data`,
+			ByCacheIndex: 7,
 		})
 	}
 
 	// A tree view of message dependencies is shown below.
 	/*
-	                    res2 ─┐
-	                              data2 ─┐
-	                     res ─┐          │
-	                               post ─┤
-	   data_type ─┐                      │
-	              data_type2 ─┐          │
-	                           type_fed ─┤
-	                          type_fed2 ─┤
+	            res ─┐
+	                   post ─┐
+	   res2 ─┐               │
+	         v2post ─┐       │
+	                 v2data ─┤
 	*/
 	eg, ctx1 := grpcfed.ErrorGroupWithContext(ctx)
-
-	grpcfed.GoWithRecover(eg, func() (any, error) {
-		if err := def_res2(ctx1); err != nil {
-			grpcfed.RecordErrorToSpan(ctx1, err)
-			return nil, err
-		}
-		if err := def_data2(ctx1); err != nil {
-			grpcfed.RecordErrorToSpan(ctx1, err)
-			return nil, err
-		}
-		return nil, nil
-	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
 		if err := def_res(ctx1); err != nil {
@@ -728,23 +499,15 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	})
 
 	grpcfed.GoWithRecover(eg, func() (any, error) {
-		if err := def_data_type(ctx1); err != nil {
+		if err := def_res2(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-		if err := def_data_type2(ctx1); err != nil {
+		if err := def_v2post(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
-		if err := def_type_fed(ctx1); err != nil {
-			grpcfed.RecordErrorToSpan(ctx1, err)
-			return nil, err
-		}
-		return nil, nil
-	})
-
-	grpcfed.GoWithRecover(eg, func() (any, error) {
-		if err := def_type_fed2(ctx1); err != nil {
+		if err := def_v2data(ctx1); err != nil {
 			grpcfed.RecordErrorToSpan(ctx1, err)
 			return nil, err
 		}
@@ -756,14 +519,11 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	}
 
 	// assign named parameters to message arguments to pass to the custom resolver.
-	req.FederationService_Org_Federation_PostVariable.Data2 = value.vars.Data2
-	req.FederationService_Org_Federation_PostVariable.DataType = value.vars.DataType
-	req.FederationService_Org_Federation_PostVariable.DataType2 = value.vars.DataType2
 	req.FederationService_Org_Federation_PostVariable.Post = value.vars.Post
 	req.FederationService_Org_Federation_PostVariable.Res = value.vars.Res
 	req.FederationService_Org_Federation_PostVariable.Res2 = value.vars.Res2
-	req.FederationService_Org_Federation_PostVariable.TypeFed = value.vars.TypeFed
-	req.FederationService_Org_Federation_PostVariable.TypeFed2 = value.vars.TypeFed2
+	req.FederationService_Org_Federation_PostVariable.V2Data = value.vars.V2Data
+	req.FederationService_Org_Federation_PostVariable.V2Post = value.vars.V2Post
 
 	// create a message value to be returned.
 	ret := &Post{}
@@ -778,117 +538,17 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 		}
 		ret.Data = dataValue
 	}
-	// (grpc.federation.field).by = "data2"
+	// (grpc.federation.field).by = "v2data"
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post1.PostData]{
 		Value:      value,
-		Expr:       `data2`,
-		CacheIndex: 17,
+		Expr:       `v2data`,
+		CacheIndex: 8,
 		Setter: func(v *post1.PostData) error {
-			data2Value, err := s.cast_Org_Post_V2_PostData__to__Org_Federation_PostData(v)
+			v2DataValue, err := s.cast_Org_Post_V2_PostData__to__Org_Federation_PostData(v)
 			if err != nil {
 				return err
 			}
-			ret.Data2 = data2Value
-			return nil
-		},
-	}); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-	// (grpc.federation.field).by = "data_type2"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*grpcfedcel.EnumSelector]{
-		Value:      value,
-		Expr:       `data_type2`,
-		CacheIndex: 18,
-		Setter: func(v *grpcfedcel.EnumSelector) error {
-			var typeValue PostType
-			if v.GetCond() {
-				if err := func(v *grpcfedcel.EnumSelector) error {
-					if v.GetCond() {
-						casted, err := s.cast_Org_Post_PostDataType__to__Org_Federation_PostType(post.PostDataType(v.GetTrueValue()))
-						if err != nil {
-							return err
-						}
-						typeValue = casted
-					} else {
-						casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
-						if err != nil {
-							return err
-						}
-						typeValue = casted
-					}
-					return nil
-				}(v.GetTrueSelector()); err != nil {
-					return err
-				}
-			} else {
-				casted, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(post1.PostDataType(v.GetFalseValue()))
-				if err != nil {
-					return err
-				}
-				typeValue = casted
-			}
-			ret.Type = typeValue
-			return nil
-		},
-	}); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-	// (grpc.federation.field).by = "type_fed"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostType]{
-		Value:      value,
-		Expr:       `type_fed`,
-		CacheIndex: 19,
-		Setter: func(v PostType) error {
-			ret.Type2 = v
-			return nil
-		},
-	}); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-	// (grpc.federation.field).by = "org.post.v2.PostDataType.value('POST_V2_TYPE_C')"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[post1.PostDataType]{
-		Value:      value,
-		Expr:       `org.post.v2.PostDataType.value('POST_V2_TYPE_C')`,
-		CacheIndex: 20,
-		Setter: func(v post1.PostDataType) error {
-			type3Value, err := s.cast_Org_Post_V2_PostDataType__to__Org_Federation_PostType(v)
-			if err != nil {
-				return err
-			}
-			ret.Type3 = type3Value
-			return nil
-		},
-	}); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-	// (grpc.federation.field).by = "type_fed2"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[PostType]{
-		Value:      value,
-		Expr:       `type_fed2`,
-		CacheIndex: 21,
-		Setter: func(v PostType) error {
-			ret.Type4 = v
-			return nil
-		},
-	}); err != nil {
-		grpcfed.RecordErrorToSpan(ctx, err)
-		return nil, err
-	}
-	// (grpc.federation.field).by = "M{x: 'xxx'}"
-	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*M]{
-		Value:      value,
-		Expr:       `M{x: 'xxx'}`,
-		CacheIndex: 22,
-		Setter: func(v *M) error {
-			mValue, err := s.cast_Org_Federation_M__to__Org_Post_M(v)
-			if err != nil {
-				return err
-			}
-			ret.M = mValue
+			ret.V2Data = v2DataValue
 			return nil
 		},
 	}); err != nil {
@@ -897,42 +557,6 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.Post", slog.Any("org.federation.Post", s.logvalue_Org_Federation_Post(ret)))
-	return ret, nil
-}
-
-// cast_Org_Federation_GetPostRequest_ConditionA__to__Org_Post_PostConditionA cast from "org.federation.GetPostRequest.ConditionA" to "org.post.PostConditionA".
-func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionA__to__Org_Post_PostConditionA(from *GetPostRequest_ConditionA) (*post.PostConditionA, error) {
-	if from == nil {
-		return nil, nil
-	}
-	propValue := from.GetProp()
-	ret := &post.PostConditionA{
-		Prop: propValue,
-	}
-
-	return ret, nil
-}
-
-// cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB cast from "org.federation.GetPostRequest.ConditionB" to "org.post.PostConditionB".
-func (s *FederationService) cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB(from *GetPostRequest_ConditionB) (*post.PostConditionB, error) {
-	if from == nil {
-		return nil, nil
-	}
-	ret := &post.PostConditionB{}
-
-	return ret, nil
-}
-
-// cast_Org_Federation_M__to__Org_Post_M cast from "org.federation.M" to "org.post.M".
-func (s *FederationService) cast_Org_Federation_M__to__Org_Post_M(from *M) (*post.M, error) {
-	if from == nil {
-		return nil, nil
-	}
-	xValue := from.GetX()
-	ret := &post.M{
-		X: xValue,
-	}
-
 	return ret, nil
 }
 
@@ -961,14 +585,10 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	}
 	headValue := from.GetHead()
 	bodyValue := from.GetBody()
-	dupBodyValue := from.GetBody()
-	countsValue := from.GetCounts()
 	ret := &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
 		Body:     bodyValue,
-		DupBody:  dupBodyValue,
-		Counts:   countsValue,
 	}
 
 	return ret, nil
@@ -1038,14 +658,10 @@ func (s *FederationService) cast_Org_Post_V2_PostContent__to__Org_Federation_Pos
 	}
 	headValue := from.GetHead()
 	bodyValue := from.GetBody()
-	dupBodyValue := from.GetBody()
-	countsValue := from.GetCounts()
 	ret := &PostContent{
 		Category: categoryValue,
 		Head:     headValue,
 		Body:     bodyValue,
-		DupBody:  dupBodyValue,
-		Counts:   countsValue,
 	}
 
 	return ret, nil
@@ -1090,28 +706,6 @@ func (s *FederationService) cast_Org_Post_V2_PostData__to__Org_Federation_PostDa
 	return ret, nil
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionA(v *GetPostRequest_ConditionA) slog.Value {
-	if !s.isLogLevelDebug {
-		return slog.GroupValue()
-	}
-	if v == nil {
-		return slog.GroupValue()
-	}
-	return slog.GroupValue(
-		slog.String("prop", v.GetProp()),
-	)
-}
-
-func (s *FederationService) logvalue_Org_Federation_GetPostRequest_ConditionB(v *GetPostRequest_ConditionB) slog.Value {
-	if !s.isLogLevelDebug {
-		return slog.GroupValue()
-	}
-	if v == nil {
-		return slog.GroupValue()
-	}
-	return slog.GroupValue()
-}
-
 func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
 	if !s.isLogLevelDebug {
 		return slog.GroupValue()
@@ -1133,8 +727,6 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
-		slog.Any("a", s.logvalue_Org_Federation_GetPostRequest_ConditionA(v.A)),
-		slog.Any("condition_b", s.logvalue_Org_Federation_GetPostRequest_ConditionB(v.ConditionB)),
 	)
 }
 
@@ -1148,12 +740,7 @@ func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 		slog.Any("data", s.logvalue_Org_Federation_PostData(v.GetData())),
-		slog.Any("data2", s.logvalue_Org_Federation_PostData(v.GetData2())),
-		slog.String("type", s.logvalue_Org_Federation_PostType(v.GetType()).String()),
-		slog.String("type2", s.logvalue_Org_Federation_PostType(v.GetType2()).String()),
-		slog.String("type3", s.logvalue_Org_Federation_PostType(v.GetType3()).String()),
-		slog.String("type4", s.logvalue_Org_Federation_PostType(v.GetType4()).String()),
-		slog.Any("m", s.logvalue_Org_Post_M(v.GetM())),
+		slog.Any("v2data", s.logvalue_Org_Federation_PostData(v.GetV2Data())),
 	)
 }
 
@@ -1166,8 +753,6 @@ func (s *FederationService) logvalue_Org_Federation_PostArgument(v *FederationSe
 	}
 	return slog.GroupValue(
 		slog.String("id", v.Id),
-		slog.Any("a", s.logvalue_Org_Federation_GetPostRequest_ConditionA(v.A)),
-		slog.Any("b", s.logvalue_Org_Federation_GetPostRequest_ConditionB(v.B)),
 	)
 }
 
@@ -1182,8 +767,6 @@ func (s *FederationService) logvalue_Org_Federation_PostContent(v *PostContent) 
 		slog.String("category", s.logvalue_Org_Federation_PostContent_Category(v.GetCategory()).String()),
 		slog.String("head", v.GetHead()),
 		slog.String("body", v.GetBody()),
-		slog.String("dup_body", v.GetDupBody()),
-		slog.Any("counts", s.logvalue_Org_Federation_PostContent_CountsEntry(v.GetCounts())),
 	)
 }
 
@@ -1196,24 +779,8 @@ func (s *FederationService) logvalue_Org_Federation_PostContent_Category(v PostC
 		return slog.StringValue("CATEGORY_A")
 	case PostContent_CATEGORY_B:
 		return slog.StringValue("CATEGORY_B")
-	case PostContent_CATEGORY_C:
-		return slog.StringValue("CATEGORY_C")
 	}
 	return slog.StringValue("")
-}
-
-func (s *FederationService) logvalue_Org_Federation_PostContent_CountsEntry(v map[int32]int32) slog.Value {
-	if !s.isLogLevelDebug {
-		return slog.GroupValue()
-	}
-	attrs := make([]slog.Attr, 0, len(v))
-	for key, value := range v {
-		attrs = append(attrs, slog.Attr{
-			Key:   grpcfed.ToLogAttrKey(key),
-			Value: slog.AnyValue(value),
-		})
-	}
-	return slog.GroupValue(attrs...)
 }
 
 func (s *FederationService) logvalue_Org_Federation_PostData(v *PostData) slog.Value {
@@ -1241,8 +808,6 @@ func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Va
 		return slog.StringValue("POST_TYPE_FOO")
 	case PostType_POST_TYPE_BAR:
 		return slog.StringValue("POST_TYPE_BAR")
-	case PostType_POST_TYPE_BAZ:
-		return slog.StringValue("POST_TYPE_BAZ")
 	}
 	return slog.StringValue("")
 }
@@ -1258,18 +823,6 @@ func (s *FederationService) logvalue_Org_Post_GetPostRequest(v *post.GetPostRequ
 		slog.String("id", v.GetId()),
 		slog.Any("a", s.logvalue_Org_Post_PostConditionA(v.GetA())),
 		slog.Any("b", s.logvalue_Org_Post_PostConditionB(v.GetB())),
-	)
-}
-
-func (s *FederationService) logvalue_Org_Post_M(v *post.M) slog.Value {
-	if !s.isLogLevelDebug {
-		return slog.GroupValue()
-	}
-	if v == nil {
-		return slog.GroupValue()
-	}
-	return slog.GroupValue(
-		slog.String("x", v.GetX()),
 	)
 }
 

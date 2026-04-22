@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+// The v2 package spans two proto files (post_v2.proto and post_v2_extra.proto)
+// which share the same go_package. This tests that the code generator correctly
+// assigns the same import alias to both files.
+
+option (grpc.federation.file)= {
+  import: ["nested_post.proto", "post_v2.proto", "post_v2_extra.proto"]
+};
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
+}
+
+message GetPostRequest {
+  string id = 1;
+}
+
+message GetPostResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "post" message {
+        name: "Post"
+        args [
+          { name: "id" by: "$.id" }
+        ]
+      }
+    }
+  };
+  Post post = 1 [(grpc.federation.field).by = "post"];
+}
+
+message Post {
+  option (grpc.federation.message) = {
+    def {
+      name: "res"
+      call {
+        method: "org.post.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+      }
+    }
+    def { name: "post" by: "res.post" autobind: true }
+    def {
+      name: "res2"
+      call {
+        method: "org.post.v2.PostService/GetPost"
+        request { field: "id", by: "$.id" }
+      }
+    }
+    def { name: "v2post", by: "res2.post" }
+    def { name: "v2data", by: "v2post.data" }
+  };
+  string id = 1;
+  PostData data = 4;
+  PostData v2data = 5 [(grpc.federation.field).by = "v2data"];
+}
+
+enum PostType {
+  option (grpc.federation.enum) = {
+    alias: [ "org.post.PostDataType", "org.post.v2.PostDataType" ]
+  };
+
+  POST_TYPE_UNKNOWN = 0 [(grpc.federation.enum_value).default = true];
+  POST_TYPE_FOO = 1 [(grpc.federation.enum_value) = { alias: ["POST_TYPE_A"] }];
+  POST_TYPE_BAR = 2 [(grpc.federation.enum_value) = {
+    alias: [
+      "org.post.PostDataType.POST_TYPE_B",
+      "org.post.PostDataType.POST_TYPE_C",
+      "org.post.v2.PostDataType.POST_V2_TYPE_B",
+      "org.post.v2.PostDataType.POST_V2_TYPE_C"
+    ]
+  }];
+}
+
+// Alias for ExtraType from the second v2 proto file.
+// This is the key test: ExtraType comes from post_v2_extra.proto which has a
+// different *GoPackage pointer than post_v2.proto, but the same import path.
+enum ExtraKind {
+  option (grpc.federation.enum).alias = "org.post.v2.ExtraType";
+
+  EXTRA_KIND_UNKNOWN = 0 [(grpc.federation.enum_value).default = true];
+  EXTRA_KIND_A = 1 [(grpc.federation.enum_value) = { alias: ["EXTRA_TYPE_A"] }];
+  EXTRA_KIND_B = 2 [(grpc.federation.enum_value) = { alias: ["EXTRA_TYPE_B"] }];
+}
+
+message PostData {
+  option (grpc.federation.message) = {
+    alias: [ "org.post.PostData", "org.post.v2.PostData" ]
+  };
+
+  PostType type = 1;
+  string title = 2;
+  PostContent content = 3;
+}
+
+message PostContent {
+  option (grpc.federation.message) = {
+    alias: [ "org.post.PostContent", "org.post.v2.PostContent" ]
+  };
+
+  enum Category {
+    option (grpc.federation.enum) = {
+      alias: [ "org.post.PostContent.Category", "org.post.v2.PostContent.Category" ]
+    };
+
+    CATEGORY_A = 0;
+    CATEGORY_B = 1;
+  };
+
+  Category category = 1;
+  string head = 2;
+  string body = 3;
+}
