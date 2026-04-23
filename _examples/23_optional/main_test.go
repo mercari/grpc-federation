@@ -31,6 +31,13 @@ var (
 	listener *bufconn.Listener
 )
 
+type Resolver struct {
+}
+
+func (r *Resolver) Resolve_Org_Federation_GetPostResponse_OptMsg_2(ctx context.Context, req *federation.FederationService_Org_Federation_GetPostResponse_OptMsg_2Argument) (*federation.SubMessage, error) {
+	return &federation.SubMessage{Value: "world"}, nil
+}
+
 func dialer(ctx context.Context, address string) (net.Conn, error) {
 	return listener.Dial()
 }
@@ -80,7 +87,8 @@ func TestFederation(t *testing.T) {
 		Level: slog.LevelDebug,
 	}))
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
-		Logger: logger,
+		Logger:   logger,
+		Resolver: new(Resolver),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -103,11 +111,12 @@ func TestFederation(t *testing.T) {
 	want := &federation.GetPostResponse{
 		OptInt:   proto.Int64(42),
 		OptColor: &optColor,
-		OptMsg:   &federation.SubMsg{Value: "hello"},
+		OptMsg:   &federation.SubMessage{Value: "hello"},
+		OptMsg_2: &federation.SubMessage{Value: "world"},
 	}
 	if diff := cmp.Diff(res, want, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
-		federation.SubMsg{},
+		federation.SubMessage{},
 	)); diff != "" {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}

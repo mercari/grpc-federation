@@ -13,7 +13,7 @@ enum Color {
   COLOR_BLUE = 3;
 }
 
-message SubMsg {
+message SubMessage {
   option (grpc.federation.message) = {};
   string value = 1 [(grpc.federation.field).by = "$.value"];
 }
@@ -34,12 +34,13 @@ message GetPostResponse {
     def {
       name: "opt_msg"
       message {
-        name: "SubMsg"
+        name: "SubMessage"
         args { name: "value", by: "'hello'" }
       }
     }
   };
   optional int64 opt_int = 1 [(grpc.federation.field).by = "opt_int"];
   optional Color opt_color = 2 [(grpc.federation.field).by = "opt_color"];
-  optional SubMsg opt_msg = 3 [(grpc.federation.field).by = "opt_msg"];
+  optional SubMessage opt_msg = 3 [(grpc.federation.field).by = "opt_msg"];
+  optional SubMessage opt_msg_2 = 4 [(grpc.federation.field).custom_resolver = true];
 }
