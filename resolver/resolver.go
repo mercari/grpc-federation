@@ -1677,7 +1677,6 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 			// To support it, ReturnType() in code_generator.go needs to return a pointer type
 			// (e.g. *int64 instead of int64) when the field is Proto3Optional, and the
 			// setReturnValueByFieldCustomResolver template needs to handle the pointer assignment.
-			// See wiki: repositories/mercari/grpc-federation/optional-custom-resolver.md
 			if field.HasCustomResolver() && field.Proto3Optional && field.Type.Kind != types.Message {
 				ctx.addError(
 					ErrWithLocation(
