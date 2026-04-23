@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package org.post.v2;
+
+option go_package = "example/post/v2;post";
+
+// A second proto file in the v2 package, exercising the case where
+// multiple proto files share the same go_package.
+enum ExtraType {
+  EXTRA_TYPE_UNKNOWN = 0;
+  EXTRA_TYPE_A = 1;
+  EXTRA_TYPE_B = 2;
+}

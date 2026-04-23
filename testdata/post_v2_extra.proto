@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package org.post.v2;
+
+option go_package = "example/post/v2;post";
+
+// This enum is defined in a separate proto file within the same v2 package.
+// It tests that the code generator correctly handles multiple GoPackage pointers
+// for the same import path when generating import aliases.
+enum ExtraType {
+  EXTRA_TYPE_UNKNOWN = 0;
+  EXTRA_TYPE_A = 1;
+  EXTRA_TYPE_B = 2;
+}

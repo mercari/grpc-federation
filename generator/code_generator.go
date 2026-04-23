@@ -604,6 +604,7 @@ func (f *File) DefaultImports() []*Import {
 func (f *File) Imports() []*Import {
 	importPathMap := make(map[string]struct{})
 	importAliasMap := make(map[string]struct{})
+	importPathToAlias := make(map[string]string)
 	for _, imprt := range f.DefaultImports() {
 		importPathMap[imprt.Path] = struct{}{}
 		importAliasMap[imprt.Alias] = struct{}{}
@@ -620,6 +621,11 @@ func (f *File) Imports() []*Import {
 			return
 		}
 		if _, exists := importPathMap[pkg.ImportPath]; exists {
+			// Multiple proto files in the same Go package produce distinct GoPackage pointers.
+			// Register this pointer with the same alias assigned to the first pointer.
+			if alias, ok := importPathToAlias[pkg.ImportPath]; ok {
+				f.aliasMap[pkg] = alias
+			}
 			return
 		}
 		alias := pkg.Name
@@ -642,6 +648,7 @@ func (f *File) Imports() []*Import {
 		})
 		importPathMap[pkg.ImportPath] = struct{}{}
 		importAliasMap[alias] = struct{}{}
+		importPathToAlias[pkg.ImportPath] = alias
 	}
 	sortedPkgs := make([]*resolver.GoPackage, 0, len(f.pkgMap))
 	for pkg := range f.pkgMap {

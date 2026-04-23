@@ -8,7 +8,7 @@ import "post/post.proto";
 option go_package = "example/federation;federation";
 
 option (grpc.federation.file)= {
-  import: ["post/v2/post.proto"]
+  import: ["post/v2/post.proto", "post/v2/extra.proto"]
 };
 
 service FederationService {
