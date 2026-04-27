@@ -128,6 +128,19 @@ type FederationV2DevServiceConfig struct {
 	// Resolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 	// If this interface is not provided, an error is returned during initialization.
 	Resolver FederationV2DevServiceResolver // required
+	// AdditionalCELOptions allows the caller to inject extra CEL environment options
+	// (for example, native Go cel.Function bindings) after the framework-provided
+	// options and CELPlugin EnvOpts have been registered.
+	//
+	// Because cel-go's FunctionDecl.AddOverload replaces the binding when an overload
+	// with the same overload ID and matching signature is re-declared, callers can
+	// use this hook to override functions already registered by a CEL WASM plugin
+	// with native Go implementations. This is useful when a plugin-registered
+	// function is purely in-memory (e.g. JWT parsing) and the per-process mutex
+	// serialization in CELPluginInstance.Call is undesirable.
+	//
+	// Default zero value (nil) is a no-op and preserves the existing behavior.
+	AdditionalCELOptions []grpcfed.CELEnvOption
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -365,6 +378,7 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("federation.v2dev.PostV2devType", PostV2DevType_value, PostV2DevType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
+	celEnvOpts = append(celEnvOpts, cfg.AdditionalCELOptions...)
 	var env FederationV2DevServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
