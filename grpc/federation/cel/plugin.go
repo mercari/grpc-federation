@@ -22,6 +22,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -414,7 +415,11 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		gcErrCh:          make(chan error, 1),
 		instanceModErrCh: make(chan error, 1),
-		cancelFn:         cancel,
+		// sem serializes invocations into the WASM instance with capacity 1
+		// (equivalent to sync.Mutex), but Acquire is context-aware so that
+		// upstream cancellation can free parked goroutines.
+		sem:      semaphore.NewWeighted(1),
+		cancelFn: cancel,
 	}
 	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
@@ -566,9 +571,15 @@ type CELPluginInstance struct {
 	instanceModErr   error
 	gcErrCh          chan error
 	closed           bool
-	mu               sync.Mutex
-	gcQueue          chan struct{}
-	cancelFn         context.CancelFunc
+	// sem is a capacity-1 weighted semaphore that serializes calls into the
+	// underlying WASM instance, replacing what was previously a sync.Mutex.
+	// Acquire(ctx, 1) is context-aware: when the caller's context is canceled
+	// while waiting, Acquire returns ctx.Err() and the goroutine (along with
+	// its stack, function arguments, and trace span) can be released, instead
+	// of remaining parked indefinitely as it would on sync.Mutex.Lock().
+	sem      *semaphore.Weighted
+	gcQueue  chan struct{}
+	cancelFn context.CancelFunc
 }
 
 const PluginProtocolVersion = 2
@@ -589,8 +600,12 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 	ctx, span := trace.Trace(ctx, "ValidatePlugin")
 	defer span.End()
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	if err := i.sem.Acquire(ctx, 1); err != nil {
+		// Acquire returns ctx.Err() on cancellation and leaves the semaphore
+		// unchanged, so Release must NOT be called on this path.
+		return err
+	}
+	defer i.sem.Release(1)
 
 	if err := i.write(ctx, []byte(VersionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
@@ -645,8 +660,14 @@ func (i *CELPluginInstance) Close() error {
 		return nil
 	}
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	// Close is called during shutdown and must wait for any in-flight call to
+	// complete before tearing down resources. Acquire with a Background ctx
+	// blocks until success and never returns an error, preserving the
+	// previous sync.Mutex.Lock() semantic on this path.
+	if err := i.sem.Acquire(context.Background(), 1); err != nil {
+		return err
+	}
+	defer i.sem.Release(1)
 
 	return i.close()
 }
@@ -697,8 +718,22 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	// GC is not bound to any user request context. Use a fresh
+	// Background-derived ctx with gcWaitTimeout so that if the semaphore is
+	// held by an in-flight Call for longer than gcWaitTimeout, we abandon
+	// this GC attempt rather than blocking the GC goroutine forever. The
+	// previous sync.Mutex.Lock() could not time out, so this is also a
+	// strict improvement on top of context-awareness.
+	acquireCtx, acquireCancel := context.WithTimeout(context.Background(), gcWaitTimeout)
+	defer acquireCancel()
+	if err := i.sem.Acquire(acquireCtx, 1); err != nil {
+		// Acquire timed out (or the ctx was canceled). Skip this GC tick;
+		// the next enqueueGC tick will retry. Do NOT call Release here:
+		// semaphore is unchanged on Acquire failure.
+		log.Logger(ctx).WarnContext(ctx, fmt.Sprintf("grpc-federation: skipping GC because instance lock could not be acquired within %s: %v", gcWaitTimeout, err))
+		return nil
+	}
+	defer i.sem.Release(1)
 
 	if i.closed {
 		return nil
@@ -740,8 +775,17 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	ctx, span := trace.Trace(ctx, "Call")
 	defer span.End()
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	// Acquire is context-aware. If ctx is canceled (upstream gateway timeout
+	// or client disconnect) while waiting for the in-flight call to finish,
+	// Acquire returns ctx.Err() and this goroutine — along with its stack,
+	// arguments, and the trace span opened above — can be released, instead
+	// of staying parked on a non-cancellable sync.Mutex.Lock().
+	if err := i.sem.Acquire(ctx, 1); err != nil {
+		// Per semaphore.Weighted docs: "On failure, returns ctx.Err() and
+		// leaves the semaphore unchanged." Do NOT call Release on this path.
+		return nil, err
+	}
+	defer i.sem.Release(1)
 
 	if err := i.sendRequest(ctx, fn, md, args...); err != nil {
 		return nil, err
