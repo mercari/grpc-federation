@@ -218,8 +218,6 @@ func TestValidatePluginReleasesOnCtxCancel(t *testing.T) {
 
 // TestStartGCSkipsOnAcquireTimeout verifies that the GC code path skips when
 // the semaphore is held by an in-flight call for longer than gcWaitForSemTimeout.
-// This preserves the pre-existing "skip on contention" behavior while making
-// the wait bounded (it was previously unbounded under sync.Mutex).
 func TestStartGCSkipsOnAcquireTimeout(t *testing.T) {
 	// Lower gcWaitForSemTimeout for the duration of this test so it runs quickly.
 	t.Cleanup(func() { gcWaitForSemTimeout = 10 * time.Second })
