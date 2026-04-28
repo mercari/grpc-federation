@@ -415,9 +415,11 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		gcErrCh:          make(chan error, 1),
 		instanceModErrCh: make(chan error, 1),
-		// sem serializes invocations into the WASM instance with capacity 1
-		// (equivalent to sync.Mutex), but Acquire is context-aware so that
-		// upstream cancellation can free parked goroutines.
+		// This semaphore functions as a sync.Mutex (since it has capacity 1), but unlike sync.Mutex,
+		// it is context-aware, so that an upstream cancellation during Acquire() will cause the call to
+		// fail with an error.
+		// Calls to the plugin are serialized so that it only processes one call at a time. This removes
+		// the need to attach an ID to each call.
 		sem:      semaphore.NewWeighted(1),
 		cancelFn: cancel,
 	}
@@ -571,12 +573,10 @@ type CELPluginInstance struct {
 	instanceModErr   error
 	gcErrCh          chan error
 	closed           bool
-	// sem is a capacity-1 weighted semaphore that serializes calls into the
-	// underlying WASM instance, replacing what was previously a sync.Mutex.
-	// Acquire(ctx, 1) is context-aware: when the caller's context is canceled
-	// while waiting, Acquire returns ctx.Err() and the goroutine (along with
-	// its stack, function arguments, and trace span) can be released, instead
-	// of remaining parked indefinitely as it would on sync.Mutex.Lock().
+	// sem always has capacity 1, so it functions as a sync.Mutex, but unlike sync.Mutex,
+	// it is context-aware, so that an upstream cancellation during Acquire() will cause the call to
+	// fail with an error.
+
 	sem      *semaphore.Weighted
 	gcQueue  chan struct{}
 	cancelFn context.CancelFunc
@@ -662,8 +662,8 @@ func (i *CELPluginInstance) Close() error {
 
 	// Close is called during shutdown and must wait for any in-flight call to
 	// complete before tearing down resources. Acquire with a Background ctx
-	// blocks until success and never returns an error, preserving the
-	// previous sync.Mutex.Lock() semantic on this path.
+	// blocks until success (since the background ctx is never canceled), so it will never
+	// actually return an error on this path.
 	if err := i.sem.Acquire(context.Background(), 1); err != nil {
 		return err
 	}
@@ -722,11 +722,8 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 	defer span.End()
 
 	// GC is not bound to any user request context. Use a fresh
-	// Background-derived ctx with gcWaitForSemTimeout so that if the semaphore is
-	// held by an in-flight Call for longer than gcWaitForSemTimeout, we abandon
-	// this GC attempt rather than blocking the GC goroutine forever. The
-	// previous sync.Mutex.Lock() could not time out, so this is also a
-	// strict improvement on top of context-awareness.
+	// Background-derived ctx with gcWaitForSemTimeout, so that if the semaphore
+	// can't be acquired, we abandon this GC attempt rather than blocking the GC goroutine forever.
 	acquireCtx, acquireCancel := context.WithTimeout(context.Background(), gcWaitForSemTimeout)
 	defer acquireCancel()
 	if err := i.sem.Acquire(acquireCtx, 1); err != nil {
@@ -779,11 +776,9 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	ctx, span := trace.Trace(ctx, "Call")
 	defer span.End()
 
-	// Acquire is context-aware. If ctx is canceled (upstream gateway timeout
-	// or client disconnect) while waiting for the in-flight call to finish,
-	// Acquire returns ctx.Err() and this goroutine — along with its stack,
-	// arguments, and the trace span opened above — can be released, instead
-	// of staying parked on a non-cancellable sync.Mutex.Lock().
+	// If the context is canceled while we are waiting to acquire the semaphore, give up and return an error.
+	// This prevents waiting calls from blocking forever, and allows caller resources to be freed
+	// (goroutine stack+args+span).
 	if err := i.sem.Acquire(ctx, 1); err != nil {
 		// Per semaphore.Weighted docs: "On failure, returns ctx.Err() and
 		// leaves the semaphore unchanged." Do NOT call Release on this path.

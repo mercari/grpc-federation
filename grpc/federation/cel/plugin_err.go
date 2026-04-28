@@ -13,7 +13,7 @@ import (
 // ctxStatusErr attaches a gRPC status to context.Canceled /
 // context.DeadlineExceeded so that callers downstream of cel-go's
 // *types.Err round-trip can recover the correct grpc code via
-// status.FromError. Without it, ctx errors surface as codes.Unknown.
+// status.FromError. Without it, ctx errors would be converted to codes.Unknown.
 type ctxStatusErr struct{ err error }
 
 func (e *ctxStatusErr) Error() string { return e.err.Error() }
@@ -28,8 +28,7 @@ func (e *ctxStatusErr) GRPCStatus() *grpcstatus.Status {
 // toCELErr converts a Go error returned from a plugin Call into a CEL
 // ref.Val. For context cancellation/deadline errors it preserves the
 // unwrap chain (and the gRPC status via ctxStatusErr) by going through
-// types.WrapErr; for any other error it falls back to NewErrFromString,
-// which is the historical behavior.
+// types.WrapErr; for any other error it falls back to NewErrFromString.
 func toCELErr(err error) ref.Val {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return types.WrapErr(&ctxStatusErr{err: err})
