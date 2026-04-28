@@ -711,26 +711,29 @@ func (i *CELPluginInstance) enqueueGC() {
 	}
 }
 
-// timeout for runtime.GC() to 10 seconds.
-var gcWaitTimeout = 10 * time.Second
+// timeout to acquire semaphore for GC
+var gcWaitForSemTimeout = 10 * time.Second
+
+// timeout for a GC run
+var gcRunUntilTimeout = 10 * time.Second
 
 func (i *CELPluginInstance) startGC(ctx context.Context) error {
 	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
 
 	// GC is not bound to any user request context. Use a fresh
-	// Background-derived ctx with gcWaitTimeout so that if the semaphore is
-	// held by an in-flight Call for longer than gcWaitTimeout, we abandon
+	// Background-derived ctx with gcWaitForSemTimeout so that if the semaphore is
+	// held by an in-flight Call for longer than gcWaitForSemTimeout, we abandon
 	// this GC attempt rather than blocking the GC goroutine forever. The
 	// previous sync.Mutex.Lock() could not time out, so this is also a
 	// strict improvement on top of context-awareness.
-	acquireCtx, acquireCancel := context.WithTimeout(context.Background(), gcWaitTimeout)
+	acquireCtx, acquireCancel := context.WithTimeout(context.Background(), gcWaitForSemTimeout)
 	defer acquireCancel()
 	if err := i.sem.Acquire(acquireCtx, 1); err != nil {
 		// Acquire timed out (or the ctx was canceled). Skip this GC tick;
 		// the next enqueueGC tick will retry. Do NOT call Release here:
 		// semaphore is unchanged on Acquire failure.
-		log.Logger(ctx).WarnContext(ctx, fmt.Sprintf("grpc-federation: skipping GC because instance lock could not be acquired within %s: %v", gcWaitTimeout, err))
+		log.Logger(ctx).WarnContext(ctx, fmt.Sprintf("grpc-federation: skipping GC because instance lock could not be acquired within %s: %v", gcWaitForSemTimeout, err))
 		return nil
 	}
 	defer i.sem.Release(1)
@@ -739,7 +742,7 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, gcWaitTimeout)
+	ctx, cancel := context.WithTimeout(ctx, gcRunUntilTimeout)
 	defer cancel()
 
 	_ = i.write(ctx, []byte(GCCommand))

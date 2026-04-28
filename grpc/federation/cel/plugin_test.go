@@ -217,13 +217,13 @@ func TestValidatePluginReleasesOnCtxCancel(t *testing.T) {
 }
 
 // TestStartGCSkipsOnAcquireTimeout verifies that the GC code path skips when
-// the semaphore is held by an in-flight call for longer than gcWaitTimeout.
+// the semaphore is held by an in-flight call for longer than gcWaitForSemTimeout.
 // This preserves the pre-existing "skip on contention" behavior while making
 // the wait bounded (it was previously unbounded under sync.Mutex).
 func TestStartGCSkipsOnAcquireTimeout(t *testing.T) {
-	// Lower gcWaitTimeout for the duration of this test so it runs quickly.
-	t.Cleanup(func() { gcWaitTimeout = 10 * time.Second })
-	gcWaitTimeout = 50 * time.Millisecond
+	// Lower gcWaitForSemTimeout for the duration of this test so it runs quickly.
+	t.Cleanup(func() { gcWaitForSemTimeout = 10 * time.Second })
+	gcWaitForSemTimeout = 50 * time.Millisecond
 
 	inst := newInstanceForSemaphoreTest()
 
@@ -245,9 +245,9 @@ func TestStartGCSkipsOnAcquireTimeout(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected nil error on GC skip, got %v", err)
 		}
-		// startGC must have given up around gcWaitTimeout, not blocked forever.
+		// startGC must have given up around gcWaitForSemTimeout, not blocked forever.
 		if elapsed > 1*time.Second {
-			t.Fatalf("startGC returned only after %v, expected ~%v", elapsed, gcWaitTimeout)
+			t.Fatalf("startGC returned only after %v, expected ~%v", elapsed, gcWaitForSemTimeout)
 		}
 		// And it must NOT have called cancelFn or pushed to gcErrCh in the
 		// skip path (those are reserved for the GC-hang path).
