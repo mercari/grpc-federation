@@ -733,6 +733,7 @@ func (i *CELPluginInstance) startGC(ctx context.Context) error {
 		// Acquire timed out (or the ctx was canceled). Skip this GC tick;
 		// the next enqueueGC tick will retry. Do NOT call Release here:
 		// semaphore is unchanged on Acquire failure.
+		span.SetAttributes(trace.StringAttr("acquire_status", "cancelled"))
 		log.Logger(ctx).WarnContext(ctx, fmt.Sprintf("grpc-federation: skipping GC because instance lock could not be acquired within %s: %v", gcWaitForSemTimeout, err))
 		return nil
 	}
@@ -786,6 +787,7 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	if err := i.sem.Acquire(ctx, 1); err != nil {
 		// Per semaphore.Weighted docs: "On failure, returns ctx.Err() and
 		// leaves the semaphore unchanged." Do NOT call Release on this path.
+		span.SetAttributes(trace.StringAttr("acquire_status", "cancelled"))
 		return nil, err
 	}
 	defer i.sem.Release(1)
