@@ -281,7 +281,7 @@ func (p *CELPlugin) Call(ctx context.Context, fn *CELFunction, args ...ref.Val) 
 	}
 	instance, err := p.getInstance(ctx)
 	if err != nil {
-		return types.NewErrFromString(err.Error())
+		return toCELErr(err)
 	}
 	span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 	ret, err := instance.Call(ctx, fn, md, args...)
@@ -295,16 +295,16 @@ func (p *CELPlugin) Call(ctx context.Context, fn *CELFunction, args ...ref.Val) 
 			// Since getInstance() always returns an available instance, it will return the backup instance if the active instance has been closed.
 			instance, err := p.getInstance(ctx)
 			if err != nil {
-				return types.NewErrFromString(err.Error())
+				return toCELErr(err)
 			}
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			retryRet, err := instance.Call(ctx, fn, md, args...)
 			if err != nil {
-				return types.NewErrFromString(err.Error())
+				return toCELErr(err)
 			}
 			return retryRet
 		} else {
-			return types.NewErrFromString(err.Error())
+			return toCELErr(err)
 		}
 	}
 	return ret
