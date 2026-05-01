@@ -22,6 +22,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -280,7 +281,7 @@ func (p *CELPlugin) Call(ctx context.Context, fn *CELFunction, args ...ref.Val) 
 	}
 	instance, err := p.getInstance(ctx)
 	if err != nil {
-		return types.NewErrFromString(err.Error())
+		return toCELErr(err)
 	}
 	span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 	ret, err := instance.Call(ctx, fn, md, args...)
@@ -294,16 +295,16 @@ func (p *CELPlugin) Call(ctx context.Context, fn *CELFunction, args ...ref.Val) 
 			// Since getInstance() always returns an available instance, it will return the backup instance if the active instance has been closed.
 			instance, err := p.getInstance(ctx)
 			if err != nil {
-				return types.NewErrFromString(err.Error())
+				return toCELErr(err)
 			}
 			span.SetAttributes(trace.StringAttr("instance_id", instance.id))
 			retryRet, err := instance.Call(ctx, fn, md, args...)
 			if err != nil {
-				return types.NewErrFromString(err.Error())
+				return toCELErr(err)
 			}
 			return retryRet
 		} else {
-			return types.NewErrFromString(err.Error())
+			return toCELErr(err)
 		}
 	}
 	return ret
@@ -414,7 +415,13 @@ func (p *CELPlugin) createInstance(ctx context.Context) (*CELPluginInstance, err
 		gcQueue:          make(chan struct{}, gcQueueLength),
 		gcErrCh:          make(chan error, 1),
 		instanceModErrCh: make(chan error, 1),
-		cancelFn:         cancel,
+		// This semaphore functions as a sync.Mutex (since it has capacity 1), but unlike sync.Mutex,
+		// it is context-aware, so that an upstream cancellation during Acquire() will cause the call to
+		// fail with an error.
+		// Calls to the plugin are serialized so that it only processes one call at a time. This removes
+		// the need to attach an ID to each call.
+		sem:      semaphore.NewWeighted(1),
+		cancelFn: cancel,
 	}
 	instance.id = fmt.Sprintf("%s-%p", p.cfg.Name, instance)
 
@@ -566,9 +573,13 @@ type CELPluginInstance struct {
 	instanceModErr   error
 	gcErrCh          chan error
 	closed           bool
-	mu               sync.Mutex
-	gcQueue          chan struct{}
-	cancelFn         context.CancelFunc
+	// sem always has capacity 1, so it functions as a sync.Mutex, but unlike sync.Mutex,
+	// it is context-aware, so that an upstream cancellation during Acquire() will cause the call to
+	// fail with an error.
+
+	sem      *semaphore.Weighted
+	gcQueue  chan struct{}
+	cancelFn context.CancelFunc
 }
 
 const PluginProtocolVersion = 2
@@ -589,8 +600,12 @@ func (i *CELPluginInstance) ValidatePlugin(ctx context.Context) error {
 	ctx, span := trace.Trace(ctx, "ValidatePlugin")
 	defer span.End()
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	if err := i.sem.Acquire(ctx, 1); err != nil {
+		// Acquire returns ctx.Err() on cancellation and leaves the semaphore
+		// unchanged, so Release must NOT be called on this path.
+		return err
+	}
+	defer i.sem.Release(1)
 
 	if err := i.write(ctx, []byte(VersionCommand)); err != nil {
 		return fmt.Errorf("failed to send cel protocol version command: %w", err)
@@ -645,8 +660,14 @@ func (i *CELPluginInstance) Close() error {
 		return nil
 	}
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	// Close is called during shutdown and must wait for any in-flight call to
+	// complete before tearing down resources. Acquire with a Background ctx
+	// blocks until success (since the background ctx is never canceled), so it will never
+	// actually return an error on this path.
+	if err := i.sem.Acquire(context.Background(), 1); err != nil {
+		return err
+	}
+	defer i.sem.Release(1)
 
 	return i.close()
 }
@@ -690,21 +711,36 @@ func (i *CELPluginInstance) enqueueGC() {
 	}
 }
 
-// timeout for runtime.GC() to 10 seconds.
-var gcWaitTimeout = 10 * time.Second
+// timeout to acquire semaphore for GC.
+var gcWaitForSemTimeout = 10 * time.Second
+
+// timeout for a GC run.
+var gcRunUntilTimeout = 10 * time.Second
 
 func (i *CELPluginInstance) startGC(ctx context.Context) error {
 	ctx, span := trace.Trace(ctx, "github.com/mercari/grpc-federation.CELPluginInstance.startGC")
 	defer span.End()
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	// GC is not bound to any user request context. Use a fresh
+	// Background-derived ctx with gcWaitForSemTimeout, so that if the semaphore
+	// can't be acquired, we abandon this GC attempt rather than blocking the GC goroutine forever.
+	acquireCtx, acquireCancel := context.WithTimeout(context.Background(), gcWaitForSemTimeout)
+	defer acquireCancel()
+	if err := i.sem.Acquire(acquireCtx, 1); err != nil {
+		// Acquire timed out (or the ctx was canceled). Skip this GC tick;
+		// the next enqueueGC tick will retry. Do NOT call Release here:
+		// semaphore is unchanged on Acquire failure.
+		span.SetAttributes(trace.StringAttr("acquire_status", "canceled"))
+		log.Logger(ctx).WarnContext(ctx, fmt.Sprintf("grpc-federation: skipping GC because instance lock could not be acquired within %s: %v", gcWaitForSemTimeout, err))
+		return nil
+	}
+	defer i.sem.Release(1)
 
 	if i.closed {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, gcWaitTimeout)
+	ctx, cancel := context.WithTimeout(ctx, gcRunUntilTimeout)
 	defer cancel()
 
 	_ = i.write(ctx, []byte(GCCommand))
@@ -740,8 +776,16 @@ func (i *CELPluginInstance) Call(ctx context.Context, fn *CELFunction, md metada
 	ctx, span := trace.Trace(ctx, "Call")
 	defer span.End()
 
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	// If the context is canceled while we are waiting to acquire the semaphore, give up and return an error.
+	// This prevents waiting calls from blocking forever, and allows caller resources to be freed
+	// (goroutine stack+args+span).
+	if err := i.sem.Acquire(ctx, 1); err != nil {
+		// Per semaphore.Weighted docs: "On failure, returns ctx.Err() and
+		// leaves the semaphore unchanged." Do NOT call Release on this path.
+		span.SetAttributes(trace.StringAttr("acquire_status", "canceled"))
+		return nil, err
+	}
+	defer i.sem.Release(1)
 
 	if err := i.sendRequest(ctx, fn, md, args...); err != nil {
 		return nil, err
