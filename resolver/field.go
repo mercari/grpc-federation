@@ -1,5 +1,25 @@
 package resolver
 
+import "github.com/mercari/grpc-federation/types"
+
+// ProtoNeedsPointerWrap reports whether a proto3 optional field's generated Go
+// value must be wrapped in a pointer before assignment.
+//
+// proto3 optional scalar/enum fields become *T in Go, so the generated setter
+// must do `ret.F = &v`. Two kinds are excluded:
+//   - Message: already *Message in generated code, no extra indirection needed.
+//   - Bytes: protoc-gen-go keeps optional bytes as []byte (nil = absent), not *[]byte.
+func (f *Field) ProtoNeedsPointerWrap() bool {
+	if f == nil || !f.Proto3Optional || f.Type == nil {
+		return false
+	}
+	switch f.Type.Kind {
+	case types.Message, types.Bytes:
+		return false
+	}
+	return true
+}
+
 func (f *Field) HasRule() bool {
 	if f == nil {
 		return false

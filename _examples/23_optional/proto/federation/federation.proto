@@ -24,7 +24,7 @@ service FederationService {
 }
 
 message GetPostRequest {
-  string id = 1;
+  optional string id = 1;
 }
 
 message GetPostResponse {
@@ -43,4 +43,6 @@ message GetPostResponse {
   optional Color opt_color = 2 [(grpc.federation.field).by = "opt_color"];
   optional SubMessage opt_msg = 3 [(grpc.federation.field).by = "opt_msg"];
   optional SubMessage opt_msg_2 = 4 [(grpc.federation.field).custom_resolver = true];
+  optional string opt_id = 5 [(grpc.federation.field).by = "$.id"];
+  optional bytes opt_bytes = 6 [(grpc.federation.field).by = "b'abc'"];
 }

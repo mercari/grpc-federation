@@ -4682,6 +4682,16 @@ func TestOptional(t *testing.T) {
 					resolver.NewMessageType(ref.Message(t, "org.federation", "SubMessage"), false),
 					testutil.NewFieldRuleBuilder(nil).SetCustomResolver(true).Build(t),
 				).
+				AddProto3OptionalFieldWithRule(
+					"opt_id",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("$.id", resolver.StringType)).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_bytes",
+					resolver.BytesType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("b'abc'", resolver.BytesType)).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(

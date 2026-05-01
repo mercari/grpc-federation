@@ -35,4 +35,6 @@ message GetPostResponse {
   optional int64 opt_int = 1 [(grpc.federation.field).by = "opt_int"];
   optional Color opt_color = 2 [(grpc.federation.field).by = "opt_color"];
   optional SubMessage opt_msg = 3 [(grpc.federation.field).custom_resolver = true];
+  optional string opt_id = 4 [(grpc.federation.field).by = "$.id"];
+  optional bytes opt_bytes = 5 [(grpc.federation.field).by = "b'abc'"];
 }

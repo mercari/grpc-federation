@@ -104,7 +104,7 @@ func TestFederation(t *testing.T) {
 
 	optColor := federation.Color_COLOR_RED
 	client := federation.NewFederationServiceClient(conn)
-	res, err := client.GetPost(ctx, &federation.GetPostRequest{Id: "test"})
+	res, err := client.GetPost(ctx, &federation.GetPostRequest{Id: proto.String("test")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,6 +113,8 @@ func TestFederation(t *testing.T) {
 		OptColor: &optColor,
 		OptMsg:   &federation.SubMessage{Value: "hello"},
 		OptMsg_2: &federation.SubMessage{Value: "world"},
+		OptId:    proto.String("test"),
+		OptBytes: []byte("abc"),
 	}
 	if diff := cmp.Diff(res, want, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},

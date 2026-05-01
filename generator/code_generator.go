@@ -2525,7 +2525,7 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		RequiredCast:   requiredCast,
 		CastFunc:       castFunc,
 		ProtoComment:   fmt.Sprintf(`// { name: %q, autobind: true }`, name),
-		Proto3Optional: field.Proto3Optional && field.Type.Kind != types.Message,
+		Proto3Optional: field.ProtoNeedsPointerWrap(),
 	}, nil
 }
 
@@ -2586,7 +2586,7 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 			RequiredCast:   requiredCast,
 			EnumSelector:   enumSelectorSetterParam,
 			CastFunc:       castFuncName(fromType, toType),
-			Proto3Optional: field.Proto3Optional && field.Type.Kind != types.Message,
+			Proto3Optional: field.ProtoNeedsPointerWrap(),
 		},
 	}
 }

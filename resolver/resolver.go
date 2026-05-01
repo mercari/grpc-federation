@@ -1672,12 +1672,15 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 			)
 			continue
 		}
+		if field.Type == nil {
+			continue
+		}
 		if field.HasMessageCustomResolver() || field.HasCustomResolver() {
 			// TODO: custom_resolver on proto3 optional scalar/enum fields is not yet supported.
 			// To support it, ReturnType() in code_generator.go needs to return a pointer type
 			// (e.g. *int64 instead of int64) when the field is Proto3Optional, and the
 			// setReturnValueByFieldCustomResolver template needs to handle the pointer assignment.
-			if field.HasCustomResolver() && field.Proto3Optional && field.Type.Kind != types.Message {
+			if field.HasCustomResolver() && field.ProtoNeedsPointerWrap() {
 				ctx.addError(
 					ErrWithLocation(
 						fmt.Sprintf(`%q field in %q message: custom_resolver is not supported on proto3 optional scalar/enum fields`, field.Name, msg.FQDN()),
@@ -1685,9 +1688,6 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 					),
 				)
 			}
-			continue
-		}
-		if field.Type == nil {
 			continue
 		}
 		rule := field.Rule
