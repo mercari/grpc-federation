@@ -18,6 +18,11 @@ message SubMessage {
   string value = 1 [(grpc.federation.field).by = "$.value"];
 }
 
+message BindSource {
+  option (grpc.federation.message) = {};
+  string opt_bind = 1 [(grpc.federation.field).by = "'auto-bound'"];
+}
+
 service FederationService {
   option (grpc.federation.service) = {};
   rpc GetPost(GetPostRequest) returns (GetPostResponse) {};
@@ -38,6 +43,7 @@ message GetPostResponse {
         args { name: "value", by: "'hello'" }
       }
     }
+    def { name: "bind_source" message { name: "BindSource" } autobind: true }
   };
   optional int64 opt_int = 1 [(grpc.federation.field).by = "opt_int"];
   optional Color opt_color = 2 [(grpc.federation.field).by = "opt_color"];
@@ -45,4 +51,5 @@ message GetPostResponse {
   optional SubMessage opt_msg_2 = 4 [(grpc.federation.field).custom_resolver = true];
   optional string opt_id = 5 [(grpc.federation.field).by = "$.id"];
   optional bytes opt_bytes = 6 [(grpc.federation.field).by = "b'abc'"];
+  optional string opt_bind = 7;
 }

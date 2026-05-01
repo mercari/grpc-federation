@@ -27,14 +27,21 @@ message SubMessage {
   string value = 1 [(grpc.federation.field).by = "$.value"];
 }
 
+message BindSource {
+  option (grpc.federation.message) = {};
+  string opt_bind = 1 [(grpc.federation.field).by = "'auto-bound'"];
+}
+
 message GetPostResponse {
   option (.grpc.federation.message) = {
     def { name: "opt_int" by: "7" }
     def { name: "opt_color" by: "org.federation.Color.value('COLOR_RED')" }
+    def { name: "bind_source" message { name: "BindSource" } autobind: true }
   };
   optional int64 opt_int = 1 [(grpc.federation.field).by = "opt_int"];
   optional Color opt_color = 2 [(grpc.federation.field).by = "opt_color"];
   optional SubMessage opt_msg = 3 [(grpc.federation.field).custom_resolver = true];
   optional string opt_id = 4 [(grpc.federation.field).by = "$.id"];
   optional bytes opt_bytes = 5 [(grpc.federation.field).by = "b'abc'"];
+  optional string opt_bind = 6;
 }

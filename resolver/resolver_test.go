@@ -4662,6 +4662,22 @@ func TestOptional(t *testing.T) {
 				Build(t),
 		).
 		AddMessage(
+			testutil.NewMessageBuilder("BindSourceArgument").
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("BindSource").
+				AddFieldWithRule("opt_bind", resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("'auto-bound'", resolver.StringType)).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "BindSourceArgument")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
 			testutil.NewMessageBuilder("GetPostResponse").
 				AddProto3OptionalFieldWithRule(
 					"opt_int",
@@ -4692,6 +4708,15 @@ func TestOptional(t *testing.T) {
 					resolver.BytesType,
 					testutil.NewFieldRuleBuilder(resolver.NewByValue("b'abc'", resolver.BytesType)).Build(t),
 				).
+				AddProto3OptionalFieldWithRule(
+					"opt_bind",
+					resolver.StringType,
+					&resolver.FieldRule{
+						AutoBindField: &resolver.AutoBindField{
+							Field: ref.Field(t, "org.federation", "BindSource", "opt_bind"),
+						},
+					},
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(
@@ -4708,12 +4733,25 @@ func TestOptional(t *testing.T) {
 								SetBy(testutil.NewCELValueBuilder("org.federation.Color.value('COLOR_RED')", resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false)).Build(t)).
 								Build(t),
 						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("bind_source").
+								SetAutoBind(true).
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "BindSource")).
+										Build(t),
+								).
+								Build(t),
+						).
 						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
 						SetDependencyGraph(
 							testutil.NewDependencyGraphBuilder().
 								Add(ref.Message(t, "org.federation", "GetPostRequest")).
 								Build(t),
 						).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("bind_source")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("opt_color")).
 						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("opt_int")).
 						Build(t),
@@ -4724,6 +4762,7 @@ func TestOptional(t *testing.T) {
 			testutil.NewServiceBuilder("FederationService").
 				AddMethod("GetPost", ref.Message(t, "org.federation", "GetPostRequest"), ref.Message(t, "org.federation", "GetPostResponse"), nil).
 				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
+				AddMessage(ref.Message(t, "org.federation", "BindSource"), ref.Message(t, "org.federation", "BindSourceArgument")).
 				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
 				Build(t),
 		)

@@ -115,6 +115,7 @@ func TestFederation(t *testing.T) {
 		OptMsg_2: &federation.SubMessage{Value: "world"},
 		OptId:    proto.String("test"),
 		OptBytes: []byte("abc"),
+		OptBind:  proto.String("auto-bound"),
 	}
 	if diff := cmp.Diff(res, want, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
