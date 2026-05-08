@@ -1907,10 +1907,11 @@ type OneofReturnField struct {
 }
 
 type CELReturnField struct {
-	CEL          *resolver.CELValue
-	SetterParam  *SetterParam
-	ProtoComment string
-	Type         string
+	CEL            *resolver.CELValue
+	SetterParam    *SetterParam
+	ProtoComment   string
+	Type           string
+	Proto3Optional bool
 }
 
 type SetterParam struct {
@@ -2579,7 +2580,8 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 			Prefix:         "// ",
 			IndentSpaceNum: 2,
 		}),
-		Type: typ,
+		Type:           typ,
+		Proto3Optional: field.ProtoNeedsPointerWrap(),
 		SetterParam: &SetterParam{
 			Name:             util.ToPublicGoVariable(field.Name),
 			Value:            "v",

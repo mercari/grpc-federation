@@ -44,4 +44,8 @@ message GetPostResponse {
   optional string opt_id = 4 [(grpc.federation.field).by = "$.id"];
   optional bytes opt_bytes = 5 [(grpc.federation.field).by = "b'abc'"];
   optional string opt_bind = 6;
+  // opt_none uses optional.none() so the field is left unset (nil pointer).
+  optional int64 opt_none = 7 [(grpc.federation.field).by = "false ? optional.of(opt_int) : optional.none()"];
+  // opt_some uses optional.of() so the field is set to the given value.
+  optional int64 opt_some = 8 [(grpc.federation.field).by = "true ? optional.of(opt_int) : optional.none()"];
 }

@@ -116,6 +116,8 @@ func TestFederation(t *testing.T) {
 		OptId:    proto.String("test"),
 		OptBytes: []byte("abc"),
 		OptBind:  proto.String("auto-bound"),
+		OptNone:  nil,             // optional.none() → field stays nil
+		OptSome:  proto.Int64(42), // optional.of(42) → field is set
 	}
 	if diff := cmp.Diff(res, want, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},
