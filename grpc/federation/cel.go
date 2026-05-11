@@ -1023,10 +1023,10 @@ func ToGRPCError(ctx context.Context, err error) *grpcfedcel.Error {
 }
 
 type SetCELValueParam[T any] struct {
-	Value          localValue
-	Expr           string
-	CacheIndex     int
-	Setter         func(T) error
+	Value      localValue
+	Expr       string
+	CacheIndex int
+	Setter     func(T) error
 	// Proto3Optional instructs SetCELValue to leave the field unset (nil)
 	// when the expression evaluates to optional.none(). Only meaningful for
 	// proto3 optional scalar/enum fields whose Go type is a pointer.
