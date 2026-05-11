@@ -394,12 +394,13 @@ type Oneof struct {
 }
 
 type Field struct {
-	Name    string
-	Desc    *descriptorpb.FieldDescriptorProto
-	Type    *Type
-	Oneof   *Oneof
-	Rule    *FieldRule
-	Message *Message
+	Name           string
+	Desc           *descriptorpb.FieldDescriptorProto
+	Type           *Type
+	Oneof          *Oneof
+	Rule           *FieldRule
+	Message        *Message
+	Proto3Optional bool
 }
 
 type OneofField struct {

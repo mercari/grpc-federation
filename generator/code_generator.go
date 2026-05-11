@@ -1914,13 +1914,14 @@ type CELReturnField struct {
 }
 
 type SetterParam struct {
-	Name           string
-	Value          string
-	RequiredCast   bool
-	CastFunc       string
-	EnumSelector   *EnumSelectorSetterParam
-	OneofTypeName  string
-	OneofFieldName string
+	Name             string
+	Value            string
+	RequiredCast     bool
+	CastFunc         string
+	EnumSelector     *EnumSelectorSetterParam
+	OneofTypeName    string
+	OneofFieldName   string
+	NeedsPointerWrap bool
 }
 
 type EnumSelectorSetterParam struct {
@@ -1944,11 +1945,12 @@ type CustomResolverReturnField struct {
 }
 
 type AutoBindReturnField struct {
-	Name         string
-	Value        string
-	RequiredCast bool
-	CastFunc     string
-	ProtoComment string
+	Name             string
+	Value            string
+	RequiredCast     bool
+	CastFunc         string
+	ProtoComment     string
+	NeedsPointerWrap bool
 }
 
 func (f *OneofReturnField) HasFieldOneofRule() bool {
@@ -2518,11 +2520,12 @@ func (m *Message) autoBindFieldToReturnField(field *resolver.Field, autoBindFiel
 		castFunc = castFuncName(fromType, field.Type)
 	}
 	return &AutoBindReturnField{
-		Name:         fieldName,
-		Value:        value,
-		RequiredCast: requiredCast,
-		CastFunc:     castFunc,
-		ProtoComment: fmt.Sprintf(`// { name: %q, autobind: true }`, name),
+		Name:             fieldName,
+		Value:            value,
+		RequiredCast:     requiredCast,
+		CastFunc:         castFunc,
+		ProtoComment:     fmt.Sprintf(`// { name: %q, autobind: true }`, name),
+		NeedsPointerWrap: field.ProtoNeedsPointerWrap(),
 	}, nil
 }
 
@@ -2578,11 +2581,12 @@ func (m *Message) celValueToReturnField(field *resolver.Field, value *resolver.C
 		}),
 		Type: typ,
 		SetterParam: &SetterParam{
-			Name:         util.ToPublicGoVariable(field.Name),
-			Value:        "v",
-			RequiredCast: requiredCast,
-			EnumSelector: enumSelectorSetterParam,
-			CastFunc:     castFuncName(fromType, toType),
+			Name:             util.ToPublicGoVariable(field.Name),
+			Value:            "v",
+			RequiredCast:     requiredCast,
+			EnumSelector:     enumSelectorSetterParam,
+			CastFunc:         castFuncName(fromType, toType),
+			NeedsPointerWrap: field.ProtoNeedsPointerWrap(),
 		},
 	}
 }

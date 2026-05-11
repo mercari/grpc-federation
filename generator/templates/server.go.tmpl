@@ -860,7 +860,16 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	{{- if .NeedsPointerWrap }}
+	ret.{{ .Name }} = &{{ toLocalVariable .Name }}
+	{{- else }}
 	ret.{{ .Name }} = {{ toLocalVariable .Name }}
+	{{- end }}
+}
+{{- else if .NeedsPointerWrap }}
+{
+	{{ toLocalVariable .Name }} := {{ .Value }} {{ .ProtoComment }}
+	ret.{{ .Name }} = &{{ toLocalVariable .Name }}
 }
 {{- else }}
 ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
@@ -872,13 +881,19 @@ ret.{{ .Name }} = {{ .Value }} {{ .ProtoComment }}
 {{- $v := .Value }}
 {{- $enumSelector := .EnumSelector }}
 {{- if $enumSelector }}
-{{- template "setReturnValueByEnumSelector" (map "Name" $name "EnumSelector" $enumSelector ) }}
+{{- template "setReturnValueByEnumSelector" (map "Name" $name "EnumSelector" $enumSelector "NeedsPointerWrap" .NeedsPointerWrap) }}
 {{- else if .RequiredCast }}
 {{ toLocalVariable $name }}, err := s.{{ .CastFunc }}({{ $v }})
 if err != nil {
 	return err
 }
+{{- if .NeedsPointerWrap }}
+ret.{{ $name }} = &{{ toLocalVariable $name }}
+{{- else }}
 ret.{{ $name }} = {{ toLocalVariable $name }}
+{{- end }}
+{{- else if .NeedsPointerWrap }}
+ret.{{ $name }} = &{{ $v }}
 {{- else }}
 ret.{{ $name }} = {{ $v }}
 {{- end }}
@@ -889,5 +904,9 @@ ret.{{ $name }} = {{ $v }}
 {{- $enumSelector := .EnumSelector }}
 var {{ $dst }} {{ $enumSelector.Type }}
 {{- template "setEnumValueByEnumSelector" (map "Dst" $dst "EnumSelector" $enumSelector) }}
+{{- if .NeedsPointerWrap }}
+ret.{{ .Name }} = &{{ $dst }}
+{{- else }}
 ret.{{ .Name }} = {{ $dst }}
+{{- end }}
 {{- end -}}

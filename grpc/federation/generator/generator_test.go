@@ -31,6 +31,7 @@ func TestRoundTrip(t *testing.T) {
 		"map",
 		"condition",
 		"switch",
+		"optional",
 	}
 	for _, test := range tests {
 		test := test

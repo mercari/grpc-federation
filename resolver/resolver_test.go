@@ -4626,3 +4626,162 @@ func TestSwitch(t *testing.T) {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }
+
+func TestOptional(t *testing.T) {
+	t.Parallel()
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	fileName := filepath.Join(testdataDir, "optional.proto")
+	fb := testutil.NewFileBuilder(fileName)
+	ref := testutil.NewBuilderReferenceManager(getUserProtoBuilder(t), getPostProtoBuilder(t), fb)
+
+	fb.SetPackage("org.federation").
+		SetGoPackage("example/federation", "federation").
+		AddEnum(
+			testutil.NewEnumBuilder("Color").
+				AddValue("COLOR_UNSPECIFIED").
+				AddValue("COLOR_RED").
+				AddValue("COLOR_GREEN").
+				AddValue("COLOR_BLUE").
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostRequest").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponseArgument").
+				AddField("id", resolver.StringType).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("SubMessage").
+				AddFieldWithRule("value", resolver.StringType,
+					&resolver.FieldRule{Value: &resolver.Value{CEL: &resolver.CELValue{Expr: "$.value"}}},
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("BindSourceArgument").
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("BindSource").
+				AddFieldWithRule("opt_bind", resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("'auto-bound'", resolver.StringType)).Build(t),
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						SetMessageArgument(ref.Message(t, "org.federation", "BindSourceArgument")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddMessage(
+			testutil.NewMessageBuilder("GetPostResponse").
+				AddProto3OptionalFieldWithRule(
+					"opt_int",
+					resolver.Int64Type,
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "GetPostResponseArgument"), resolver.Int64Type, "opt_int").Build(t),
+					).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_color",
+					resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false),
+					testutil.NewFieldRuleBuilder(
+						testutil.NewNameReferenceValueBuilder(ref.Type(t, "org.federation", "GetPostResponseArgument"), resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false), "opt_color").Build(t),
+					).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_msg",
+					resolver.NewMessageType(ref.Message(t, "org.federation", "SubMessage"), false),
+					testutil.NewFieldRuleBuilder(nil).SetCustomResolver(true).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_id",
+					resolver.StringType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("$.id", resolver.StringType)).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_bytes",
+					resolver.BytesType,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("b'abc'", resolver.BytesType)).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_bind",
+					resolver.StringType,
+					&resolver.FieldRule{
+						AutoBindField: &resolver.AutoBindField{
+							Field: ref.Field(t, "org.federation", "BindSource", "opt_bind"),
+						},
+					},
+				).
+				SetRule(
+					testutil.NewMessageRuleBuilder().
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("opt_int").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("7", resolver.Int64Type).Build(t)).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("opt_color").
+								SetUsed(true).
+								SetBy(testutil.NewCELValueBuilder("org.federation.Color.value('COLOR_RED')", resolver.NewEnumType(ref.Enum(t, "org.federation", "Color"), false)).Build(t)).
+								Build(t),
+						).
+						AddVariableDefinition(
+							testutil.NewVariableDefinitionBuilder().
+								SetName("bind_source").
+								SetAutoBind(true).
+								SetUsed(true).
+								SetMessage(
+									testutil.NewMessageExprBuilder().
+										SetMessage(ref.Message(t, "org.federation", "BindSource")).
+										Build(t),
+								).
+								Build(t),
+						).
+						SetMessageArgument(ref.Message(t, "org.federation", "GetPostResponseArgument")).
+						SetDependencyGraph(
+							testutil.NewDependencyGraphBuilder().
+								Add(ref.Message(t, "org.federation", "GetPostRequest")).
+								Build(t),
+						).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("bind_source")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("opt_color")).
+						AddVariableDefinitionGroup(testutil.NewVariableDefinitionGroupByName("opt_int")).
+						Build(t),
+				).
+				Build(t),
+		).
+		AddService(
+			testutil.NewServiceBuilder("FederationService").
+				AddMethod("GetPost", ref.Message(t, "org.federation", "GetPostRequest"), ref.Message(t, "org.federation", "GetPostResponse"), nil).
+				SetRule(testutil.NewServiceRuleBuilder().Build(t)).
+				AddMessage(ref.Message(t, "org.federation", "BindSource"), ref.Message(t, "org.federation", "BindSourceArgument")).
+				AddMessage(ref.Message(t, "org.federation", "GetPostResponse"), ref.Message(t, "org.federation", "GetPostResponseArgument")).
+				Build(t),
+		)
+
+	federationFile := fb.Build(t)
+	federationService := federationFile.Services[0]
+
+	r := resolver.New(testutil.Compile(t, fileName), resolver.ImportPathOption(testdataDir))
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("failed to get files. expected 1 but got %d", len(result.Files))
+	}
+	if len(result.Files[0].Services) != 1 {
+		t.Fatalf("failed to get services. expected 1 but got %d", len(result.Files[0].Services))
+	}
+	if diff := cmp.Diff(result.Files[0].Services[0], federationService, testutil.ResolverCmpOpts()...); diff != "" {
+		t.Errorf("(-got, +want)\n%s", diff)
+	}
+}

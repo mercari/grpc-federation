@@ -1283,7 +1283,13 @@ func (r *Resolver) resolveMessage(ctx *context, pkg *Package, name string, build
 		oneofs = append(oneofs, oneof)
 	}
 	msg.Fields = r.resolveFields(ctx, msgDef.GetField(), oneofs, builder)
-	msg.Oneofs = oneofs
+	var nonEmptyOneofs []*Oneof
+	for _, oneof := range oneofs {
+		if len(oneof.Fields) > 0 {
+			nonEmptyOneofs = append(nonEmptyOneofs, oneof)
+		}
+	}
+	msg.Oneofs = nonEmptyOneofs
 	return msg
 }
 
@@ -1666,10 +1672,22 @@ func (r *Resolver) validateMessageFields(ctx *context, msg *Message, builder *so
 			)
 			continue
 		}
-		if field.HasMessageCustomResolver() || field.HasCustomResolver() {
+		if field.Type == nil {
 			continue
 		}
-		if field.Type == nil {
+		if field.HasMessageCustomResolver() || field.HasCustomResolver() {
+			// TODO: custom_resolver on proto3 optional scalar/enum fields is not yet supported.
+			// To support it, ReturnType() in code_generator.go needs to return a pointer type
+			// (e.g. *int64 instead of int64) when the field is Proto3Optional, and the
+			// setReturnValueByFieldCustomResolver template needs to handle the pointer assignment.
+			if field.HasCustomResolver() && field.ProtoNeedsPointerWrap() {
+				ctx.addError(
+					ErrWithLocation(
+						fmt.Sprintf(`%q field in %q message: custom_resolver is not supported on proto3 optional scalar/enum fields`, field.Name, msg.FQDN()),
+						builder.Location(),
+					),
+				)
+			}
 			continue
 		}
 		rule := field.Rule
@@ -3524,7 +3542,9 @@ func (r *Resolver) resolveFields(ctx *context, fieldsDef []*descriptorpb.FieldDe
 			fieldBuilder *source.FieldBuilder
 			oneof        *Oneof
 		)
-		if fieldDef.OneofIndex != nil {
+		// A Proto3 optional fields is converted into a oneof field (with a hidden oneof type descriptor) by the protoc-gen-go compiler.
+		// But it should be treated as a regular, non-oneof field for the purposes of grpc-federation.
+		if fieldDef.OneofIndex != nil && !fieldDef.GetProto3Optional() {
 			oneof = oneofs[fieldDef.GetOneofIndex()]
 			fieldBuilder = builder.WithOneof(oneof.Name).WithField(fieldDef.GetName())
 		} else {
@@ -3551,10 +3571,11 @@ func (r *Resolver) resolveField(ctx *context, fieldDef *descriptorpb.FieldDescri
 		return nil
 	}
 	field := &Field{
-		Name:    fieldDef.GetName(),
-		Desc:    fieldDef,
-		Type:    typ,
-		Message: ctx.msg,
+		Name:           fieldDef.GetName(),
+		Desc:           fieldDef,
+		Type:           typ,
+		Message:        ctx.msg,
+		Proto3Optional: fieldDef.GetProto3Optional(),
 	}
 	if oneof != nil {
 		oneof.Fields = append(oneof.Fields, field)
