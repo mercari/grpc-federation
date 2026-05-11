@@ -854,7 +854,9 @@ func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
 }
 
 // evalCEL is the internal implementation of EvalCEL. The second return value
-// is true when the CEL expression evaluated to optional.none().
+// reports whether the CEL expression evaluated to optional.none(); this is
+// consumed by SetCELValue to leave proto3 optional fields unset. All other
+// callers use EvalCEL and discard the bool.
 func evalCEL(ctx context.Context, req *EvalCELRequest) (any, bool, error) {
 	if celCacheMap := getCELCacheMap(ctx); celCacheMap == nil {
 		return nil, false, ErrCELCacheMap
@@ -879,10 +881,15 @@ func evalCEL(ctx context.Context, req *EvalCELRequest) (any, bool, error) {
 	opt, ok := out.(*celtypes.Optional)
 	if ok {
 		if opt == celtypes.OptionalNone {
+			if req.OutType == nil {
+				return nil, true, nil
+			}
 			return reflect.Zero(req.OutType).Interface(), true, nil
 		}
 		out = opt.GetValue()
 	}
+	// CEL null is a typed zero value, not field absence; wasNone stays false
+	// so callers always assign the zero value rather than skipping the setter.
 	if _, ok := out.(celtypes.Null); ok {
 		if req.OutType == nil {
 			return nil, false, nil

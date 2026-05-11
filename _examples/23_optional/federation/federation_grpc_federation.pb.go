@@ -548,6 +548,62 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
+	// (grpc.federation.field).by = "$.id == 'nonexistent' ? optional.of(opt_int) : optional.none()"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:          value,
+		Expr:           `$.id == 'nonexistent' ? optional.of(opt_int) : optional.none()`,
+		CacheIndex:     12,
+		Proto3Optional: true,
+		Setter: func(v int64) error {
+			ret.OptNoneDynamic = &v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "$.id != ” ? optional.of(opt_int) : optional.none()"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:          value,
+		Expr:           `$.id != '' ? optional.of(opt_int) : optional.none()`,
+		CacheIndex:     13,
+		Proto3Optional: true,
+		Setter: func(v int64) error {
+			ret.OptSomeDynamic = &v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "optional.of(0)"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
+		Value:          value,
+		Expr:           `optional.of(0)`,
+		CacheIndex:     14,
+		Proto3Optional: true,
+		Setter: func(v int64) error {
+			ret.OptSomeZero = &v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+	// (grpc.federation.field).by = "false ? optional.of(opt_color) : optional.none()"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Color]{
+		Value:          value,
+		Expr:           `false ? optional.of(opt_color) : optional.none()`,
+		CacheIndex:     15,
+		Proto3Optional: true,
+		Setter: func(v Color) error {
+			ret.OptNoneColor = &v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
 
 	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GetPostResponse", slog.Any("org.federation.GetPostResponse", s.logvalue_Org_Federation_GetPostResponse(ret)))
 	return ret, nil
@@ -576,7 +632,7 @@ func (s *FederationService) resolve_Org_Federation_SubMessage(ctx context.Contex
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `$.value`,
-		CacheIndex: 12,
+		CacheIndex: 16,
 		Setter: func(v string) error {
 			ret.Value = v
 			return nil
@@ -646,6 +702,10 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 		slog.String("opt_bind", v.GetOptBind()),
 		slog.Int64("opt_none", v.GetOptNone()),
 		slog.Int64("opt_some", v.GetOptSome()),
+		slog.Int64("opt_none_dynamic", v.GetOptNoneDynamic()),
+		slog.Int64("opt_some_dynamic", v.GetOptSomeDynamic()),
+		slog.Int64("opt_some_zero", v.GetOptSomeZero()),
+		slog.String("opt_none_color", s.logvalue_Org_Federation_Color(v.GetOptNoneColor()).String()),
 	)
 }
 

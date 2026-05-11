@@ -118,6 +118,13 @@ func TestFederation(t *testing.T) {
 		OptBind:  proto.String("auto-bound"),
 		OptNone:  nil,             // optional.none() → field stays nil
 		OptSome:  proto.Int64(42), // optional.of(42) → field is set
+		// Dynamic-condition coverage: condition evaluated at runtime.
+		OptNoneDynamic: nil,             // id=="nonexistent" is false at runtime → none
+		OptSomeDynamic: proto.Int64(42), // id!="" is true at runtime → of(42)
+		// Zero-value coverage: optional.of(0) must set the field, not leave it nil.
+		OptSomeZero: proto.Int64(0),
+		// Enum type coverage: optional.none() on a Color field → nil.
+		OptNoneColor: nil,
 	}
 	if diff := cmp.Diff(res, want, cmpopts.IgnoreUnexported(
 		federation.GetPostResponse{},

@@ -56,4 +56,12 @@ message GetPostResponse {
   optional int64 opt_none = 8 [(grpc.federation.field).by = "false ? optional.of(opt_int) : optional.none()"];
   // opt_some: optional.of() sets the field to the given value.
   optional int64 opt_some = 9 [(grpc.federation.field).by = "true ? optional.of(opt_int) : optional.none()"];
+  // opt_none_dynamic: runtime condition evaluates to false → nil.
+  optional int64 opt_none_dynamic = 10 [(grpc.federation.field).by = "$.id == 'nonexistent' ? optional.of(opt_int) : optional.none()"];
+  // opt_some_dynamic: runtime condition evaluates to true → field set.
+  optional int64 opt_some_dynamic = 11 [(grpc.federation.field).by = "$.id != '' ? optional.of(opt_int) : optional.none()"];
+  // opt_some_zero: optional.of(0) must set the field to *0, not leave it nil.
+  optional int64 opt_some_zero = 12 [(grpc.federation.field).by = "optional.of(0)"];
+  // opt_none_color: enum type with optional.none() leaves the field nil.
+  optional Color opt_none_color = 13 [(grpc.federation.field).by = "false ? optional.of(opt_color) : optional.none()"];
 }
