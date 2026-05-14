@@ -1,5 +1,8 @@
 //go:build update_testdata
 
+// Provides TestUpdateTestdata to regenerate expected_*.go files for the test cases listed in the `cases` variable.
+// Run with: go test ./generator/... -run TestUpdateTestdata -tags update_testdata
+
 package generator_test
 
 import (
@@ -14,8 +17,6 @@ import (
 	"github.com/mercari/grpc-federation/resolver"
 )
 
-// TestUpdateTestdata regenerates expected_*.go files for the listed test cases.
-// Run with: go test ./generator/... -run TestUpdateTestdata -tags update_testdata
 func TestUpdateTestdata(t *testing.T) {
 	cases := []string{"optional"}
 	for _, name := range cases {
