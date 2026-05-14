@@ -842,6 +842,9 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.CEL.Expr }}`,
 	CacheIndex: {{ $msg.CELCacheIndex }},
+	{{- if $value.Proto3Optional }}
+	Proto3Optional: true,
+	{{- end }}
 	Setter: func(v {{ $value.Type }}) error {
 		{{- template "setReturnValueBySetter" $value.SetterParam }}
 		return nil

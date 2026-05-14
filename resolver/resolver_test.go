@@ -4717,6 +4717,16 @@ func TestOptional(t *testing.T) {
 						},
 					},
 				).
+				AddProto3OptionalFieldWithRule(
+					"opt_none",
+					resolver.Int64Type,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("false ? optional.of(opt_int) : optional.none()", resolver.Int64Type)).Build(t),
+				).
+				AddProto3OptionalFieldWithRule(
+					"opt_some",
+					resolver.Int64Type,
+					testutil.NewFieldRuleBuilder(resolver.NewByValue("true ? optional.of(opt_int) : optional.none()", resolver.Int64Type)).Build(t),
+				).
 				SetRule(
 					testutil.NewMessageRuleBuilder().
 						AddVariableDefinition(

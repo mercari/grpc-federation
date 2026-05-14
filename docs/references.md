@@ -1673,6 +1673,12 @@ If a message with this option has a field that is not present in the message spe
 `by` used to refer to a variable or message argument defined in a `grpc.federation.message` option by [CEL](./cel.md).
 You need to use `$.` to refer to the message argument.
 
+If your field is `optional`, you can use `by` to assign a nil value to it (i.e. leave the field unset). Note that the type-checking for the expression must produce a type compatible with the field type, e.g.
+
+```proto
+optional int64 optional_int = 1 [(grpc.federation.field).by = "false ? optional.of(1) : optional.none()"];
+```
+
 ## (grpc.federation.field).oneof
 
 `oneof` used to directly assign a value to a field defined by `oneof`.

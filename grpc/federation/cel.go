@@ -849,11 +849,20 @@ type EvalCELRequest struct {
 }
 
 func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
+	v, _, err := evalCEL(ctx, req)
+	return v, err
+}
+
+// evalCEL is the internal implementation of EvalCEL. The second return value
+// reports whether the CEL expression evaluated to optional.none(); this is
+// consumed by SetCELValue to leave proto3 optional fields unset. All other
+// callers use EvalCEL and discard the bool.
+func evalCEL(ctx context.Context, req *EvalCELRequest) (any, bool, error) {
 	if celCacheMap := getCELCacheMap(ctx); celCacheMap == nil {
-		return nil, ErrCELCacheMap
+		return nil, false, ErrCELCacheMap
 	}
 	if req.CacheIndex == 0 {
-		return nil, ErrCELCacheIndex
+		return nil, false, ErrCELCacheIndex
 	}
 
 	req.Value.rlock()
@@ -863,29 +872,35 @@ func EvalCEL(ctx context.Context, req *EvalCELRequest) (any, error) {
 
 	program, err := createCELProgram(ctx, req.Expr, req.CacheIndex, envOpts)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	out, _, err := program.ContextEval(ctx, evalValues)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	opt, ok := out.(*celtypes.Optional)
 	if ok {
 		if opt == celtypes.OptionalNone {
-			return reflect.Zero(req.OutType).Interface(), nil
+			if req.OutType == nil {
+				return nil, true, nil
+			}
+			return reflect.Zero(req.OutType).Interface(), true, nil
 		}
 		out = opt.GetValue()
 	}
+	// CEL null is a typed zero value, not field absence; wasNone stays false
+	// so callers always assign the zero value rather than skipping the setter.
 	if _, ok := out.(celtypes.Null); ok {
 		if req.OutType == nil {
-			return nil, nil
+			return nil, false, nil
 		}
-		return reflect.Zero(req.OutType).Interface(), nil
+		return reflect.Zero(req.OutType).Interface(), false, nil
 	}
 	if req.OutType != nil {
-		return out.ConvertToNative(req.OutType)
+		v, err := out.ConvertToNative(req.OutType)
+		return v, false, err
 	}
-	return out.Value(), nil
+	return out.Value(), false, nil
 }
 
 func createCELProgram(ctx context.Context, expr string, cacheIndex int, envOpts []cel.EnvOption) (cel.Program, error) {
@@ -1012,11 +1027,15 @@ type SetCELValueParam[T any] struct {
 	Expr       string
 	CacheIndex int
 	Setter     func(T) error
+	// Proto3Optional instructs SetCELValue to leave the field unset (nil)
+	// when the expression evaluates to optional.none(). Only meaningful for
+	// proto3 optional scalar/enum fields whose Go type is a pointer.
+	Proto3Optional bool
 }
 
 func SetCELValue[T any](ctx context.Context, param *SetCELValueParam[T]) error {
 	var typ T
-	out, err := EvalCEL(ctx, &EvalCELRequest{
+	out, wasNone, err := evalCEL(ctx, &EvalCELRequest{
 		Value:      param.Value,
 		Expr:       param.Expr,
 		OutType:    reflect.TypeOf(typ),
@@ -1024,6 +1043,9 @@ func SetCELValue[T any](ctx context.Context, param *SetCELValueParam[T]) error {
 	})
 	if err != nil {
 		return err
+	}
+	if param.Proto3Optional && wasNone {
+		return nil
 	}
 
 	param.Value.lock()
