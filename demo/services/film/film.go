@@ -17,7 +17,7 @@ type FilmService struct {
 
 func NewFilmService() *FilmService {
 	return &FilmService{
-		cli:   swapi.NewClient(),
+		cli:   util.NewSwapiClient(),
 		cache: make(map[int64]*filmpb.Film),
 	}
 }

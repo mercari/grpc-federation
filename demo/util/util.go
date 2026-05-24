@@ -1,10 +1,25 @@
 package util
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strconv"
+
+	"github.com/peterhellberg/swapi"
 )
+
+// NewSwapiClient returns a swapi.Client that skips TLS verification.
+// Workaround for the expired swapi.dev certificate in this local demo.
+func NewSwapiClient() *swapi.Client {
+	hc := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+	return swapi.NewClient(swapi.HTTPClient(hc))
+}
 
 var (
 	personURLToIDRe   = regexp.MustCompile(`swapi.dev/api/people/(\d+)/`)

@@ -17,7 +17,7 @@ type PlanetService struct {
 
 func NewPlanetService() *PlanetService {
 	return &PlanetService{
-		cli:   swapi.NewClient(),
+		cli:   util.NewSwapiClient(),
 		cache: make(map[int64]*planetpb.Planet),
 	}
 }

@@ -17,7 +17,7 @@ type SpeciesService struct {
 
 func NewSpeciesService() *SpeciesService {
 	return &SpeciesService{
-		cli:   swapi.NewClient(),
+		cli:   util.NewSwapiClient(),
 		cache: make(map[int64]*speciespb.Species),
 	}
 }

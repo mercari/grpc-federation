@@ -17,7 +17,7 @@ type StarshipService struct {
 
 func NewStarshipService() *StarshipService {
 	return &StarshipService{
-		cli:   swapi.NewClient(),
+		cli:   util.NewSwapiClient(),
 		cache: make(map[int64]*starshippb.Starship),
 	}
 }
