@@ -83,6 +83,19 @@ type FederationServiceConfig struct {
 	// Resolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 	// If this interface is not provided, an error is returned during initialization.
 	Resolver FederationServiceResolver // required
+	// AdditionalCELOptions allows the caller to inject extra CEL environment options
+	// (for example, native Go cel.Function bindings) after the framework-provided
+	// options and CELPlugin EnvOpts have been registered.
+	//
+	// Because cel-go's FunctionDecl.AddOverload replaces the binding when an overload
+	// with the same overload ID and matching signature is re-declared, callers can
+	// use this hook to override functions already registered by a CEL WASM plugin
+	// with native Go implementations. This is useful when a plugin-registered
+	// function is purely in-memory (e.g. JWT parsing) and the per-process mutex
+	// serialization in CELPluginInstance.Call is undesirable.
+	//
+	// Default zero value (nil) is a no-op and preserves the existing behavior.
+	AdditionalCELOptions []grpcfed.CELEnvOption
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -214,6 +227,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.PostType", post.PostType_value, post.PostType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.Item.ItemType", user.Item_ItemType_value, user.Item_ItemType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.user.UserType", user.UserType_value, user.UserType_name)...)
+	celEnvOpts = append(celEnvOpts, cfg.AdditionalCELOptions...)
 	svc := &FederationService{
 		cfg:             cfg,
 		logger:          logger,

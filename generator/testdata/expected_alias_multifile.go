@@ -56,6 +56,19 @@ type FederationServiceConfig struct {
 	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
 	// If this interface is not provided, an error is returned during initialization.
 	Client FederationServiceClientFactory // required
+	// AdditionalCELOptions allows the caller to inject extra CEL environment options
+	// (for example, native Go cel.Function bindings) after the framework-provided
+	// options and CELPlugin EnvOpts have been registered.
+	//
+	// Because cel-go's FunctionDecl.AddOverload replaces the binding when an overload
+	// with the same overload ID and matching signature is re-declared, callers can
+	// use this hook to override functions already registered by a CEL WASM plugin
+	// with native Go implementations. This is useful when a plugin-registered
+	// function is purely in-memory (e.g. JWT parsing) and the per-process mutex
+	// serialization in CELPluginInstance.Call is undesirable.
+	//
+	// Default zero value (nil) is a no-op and preserves the existing behavior.
+	AdditionalCELOptions []grpcfed.CELEnvOption
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -172,6 +185,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.ExtraType", post1.ExtraType_value, post1.ExtraType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostContent.Category", post1.PostContent_Category_value, post1.PostContent_Category_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.post.v2.PostDataType", post1.PostDataType_value, post1.PostDataType_name)...)
+	celEnvOpts = append(celEnvOpts, cfg.AdditionalCELOptions...)
 	svc := &FederationService{
 		cfg:             cfg,
 		logger:          logger,
