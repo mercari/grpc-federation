@@ -622,7 +622,10 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 	relativePath := g.absPathToRelativePath[r.protoPath]
 	pathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 
-	result, err := resolver.New(r.req.GetProtoFile(), resolver.ImportPathOption(opt.Path.ImportPaths...)).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(),
+		resolver.ImportPathOption(opt.Path.ImportPaths...),
+		resolver.CELLibrariesOption(g.cfg.CELLibraries...),
+	).Resolve()
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +650,10 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 }
 
 func (g *Generator) createGRPCFederationFiles(r *PluginRequest) ([]*resolver.File, error) {
-	result, err := resolver.New(r.req.GetProtoFile(), resolver.ImportPathOption(g.cfg.Imports...)).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(),
+		resolver.ImportPathOption(g.cfg.Imports...),
+		resolver.CELLibrariesOption(g.cfg.CELLibraries...),
+	).Resolve()
 	if err != nil {
 		return nil, err
 	}

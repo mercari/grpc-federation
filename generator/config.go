@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/google/cel-go/cel"
 )
 
 type Config struct {
@@ -24,6 +25,8 @@ type Config struct {
 	AutoProtocGenGo *bool `yaml:"autoProtocGenGo"`
 	// AutoProtocGenGoGRPC automatically run protoc-gen-go-grpc at the time of editing proto. default is true.
 	AutoProtocGenGoGRPC *bool `yaml:"autoProtocGenGoGrpc"`
+	// CELLibraries registers CEL external libraries with the codegen-time resolver so that DSL expressions referring to library-provided functions type-check.
+	CELLibraries []cel.SingletonLibrary `yaml:"-"`
 }
 
 type PluginConfig struct {
