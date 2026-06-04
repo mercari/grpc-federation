@@ -1,0 +1,777 @@
+syntax = "proto3";
+
+package grpc.federation;
+
+import "google/protobuf/descriptor.proto";
+import "google/rpc/code.proto";
+import "google/rpc/error_details.proto";
+import "grpc/federation/private.proto";
+import "grpc/federation/time.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation;federation";
+
+extend google.protobuf.FileOptions {
+  FileRule file = 1187;
+}
+
+extend google.protobuf.ServiceOptions {
+  ServiceRule service = 1187;
+}
+
+extend google.protobuf.MethodOptions {
+  MethodRule method = 1187;
+}
+
+extend google.protobuf.MessageOptions {
+  MessageRule message = 1187;
+}
+
+extend google.protobuf.FieldOptions {
+  FieldRule field = 1187;
+}
+
+extend google.protobuf.EnumOptions {
+  EnumRule enum = 1187;
+}
+
+extend google.protobuf.EnumValueOptions {
+  EnumValueRule enum_value = 1187;
+}
+
+extend google.protobuf.OneofOptions {
+  OneofRule oneof = 1187;
+}
+
+message FileRule {
+  CELPlugin plugin = 1;
+  // import can be used to resolve methods, messages, etc. that are referenced in gRPC Federation rules.
+  repeated string import = 2;
+}
+
+message EnumRule {
+  // alias mapping between enums defined in other packages and enums defined on the federation service side.
+  // The alias is the FQDN ( <package-name>.<enum-name> ) to the enum.
+  // If this definition exists, type conversion is automatically performed before the enum value assignment operation.
+  // If a enum with this option has a value that is not present in the enum specified by alias, and the alias option is not specified for that value, an error is occurred.
+  // You can specify multiple aliases. In that case, only values common to all aliases will be considered.
+  // Specifying a value that is not included in either alias will result in an error.
+  repeated string alias = 1;
+}
+
+message EnumValueRule {
+  // specifies the default value of the enum.
+  // All values other than those specified in alias will be default values.
+  optional bool default = 1;
+  // alias can be used when alias is specified in grpc.federation.enum option,
+  // and specifies the value name to be referenced among the enums specified in alias of enum option.
+  // multiple value names can be specified for alias.
+  repeated string alias = 2;
+
+  // attr is used to hold multiple name-value pairs corresponding to an enum value.
+  // The values specified by the name must be consistently specified for all enum values.
+  // The values stored using this feature can be retrieved using the `attr()` method of the enum API.
+  repeated EnumValueAttribute attr = 3;
+
+  // noalias exclude from the target of alias.
+  // This option cannot be specified simultaneously with `default` or `alias`.
+  optional bool noalias = 4;
+}
+
+message EnumValueAttribute {
+  // name is the attribute key.
+  // This value is used to search for values using the `attr(<name>)` method.
+  string name = 1;
+  // value represents the value corresponding to `name`.
+  string value = 2;
+}
+
+message OneofRule {}
+
+// ServiceRule define gRPC Federation rules for the service.
+message ServiceRule {
+  // env defines the environment variable.
+  Env env = 1;
+  // var defines the service-level variables.
+  repeated ServiceVariable var = 2;
+}
+
+// Env is used when setting environment variables.
+// There are two ways to configure it.
+message Env {
+  // var is used to directly list environment variables.
+  repeated EnvVar var = 1;
+  // message is used to reference an already defined Protocol Buffers' message for defining environment variables.
+  // If you want to set detailed options for the fields of the message, use the `env` option in FieldRule.
+  string message = 2;
+}
+
+// ServiceVariable define variables at the service level.
+// This definition is executed at server startup, after the initialization of Env.
+// The defined variables can be used across all messages that the service depends on.
+message ServiceVariable {
+  // name is a variable name.
+  // This name can be referenced in all CELs related to the service by using `grpc.federation.var.` prefix.
+  optional string name = 1;
+
+  // if specify the condition for evaluating expr.
+  // this value evaluated by CEL and it must return a boolean value.
+  // If the result of evaluation is `false`, the value assigned to name is the default value of the result of evaluation of `expr`.
+  optional string if = 2;
+
+  // expr specify the value to be assigned to name.
+  oneof expr {
+    // `by` evaluates with CEL.
+    string by = 11;
+
+    // map apply map operation for the specified repeated type.
+    MapExpr map = 12;
+
+    // message gets with message arguments.
+    MessageExpr message = 13;
+
+    // validation defines the validation rule and message.
+    ServiceVariableValidationExpr validation = 14;
+
+    // enum gets with cel value.
+    EnumExpr enum = 15;
+
+    // switch provides conditional evaluation with multiple branches.
+    SwitchExpr switch = 16;
+  }
+}
+
+// ServiceVariableValidationExpr represents validation rule and error message.
+message ServiceVariableValidationExpr {
+  // if specifies condition in CEL. If the condition is true, it returns error.
+  // The return value must always be of type boolean.
+  string if = 1;
+  // message is a error message in CEL.
+  string message = 2;
+}
+
+// EnvVar represents an environment variable.
+message EnvVar {
+  // name is an environment variable name.
+  string name = 1;
+  // type is an environment variable type.
+  EnvType type = 2;
+  // option is an additional option for parsing environment variable.
+  optional EnvVarOption option = 3;
+}
+
+// TypeKind is primitive kind list.
+enum TypeKind {
+  // UNKNOWN represents unexpected value.
+  UNKNOWN = 0;
+  // STRING is used to convert the input value to `string` type.
+  STRING = 1;
+  // BOOL is used to convert the input value to `bool` type.
+  BOOL = 2;
+  // INT64 is used to convert the input value to `int64` type.
+  INT64 = 3;
+  // UINT64 is used to convert the input value to `uint64` type.
+  UINT64 = 4;
+  // DOUBLE is used to convert the input value to `double` type.
+  DOUBLE = 5;
+  // DURATION is used to convert the input value to the `google.protobuf.Duration` type.
+  DURATION = 6;
+}
+
+// EnvType represents type information for environment variable.
+message EnvType {
+  oneof type {
+    // kind is used when the type is a primitive type.
+    TypeKind kind = 1;
+    // repeated is used when the type is a repeated type.
+    EnvType repeated = 2;
+    // map is used when the type is a map type.
+    EnvMapType map = 3;
+  }
+}
+
+// EnvMapType represents map type.
+message EnvMapType {
+  // key represents map's key type.
+  EnvType key = 1;
+  // value represents map's value type.
+  EnvType value = 2;
+}
+
+// EnvVarOption represents additional option for environment variable.
+// The option work with the `envconfig` library in Go language.
+// For detailed specifications, please refer to the library's documentation ( https://pkg.go.dev/github.com/kelseyhightower/envconfig#section-readme ).
+message EnvVarOption {
+  // alternate use this option if you want to use an environment variable with a different name than the value specified in `EnvVar.name`.
+  optional string alternate = 1;
+  // default specify the value to use as a fallback if the specified environment variable is not found.
+  optional string default = 2;
+  // required require the environment variable to exist.
+  // If it does not exist, an error will occur at startup.
+  optional bool required = 3;
+  // ignored if ignored is true, it does nothing even if the environment variable exists.
+  optional bool ignored = 4;
+}
+
+message MethodRule {
+  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
+  // If you want to handle this error, you need to implement a custom error handler in Go.
+  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
+  optional string timeout = 1;
+  // response specify the name of the message you want to use to create the response value.
+  // If you specify a reserved type like `google.protobuf.Empty` as the response, you cannot define gRPC Federation options.
+  // In such cases, you can specify a separate message to create the response value.
+  // The specified response message must contain fields with the same names and types as all the fields in the original response.
+  optional string response = 2;
+}
+
+// MessageRule define gRPC Federation rules for the message.
+message MessageRule {
+  // def specify variables to be used in field binding by `grpc.federation.field` option.
+  repeated VariableDefinition def = 1;
+  // if custom_resolver is true, the resolver for this message is implemented by Go.
+  // If there are any values retrieved by resolver or messages, they are passed as arguments for custom resolver.
+  // Each field of the message returned by the custom resolver is automatically bound.
+  // If you want to change the binding process for a particular field, set `custom_resolver=true` option for that field.
+  optional bool custom_resolver = 2;
+  // alias mapping between messages defined in other packages and messages defined on the federation service side.
+  // The alias is the FQDN ( <package-name>.<message-name> ) to the message.
+  // If this definition exists, type conversion is automatically performed before the field assignment operation.
+  // If a message with this option has a field that is not present in the message specified by alias, and the alias option is not specified for that field, an error is occurred.
+  // You can specify multiple aliases. In that case, only fields common to all aliases will be considered.
+  // Specifying a field that is not included in either alias will result in an error.
+  repeated string alias = 3;
+}
+
+// VariableDefinition represents variable definition.
+message VariableDefinition {
+  // name is a variable name.
+  // This name can be referenced in all CELs defined after itself in the same message.
+  // It can also be referenced in `grpc.federation.field` option.
+  optional string name = 1;
+
+  // if specify the condition for evaluating expr.
+  // this value evaluated by CEL and it must return a boolean value.
+  // If the result of evaluation is `false`, the value assigned to name is the default value of the result of evaluation of `expr`.
+  optional string if = 2;
+
+  // autobind if the result value of `expr` is a message type,
+  // the value of a field with the same name and type as the field name of its own message is automatically assigned to the value of the field in the message.
+  // If multiple autobinds are used at the same message,
+  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
+  optional bool autobind = 3;
+
+  // expr specify the value to be assigned to name.
+  oneof expr {
+    // `by` evaluates with CEL.
+    string by = 11;
+
+    // map apply map operation for the specified repeated type.
+    MapExpr map = 12;
+
+    // message gets with message arguments.
+    MessageExpr message = 13;
+
+    // call specifies how to call gRPC method.
+    CallExpr call = 14;
+
+    // validation defines the validation rule and error.
+    ValidationExpr validation = 15;
+
+    // enum gets with cel value.
+    EnumExpr enum = 16;
+
+    // switch provides conditional evaluation with multiple branches.
+    SwitchExpr switch = 17;
+  }
+}
+
+// MapExpr apply map operation for the specified repeated type.
+message MapExpr {
+  // iterator define iterator variable.
+  // When evaluating CEL in `expr`, we can refer to the name defined in iterator.
+  Iterator iterator = 1;
+
+  // expr creates map elements using iterator variable.
+  oneof expr {
+    // `by` evaluates with CEL.
+    // this can refer to the variable declared by `iterator`.
+    string by = 11;
+    // message gets with message arguments, and it is made an element of the map.
+    // The result type of MapExpr is the repeated type of the specified message.
+    MessageExpr message = 12;
+    // enum creates enum value for each element of the map.
+    // The result type of MapExpr is the repeated type of the specified enum.
+    EnumExpr enum = 13;
+  }
+}
+
+// Iterator represents iterator variable.
+message Iterator {
+  // variable name.
+  string name = 1;
+  // src the value that will be the source for creating the iterator.
+  // src must be a repeated type.
+  string src = 2;
+}
+
+// MessageExpr represents dependent message.
+message MessageExpr {
+  // name specify the message name by FQDN. format is `<package-name>.<message-name>`.
+  // <package-name> can be omitted when referring to messages in the same package.
+  string name = 1;
+
+  // args specify the parameters needed to get the message. This is called the "message arguments".
+  repeated Argument args = 2;
+}
+
+// EnumExpr represents dependent enum.
+message EnumExpr {
+  // name specify the enum name by FQDN. format is `<package-name>.<enum-name>`.
+  // <package-name> can be omitted when referring to enum in the same package.
+  string name = 1;
+
+  // `by` evaluates with CEL.
+  string by = 2;
+}
+
+// CallExpr represents how to call gRPC method.
+message CallExpr {
+  // method specify the FQDN for the gRPC method. format is `<package-name>.<service-name>/<method-name>`.
+  string method = 1;
+  // request specify request parameters for the gRPC method.
+  repeated MethodRequest request = 2;
+  // the time to timeout. If the specified time period elapses, DEADLINE_EXCEEDED status is returned.
+  // If you want to handle this error, you need to implement a custom error handler in Go.
+  // The format is the same as Go's time.Duration format. See https://pkg.go.dev/time#ParseDuration.
+  optional string timeout = 3;
+  // retry specifies the retry policy if the method call fails.
+  optional RetryPolicy retry = 4;
+  // error evaluated when an error occurs during a method call.
+  // Multiple errors can be defined and are evaluated in the order in which they are described.
+  // If an error occurs while creating an gRPC status error, original error will be returned.
+  repeated GRPCError error = 5;
+  // option is the gRPC's call option (https://pkg.go.dev/google.golang.org/grpc#CallOption).
+  optional GRPCCallOption option = 6;
+  // metadata specify outgoing metadata with CEL value.
+  // The specified type must always be of type map<string, repeated string>.
+  optional string metadata = 7;
+}
+
+// SwitchExpr represents a switch statement. At least one "case", and "default", must be defined. All
+// case.if expressions must evaluate to a boolean value. All case.by expressions, and default.by, must
+// evaluate to the same type (the return type of the switch).
+//
+// When executed, the case.if expressions are evaluated in order, and, for the first case whose
+// case.if expression evaluates to true, its case.by is evaluated to make the return value of the
+// SwitchExpr.
+// If no case.if evaluates to true, default.by is evaluated to make the return value.
+message SwitchExpr {
+  // Cases for the switch expression.
+  repeated SwitchCaseExpr case = 1;
+  // The default case, if none of the "case.if" expressions evaluate to true.
+  SwitchDefaultExpr default = 2;
+}
+
+// SwitchCaseExpr represents a single case for a switch expression.
+message SwitchCaseExpr {
+  // if specify the condition for evaluating expr.
+  // this value evaluated by CEL and it must return a boolean value.
+  string if = 1;
+  // def define variables in current scope.
+  repeated VariableDefinition def = 2;
+  // expr specify the value to return for the case.
+  oneof expr {
+    // `by` evaluates with CEL.
+    string by = 11;
+  }
+}
+
+// SwitchDefaultExpr represents the default case for a switch expression.
+message SwitchDefaultExpr {
+  // def define variables in current scope.
+  repeated VariableDefinition def = 1;
+  // expr specify the value to return for the default case.
+  oneof expr {
+    // `by` evaluates with CEL.
+    string by = 11;
+  }
+}
+
+// GRPCError create gRPC status value.
+message GRPCError {
+  // def define variables in current scope.
+  repeated VariableDefinition def = 1;
+  // if specifies condition in CEL. If the condition is true, it returns defined error information.
+  // If this field is omitted, it is always treated as 'true' and returns defined error information.
+  // The return value must always be of type boolean.
+  optional string if = 2;
+  // code is a gRPC status code.
+  optional google.rpc.Code code = 3;
+  // message is a gRPC status message.
+  // If omitted, the message will be auto-generated from the configurations.
+  optional string message = 4;
+  // details is a list of error details.
+  // If returns error, the corresponding error details are set.
+  repeated GRPCErrorDetail details = 5;
+  // ignore ignore the error if the condition in the "if" field is true and "ignore" field is set to true.
+  // When an error is ignored, the returned response is always null value.
+  // If you want to return a response that is not null, please use `ignore_and_response` feature.
+  // Therefore, `ignore` and `ignore_and_response` cannot be specified same.
+  optional bool ignore = 6;
+  // ignore_and_response ignore the error if the condition in the "if" field is true and it returns response specified in CEL.
+  // The evaluation value of CEL must always be the same as the response message type.
+  // `ignore` and `ignore_and_response` cannot be specified same.
+  optional string ignore_and_response = 7;
+  // LogLevel is the importance or severity of a log event.
+  enum LogLevel {
+    // UNKNOWN represents unexpected value.
+    UNKNOWN = 0;
+    // DEBUG is used for detailed information that is useful during development and debugging.
+    DEBUG = 1;
+    // INFO logs are used to provide information about the normal functioning of the application.
+    INFO = 2;
+    // WARN signifies a potential problem or warning that does not necessarily stop the program from working but may lead to issues in the future.
+    WARN = 3;
+    // ERROR indicates a serious issue that has caused a failure in the application.
+    ERROR = 4;
+  }
+  // log_level can be configured to output logs as any log level.
+  // If DEBUG is specified for the log_level, logs are output as debug logs.
+  // default value is ERROR.
+  optional LogLevel log_level = 8;
+}
+
+message GRPCErrorDetail {
+  // if specifies condition rule in CEL. If the condition is true, gRPC error detail is added to the error.
+  string if = 1;
+  // def define variables in current scope.
+  repeated VariableDefinition def = 2;
+  // message represents arbitrary messages to describe the detail of the error.
+  repeated MessageExpr message = 3;
+  // error_info describes the cause of the error with structured details.
+  repeated google.rpc.ErrorInfo error_info = 4;
+  // retry_info describes when the clients can retry a failed request.
+  repeated google.rpc.RetryInfo retry_info = 5;
+  // debug_info describes additional debugging info.
+  repeated google.rpc.DebugInfo debug_info = 6;
+  // quota_failure describes how a quota check failed.
+  repeated google.rpc.QuotaFailure quota_failure = 7;
+  // precondition_failure describes what preconditions have failed.
+  repeated google.rpc.PreconditionFailure precondition_failure = 8;
+  // bad_request describes violations in a client request.
+  repeated google.rpc.BadRequest bad_request = 9;
+  // request_info contains metadata about the request that clients can attach.
+  repeated google.rpc.RequestInfo request_info = 10;
+  // resource_info describes the resource that is being accessed.
+  repeated google.rpc.ResourceInfo resource_info = 11;
+  // help provides links to documentation or for performing an out of band action.
+  repeated google.rpc.Help help = 12;
+  // localized_message provides a localized error message that is safe to return to the user.
+  repeated google.rpc.LocalizedMessage localized_message = 13;
+  // by specify a message in CEL to express the details of the error.
+  repeated string by = 14;
+}
+
+// GRPCCallOption configures a gRPC Call before it starts or extracts information from a gRPC Call after it completes.
+message GRPCCallOption {
+  // set the content-subtype. For example, if content-subtype is "json", the Content-Type over the wire will be "application/grpc+json".
+  // The content-subtype is converted to lowercase before being included in Content-Type.
+  // See Content-Type on https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#requests for more details.
+  // If no such codec is found, the call will result in an error with code INTERNAL.
+  optional string content_subtype = 1;
+
+  // header retrieves the header metadata for a unary RPC.
+  // In order to obtain the metadata, you must specify a variable of type map<string, repeated string> in the header.
+  // e.g.)
+  // def [
+  //  { name: "hdr" by: "grpc.federation.metadata.new()" }
+  //  { call { method: "pkg.Method" option { header: "hdr" } } }
+  // ]
+  optional string header = 2;
+
+  // max_call_recv_msg_size sets the maximum message size in bytes the client can receive.
+  // If this is not set, gRPC uses the default 4MB.
+  optional int64 max_call_recv_msg_size = 3;
+
+  // max_call_send_msg_size sets the maximum message size in bytes the client can send.
+  // If this is not set, gRPC uses the default maximum number of int32 range.
+  optional int64 max_call_send_msg_size = 4;
+
+  // static_method specifies that a call is being made to a method that is static,
+  // which means the method is known at compile time and doesn't change at runtime.
+  // This can be used as a signal to stats plugins that this method is safe to include as a key to a measurement.
+  optional bool static_method = 5;
+
+  // trailer retrieves the trailer metadata for a unary RPC.
+  // In order to obtain the metadata, you must specify a variable of type map<string, repeated string> in the trailer.
+  // e.g.)
+  // def [
+  //  { name: "trl" by: "grpc.federation.metadata.new()" }
+  //  { call { method: "pkg.Method" option { trailer: "trl" } } }
+  // ]
+  optional string trailer = 6;
+
+  // wait_for_ready configures the RPC's behavior when the client is in TRANSIENT_FAILURE,
+  // which occurs when all addresses fail to connect.
+  // If wait_for_ready is false, the RPC will fail immediately.
+  // Otherwise, the client will wait until a connection becomes available or the RPC's deadline is reached.
+  // By default, RPCs do not "wait for ready".
+  optional bool wait_for_ready = 7;
+}
+
+// Validation represents a validation rule against variables defined within the current scope.
+message ValidationExpr {
+  // name is a unique name for the validation.
+  // If set, the validation error type will be <message-name><name>Error.
+  // If omitted, the validation error type will be ValidationError.
+  optional string name = 1;
+  // error defines the actual validation rules and an error to returned if the validation fails.
+  GRPCError error = 2;
+}
+
+// RetryPolicy define the retry policy if the method call fails.
+message RetryPolicy {
+  oneof policy {
+    // retry according to the "constant" policy.
+    RetryPolicyConstant constant = 1;
+    // retry according to the "exponential backoff" policy.
+    // The following Go library is used in the implementation,
+    // so please refer to the library documentation for how to specify each parameter.
+    // https://pkg.go.dev/github.com/cenkalti/backoff/v4#section-readme.
+    RetryPolicyExponential exponential = 2;
+  }
+  // if specifies condition in CEL. If the condition is true, run the retry process according to the policy.
+  // If this field is omitted, it is always treated as 'true' and run the retry process.
+  // The return value must always be of type boolean.
+  string if = 3;
+}
+
+// RetryPolicyConstant define "constant" based retry policy.
+message RetryPolicyConstant {
+  // interval value. ( default value is 1s ).
+  optional string interval = 1;
+  // max retry count. ( default value is 5. If zero is specified, it never stops )
+  optional uint64 max_retries = 2;
+}
+
+// RetryPolicyExponential define "exponential backoff" based retry policy.
+message RetryPolicyExponential {
+  // initial interval value. ( default value is "500ms" ).
+  optional string initial_interval = 1;
+  // randomization factor value. ( default value is 0.5 ).
+  optional double randomization_factor = 2;
+  // multiplier. ( default value is 1.5 ).
+  optional double multiplier = 3;
+  // max interval value. ( default value is "60s" ).
+  optional string max_interval = 4;
+  // max retry count. ( default value is 5. If zero is specified, it never stops ).
+  optional uint64 max_retries = 5;
+}
+
+// MethodRequest define parameters to be used for gRPC method request.
+message MethodRequest {
+  // field name of the request message.
+  string field = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  optional string by = 2;
+  // if describes the condition to be assigned to field.
+  // The return value must be of type bool.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  // If the field is a 'oneof' field, it must be specified.
+  optional string if = 3;
+}
+
+// MethodResponse define which value of the method response is referenced.
+message MethodResponse {
+  // name specify the unique name that can be used in a `MessageRule` / `FieldRule` for the same message for a specific field in the response.
+  optional string name = 1;
+  // field name in response message.
+  optional string field = 2;
+  // autobind if the value referenced by `field` is a message type,
+  // the value of a field with the same name and type as the field name of its own message is automatically assigned to the value of the field in the message.
+  // If multiple autobinds are used at the same message,
+  // you must explicitly use the `grpc.federation.field` option to do the binding yourself, since duplicate field names cannot be correctly determined as one.
+  optional bool autobind = 3;
+}
+
+// Argument define message argument.
+message Argument {
+  // name of the message argument.
+  // Use this name to refer to the message argument.
+  // For example, if `foo` is specified as the name, it is referenced by `$.foo`.
+  string name = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  optional string by = 2;
+  // inline like by, it refers to the specified value and expands all fields beyond it.
+  // For this reason, the referenced value must always be of message type.
+  optional string inline = 3;
+}
+
+// FieldRule define gRPC Federation rules for the field of message.
+message FieldRule {
+  // If custom_resolver is true, the field binding process is to be implemented in Go.
+  // If there are any values retrieved by grpc.federation.message option, they are passed as arguments for custom resolver.
+  optional bool custom_resolver = 1;
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule can be used.
+  optional string by = 2;
+  // alias can be used when alias is specified in grpc.federation.message option,
+  // and specifies the field name to be referenced among the messages specified in alias of message option.
+  // If the specified field has the same type or can be converted automatically, its value is assigned.
+  optional string alias = 3;
+  // use to evaluate any one of fields. this field only available in oneof.
+  FieldOneof oneof = 4;
+  // when defining an environment variable, use it for fields where you want to set additional options.
+  EnvVarOption env = 5;
+}
+
+// FieldOneof evaluate "messages" or other field only if expr is true and assign to the oneof field.
+// This feature only available in oneof.
+message FieldOneof {
+  // cond specify either `expr` or `default`. Only one `default` can be set per oneof.
+  oneof cond {
+    // if describes the condition to be assigned to field.
+    // The return value must be of type bool.
+    // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+    // Variables are already defined in MessageRule can be used.
+    string if = 1;
+
+    // default used to assign a value when none of the other fields match any of the specified expressions.
+    // Only one value can be defined per oneof.
+    bool default = 2;
+  }
+
+  // def specify variables to be used in current oneof field's scope for field binding.
+  repeated VariableDefinition def = 3;
+
+  // by used to refer to a name or message argument defined in a MessageRule, use `$.` to refer to the message argument.
+  // Use CEL (https://github.com/google/cel-spec) to evaluate the expression.
+  // Variables are already defined in MessageRule and FieldOneOf can be used.
+  string by = 4;
+}
+
+// CELPlugin define schema of CEL plugin.
+message CELPlugin {
+  repeated CELPluginExport export = 1;
+}
+
+// CELPluginExport describe the schema to be exposed as a CEL plugin.
+message CELPluginExport {
+  // name is the plugin name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // types describe the message type you want to expose.
+  repeated CELReceiverType types = 3;
+  // functions describe the definition of the function you want to expose.
+  repeated CELFunction functions = 4;
+  // variables describe the definition of the variable you want to expose.
+  repeated CELVariable variables = 5;
+  CELPluginCapability capability = 6;
+}
+
+// CELPluginCapability controls the permissions granted to the WebAssembly plugin.
+message CELPluginCapability {
+  // env is the capability for environment variable.
+  optional CELPluginEnvCapability env = 1;
+  // file_system is the capability for file system.
+  optional CELPluginFileSystemCapability file_system = 2;
+  // network is the capability for network.
+  optional CELPluginNetworkCapability network = 3;
+}
+
+// CELPluginEnvCapability controls access to the environment variable.
+message CELPluginEnvCapability {
+  // all allows access to all environment variables.
+  bool all = 1;
+  // specifies accessible names. If "all" is true, it takes precedence.
+  repeated string names = 2;
+}
+
+// CELPluginFileSystemCapability controls access to the file system.
+message CELPluginFileSystemCapability {
+  // mount_path specifies the file path of the host to mount.
+  // If not specified, the root directory will be used.
+  string mount_path = 1;
+}
+
+// CELPluginNetworkCapability sets permissions related to network access.
+// This is an experimental feature.
+message CELPluginNetworkCapability {}
+
+// CELFunction represents the CEL function definition.
+message CELFunction {
+  // name is the function name.
+  string name = 1;
+  // desc is the description of function.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // args describe the definition of the function argument.
+  repeated CELFunctionArgument args = 3;
+  // return describe the definition of return type of function.
+  CELType return = 4;
+}
+
+// CELReceiverType represents methods tied to the message.
+message CELReceiverType {
+  // name is the message name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // methods describe the definition of the method for the message.
+  repeated CELFunction methods = 3;
+}
+
+// CELFunctionArgument represents the function argument.
+message CELFunctionArgument {
+  // name is the argument value name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // type is the argument type.
+  CELType type = 3;
+}
+
+// CELType represents type information for CEL plugin interface.
+message CELType {
+  oneof type {
+    // kind is used when the type is a primitive type.
+    TypeKind kind = 1;
+    // repeated is used when the type is a repeated type.
+    CELType repeated = 2;
+    // map is used when the type is a map type.
+    CELMapType map = 3;
+    // message is a fqdn to the message type.
+    string message = 4;
+    // enum is a fqdn to the enum type.
+    string enum = 5;
+  }
+}
+
+// CELMapType represents map type.
+message CELMapType {
+  // key represents map's key type.
+  CELType key = 1;
+  // value represents map's value type.
+  CELType value = 2;
+}
+
+// CELVariable represents CEL variable.
+message CELVariable {
+  // name is the variable name.
+  string name = 1;
+  // desc is the description of plugin.
+  // This description is used as documentation at code generation.
+  string desc = 2;
+  // type is the variable type.
+  CELType type = 3;
+}

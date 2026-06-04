@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Greet(GreetRequest) returns (GreetResponse) {};
+}
+
+message GreetRequest {
+  string name = 1;
+}
+
+message GreetResponse {
+  option (grpc.federation.message) = {
+    // By itself, there is nothing wrong with this def statement, but it can be used
+    // in a test that does not import the org.example library.
+    def { name: "shouted" by: "org.example.shout($.name)" }
+  };
+  string message = 1 [(grpc.federation.field).by = "'hello, ' + shouted"];
+}

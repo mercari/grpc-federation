@@ -22,18 +22,19 @@ import (
 )
 
 type (
-	ErrorGroup     = errgroup.Group
-	ProtoMessage   = protoadapt.MessageV1
-	CELTypeDeclare = cel.Type
-	CELEnv         = cel.Env
-	CELEnvOption   = cel.EnvOption
-	CELFieldType   = types.FieldType
-	Code           = codes.Code
-	RWMutex        = sync.RWMutex
-	Status         = status.Status
-	Duration       = time.Duration
-	CallOption     = grpc.CallOption
-	GRPCMetadata   = metadata.MD
+	ErrorGroup          = errgroup.Group
+	ProtoMessage        = protoadapt.MessageV1
+	CELTypeDeclare      = cel.Type
+	CELEnv              = cel.Env
+	CELEnvOption        = cel.EnvOption
+	CELSingletonLibrary = cel.SingletonLibrary
+	CELFieldType        = types.FieldType
+	Code                = codes.Code
+	RWMutex             = sync.RWMutex
+	Status              = status.Status
+	Duration            = time.Duration
+	CallOption          = grpc.CallOption
+	GRPCMetadata        = metadata.MD
 )
 
 var (

@@ -3,7 +3,7 @@
 //
 //	protoc-gen-grpc-federation: (devel)
 //
-// source: minimum.proto
+// source: federation/federation.proto
 package federation
 
 import (
@@ -22,22 +22,19 @@ var (
 	_ = reflect.Invalid // to avoid "imported and not used error"
 )
 
-// Org_Federation_GetPostResponseVariable represents variable definitions in "org.federation.GetPostResponse".
-type FederationService_Org_Federation_GetPostResponseVariable struct {
+// Org_Federation_GreetResponseVariable represents variable definitions in "org.federation.GreetResponse".
+type FederationService_Org_Federation_GreetResponseVariable struct {
+	Outputted string
 }
 
-// Org_Federation_GetPostResponseArgument is argument for "org.federation.GetPostResponse" message.
-type FederationService_Org_Federation_GetPostResponseArgument struct {
-	Id   string
-	Type PostType
-	FederationService_Org_Federation_GetPostResponseVariable
+// Org_Federation_GreetResponseArgument is argument for "org.federation.GreetResponse" message.
+type FederationService_Org_Federation_GreetResponseArgument struct {
+	Name string
+	FederationService_Org_Federation_GreetResponseVariable
 }
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
-	// Resolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
-	// If this interface is not provided, an error is returned during initialization.
-	Resolver FederationServiceResolver // required
 	// CELLibraries registers CEL external libraries to extend the CEL API.
 	CELLibraries []grpcfed.CELSingletonLibrary
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
@@ -65,8 +62,6 @@ type FederationServiceDependentClientSet struct {
 
 // FederationServiceResolver provides an interface to directly implement message resolver and field resolver not defined in Protocol Buffers.
 type FederationServiceResolver interface {
-	// Resolve_Org_Federation_GetPostResponse implements resolver for "org.federation.GetPostResponse".
-	Resolve_Org_Federation_GetPostResponse(context.Context, *FederationService_Org_Federation_GetPostResponseArgument) (*GetPostResponse, error)
 }
 
 // FederationServiceCELPluginWasmConfig type alias for grpcfedcel.WasmConfig.
@@ -83,13 +78,6 @@ type FederationServiceCELPluginConfig struct {
 // by embedding them in a resolver structure that you have created.
 type FederationServiceUnimplementedResolver struct{}
 
-// Resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse".
-// This method always returns Unimplemented error.
-func (FederationServiceUnimplementedResolver) Resolve_Org_Federation_GetPostResponse(context.Context, *FederationService_Org_Federation_GetPostResponseArgument) (ret *GetPostResponse, e error) {
-	e = grpcfed.GRPCErrorf(grpcfed.UnimplementedCode, "method Resolve_Org_Federation_GetPostResponse not implemented")
-	return
-}
-
 // FederationService represents Federation Service.
 type FederationService struct {
 	UnimplementedFederationServiceServer
@@ -99,7 +87,6 @@ type FederationService struct {
 	errorHandler    grpcfed.ErrorHandler
 	celCacheMap     *grpcfed.CELCacheMap
 	tracer          trace.Tracer
-	resolver        FederationServiceResolver
 	celTypeHelper   *grpcfed.CELTypeHelper
 	celEnvOpts      []grpcfed.CELEnvOption
 	celPlugins      []*grpcfedcel.CELPlugin
@@ -108,9 +95,6 @@ type FederationService struct {
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
-	if cfg.Resolver == nil {
-		return nil, grpcfed.ErrResolverConfig
-	}
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
@@ -123,15 +107,13 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		errorHandler = func(ctx context.Context, methodName string, err error) error { return err }
 	}
 	celTypeHelperFieldMap := grpcfed.CELTypeHelperFieldMap{
-		"grpc.federation.private.org.federation.GetPostResponseArgument": {
-			"id":   grpcfed.NewCELFieldType(grpcfed.CELStringType, "Id"),
-			"type": grpcfed.NewCELFieldType(grpcfed.CELIntType, "Type"),
+		"grpc.federation.private.org.federation.GreetResponseArgument": {
+			"name": grpcfed.NewCELFieldType(grpcfed.CELStringType, "Name"),
 		},
 	}
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
-	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.PostType", PostType_value, PostType_name)...)
 	for _, lib := range cfg.CELLibraries {
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))
 	}
@@ -144,14 +126,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
-		resolver:        cfg.Resolver,
 		client:          &FederationServiceDependentClientSet{},
-	}
-	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
-		ctx := context.Background()
-		if err := resolver.Init(ctx); err != nil {
-			return nil, err
-		}
 	}
 	return svc, nil
 }
@@ -167,9 +142,9 @@ func (s *FederationService) cleanup(ctx context.Context) {
 	}
 }
 
-// GetPost implements "org.federation.FederationService/GetPost" method.
-func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (res *GetPostResponse, e error) {
-	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/GetPost")
+// Greet implements "org.federation.FederationService/Greet" method.
+func (s *FederationService) Greet(ctx context.Context, req *GreetRequest) (res *GreetResponse, e error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.FederationService/Greet")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, s.logger)
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
@@ -184,9 +159,8 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 			celPlugin.Cleanup()
 		}
 	}()
-	res, err := s.resolve_Org_Federation_GetPostResponse(ctx, &FederationService_Org_Federation_GetPostResponseArgument{
-		Id:   req.GetId(),
-		Type: req.GetType(),
+	res, err := s.resolve_Org_Federation_GreetResponse(ctx, &FederationService_Org_Federation_GreetResponseArgument{
+		Name: req.GetName(),
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -196,28 +170,71 @@ func (s *FederationService) GetPost(ctx context.Context, req *GetPostRequest) (r
 	return res, nil
 }
 
-// resolve_Org_Federation_GetPostResponse resolve "org.federation.GetPostResponse" message.
-func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.Context, req *FederationService_Org_Federation_GetPostResponseArgument) (*GetPostResponse, error) {
-	ctx, span := s.tracer.Start(ctx, "org.federation.GetPostResponse")
+// resolve_Org_Federation_GreetResponse resolve "org.federation.GreetResponse" message.
+func (s *FederationService) resolve_Org_Federation_GreetResponse(ctx context.Context, req *FederationService_Org_Federation_GreetResponseArgument) (*GreetResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "org.federation.GreetResponse")
 	defer span.End()
 	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx), grpcfed.LogAttrs(ctx)...)
 
-	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GetPostResponse", slog.Any("message_args", s.logvalue_Org_Federation_GetPostResponseArgument(req)))
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolve org.federation.GreetResponse", slog.Any("message_args", s.logvalue_Org_Federation_GreetResponseArgument(req)))
+	type localValueType struct {
+		*grpcfed.LocalValue
+		vars struct {
+			Outputted string
+		}
+	}
+	value := &localValueType{LocalValue: grpcfed.NewLocalValue(ctx, s.celEnvOpts, "grpc.federation.private.org.federation.GreetResponseArgument", req)}
+	ctx = grpcfed.WithLocalValue(ctx, value.LocalValue)
+	/*
+		def {
+		  name: "outputted"
+		  by: "example.ext.upper($.name)"
+		}
+	*/
+	def_outputted := func(ctx context.Context) error {
+		return grpcfed.EvalDef(ctx, value, grpcfed.Def[string, *localValueType]{
+			Name: `outputted`,
+			Type: grpcfed.CELStringType,
+			Setter: func(value *localValueType, v string) error {
+				value.vars.Outputted = v
+				return nil
+			},
+			By:           `example.ext.upper($.name)`,
+			ByCacheIndex: 1,
+		})
+	}
 
-	// create a message value to be returned.
-	// `custom_resolver = true` in "grpc.federation.message" option.
-	ctx = grpcfed.WithLogger(ctx, grpcfed.Logger(ctx)) // create a new reference to logger.
-	ret, err := s.resolver.Resolve_Org_Federation_GetPostResponse(ctx, req)
-	if err != nil {
+	if err := def_outputted(ctx); err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
 		return nil, err
 	}
 
-	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GetPostResponse", slog.Any("org.federation.GetPostResponse", s.logvalue_Org_Federation_GetPostResponse(ret)))
+	// assign named parameters to message arguments to pass to the custom resolver.
+	req.FederationService_Org_Federation_GreetResponseVariable.Outputted = value.vars.Outputted
+
+	// create a message value to be returned.
+	ret := &GreetResponse{}
+
+	// field binding section.
+	// (grpc.federation.field).by = "'hello, ' + outputted"
+	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
+		Value:      value,
+		Expr:       `'hello, ' + outputted`,
+		CacheIndex: 2,
+		Setter: func(v string) error {
+			ret.Message = v
+			return nil
+		},
+	}); err != nil {
+		grpcfed.RecordErrorToSpan(ctx, err)
+		return nil, err
+	}
+
+	grpcfed.Logger(ctx).DebugContext(ctx, "resolved org.federation.GreetResponse", slog.Any("org.federation.GreetResponse", s.logvalue_Org_Federation_GreetResponse(ret)))
 	return ret, nil
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostResponse) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GreetResponse(v *GreetResponse) slog.Value {
 	if !s.isLogLevelDebug {
 		return slog.GroupValue()
 	}
@@ -225,11 +242,11 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponse(v *GetPostRe
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
-		slog.Any("post", s.logvalue_Org_Federation_Post(v.GetPost())),
+		slog.String("message", v.GetMessage()),
 	)
 }
 
-func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *FederationService_Org_Federation_GetPostResponseArgument) slog.Value {
+func (s *FederationService) logvalue_Org_Federation_GreetResponseArgument(v *FederationService_Org_Federation_GreetResponseArgument) slog.Value {
 	if !s.isLogLevelDebug {
 		return slog.GroupValue()
 	}
@@ -237,48 +254,6 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 		return slog.GroupValue()
 	}
 	return slog.GroupValue(
-		slog.String("id", v.Id),
-		slog.String("type", s.logvalue_Org_Federation_PostType(v.Type).String()),
-	)
-}
-
-func (s *FederationService) logvalue_Org_Federation_Post(v *Post) slog.Value {
-	if !s.isLogLevelDebug {
-		return slog.GroupValue()
-	}
-	if v == nil {
-		return slog.GroupValue()
-	}
-	return slog.GroupValue(
-		slog.String("id", v.GetId()),
-		slog.String("title", v.GetTitle()),
-		slog.String("content", v.GetContent()),
-		slog.Any("user", s.logvalue_Org_Federation_User(v.GetUser())),
-	)
-}
-
-func (s *FederationService) logvalue_Org_Federation_PostType(v PostType) slog.Value {
-	if !s.isLogLevelDebug {
-		return slog.GroupValue()
-	}
-	switch v {
-	case PostType_POST_TYPE_1:
-		return slog.StringValue("POST_TYPE_1")
-	case PostType_POST_TYPE_2:
-		return slog.StringValue("POST_TYPE_2")
-	}
-	return slog.StringValue("")
-}
-
-func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
-	if !s.isLogLevelDebug {
-		return slog.GroupValue()
-	}
-	if v == nil {
-		return slog.GroupValue()
-	}
-	return slog.GroupValue(
-		slog.String("id", v.GetId()),
-		slog.String("name", v.GetName()),
+		slog.String("name", v.Name),
 	)
 }

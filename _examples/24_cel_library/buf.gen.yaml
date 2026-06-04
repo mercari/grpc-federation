@@ -1,0 +1,10 @@
+version: v1
+managed:
+  enabled: true
+plugins:
+  - plugin: go
+    out: .
+    opt: paths=source_relative
+  - plugin: go-grpc
+    out: .
+    opt: paths=source_relative

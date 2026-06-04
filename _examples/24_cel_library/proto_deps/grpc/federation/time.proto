@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package grpc.federation.time;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation/cel;cel";
+
+// Time represents google.protobuf.Timestamp with time zone.
+message Time {
+  // timestamp is the timestamp.
+  google.protobuf.Timestamp timestamp = 1;
+  // loc is the location.
+  Location loc = 2;
+}
+
+// Location represents time zone.
+// See https://pkg.go.dev/time#Location.
+message Location {
+  // name is the time zone name.
+  string name = 1;
+  // offset is the offset (seconds east of UTC).
+  int64 offset = 2;
+}

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Greet(GreetRequest) returns (GreetResponse) {};
+}
+
+message GreetRequest {
+  string name = 1;
+}
+
+message GreetResponse {
+  option (grpc.federation.message) = {
+    def { name: "outputted" by: "example.ext.upper($.name)" }
+  };
+  string message = 1 [(grpc.federation.field).by = "'hello, ' + outputted"];
+}
