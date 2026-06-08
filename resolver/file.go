@@ -68,20 +68,45 @@ func (f *File) AllUseMethods() []*Method {
 
 // AllCELPlugins returns the set of plugin.export blocks that should be
 // auto-registered with the CEL env when type-checking expressions in this
-// file. Discovery walks only (grpc.federation.file).import edges; a plugin
-// file reachable only through a regular protobuf-import chain is loaded for
-// type resolution but not auto-registered. A federation server that wants
-// such a plugin available must federation-import it directly, or register an
-// equivalent Go-native cel.SingletonLibrary at server-construction time.
+// file. A plugin file's exports are included iff that file is
+// federation-reachable for this compile — i.e., some file in the resolver's
+// compile graph federation-imports it (directly or transitively through
+// other (grpc.federation.file).import edges). A plugin file reachable only
+// through regular protobuf-import edges is loaded for type resolution but
+// does not contribute its plugin to the CEL env. A federation server that
+// wants such a plugin available must federation-import it (from any file in
+// the compile), or register an equivalent Go-native cel.SingletonLibrary at
+// server-construction time.
+//
+// This walks the full ImportFiles graph because the per-compile
+// reachability flag captures cross-file edges that don't appear on this
+// file's own FederationImports list — e.g., a shared proto that
+// regular-imports a plugin file becomes able to type-check against that
+// plugin because the calling service federation-imports it from a
+// different file in the compile.
 func (f *File) AllCELPlugins() []*CELPlugin {
 	pluginMap := make(map[string]*CELPlugin)
 	for _, plugin := range f.CELPlugins {
 		pluginMap[plugin.Name] = plugin
 	}
-	for _, file := range f.FederationImports {
-		for _, plugin := range file.AllCELPlugins() {
-			pluginMap[plugin.Name] = plugin
+	visited := make(map[string]struct{})
+	var walk func(file *File)
+	walk = func(file *File) {
+		if _, seen := visited[file.Name]; seen {
+			return
 		}
+		visited[file.Name] = struct{}{}
+		if file.federationReachable {
+			for _, plugin := range file.CELPlugins {
+				pluginMap[plugin.Name] = plugin
+			}
+		}
+		for _, imp := range file.ImportFiles {
+			walk(imp)
+		}
+	}
+	for _, imp := range f.ImportFiles {
+		walk(imp)
 	}
 	plugins := make([]*CELPlugin, 0, len(pluginMap))
 	for _, plugin := range pluginMap {

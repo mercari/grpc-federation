@@ -195,6 +195,8 @@ func (r *Resolver) Resolve() (*Result, error) {
 
 	files := r.resolveFiles(ctx)
 
+	r.markFederationReachable(files)
+
 	r.resolveRule(ctx, files)
 
 	if !r.existsServiceRule(files) {
@@ -279,6 +281,35 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 		}
 		r.files = append([]*descriptorpb.FileDescriptorProto{fileDef}, r.files...)
 		filesMap[fileDef.GetName()] = struct{}{}
+	}
+}
+
+// markFederationReachable computes the per-compile federation-reachability of
+// each resolved file and stamps the federationReachable flag accordingly. A
+// file is federation-reachable iff some file in this compile graph reaches it
+// through an (grpc.federation.file).import edge — directly or transitively
+// via other federation-import edges. AllCELPlugins uses the flag to gate
+// plugin auto-registration: a file's plugin.export contributes to every CEL
+// env in this compile iff the file is federation-reachable.
+func (r *Resolver) markFederationReachable(files []*File) {
+	reachable := make(map[*File]bool)
+	var visit func(f *File)
+	visit = func(f *File) {
+		if reachable[f] {
+			return
+		}
+		reachable[f] = true
+		for _, dep := range f.FederationImports {
+			visit(dep)
+		}
+	}
+	for _, f := range files {
+		for _, dep := range f.FederationImports {
+			visit(dep)
+		}
+	}
+	for f := range reachable {
+		f.federationReachable = true
 	}
 }
 

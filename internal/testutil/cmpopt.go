@@ -9,7 +9,7 @@ import (
 
 func ResolverCmpOpts() []cmp.Option {
 	return []cmp.Option{
-		cmpopts.IgnoreUnexported(resolver.VariableDefinition{}),
+		cmpopts.IgnoreUnexported(resolver.VariableDefinition{}, resolver.File{}),
 		cmpopts.IgnoreFields(resolver.File{}, "Messages", "Services", "Enums", "Desc", "CELPlugins", "ImportFiles", "FederationImports"),
 		cmpopts.IgnoreFields(resolver.Service{}, "CELPlugins", "Desc"),
 		cmpopts.IgnoreFields(resolver.Package{}, "Files"),

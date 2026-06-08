@@ -58,15 +58,22 @@ type File struct {
 	ImportFiles []*File
 	// FederationImports is the subset of ImportFiles whose dependency edge from
 	// this file was created by an (grpc.federation.file).import entry, not by a
-	// regular protobuf import. Plugin auto-registration via AllCELPlugins walks
-	// only these edges; a file whose plugin.export is reachable only through a
-	// regular-import chain is loaded for type resolution but does not contribute
-	// its plugin to the CEL env.
+	// regular protobuf import. The resolver uses this to compute per-compile
+	// federation-reachability: a plugin file is auto-registered iff at least
+	// one file in the compile graph federation-imports it (transitively); see
+	// AllCELPlugins. A file reachable only through regular-import edges is
+	// loaded for type resolution but does not contribute its plugin to the
+	// CEL env.
 	FederationImports []*File
-	Services          []*Service
-	Messages          []*Message
-	Enums             []*Enum
-	CELPlugins        []*CELPlugin
+	// federationReachable is true if some file in this Resolver's compile graph
+	// federation-imports this file (directly or transitively through other
+	// federation-imports). Set by the Resolver after resolveFiles completes;
+	// read by AllCELPlugins.
+	federationReachable bool
+	Services            []*Service
+	Messages            []*Message
+	Enums               []*Enum
+	CELPlugins          []*CELPlugin
 }
 
 type Files []*File
