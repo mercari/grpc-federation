@@ -196,6 +196,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 	files := r.resolveFiles(ctx)
 
 	r.markFederationReachable(files)
+	r.refreshServiceCELPlugins(files)
 
 	r.resolveRule(ctx, files)
 
@@ -281,6 +282,21 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 		}
 		r.files = append([]*descriptorpb.FileDescriptorProto{fileDef}, r.files...)
 		filesMap[fileDef.GetName()] = struct{}{}
+	}
+}
+
+// refreshServiceCELPlugins re-populates Service.CELPlugins from the owning
+// file's AllCELPlugins after markFederationReachable runs. resolveService
+// captures CELPlugins at service-creation time, which happens during
+// resolveFile — before the per-compile reachability closure exists. Without
+// this refresh, every Service.CELPlugins would be empty whenever the gate
+// would otherwise have included a plugin, since AllCELPlugins returns no
+// federation-reachable plugins during that earlier pass.
+func (r *Resolver) refreshServiceCELPlugins(files []*File) {
+	for _, f := range files {
+		for _, svc := range f.Services {
+			svc.CELPlugins = f.AllCELPlugins()
+		}
 	}
 }
 
