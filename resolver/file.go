@@ -86,9 +86,6 @@ func (f *File) AllUseMethods() []*Method {
 // different file in the compile.
 func (f *File) AllCELPlugins() []*CELPlugin {
 	pluginMap := make(map[string]*CELPlugin)
-	for _, plugin := range f.CELPlugins {
-		pluginMap[plugin.Name] = plugin
-	}
 	visited := make(map[string]struct{})
 	var walk func(file *File)
 	walk = func(file *File) {
@@ -105,9 +102,7 @@ func (f *File) AllCELPlugins() []*CELPlugin {
 			walk(imp)
 		}
 	}
-	for _, imp := range f.ImportFiles {
-		walk(imp)
-	}
+	walk(f)
 	plugins := make([]*CELPlugin, 0, len(pluginMap))
 	for _, plugin := range pluginMap {
 		plugins = append(plugins, plugin)
