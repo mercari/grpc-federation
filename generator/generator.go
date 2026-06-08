@@ -513,7 +513,10 @@ func (g *Generator) compileProto(ctx context.Context, protoPath string) (*plugin
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source file: %w", err)
 	}
-	if outs := g.validator.Validate(ctx, file, validator.ImportPathOption(g.importPaths...)); len(outs) != 0 {
+	if outs := g.validator.Validate(ctx, file,
+		validator.ImportPathOption(g.importPaths...),
+		validator.CELLibrariesOption(g.cfg.CELLibraries...),
+	); len(outs) != 0 {
 		out := validator.Format(outs)
 		if validator.ExistsError(outs) {
 			return nil, errors.New(out)
