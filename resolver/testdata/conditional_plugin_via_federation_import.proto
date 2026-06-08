@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package org.consumer;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/consumerfederation;consumerfederation";
+option (grpc.federation.file) = {
+  import: [ "conditional_plugin.proto" ]
+};
+
+service ConsumerFederation {
+  option (grpc.federation.service) = {};
+}

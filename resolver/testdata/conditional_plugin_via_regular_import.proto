@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package org.consumer;
+
+import "grpc/federation/federation.proto";
+// Regular protobuf import of a file whose plugin.export block would,
+// under federation-import semantics, register a CEL plugin. Under
+// conditional-plugin-import semantics, this regular import loads the
+// file for type resolution but does NOT auto-register the plugin.
+import "conditional_plugin.proto";
+
+option go_package = "example/consumerregular;consumerregular";
+
+service ConsumerRegular {
+  option (grpc.federation.service) = {};
+}

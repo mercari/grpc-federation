@@ -66,12 +66,19 @@ func (f *File) AllUseMethods() []*Method {
 	return mtds
 }
 
+// AllCELPlugins returns the set of plugin.export blocks that should be
+// auto-registered with the CEL env when type-checking expressions in this
+// file. Discovery walks only (grpc.federation.file).import edges; a plugin
+// file reachable only through a regular protobuf-import chain is loaded for
+// type resolution but not auto-registered. A federation server that wants
+// such a plugin available must federation-import it directly, or register an
+// equivalent Go-native cel.SingletonLibrary at server-construction time.
 func (f *File) AllCELPlugins() []*CELPlugin {
 	pluginMap := make(map[string]*CELPlugin)
 	for _, plugin := range f.CELPlugins {
 		pluginMap[plugin.Name] = plugin
 	}
-	for _, file := range f.ImportFiles {
+	for _, file := range f.FederationImports {
 		for _, plugin := range file.AllCELPlugins() {
 			pluginMap[plugin.Name] = plugin
 		}

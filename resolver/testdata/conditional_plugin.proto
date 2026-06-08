@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package org.testplugin;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/testplugin;testplugin";
+
+option (.grpc.federation.file).plugin.export = {
+  name: "testplugin"
+  functions { name: "greet" args { type { kind: STRING } } return { kind: STRING } }
+};
