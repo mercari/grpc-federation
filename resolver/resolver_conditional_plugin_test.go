@@ -40,34 +40,34 @@ func compileWithTestdataImports(t *testing.T, path string) []*descriptorpb.FileD
 	return desc
 }
 
-// TestConditionalPluginImport_RegularImport asserts that a file whose only
-// reference to a plugin .proto is through a regular protobuf `import "..."`
+// TestConditionalPluginImport_ProtoImport asserts that a file whose only
+// reference to a plugin .proto is through a proto-import `import "..."`
 // statement does NOT have the plugin auto-registered for CEL type-checking.
 // The plugin file is loaded for type resolution but its plugin.export block
 // is ignored, leaving the function unavailable in the CEL env.
-func TestConditionalPluginImport_RegularImport(t *testing.T) {
+func TestConditionalPluginImport_ProtoImport(t *testing.T) {
 	t.Parallel()
-	consumerFile := filepath.Join(testutil.RepoRoot(), "resolver", "testdata", "conditional_plugin_via_regular_import.proto")
+	consumerFile := filepath.Join(testutil.RepoRoot(), "resolver", "testdata", "conditional_plugin_via_proto_import.proto")
 	files := compileWithTestdataImports(t, consumerFile)
 
 	result, err := resolver.New(files).Resolve()
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	consumer := findFileByName(t, result.Files, "conditional_plugin_via_regular_import.proto")
+	consumer := findFileByName(t, result.Files, "conditional_plugin_via_proto_import.proto")
 	if got := consumer.AllCELPlugins(); len(got) != 0 {
-		t.Errorf("AllCELPlugins via regular-import edge: got %d plugins, want 0; first plugin: %s",
+		t.Errorf("AllCELPlugins via proto-import edge: got %d plugins, want 0; first plugin: %s",
 			len(got), got[0].Name)
 	}
 }
 
-// TestConditionalPluginImport_FederationImport asserts that a file that
-// reaches a plugin .proto via an (grpc.federation.file).import edge DOES
+// TestConditionalPluginImport_OptionImport asserts that a file that reaches
+// a plugin .proto via an (grpc.federation.file).import edge DOES
 // auto-register the plugin — preserving backward-compatible behavior for
-// the federation-import path.
-func TestConditionalPluginImport_FederationImport(t *testing.T) {
+// the option-import path.
+func TestConditionalPluginImport_OptionImport(t *testing.T) {
 	t.Parallel()
-	consumerFile := filepath.Join(testutil.RepoRoot(), "resolver", "testdata", "conditional_plugin_via_federation_import.proto")
+	consumerFile := filepath.Join(testutil.RepoRoot(), "resolver", "testdata", "conditional_plugin_via_option_import.proto")
 	files := compileWithTestdataImports(t, consumerFile)
 
 	result, err := resolver.New(files, resolver.ImportPathOption(
@@ -77,10 +77,10 @@ func TestConditionalPluginImport_FederationImport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	consumer := findFileByName(t, result.Files, "conditional_plugin_via_federation_import.proto")
+	consumer := findFileByName(t, result.Files, "conditional_plugin_via_option_import.proto")
 	plugins := consumer.AllCELPlugins()
 	if len(plugins) != 1 {
-		t.Fatalf("AllCELPlugins via federation-import edge: got %d, want 1", len(plugins))
+		t.Fatalf("AllCELPlugins via option-import edge: got %d, want 1", len(plugins))
 	}
 	if plugins[0].Name != "testplugin" {
 		t.Errorf("plugin name: got %q, want %q", plugins[0].Name, "testplugin")

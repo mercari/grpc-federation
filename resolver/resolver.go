@@ -69,14 +69,14 @@ type Resolver struct {
 	// runtime errors when calling functions that are defined by missing libraries.
 	celLibraries []cel.SingletonLibrary
 
-	// federationImportEdges records, per file, which of its dependencies were
-	// added via an (grpc.federation.file).import edge rather than via a regular
-	// protobuf import. The map key is the importing file's name; the inner map
-	// holds the names of files imported via the federation-import path. A file
-	// whose plugin.export block reaches the current file only via regular-import
+	// optionImportEdges records, per file, which of its dependencies were
+	// added via an (grpc.federation.file).import edge rather than via a
+	// proto-import. The map key is the importing file's name; the inner map
+	// holds the names of files imported via the option-import path. A file
+	// whose plugin.export block reaches the current file only via proto-import
 	// edges is loaded for type resolution but not auto-registered as a CEL
 	// plugin; see (*File).AllCELPlugins.
-	federationImportEdges map[string]map[string]bool
+	optionImportEdges map[string]map[string]bool
 }
 
 type Option func(*option)
@@ -137,7 +137,7 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		cachedGRPCErrorAccessorMap: make(map[string][]cel.EnvOption),
 
 		celLibraries:          opt.celLibraries,
-		federationImportEdges: make(map[string]map[string]bool),
+		optionImportEdges: make(map[string]map[string]bool),
 	}
 }
 
@@ -195,7 +195,7 @@ func (r *Resolver) Resolve() (*Result, error) {
 
 	files := r.resolveFiles(ctx)
 
-	r.markFederationReachable(files)
+	r.markOptionImportReachable(files)
 	r.refreshServiceCELPlugins(files)
 
 	r.resolveRule(ctx, files)
@@ -285,50 +285,6 @@ func (r *Resolver) resolveFileImportRule(ctx *context, files []*descriptorpb.Fil
 	}
 }
 
-// refreshServiceCELPlugins re-populates Service.CELPlugins from the owning
-// file's AllCELPlugins after markFederationReachable runs. resolveService
-// captures CELPlugins at service-creation time, which happens during
-// resolveFile — before the per-compile reachability closure exists. Without
-// this refresh, every Service.CELPlugins would be empty whenever the gate
-// would otherwise have included a plugin, since AllCELPlugins returns no
-// federation-reachable plugins during that earlier pass.
-func (r *Resolver) refreshServiceCELPlugins(files []*File) {
-	for _, f := range files {
-		for _, svc := range f.Services {
-			svc.CELPlugins = f.AllCELPlugins()
-		}
-	}
-}
-
-// markFederationReachable computes the per-compile federation-reachability of
-// each resolved file and stamps the federationReachable flag accordingly. A
-// file is federation-reachable iff some file in this compile graph reaches it
-// through an (grpc.federation.file).import edge — directly or transitively
-// via other federation-import edges. AllCELPlugins uses the flag to gate
-// plugin auto-registration: a file's plugin.export contributes to every CEL
-// env in this compile iff the file is federation-reachable.
-func (r *Resolver) markFederationReachable(files []*File) {
-	reachable := make(map[*File]bool)
-	var visit func(f *File)
-	visit = func(f *File) {
-		if reachable[f] {
-			return
-		}
-		reachable[f] = true
-		for _, dep := range f.FederationImports {
-			visit(dep)
-		}
-	}
-	for _, f := range files {
-		for _, dep := range f.FederationImports {
-			visit(dep)
-		}
-	}
-	for f := range reachable {
-		f.federationReachable = true
-	}
-}
-
 func (r *Resolver) resolveFileImportRuleRecursive(ctx *context, files []*descriptorpb.FileDescriptorProto) []*descriptorpb.FileDescriptorProto {
 	var importFileDefs []*descriptorpb.FileDescriptorProto
 	for _, fileDef := range files {
@@ -376,10 +332,10 @@ func (r *Resolver) resolveFileImportRuleRecursive(ctx *context, files []*descrip
 			}
 			importFileDefs = append(importFileDefs, deps...)
 			fileDef.Dependency = append(fileDef.Dependency, path)
-			if r.federationImportEdges[fileDef.GetName()] == nil {
-				r.federationImportEdges[fileDef.GetName()] = make(map[string]bool)
+			if r.optionImportEdges[fileDef.GetName()] == nil {
+				r.optionImportEdges[fileDef.GetName()] = make(map[string]bool)
 			}
-			r.federationImportEdges[fileDef.GetName()][path] = true
+			r.optionImportEdges[fileDef.GetName()][path] = true
 		}
 	}
 	if len(importFileDefs) == 0 {
@@ -958,7 +914,7 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		}
 	}
 
-	fedEdges := r.federationImportEdges[file.Name]
+	optEdges := r.optionImportEdges[file.Name]
 	for _, depFileName := range def.GetDependency() {
 		depDef, exists := r.fileNameToDefMap[depFileName]
 		if !exists {
@@ -966,8 +922,8 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		}
 		imported := r.resolveFile(ctx, depDef, source.NewLocationBuilder(depDef.GetName()))
 		file.ImportFiles = append(file.ImportFiles, imported)
-		if fedEdges[depFileName] {
-			file.FederationImports = append(file.FederationImports, imported)
+		if optEdges[depFileName] {
+			file.OptionImports = append(file.OptionImports, imported)
 		}
 	}
 	for _, serviceDef := range def.GetService() {
