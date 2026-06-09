@@ -136,7 +136,7 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		cachedEnumAccessorMap:      make(map[string][]cel.EnvOption),
 		cachedGRPCErrorAccessorMap: make(map[string][]cel.EnvOption),
 
-		celLibraries:          opt.celLibraries,
+		celLibraries:      opt.celLibraries,
 		optionImportEdges: make(map[string]map[string]bool),
 	}
 }

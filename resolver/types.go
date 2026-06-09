@@ -70,10 +70,10 @@ type File struct {
 	// option-imports). Set by the Resolver after resolveFiles completes; read
 	// by AllCELPlugins.
 	IsImportedByOption bool
-	Services            []*Service
-	Messages            []*Message
-	Enums               []*Enum
-	CELPlugins          []*CELPlugin
+	Services           []*Service
+	Messages           []*Message
+	Enums              []*Enum
+	CELPlugins         []*CELPlugin
 }
 
 type Files []*File
