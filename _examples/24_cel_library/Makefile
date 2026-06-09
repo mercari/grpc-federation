@@ -10,7 +10,7 @@ generate:
 
 .PHONY: lint
 lint:
-	@$(GOBIN)/grpc-federation-linter -Iproto -Iproto_deps ./proto/federation/federation.proto
+	@go run ./cmd/lint
 
 .PHONY: test
 test:
