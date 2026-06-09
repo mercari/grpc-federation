@@ -68,6 +68,8 @@ type FederationServiceConfig struct {
 	// you must write a plugin and output WebAssembly.
 	// In this field, configure to load wasm with the path to the WebAssembly file and the sha256 value.
 	CELPlugin *FederationServiceCELPluginConfig
+	// CELLibraries registers CEL external libraries to extend the CEL API.
+	CELLibraries []grpcfed.CELSingletonLibrary
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -239,6 +241,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		}
 		celPlugins = append(celPlugins, plugin)
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
+	}
+	for _, lib := range cfg.CELLibraries {
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))
 	}
 	svc := &FederationService{
 		cfg:             cfg,
