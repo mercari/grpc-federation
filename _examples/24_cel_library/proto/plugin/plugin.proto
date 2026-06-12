@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package example.ext;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/plugin;pluginpb";
+
+option (grpc.federation.file).plugin.export = {
+  name: "ext"
+  functions: [
+    {
+      name: "upper"
+      desc: "upper returns s with all Unicode letters mapped to their upper case"
+      args {
+        name: "s"
+        type { kind: STRING }
+        desc: "the input string"
+      }
+      return { kind: STRING }
+    }
+  ]
+};

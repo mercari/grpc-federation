@@ -100,7 +100,7 @@ type FederationService struct {
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
-	if cfg.CELPlugin == nil {
+	if cfg.CELPlugin == nil && len(cfg.CELLibraries) == 0 {
 		return nil, grpcfed.ErrCELPluginConfig
 	}
 	logger := cfg.Logger
@@ -121,43 +121,45 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	var celPlugins []*grpcfedcel.CELPlugin
-	{
-		plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
-			Name:     "account",
-			Wasm:     cfg.CELPlugin.Account,
-			CacheDir: cfg.CELPlugin.CacheDir,
-			Functions: []*grpcfedcel.CELFunction{
-				{
-					Name:     "example.account.get_id",
-					ID:       "example_account_get_id_string",
-					Args:     []*grpcfed.CELTypeDeclare{},
-					Return:   grpcfed.CELStringType,
-					IsMethod: false,
-				},
-				{
-					Name: "example.account.get_id",
-					ID:   "example_account_get_id_string_string",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.CELStringType,
+	if cfg.CELPlugin != nil {
+		{
+			plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
+				Name:     "account",
+				Wasm:     cfg.CELPlugin.Account,
+				CacheDir: cfg.CELPlugin.CacheDir,
+				Functions: []*grpcfedcel.CELFunction{
+					{
+						Name:     "example.account.get_id",
+						ID:       "example_account_get_id_string",
+						Args:     []*grpcfed.CELTypeDeclare{},
+						Return:   grpcfed.CELStringType,
+						IsMethod: false,
 					},
-					Return:   grpcfed.CELStringType,
-					IsMethod: false,
+					{
+						Name: "example.account.get_id",
+						ID:   "example_account_get_id_string_string",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.CELStringType,
+						},
+						Return:   grpcfed.CELStringType,
+						IsMethod: false,
+					},
 				},
-			},
-			Capability: &grpcfedcel.CELPluginCapability{},
-		})
-		if err != nil {
-			return nil, err
+				Capability: &grpcfedcel.CELPluginCapability{},
+			})
+			if err != nil {
+				return nil, err
+			}
+			instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+			if err != nil {
+				return nil, err
+			}
+			if err := instance.ValidatePlugin(ctx); err != nil {
+				return nil, err
+			}
+			celPlugins = append(celPlugins, plugin)
+			celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 		}
-		instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
-		if err != nil {
-			return nil, err
-		}
-		if err := instance.ValidatePlugin(ctx); err != nil {
-			return nil, err
-		}
-		celPlugins = append(celPlugins, plugin)
-		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 	}
 	for _, lib := range cfg.CELLibraries {
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))

@@ -56,24 +56,10 @@ type File struct {
 	Name        string
 	Desc        *descriptorpb.FileDescriptorProto
 	ImportFiles []*File
-	// OptionImports is the subset of ImportFiles whose dependency edge from
-	// this file was created by an (grpc.federation.file).import entry, not by
-	// a proto-import. The resolver uses this to compute per-compile
-	// option-import reachability: a plugin file is auto-registered iff at
-	// least one file in the compile graph option-imports it (transitively);
-	// see AllCELPlugins. A file reachable only through proto-import edges is
-	// loaded for type resolution but does not contribute its plugin to the
-	// CEL env.
-	OptionImports []*File
-	// IsImportedByOption is true if some file in this Resolver's compile graph
-	// option-imports this file (directly or transitively through other
-	// option-imports). Set by the Resolver after resolveFiles completes; read
-	// by AllCELPlugins.
-	IsImportedByOption bool
-	Services           []*Service
-	Messages           []*Message
-	Enums              []*Enum
-	CELPlugins         []*CELPlugin
+	Services    []*Service
+	Messages    []*Message
+	Enums       []*Enum
+	CELPlugins  []*CELPlugin
 }
 
 type Files []*File

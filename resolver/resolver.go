@@ -68,15 +68,6 @@ type Resolver struct {
 	// set of libraries must also be specified in your service config, to avoid
 	// runtime errors when calling functions that are defined by missing libraries.
 	celLibraries []cel.SingletonLibrary
-
-	// optionImportEdges records, per file, which of its dependencies were
-	// added via an (grpc.federation.file).import edge rather than via a
-	// proto-import. The map key is the importing file's name; the inner map
-	// holds the names of files imported via the option-import path. A file
-	// whose plugin.export block reaches the current file only via proto-import
-	// edges is loaded for type resolution but not auto-registered as a CEL
-	// plugin; see (*File).AllCELPlugins.
-	optionImportEdges map[string]map[string]bool
 }
 
 type Option func(*option)
@@ -136,8 +127,7 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		cachedEnumAccessorMap:      make(map[string][]cel.EnvOption),
 		cachedGRPCErrorAccessorMap: make(map[string][]cel.EnvOption),
 
-		celLibraries:      opt.celLibraries,
-		optionImportEdges: make(map[string]map[string]bool),
+		celLibraries: opt.celLibraries,
 	}
 }
 
@@ -194,9 +184,6 @@ func (r *Resolver) Resolve() (*Result, error) {
 	}
 
 	files := r.resolveFiles(ctx)
-
-	r.markOptionImportReachable(files)
-	r.refreshServiceCELPlugins(files)
 
 	r.resolveRule(ctx, files)
 
@@ -332,10 +319,6 @@ func (r *Resolver) resolveFileImportRuleRecursive(ctx *context, files []*descrip
 			}
 			importFileDefs = append(importFileDefs, deps...)
 			fileDef.Dependency = append(fileDef.Dependency, path)
-			if r.optionImportEdges[fileDef.GetName()] == nil {
-				r.optionImportEdges[fileDef.GetName()] = make(map[string]bool)
-			}
-			r.optionImportEdges[fileDef.GetName()][path] = true
 		}
 	}
 	if len(importFileDefs) == 0 {
@@ -914,7 +897,6 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		}
 	}
 
-	optEdges := r.optionImportEdges[file.Name]
 	for _, depFileName := range def.GetDependency() {
 		depDef, exists := r.fileNameToDefMap[depFileName]
 		if !exists {
@@ -922,9 +904,6 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		}
 		imported := r.resolveFile(ctx, depDef, source.NewLocationBuilder(depDef.GetName()))
 		file.ImportFiles = append(file.ImportFiles, imported)
-		if optEdges[depFileName] {
-			file.OptionImports = append(file.OptionImports, imported)
-		}
 	}
 	for _, serviceDef := range def.GetService() {
 		name := serviceDef.GetName()

@@ -35,6 +35,10 @@ type FederationService_Org_Federation_GreetResponseArgument struct {
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
+	// CELPlugin If you use the plugin feature to extend the CEL API,
+	// you must write a plugin and output WebAssembly.
+	// In this field, configure to load wasm with the path to the WebAssembly file and the sha256 value.
+	CELPlugin *FederationServiceCELPluginConfig
 	// CELLibraries registers CEL external libraries to extend the CEL API.
 	CELLibraries []grpcfed.CELSingletonLibrary
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
@@ -69,6 +73,7 @@ type FederationServiceCELPluginWasmConfig = grpcfedcel.WasmConfig
 
 // FederationServiceCELPluginConfig hints for loading a WebAssembly based plugin.
 type FederationServiceCELPluginConfig struct {
+	Ext      FederationServiceCELPluginWasmConfig
 	CacheDir string
 }
 
@@ -95,6 +100,9 @@ type FederationService struct {
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
+	if cfg.CELPlugin == nil && len(cfg.CELLibraries) == 0 {
+		return nil, grpcfed.ErrCELPluginConfig
+	}
 	logger := cfg.Logger
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
@@ -114,6 +122,40 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celTypeHelper := grpcfed.NewCELTypeHelper("org.federation", celTypeHelperFieldMap)
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
+	var celPlugins []*grpcfedcel.CELPlugin
+	if cfg.CELPlugin != nil {
+		{
+			plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
+				Name:     "ext",
+				Wasm:     cfg.CELPlugin.Ext,
+				CacheDir: cfg.CELPlugin.CacheDir,
+				Functions: []*grpcfedcel.CELFunction{
+					{
+						Name: "example.ext.upper",
+						ID:   "example_ext_upper_string_string",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.CELStringType,
+						},
+						Return:   grpcfed.CELStringType,
+						IsMethod: false,
+					},
+				},
+				Capability: &grpcfedcel.CELPluginCapability{},
+			})
+			if err != nil {
+				return nil, err
+			}
+			instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+			if err != nil {
+				return nil, err
+			}
+			if err := instance.ValidatePlugin(ctx); err != nil {
+				return nil, err
+			}
+			celPlugins = append(celPlugins, plugin)
+			celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
+		}
+	}
 	for _, lib := range cfg.CELLibraries {
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))
 	}
@@ -126,6 +168,7 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celTypeHelper:   celTypeHelper,
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
+		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
 	}
 	return svc, nil

@@ -8,3 +8,8 @@ plugins:
   - plugin: go-grpc
     out: .
     opt: paths=source_relative
+  - plugin: grpc-federation
+    out: .
+    opt:
+    - paths=source_relative
+    - import_paths=proto

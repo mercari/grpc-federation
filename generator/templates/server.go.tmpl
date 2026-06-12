@@ -259,7 +259,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	}
 	{{- end }}
 	{{- if $celPlugins }}
-	if cfg.CELPlugin == nil {
+	if cfg.CELPlugin == nil && len(cfg.CELLibraries) == 0 {
 		return nil, grpcfed.ErrCELPluginConfig
 	}
 	{{- end }}
@@ -342,6 +342,7 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 	{{- end }}
 	{{- if $celPlugins }}
 	var celPlugins []*grpcfedcel.CELPlugin
+	if cfg.CELPlugin != nil {
 	{{- end }}
 	{{- range $celPlugins }}
 	{
@@ -397,6 +398,9 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 		}
 		celPlugins = append(celPlugins, plugin)
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
+	}
+	{{- end }}
+	{{- if $celPlugins }}
 	}
 	{{- end }}
 	for _, lib := range cfg.CELLibraries {

@@ -5,6 +5,11 @@ package org.federation;
 import "grpc/federation/federation.proto";
 
 option go_package = "example/federation;federation";
+option (grpc.federation.file) = {
+  import: [
+    "plugin/plugin.proto"
+  ]
+};
 
 service FederationService {
   option (grpc.federation.service) = {};

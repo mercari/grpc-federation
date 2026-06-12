@@ -104,7 +104,7 @@ type FederationService struct {
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
-	if cfg.CELPlugin == nil {
+	if cfg.CELPlugin == nil && len(cfg.CELLibraries) == 0 {
 		return nil, grpcfed.ErrCELPluginConfig
 	}
 	logger := cfg.Logger
@@ -128,68 +128,70 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	var celPlugins []*grpcfedcel.CELPlugin
-	{
-		plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
-			Name:     "net",
-			Wasm:     cfg.CELPlugin.Net,
-			CacheDir: cfg.CELPlugin.CacheDir,
-			Functions: []*grpcfedcel.CELFunction{
-				{
-					Name: "example.net.httpGet",
-					ID:   "example_net_httpGet_string_string",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.CELStringType,
+	if cfg.CELPlugin != nil {
+		{
+			plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
+				Name:     "net",
+				Wasm:     cfg.CELPlugin.Net,
+				CacheDir: cfg.CELPlugin.CacheDir,
+				Functions: []*grpcfedcel.CELFunction{
+					{
+						Name: "example.net.httpGet",
+						ID:   "example_net_httpGet_string_string",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.CELStringType,
+						},
+						Return:   grpcfed.CELStringType,
+						IsMethod: false,
 					},
-					Return:   grpcfed.CELStringType,
-					IsMethod: false,
-				},
-				{
-					Name:     "example.net.getFooEnv",
-					ID:       "example_net_getFooEnv_string",
-					Args:     []*grpcfed.CELTypeDeclare{},
-					Return:   grpcfed.CELStringType,
-					IsMethod: false,
-				},
-				{
-					Name:     "example.net.getGOGCEnv",
-					ID:       "example_net_getGOGCEnv_string",
-					Args:     []*grpcfed.CELTypeDeclare{},
-					Return:   grpcfed.CELStringType,
-					IsMethod: false,
-				},
-				{
-					Name: "example.net.getFileContent",
-					ID:   "example_net_getFileContent_string_string",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.CELStringType,
+					{
+						Name:     "example.net.getFooEnv",
+						ID:       "example_net_getFooEnv_string",
+						Args:     []*grpcfed.CELTypeDeclare{},
+						Return:   grpcfed.CELStringType,
+						IsMethod: false,
 					},
-					Return:   grpcfed.CELStringType,
-					IsMethod: false,
+					{
+						Name:     "example.net.getGOGCEnv",
+						ID:       "example_net_getGOGCEnv_string",
+						Args:     []*grpcfed.CELTypeDeclare{},
+						Return:   grpcfed.CELStringType,
+						IsMethod: false,
+					},
+					{
+						Name: "example.net.getFileContent",
+						ID:   "example_net_getFileContent_string_string",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.CELStringType,
+						},
+						Return:   grpcfed.CELStringType,
+						IsMethod: false,
+					},
 				},
-			},
-			Capability: &grpcfedcel.CELPluginCapability{
-				Env: &grpcfedcel.CELPluginEnvCapability{
-					All:   true,
-					Names: []string{},
+				Capability: &grpcfedcel.CELPluginCapability{
+					Env: &grpcfedcel.CELPluginEnvCapability{
+						All:   true,
+						Names: []string{},
+					},
+					FileSystem: &grpcfedcel.CELPluginFileSystemCapability{
+						MountPath: "/",
+					},
+					Network: &grpcfedcel.CELPluginNetworkCapability{},
 				},
-				FileSystem: &grpcfedcel.CELPluginFileSystemCapability{
-					MountPath: "/",
-				},
-				Network: &grpcfedcel.CELPluginNetworkCapability{},
-			},
-		})
-		if err != nil {
-			return nil, err
+			})
+			if err != nil {
+				return nil, err
+			}
+			instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+			if err != nil {
+				return nil, err
+			}
+			if err := instance.ValidatePlugin(ctx); err != nil {
+				return nil, err
+			}
+			celPlugins = append(celPlugins, plugin)
+			celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 		}
-		instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
-		if err != nil {
-			return nil, err
-		}
-		if err := instance.ValidatePlugin(ctx); err != nil {
-			return nil, err
-		}
-		celPlugins = append(celPlugins, plugin)
-		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 	}
 	for _, lib := range cfg.CELLibraries {
 		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))
