@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+// This proto calls org.example.shout — declared by cel_library_plugin.proto's
+// (grpc.federation.file).plugin.export block. The plugin proto is brought into
+// the resolver's compile graph by the federation-import below; the resolver
+// walks plugin protos reachable through any ImportFiles edge and registers
+// their plugin.export contents in the codegen-time CEL env, so the DSL
+// expression type-checks without supplying a resolver.CELLibrariesOption.
+option (grpc.federation.file) = {
+  import : [ "cel_library_plugin.proto" ]
+};
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Greet(GreetRequest) returns (GreetResponse) {};
+}
+
+message GreetRequest {
+  string name = 1;
+}
+
+message GreetResponse {
+  option (grpc.federation.message) = {
+    def {name : "shouted" by : "org.example.shout($.name)"}
+  };
+  string message = 1 [ (grpc.federation.field).by = "'hello, ' + shouted" ];
+}

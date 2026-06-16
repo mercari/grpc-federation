@@ -55,3 +55,30 @@ func TestCELLibrariesOption(t *testing.T) {
 		t.Fatalf("expected 1 file, got %d", len(result.Files))
 	}
 }
+
+// TestPluginExportContributesCELFunctions is the plugin.export counterpart of
+// TestCELLibrariesOption: the federation proto option-imports a plugin proto
+// whose (grpc.federation.file).plugin.export declares org.example.shout, and
+// no resolver.CELLibrariesOption is supplied. The resolver must walk the
+// option-imported plugin proto and contribute its plugin.export to the
+// codegen-time CEL env so the DSL expression type-checks.
+func TestPluginExportContributesCELFunctions(t *testing.T) {
+	t.Parallel()
+	testdataDir := filepath.Join(testutil.RepoRoot(), "resolver", "testdata")
+	fileName := filepath.Join(testdataDir, "cel_library_via_plugin.proto")
+	files := testutil.Compile(t, fileName)
+
+	r := resolver.New(files,
+		resolver.ImportPathOption(testdataDir, filepath.Join(testutil.RepoRoot(), "proto")),
+	)
+	result, err := r.Resolve()
+	if err != nil {
+		t.Fatalf("expected resolve to succeed via plugin.export, got: %v", err)
+	}
+	// resultFiles returns every file with a service-with-rule OR with a
+	// plugin.export, so both the federation proto and the option-imported
+	// plugin proto are expected here.
+	if len(result.Files) != 2 {
+		t.Fatalf("expected 2 files (federation + plugin), got %d", len(result.Files))
+	}
+}
