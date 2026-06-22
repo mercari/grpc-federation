@@ -1,11 +1,10 @@
 // Command lint validates federation.proto with the external library
-// extlib.NewLibrary() provided for the validator's resolver via
-// validator.CELLibrariesOption. This is the lint-time analog of
-// cmd/codegen: a CEL expression that uses the library-provided function
-// (e.g. `example.ext.upper($.name)`) type-checks correctly only when the
-// library is registered. The shared grpc-federation-linter binary has no
-// way to load Go libraries, so each example whose DSL uses an external
-// library ships its own linter.
+// extlib.NewLibrary() provided via validator.CELLibrariesOption. This is
+// the lint-time analog of cmd/codegen: a CEL expression that uses the
+// library-provided function (`example.ext.upper($.name)`) type-checks
+// correctly only when the library is registered. The shared binary
+// grpc-federation-linter cannot load CEL libraries itself, so
+// an additional linter is required.
 package main
 
 import (

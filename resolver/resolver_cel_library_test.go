@@ -40,7 +40,7 @@ func (shoutLibrary) ProgramOptions() []cel.ProgramOption { return nil }
 
 // TestCELLibrariesOption asserts that a library registered via
 // resolver.CELLibrariesOption is visible to the codegen-time CEL env, so a
-// DSL expression that calls into the library passes type-checking.
+// CEL expression that calls into the library passes type-checking.
 func TestCELLibrariesOption(t *testing.T) {
 	t.Parallel()
 	fileName := filepath.Join(testutil.RepoRoot(), "resolver", "testdata", "cel_library.proto")
@@ -61,7 +61,7 @@ func TestCELLibrariesOption(t *testing.T) {
 // whose (grpc.federation.file).plugin.export declares org.example.shout, and
 // no resolver.CELLibrariesOption is supplied. The resolver must walk the
 // option-imported plugin proto and contribute its plugin.export to the
-// codegen-time CEL env so the DSL expression type-checks.
+// codegen-time CEL env so the expression type-checks.
 func TestPluginExportContributesCELFunctions(t *testing.T) {
 	t.Parallel()
 	testdataDir := filepath.Join(testutil.RepoRoot(), "resolver", "testdata")

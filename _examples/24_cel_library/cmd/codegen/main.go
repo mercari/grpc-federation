@@ -1,8 +1,8 @@
 // Command codegen emits the grpc-federation-generated *.pb.go file for
 // federation.proto with the external library extlib.NewLibrary() provided for
 // the codegen-time resolver via resolver.CELLibrariesOption. This ensures that
-// a CEL expression that uses the library-provided function (e.g.
-// `example.ext.upper($.name)` type-checks correctly.
+// a CEL expression that uses the library-provided function `example.ext.upper($.name)`
+// type-checks correctly.
 //
 // protoc-gen-go and protoc-gen-go-grpc are run separately by buf — see
 // buf.gen.yaml — because they need no library awareness.

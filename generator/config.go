@@ -25,7 +25,7 @@ type Config struct {
 	AutoProtocGenGo *bool `yaml:"autoProtocGenGo"`
 	// AutoProtocGenGoGRPC automatically run protoc-gen-go-grpc at the time of editing proto. default is true.
 	AutoProtocGenGoGRPC *bool `yaml:"autoProtocGenGoGrpc"`
-	// CELLibraries registers CEL external libraries with the codegen-time resolver so that DSL expressions referring to library-provided functions type-check.
+	// CELLibraries registers CEL external libraries with the resolver so that they can be referred to when type-checking CEL expressions.
 	CELLibraries []cel.SingletonLibrary `yaml:"-"`
 }
 

@@ -64,7 +64,7 @@ type Resolver struct {
 	cachedGRPCErrorAccessorMap map[string][]cel.EnvOption
 
 	// celLibraries is the set of externally-defined CEL libraries to add to the
-	// codegen-time CEL environment when type-checking DSL expressions. This same
+	// codegen-time CEL environment for type-checking CEL expressions. This same
 	// set of libraries must also be specified in your service config, to avoid
 	// runtime errors when calling functions that are defined by missing libraries.
 	celLibraries []cel.SingletonLibrary
@@ -902,8 +902,7 @@ func (r *Resolver) resolveFile(ctx *context, def *descriptorpb.FileDescriptorPro
 		if !exists {
 			continue
 		}
-		imported := r.resolveFile(ctx, depDef, source.NewLocationBuilder(depDef.GetName()))
-		file.ImportFiles = append(file.ImportFiles, imported)
+		file.ImportFiles = append(file.ImportFiles, r.resolveFile(ctx, depDef, source.NewLocationBuilder(depDef.GetName())))
 	}
 	for _, serviceDef := range def.GetService() {
 		name := serviceDef.GetName()
