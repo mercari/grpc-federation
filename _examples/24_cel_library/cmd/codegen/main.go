@@ -10,6 +10,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -56,11 +57,18 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if len(result.Files) != 1 {
-		log.Fatalf("expected 1 federation file, got %d", len(result.Files))
+	var targetFile *resolver.File
+	for _, file := range result.Files {
+		if len(file.Services) != 0 {
+			targetFile = file
+			break
+		}
+	}
+	if targetFile == nil {
+		return fmt.Errorf("federation service file not found")
 	}
 
-	out, err := generator.NewCodeGenerator().Generate(result.Files[0])
+	out, err := generator.NewCodeGenerator().Generate(targetFile)
 	if err != nil {
 		return err
 	}
