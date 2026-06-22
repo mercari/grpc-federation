@@ -277,7 +277,7 @@ func newPluginRequest(protoPath string, org *pluginpb.CodeGeneratorRequest, plug
 
 func (g *Generator) generateByPlugin(ctx context.Context, req *PluginRequest, cfg *PluginConfig) (*pluginpb.CodeGeneratorResponse, error) {
 	if cfg.Plugin == protocGenGRPCFederation && len(g.cfg.CELLibraries) > 0 && cfg.installedPath != "" {
-		// TODO: Supporting this case properly requires adding a proto extension to encode the type and function definitions from a CEL library
+		// Note: Supporting this case properly requires adding a proto extension to encode the type and function definitions from a CEL library
 		// so that they can be passed to a plugin binary.
 		log.Printf(
 			"ignoring installed %s at %s: running in-process because Config.CELLibraries is set. Plugin binaries do not support external CEL libraries",
