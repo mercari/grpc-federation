@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+// This proto calls org.example.shout — a CEL function that is NOT declared
+// via plugin.export. It is supplied at codegen time via the resolver's
+// CELLibrariesOption (and at runtime via FederationServiceConfig.CELLibraries),
+// so that proto type-checks pass without a WebAssembly plugin.
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc Greet(GreetRequest) returns (GreetResponse) {};
+}
+
+message GreetRequest {
+  string name = 1;
+}
+
+message GreetResponse {
+  option (grpc.federation.message) = {
+    def { name: "shouted" by: "org.example.shout($.name)" }
+  };
+  string message = 1 [(grpc.federation.field).by = "'hello, ' + shouted"];
+}

@@ -41,6 +41,8 @@ type FederationServiceConfig struct {
 	// Client provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
 	// If this interface is not provided, an error is returned during initialization.
 	Client FederationServiceClientFactory // required
+	// CELLibraries registers CEL external libraries to extend the CEL API.
+	CELLibraries []grpcfed.CELSingletonLibrary
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -137,6 +139,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.GRPCErrorAccessorOptions(celTypeHelper, "content.GetContentResponse")...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("content.ContentType", content.ContentType_value, content.ContentType_name)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.EnumAccessorOptions("org.federation.ContentType", ContentType_value, ContentType_name)...)
+	for _, lib := range cfg.CELLibraries {
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))
+	}
 	svc := &FederationService{
 		cfg:             cfg,
 		logger:          logger,

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package grpc.federation.url;
+
+option go_package = "github.com/mercari/grpc-federation/grpc/federation/cel;cel";
+
+// URL represents the structure of the URL in net/url package.
+message URL {
+  string scheme = 1;
+  string opaque = 2;
+  Userinfo user = 3;
+  string host = 4;
+  string path = 5;
+  string raw_path = 6;
+  bool omit_host = 7;
+  bool force_query = 8;
+  string raw_query = 9;
+  string fragment = 10;
+  string raw_fragment = 11;
+}
+
+// Userinfo represents username and password information.
+message Userinfo {
+  string username = 1;
+  string password = 2;
+  bool password_set = 3;
+}

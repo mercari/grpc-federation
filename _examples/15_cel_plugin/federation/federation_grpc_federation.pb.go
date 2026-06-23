@@ -68,6 +68,8 @@ type FederationServiceConfig struct {
 	// you must write a plugin and output WebAssembly.
 	// In this field, configure to load wasm with the path to the WebAssembly file and the sha256 value.
 	CELPlugin *FederationServiceCELPluginConfig
+	// CELLibraries registers CEL external libraries to extend the CEL API.
+	CELLibraries []grpcfed.CELSingletonLibrary
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -127,7 +129,7 @@ type FederationService struct {
 
 // NewFederationService creates FederationService instance by FederationServiceConfig.
 func NewFederationService(cfg FederationServiceConfig) (*FederationService, error) {
-	if cfg.CELPlugin == nil {
+	if cfg.CELPlugin == nil && len(cfg.CELLibraries) == 0 {
 		return nil, grpcfed.ErrCELPluginConfig
 	}
 	logger := cfg.Logger
@@ -155,90 +157,95 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	var celEnvOpts []grpcfed.CELEnvOption
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	var celPlugins []*grpcfedcel.CELPlugin
-	{
-		plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
-			Name:     "regexp",
-			Wasm:     cfg.CELPlugin.Regexp,
-			CacheDir: cfg.CELPlugin.CacheDir,
-			Functions: []*grpcfedcel.CELFunction{
-				{
-					Name: "example.regexp.compile",
-					ID:   "example_regexp_compile_string_example_regexp_Regexp",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.CELStringType,
+	if cfg.CELPlugin != nil {
+		{
+			plugin, err := grpcfedcel.NewCELPlugin(ctx, grpcfedcel.CELPluginConfig{
+				Name:     "regexp",
+				Wasm:     cfg.CELPlugin.Regexp,
+				CacheDir: cfg.CELPlugin.CacheDir,
+				Functions: []*grpcfedcel.CELFunction{
+					{
+						Name: "example.regexp.compile",
+						ID:   "example_regexp_compile_string_example_regexp_Regexp",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.CELStringType,
+						},
+						Return:   grpcfed.NewCELObjectType("example.regexp.Regexp"),
+						IsMethod: false,
 					},
-					Return:   grpcfed.NewCELObjectType("example.regexp.Regexp"),
-					IsMethod: false,
-				},
-				{
-					Name:     "example.regexp.newExample",
-					ID:       "example_regexp_newExample_example_regexp_Example",
-					Args:     []*grpcfed.CELTypeDeclare{},
-					Return:   grpcfed.NewCELObjectType("example.regexp.Example"),
-					IsMethod: false,
-				},
-				{
-					Name:     "example.regexp.newExamples",
-					ID:       "example_regexp_newExamples_repeated example_regexp_Example",
-					Args:     []*grpcfed.CELTypeDeclare{},
-					Return:   grpcfed.NewCELListType(grpcfed.NewCELObjectType("example.regexp.Example")),
-					IsMethod: false,
-				},
-				{
-					Name: "example.regexp.filterExamples",
-					ID:   "example_regexp_filterExamples_repeated example_regexp_Example_repeated example_regexp_Example",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.NewCELListType(grpcfed.NewCELObjectType("example.regexp.Example")),
+					{
+						Name:     "example.regexp.newExample",
+						ID:       "example_regexp_newExample_example_regexp_Example",
+						Args:     []*grpcfed.CELTypeDeclare{},
+						Return:   grpcfed.NewCELObjectType("example.regexp.Example"),
+						IsMethod: false,
 					},
-					Return:   grpcfed.NewCELListType(grpcfed.NewCELObjectType("example.regexp.Example")),
-					IsMethod: false,
-				},
-				{
-					Name: "matchString",
-					ID:   "example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.NewCELObjectType("example.regexp.Regexp"),
-						grpcfed.CELStringType,
+					{
+						Name:     "example.regexp.newExamples",
+						ID:       "example_regexp_newExamples_repeated example_regexp_Example",
+						Args:     []*grpcfed.CELTypeDeclare{},
+						Return:   grpcfed.NewCELListType(grpcfed.NewCELObjectType("example.regexp.Example")),
+						IsMethod: false,
 					},
-					Return:   grpcfed.CELBoolType,
-					IsMethod: true,
-				},
-				{
-					Name: "concat",
-					ID:   "example_regexp_Example_concat_example_regexp_Example_repeated string_string",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.NewCELObjectType("example.regexp.Example"),
-						grpcfed.NewCELListType(grpcfed.CELStringType),
+					{
+						Name: "example.regexp.filterExamples",
+						ID:   "example_regexp_filterExamples_repeated example_regexp_Example_repeated example_regexp_Example",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.NewCELListType(grpcfed.NewCELObjectType("example.regexp.Example")),
+						},
+						Return:   grpcfed.NewCELListType(grpcfed.NewCELObjectType("example.regexp.Example")),
+						IsMethod: false,
 					},
-					Return:   grpcfed.CELStringType,
-					IsMethod: true,
-				},
-				{
-					Name: "split",
-					ID:   "example_regexp_Example_split_example_regexp_Example_string_string_repeated string",
-					Args: []*grpcfed.CELTypeDeclare{
-						grpcfed.NewCELObjectType("example.regexp.Example"),
-						grpcfed.CELStringType,
-						grpcfed.CELStringType,
+					{
+						Name: "matchString",
+						ID:   "example_regexp_Regexp_matchString_example_regexp_Regexp_string_bool",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.NewCELObjectType("example.regexp.Regexp"),
+							grpcfed.CELStringType,
+						},
+						Return:   grpcfed.CELBoolType,
+						IsMethod: true,
 					},
-					Return:   grpcfed.NewCELListType(grpcfed.CELStringType),
-					IsMethod: true,
+					{
+						Name: "concat",
+						ID:   "example_regexp_Example_concat_example_regexp_Example_repeated string_string",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.NewCELObjectType("example.regexp.Example"),
+							grpcfed.NewCELListType(grpcfed.CELStringType),
+						},
+						Return:   grpcfed.CELStringType,
+						IsMethod: true,
+					},
+					{
+						Name: "split",
+						ID:   "example_regexp_Example_split_example_regexp_Example_string_string_repeated string",
+						Args: []*grpcfed.CELTypeDeclare{
+							grpcfed.NewCELObjectType("example.regexp.Example"),
+							grpcfed.CELStringType,
+							grpcfed.CELStringType,
+						},
+						Return:   grpcfed.NewCELListType(grpcfed.CELStringType),
+						IsMethod: true,
+					},
 				},
-			},
-			Capability: &grpcfedcel.CELPluginCapability{},
-		})
-		if err != nil {
-			return nil, err
+				Capability: &grpcfedcel.CELPluginCapability{},
+			})
+			if err != nil {
+				return nil, err
+			}
+			instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
+			if err != nil {
+				return nil, err
+			}
+			if err := instance.ValidatePlugin(ctx); err != nil {
+				return nil, err
+			}
+			celPlugins = append(celPlugins, plugin)
+			celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
 		}
-		instance, err := plugin.CreateInstance(ctx, celTypeHelper.CELRegistry())
-		if err != nil {
-			return nil, err
-		}
-		if err := instance.ValidatePlugin(ctx); err != nil {
-			return nil, err
-		}
-		celPlugins = append(celPlugins, plugin)
-		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(plugin))
+	}
+	for _, lib := range cfg.CELLibraries {
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))
 	}
 	svc := &FederationService{
 		cfg:             cfg,

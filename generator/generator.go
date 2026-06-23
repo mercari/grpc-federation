@@ -276,6 +276,15 @@ func newPluginRequest(protoPath string, org *pluginpb.CodeGeneratorRequest, plug
 }
 
 func (g *Generator) generateByPlugin(ctx context.Context, req *PluginRequest, cfg *PluginConfig) (*pluginpb.CodeGeneratorResponse, error) {
+	if cfg.Plugin == protocGenGRPCFederation && len(g.cfg.CELLibraries) > 0 && cfg.installedPath != "" {
+		// Note: Supporting this case properly requires adding a proto extension to encode the type and function
+		// definitions from a CEL library so that they can be passed to a plugin binary.
+		log.Printf(
+			"ignoring installed %s at %s: running in-process because Config.CELLibraries is set. Plugin binaries do not support external CEL libraries",
+			cfg.Plugin, cfg.installedPath,
+		)
+		return g.generateByGRPCFederation(req)
+	}
 	if cfg.installedPath == "" {
 		switch cfg.Plugin {
 		case protocGenGo:
@@ -513,7 +522,10 @@ func (g *Generator) compileProto(ctx context.Context, protoPath string) (*plugin
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source file: %w", err)
 	}
-	if outs := g.validator.Validate(ctx, file, validator.ImportPathOption(g.importPaths...)); len(outs) != 0 {
+	if outs := g.validator.Validate(ctx, file,
+		validator.ImportPathOption(g.importPaths...),
+		validator.CELLibrariesOption(g.cfg.CELLibraries...),
+	); len(outs) != 0 {
 		out := validator.Format(outs)
 		if validator.ExistsError(outs) {
 			return nil, errors.New(out)
@@ -622,7 +634,10 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 	relativePath := g.absPathToRelativePath[r.protoPath]
 	pathResolver := resolver.NewOutputFilePathResolver(opt.Path)
 
-	result, err := resolver.New(r.req.GetProtoFile(), resolver.ImportPathOption(opt.Path.ImportPaths...)).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(),
+		resolver.ImportPathOption(opt.Path.ImportPaths...),
+		resolver.CELLibrariesOption(g.cfg.CELLibraries...),
+	).Resolve()
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +662,10 @@ func (g *Generator) generateByGRPCFederation(r *PluginRequest) (*pluginpb.CodeGe
 }
 
 func (g *Generator) createGRPCFederationFiles(r *PluginRequest) ([]*resolver.File, error) {
-	result, err := resolver.New(r.req.GetProtoFile(), resolver.ImportPathOption(g.cfg.Imports...)).Resolve()
+	result, err := resolver.New(r.req.GetProtoFile(),
+		resolver.ImportPathOption(g.cfg.Imports...),
+		resolver.CELLibrariesOption(g.cfg.CELLibraries...),
+	).Resolve()
 	if err != nil {
 		return nil, err
 	}

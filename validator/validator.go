@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bufbuild/protocompile/ast"
+	"github.com/google/cel-go/cel"
 
 	"github.com/mercari/grpc-federation/compiler"
 	"github.com/mercari/grpc-federation/resolver"
@@ -19,6 +20,7 @@ type Validator struct {
 	compiler      *compiler.Compiler
 	importPaths   []string
 	manualImport  bool
+	celLibraries  []cel.SingletonLibrary
 	pathToFileMap map[string]*source.File
 }
 
@@ -52,9 +54,20 @@ func ManualImportOption() ValidatorOption {
 	}
 }
 
+// CELLibrariesOption mirrors resolver.CELLibrariesOption: the validator's
+// internal resolver needs the same set of externally-defined CEL libraries
+// so that DSL expressions referencing library-provided functions type-check
+// during the pre-codegen validation pass.
+func CELLibrariesOption(libs ...cel.SingletonLibrary) ValidatorOption {
+	return func(v *Validator) {
+		v.celLibraries = append(v.celLibraries, libs...)
+	}
+}
+
 func (v *Validator) applyOptions(opts ...ValidatorOption) {
 	v.pathToFileMap = map[string]*source.File{}
 	v.importPaths = []string{}
+	v.celLibraries = nil
 	for _, opt := range opts {
 		opt(v)
 	}
@@ -76,7 +89,10 @@ func (v *Validator) Validate(ctx context.Context, file *source.File, opts ...Val
 		}
 		return v.compilerErrorToValidationOutputs(compilerErr)
 	}
-	r := resolver.New(protos, resolver.ImportPathOption(v.importPaths...))
+	r := resolver.New(protos,
+		resolver.ImportPathOption(v.importPaths...),
+		resolver.CELLibrariesOption(v.celLibraries...),
+	)
 	result, err := r.Resolve()
 	return v.ToValidationOutputByResolverResult(result, err, opts...)
 }

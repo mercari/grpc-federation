@@ -62,17 +62,30 @@ type Resolver struct {
 	cachedFileAllEnumMap       map[string][]*Enum
 	cachedEnumAccessorMap      map[string][]cel.EnvOption
 	cachedGRPCErrorAccessorMap map[string][]cel.EnvOption
+
+	// celLibraries is the set of externally-defined CEL libraries to add to the
+	// codegen-time CEL environment for type-checking CEL expressions. This same
+	// set of libraries must also be specified in your service config, to avoid
+	// runtime errors when calling functions that are defined by missing libraries.
+	celLibraries []cel.SingletonLibrary
 }
 
 type Option func(*option)
 
 type option struct {
-	importPaths []string
+	importPaths  []string
+	celLibraries []cel.SingletonLibrary
 }
 
 func ImportPathOption(paths ...string) Option {
 	return func(o *option) {
 		o.importPaths = paths
+	}
+}
+
+func CELLibrariesOption(libs ...cel.SingletonLibrary) Option {
+	return func(o *option) {
+		o.celLibraries = libs
 	}
 }
 
@@ -113,6 +126,8 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		cachedFileAllEnumMap:       make(map[string][]*Enum),
 		cachedEnumAccessorMap:      make(map[string][]cel.EnvOption),
 		cachedGRPCErrorAccessorMap: make(map[string][]cel.EnvOption),
+
+		celLibraries: opt.celLibraries,
 	}
 }
 
@@ -5022,6 +5037,9 @@ func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.En
 	envOpts = append(envOpts, r.enumOperators()...)
 	for _, plugin := range ctx.file().AllCELPlugins() {
 		envOpts = append(envOpts, cel.Lib(plugin))
+	}
+	for _, lib := range r.celLibraries {
+		envOpts = append(envOpts, cel.Lib(lib))
 	}
 	env, err := cel.NewCustomEnv(envOpts...)
 	if err != nil {

@@ -911,6 +911,21 @@ invalid_optional_custom_resolver.proto:20:3: "score" field in "federation.GetPos
 20:    optional int64 score = 1 [(grpc.federation.field).custom_resolver = true];
        ^
 `},
+		{file: "missing_cel_library.proto", expected: `
+missing_cel_library.proto:22:31: ERROR: <input>:1:1: undeclared reference to 'org' (in container 'org.federation')
+ | org.example.shout(__ARG__.name)
+ | ^
+ERROR: <input>:1:18: undeclared reference to 'shout' (in container 'org.federation')
+ | org.example.shout(__ARG__.name)
+ | .................^
+22:      def { name: "shouted" by: "org.example.shout($.name)" }
+                                   ^
+missing_cel_library.proto:24:52: ERROR: <input>:1:13: undeclared reference to 'shouted' (in container 'org.federation')
+ | 'hello, ' + shouted
+ | ............^
+24:    string message = 1 [(grpc.federation.field).by = "'hello, ' + shouted"];
+                                                        ^
+`},
 	}
 	for _, test := range tests {
 		test := test

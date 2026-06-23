@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package org.example;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/plugin;pluginpb";
+
+// This plugin proto declares org.example.shout(string) -> string via the
+// (grpc.federation.file).plugin.export construct, which is the codegen-time
+// signature carrier used by the m-grpc-f resolver when no Go-native library
+// is registered via resolver.CELLibrariesOption. cel_library_via_plugin.proto
+// option-imports this file so its plugin.export contributes to the CEL env.
+option (grpc.federation.file).plugin.export = {
+  name : "shout"
+  functions : [
+    {name : "shout" args {name : "s" type {kind : STRING}} return {kind : STRING}}
+  ]
+};

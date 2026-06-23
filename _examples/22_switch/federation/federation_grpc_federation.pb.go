@@ -37,6 +37,8 @@ type FederationService_Org_Federation_GetPostResponseArgument struct {
 
 // FederationServiceConfig configuration required to initialize the service that use GRPC Federation.
 type FederationServiceConfig struct {
+	// CELLibraries registers CEL external libraries to extend the CEL API.
+	CELLibraries []grpcfed.CELSingletonLibrary
 	// ErrorHandler Federation Service often needs to convert errors received from downstream services.
 	// If an error occurs during method execution in the Federation Service, this error handler is called and the returned error is treated as a final error.
 	ErrorHandler grpcfed.ErrorHandler
@@ -164,6 +166,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 	celEnvOpts = append(celEnvOpts, grpcfed.NewDefaultEnvOptions(celTypeHelper)...)
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.env", grpcfed.CELObjectType("grpc.federation.private.Env")))
 	celEnvOpts = append(celEnvOpts, grpcfed.NewCELVariable("grpc.federation.var", grpcfed.CELObjectType("grpc.federation.private.ServiceVariable")))
+	for _, lib := range cfg.CELLibraries {
+		celEnvOpts = append(celEnvOpts, grpcfed.CELLib(lib))
+	}
 	var env FederationServiceEnv
 	if err := grpcfed.LoadEnv("", &env); err != nil {
 		return nil, err
