@@ -1444,7 +1444,7 @@ A single case in a `switch` expression. Cases are evaluated in order, and the fi
 | [`if`](#grpcfederationmessagedefswitchcaseif) | [CEL](./cel.md)             | required             |
 | [`by`](#grpcfederationmessagedefswitchcaseby) | [CEL](./cel.md)             | required             |
 
-## (gprc.federation.message).def.switch.case.def
+## (grpc.federation.message).def.switch.case.def
 
 `def` defines a variable scoped to the case block.
 
@@ -1467,7 +1467,7 @@ The default case that is evaluated when none of the switch cases match. Variable
 | [`def`](#grpcfederationmessagedef)               | repeated VariableDefinition | optional             |
 | [`by`](#grpcfederationmessagedefswitchdefaultby) | [CEL](./cel.md)             | required             |
 
-## (gprc.federation.message).def.switch.default.def
+## (grpc.federation.message).def.switch.default.def
 
 `def` defines a variable scoped to the default block.
 

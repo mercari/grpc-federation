@@ -16,12 +16,14 @@ In addition to the standard CEL operations, the gRPC Federation supports a numbe
 - [grpc.federation.metadata APIs](./cel/metadata.md)
 - [grpc.federation.rand APIs](./cel/rand.md)
 - [grpc.federation.regexp APIs](./cel/regexp.md)
+- [grpc.federation.strings APIs](./cel/strings.md)
 - [grpc.federation.time APIs](./cel/time.md)
+- [grpc.federation.url APIs](./cel/url.md)
 - [grpc.federation.uuid APIs](./cel/uuid.md)
 
 ## Refer to the defined variable
 
-If you have defined variables using [`def`](#grpcfederationmessagedef) feature, you can use them in CEL.  
+If you have defined variables using [`def`](./references.md#grpcfederationmessagedef) feature, you can use them in CEL.  
 Also, the message argument should be `$.` can be used to refer to them.
 
 ## error
