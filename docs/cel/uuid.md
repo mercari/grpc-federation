@@ -96,7 +96,7 @@ FYI: https://pkg.go.dev/github.com/google/uuid#Parse
 
 ```cel
 grpc.federation.uuid.parse('daa4728d-159f-4fc2-82cf-cae915d54e08')
-gprc.federation.uuid.parse(gprc.federation.uuid.new().string())
+grpc.federation.uuid.parse(grpc.federation.uuid.new().string())
 ```
 
 ## validate

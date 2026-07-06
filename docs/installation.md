@@ -43,7 +43,7 @@ plugins:
     out: gen
     opt:
       - paths=source_relative
-  - plugin: buf.build/community/mercari-grpc-federation:v1.0.0
+  - plugin: buf.build/community/mercari-grpc-federation:v1.27.0
     out: gen
     opt:
       - paths=source_relative
@@ -104,12 +104,12 @@ go install github.com/mercari/grpc-federation/cmd/protoc-gen-grpc-federation@lat
 ### 2.2. Put gRPC Federation proto file to the import path
 
 Copy the gRPC Federation proto file to the import path.
-gRPC Federation's proto file is [here](./proto/grpc/federation/federation.proto).
+gRPC Federation's proto file is [here](../proto/grpc/federation/federation.proto).
 
 Also, gRPC Federation depends on the following proto file. These are located in the `proto_deps` directory and should be added to the import path if necessary.
 
-- [`google/rpc/code.proto`](./proto_deps/google/rpc/code.proto)
-- [`google/rpc/error_details.proto`](./proto_deps/google/rpc/error_details.proto)
+- [`google/rpc/code.proto`](../proto_deps/google/rpc/code.proto)
+- [`google/rpc/error_details.proto`](../proto_deps/google/rpc/error_details.proto)
 
 ```console
 git clone https://github.com/mercari/grpc-federation.git

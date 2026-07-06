@@ -133,4 +133,4 @@ grpc-federation-generator ./proto/federation/federation.proto
 
 ## 6. Run your code generator
 
-The plugin is executed and the `resover_test.go` file is created in the current working directory.
+The plugin is executed and the `resolver_test.go` file is created in the current working directory.
