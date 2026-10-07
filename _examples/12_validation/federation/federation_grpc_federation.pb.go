@@ -185,6 +185,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		resolver:        cfg.Resolver,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
 		if err := resolver.Init(ctx); err != nil {
@@ -1417,4 +1420,73 @@ func (s *FederationService) logvalue_Org_Federation_PostArgument(v *FederationSe
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 20)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CustomHandlerMessageArgument"))}
+	scopes[1] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CustomMessageArgument"))}
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`customHandler`, grpcfed.CELObjectType("org.federation.CustomHandlerMessage")))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`customMessage`, grpcfed.CELObjectType("org.federation.CustomMessage")))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`_def3`, grpcfed.CELBoolType))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`_def4`, grpcfed.CELBoolType))
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`_def5_def0`, grpcfed.CELBoolType))
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`_def5_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")))
+	scopes[9] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def5_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage"))}
+	scopes[10] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def5_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage"))}
+	scopes[11] = grpcfed.ExtendCELEnvOptions(scopes[8], grpcfed.NewCELVariable(`_def5_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage")))
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`_def5`, grpcfed.CELBoolType))
+	scopes[13] = grpcfed.ExtendCELEnvOptions(scopes[12], grpcfed.NewCELVariable(`condition`, grpcfed.CELBoolType))
+	scopes[14] = grpcfed.ExtendCELEnvOptions(scopes[12], grpcfed.NewCELVariable(`_def6`, grpcfed.CELBoolType))
+	scopes[15] = grpcfed.ExtendCELEnvOptions(scopes[14], grpcfed.NewCELVariable(`customMessageValidation`, grpcfed.CELBoolType))
+	scopes[16] = grpcfed.ExtendCELEnvOptions(scopes[15], grpcfed.NewCELVariable(`_def8`, grpcfed.CELBoolType))
+	scopes[17] = grpcfed.ExtendCELEnvOptions(scopes[16], grpcfed.NewCELVariable(`_def9`, grpcfed.CELBoolType))
+	scopes[18] = grpcfed.ExtendCELEnvOptions(scopes[17], grpcfed.NewCELVariable(`_def10`, grpcfed.CELBoolType))
+	scopes[19] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.arg == 'wrong'`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `$.message`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `'some-arg'`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `'some-message'`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `post.id != 'some-id'`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `'validation1 failed!'`, Variables: scopes[4]},
+		{CacheIndex: 7, Expr: `post.id != 'some-id'`, Variables: scopes[5]},
+		{CacheIndex: 8, Expr: `'validation2 failed!'`, Variables: scopes[5]},
+		{CacheIndex: 9, Expr: `grpc.federation.log.add({'validation3_attrs': true})`, Variables: scopes[6]},
+		{CacheIndex: 10, Expr: `$.id != 'correct-id'`, Variables: scopes[7]},
+		{CacheIndex: 11, Expr: `'validation3 failed!'`, Variables: scopes[7]},
+		{CacheIndex: 12, Expr: `true`, Variables: scopes[7]},
+		{CacheIndex: 13, Expr: `'message1'`, Variables: scopes[7]},
+		{CacheIndex: 14, Expr: `'message2'`, Variables: scopes[8]},
+		{CacheIndex: 15, Expr: `_def5_err_detail0_msg0`, Variables: scopes[9]},
+		{CacheIndex: 16, Expr: `_def5_err_detail0_msg1`, Variables: scopes[10]},
+		{CacheIndex: 17, Expr: `CustomMessage{message: 'foo'}`, Variables: scopes[7]},
+		{CacheIndex: 18, Expr: `'type1'`, Variables: scopes[11]},
+		{CacheIndex: 19, Expr: `post.id`, Variables: scopes[11]},
+		{CacheIndex: 20, Expr: `'description1'`, Variables: scopes[11]},
+		{CacheIndex: 21, Expr: `post.id`, Variables: scopes[11]},
+		{CacheIndex: 22, Expr: `'description2'`, Variables: scopes[11]},
+		{CacheIndex: 23, Expr: `post.content`, Variables: scopes[11]},
+		{CacheIndex: 24, Expr: `post.id != 'some-id'`, Variables: scopes[12]},
+		{CacheIndex: 25, Expr: `condition`, Variables: scopes[13]},
+		{CacheIndex: 26, Expr: `'validation4 failed!'`, Variables: scopes[13]},
+		{CacheIndex: 27, Expr: `customMessage.message == ''`, Variables: scopes[14]},
+		{CacheIndex: 28, Expr: `'custom message is empty'`, Variables: scopes[14]},
+		{CacheIndex: 29, Expr: `post.item == null`, Variables: scopes[15]},
+		{CacheIndex: 30, Expr: `'item is null'`, Variables: scopes[15]},
+		{CacheIndex: 31, Expr: `post.item.item_id == 0`, Variables: scopes[16]},
+		{CacheIndex: 32, Expr: `'item id is zero'`, Variables: scopes[16]},
+		{CacheIndex: 33, Expr: `post.item.name == ''`, Variables: scopes[17]},
+		{CacheIndex: 34, Expr: `'item name is empty'`, Variables: scopes[17]},
+		{CacheIndex: 35, Expr: `post`, Variables: scopes[18]},
+		{CacheIndex: 36, Expr: `'some-id'`, Variables: scopes[19]},
+		{CacheIndex: 37, Expr: `'some-title'`, Variables: scopes[19]},
+		{CacheIndex: 38, Expr: `'some-content'`, Variables: scopes[19]},
+		{CacheIndex: 39, Expr: `Item{item_id: 2, name: 'item-name2'}`, Variables: scopes[19]},
+	})
 }

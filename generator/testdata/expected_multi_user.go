@@ -220,6 +220,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
 		if err := resolver.Init(ctx); err != nil {
@@ -837,4 +840,27 @@ func (s *FederationService) logvalue_Org_User_GetUsersRequest(v *user.GetUsersRe
 	return slog.GroupValue(
 		slog.Any("ids", v.GetIds()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 6)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`uid`, grpcfed.CELObjectType("org.federation.UserID"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User")))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`user2`, grpcfed.CELObjectType("org.federation.User")))
+	scopes[3] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.user.GetUserResponse")))
+	scopes[5] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserIDArgument")), grpcfed.NewCELVariable(`_def0`, grpcfed.CELObjectType("org.federation.Sub"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `uid.value`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `uid.value`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `user`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `user2`, Variables: scopes[2]},
+		{CacheIndex: 5, Expr: `$.user_id`, Variables: scopes[3]},
+		{CacheIndex: 6, Expr: `res.user`, Variables: scopes[4]},
+		{CacheIndex: 7, Expr: `'xxx'`, Variables: scopes[5]},
+	})
 }

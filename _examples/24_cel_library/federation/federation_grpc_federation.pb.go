@@ -171,6 +171,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -299,4 +302,18 @@ func (s *FederationService) logvalue_Org_Federation_GreetResponseArgument(v *Fed
 	return slog.GroupValue(
 		slog.String("name", v.Name),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 2)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GreetResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`outputted`, grpcfed.CELStringType))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `example.ext.upper($.name)`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `'hello, ' + outputted`, Variables: scopes[1]},
+	})
 }

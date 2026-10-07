@@ -130,6 +130,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:          tracer,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -351,4 +354,26 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 4)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`blue`, grpcfed.CELIntType))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`default`, grpcfed.CELIntType))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`switch`, grpcfed.CELIntType))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `73`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `$.id == 'blue'`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `blue`, Variables: scopes[1]},
+		{CacheIndex: 4, Expr: `$.id == 'red'`, Variables: scopes[1]},
+		{CacheIndex: 5, Expr: `2`, Variables: scopes[1]},
+		{CacheIndex: 6, Expr: `3`, Variables: scopes[1]},
+		{CacheIndex: 7, Expr: `default`, Variables: scopes[2]},
+		{CacheIndex: 8, Expr: `switch`, Variables: scopes[3]},
+	})
 }

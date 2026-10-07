@@ -197,6 +197,9 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 		resolver:        cfg.Resolver,
 		client:          &OtherServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
 		if err := resolver.Init(ctx); err != nil {
@@ -907,4 +910,40 @@ func (s *OtherService) logvalue_Federation_UserArgument(v *OtherService_Federati
 		slog.String("id", v.Id),
 		slog.String("name", v.Name),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by OtherService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *OtherService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 8)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`u`, grpcfed.CELObjectType("federation.User")))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`favorite_value`, grpcfed.CELIntType))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`reaction`, grpcfed.CELObjectType("federation.Reaction")))
+	scopes[5] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.ReactionArgument"))}
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType))
+	scopes[7] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `'foo'`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `'bar'`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `favorite.FavoriteType.value('TYPE1')`, Variables: scopes[1]},
+		{CacheIndex: 4, Expr: `favorite_value == favorite.FavoriteType.TYPE1`, Variables: scopes[2]},
+		{CacheIndex: 5, Expr: `favorite_value`, Variables: scopes[3]},
+		{CacheIndex: 6, Expr: `'post-id'`, Variables: scopes[4]},
+		{CacheIndex: 7, Expr: `'title'`, Variables: scopes[4]},
+		{CacheIndex: 8, Expr: `'content'`, Variables: scopes[4]},
+		{CacheIndex: 9, Expr: `u`, Variables: scopes[4]},
+		{CacheIndex: 10, Expr: `reaction`, Variables: scopes[4]},
+		{CacheIndex: 11, Expr: `favorite_value`, Variables: scopes[4]},
+		{CacheIndex: 12, Expr: `cmp`, Variables: scopes[4]},
+		{CacheIndex: 13, Expr: `$.v == favorite.FavoriteType.TYPE1`, Variables: scopes[5]},
+		{CacheIndex: 14, Expr: `favorite.FavoriteType.value('TYPE1')`, Variables: scopes[6]},
+		{CacheIndex: 15, Expr: `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`, Variables: scopes[6]},
+		{CacheIndex: 16, Expr: `cmp`, Variables: scopes[6]},
+		{CacheIndex: 17, Expr: `$.id`, Variables: scopes[7]},
+		{CacheIndex: 18, Expr: `$.name`, Variables: scopes[7]},
+	})
 }

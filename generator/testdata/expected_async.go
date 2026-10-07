@@ -280,6 +280,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:          tracer,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -1744,4 +1747,57 @@ func (s *FederationService) logvalue_Org_Federation_JArgument(v *FederationServi
 	return slog.GroupValue(
 		slog.String("i", v.I),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 19)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.AArgument")), grpcfed.NewCELVariable(`aa`, grpcfed.CELObjectType("org.federation.AA")), grpcfed.NewCELVariable(`ab`, grpcfed.CELObjectType("org.federation.AB"))}
+	scopes[1] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.AAArgument"))}
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.ABArgument"))}
+	scopes[3] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.BArgument"))}
+	scopes[4] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CArgument"))}
+	scopes[5] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.DArgument"))}
+	scopes[6] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.EArgument"))}
+	scopes[7] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.FArgument"))}
+	scopes[8] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GArgument"))}
+	scopes[9] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("org.federation.A")), grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("org.federation.B"))}
+	scopes[10] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`c`, grpcfed.CELObjectType("org.federation.C")))
+	scopes[11] = grpcfed.ExtendCELEnvOptions(scopes[10], grpcfed.NewCELVariable(`d`, grpcfed.CELObjectType("org.federation.D")))
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[11], grpcfed.NewCELVariable(`e`, grpcfed.CELObjectType("org.federation.E")))
+	scopes[13] = grpcfed.ExtendCELEnvOptions(scopes[12], grpcfed.NewCELVariable(`f`, grpcfed.CELObjectType("org.federation.F")), grpcfed.NewCELVariable(`g`, grpcfed.CELObjectType("org.federation.G")))
+	scopes[14] = grpcfed.ExtendCELEnvOptions(scopes[13], grpcfed.NewCELVariable(`h`, grpcfed.CELObjectType("org.federation.H")), grpcfed.NewCELVariable(`i`, grpcfed.CELObjectType("org.federation.I")))
+	scopes[15] = grpcfed.ExtendCELEnvOptions(scopes[14], grpcfed.NewCELVariable(`j`, grpcfed.CELObjectType("org.federation.J")))
+	scopes[16] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.HArgument"))}
+	scopes[17] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.IArgument"))}
+	scopes[18] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.JArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `'a'`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `'aa'`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `'ab'`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `'b'`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `'c'`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `'d'`, Variables: scopes[5]},
+		{CacheIndex: 7, Expr: `'e'`, Variables: scopes[6]},
+		{CacheIndex: 8, Expr: `'f'`, Variables: scopes[7]},
+		{CacheIndex: 9, Expr: `'g'`, Variables: scopes[8]},
+		{CacheIndex: 10, Expr: `a.name`, Variables: scopes[9]},
+		{CacheIndex: 11, Expr: `b.name`, Variables: scopes[10]},
+		{CacheIndex: 12, Expr: `c.name`, Variables: scopes[11]},
+		{CacheIndex: 13, Expr: `d.name`, Variables: scopes[11]},
+		{CacheIndex: 14, Expr: `c.name`, Variables: scopes[12]},
+		{CacheIndex: 15, Expr: `d.name`, Variables: scopes[12]},
+		{CacheIndex: 16, Expr: `e.name`, Variables: scopes[13]},
+		{CacheIndex: 17, Expr: `f.name`, Variables: scopes[13]},
+		{CacheIndex: 18, Expr: `g.name`, Variables: scopes[13]},
+		{CacheIndex: 19, Expr: `i.name`, Variables: scopes[14]},
+		{CacheIndex: 20, Expr: `h.name`, Variables: scopes[15]},
+		{CacheIndex: 21, Expr: `j.name`, Variables: scopes[15]},
+		{CacheIndex: 22, Expr: `'h'`, Variables: scopes[16]},
+		{CacheIndex: 23, Expr: `'i'`, Variables: scopes[17]},
+		{CacheIndex: 24, Expr: `'j'`, Variables: scopes[18]},
+	})
 }

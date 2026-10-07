@@ -155,6 +155,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Content_ContentServiceClient: Content_ContentServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -1275,4 +1278,55 @@ func (s *FederationService) logvalue_repeated_Org_Federation_ContentType(v []Con
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 3)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("content.GetContentResponse")))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`content`, grpcfed.CELObjectType("content.Content")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.id`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `1.23`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `[4.56, 7.89]`, Variables: scopes[0]},
+		{CacheIndex: 4, Expr: `4.56`, Variables: scopes[0]},
+		{CacheIndex: 5, Expr: `[7.89, 1.23]`, Variables: scopes[0]},
+		{CacheIndex: 6, Expr: `-1`, Variables: scopes[0]},
+		{CacheIndex: 7, Expr: `[-2, -3]`, Variables: scopes[0]},
+		{CacheIndex: 8, Expr: `-4`, Variables: scopes[0]},
+		{CacheIndex: 9, Expr: `[-5, -6]`, Variables: scopes[0]},
+		{CacheIndex: 10, Expr: `1u`, Variables: scopes[0]},
+		{CacheIndex: 11, Expr: `[2u, 3u]`, Variables: scopes[0]},
+		{CacheIndex: 12, Expr: `4u`, Variables: scopes[0]},
+		{CacheIndex: 13, Expr: `[5u, 6u]`, Variables: scopes[0]},
+		{CacheIndex: 14, Expr: `-7`, Variables: scopes[0]},
+		{CacheIndex: 15, Expr: `[-8, -9]`, Variables: scopes[0]},
+		{CacheIndex: 16, Expr: `-10`, Variables: scopes[0]},
+		{CacheIndex: 17, Expr: `[-11, -12]`, Variables: scopes[0]},
+		{CacheIndex: 18, Expr: `10u`, Variables: scopes[0]},
+		{CacheIndex: 19, Expr: `[11u, 12u]`, Variables: scopes[0]},
+		{CacheIndex: 20, Expr: `13u`, Variables: scopes[0]},
+		{CacheIndex: 21, Expr: `[14u, 15u]`, Variables: scopes[0]},
+		{CacheIndex: 22, Expr: `-14`, Variables: scopes[0]},
+		{CacheIndex: 23, Expr: `[-15, -16]`, Variables: scopes[0]},
+		{CacheIndex: 24, Expr: `-17`, Variables: scopes[0]},
+		{CacheIndex: 25, Expr: `[-18, -19]`, Variables: scopes[0]},
+		{CacheIndex: 26, Expr: `true`, Variables: scopes[0]},
+		{CacheIndex: 27, Expr: `[true, false]`, Variables: scopes[0]},
+		{CacheIndex: 28, Expr: `'foo'`, Variables: scopes[0]},
+		{CacheIndex: 29, Expr: `['hello', 'world']`, Variables: scopes[0]},
+		{CacheIndex: 30, Expr: `b'foo'`, Variables: scopes[0]},
+		{CacheIndex: 31, Expr: `[b'foo', b'bar']`, Variables: scopes[0]},
+		{CacheIndex: 32, Expr: `content.ContentType.CONTENT_TYPE_1`, Variables: scopes[0]},
+		{CacheIndex: 33, Expr: `[content.ContentType.CONTENT_TYPE_2, content.ContentType.CONTENT_TYPE_3]`, Variables: scopes[0]},
+		{CacheIndex: 34, Expr: `content.Content{double_field: 1.23, doubles_field: [4.56, 7.89]}`, Variables: scopes[0]},
+		{CacheIndex: 35, Expr: `[content.Content{}, content.Content{}]`, Variables: scopes[0]},
+		{CacheIndex: 36, Expr: `res.content`, Variables: scopes[1]},
+		{CacheIndex: 37, Expr: `content`, Variables: scopes[2]},
+		{CacheIndex: 38, Expr: `content.int32_field + content.sint32_field`, Variables: scopes[2]},
+	})
 }

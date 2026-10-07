@@ -180,6 +180,9 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 		svcVar:          new(InlineEnvServiceVariable),
 		client:          &InlineEnvServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
@@ -294,4 +297,22 @@ func (s *InlineEnvService) initServiceVariables(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// precompileCEL compiles every CEL expression used by InlineEnvService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *InlineEnvService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 2)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`x`, grpcfed.CELStringType)}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`y`, grpcfed.CELListType(grpcfed.CELIntType)))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `grpc.federation.env.aaa`},
+		{CacheIndex: 2, Expr: `grpc.federation.env.aaa == 'xxx'`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `grpc.federation.env.bbb`, Variables: scopes[0]},
+		{CacheIndex: 4, Expr: `[0, 0]`, Variables: scopes[0]},
+		{CacheIndex: 5, Expr: `grpc.federation.env.bbb == 1`, Variables: scopes[1]},
+		{CacheIndex: 6, Expr: `'error'`, Variables: scopes[1]},
+	})
 }

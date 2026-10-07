@@ -33,7 +33,7 @@ func ResolverCmpOpts() []cmp.Option {
 		cmpopts.IgnoreFields(resolver.Oneof{}, "Message"),
 		cmpopts.IgnoreFields(resolver.Field{}, "Message", "Oneof.Message", "Oneof.Fields", "Desc"),
 		cmpopts.IgnoreFields(resolver.Value{}, "CEL"),
-		cmpopts.IgnoreFields(resolver.CELValue{}, "CheckedExpr"),
+		cmpopts.IgnoreFields(resolver.CELValue{}, "CheckedExpr", "Variables"),
 		cmpopts.IgnoreFields(resolver.MessageExpr{}, "Message.Rule", "Message.Fields"),
 	}
 }

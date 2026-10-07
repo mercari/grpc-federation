@@ -262,6 +262,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			User_UserServiceClient: User_UserServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -1869,4 +1872,72 @@ func (s *FederationService) logvalue_User_GetUserRequest(v *user.GetUserRequest)
 		slog.Int64("foo", v.GetFoo()),
 		slog.String("bar", v.GetBar()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 13)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CastOneofArgument"))}
+	scopes[1] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetNoValueResponseArgument")), grpcfed.NewCELVariable(`no_value_sel`, grpcfed.CELObjectType("org.federation.NoValueSelection"))}
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`sel`, grpcfed.CELObjectType("org.federation.UserSelection")), grpcfed.NewCELVariable(`msg_sel`, grpcfed.CELObjectType("org.federation.MessageSelection")), grpcfed.NewCELVariable(`nested_msg`, grpcfed.CELObjectType("org.federation.NestedMessageSelection.Nest")), grpcfed.NewCELVariable(`cast_oneof`, grpcfed.CELObjectType("org.federation.CastOneof")))
+	scopes[4] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.MessageSelectionArgument"))}
+	scopes[5] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.NestedMessageSelection_NestArgument"))}
+	scopes[6] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.NoValueSelectionArgument"))}
+	scopes[7] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`_def0`, grpcfed.CELObjectType("user.GetUserResponse")))
+	scopes[9] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserSelectionArgument"))}
+	scopes[10] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`ua`, grpcfed.CELObjectType("org.federation.User")))
+	scopes[11] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`ub`, grpcfed.CELObjectType("org.federation.User")))
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`uc`, grpcfed.CELObjectType("org.federation.User")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `false`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `false`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `true`, Variables: scopes[0]},
+		{CacheIndex: 4, Expr: `uint(1)`, Variables: scopes[0]},
+		{CacheIndex: 5, Expr: `user.User{id: 'foo'}`, Variables: scopes[0]},
+		{CacheIndex: 6, Expr: `user.UserType.value('USER_TYPE_ANONYMOUS')`, Variables: scopes[0]},
+		{CacheIndex: 7, Expr: `no_value_sel.no_value`, Variables: scopes[1]},
+		{CacheIndex: 8, Expr: `'foo'`, Variables: scopes[2]},
+		{CacheIndex: 9, Expr: `sel.user`, Variables: scopes[3]},
+		{CacheIndex: 10, Expr: `msg_sel.message`, Variables: scopes[3]},
+		{CacheIndex: 11, Expr: `nested_msg`, Variables: scopes[3]},
+		{CacheIndex: 12, Expr: `cast_oneof`, Variables: scopes[3]},
+		{CacheIndex: 13, Expr: `false`, Variables: scopes[4]},
+		{CacheIndex: 14, Expr: `true`, Variables: scopes[4]},
+		{CacheIndex: 15, Expr: `'aaa'`, Variables: scopes[4]},
+		{CacheIndex: 16, Expr: `'bbb'`, Variables: scopes[4]},
+		{CacheIndex: 17, Expr: `'ccc'`, Variables: scopes[4]},
+		{CacheIndex: 18, Expr: `true`, Variables: scopes[5]},
+		{CacheIndex: 19, Expr: `false`, Variables: scopes[5]},
+		{CacheIndex: 20, Expr: `1`, Variables: scopes[5]},
+		{CacheIndex: 21, Expr: `'foo'`, Variables: scopes[5]},
+		{CacheIndex: 22, Expr: `false`, Variables: scopes[6]},
+		{CacheIndex: 23, Expr: `false`, Variables: scopes[6]},
+		{CacheIndex: 24, Expr: `M{value: 'a'}`, Variables: scopes[6]},
+		{CacheIndex: 25, Expr: `M{value: 'b'}`, Variables: scopes[6]},
+		{CacheIndex: 26, Expr: `$.user_id`, Variables: scopes[7]},
+		{CacheIndex: 27, Expr: `$.foo != 0`, Variables: scopes[7]},
+		{CacheIndex: 28, Expr: `$.foo`, Variables: scopes[7]},
+		{CacheIndex: 29, Expr: `$.bar != ''`, Variables: scopes[7]},
+		{CacheIndex: 30, Expr: `$.bar`, Variables: scopes[7]},
+		{CacheIndex: 31, Expr: `$.user_id`, Variables: scopes[8]},
+		{CacheIndex: 32, Expr: `false`, Variables: scopes[9]},
+		{CacheIndex: 33, Expr: `true`, Variables: scopes[9]},
+		{CacheIndex: 34, Expr: `'a'`, Variables: scopes[9]},
+		{CacheIndex: 35, Expr: `0`, Variables: scopes[9]},
+		{CacheIndex: 36, Expr: `'hello'`, Variables: scopes[9]},
+		{CacheIndex: 37, Expr: `ua`, Variables: scopes[10]},
+		{CacheIndex: 38, Expr: `'b'`, Variables: scopes[9]},
+		{CacheIndex: 39, Expr: `0`, Variables: scopes[9]},
+		{CacheIndex: 40, Expr: `'hello'`, Variables: scopes[9]},
+		{CacheIndex: 41, Expr: `ub`, Variables: scopes[11]},
+		{CacheIndex: 42, Expr: `$.value`, Variables: scopes[9]},
+		{CacheIndex: 43, Expr: `0`, Variables: scopes[9]},
+		{CacheIndex: 44, Expr: `'hello'`, Variables: scopes[9]},
+		{CacheIndex: 45, Expr: `uc`, Variables: scopes[12]},
+	})
 }

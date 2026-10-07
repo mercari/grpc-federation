@@ -157,6 +157,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Post_PostServiceClient: Post_PostServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -701,4 +704,35 @@ func (s *FederationService) logvalue_Post_GetPostRequest(v *post.GetPostRequest)
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 8)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`hdr`, grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELListType(grpcfed.CELStringType))))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`tlr`, grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELListType(grpcfed.CELStringType))))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`md`, grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELListType(grpcfed.CELStringType))))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`_def3_def0`, grpcfed.CELIntType))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`hdr_keys`, grpcfed.CELListType(grpcfed.CELStringType)))
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`tlr_keys`, grpcfed.CELListType(grpcfed.CELStringType)))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `grpc.federation.metadata.new()`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `grpc.federation.metadata.new()`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `{'authorization': ['Bearer xxx']}`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `$.id`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `md`, Variables: scopes[3]},
+		{CacheIndex: 6, Expr: `1`, Variables: scopes[3]},
+		{CacheIndex: 7, Expr: `true`, Variables: scopes[4]},
+		{CacheIndex: 8, Expr: `res != null`, Variables: scopes[5]},
+		{CacheIndex: 9, Expr: `hdr.map(k, k)`, Variables: scopes[5]},
+		{CacheIndex: 10, Expr: `res != null`, Variables: scopes[6]},
+		{CacheIndex: 11, Expr: `tlr.map(k, k)`, Variables: scopes[6]},
+		{CacheIndex: 12, Expr: `hdr_keys.sortAsc(v, v)`, Variables: scopes[7]},
+		{CacheIndex: 13, Expr: `tlr_keys.sortAsc(v, v)`, Variables: scopes[7]},
+	})
 }
