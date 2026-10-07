@@ -176,6 +176,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -357,4 +360,21 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 3)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`id_from_plugin`, grpcfed.CELStringType))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`id_from_metadata`, grpcfed.CELStringType))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `example.account.get_id()`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `grpc.federation.metadata.incoming()['id'][0]`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `id_from_plugin`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `id_from_metadata`, Variables: scopes[2]},
+	})
 }

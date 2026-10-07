@@ -283,6 +283,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
 		if err := resolver.Init(ctx); err != nil {
@@ -1859,4 +1862,57 @@ func (s *FederationService) logvalue_repeated_Org_Federation_Item(v []*Item) slo
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 15)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID")))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`map_value`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType)))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`e`, grpcfed.CELIntType))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`id`, grpcfed.CELIntType))
+	scopes[6] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.MArgument"))}
+	scopes[7] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse")))
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[8], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.post.Post")))
+	scopes[10] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User")), grpcfed.NewCELVariable(`z`, grpcfed.CELObjectType("org.federation.Z")))
+	scopes[11] = grpcfed.ExtendCELEnvOptions(scopes[10], grpcfed.NewCELVariable(`m`, grpcfed.CELObjectType("org.federation.M")))
+	scopes[12] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}
+	scopes[13] = grpcfed.ExtendCELEnvOptions(scopes[12], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.user.GetUserResponse")))
+	scopes[14] = grpcfed.ExtendCELEnvOptions(scopes[13], grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.user.User")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.id`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `grpc.federation.uuid.newRandom()`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `{1:'a', 2:'b', 3:'c'}`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `org.user.Item.ItemType.value('ITEM_TYPE_2')`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `100`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `post`, Variables: scopes[5]},
+		{CacheIndex: 7, Expr: `'foo'`, Variables: scopes[5]},
+		{CacheIndex: 8, Expr: `uuid.string()`, Variables: scopes[5]},
+		{CacheIndex: 9, Expr: `org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)`, Variables: scopes[5]},
+		{CacheIndex: 10, Expr: `org.federation.Item.ItemType.value('ITEM_TYPE_1')`, Variables: scopes[5]},
+		{CacheIndex: 11, Expr: `map_value`, Variables: scopes[5]},
+		{CacheIndex: 12, Expr: `e`, Variables: scopes[5]},
+		{CacheIndex: 13, Expr: `Item.ItemType.attr(e, 'en')`, Variables: scopes[5]},
+		{CacheIndex: 14, Expr: `id`, Variables: scopes[5]},
+		{CacheIndex: 15, Expr: `'foo'`, Variables: scopes[6]},
+		{CacheIndex: 16, Expr: `1`, Variables: scopes[6]},
+		{CacheIndex: 17, Expr: `$.id`, Variables: scopes[7]},
+		{CacheIndex: 18, Expr: `true`, Variables: scopes[7]},
+		{CacheIndex: 19, Expr: `res.post`, Variables: scopes[8]},
+		{CacheIndex: 20, Expr: `post`, Variables: scopes[9]},
+		{CacheIndex: 21, Expr: `10`, Variables: scopes[10]},
+		{CacheIndex: 22, Expr: `1`, Variables: scopes[10]},
+		{CacheIndex: 23, Expr: `user`, Variables: scopes[11]},
+		{CacheIndex: 24, Expr: `$.user_id`, Variables: scopes[12]},
+		{CacheIndex: 25, Expr: `error.code != google.rpc.Code.UNIMPLEMENTED`, Variables: scopes[12]},
+		{CacheIndex: 26, Expr: `res.user`, Variables: scopes[13]},
+		{CacheIndex: 27, Expr: `uint(2)`, Variables: scopes[14]},
+		{CacheIndex: 28, Expr: `org.user.Item.ItemType.value('ITEM_TYPE_2')`, Variables: scopes[14]},
+	})
 }

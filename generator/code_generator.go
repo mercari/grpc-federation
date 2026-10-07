@@ -327,9 +327,11 @@ func (f *File) CELPlugins() []*CELPlugin {
 
 type Service struct {
 	*resolver.Service
-	file              *File
-	nameToLogValueMap map[string]*LogValue
-	celCacheIndex     int
+	file                 *File
+	nameToLogValueMap    map[string]*LogValue
+	celCacheIndex        int
+	celPrecompileEntries []*CELPrecompileEntry
+	celPrecompileScopes  []*CELPrecompileScope
 }
 
 func newService(svc *resolver.Service, file *File) *Service {
@@ -340,9 +342,147 @@ func newService(svc *resolver.Service, file *File) *Service {
 	}
 }
 
-func (s *Service) CELCacheIndex() int {
+// CELPrecompileEntry is a CEL expression that is compiled at service startup.
+// One entry is recorded every time a cache index is issued while rendering the template,
+// so the entry list must be rendered after all other parts of the service.
+type CELPrecompileEntry struct {
+	Index      int
+	Expr       string
+	Variables  []*CELPrecompileVariable
+	scopeIndex int
+}
+
+// ScopeIndex returns the index into Service.CELPrecompileScopes() of the variable set visible to this expression.
+// It returns -1 when no user-defined variable is visible.
+func (e *CELPrecompileEntry) ScopeIndex() int {
+	return e.scopeIndex
+}
+
+// HasScope reports whether the expression has visible user-defined variables.
+func (e *CELPrecompileEntry) HasScope() bool {
+	return e.scopeIndex >= 0
+}
+
+// CELPrecompileVariable is a user-defined variable visible to the expression.
+type CELPrecompileVariable struct {
+	Name    string
+	CELType string
+}
+
+func (v *CELPrecompileVariable) key() string {
+	return v.Name + ":" + v.CELType
+}
+
+// CELPrecompileScope is a unique set of user-defined variables shared by one or more expressions.
+// Scopes grow by appending one variable at a time, so most scopes can be expressed as
+// their parent scope plus the trailing variables, which keeps the generated code small.
+type CELPrecompileScope struct {
+	Index  int
+	Parent int // -1 when the scope has no parent scope.
+	// Variables holds the full variable set when Parent is -1, otherwise only the variables appended to the parent.
+	Variables []*CELPrecompileVariable
+	key       string
+}
+
+// HasParent reports whether the scope extends another scope.
+func (s *CELPrecompileScope) HasParent() bool {
+	return s.Parent >= 0
+}
+
+// CELCacheIndex issues a new cache index for the CEL expression and records it for precompilation.
+func (s *Service) CELCacheIndex(v *resolver.CELValue) int {
 	s.celCacheIndex++
+	if v != nil {
+		s.celPrecompileEntries = append(s.celPrecompileEntries, &CELPrecompileEntry{
+			Index:     s.celCacheIndex,
+			Expr:      v.Expr,
+			Variables: toCELPrecompileVariables(v.Variables),
+		})
+	}
 	return s.celCacheIndex
+}
+
+// celCacheIndexForVariable issues a new cache index for an expression that only references
+// the given variable by name (e.g. grpcfed.CustomMessage evaluates a variable definition by its name).
+func (s *Service) celCacheIndexForVariable(name string, typ *resolver.Type) int {
+	s.celCacheIndex++
+	if name != "" && typ != nil {
+		s.celPrecompileEntries = append(s.celPrecompileEntries, &CELPrecompileEntry{
+			Index: s.celCacheIndex,
+			Expr:  name,
+			Variables: []*CELPrecompileVariable{
+				{Name: name, CELType: toCELNativeType(typ)},
+			},
+		})
+	}
+	return s.celCacheIndex
+}
+
+// CELPrecompileEntries returns all recorded expressions. It must be called after all cache indexes are issued.
+func (s *Service) CELPrecompileEntries() []*CELPrecompileEntry {
+	s.buildCELPrecompileScopes()
+	return s.celPrecompileEntries
+}
+
+// CELPrecompileScopes returns the deduplicated variable scopes referenced by CELPrecompileEntries.
+func (s *Service) CELPrecompileScopes() []*CELPrecompileScope {
+	s.buildCELPrecompileScopes()
+	return s.celPrecompileScopes
+}
+
+func (s *Service) buildCELPrecompileScopes() {
+	if s.celPrecompileScopes != nil || len(s.celPrecompileEntries) == 0 {
+		return
+	}
+	scopes := []*CELPrecompileScope{}
+	keyToScope := map[string]*CELPrecompileScope{}
+	for _, entry := range s.celPrecompileEntries {
+		if len(entry.Variables) == 0 {
+			entry.scopeIndex = -1
+			continue
+		}
+		keys := make([]string, 0, len(entry.Variables))
+		for _, v := range entry.Variables {
+			keys = append(keys, v.key())
+		}
+		fullKey := strings.Join(keys, "\n")
+		if scope, exists := keyToScope[fullKey]; exists {
+			entry.scopeIndex = scope.Index
+			continue
+		}
+		// Find the longest already known prefix to use as the parent scope.
+		scope := &CELPrecompileScope{Index: len(scopes), Parent: -1, key: fullKey}
+		for prefixLen := len(entry.Variables) - 1; prefixLen > 0; prefixLen-- {
+			parent, exists := keyToScope[strings.Join(keys[:prefixLen], "\n")]
+			if !exists {
+				continue
+			}
+			scope.Parent = parent.Index
+			scope.Variables = entry.Variables[prefixLen:]
+			break
+		}
+		if scope.Parent < 0 {
+			scope.Variables = entry.Variables
+		}
+		scopes = append(scopes, scope)
+		keyToScope[fullKey] = scope
+		entry.scopeIndex = scope.Index
+	}
+	s.celPrecompileScopes = scopes
+}
+
+func toCELPrecompileVariables(vars []*resolver.CELVariable) []*CELPrecompileVariable {
+	ret := make([]*CELPrecompileVariable, 0, len(vars))
+	for _, v := range vars {
+		if v == nil || v.Name == "" || v.Type == nil {
+			continue
+		}
+		ret = append(ret, &CELPrecompileVariable{
+			Name:    v.Name,
+			CELType: toCELNativeType(v.Type),
+		})
+	}
+	return ret
 }
 
 func (s *Service) Env() *Env {
@@ -1757,8 +1897,8 @@ type Message struct {
 	file    *File
 }
 
-func (m *Message) CELCacheIndex() int {
-	return m.Service.CELCacheIndex()
+func (m *Message) CELCacheIndex(v *resolver.CELValue) int {
+	return m.Service.CELCacheIndex(v)
 }
 
 func (m *Message) ProtoFQDN() string {
@@ -1969,6 +2109,8 @@ func (f *OneofReturnField) HasFieldOneofRule() bool {
 type OneofField struct {
 	Expr           string
 	By             string
+	ExprValue      *resolver.CELValue
+	ByValue        *resolver.CELValue
 	Type           string
 	Condition      string
 	Name           string
@@ -2688,6 +2830,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
 					By:             rule.Oneof.By.Expr,
+					ByValue:        rule.Oneof.By,
 					Type:           typ,
 					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:           fieldName,
@@ -2707,6 +2850,8 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 				caseFields = append(caseFields, &OneofField{
 					Expr:           rule.Oneof.If.Expr,
 					By:             rule.Oneof.By.Expr,
+					ExprValue:      rule.Oneof.If,
+					ByValue:        rule.Oneof.By,
 					Type:           typ,
 					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:           fieldName,
@@ -2809,8 +2954,26 @@ type VariableDefinition struct {
 	file *File
 }
 
-func (d *VariableDefinition) CELCacheIndex() int {
-	return d.Service.CELCacheIndex()
+func (d *VariableDefinition) CELCacheIndex(v *resolver.CELValue) int {
+	return d.Service.CELCacheIndex(v)
+}
+
+// CustomMessageCELCacheIndex issues a cache index for evaluating this variable by its name
+// (used by grpcfed.CustomMessage for error details).
+func (d *VariableDefinition) CustomMessageCELCacheIndex() int {
+	var typ *resolver.Type
+	if d.VariableDefinition.Expr != nil {
+		typ = d.VariableDefinition.Expr.Type
+	}
+	return d.Service.celCacheIndexForVariable(d.VariableDefinition.Name, typ)
+}
+
+func (d *VariableDefinition) IfValue() *resolver.CELValue {
+	return d.VariableDefinition.If
+}
+
+func (d *VariableDefinition) MetadataValue() *resolver.CELValue {
+	return d.VariableDefinition.Expr.Call.Metadata
 }
 
 func (d *VariableDefinition) Key() string {
@@ -2991,8 +3154,8 @@ type GRPCError struct {
 	svc *Service
 }
 
-func (e *GRPCError) CELCacheIndex() int {
-	return e.svc.CELCacheIndex()
+func (e *GRPCError) CELCacheIndex(v *resolver.CELValue) int {
+	return e.svc.CELCacheIndex(v)
 }
 
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
@@ -3088,6 +3251,7 @@ func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
 type GRPCErrorDetailBy struct {
 	Expr string
 	Type string
+	CEL  *resolver.CELValue
 }
 
 func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
@@ -3096,6 +3260,7 @@ func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
 		ret = append(ret, &GRPCErrorDetailBy{
 			Expr: by.Expr,
 			Type: toMakeZeroValue(detail.svc.file, by.Out),
+			CEL:  by,
 		})
 	}
 	return ret
@@ -3155,8 +3320,8 @@ func (pf *PreconditionFailure) Violations() []*PreconditionFailureViolation {
 	return ret
 }
 
-func (v *PreconditionFailureViolation) CELCacheIndex() int {
-	return v.svc.CELCacheIndex()
+func (v *PreconditionFailureViolation) CELCacheIndex(value *resolver.CELValue) int {
+	return v.svc.CELCacheIndex(value)
 }
 
 type BadRequest struct {
@@ -3180,8 +3345,8 @@ func (b *BadRequest) FieldViolations() []*BadRequestFieldViolation {
 	return ret
 }
 
-func (v *BadRequestFieldViolation) CELCacheIndex() int {
-	return v.svc.CELCacheIndex()
+func (v *BadRequestFieldViolation) CELCacheIndex(value *resolver.CELValue) int {
+	return v.svc.CELCacheIndex(value)
 }
 
 type LocalizedMessage struct {
@@ -3189,8 +3354,8 @@ type LocalizedMessage struct {
 	*resolver.LocalizedMessage
 }
 
-func (m *LocalizedMessage) CELCacheIndex() int {
-	return m.svc.CELCacheIndex()
+func (m *LocalizedMessage) CELCacheIndex(v *resolver.CELValue) int {
+	return m.svc.CELCacheIndex(v)
 }
 
 func (d *VariableDefinition) ServiceName() string {
@@ -3509,8 +3674,8 @@ func (r *SwitchResolver) Type() string {
 	return r.file.toTypeText(r.SwitchExpr.Type)
 }
 
-func (r *SwitchResolver) CELCacheIndex() int {
-	return r.Service.CELCacheIndex()
+func (r *SwitchResolver) CELCacheIndex(v *resolver.CELValue) int {
+	return r.Service.CELCacheIndex(v)
 }
 
 type SwitchCaseResolver struct {

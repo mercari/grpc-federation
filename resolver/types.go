@@ -574,6 +574,16 @@ type CELValue struct {
 	Expr        string
 	Out         *Type
 	CheckedExpr *exprv1.CheckedExpr
+	// Variables is the set of user-defined variables (message argument, variable definitions, map iterator)
+	// that are visible to this expression at compile time, in declaration order.
+	// It is used by the code generator to emit the CEL env for precompiling this expression on startup.
+	Variables []*CELVariable
+}
+
+// CELVariable represents a user-defined variable that is declared in a CEL env.
+type CELVariable struct {
+	Name string
+	Type *Type
 }
 
 type EnvKey string

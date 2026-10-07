@@ -147,6 +147,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		resolver:        cfg.Resolver,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
 		if err := resolver.Init(ctx); err != nil {
@@ -281,4 +284,11 @@ func (s *FederationService) logvalue_Org_Federation_User(v *User) slog.Value {
 		slog.String("id", v.GetId()),
 		slog.String("name", v.GetName()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{})
 }

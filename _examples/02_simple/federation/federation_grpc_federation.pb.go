@@ -306,6 +306,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			User_UserServiceClient: User_UserServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -4002,4 +4005,173 @@ func (s *FederationService) logvalue_repeated_Federation_Item(v []*Item) slog.Va
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 50)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.AArgument")), grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("federation.A.B"))}
+	scopes[1] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.A_BArgument"))}
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C")))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C")))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`_def2`, grpcfed.CELBoolType))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`_def3`, grpcfed.CELBoolType))
+	scopes[6] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.A_B_CArgument"))}
+	scopes[7] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post")))
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[8], grpcfed.NewCELVariable(`strings_join`, grpcfed.CELStringType))
+	scopes[10] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`parse_float`, grpcfed.CELDoubleType))
+	scopes[11] = grpcfed.ExtendCELEnvOptions(scopes[10], grpcfed.NewCELVariable(`url`, grpcfed.CELObjectType("grpc.federation.url.URL")))
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[11], grpcfed.NewCELVariable(`date`, grpcfed.CELObjectType("grpc.federation.time.Time")))
+	scopes[13] = grpcfed.ExtendCELEnvOptions(scopes[12], grpcfed.NewCELVariable(`rand_source`, grpcfed.CELObjectType("grpc.federation.rand.Source")))
+	scopes[14] = grpcfed.ExtendCELEnvOptions(scopes[13], grpcfed.NewCELVariable(`fixed_rand`, grpcfed.CELObjectType("grpc.federation.rand.Rand")))
+	scopes[15] = grpcfed.ExtendCELEnvOptions(scopes[14], grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID")))
+	scopes[16] = grpcfed.ExtendCELEnvOptions(scopes[15], grpcfed.NewCELVariable(`loc`, grpcfed.CELObjectType("grpc.federation.time.Location")))
+	scopes[17] = grpcfed.ExtendCELEnvOptions(scopes[16], grpcfed.NewCELVariable(`jp_time`, grpcfed.CELObjectType("grpc.federation.time.Time")))
+	scopes[18] = grpcfed.ExtendCELEnvOptions(scopes[17], grpcfed.NewCELVariable(`value1`, grpcfed.CELStringType), grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("federation.A")))
+	scopes[19] = grpcfed.ExtendCELEnvOptions(scopes[18], grpcfed.NewCELVariable(`sorted_values`, grpcfed.CELListType(grpcfed.CELIntType)))
+	scopes[20] = grpcfed.ExtendCELEnvOptions(scopes[19], grpcfed.NewCELVariable(`sorted_items`, grpcfed.CELListType(grpcfed.CELObjectType("user.Item"))))
+	scopes[21] = grpcfed.ExtendCELEnvOptions(scopes[20], grpcfed.NewCELVariable(`map_value`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType)))
+	scopes[22] = grpcfed.ExtendCELEnvOptions(scopes[21], grpcfed.NewCELVariable(`null_value`, grpcfed.CELNullType))
+	scopes[23] = grpcfed.ExtendCELEnvOptions(scopes[22], grpcfed.NewCELVariable(`_def16`, grpcfed.CELBoolType))
+	scopes[24] = grpcfed.ExtendCELEnvOptions(scopes[23], grpcfed.NewCELVariable(`e`, grpcfed.CELIntType))
+	scopes[25] = grpcfed.ExtendCELEnvOptions(scopes[24], grpcfed.NewCELVariable(`sqrt_double`, grpcfed.CELDoubleType))
+	scopes[26] = grpcfed.ExtendCELEnvOptions(scopes[25], grpcfed.NewCELVariable(`sqrt_int`, grpcfed.CELDoubleType))
+	scopes[27] = grpcfed.ExtendCELEnvOptions(scopes[26], grpcfed.NewCELVariable(`pow`, grpcfed.CELDoubleType))
+	scopes[28] = grpcfed.ExtendCELEnvOptions(scopes[27], grpcfed.NewCELVariable(`floor`, grpcfed.CELDoubleType))
+	scopes[29] = grpcfed.ExtendCELEnvOptions(scopes[28], grpcfed.NewCELVariable(`flatten`, grpcfed.CELListType(grpcfed.CELIntType)))
+	scopes[30] = grpcfed.ExtendCELEnvOptions(scopes[29], grpcfed.NewCELVariable(`round`, grpcfed.CELDoubleType))
+	scopes[31] = grpcfed.ExtendCELEnvOptions(scopes[30], grpcfed.NewCELVariable(`dup`, grpcfed.CELListType(grpcfed.CELIntType)))
+	scopes[32] = grpcfed.ExtendCELEnvOptions(scopes[31], grpcfed.NewCELVariable(`any`, grpcfed.CELObjectType("google.protobuf.Any")))
+	scopes[33] = grpcfed.ExtendCELEnvOptions(scopes[32], grpcfed.NewCELVariable(`fmt`, grpcfed.CELStringType))
+	scopes[34] = grpcfed.ExtendCELEnvOptions(scopes[33], grpcfed.NewCELVariable(`replaced`, grpcfed.CELStringType))
+	scopes[35] = grpcfed.ExtendCELEnvOptions(scopes[34], grpcfed.NewCELVariable(`list_to_map`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELIntType)))
+	scopes[36] = grpcfed.ExtendCELEnvOptions(scopes[35], grpcfed.NewCELVariable(`uuid_parse`, grpcfed.CELObjectType("grpc.federation.uuid.UUID")))
+	scopes[37] = grpcfed.ExtendCELEnvOptions(scopes[36], grpcfed.NewCELVariable(`uuid_validate`, grpcfed.CELBoolType))
+	scopes[38] = grpcfed.ExtendCELEnvOptions(scopes[37], grpcfed.NewCELVariable(`compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp")))
+	scopes[39] = grpcfed.ExtendCELEnvOptions(scopes[38], grpcfed.NewCELVariable(`must_compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp")))
+	scopes[40] = grpcfed.ExtendCELEnvOptions(scopes[39], grpcfed.NewCELVariable(`quote_meta`, grpcfed.CELStringType))
+	scopes[41] = grpcfed.ExtendCELEnvOptions(scopes[40], grpcfed.NewCELVariable(`find_string_submatch`, grpcfed.CELListType(grpcfed.CELStringType)))
+	scopes[42] = grpcfed.ExtendCELEnvOptions(scopes[41], grpcfed.NewCELVariable(`match_string`, grpcfed.CELBoolType))
+	scopes[43] = grpcfed.ExtendCELEnvOptions(scopes[42], grpcfed.NewCELVariable(`replace_all_string`, grpcfed.CELStringType))
+	scopes[44] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}
+	scopes[45] = grpcfed.ExtendCELEnvOptions(scopes[44], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")))
+	scopes[46] = grpcfed.ExtendCELEnvOptions(scopes[45], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")))
+	scopes[47] = grpcfed.ExtendCELEnvOptions(scopes[46], grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.User")))
+	scopes[48] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}
+	scopes[49] = grpcfed.ExtendCELEnvOptions(scopes[48], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("user.GetUserResponse")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `b`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `true`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `A.B.C{}`, Variables: scopes[0]},
+		{CacheIndex: 4, Expr: `'foo'`, Variables: scopes[1]},
+		{CacheIndex: 5, Expr: `'bar'`, Variables: scopes[2]},
+		{CacheIndex: 6, Expr: `foo.type == 'foo'`, Variables: scopes[3]},
+		{CacheIndex: 7, Expr: `grpc.federation.log.info('output federation log', {'messages': [foo, bar], 'message_map': {'foo': foo, 'bar': bar}})`, Variables: scopes[3]},
+		{CacheIndex: 8, Expr: `grpc.federation.log.add({'foo_type': foo.type, 'bar_type': bar.type})`, Variables: scopes[4]},
+		{CacheIndex: 9, Expr: `foo`, Variables: scopes[5]},
+		{CacheIndex: 10, Expr: `bar`, Variables: scopes[5]},
+		{CacheIndex: 11, Expr: `$.type`, Variables: scopes[6]},
+		{CacheIndex: 12, Expr: `$.id`, Variables: scopes[7]},
+		{CacheIndex: 13, Expr: `grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')`, Variables: scopes[8]},
+		{CacheIndex: 14, Expr: `grpc.federation.strings.parseFloat(strings_join, 64)`, Variables: scopes[9]},
+		{CacheIndex: 15, Expr: `grpc.federation.url.parse('https://test_user:password@example.com/path')`, Variables: scopes[10]},
+		{CacheIndex: 16, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())`, Variables: scopes[11]},
+		{CacheIndex: 17, Expr: `grpc.federation.rand.newSource(date.unix())`, Variables: scopes[12]},
+		{CacheIndex: 18, Expr: `grpc.federation.rand.new(rand_source)`, Variables: scopes[13]},
+		{CacheIndex: 19, Expr: `.grpc.federation.uuid.newRandomFromRand(fixed_rand)`, Variables: scopes[14]},
+		{CacheIndex: 20, Expr: `grpc.federation.time.loadLocation('Asia/Tokyo')`, Variables: scopes[15]},
+		{CacheIndex: 21, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, loc)`, Variables: scopes[16]},
+		{CacheIndex: 22, Expr: `grpc.federation.metadata.incoming()['key1'][0]`, Variables: scopes[17]},
+		{CacheIndex: 23, Expr: `[4, 1, 3, 2].sortAsc(v, v)`, Variables: scopes[18]},
+		{CacheIndex: 24, Expr: `[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)`, Variables: scopes[19]},
+		{CacheIndex: 25, Expr: `{1: 'a', 2: 'b', 3: 'c'}`, Variables: scopes[20]},
+		{CacheIndex: 26, Expr: `null`, Variables: scopes[21]},
+		{CacheIndex: 27, Expr: `grpc.federation.log.info('output federation log', {'post_message': post})`, Variables: scopes[22]},
+		{CacheIndex: 28, Expr: `true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)`, Variables: scopes[23]},
+		{CacheIndex: 29, Expr: `grpc.federation.math.sqrt(3.0*3.0+4.0*4.0)`, Variables: scopes[24]},
+		{CacheIndex: 30, Expr: `grpc.federation.math.sqrt(3*3+4*4)`, Variables: scopes[25]},
+		{CacheIndex: 31, Expr: `grpc.federation.math.pow(2.0, 3.0)`, Variables: scopes[26]},
+		{CacheIndex: 32, Expr: `grpc.federation.math.floor(1.51)`, Variables: scopes[27]},
+		{CacheIndex: 33, Expr: `[[1], [2], [3]].flatten()`, Variables: scopes[28]},
+		{CacheIndex: 34, Expr: `grpc.federation.math.round(1.5)`, Variables: scopes[29]},
+		{CacheIndex: 35, Expr: `[1, 2, 3, 4].filter(dup, dup % 2 == 0)`, Variables: scopes[30]},
+		{CacheIndex: 36, Expr: `grpc.federation.any.new(post)`, Variables: scopes[31]},
+		{CacheIndex: 37, Expr: `'%d-%d-%d-world'.format([1, 2, 3])`, Variables: scopes[32]},
+		{CacheIndex: 38, Expr: `fmt.replace('world', 'grpc')`, Variables: scopes[33]},
+		{CacheIndex: 39, Expr: `[1, 2, 3].transformMap(idx, v, idx % 2 == 0, (idx * v) + v)`, Variables: scopes[34]},
+		{CacheIndex: 40, Expr: `grpc.federation.uuid.parse(uuid.string())`, Variables: scopes[35]},
+		{CacheIndex: 41, Expr: `grpc.federation.uuid.validate(uuid.string())`, Variables: scopes[36]},
+		{CacheIndex: 42, Expr: `grpc.federation.regexp.compile('[a-z]+\\d\\d')`, Variables: scopes[37]},
+		{CacheIndex: 43, Expr: `grpc.federation.regexp.mustCompile('([a-z]+)\\d(\\d)')`, Variables: scopes[38]},
+		{CacheIndex: 44, Expr: `grpc.federation.regexp.quoteMeta('[a-z]+\\d')`, Variables: scopes[39]},
+		{CacheIndex: 45, Expr: `must_compile.findStringSubmatch('abc123')`, Variables: scopes[40]},
+		{CacheIndex: 46, Expr: `compile.matchString('abc12')`, Variables: scopes[41]},
+		{CacheIndex: 47, Expr: `grpc.federation.regexp.compile('mackerel').replaceAllString('mackerel is tasty', 'salmon')`, Variables: scopes[42]},
+		{CacheIndex: 48, Expr: `post`, Variables: scopes[43]},
+		{CacheIndex: 49, Expr: `'hello'`, Variables: scopes[43]},
+		{CacheIndex: 50, Expr: `uuid.string()`, Variables: scopes[43]},
+		{CacheIndex: 51, Expr: `loc.string()`, Variables: scopes[43]},
+		{CacheIndex: 52, Expr: `value1`, Variables: scopes[43]},
+		{CacheIndex: 53, Expr: `Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)`, Variables: scopes[43]},
+		{CacheIndex: 54, Expr: `Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)`, Variables: scopes[43]},
+		{CacheIndex: 55, Expr: `user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)`, Variables: scopes[43]},
+		{CacheIndex: 56, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`, Variables: scopes[43]},
+		{CacheIndex: 57, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`, Variables: scopes[43]},
+		{CacheIndex: 58, Expr: `user.Item.ItemType.from(1)`, Variables: scopes[43]},
+		{CacheIndex: 59, Expr: `Item.Location.LocationType.value('LOCATION_TYPE_1')`, Variables: scopes[43]},
+		{CacheIndex: 60, Expr: `user.Item.ItemType.value('ITEM_TYPE_2')`, Variables: scopes[43]},
+		{CacheIndex: 61, Expr: `a`, Variables: scopes[43]},
+		{CacheIndex: 62, Expr: `sorted_values`, Variables: scopes[43]},
+		{CacheIndex: 63, Expr: `sorted_items`, Variables: scopes[43]},
+		{CacheIndex: 64, Expr: `map_value`, Variables: scopes[43]},
+		{CacheIndex: 65, Expr: `google.protobuf.DoubleValue{value: 1.23}`, Variables: scopes[43]},
+		{CacheIndex: 66, Expr: `google.protobuf.FloatValue{value: 3.45}`, Variables: scopes[43]},
+		{CacheIndex: 67, Expr: `google.protobuf.Int64Value{value: 1}`, Variables: scopes[43]},
+		{CacheIndex: 68, Expr: `google.protobuf.UInt64Value{value: uint(2)}`, Variables: scopes[43]},
+		{CacheIndex: 69, Expr: `google.protobuf.Int32Value{value: 3}`, Variables: scopes[43]},
+		{CacheIndex: 70, Expr: `google.protobuf.UInt32Value{value: uint(4)}`, Variables: scopes[43]},
+		{CacheIndex: 71, Expr: `google.protobuf.BoolValue{value: true}`, Variables: scopes[43]},
+		{CacheIndex: 72, Expr: `google.protobuf.StringValue{value: 'hello'}`, Variables: scopes[43]},
+		{CacheIndex: 73, Expr: `google.protobuf.BytesValue{value: bytes('world')}`, Variables: scopes[43]},
+		{CacheIndex: 74, Expr: `'hello\nworld'`, Variables: scopes[43]},
+		{CacheIndex: 75, Expr: `null`, Variables: scopes[43]},
+		{CacheIndex: 76, Expr: `null_value`, Variables: scopes[43]},
+		{CacheIndex: 77, Expr: `true ? null : google.protobuf.Timestamp{}`, Variables: scopes[43]},
+		{CacheIndex: 78, Expr: `jp_time.location().string()`, Variables: scopes[43]},
+		{CacheIndex: 79, Expr: `strings_join`, Variables: scopes[43]},
+		{CacheIndex: 80, Expr: `parse_float`, Variables: scopes[43]},
+		{CacheIndex: 81, Expr: `url.userinfo().username()`, Variables: scopes[43]},
+		{CacheIndex: 82, Expr: `e`, Variables: scopes[43]},
+		{CacheIndex: 83, Expr: `Item.ItemType.attr(e, 'en')`, Variables: scopes[43]},
+		{CacheIndex: 84, Expr: `sqrt_double`, Variables: scopes[43]},
+		{CacheIndex: 85, Expr: `sqrt_int`, Variables: scopes[43]},
+		{CacheIndex: 86, Expr: `pow`, Variables: scopes[43]},
+		{CacheIndex: 87, Expr: `floor`, Variables: scopes[43]},
+		{CacheIndex: 88, Expr: `flatten`, Variables: scopes[43]},
+		{CacheIndex: 89, Expr: `round`, Variables: scopes[43]},
+		{CacheIndex: 90, Expr: `any`, Variables: scopes[43]},
+		{CacheIndex: 91, Expr: `replaced`, Variables: scopes[43]},
+		{CacheIndex: 92, Expr: `list_to_map`, Variables: scopes[43]},
+		{CacheIndex: 93, Expr: `uuid_parse.string()`, Variables: scopes[43]},
+		{CacheIndex: 94, Expr: `uuid_validate`, Variables: scopes[43]},
+		{CacheIndex: 95, Expr: `compile.string()`, Variables: scopes[43]},
+		{CacheIndex: 96, Expr: `must_compile.string()`, Variables: scopes[43]},
+		{CacheIndex: 97, Expr: `quote_meta`, Variables: scopes[43]},
+		{CacheIndex: 98, Expr: `find_string_submatch`, Variables: scopes[43]},
+		{CacheIndex: 99, Expr: `match_string`, Variables: scopes[43]},
+		{CacheIndex: 100, Expr: `replace_all_string`, Variables: scopes[43]},
+		{CacheIndex: 101, Expr: `$.id`, Variables: scopes[44]},
+		{CacheIndex: 102, Expr: `true`, Variables: scopes[44]},
+		{CacheIndex: 103, Expr: `res.post`, Variables: scopes[45]},
+		{CacheIndex: 104, Expr: `post`, Variables: scopes[46]},
+		{CacheIndex: 105, Expr: `user`, Variables: scopes[47]},
+		{CacheIndex: 106, Expr: `$.user_id`, Variables: scopes[48]},
+		{CacheIndex: 107, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`, Variables: scopes[48]},
+		{CacheIndex: 108, Expr: `true`, Variables: scopes[48]},
+		{CacheIndex: 109, Expr: `res.user`, Variables: scopes[49]},
+	})
 }

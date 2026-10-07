@@ -163,6 +163,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		resolver:        cfg.Resolver,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
 		if err := resolver.Init(ctx); err != nil {
@@ -560,4 +563,27 @@ func (s *FederationService) logvalue_Org_Federation_SubMessage(v *SubMessage) sl
 	return slog.GroupValue(
 		slog.String("value", v.GetValue()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 4)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.BindSourceArgument"))}
+	scopes[1] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType), grpcfed.NewCELVariable(`bind_source`, grpcfed.CELObjectType("org.federation.BindSource")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `'auto-bound'`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `7`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `org.federation.Color.value('COLOR_RED')`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `opt_int`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `opt_color`, Variables: scopes[3]},
+		{CacheIndex: 6, Expr: `$.id`, Variables: scopes[3]},
+		{CacheIndex: 7, Expr: `b'abc'`, Variables: scopes[3]},
+		{CacheIndex: 8, Expr: `false ? optional.of(opt_int) : optional.none()`, Variables: scopes[3]},
+		{CacheIndex: 9, Expr: `true ? optional.of(opt_int) : optional.none()`, Variables: scopes[3]},
+	})
 }

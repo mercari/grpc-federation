@@ -197,6 +197,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -995,4 +998,46 @@ func (s *FederationService) logvalue_Org_Post_UpdatePostRequest(v *post.UpdatePo
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 10)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CustomMessageArgument"))}
+	scopes[1] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")))
+	scopes[3] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.LocalizedMessageArgument"))}
+	scopes[4] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`id`, grpcfed.CELStringType))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`localized_msg`, grpcfed.CELObjectType("org.federation.LocalizedMessage")))
+	scopes[7] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def0_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage"))}
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`_def0_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")))
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `'custom error message:' + $.msg`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `$.id`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `post`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `'localized value:' + $.value`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `$.id`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `$.id`, Variables: scopes[4]},
+		{CacheIndex: 7, Expr: `error.precondition_failures.map(f, f.violations[0]).first(v, v.subject == '').?subject == optional.of('')`, Variables: scopes[5]},
+		{CacheIndex: 8, Expr: `'id must be not empty'`, Variables: scopes[5]},
+		{CacheIndex: 9, Expr: `id`, Variables: scopes[5]},
+		{CacheIndex: 10, Expr: `true`, Variables: scopes[6]},
+		{CacheIndex: 11, Expr: `id`, Variables: scopes[6]},
+		{CacheIndex: 12, Expr: `_def0_err_detail0_msg0`, Variables: scopes[7]},
+		{CacheIndex: 13, Expr: `org.post.Post{id: 'foo'}`, Variables: scopes[6]},
+		{CacheIndex: 14, Expr: `org.post.CreatePost{title: 'bar'}`, Variables: scopes[6]},
+		{CacheIndex: 15, Expr: `'some-type'`, Variables: scopes[8]},
+		{CacheIndex: 16, Expr: `'some-subject'`, Variables: scopes[8]},
+		{CacheIndex: 17, Expr: `'some-description'`, Variables: scopes[8]},
+		{CacheIndex: 18, Expr: `localized_msg.value`, Variables: scopes[8]},
+		{CacheIndex: 19, Expr: `error.code == google.rpc.Code.UNIMPLEMENTED`, Variables: scopes[4]},
+		{CacheIndex: 20, Expr: `org.post.GetPostResponse{post: org.post.Post{id: 'anonymous', title: 'none'}}`, Variables: scopes[4]},
+		{CacheIndex: 21, Expr: `true`, Variables: scopes[4]},
+		{CacheIndex: 22, Expr: `res.post`, Variables: scopes[9]},
+	})
 }

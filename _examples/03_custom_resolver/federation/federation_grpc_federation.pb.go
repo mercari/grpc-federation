@@ -391,6 +391,9 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 			User_UserServiceClient: User_UserServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
@@ -1576,4 +1579,48 @@ func (s *FederationV2DevService) logvalue_User_GetUsersRequest(v *user.GetUsersR
 	return slog.GroupValue(
 		slog.Any("ids", v.GetIds()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationV2DevService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationV2DevService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 13)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.v2dev.PostV2dev")), grpcfed.NewCELVariable(`r`, grpcfed.CELObjectType("federation.v2dev.Ref")))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User")))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`unused`, grpcfed.CELObjectType("federation.v2dev.Unused")))
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`_def4`, grpcfed.CELObjectType("federation.v2dev.ForNameless")), grpcfed.NewCELVariable(`typed_nil`, grpcfed.CELObjectType("federation.v2dev.TypedNil")))
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`null_check`, grpcfed.CELBoolType))
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[8], grpcfed.NewCELVariable(`_def7`, grpcfed.CELBoolType))
+	scopes[10] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.RefArgument"))}
+	scopes[11] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.UserArgument"))}
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[11], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("user.GetUserResponse")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `1`},
+		{CacheIndex: 2, Expr: `$.id`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `post`, Variables: scopes[1]},
+		{CacheIndex: 4, Expr: `PostV2devType.value('POST_V2_DEV_TYPE')`, Variables: scopes[1]},
+		{CacheIndex: 5, Expr: `grpc.federation.env.a`, Variables: scopes[1]},
+		{CacheIndex: 6, Expr: `grpc.federation.env.b[1]`, Variables: scopes[1]},
+		{CacheIndex: 7, Expr: `grpc.federation.env.c['z']`, Variables: scopes[1]},
+		{CacheIndex: 8, Expr: `r`, Variables: scopes[1]},
+		{CacheIndex: 9, Expr: `$.id`, Variables: scopes[2]},
+		{CacheIndex: 10, Expr: `res.post`, Variables: scopes[3]},
+		{CacheIndex: 11, Expr: `post`, Variables: scopes[4]},
+		{CacheIndex: 12, Expr: `'foo'`, Variables: scopes[5]},
+		{CacheIndex: 13, Expr: `'bar'`, Variables: scopes[6]},
+		{CacheIndex: 14, Expr: `typed_nil == null`, Variables: scopes[7]},
+		{CacheIndex: 15, Expr: `true`, Variables: scopes[7]},
+		{CacheIndex: 16, Expr: `typed_nil == null`, Variables: scopes[8]},
+		{CacheIndex: 17, Expr: `grpc.federation.log.info('output typed_nil', {'result': typed_nil == null})`, Variables: scopes[8]},
+		{CacheIndex: 18, Expr: `null_check`, Variables: scopes[9]},
+		{CacheIndex: 19, Expr: `grpc.federation.env.a`, Variables: scopes[10]},
+		{CacheIndex: 20, Expr: `$.user_id`, Variables: scopes[11]},
+		{CacheIndex: 21, Expr: `res.user`, Variables: scopes[12]},
+	})
 }

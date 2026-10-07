@@ -185,6 +185,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Post_PostServiceClient: Post_PostServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -706,4 +709,26 @@ func (s *FederationService) logvalue_Post_UpdatePostRequest(v *post.UpdatePostRe
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 6)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post")))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")))
+	scopes[4] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UpdatePostResponseArgument"))}
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`_def0`, grpcfed.CELObjectType("post.UpdatePostResponse")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.id`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `post`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `$.id`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `res.post`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `$.id`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `$.id`, Variables: scopes[5]},
+	})
 }

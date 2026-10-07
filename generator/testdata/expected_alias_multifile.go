@@ -191,6 +191,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_Post_V2_PostServiceClient: Org_Post_V2_PostServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -863,4 +866,30 @@ func (s *FederationService) logvalue_Org_Post_V2_GetPostRequest(v *post1.GetPost
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 8)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse")))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.post.Post")))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`res2`, grpcfed.CELObjectType("org.post.v2.GetPostResponse")))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`v2post`, grpcfed.CELObjectType("org.post.v2.Post")))
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`v2data`, grpcfed.CELObjectType("org.post.v2.PostData")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.id`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `post`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `$.id`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `res.post`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `$.id`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `res2.post`, Variables: scopes[5]},
+		{CacheIndex: 7, Expr: `v2post.data`, Variables: scopes[6]},
+		{CacheIndex: 8, Expr: `v2data`, Variables: scopes[7]},
+	})
 }

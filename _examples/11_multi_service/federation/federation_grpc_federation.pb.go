@@ -271,6 +271,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		svcVar:          new(FederationServiceVariable),
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
@@ -1432,6 +1435,60 @@ func (s *FederationService) logvalue_Federation_UserArgument(v *FederationServic
 	)
 }
 
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 14)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`upper_name`, grpcfed.CELStringType)}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`federation_service_variable`, grpcfed.CELIntType))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetNameResponseArgument")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetNameResponse.Foo"))}
+	scopes[3] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetNameResponse_FooArgument"))}
+	scopes[4] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`p`, grpcfed.CELObjectType("federation.Post")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetPostResponse.Foo"))}
+	scopes[5] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponse_FooArgument"))}
+	scopes[6] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`u`, grpcfed.CELObjectType("federation.User")))
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`favorite_value`, grpcfed.CELIntType))
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[8], grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType))
+	scopes[10] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`reaction`, grpcfed.CELObjectType("federation.Reaction")))
+	scopes[11] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.ReactionArgument"))}
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[11], grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType))
+	scopes[13] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `grpc.federation.strings.toUpper(grpc.federation.env.name)`},
+		{CacheIndex: 2, Expr: `1`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `grpc.federation.env.name == ''`, Variables: scopes[1]},
+		{CacheIndex: 4, Expr: `'name environment variable is unspecified'`, Variables: scopes[1]},
+		{CacheIndex: 5, Expr: `{'a': true}`, Variables: scopes[1]},
+		{CacheIndex: 6, Expr: `grpc.federation.env.name`, Variables: scopes[2]},
+		{CacheIndex: 7, Expr: `foo`, Variables: scopes[2]},
+		{CacheIndex: 8, Expr: `'y'`, Variables: scopes[3]},
+		{CacheIndex: 9, Expr: `p`, Variables: scopes[4]},
+		{CacheIndex: 10, Expr: `grpc.federation.var.upper_name`, Variables: scopes[4]},
+		{CacheIndex: 11, Expr: `foo`, Variables: scopes[4]},
+		{CacheIndex: 12, Expr: `'x'`, Variables: scopes[5]},
+		{CacheIndex: 13, Expr: `'foo'`, Variables: scopes[6]},
+		{CacheIndex: 14, Expr: `'bar'`, Variables: scopes[6]},
+		{CacheIndex: 15, Expr: `favorite.FavoriteType.value('TYPE1')`, Variables: scopes[7]},
+		{CacheIndex: 16, Expr: `favorite_value == favorite.FavoriteType.TYPE1`, Variables: scopes[8]},
+		{CacheIndex: 17, Expr: `favorite_value`, Variables: scopes[9]},
+		{CacheIndex: 18, Expr: `'post-id'`, Variables: scopes[10]},
+		{CacheIndex: 19, Expr: `'title'`, Variables: scopes[10]},
+		{CacheIndex: 20, Expr: `'content'`, Variables: scopes[10]},
+		{CacheIndex: 21, Expr: `u`, Variables: scopes[10]},
+		{CacheIndex: 22, Expr: `reaction`, Variables: scopes[10]},
+		{CacheIndex: 23, Expr: `favorite_value`, Variables: scopes[10]},
+		{CacheIndex: 24, Expr: `cmp`, Variables: scopes[10]},
+		{CacheIndex: 25, Expr: `$.v == favorite.FavoriteType.TYPE1`, Variables: scopes[11]},
+		{CacheIndex: 26, Expr: `favorite.FavoriteType.value('TYPE1')`, Variables: scopes[12]},
+		{CacheIndex: 27, Expr: `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`, Variables: scopes[12]},
+		{CacheIndex: 28, Expr: `cmp`, Variables: scopes[12]},
+		{CacheIndex: 29, Expr: `$.id`, Variables: scopes[13]},
+		{CacheIndex: 30, Expr: `$.name`, Variables: scopes[13]},
+	})
+}
+
 // Federation_GetNameResponseVariable represents variable definitions in "federation.GetNameResponse".
 type PrivateService_Federation_GetNameResponseVariable struct {
 	Foo *GetNameResponse_Foo
@@ -1682,6 +1739,9 @@ func NewPrivateService(cfg PrivateServiceConfig) (*PrivateService, error) {
 		env:             &env,
 		svcVar:          new(PrivateServiceVariable),
 		client:          &PrivateServiceDependentClientSet{},
+	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
 	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
@@ -2955,6 +3015,65 @@ func (s *PrivateService) logvalue_Federation_UserArgument(v *PrivateService_Fede
 	)
 }
 
+// precompileCEL compiles every CEL expression used by PrivateService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *PrivateService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 17)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`upper_name`, grpcfed.CELStringType)}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`private_service_enum`, grpcfed.CELIntType))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`private_service_user`, grpcfed.CELObjectType("federation.User")))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`users`, grpcfed.CELListType(grpcfed.CELObjectType("federation.User"))), grpcfed.NewCELVariable(`iter`, grpcfed.CELObjectType("federation.User")))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`users`, grpcfed.CELListType(grpcfed.CELObjectType("federation.User"))), grpcfed.NewCELVariable(`private_service_user_names`, grpcfed.CELListType(grpcfed.CELStringType)))
+	scopes[5] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetNameResponseArgument")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetNameResponse.Foo"))}
+	scopes[6] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetNameResponse_FooArgument"))}
+	scopes[7] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`p`, grpcfed.CELObjectType("federation.Post")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetPostResponse.Foo"))}
+	scopes[8] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponse_FooArgument"))}
+	scopes[9] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}
+	scopes[10] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`u`, grpcfed.CELObjectType("federation.User")))
+	scopes[11] = grpcfed.ExtendCELEnvOptions(scopes[10], grpcfed.NewCELVariable(`favorite_value`, grpcfed.CELIntType))
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[11], grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType))
+	scopes[13] = grpcfed.ExtendCELEnvOptions(scopes[12], grpcfed.NewCELVariable(`reaction`, grpcfed.CELObjectType("federation.Reaction")))
+	scopes[14] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.ReactionArgument"))}
+	scopes[15] = grpcfed.ExtendCELEnvOptions(scopes[14], grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType))
+	scopes[16] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `grpc.federation.strings.toUpper(grpc.federation.env.name)`},
+		{CacheIndex: 2, Expr: `favorite.FavoriteType.value('TYPE_1')`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `'private_service_user_id'`, Variables: scopes[1]},
+		{CacheIndex: 4, Expr: `'private_service_user_name'`, Variables: scopes[1]},
+		{CacheIndex: 5, Expr: `[private_service_user]`, Variables: scopes[2]},
+		{CacheIndex: 6, Expr: `iter.name`, Variables: scopes[3]},
+		{CacheIndex: 7, Expr: `{'b': true}`, Variables: scopes[4]},
+		{CacheIndex: 8, Expr: `grpc.federation.env.name`, Variables: scopes[5]},
+		{CacheIndex: 9, Expr: `foo`, Variables: scopes[5]},
+		{CacheIndex: 10, Expr: `'y'`, Variables: scopes[6]},
+		{CacheIndex: 11, Expr: `p`, Variables: scopes[7]},
+		{CacheIndex: 12, Expr: `grpc.federation.var.upper_name`, Variables: scopes[7]},
+		{CacheIndex: 13, Expr: `foo`, Variables: scopes[7]},
+		{CacheIndex: 14, Expr: `'x'`, Variables: scopes[8]},
+		{CacheIndex: 15, Expr: `'foo'`, Variables: scopes[9]},
+		{CacheIndex: 16, Expr: `'bar'`, Variables: scopes[9]},
+		{CacheIndex: 17, Expr: `favorite.FavoriteType.value('TYPE1')`, Variables: scopes[10]},
+		{CacheIndex: 18, Expr: `favorite_value == favorite.FavoriteType.TYPE1`, Variables: scopes[11]},
+		{CacheIndex: 19, Expr: `favorite_value`, Variables: scopes[12]},
+		{CacheIndex: 20, Expr: `'post-id'`, Variables: scopes[13]},
+		{CacheIndex: 21, Expr: `'title'`, Variables: scopes[13]},
+		{CacheIndex: 22, Expr: `'content'`, Variables: scopes[13]},
+		{CacheIndex: 23, Expr: `u`, Variables: scopes[13]},
+		{CacheIndex: 24, Expr: `reaction`, Variables: scopes[13]},
+		{CacheIndex: 25, Expr: `favorite_value`, Variables: scopes[13]},
+		{CacheIndex: 26, Expr: `cmp`, Variables: scopes[13]},
+		{CacheIndex: 27, Expr: `$.v == favorite.FavoriteType.TYPE1`, Variables: scopes[14]},
+		{CacheIndex: 28, Expr: `favorite.FavoriteType.value('TYPE1')`, Variables: scopes[15]},
+		{CacheIndex: 29, Expr: `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`, Variables: scopes[15]},
+		{CacheIndex: 30, Expr: `cmp`, Variables: scopes[15]},
+		{CacheIndex: 31, Expr: `$.id`, Variables: scopes[16]},
+		{CacheIndex: 32, Expr: `$.name`, Variables: scopes[16]},
+	})
+}
+
 // Federation_GetStatusResponseVariable represents variable definitions in "federation.GetStatusResponse".
 type DebugService_Federation_GetStatusResponseVariable struct {
 	U *User
@@ -3074,6 +3193,9 @@ func NewDebugService(cfg DebugServiceConfig) (*DebugService, error) {
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
 		client:          &DebugServiceDependentClientSet{},
+	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
 	}
 	return svc, nil
 }
@@ -3311,4 +3433,22 @@ func (s *DebugService) logvalue_Federation_UserArgument(v *DebugService_Federati
 		slog.String("id", v.Id),
 		slog.String("name", v.Name),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by DebugService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *DebugService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 3)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetStatusResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`u`, grpcfed.CELObjectType("federation.User")))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `'xxxx'`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `'yyyy'`, Variables: scopes[0]},
+		{CacheIndex: 3, Expr: `u`, Variables: scopes[1]},
+		{CacheIndex: 4, Expr: `$.id`, Variables: scopes[2]},
+		{CacheIndex: 5, Expr: `$.name`, Variables: scopes[2]},
+	})
 }

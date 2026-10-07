@@ -186,6 +186,9 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		svcVar:          new(RefEnvServiceVariable),
 		client:          &RefEnvServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
@@ -308,4 +311,16 @@ func (s *RefEnvService) logvalue_Org_Federation_ConstantArgument(v *RefEnvServic
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+// precompileCEL compiles every CEL expression used by RefEnvService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *RefEnvService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 1)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.ConstantArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `grpc.federation.env.aaa + 'xxx'`, Variables: scopes[0]},
+	})
 }

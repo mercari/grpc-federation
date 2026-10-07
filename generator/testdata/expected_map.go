@@ -234,6 +234,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
 		if err := resolver.Init(ctx); err != nil {
@@ -1236,4 +1239,45 @@ func (s *FederationService) logvalue_repeated_Org_Federation_UserType(v []UserTy
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 13)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostsResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`posts`, grpcfed.CELObjectType("org.federation.Posts")))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostsArgument"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostsResponse")))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`posts`, grpcfed.CELListType(grpcfed.CELObjectType("org.post.Post"))), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.post.Post")))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`posts`, grpcfed.CELListType(grpcfed.CELObjectType("org.post.Post"))), grpcfed.NewCELVariable(`ids`, grpcfed.CELListType(grpcfed.CELStringType)), grpcfed.NewCELVariable(`iter`, grpcfed.CELObjectType("org.post.Post")))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`posts`, grpcfed.CELListType(grpcfed.CELObjectType("org.post.Post"))), grpcfed.NewCELVariable(`ids`, grpcfed.CELListType(grpcfed.CELStringType)), grpcfed.NewCELVariable(`users`, grpcfed.CELListType(grpcfed.CELObjectType("org.federation.User"))), grpcfed.NewCELVariable(`iter`, grpcfed.CELObjectType("org.post.Post")))
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`posts`, grpcfed.CELListType(grpcfed.CELObjectType("org.post.Post"))), grpcfed.NewCELVariable(`ids`, grpcfed.CELListType(grpcfed.CELStringType)), grpcfed.NewCELVariable(`users`, grpcfed.CELListType(grpcfed.CELObjectType("org.federation.User"))), grpcfed.NewCELVariable(`items`, grpcfed.CELListType(grpcfed.CELObjectType("org.federation.Posts.PostItem"))))
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`source_user_types`, grpcfed.CELListType(grpcfed.CELIntType)), grpcfed.NewCELVariable(`typ`, grpcfed.CELIntType))
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[7], grpcfed.NewCELVariable(`source_user_types`, grpcfed.CELListType(grpcfed.CELIntType)), grpcfed.NewCELVariable(`user_types`, grpcfed.CELListType(grpcfed.CELIntType)))
+	scopes[10] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.Posts_PostItemArgument"))}
+	scopes[11] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}
+	scopes[12] = grpcfed.ExtendCELEnvOptions(scopes[11], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.user.GetUserResponse")))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.ids`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `posts`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `$.post_ids`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `res.posts`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `post.id`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `iter.user_id`, Variables: scopes[5]},
+		{CacheIndex: 7, Expr: `iter.id`, Variables: scopes[6]},
+		{CacheIndex: 8, Expr: `[org.user.UserType.value('USER_TYPE_1'), org.user.UserType.value('USER_TYPE_2')]`, Variables: scopes[7]},
+		{CacheIndex: 9, Expr: `typ`, Variables: scopes[8]},
+		{CacheIndex: 10, Expr: `ids`, Variables: scopes[9]},
+		{CacheIndex: 11, Expr: `posts.map(post, post.title)`, Variables: scopes[9]},
+		{CacheIndex: 12, Expr: `posts.map(post, post.content)`, Variables: scopes[9]},
+		{CacheIndex: 13, Expr: `users`, Variables: scopes[9]},
+		{CacheIndex: 14, Expr: `items`, Variables: scopes[9]},
+		{CacheIndex: 15, Expr: `user_types`, Variables: scopes[9]},
+		{CacheIndex: 16, Expr: `'item_' + $.id`, Variables: scopes[10]},
+		{CacheIndex: 17, Expr: `$.user_id`, Variables: scopes[11]},
+		{CacheIndex: 18, Expr: `res.user`, Variables: scopes[12]},
+	})
 }

@@ -208,6 +208,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -483,4 +486,27 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 		slog.String("url", v.Url),
 		slog.String("path", v.Path),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 5)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`body`, grpcfed.CELStringType))
+	scopes[2] = grpcfed.ExtendCELEnvOptions(scopes[1], grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType))
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`file`, grpcfed.CELStringType))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `example.net.httpGet($.url)`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `example.net.getFooEnv()`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `example.net.getGOGCEnv()`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `example.net.getFileContent($.path)`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `body`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `foo`, Variables: scopes[4]},
+		{CacheIndex: 7, Expr: `file`, Variables: scopes[4]},
+		{CacheIndex: 8, Expr: `gogc`, Variables: scopes[4]},
+	})
 }

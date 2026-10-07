@@ -259,6 +259,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -788,4 +791,38 @@ func (s *FederationService) logvalue_Org_Federation_IsMatchResponseArgument(v *F
 		slog.String("expr", v.Expr),
 		slog.String("target", v.Target),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 11)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.example.regexp.ExampleArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`v`, grpcfed.CELIntType))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.ExampleResponseArgument"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`exps`, grpcfed.CELListType(grpcfed.CELObjectType("example.regexp.Example"))))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`v`, grpcfed.CELListType(grpcfed.CELObjectType("example.regexp.Example"))))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`exp`, grpcfed.CELObjectType("example.regexp.Example")))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`str`, grpcfed.CELStringType))
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`exp_msg`, grpcfed.CELObjectType("example.regexp.Example")))
+	scopes[8] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.IsMatchResponseArgument"))}
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[8], grpcfed.NewCELVariable(`re`, grpcfed.CELObjectType("example.regexp.Regexp")))
+	scopes[10] = grpcfed.ExtendCELEnvOptions(scopes[9], grpcfed.NewCELVariable(`matched`, grpcfed.CELBoolType))
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.value + 1`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `v`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `example.regexp.newExamples()`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `example.regexp.filterExamples(exps)`, Variables: scopes[3]},
+		{CacheIndex: 5, Expr: `example.regexp.newExample()`, Variables: scopes[4]},
+		{CacheIndex: 6, Expr: `exp.concat(exp.split('/a/b/c', '/'))`, Variables: scopes[5]},
+		{CacheIndex: 7, Expr: `2`, Variables: scopes[6]},
+		{CacheIndex: 8, Expr: `v.size()`, Variables: scopes[7]},
+		{CacheIndex: 9, Expr: `str`, Variables: scopes[7]},
+		{CacheIndex: 10, Expr: `exp_msg.value`, Variables: scopes[7]},
+		{CacheIndex: 11, Expr: `example.regexp.compile($.expr)`, Variables: scopes[8]},
+		{CacheIndex: 12, Expr: `re.matchString($.target)`, Variables: scopes[9]},
+		{CacheIndex: 13, Expr: `matched`, Variables: scopes[10]},
+	})
 }

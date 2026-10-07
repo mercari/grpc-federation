@@ -183,6 +183,9 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Post_PostServiceClient: Post_PostServiceClient,
 		},
 	}
+	if err := svc.precompileCEL(ctx); err != nil {
+		return nil, err
+	}
 	return svc, nil
 }
 
@@ -780,4 +783,42 @@ func (s *FederationService) logvalue_Post_GetPostsRequest(v *post.GetPostsReques
 	return slog.GroupValue(
 		slog.Any("ids", v.GetIds()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService at startup,
+// so that the first request does not have to pay the compilation cost.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	// Each scope is the set of user-defined variables visible to the expressions that reference it.
+	scopes := make([][]grpcfed.CELEnvOption, 11)
+	scopes[0] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}
+	scopes[1] = grpcfed.ExtendCELEnvOptions(scopes[0], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")))
+	scopes[2] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}
+	scopes[3] = grpcfed.ExtendCELEnvOptions(scopes[2], grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")))
+	scopes[4] = grpcfed.ExtendCELEnvOptions(scopes[3], grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")))
+	scopes[5] = grpcfed.ExtendCELEnvOptions(scopes[4], grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User")))
+	scopes[6] = grpcfed.ExtendCELEnvOptions(scopes[5], grpcfed.NewCELVariable(`posts`, grpcfed.CELListType(grpcfed.CELObjectType("post.Post"))))
+	scopes[7] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`iter`, grpcfed.CELObjectType("post.Post")))
+	scopes[8] = grpcfed.ExtendCELEnvOptions(scopes[6], grpcfed.NewCELVariable(`users`, grpcfed.CELListType(grpcfed.CELObjectType("org.federation.User"))))
+	scopes[9] = grpcfed.ExtendCELEnvOptions(scopes[8], grpcfed.NewCELVariable(`_def5`, grpcfed.CELBoolType))
+	scopes[10] = []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.id`, Variables: scopes[0]},
+		{CacheIndex: 2, Expr: `post`, Variables: scopes[1]},
+		{CacheIndex: 3, Expr: `$.id != ''`, Variables: scopes[2]},
+		{CacheIndex: 4, Expr: `$.id`, Variables: scopes[2]},
+		{CacheIndex: 5, Expr: `res != null`, Variables: scopes[3]},
+		{CacheIndex: 6, Expr: `res.post`, Variables: scopes[3]},
+		{CacheIndex: 7, Expr: `post != null`, Variables: scopes[4]},
+		{CacheIndex: 8, Expr: `post.user_id`, Variables: scopes[4]},
+		{CacheIndex: 9, Expr: `[post]`, Variables: scopes[5]},
+		{CacheIndex: 10, Expr: `user != null`, Variables: scopes[6]},
+		{CacheIndex: 11, Expr: `iter.user_id`, Variables: scopes[7]},
+		{CacheIndex: 12, Expr: `users.size() > 0`, Variables: scopes[8]},
+		{CacheIndex: 13, Expr: `users[0].id == ''`, Variables: scopes[8]},
+		{CacheIndex: 14, Expr: `post.id`, Variables: scopes[9]},
+		{CacheIndex: 15, Expr: `post.title`, Variables: scopes[9]},
+		{CacheIndex: 16, Expr: `users[0]`, Variables: scopes[9]},
+		{CacheIndex: 17, Expr: `$.user_id`, Variables: scopes[10]},
+	})
 }
