@@ -61,6 +61,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -162,6 +165,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:          tracer,
 		resolver:        cfg.Resolver,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
@@ -560,4 +568,20 @@ func (s *FederationService) logvalue_Org_Federation_SubMessage(v *SubMessage) sl
 	return slog.GroupValue(
 		slog.String("value", v.GetValue()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `'auto-bound'`},
+		{CacheIndex: 2, Expr: `7`},
+		{CacheIndex: 3, Expr: `org.federation.Color.value('COLOR_RED')`},
+		{CacheIndex: 4, Expr: `opt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{CacheIndex: 5, Expr: `opt_color`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType)}},
+		{CacheIndex: 6, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{CacheIndex: 7, Expr: `b'abc'`},
+		{CacheIndex: 8, Expr: `false ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{CacheIndex: 9, Expr: `true ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+	})
 }

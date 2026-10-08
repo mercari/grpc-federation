@@ -12,10 +12,13 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/google/cel-go/cel"
+	celtypes "github.com/google/cel-go/common/types"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
 	"github.com/mercari/grpc-federation/util"
@@ -327,9 +330,11 @@ func (f *File) CELPlugins() []*CELPlugin {
 
 type Service struct {
 	*resolver.Service
-	file              *File
-	nameToLogValueMap map[string]*LogValue
-	celCacheIndex     int
+	file                  *File
+	nameToLogValueMap     map[string]*LogValue
+	celCacheIndex         int
+	celPrecompileEntries  []*CELPrecompileEntry
+	celPrecompileRendered bool
 }
 
 func newService(svc *resolver.Service, file *File) *Service {
@@ -340,9 +345,65 @@ func newService(svc *resolver.Service, file *File) *Service {
 	}
 }
 
-func (s *Service) CELCacheIndex() int {
+// CELPrecompileEntry is a CEL expression compiled by the generated precompileCEL method.
+type CELPrecompileEntry struct {
+	Index     int
+	Expr      string
+	Variables []*CELPrecompileVariable
+}
+
+// CELPrecompileVariable is a variable referenced by a precompiled expression.
+type CELPrecompileVariable struct {
+	Name    string
+	CELType string
+}
+
+// CELCacheIndex issues a new cache index for the CEL expression and records it for precompilation.
+// Every expression must be passed here, otherwise it would silently stay lazily compiled.
+func (s *Service) CELCacheIndex(v *resolver.CELValue) (int, error) {
+	if v == nil {
+		return 0, fmt.Errorf("grpc-federation: cache index requested for a nil CEL value in %s", s.Name)
+	}
+	vars := make([]*CELPrecompileVariable, 0, len(v.Variables))
+	for _, variable := range v.Variables {
+		celType, err := celTypeToNativeType(variable.Type)
+		if err != nil {
+			return 0, fmt.Errorf("grpc-federation: variable %q of CEL expression %q: %w", variable.Name, v.Expr, err)
+		}
+		vars = append(vars, &CELPrecompileVariable{Name: variable.Name, CELType: celType})
+	}
+	return s.addCELPrecompileEntry(v.Expr, vars)
+}
+
+// celCacheIndexForVariable issues a cache index for an expression that only references
+// the given variable by name (grpcfed.CustomMessage evaluates a variable definition by its name).
+func (s *Service) celCacheIndexForVariable(name string, typ *resolver.Type) (int, error) {
+	if name == "" || typ == nil {
+		return 0, fmt.Errorf("grpc-federation: cache index requested for an unnamed variable in %s", s.Name)
+	}
+	return s.addCELPrecompileEntry(name, []*CELPrecompileVariable{
+		{Name: name, CELType: toCELNativeType(typ)},
+	})
+}
+
+func (s *Service) addCELPrecompileEntry(expr string, vars []*CELPrecompileVariable) (int, error) {
+	if s.celPrecompileRendered {
+		return 0, fmt.Errorf("grpc-federation: cache index issued after the precompile table of %s was rendered", s.Name)
+	}
 	s.celCacheIndex++
-	return s.celCacheIndex
+	s.celPrecompileEntries = append(s.celPrecompileEntries, &CELPrecompileEntry{
+		Index:     s.celCacheIndex,
+		Expr:      expr,
+		Variables: vars,
+	})
+	return s.celCacheIndex, nil
+}
+
+// CELPrecompileEntries returns all recorded expressions.
+// It must be called after all cache indexes are issued, so the template renders it last.
+func (s *Service) CELPrecompileEntries() []*CELPrecompileEntry {
+	s.celPrecompileRendered = true
+	return s.celPrecompileEntries
 }
 
 func (s *Service) Env() *Env {
@@ -1757,8 +1818,8 @@ type Message struct {
 	file    *File
 }
 
-func (m *Message) CELCacheIndex() int {
-	return m.Service.CELCacheIndex()
+func (m *Message) CELCacheIndex(v *resolver.CELValue) (int, error) {
+	return m.Service.CELCacheIndex(v)
 }
 
 func (m *Message) ProtoFQDN() string {
@@ -1969,6 +2030,8 @@ func (f *OneofReturnField) HasFieldOneofRule() bool {
 type OneofField struct {
 	Expr           string
 	By             string
+	ExprValue      *resolver.CELValue
+	ByValue        *resolver.CELValue
 	Type           string
 	Condition      string
 	Name           string
@@ -2688,6 +2751,7 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
 					By:             rule.Oneof.By.Expr,
+					ByValue:        rule.Oneof.By,
 					Type:           typ,
 					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:           fieldName,
@@ -2707,6 +2771,8 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 				caseFields = append(caseFields, &OneofField{
 					Expr:           rule.Oneof.If.Expr,
 					By:             rule.Oneof.By.Expr,
+					ExprValue:      rule.Oneof.If,
+					ByValue:        rule.Oneof.By,
 					Type:           typ,
 					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:           fieldName,
@@ -2809,8 +2875,26 @@ type VariableDefinition struct {
 	file *File
 }
 
-func (d *VariableDefinition) CELCacheIndex() int {
-	return d.Service.CELCacheIndex()
+func (d *VariableDefinition) CELCacheIndex(v *resolver.CELValue) (int, error) {
+	return d.Service.CELCacheIndex(v)
+}
+
+// CustomMessageCELCacheIndex issues a cache index for evaluating this variable by its name
+// (used by grpcfed.CustomMessage for error details).
+func (d *VariableDefinition) CustomMessageCELCacheIndex() (int, error) {
+	var typ *resolver.Type
+	if d.VariableDefinition.Expr != nil {
+		typ = d.VariableDefinition.Expr.Type
+	}
+	return d.Service.celCacheIndexForVariable(d.VariableDefinition.Name, typ)
+}
+
+func (d *VariableDefinition) IfValue() *resolver.CELValue {
+	return d.VariableDefinition.If
+}
+
+func (d *VariableDefinition) MetadataValue() *resolver.CELValue {
+	return d.VariableDefinition.Expr.Call.Metadata
 }
 
 func (d *VariableDefinition) Key() string {
@@ -2991,8 +3075,8 @@ type GRPCError struct {
 	svc *Service
 }
 
-func (e *GRPCError) CELCacheIndex() int {
-	return e.svc.CELCacheIndex()
+func (e *GRPCError) CELCacheIndex(v *resolver.CELValue) (int, error) {
+	return e.svc.CELCacheIndex(v)
 }
 
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
@@ -3088,6 +3172,7 @@ func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
 type GRPCErrorDetailBy struct {
 	Expr string
 	Type string
+	CEL  *resolver.CELValue
 }
 
 func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
@@ -3096,6 +3181,7 @@ func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
 		ret = append(ret, &GRPCErrorDetailBy{
 			Expr: by.Expr,
 			Type: toMakeZeroValue(detail.svc.file, by.Out),
+			CEL:  by,
 		})
 	}
 	return ret
@@ -3155,8 +3241,8 @@ func (pf *PreconditionFailure) Violations() []*PreconditionFailureViolation {
 	return ret
 }
 
-func (v *PreconditionFailureViolation) CELCacheIndex() int {
-	return v.svc.CELCacheIndex()
+func (v *PreconditionFailureViolation) CELCacheIndex(value *resolver.CELValue) (int, error) {
+	return v.svc.CELCacheIndex(value)
 }
 
 type BadRequest struct {
@@ -3180,8 +3266,8 @@ func (b *BadRequest) FieldViolations() []*BadRequestFieldViolation {
 	return ret
 }
 
-func (v *BadRequestFieldViolation) CELCacheIndex() int {
-	return v.svc.CELCacheIndex()
+func (v *BadRequestFieldViolation) CELCacheIndex(value *resolver.CELValue) (int, error) {
+	return v.svc.CELCacheIndex(value)
 }
 
 type LocalizedMessage struct {
@@ -3189,8 +3275,8 @@ type LocalizedMessage struct {
 	*resolver.LocalizedMessage
 }
 
-func (m *LocalizedMessage) CELCacheIndex() int {
-	return m.svc.CELCacheIndex()
+func (m *LocalizedMessage) CELCacheIndex(v *resolver.CELValue) (int, error) {
+	return m.svc.CELCacheIndex(v)
 }
 
 func (d *VariableDefinition) ServiceName() string {
@@ -3509,8 +3595,8 @@ func (r *SwitchResolver) Type() string {
 	return r.file.toTypeText(r.SwitchExpr.Type)
 }
 
-func (r *SwitchResolver) CELCacheIndex() int {
-	return r.Service.CELCacheIndex()
+func (r *SwitchResolver) CELCacheIndex(v *resolver.CELValue) (int, error) {
+	return r.Service.CELCacheIndex(v)
 }
 
 type SwitchCaseResolver struct {
@@ -3571,6 +3657,74 @@ func (r *SwitchDefaultResolver) DefSet() *VariableDefinitionSet {
 
 func (r *SwitchDefaultResolver) By() *resolver.CELValue {
 	return r.SwitchDefault.By
+}
+
+// celTypeToNativeType renders the Go source that declares the given CEL type in the runtime env.
+// It must produce the same type as toCELNativeType does for the variable's declaration.
+func celTypeToNativeType(t *cel.Type) (string, error) {
+	if name := t.DeclaredTypeName(); strings.HasPrefix(name, "wrapper(") {
+		wrappers := map[string]string{
+			"wrapper(bool)":   "google.protobuf.BoolValue",
+			"wrapper(bytes)":  "google.protobuf.BytesValue",
+			"wrapper(double)": "google.protobuf.DoubleValue",
+			"wrapper(int)":    "google.protobuf.Int64Value",
+			"wrapper(string)": "google.protobuf.StringValue",
+			"wrapper(uint)":   "google.protobuf.UInt64Value",
+		}
+		if msg, ok := wrappers[name]; ok {
+			return fmt.Sprintf("grpcfed.CELObjectType(%q)", msg), nil
+		}
+	}
+	switch t.Kind() {
+	case celtypes.BoolKind:
+		return "grpcfed.CELBoolType", nil
+	case celtypes.BytesKind:
+		return "grpcfed.CELBytesType", nil
+	case celtypes.DoubleKind:
+		return "grpcfed.CELDoubleType", nil
+	case celtypes.IntKind:
+		return "grpcfed.CELIntType", nil
+	case celtypes.UintKind:
+		return "grpcfed.CELUintType", nil
+	case celtypes.StringKind:
+		return "grpcfed.CELStringType", nil
+	case celtypes.NullTypeKind:
+		return "grpcfed.CELNullType", nil
+	case celtypes.AnyKind:
+		return `grpcfed.CELObjectType("google.protobuf.Any")`, nil
+	case celtypes.DurationKind:
+		return `grpcfed.CELObjectType("google.protobuf.Duration")`, nil
+	case celtypes.TimestampKind:
+		return `grpcfed.CELObjectType("google.protobuf.Timestamp")`, nil
+	case celtypes.StructKind:
+		return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.TypeName()), nil
+	case celtypes.OpaqueKind:
+		// The runtime env declares an enum selector as a plain object type.
+		if t.TypeName() == grpcfedcel.EnumSelectorFQDN {
+			return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.TypeName()), nil
+		}
+		// An enum is declared as an opaque type with an int parameter, but the runtime env declares it as int.
+		if params := t.Parameters(); len(params) == 1 && params[0].Kind() == celtypes.IntKind && t.TypeName() != "optional_type" {
+			return "grpcfed.CELIntType", nil
+		}
+	case celtypes.ListKind:
+		elem, err := celTypeToNativeType(t.Parameters()[0])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("grpcfed.CELListType(%s)", elem), nil
+	case celtypes.MapKind:
+		key, err := celTypeToNativeType(t.Parameters()[0])
+		if err != nil {
+			return "", err
+		}
+		value, err := celTypeToNativeType(t.Parameters()[1])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("grpcfed.NewCELMapType(%s, %s)", key, value), nil
+	}
+	return "", fmt.Errorf("unsupported CEL type %s", t)
 }
 
 func toCELNativeType(t *resolver.Type) string {

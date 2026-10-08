@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/cel-go/cel"
 	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -574,6 +575,15 @@ type CELValue struct {
 	Expr        string
 	Out         *Type
 	CheckedExpr *exprv1.CheckedExpr
+	// Variables are the user-defined variables the expression references, sorted by name.
+	// Variables provided by the service-wide env (error, context, grpc.federation.env/var) are excluded.
+	Variables []*CELVariable
+}
+
+// CELVariable is a variable referenced by a CEL expression.
+type CELVariable struct {
+	Name string
+	Type *cel.Type
 }
 
 type EnvKey string

@@ -40,6 +40,9 @@ type RefEnvServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // RefEnvServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -186,6 +189,11 @@ func NewRefEnvService(cfg RefEnvServiceConfig) (*RefEnvService, error) {
 		svcVar:          new(RefEnvServiceVariable),
 		client:          &RefEnvServiceDependentClientSet{},
 	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
@@ -308,4 +316,12 @@ func (s *RefEnvService) logvalue_Org_Federation_ConstantArgument(v *RefEnvServic
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+// precompileCEL compiles every CEL expression used by RefEnvService ahead of the first request.
+func (s *RefEnvService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `grpc.federation.env.aaa + 'xxx'`},
+	})
 }

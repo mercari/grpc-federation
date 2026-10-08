@@ -23,6 +23,7 @@ import (
 	"github.com/google/cel-go/ext"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -4968,9 +4969,108 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 		return err
 	}
 
+	vars, err := referencedCELVariables(checkedExpr)
+	if err != nil {
+		return err
+	}
+
 	value.Out = out
 	value.CheckedExpr = checkedExpr
+	value.Variables = vars
 	return nil
+}
+
+// referencedCELVariables returns the user-defined variables referenced by the checked expression.
+func referencedCELVariables(checked *exprv1.CheckedExpr) ([]*CELVariable, error) {
+	seen := map[string]struct{}{}
+	notVariable := nonVariableReferenceIDs(checked.GetExpr())
+	var vars []*CELVariable
+	for id, ref := range checked.GetReferenceMap() {
+		// An identifier reference has neither overloads nor a constant value (enum values).
+		if len(ref.GetOverloadId()) != 0 || ref.GetValue() != nil {
+			continue
+		}
+		if _, skip := notVariable[id]; skip {
+			continue
+		}
+		name := ref.GetName()
+		if isServiceWideCELVariable(name) {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		celType, err := cel.ExprTypeToType(checked.GetTypeMap()[id])
+		if err != nil {
+			return nil, err
+		}
+		vars = append(vars, &CELVariable{Name: name, Type: celType})
+	}
+	sort.Slice(vars, func(i, j int) bool { return vars[i].Name < vars[j].Name })
+	return vars, nil
+}
+
+// nonVariableReferenceIDs returns the ids of expressions that have an entry in the reference map
+// but are not variables declared in the env: identifiers bound by a comprehension
+// (macro iteration and accumulator variables) and the type names of message literals.
+func nonVariableReferenceIDs(root *exprv1.Expr) map[int64]struct{} {
+	ret := map[int64]struct{}{}
+	var walk func(e *exprv1.Expr, bound map[string]struct{})
+	walkAll := func(es []*exprv1.Expr, bound map[string]struct{}) {
+		for _, e := range es {
+			walk(e, bound)
+		}
+	}
+	walk = func(e *exprv1.Expr, bound map[string]struct{}) {
+		switch k := e.GetExprKind().(type) {
+		case *exprv1.Expr_IdentExpr:
+			if _, ok := bound[k.IdentExpr.GetName()]; ok {
+				ret[e.GetId()] = struct{}{}
+			}
+		case *exprv1.Expr_SelectExpr:
+			walk(k.SelectExpr.GetOperand(), bound)
+		case *exprv1.Expr_CallExpr:
+			walk(k.CallExpr.GetTarget(), bound)
+			walkAll(k.CallExpr.GetArgs(), bound)
+		case *exprv1.Expr_ListExpr:
+			walkAll(k.ListExpr.GetElements(), bound)
+		case *exprv1.Expr_StructExpr:
+			ret[e.GetId()] = struct{}{}
+			for _, entry := range k.StructExpr.GetEntries() {
+				if key := entry.GetMapKey(); key != nil {
+					walk(key, bound)
+				}
+				walk(entry.GetValue(), bound)
+			}
+		case *exprv1.Expr_ComprehensionExpr:
+			c := k.ComprehensionExpr
+			walk(c.GetIterRange(), bound)
+			walk(c.GetAccuInit(), bound)
+			inner := map[string]struct{}{}
+			for name := range bound {
+				inner[name] = struct{}{}
+			}
+			for _, name := range []string{c.GetIterVar(), c.GetIterVar2(), c.GetAccuVar()} {
+				if name != "" {
+					inner[name] = struct{}{}
+				}
+			}
+			walk(c.GetLoopCondition(), inner)
+			walk(c.GetLoopStep(), inner)
+			walk(c.GetResult(), inner)
+		}
+	}
+	walk(root, map[string]struct{}{})
+	return ret
+}
+
+func isServiceWideCELVariable(name string) bool {
+	switch name {
+	case "error", federation.ContextVariableName, "grpc.federation.env", "grpc.federation.var":
+		return true
+	}
+	return false
 }
 
 func (r *Resolver) removeContextArgumentFromErrorText(err *cel.Error) {

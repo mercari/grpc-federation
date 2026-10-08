@@ -44,6 +44,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -129,6 +132,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -351,4 +359,19 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `73`},
+		{CacheIndex: 2, Expr: `$.id == 'blue'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{CacheIndex: 3, Expr: `blue`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`blue`, grpcfed.CELIntType)}},
+		{CacheIndex: 4, Expr: `$.id == 'red'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{CacheIndex: 5, Expr: `2`},
+		{CacheIndex: 6, Expr: `3`},
+		{CacheIndex: 7, Expr: `default`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`default`, grpcfed.CELIntType)}},
+		{CacheIndex: 8, Expr: `switch`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`switch`, grpcfed.CELIntType)}},
+	})
 }

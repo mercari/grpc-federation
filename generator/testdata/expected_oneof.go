@@ -79,6 +79,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -198,6 +201,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -927,4 +935,28 @@ func (s *FederationService) logvalue_Org_User_GetUsersRequest(v *user.GetUsersRe
 	return slog.GroupValue(
 		slog.Any("ids", v.GetIds()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `'foo'`},
+		{CacheIndex: 2, Expr: `sel.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sel`, grpcfed.CELObjectType("org.federation.UserSelection"))}},
+		{CacheIndex: 3, Expr: `'foo'`},
+		{CacheIndex: 4, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
+		{CacheIndex: 5, Expr: `false`},
+		{CacheIndex: 6, Expr: `1`},
+		{CacheIndex: 7, Expr: `true`},
+		{CacheIndex: 8, Expr: `'hello'`},
+		{CacheIndex: 9, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
+		{CacheIndex: 10, Expr: `m.value == $.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserSelectionArgument")), grpcfed.NewCELVariable(`m`, grpcfed.CELObjectType("org.federation.M"))}},
+		{CacheIndex: 11, Expr: `m.value != $.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserSelectionArgument")), grpcfed.NewCELVariable(`m`, grpcfed.CELObjectType("org.federation.M"))}},
+		{CacheIndex: 12, Expr: `'a'`},
+		{CacheIndex: 13, Expr: `ua`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`ua`, grpcfed.CELObjectType("org.federation.User"))}},
+		{CacheIndex: 14, Expr: `'b'`},
+		{CacheIndex: 15, Expr: `ub`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`ub`, grpcfed.CELObjectType("org.federation.User"))}},
+		{CacheIndex: 16, Expr: `$.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserSelectionArgument"))}},
+		{CacheIndex: 17, Expr: `uc`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uc`, grpcfed.CELObjectType("org.federation.User"))}},
+	})
 }

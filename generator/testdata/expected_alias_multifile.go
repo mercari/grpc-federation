@@ -63,6 +63,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -190,6 +193,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_Post_PostServiceClient:    Org_Post_PostServiceClient,
 			Org_Post_V2_PostServiceClient: Org_Post_V2_PostServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -863,4 +871,19 @@ func (s *FederationService) logvalue_Org_Post_V2_GetPostRequest(v *post1.GetPost
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{CacheIndex: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{CacheIndex: 2, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{CacheIndex: 3, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{CacheIndex: 4, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse"))}},
+		{CacheIndex: 5, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{CacheIndex: 6, Expr: `res2.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res2`, grpcfed.CELObjectType("org.post.v2.GetPostResponse"))}},
+		{CacheIndex: 7, Expr: `v2post.data`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`v2post`, grpcfed.CELObjectType("org.post.v2.Post"))}},
+		{CacheIndex: 8, Expr: `v2data`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`v2data`, grpcfed.CELObjectType("org.post.v2.PostData"))}},
+	})
 }
