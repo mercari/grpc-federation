@@ -502,13 +502,13 @@ func (s *{{ $serviceName }}) initServiceVariables(ctx context.Context) error {
 	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 		Value: value,
 		Expr: `{{ .Expr.Validation.Error.If.Expr }}`,
-		CacheIndex: {{ .CELCacheIndex .Expr.Validation.Error.If }},
+		CacheIndex: {{ .Expr.Validation.Error.If.Index }},
 		Body: func(value *localValueType) error {
 			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 				Value: value,
 				Expr: `{{ .Expr.Validation.Error.Message.Expr }}`,
 				OutType: reflect.TypeOf(""),
-				CacheIndex: {{ .CELCacheIndex .Expr.Validation.Error.Message }},
+				CacheIndex: {{ .Expr.Validation.Error.Message.Index }},
 			})
 			if err != nil {
 				return err
@@ -769,7 +769,7 @@ func (s *{{ $serviceName }}) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
 		{{- range .CELPrecompileEntries }}
-		{CacheIndex: {{ .Index }}, Expr: `{{ .Expr }}`{{ if .Variables }}, Variables: []grpcfed.CELEnvOption{
+		{Index: {{ .Index }}, Expr: `{{ .Expr }}`{{ if .Variables }}, Variables: []grpcfed.CELEnvOption{
 			{{- range .Variables }}grpcfed.NewCELVariable(`{{ .Name }}`, {{ .CELType }}), {{ end -}}
 		}{{ end }}},
 		{{- end }}
@@ -812,7 +812,7 @@ oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 	Value: value,
 	Expr: `{{ .Expr }}`,
 	OutType: reflect.TypeOf(true),
-	CacheIndex: {{ $msg.CELCacheIndex .ExprValue }},
+	CacheIndex: {{ .FieldOneofRule.If.Index }},
 })
 if err != nil {
 	grpcfed.RecordErrorToSpan(ctx, err)
@@ -843,7 +843,7 @@ if false {
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.By }}`,
-	CacheIndex: {{ $msg.CELCacheIndex $value.ByValue }},
+	CacheIndex: {{ $value.FieldOneofRule.By.Index }},
 	Setter: func(v {{ $value.Type }}) error {
 		{{- template "setReturnValueBySetter" $value.SetterParam }}
 		return nil
@@ -870,7 +870,7 @@ ret.{{ $name }} = {{ $value.Value }}
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.CEL.Expr }}`,
-	CacheIndex: {{ $msg.CELCacheIndex $value.CEL }},
+	CacheIndex: {{ $value.CEL.Index }},
 	{{- if $value.Proto3Optional }}
 	Proto3Optional: true,
 	{{- end }}

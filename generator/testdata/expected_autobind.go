@@ -676,10 +676,10 @@ func (s *FederationService) logvalue_Org_Post_UpdatePostRequest(v *post.UpdatePo
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{CacheIndex: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 2, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
-		{CacheIndex: 3, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse"))}},
-		{CacheIndex: 4, Expr: `'foo'`},
-		{CacheIndex: 5, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
+		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 2, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 3, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse"))}},
+		{Index: 4, Expr: `'foo'`},
+		{Index: 5, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
 	})
 }

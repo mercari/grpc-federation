@@ -13,14 +13,14 @@ if _, err := func() (any, error) {
 if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 	Value: value,
 	Expr: `{{ $error.If.Expr }}`,
-	CacheIndex: {{ $error.CELCacheIndex $error.If }},
+	CacheIndex: {{ $error.If.Index }},
 	Body: func(value *localValueType) error {
 		{{- if $error.Message }}
 		errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 			Value: value,
 			Expr: `{{ $error.Message.Expr }}`,
 			OutType: reflect.TypeOf(""),
-			CacheIndex: {{ $error.CELCacheIndex $error.Message }},
+			CacheIndex: {{ $error.Message.Index }},
 		})
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 		if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 			Value: value,
 			Expr: `{{ .If.Expr }}`,
-			CacheIndex: {{ $error.CELCacheIndex .If }},
+			CacheIndex: {{ .If.Index }},
 			Body: func(value *localValueType) error {
 				{{- if .MessageSet }}
 				if _, err := func() (any, error){
@@ -57,7 +57,7 @@ if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 				if detail := grpcfed.CustomMessage({{ $ctx }}, &grpcfed.CustomMessageParam{
 					Value: value,
 					MessageValueName: "{{ $def.Name }}",
-					CacheIndex: {{ $def.CustomMessageCELCacheIndex }},
+					CacheIndex: {{ $def.NameValue.Index }},
 					MessageIndex: {{ $idx }},
 				}); detail != nil {
 					details = append(details, detail)
@@ -71,7 +71,7 @@ if err := grpcfed.If({{ $ctx }}, &grpcfed.IfParam[*localValueType]{
 						Value: value,
 						Expr: `{{ .Expr }}`,
 						OutType: reflect.TypeOf({{ .Type }}),
-						CacheIndex: {{ $error.CELCacheIndex .CEL }},
+						CacheIndex: {{ .CEL.Index }},
 					})
 					if err != nil {
 						grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))

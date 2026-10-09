@@ -365,13 +365,13 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{CacheIndex: 1, Expr: `73`},
-		{CacheIndex: 2, Expr: `$.id == 'blue'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 3, Expr: `blue`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`blue`, grpcfed.CELIntType)}},
-		{CacheIndex: 4, Expr: `$.id == 'red'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 5, Expr: `2`},
-		{CacheIndex: 6, Expr: `3`},
-		{CacheIndex: 7, Expr: `default`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`default`, grpcfed.CELIntType)}},
-		{CacheIndex: 8, Expr: `switch`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`switch`, grpcfed.CELIntType)}},
+		{Index: 1, Expr: `73`},
+		{Index: 2, Expr: `$.id == 'blue'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 3, Expr: `blue`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`blue`, grpcfed.CELIntType)}},
+		{Index: 4, Expr: `$.id == 'red'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 5, Expr: `2`},
+		{Index: 6, Expr: `3`},
+		{Index: 7, Expr: `default`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`default`, grpcfed.CELIntType)}},
+		{Index: 8, Expr: `switch`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`switch`, grpcfed.CELIntType)}},
 	})
 }

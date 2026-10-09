@@ -333,8 +333,8 @@ func NewCELCacheMap() *CELCacheMap {
 // CELPrecompileEntry is a CEL expression to compile ahead of the first request.
 // The code generator emits one entry per cache index.
 type CELPrecompileEntry struct {
-	// CacheIndex is the cache key of the expression. It must match the index used at evaluation time.
-	CacheIndex int
+	// Index is the cache key of the expression. It must match the index used at evaluation time.
+	Index int
 	// Expr is the CEL expression text as written in the proto definition.
 	Expr string
 	// Variables are the user-defined variables the expression references.
@@ -358,7 +358,7 @@ func PrecompileCEL(ctx context.Context, envOpts []cel.EnvOption, entries []*CELP
 		return fmt.Errorf("failed to create cel env for precompile: %w", err)
 	}
 	for _, entry := range entries {
-		if entry.CacheIndex == 0 {
+		if entry.Index == 0 {
 			return ErrCELCacheIndex
 		}
 		env := baseEnv
@@ -372,7 +372,7 @@ func PrecompileCEL(ctx context.Context, envOpts []cel.EnvOption, entries []*CELP
 		if err != nil {
 			return fmt.Errorf("failed to precompile cel expression %q: %w", entry.Expr, err)
 		}
-		celCacheMap.set(entry.CacheIndex, &CELCache{program: program})
+		celCacheMap.set(entry.Index, &CELCache{program: program})
 	}
 	return nil
 }

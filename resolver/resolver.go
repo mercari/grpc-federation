@@ -61,6 +61,7 @@ type Resolver struct {
 	cachedMethodMap            map[string]*Method
 	cachedServiceMap           map[string]*Service
 	cachedFileAllEnumMap       map[string][]*Enum
+	celValueIndex              int
 	cachedEnumAccessorMap      map[string][]cel.EnvOption
 	cachedGRPCErrorAccessorMap map[string][]cel.EnvOption
 
@@ -2255,6 +2256,7 @@ func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env,
 		return nil
 	}
 
+	ctx = ctx.withService(svc)
 	svcVars := make([]*ServiceVariable, 0, len(def))
 	nameMap := make(map[string]struct{})
 	celEnv, err := r.createServiceCELEnv(ctx, svc, env)
@@ -4697,6 +4699,18 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 	}
 	for idx, def := range detail.Messages.Definitions() {
 		env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithDef(idx))
+		if def.Name != "" && def.Expr != nil && def.Expr.Type != nil {
+			// The generated code evaluates the message variable by its name.
+			def.NameValue = &CELValue{Expr: def.Name}
+			if err := r.resolveCELValue(ctx, env, def.NameValue); err != nil {
+				ctx.addError(
+					ErrWithLocation(
+						err.Error(),
+						builder.WithDef(idx).Location(),
+					),
+				)
+			}
+		}
 	}
 
 	for fIdx, failure := range detail.PreconditionFailures {
@@ -4977,7 +4991,24 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	value.Out = out
 	value.CheckedExpr = checkedExpr
 	value.Variables = vars
+	r.assignCELValueIndex(ctx, value)
 	return nil
+}
+
+// assignCELValueIndex gives the expression its index and records it in the message or service it belongs to,
+// so that the generator can compile every expression of a service ahead of the first request.
+func (r *Resolver) assignCELValueIndex(ctx *context, value *CELValue) {
+	if value.Index != 0 {
+		return
+	}
+	r.celValueIndex++
+	value.Index = r.celValueIndex
+	switch {
+	case ctx.msg != nil:
+		ctx.msg.CELValues = append(ctx.msg.CELValues, value)
+	case ctx.svc != nil:
+		ctx.svc.CELValues = append(ctx.svc.CELValues, value)
+	}
 }
 
 // referencedCELVariables returns the user-defined variables referenced by the checked expression.

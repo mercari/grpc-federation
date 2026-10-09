@@ -330,11 +330,8 @@ func (f *File) CELPlugins() []*CELPlugin {
 
 type Service struct {
 	*resolver.Service
-	file                  *File
-	nameToLogValueMap     map[string]*LogValue
-	celCacheIndex         int
-	celPrecompileEntries  []*CELPrecompileEntry
-	celPrecompileRendered bool
+	file              *File
+	nameToLogValueMap map[string]*LogValue
 }
 
 func newService(svc *resolver.Service, file *File) *Service {
@@ -358,52 +355,32 @@ type CELPrecompileVariable struct {
 	CELType string
 }
 
-// CELCacheIndex issues a new cache index for the CEL expression and records it for precompilation.
-// Every expression must be passed here, otherwise it would silently stay lazily compiled.
-func (s *Service) CELCacheIndex(v *resolver.CELValue) (int, error) {
-	if v == nil {
-		return 0, fmt.Errorf("grpc-federation: cache index requested for a nil CEL value in %s", s.Name)
+// CELPrecompileEntries returns every CEL expression used by the service, ordered by index.
+func (s *Service) CELPrecompileEntries() ([]*CELPrecompileEntry, error) {
+	values := append([]*resolver.CELValue{}, s.CELValues...)
+	for _, msg := range s.Messages() {
+		values = append(values, msg.CELValues...)
 	}
-	vars := make([]*CELPrecompileVariable, 0, len(v.Variables))
-	for _, variable := range v.Variables {
-		celType, err := celTypeToNativeType(variable.Type)
-		if err != nil {
-			return 0, fmt.Errorf("grpc-federation: variable %q of CEL expression %q: %w", variable.Name, v.Expr, err)
+	sort.Slice(values, func(i, j int) bool { return values[i].Index < values[j].Index })
+
+	entries := make([]*CELPrecompileEntry, 0, len(values))
+	seen := make(map[int]struct{}, len(values))
+	for _, value := range values {
+		if _, exists := seen[value.Index]; exists {
+			continue
 		}
-		vars = append(vars, &CELPrecompileVariable{Name: variable.Name, CELType: celType})
+		seen[value.Index] = struct{}{}
+		vars := make([]*CELPrecompileVariable, 0, len(value.Variables))
+		for _, variable := range value.Variables {
+			celType, err := celTypeToNativeType(variable.Type)
+			if err != nil {
+				return nil, fmt.Errorf("grpc-federation: variable %q of CEL expression %q: %w", variable.Name, value.Expr, err)
+			}
+			vars = append(vars, &CELPrecompileVariable{Name: variable.Name, CELType: celType})
+		}
+		entries = append(entries, &CELPrecompileEntry{Index: value.Index, Expr: value.Expr, Variables: vars})
 	}
-	return s.addCELPrecompileEntry(v.Expr, vars)
-}
-
-// celCacheIndexForVariable issues a cache index for an expression that only references
-// the given variable by name (grpcfed.CustomMessage evaluates a variable definition by its name).
-func (s *Service) celCacheIndexForVariable(name string, typ *resolver.Type) (int, error) {
-	if name == "" || typ == nil {
-		return 0, fmt.Errorf("grpc-federation: cache index requested for an unnamed variable in %s", s.Name)
-	}
-	return s.addCELPrecompileEntry(name, []*CELPrecompileVariable{
-		{Name: name, CELType: toCELNativeType(typ)},
-	})
-}
-
-func (s *Service) addCELPrecompileEntry(expr string, vars []*CELPrecompileVariable) (int, error) {
-	if s.celPrecompileRendered {
-		return 0, fmt.Errorf("grpc-federation: cache index issued after the precompile table of %s was rendered", s.Name)
-	}
-	s.celCacheIndex++
-	s.celPrecompileEntries = append(s.celPrecompileEntries, &CELPrecompileEntry{
-		Index:     s.celCacheIndex,
-		Expr:      expr,
-		Variables: vars,
-	})
-	return s.celCacheIndex, nil
-}
-
-// CELPrecompileEntries returns all recorded expressions.
-// It must be called after all cache indexes are issued, so the template renders it last.
-func (s *Service) CELPrecompileEntries() []*CELPrecompileEntry {
-	s.celPrecompileRendered = true
-	return s.celPrecompileEntries
+	return entries, nil
 }
 
 func (s *Service) Env() *Env {
@@ -1818,10 +1795,6 @@ type Message struct {
 	file    *File
 }
 
-func (m *Message) CELCacheIndex(v *resolver.CELValue) (int, error) {
-	return m.Service.CELCacheIndex(v)
-}
-
 func (m *Message) ProtoFQDN() string {
 	return m.FQDN()
 }
@@ -2030,8 +2003,6 @@ func (f *OneofReturnField) HasFieldOneofRule() bool {
 type OneofField struct {
 	Expr           string
 	By             string
-	ExprValue      *resolver.CELValue
-	ByValue        *resolver.CELValue
 	Type           string
 	Condition      string
 	Name           string
@@ -2751,7 +2722,6 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 			if rule.Oneof.Default {
 				defaultField = &OneofField{
 					By:             rule.Oneof.By.Expr,
-					ByValue:        rule.Oneof.By,
 					Type:           typ,
 					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:           fieldName,
@@ -2771,8 +2741,6 @@ func (m *Message) oneofValueToReturnField(oneof *resolver.Oneof) (*OneofReturnFi
 				caseFields = append(caseFields, &OneofField{
 					Expr:           rule.Oneof.If.Expr,
 					By:             rule.Oneof.By.Expr,
-					ExprValue:      rule.Oneof.If,
-					ByValue:        rule.Oneof.By,
 					Type:           typ,
 					Condition:      fmt.Sprintf(`oneof_%s.(bool)`, fieldName),
 					Name:           fieldName,
@@ -2873,28 +2841,6 @@ type VariableDefinition struct {
 	Service *Service
 	*resolver.VariableDefinition
 	file *File
-}
-
-func (d *VariableDefinition) CELCacheIndex(v *resolver.CELValue) (int, error) {
-	return d.Service.CELCacheIndex(v)
-}
-
-// CustomMessageCELCacheIndex issues a cache index for evaluating this variable by its name
-// (used by grpcfed.CustomMessage for error details).
-func (d *VariableDefinition) CustomMessageCELCacheIndex() (int, error) {
-	var typ *resolver.Type
-	if d.VariableDefinition.Expr != nil {
-		typ = d.VariableDefinition.Expr.Type
-	}
-	return d.Service.celCacheIndexForVariable(d.VariableDefinition.Name, typ)
-}
-
-func (d *VariableDefinition) IfValue() *resolver.CELValue {
-	return d.VariableDefinition.If
-}
-
-func (d *VariableDefinition) MetadataValue() *resolver.CELValue {
-	return d.VariableDefinition.Expr.Call.Metadata
 }
 
 func (d *VariableDefinition) Key() string {
@@ -3075,10 +3021,6 @@ type GRPCError struct {
 	svc *Service
 }
 
-func (e *GRPCError) CELCacheIndex(v *resolver.CELValue) (int, error) {
-	return e.svc.CELCacheIndex(v)
-}
-
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
 // e.g. FAILED_PRECONDITION -> FailedPrecondition.
 func (e *GRPCError) GoGRPCStatusCode() string {
@@ -3241,10 +3183,6 @@ func (pf *PreconditionFailure) Violations() []*PreconditionFailureViolation {
 	return ret
 }
 
-func (v *PreconditionFailureViolation) CELCacheIndex(value *resolver.CELValue) (int, error) {
-	return v.svc.CELCacheIndex(value)
-}
-
 type BadRequest struct {
 	*resolver.BadRequest
 	svc *Service
@@ -3266,17 +3204,9 @@ func (b *BadRequest) FieldViolations() []*BadRequestFieldViolation {
 	return ret
 }
 
-func (v *BadRequestFieldViolation) CELCacheIndex(value *resolver.CELValue) (int, error) {
-	return v.svc.CELCacheIndex(value)
-}
-
 type LocalizedMessage struct {
 	svc *Service
 	*resolver.LocalizedMessage
-}
-
-func (m *LocalizedMessage) CELCacheIndex(v *resolver.CELValue) (int, error) {
-	return m.svc.CELCacheIndex(v)
 }
 
 func (d *VariableDefinition) ServiceName() string {
@@ -3593,10 +3523,6 @@ type SwitchResolver struct {
 
 func (r *SwitchResolver) Type() string {
 	return r.file.toTypeText(r.SwitchExpr.Type)
-}
-
-func (r *SwitchResolver) CELCacheIndex(v *resolver.CELValue) (int, error) {
-	return r.Service.CELCacheIndex(v)
 }
 
 type SwitchCaseResolver struct {

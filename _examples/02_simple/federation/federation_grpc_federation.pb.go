@@ -414,7 +414,7 @@ func (s *FederationService) resolve_Federation_A(ctx context.Context, req *Feder
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*A_B]{
 		Value:      value,
 		Expr:       `b`,
-		CacheIndex: 1,
+		CacheIndex: 99,
 		Setter: func(v *A_B) error {
 			ret.B = v
 			return nil
@@ -427,7 +427,7 @@ func (s *FederationService) resolve_Federation_A(ctx context.Context, req *Feder
 		Value:      value,
 		Expr:       `true`,
 		OutType:    reflect.TypeOf(true),
-		CacheIndex: 2,
+		CacheIndex: 100,
 	})
 	if err != nil {
 		grpcfed.RecordErrorToSpan(ctx, err)
@@ -441,7 +441,7 @@ func (s *FederationService) resolve_Federation_A(ctx context.Context, req *Feder
 		if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*A_B_C]{
 			Value:      value,
 			Expr:       `A.B.C{}`,
-			CacheIndex: 3,
+			CacheIndex: 101,
 			Setter: func(v *A_B_C) error {
 				optValue, err := s.cast_Federation_A_B_C__to__Federation_A_OptC(v)
 				if err != nil {
@@ -501,7 +501,7 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'foo'`,
-					CacheIndex: 4,
+					CacheIndex: 102,
 					Setter: func(v string) error {
 						args.Type = v
 						return nil
@@ -541,7 +541,7 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `'bar'`,
-					CacheIndex: 5,
+					CacheIndex: 103,
 					Setter: func(v string) error {
 						args.Type = v
 						return nil
@@ -568,7 +568,7 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 	def__def2 := func(ctx context.Context) error {
 		return grpcfed.EvalDef(ctx, value, grpcfed.Def[bool, *localValueType]{
 			If:           `foo.type == 'foo'`,
-			IfCacheIndex: 6,
+			IfCacheIndex: 104,
 			Name:         `_def2`,
 			Type:         grpcfed.CELBoolType,
 			Setter: func(value *localValueType, v bool) error {
@@ -576,7 +576,7 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 				return nil
 			},
 			By:           `grpc.federation.log.info('output federation log', {'messages': [foo, bar], 'message_map': {'foo': foo, 'bar': bar}})`,
-			ByCacheIndex: 7,
+			ByCacheIndex: 105,
 		})
 	}
 
@@ -595,7 +595,7 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 				return nil
 			},
 			By:           `grpc.federation.log.add({'foo_type': foo.type, 'bar_type': bar.type})`,
-			ByCacheIndex: 8,
+			ByCacheIndex: 106,
 		})
 	}
 
@@ -678,7 +678,7 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*A_B_C]{
 		Value:      value,
 		Expr:       `foo`,
-		CacheIndex: 9,
+		CacheIndex: 107,
 		Setter: func(v *A_B_C) error {
 			ret.Foo = v
 			return nil
@@ -691,7 +691,7 @@ func (s *FederationService) resolve_Federation_A_B(ctx context.Context, req *Fed
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*A_B_C]{
 		Value:      value,
 		Expr:       `bar`,
-		CacheIndex: 10,
+		CacheIndex: 108,
 		Setter: func(v *A_B_C) error {
 			ret.Bar = v
 			return nil
@@ -728,7 +728,7 @@ func (s *FederationService) resolve_Federation_A_B_C(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `$.type`,
-		CacheIndex: 11,
+		CacheIndex: 109,
 		Setter: func(v string) error {
 			ret.Type = v
 			return nil
@@ -816,7 +816,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 12,
+					CacheIndex: 1,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -848,7 +848,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')`,
-			ByCacheIndex: 13,
+			ByCacheIndex: 2,
 		})
 	}
 
@@ -867,7 +867,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.strings.parseFloat(strings_join, 64)`,
-			ByCacheIndex: 14,
+			ByCacheIndex: 3,
 		})
 	}
 
@@ -886,7 +886,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.url.parse('https://test_user:password@example.com/path')`,
-			ByCacheIndex: 15,
+			ByCacheIndex: 4,
 		})
 	}
 
@@ -905,7 +905,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())`,
-			ByCacheIndex: 16,
+			ByCacheIndex: 5,
 		})
 	}
 
@@ -924,7 +924,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.rand.newSource(date.unix())`,
-			ByCacheIndex: 17,
+			ByCacheIndex: 6,
 		})
 	}
 
@@ -943,7 +943,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.rand.new(rand_source)`,
-			ByCacheIndex: 18,
+			ByCacheIndex: 7,
 		})
 	}
 
@@ -962,7 +962,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `.grpc.federation.uuid.newRandomFromRand(fixed_rand)`,
-			ByCacheIndex: 19,
+			ByCacheIndex: 8,
 		})
 	}
 
@@ -981,7 +981,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.time.loadLocation('Asia/Tokyo')`,
-			ByCacheIndex: 20,
+			ByCacheIndex: 9,
 		})
 	}
 
@@ -1000,7 +1000,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, loc)`,
-			ByCacheIndex: 21,
+			ByCacheIndex: 10,
 		})
 	}
 
@@ -1019,7 +1019,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.metadata.incoming()['key1'][0]`,
-			ByCacheIndex: 22,
+			ByCacheIndex: 11,
 		})
 	}
 
@@ -1065,7 +1065,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `[4, 1, 3, 2].sortAsc(v, v)`,
-			ByCacheIndex: 23,
+			ByCacheIndex: 12,
 		})
 	}
 
@@ -1084,7 +1084,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)`,
-			ByCacheIndex: 24,
+			ByCacheIndex: 13,
 		})
 	}
 
@@ -1103,7 +1103,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `{1: 'a', 2: 'b', 3: 'c'}`,
-			ByCacheIndex: 25,
+			ByCacheIndex: 14,
 		})
 	}
 
@@ -1122,7 +1122,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `null`,
-			ByCacheIndex: 26,
+			ByCacheIndex: 15,
 		})
 	}
 
@@ -1141,7 +1141,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.log.info('output federation log', {'post_message': post})`,
-			ByCacheIndex: 27,
+			ByCacheIndex: 16,
 		})
 	}
 
@@ -1167,7 +1167,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 					Value:      value,
 					Expr:       `true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)`,
 					OutType:    reflect.TypeOf(user.Item_ItemType(0)),
-					CacheIndex: 28,
+					CacheIndex: 17,
 				})
 				if err != nil {
 					return 0, err
@@ -1193,7 +1193,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.math.sqrt(3.0*3.0+4.0*4.0)`,
-			ByCacheIndex: 29,
+			ByCacheIndex: 18,
 		})
 	}
 
@@ -1212,7 +1212,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.math.sqrt(3*3+4*4)`,
-			ByCacheIndex: 30,
+			ByCacheIndex: 19,
 		})
 	}
 
@@ -1231,7 +1231,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.math.pow(2.0, 3.0)`,
-			ByCacheIndex: 31,
+			ByCacheIndex: 20,
 		})
 	}
 
@@ -1250,7 +1250,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.math.floor(1.51)`,
-			ByCacheIndex: 32,
+			ByCacheIndex: 21,
 		})
 	}
 
@@ -1269,7 +1269,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `[[1], [2], [3]].flatten()`,
-			ByCacheIndex: 33,
+			ByCacheIndex: 22,
 		})
 	}
 
@@ -1288,7 +1288,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.math.round(1.5)`,
-			ByCacheIndex: 34,
+			ByCacheIndex: 23,
 		})
 	}
 
@@ -1307,7 +1307,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `[1, 2, 3, 4].filter(dup, dup % 2 == 0)`,
-			ByCacheIndex: 35,
+			ByCacheIndex: 24,
 		})
 	}
 
@@ -1326,7 +1326,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.any.new(post)`,
-			ByCacheIndex: 36,
+			ByCacheIndex: 25,
 		})
 	}
 
@@ -1345,7 +1345,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `'%d-%d-%d-world'.format([1, 2, 3])`,
-			ByCacheIndex: 37,
+			ByCacheIndex: 26,
 		})
 	}
 
@@ -1364,7 +1364,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `fmt.replace('world', 'grpc')`,
-			ByCacheIndex: 38,
+			ByCacheIndex: 27,
 		})
 	}
 
@@ -1383,7 +1383,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `[1, 2, 3].transformMap(idx, v, idx % 2 == 0, (idx * v) + v)`,
-			ByCacheIndex: 39,
+			ByCacheIndex: 28,
 		})
 	}
 
@@ -1402,7 +1402,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.uuid.parse(uuid.string())`,
-			ByCacheIndex: 40,
+			ByCacheIndex: 29,
 		})
 	}
 
@@ -1421,7 +1421,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.uuid.validate(uuid.string())`,
-			ByCacheIndex: 41,
+			ByCacheIndex: 30,
 		})
 	}
 
@@ -1440,7 +1440,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.regexp.compile('[a-z]+\\d\\d')`,
-			ByCacheIndex: 42,
+			ByCacheIndex: 31,
 		})
 	}
 
@@ -1459,7 +1459,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.regexp.mustCompile('([a-z]+)\\d(\\d)')`,
-			ByCacheIndex: 43,
+			ByCacheIndex: 32,
 		})
 	}
 
@@ -1478,7 +1478,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.regexp.quoteMeta('[a-z]+\\d')`,
-			ByCacheIndex: 44,
+			ByCacheIndex: 33,
 		})
 	}
 
@@ -1497,7 +1497,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `must_compile.findStringSubmatch('abc123')`,
-			ByCacheIndex: 45,
+			ByCacheIndex: 34,
 		})
 	}
 
@@ -1516,7 +1516,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `compile.matchString('abc12')`,
-			ByCacheIndex: 46,
+			ByCacheIndex: 35,
 		})
 	}
 
@@ -1535,7 +1535,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 				return nil
 			},
 			By:           `grpc.federation.regexp.compile('mackerel').replaceAllString('mackerel is tasty', 'salmon')`,
-			ByCacheIndex: 47,
+			ByCacheIndex: 36,
 		})
 	}
 
@@ -1911,7 +1911,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `post`,
-		CacheIndex: 48,
+		CacheIndex: 37,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -1924,7 +1924,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'hello'`,
-		CacheIndex: 49,
+		CacheIndex: 38,
 		Setter: func(v string) error {
 			ret.Str = v
 			return nil
@@ -1937,7 +1937,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `uuid.string()`,
-		CacheIndex: 50,
+		CacheIndex: 39,
 		Setter: func(v string) error {
 			ret.Uuid = v
 			return nil
@@ -1950,7 +1950,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `loc.string()`,
-		CacheIndex: 51,
+		CacheIndex: 40,
 		Setter: func(v string) error {
 			ret.Loc = v
 			return nil
@@ -1963,7 +1963,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `value1`,
-		CacheIndex: 52,
+		CacheIndex: 41,
 		Setter: func(v string) error {
 			ret.Value1 = v
 			return nil
@@ -1976,7 +1976,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)`,
-		CacheIndex: 53,
+		CacheIndex: 42,
 		Setter: func(v string) error {
 			ret.ItemTypeName = v
 			return nil
@@ -1989,7 +1989,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)`,
-		CacheIndex: 54,
+		CacheIndex: 43,
 		Setter: func(v string) error {
 			ret.LocationTypeName = v
 			return nil
@@ -2002,7 +2002,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)`,
-		CacheIndex: 55,
+		CacheIndex: 44,
 		Setter: func(v string) error {
 			ret.UserItemTypeName = v
 			return nil
@@ -2015,7 +2015,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.value('ITEM_TYPE_1')`,
-		CacheIndex: 56,
+		CacheIndex: 45,
 		Setter: func(v user.Item_ItemType) error {
 			itemTypeValueEnumValue, err := s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
 			if err != nil {
@@ -2032,7 +2032,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.value('ITEM_TYPE_1')`,
-		CacheIndex: 57,
+		CacheIndex: 46,
 		Setter: func(v user.Item_ItemType) error {
 			itemTypeValueIntValue, err := s.cast_User_Item_ItemType__to__int32(v)
 			if err != nil {
@@ -2049,7 +2049,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.from(1)`,
-		CacheIndex: 58,
+		CacheIndex: 47,
 		Setter: func(v user.Item_ItemType) error {
 			itemTypeValueCastValue, err := s.cast_User_Item_ItemType__to__Federation_Item_ItemType(v)
 			if err != nil {
@@ -2066,7 +2066,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Item_Location_LocationType]{
 		Value:      value,
 		Expr:       `Item.Location.LocationType.value('LOCATION_TYPE_1')`,
-		CacheIndex: 59,
+		CacheIndex: 48,
 		Setter: func(v Item_Location_LocationType) error {
 			locationTypeValueValue, err := s.cast_Federation_Item_Location_LocationType__to__int32(v)
 			if err != nil {
@@ -2083,7 +2083,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 		Value:      value,
 		Expr:       `user.Item.ItemType.value('ITEM_TYPE_2')`,
-		CacheIndex: 60,
+		CacheIndex: 49,
 		Setter: func(v user.Item_ItemType) error {
 			userItemTypeValueValue, err := s.cast_User_Item_ItemType__to__int32(v)
 			if err != nil {
@@ -2100,7 +2100,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*A]{
 		Value:      value,
 		Expr:       `a`,
-		CacheIndex: 61,
+		CacheIndex: 50,
 		Setter: func(v *A) error {
 			ret.A = v
 			return nil
@@ -2113,7 +2113,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int32]{
 		Value:      value,
 		Expr:       `sorted_values`,
-		CacheIndex: 62,
+		CacheIndex: 51,
 		Setter: func(v []int32) error {
 			ret.SortedValues = v
 			return nil
@@ -2126,7 +2126,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]*user.Item]{
 		Value:      value,
 		Expr:       `sorted_items`,
-		CacheIndex: 63,
+		CacheIndex: 52,
 		Setter: func(v []*user.Item) error {
 			sortedItemsValue, err := s.cast_repeated_User_Item__to__repeated_Federation_Item(v)
 			if err != nil {
@@ -2143,7 +2143,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[map[int64]string]{
 		Value:      value,
 		Expr:       `map_value`,
-		CacheIndex: 64,
+		CacheIndex: 53,
 		Setter: func(v map[int64]string) error {
 			mapValueValue, err := s.cast_map_int64_string__to__map_int32_string(v)
 			if err != nil {
@@ -2160,7 +2160,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.DoubleValue]{
 		Value:      value,
 		Expr:       `google.protobuf.DoubleValue{value: 1.23}`,
-		CacheIndex: 65,
+		CacheIndex: 54,
 		Setter: func(v *wrapperspb.DoubleValue) error {
 			doubleWrapperValueValue, err := s.cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_DoubleValue(v)
 			if err != nil {
@@ -2177,7 +2177,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.DoubleValue]{
 		Value:      value,
 		Expr:       `google.protobuf.FloatValue{value: 3.45}`,
-		CacheIndex: 66,
+		CacheIndex: 55,
 		Setter: func(v *wrapperspb.DoubleValue) error {
 			floatWrapperValueValue, err := s.cast_Google_Protobuf_DoubleValue__to__Google_Protobuf_FloatValue(v)
 			if err != nil {
@@ -2194,7 +2194,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.Int64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.Int64Value{value: 1}`,
-		CacheIndex: 67,
+		CacheIndex: 56,
 		Setter: func(v *wrapperspb.Int64Value) error {
 			i64WrapperValueValue, err := s.cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int64Value(v)
 			if err != nil {
@@ -2211,7 +2211,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.UInt64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.UInt64Value{value: uint(2)}`,
-		CacheIndex: 68,
+		CacheIndex: 57,
 		Setter: func(v *wrapperspb.UInt64Value) error {
 			u64WrapperValueValue, err := s.cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt64Value(v)
 			if err != nil {
@@ -2228,7 +2228,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.Int64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.Int32Value{value: 3}`,
-		CacheIndex: 69,
+		CacheIndex: 58,
 		Setter: func(v *wrapperspb.Int64Value) error {
 			i32WrapperValueValue, err := s.cast_Google_Protobuf_Int64Value__to__Google_Protobuf_Int32Value(v)
 			if err != nil {
@@ -2245,7 +2245,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.UInt64Value]{
 		Value:      value,
 		Expr:       `google.protobuf.UInt32Value{value: uint(4)}`,
-		CacheIndex: 70,
+		CacheIndex: 59,
 		Setter: func(v *wrapperspb.UInt64Value) error {
 			u32WrapperValueValue, err := s.cast_Google_Protobuf_UInt64Value__to__Google_Protobuf_UInt32Value(v)
 			if err != nil {
@@ -2262,7 +2262,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.BoolValue]{
 		Value:      value,
 		Expr:       `google.protobuf.BoolValue{value: true}`,
-		CacheIndex: 71,
+		CacheIndex: 60,
 		Setter: func(v *wrapperspb.BoolValue) error {
 			boolWrapperValueValue, err := s.cast_Google_Protobuf_BoolValue__to__Google_Protobuf_BoolValue(v)
 			if err != nil {
@@ -2279,7 +2279,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.StringValue]{
 		Value:      value,
 		Expr:       `google.protobuf.StringValue{value: 'hello'}`,
-		CacheIndex: 72,
+		CacheIndex: 61,
 		Setter: func(v *wrapperspb.StringValue) error {
 			stringWrapperValueValue, err := s.cast_Google_Protobuf_StringValue__to__Google_Protobuf_StringValue(v)
 			if err != nil {
@@ -2296,7 +2296,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*wrapperspb.BytesValue]{
 		Value:      value,
 		Expr:       `google.protobuf.BytesValue{value: bytes('world')}`,
-		CacheIndex: 73,
+		CacheIndex: 62,
 		Setter: func(v *wrapperspb.BytesValue) error {
 			bytesWrapperValueValue, err := s.cast_Google_Protobuf_BytesValue__to__Google_Protobuf_BytesValue(v)
 			if err != nil {
@@ -2313,7 +2313,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'hello\nworld'`,
-		CacheIndex: 74,
+		CacheIndex: 63,
 		Setter: func(v string) error {
 			ret.Hello = v
 			return nil
@@ -2326,7 +2326,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*timestamppb.Timestamp]{
 		Value:      value,
 		Expr:       `null`,
-		CacheIndex: 75,
+		CacheIndex: 64,
 		Setter: func(v *timestamppb.Timestamp) error {
 			ret.NullTimestamp = v
 			return nil
@@ -2339,7 +2339,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*timestamppb.Timestamp]{
 		Value:      value,
 		Expr:       `null_value`,
-		CacheIndex: 76,
+		CacheIndex: 65,
 		Setter: func(v *timestamppb.Timestamp) error {
 			ret.NullTimestamp2 = v
 			return nil
@@ -2352,7 +2352,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*timestamppb.Timestamp]{
 		Value:      value,
 		Expr:       `true ? null : google.protobuf.Timestamp{}`,
-		CacheIndex: 77,
+		CacheIndex: 66,
 		Setter: func(v *timestamppb.Timestamp) error {
 			ret.NullTimestamp3 = v
 			return nil
@@ -2365,7 +2365,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `jp_time.location().string()`,
-		CacheIndex: 78,
+		CacheIndex: 67,
 		Setter: func(v string) error {
 			ret.JpLoc = v
 			return nil
@@ -2378,7 +2378,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `strings_join`,
-		CacheIndex: 79,
+		CacheIndex: 68,
 		Setter: func(v string) error {
 			ret.StringsJoin = v
 			return nil
@@ -2391,7 +2391,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `parse_float`,
-		CacheIndex: 80,
+		CacheIndex: 69,
 		Setter: func(v float64) error {
 			ret.ParseFloat = v
 			return nil
@@ -2404,7 +2404,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `url.userinfo().username()`,
-		CacheIndex: 81,
+		CacheIndex: 70,
 		Setter: func(v string) error {
 			ret.UrlUserName = v
 			return nil
@@ -2417,7 +2417,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Item_ItemType]{
 		Value:      value,
 		Expr:       `e`,
-		CacheIndex: 82,
+		CacheIndex: 71,
 		Setter: func(v Item_ItemType) error {
 			ret.EnumValue = v
 			return nil
@@ -2430,7 +2430,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `Item.ItemType.attr(e, 'en')`,
-		CacheIndex: 83,
+		CacheIndex: 72,
 		Setter: func(v string) error {
 			ret.EnumValueStr = v
 			return nil
@@ -2443,7 +2443,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `sqrt_double`,
-		CacheIndex: 84,
+		CacheIndex: 73,
 		Setter: func(v float64) error {
 			ret.SqrtDouble = v
 			return nil
@@ -2456,7 +2456,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `sqrt_int`,
-		CacheIndex: 85,
+		CacheIndex: 74,
 		Setter: func(v float64) error {
 			ret.SqrtInt = v
 			return nil
@@ -2469,7 +2469,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `pow`,
-		CacheIndex: 86,
+		CacheIndex: 75,
 		Setter: func(v float64) error {
 			ret.Pow = v
 			return nil
@@ -2482,7 +2482,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `floor`,
-		CacheIndex: 87,
+		CacheIndex: 76,
 		Setter: func(v float64) error {
 			ret.Floor = v
 			return nil
@@ -2495,7 +2495,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]int64]{
 		Value:      value,
 		Expr:       `flatten`,
-		CacheIndex: 88,
+		CacheIndex: 77,
 		Setter: func(v []int64) error {
 			ret.Flatten = v
 			return nil
@@ -2508,7 +2508,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[float64]{
 		Value:      value,
 		Expr:       `round`,
-		CacheIndex: 89,
+		CacheIndex: 78,
 		Setter: func(v float64) error {
 			ret.Round = v
 			return nil
@@ -2521,7 +2521,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*anypb.Any]{
 		Value:      value,
 		Expr:       `any`,
-		CacheIndex: 90,
+		CacheIndex: 79,
 		Setter: func(v *anypb.Any) error {
 			anyValue, err := s.cast_Google_Protobuf_Any__to__Google_Protobuf_Any(v)
 			if err != nil {
@@ -2538,7 +2538,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `replaced`,
-		CacheIndex: 91,
+		CacheIndex: 80,
 		Setter: func(v string) error {
 			ret.Replaced = v
 			return nil
@@ -2551,7 +2551,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[map[int64]int64]{
 		Value:      value,
 		Expr:       `list_to_map`,
-		CacheIndex: 92,
+		CacheIndex: 81,
 		Setter: func(v map[int64]int64) error {
 			listToMapValue, err := s.cast_map_int64_int64__to__map_int32_int32(v)
 			if err != nil {
@@ -2568,7 +2568,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `uuid_parse.string()`,
-		CacheIndex: 93,
+		CacheIndex: 82,
 		Setter: func(v string) error {
 			ret.UuidParse = v
 			return nil
@@ -2581,7 +2581,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `uuid_validate`,
-		CacheIndex: 94,
+		CacheIndex: 83,
 		Setter: func(v bool) error {
 			ret.UuidValidate = v
 			return nil
@@ -2594,7 +2594,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `compile.string()`,
-		CacheIndex: 95,
+		CacheIndex: 84,
 		Setter: func(v string) error {
 			ret.Compile = v
 			return nil
@@ -2607,7 +2607,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `must_compile.string()`,
-		CacheIndex: 96,
+		CacheIndex: 85,
 		Setter: func(v string) error {
 			ret.MustCompile = v
 			return nil
@@ -2620,7 +2620,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `quote_meta`,
-		CacheIndex: 97,
+		CacheIndex: 86,
 		Setter: func(v string) error {
 			ret.QuoteMeta = v
 			return nil
@@ -2633,7 +2633,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]string]{
 		Value:      value,
 		Expr:       `find_string_submatch`,
-		CacheIndex: 98,
+		CacheIndex: 87,
 		Setter: func(v []string) error {
 			ret.FindStringSubmatch = v
 			return nil
@@ -2646,7 +2646,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[bool]{
 		Value:      value,
 		Expr:       `match_string`,
-		CacheIndex: 99,
+		CacheIndex: 88,
 		Setter: func(v bool) error {
 			ret.MatchString = v
 			return nil
@@ -2659,7 +2659,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `replace_all_string`,
-		CacheIndex: 100,
+		CacheIndex: 89,
 		Setter: func(v string) error {
 			ret.ReplaceAllString = v
 			return nil
@@ -2713,7 +2713,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 101,
+					CacheIndex: 90,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -2729,7 +2729,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 					return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[post.GetPostResponse]{
 						Value:      value,
 						If:         `true`,
-						CacheIndex: 102,
+						CacheIndex: 91,
 						BackOff:    b,
 						Body: func() (*post.GetPostResponse, error) {
 							return s.client.Post_PostServiceClient.GetPost(ctx, args)
@@ -2762,7 +2762,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				return nil
 			},
 			By:           `res.post`,
-			ByCacheIndex: 103,
+			ByCacheIndex: 92,
 		})
 	}
 
@@ -2789,7 +2789,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post.Post]{
 					Value:      value,
 					Expr:       `post`,
-					CacheIndex: 104,
+					CacheIndex: 93,
 					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
@@ -2838,7 +2838,7 @@ func (s *FederationService) resolve_Federation_Post(ctx context.Context, req *Fe
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:      value,
 		Expr:       `user`,
-		CacheIndex: 105,
+		CacheIndex: 94,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -2894,7 +2894,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.user_id`,
-					CacheIndex: 106,
+					CacheIndex: 95,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -2906,7 +2906,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 					Value:      value,
 					Expr:       `user.Item.ItemType.value('ITEM_TYPE_1')`,
-					CacheIndex: 107,
+					CacheIndex: 96,
 					Setter: func(v user.Item_ItemType) error {
 						typeValue, err := s.cast_User_Item_ItemType__to__int32(v)
 						if err != nil {
@@ -2932,7 +2932,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 					return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[user.GetUserResponse]{
 						Value:      value,
 						If:         `true`,
-						CacheIndex: 108,
+						CacheIndex: 97,
 						BackOff:    b,
 						Body: func() (*user.GetUserResponse, error) {
 							return s.client.User_UserServiceClient.GetUser(ctx, args)
@@ -2965,7 +2965,7 @@ func (s *FederationService) resolve_Federation_User(ctx context.Context, req *Fe
 				return nil
 			},
 			By:           `res.user`,
-			ByCacheIndex: 109,
+			ByCacheIndex: 98,
 		})
 	}
 
@@ -4016,114 +4016,114 @@ func (s *FederationService) logvalue_repeated_Federation_Item(v []*Item) slog.Va
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{CacheIndex: 1, Expr: `b`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("federation.A.B"))}},
-		{CacheIndex: 2, Expr: `true`},
-		{CacheIndex: 3, Expr: `A.B.C{}`},
-		{CacheIndex: 4, Expr: `'foo'`},
-		{CacheIndex: 5, Expr: `'bar'`},
-		{CacheIndex: 6, Expr: `foo.type == 'foo'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
-		{CacheIndex: 7, Expr: `grpc.federation.log.info('output federation log', {'messages': [foo, bar], 'message_map': {'foo': foo, 'bar': bar}})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
-		{CacheIndex: 8, Expr: `grpc.federation.log.add({'foo_type': foo.type, 'bar_type': bar.type})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
-		{CacheIndex: 9, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
-		{CacheIndex: 10, Expr: `bar`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C"))}},
-		{CacheIndex: 11, Expr: `$.type`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.A_B_CArgument"))}},
-		{CacheIndex: 12, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 13, Expr: `grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')`},
-		{CacheIndex: 14, Expr: `grpc.federation.strings.parseFloat(strings_join, 64)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`strings_join`, grpcfed.CELStringType)}},
-		{CacheIndex: 15, Expr: `grpc.federation.url.parse('https://test_user:password@example.com/path')`},
-		{CacheIndex: 16, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())`},
-		{CacheIndex: 17, Expr: `grpc.federation.rand.newSource(date.unix())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`date`, grpcfed.CELObjectType("grpc.federation.time.Time"))}},
-		{CacheIndex: 18, Expr: `grpc.federation.rand.new(rand_source)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`rand_source`, grpcfed.CELObjectType("grpc.federation.rand.Source"))}},
-		{CacheIndex: 19, Expr: `.grpc.federation.uuid.newRandomFromRand(fixed_rand)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`fixed_rand`, grpcfed.CELObjectType("grpc.federation.rand.Rand"))}},
-		{CacheIndex: 20, Expr: `grpc.federation.time.loadLocation('Asia/Tokyo')`},
-		{CacheIndex: 21, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, loc)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`loc`, grpcfed.CELObjectType("grpc.federation.time.Location"))}},
-		{CacheIndex: 22, Expr: `grpc.federation.metadata.incoming()['key1'][0]`},
-		{CacheIndex: 23, Expr: `[4, 1, 3, 2].sortAsc(v, v)`},
-		{CacheIndex: 24, Expr: `[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)`},
-		{CacheIndex: 25, Expr: `{1: 'a', 2: 'b', 3: 'c'}`},
-		{CacheIndex: 26, Expr: `null`},
-		{CacheIndex: 27, Expr: `grpc.federation.log.info('output federation log', {'post_message': post})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
-		{CacheIndex: 28, Expr: `true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)`},
-		{CacheIndex: 29, Expr: `grpc.federation.math.sqrt(3.0*3.0+4.0*4.0)`},
-		{CacheIndex: 30, Expr: `grpc.federation.math.sqrt(3*3+4*4)`},
-		{CacheIndex: 31, Expr: `grpc.federation.math.pow(2.0, 3.0)`},
-		{CacheIndex: 32, Expr: `grpc.federation.math.floor(1.51)`},
-		{CacheIndex: 33, Expr: `[[1], [2], [3]].flatten()`},
-		{CacheIndex: 34, Expr: `grpc.federation.math.round(1.5)`},
-		{CacheIndex: 35, Expr: `[1, 2, 3, 4].filter(dup, dup % 2 == 0)`},
-		{CacheIndex: 36, Expr: `grpc.federation.any.new(post)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
-		{CacheIndex: 37, Expr: `'%d-%d-%d-world'.format([1, 2, 3])`},
-		{CacheIndex: 38, Expr: `fmt.replace('world', 'grpc')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`fmt`, grpcfed.CELStringType)}},
-		{CacheIndex: 39, Expr: `[1, 2, 3].transformMap(idx, v, idx % 2 == 0, (idx * v) + v)`},
-		{CacheIndex: 40, Expr: `grpc.federation.uuid.parse(uuid.string())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
-		{CacheIndex: 41, Expr: `grpc.federation.uuid.validate(uuid.string())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
-		{CacheIndex: 42, Expr: `grpc.federation.regexp.compile('[a-z]+\\d\\d')`},
-		{CacheIndex: 43, Expr: `grpc.federation.regexp.mustCompile('([a-z]+)\\d(\\d)')`},
-		{CacheIndex: 44, Expr: `grpc.federation.regexp.quoteMeta('[a-z]+\\d')`},
-		{CacheIndex: 45, Expr: `must_compile.findStringSubmatch('abc123')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`must_compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
-		{CacheIndex: 46, Expr: `compile.matchString('abc12')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
-		{CacheIndex: 47, Expr: `grpc.federation.regexp.compile('mackerel').replaceAllString('mackerel is tasty', 'salmon')`},
-		{CacheIndex: 48, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
-		{CacheIndex: 49, Expr: `'hello'`},
-		{CacheIndex: 50, Expr: `uuid.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
-		{CacheIndex: 51, Expr: `loc.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`loc`, grpcfed.CELObjectType("grpc.federation.time.Location"))}},
-		{CacheIndex: 52, Expr: `value1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`value1`, grpcfed.CELStringType)}},
-		{CacheIndex: 53, Expr: `Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)`},
-		{CacheIndex: 54, Expr: `Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)`},
-		{CacheIndex: 55, Expr: `user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)`},
-		{CacheIndex: 56, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
-		{CacheIndex: 57, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
-		{CacheIndex: 58, Expr: `user.Item.ItemType.from(1)`},
-		{CacheIndex: 59, Expr: `Item.Location.LocationType.value('LOCATION_TYPE_1')`},
-		{CacheIndex: 60, Expr: `user.Item.ItemType.value('ITEM_TYPE_2')`},
-		{CacheIndex: 61, Expr: `a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("federation.A"))}},
-		{CacheIndex: 62, Expr: `sorted_values`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sorted_values`, grpcfed.CELListType(grpcfed.CELIntType))}},
-		{CacheIndex: 63, Expr: `sorted_items`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sorted_items`, grpcfed.CELListType(grpcfed.CELObjectType("user.Item")))}},
-		{CacheIndex: 64, Expr: `map_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`map_value`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType))}},
-		{CacheIndex: 65, Expr: `google.protobuf.DoubleValue{value: 1.23}`},
-		{CacheIndex: 66, Expr: `google.protobuf.FloatValue{value: 3.45}`},
-		{CacheIndex: 67, Expr: `google.protobuf.Int64Value{value: 1}`},
-		{CacheIndex: 68, Expr: `google.protobuf.UInt64Value{value: uint(2)}`},
-		{CacheIndex: 69, Expr: `google.protobuf.Int32Value{value: 3}`},
-		{CacheIndex: 70, Expr: `google.protobuf.UInt32Value{value: uint(4)}`},
-		{CacheIndex: 71, Expr: `google.protobuf.BoolValue{value: true}`},
-		{CacheIndex: 72, Expr: `google.protobuf.StringValue{value: 'hello'}`},
-		{CacheIndex: 73, Expr: `google.protobuf.BytesValue{value: bytes('world')}`},
-		{CacheIndex: 74, Expr: `'hello\nworld'`},
-		{CacheIndex: 75, Expr: `null`},
-		{CacheIndex: 76, Expr: `null_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`null_value`, grpcfed.CELNullType)}},
-		{CacheIndex: 77, Expr: `true ? null : google.protobuf.Timestamp{}`},
-		{CacheIndex: 78, Expr: `jp_time.location().string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`jp_time`, grpcfed.CELObjectType("grpc.federation.time.Time"))}},
-		{CacheIndex: 79, Expr: `strings_join`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`strings_join`, grpcfed.CELStringType)}},
-		{CacheIndex: 80, Expr: `parse_float`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`parse_float`, grpcfed.CELDoubleType)}},
-		{CacheIndex: 81, Expr: `url.userinfo().username()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`url`, grpcfed.CELObjectType("grpc.federation.url.URL"))}},
-		{CacheIndex: 82, Expr: `e`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
-		{CacheIndex: 83, Expr: `Item.ItemType.attr(e, 'en')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
-		{CacheIndex: 84, Expr: `sqrt_double`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sqrt_double`, grpcfed.CELDoubleType)}},
-		{CacheIndex: 85, Expr: `sqrt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sqrt_int`, grpcfed.CELDoubleType)}},
-		{CacheIndex: 86, Expr: `pow`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`pow`, grpcfed.CELDoubleType)}},
-		{CacheIndex: 87, Expr: `floor`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`floor`, grpcfed.CELDoubleType)}},
-		{CacheIndex: 88, Expr: `flatten`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`flatten`, grpcfed.CELListType(grpcfed.CELIntType))}},
-		{CacheIndex: 89, Expr: `round`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`round`, grpcfed.CELDoubleType)}},
-		{CacheIndex: 90, Expr: `any`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`any`, grpcfed.CELObjectType("google.protobuf.Any"))}},
-		{CacheIndex: 91, Expr: `replaced`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`replaced`, grpcfed.CELStringType)}},
-		{CacheIndex: 92, Expr: `list_to_map`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`list_to_map`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELIntType))}},
-		{CacheIndex: 93, Expr: `uuid_parse.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid_parse`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
-		{CacheIndex: 94, Expr: `uuid_validate`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid_validate`, grpcfed.CELBoolType)}},
-		{CacheIndex: 95, Expr: `compile.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
-		{CacheIndex: 96, Expr: `must_compile.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`must_compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
-		{CacheIndex: 97, Expr: `quote_meta`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`quote_meta`, grpcfed.CELStringType)}},
-		{CacheIndex: 98, Expr: `find_string_submatch`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`find_string_submatch`, grpcfed.CELListType(grpcfed.CELStringType))}},
-		{CacheIndex: 99, Expr: `match_string`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`match_string`, grpcfed.CELBoolType)}},
-		{CacheIndex: 100, Expr: `replace_all_string`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`replace_all_string`, grpcfed.CELStringType)}},
-		{CacheIndex: 101, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}},
-		{CacheIndex: 102, Expr: `true`},
-		{CacheIndex: 103, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
-		{CacheIndex: 104, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post"))}},
-		{CacheIndex: 105, Expr: `user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.User"))}},
-		{CacheIndex: 106, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}},
-		{CacheIndex: 107, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
-		{CacheIndex: 108, Expr: `true`},
-		{CacheIndex: 109, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("user.GetUserResponse"))}},
+		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}},
+		{Index: 2, Expr: `grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')`},
+		{Index: 3, Expr: `grpc.federation.strings.parseFloat(strings_join, 64)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`strings_join`, grpcfed.CELStringType)}},
+		{Index: 4, Expr: `grpc.federation.url.parse('https://test_user:password@example.com/path')`},
+		{Index: 5, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())`},
+		{Index: 6, Expr: `grpc.federation.rand.newSource(date.unix())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`date`, grpcfed.CELObjectType("grpc.federation.time.Time"))}},
+		{Index: 7, Expr: `grpc.federation.rand.new(rand_source)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`rand_source`, grpcfed.CELObjectType("grpc.federation.rand.Source"))}},
+		{Index: 8, Expr: `.grpc.federation.uuid.newRandomFromRand(fixed_rand)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`fixed_rand`, grpcfed.CELObjectType("grpc.federation.rand.Rand"))}},
+		{Index: 9, Expr: `grpc.federation.time.loadLocation('Asia/Tokyo')`},
+		{Index: 10, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, loc)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`loc`, grpcfed.CELObjectType("grpc.federation.time.Location"))}},
+		{Index: 11, Expr: `grpc.federation.metadata.incoming()['key1'][0]`},
+		{Index: 12, Expr: `[4, 1, 3, 2].sortAsc(v, v)`},
+		{Index: 13, Expr: `[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)`},
+		{Index: 14, Expr: `{1: 'a', 2: 'b', 3: 'c'}`},
+		{Index: 15, Expr: `null`},
+		{Index: 16, Expr: `grpc.federation.log.info('output federation log', {'post_message': post})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 17, Expr: `true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)`},
+		{Index: 18, Expr: `grpc.federation.math.sqrt(3.0*3.0+4.0*4.0)`},
+		{Index: 19, Expr: `grpc.federation.math.sqrt(3*3+4*4)`},
+		{Index: 20, Expr: `grpc.federation.math.pow(2.0, 3.0)`},
+		{Index: 21, Expr: `grpc.federation.math.floor(1.51)`},
+		{Index: 22, Expr: `[[1], [2], [3]].flatten()`},
+		{Index: 23, Expr: `grpc.federation.math.round(1.5)`},
+		{Index: 24, Expr: `[1, 2, 3, 4].filter(dup, dup % 2 == 0)`},
+		{Index: 25, Expr: `grpc.federation.any.new(post)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 26, Expr: `'%d-%d-%d-world'.format([1, 2, 3])`},
+		{Index: 27, Expr: `fmt.replace('world', 'grpc')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`fmt`, grpcfed.CELStringType)}},
+		{Index: 28, Expr: `[1, 2, 3].transformMap(idx, v, idx % 2 == 0, (idx * v) + v)`},
+		{Index: 29, Expr: `grpc.federation.uuid.parse(uuid.string())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 30, Expr: `grpc.federation.uuid.validate(uuid.string())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 31, Expr: `grpc.federation.regexp.compile('[a-z]+\\d\\d')`},
+		{Index: 32, Expr: `grpc.federation.regexp.mustCompile('([a-z]+)\\d(\\d)')`},
+		{Index: 33, Expr: `grpc.federation.regexp.quoteMeta('[a-z]+\\d')`},
+		{Index: 34, Expr: `must_compile.findStringSubmatch('abc123')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`must_compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 35, Expr: `compile.matchString('abc12')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 36, Expr: `grpc.federation.regexp.compile('mackerel').replaceAllString('mackerel is tasty', 'salmon')`},
+		{Index: 37, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 38, Expr: `'hello'`},
+		{Index: 39, Expr: `uuid.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 40, Expr: `loc.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`loc`, grpcfed.CELObjectType("grpc.federation.time.Location"))}},
+		{Index: 41, Expr: `value1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`value1`, grpcfed.CELStringType)}},
+		{Index: 42, Expr: `Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)`},
+		{Index: 43, Expr: `Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)`},
+		{Index: 44, Expr: `user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)`},
+		{Index: 45, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 46, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 47, Expr: `user.Item.ItemType.from(1)`},
+		{Index: 48, Expr: `Item.Location.LocationType.value('LOCATION_TYPE_1')`},
+		{Index: 49, Expr: `user.Item.ItemType.value('ITEM_TYPE_2')`},
+		{Index: 50, Expr: `a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("federation.A"))}},
+		{Index: 51, Expr: `sorted_values`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sorted_values`, grpcfed.CELListType(grpcfed.CELIntType))}},
+		{Index: 52, Expr: `sorted_items`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sorted_items`, grpcfed.CELListType(grpcfed.CELObjectType("user.Item")))}},
+		{Index: 53, Expr: `map_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`map_value`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType))}},
+		{Index: 54, Expr: `google.protobuf.DoubleValue{value: 1.23}`},
+		{Index: 55, Expr: `google.protobuf.FloatValue{value: 3.45}`},
+		{Index: 56, Expr: `google.protobuf.Int64Value{value: 1}`},
+		{Index: 57, Expr: `google.protobuf.UInt64Value{value: uint(2)}`},
+		{Index: 58, Expr: `google.protobuf.Int32Value{value: 3}`},
+		{Index: 59, Expr: `google.protobuf.UInt32Value{value: uint(4)}`},
+		{Index: 60, Expr: `google.protobuf.BoolValue{value: true}`},
+		{Index: 61, Expr: `google.protobuf.StringValue{value: 'hello'}`},
+		{Index: 62, Expr: `google.protobuf.BytesValue{value: bytes('world')}`},
+		{Index: 63, Expr: `'hello\nworld'`},
+		{Index: 64, Expr: `null`},
+		{Index: 65, Expr: `null_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`null_value`, grpcfed.CELNullType)}},
+		{Index: 66, Expr: `true ? null : google.protobuf.Timestamp{}`},
+		{Index: 67, Expr: `jp_time.location().string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`jp_time`, grpcfed.CELObjectType("grpc.federation.time.Time"))}},
+		{Index: 68, Expr: `strings_join`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`strings_join`, grpcfed.CELStringType)}},
+		{Index: 69, Expr: `parse_float`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`parse_float`, grpcfed.CELDoubleType)}},
+		{Index: 70, Expr: `url.userinfo().username()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`url`, grpcfed.CELObjectType("grpc.federation.url.URL"))}},
+		{Index: 71, Expr: `e`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 72, Expr: `Item.ItemType.attr(e, 'en')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 73, Expr: `sqrt_double`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sqrt_double`, grpcfed.CELDoubleType)}},
+		{Index: 74, Expr: `sqrt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sqrt_int`, grpcfed.CELDoubleType)}},
+		{Index: 75, Expr: `pow`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`pow`, grpcfed.CELDoubleType)}},
+		{Index: 76, Expr: `floor`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`floor`, grpcfed.CELDoubleType)}},
+		{Index: 77, Expr: `flatten`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`flatten`, grpcfed.CELListType(grpcfed.CELIntType))}},
+		{Index: 78, Expr: `round`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`round`, grpcfed.CELDoubleType)}},
+		{Index: 79, Expr: `any`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`any`, grpcfed.CELObjectType("google.protobuf.Any"))}},
+		{Index: 80, Expr: `replaced`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`replaced`, grpcfed.CELStringType)}},
+		{Index: 81, Expr: `list_to_map`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`list_to_map`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELIntType))}},
+		{Index: 82, Expr: `uuid_parse.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid_parse`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 83, Expr: `uuid_validate`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid_validate`, grpcfed.CELBoolType)}},
+		{Index: 84, Expr: `compile.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 85, Expr: `must_compile.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`must_compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 86, Expr: `quote_meta`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`quote_meta`, grpcfed.CELStringType)}},
+		{Index: 87, Expr: `find_string_submatch`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`find_string_submatch`, grpcfed.CELListType(grpcfed.CELStringType))}},
+		{Index: 88, Expr: `match_string`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`match_string`, grpcfed.CELBoolType)}},
+		{Index: 89, Expr: `replace_all_string`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`replace_all_string`, grpcfed.CELStringType)}},
+		{Index: 90, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}},
+		{Index: 91, Expr: `true`},
+		{Index: 92, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 93, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post"))}},
+		{Index: 94, Expr: `user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.User"))}},
+		{Index: 95, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}},
+		{Index: 96, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 97, Expr: `true`},
+		{Index: 98, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("user.GetUserResponse"))}},
+		{Index: 99, Expr: `b`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("federation.A.B"))}},
+		{Index: 100, Expr: `true`},
+		{Index: 101, Expr: `A.B.C{}`},
+		{Index: 102, Expr: `'foo'`},
+		{Index: 103, Expr: `'bar'`},
+		{Index: 104, Expr: `foo.type == 'foo'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 105, Expr: `grpc.federation.log.info('output federation log', {'messages': [foo, bar], 'message_map': {'foo': foo, 'bar': bar}})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 106, Expr: `grpc.federation.log.add({'foo_type': foo.type, 'bar_type': bar.type})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 107, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 108, Expr: `bar`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 109, Expr: `$.type`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.A_B_CArgument"))}},
 	})
 }

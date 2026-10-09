@@ -19,16 +19,16 @@ func TestPrecompileCEL(t *testing.T) {
 		t.Parallel()
 		ctx := grpcfed.WithCELCacheMap(context.Background(), grpcfed.NewCELCacheMap())
 		entries := []*grpcfed.CELPrecompileEntry{
-			{CacheIndex: 1, Expr: `1 + 2`},
+			{Index: 1, Expr: `1 + 2`},
 			{
-				CacheIndex: 2,
-				Expr:       `x * 2`,
-				Variables:  []cel.EnvOption{cel.Variable("x", cel.IntType)},
+				Index:     2,
+				Expr:      `x * 2`,
+				Variables: []cel.EnvOption{cel.Variable("x", cel.IntType)},
 			},
 			{
-				CacheIndex: 3,
-				Expr:       `$ == 'foo'`,
-				Variables:  []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.StringType)},
+				Index:     3,
+				Expr:      `$ == 'foo'`,
+				Variables: []cel.EnvOption{cel.Variable(grpcfed.MessageArgumentVariableName, cel.StringType)},
 			},
 		}
 		if err := grpcfed.PrecompileCEL(ctx, envOpts, entries); err != nil {
@@ -54,7 +54,7 @@ func TestPrecompileCEL(t *testing.T) {
 		t.Parallel()
 		ctx := grpcfed.WithCELCacheMap(context.Background(), grpcfed.NewCELCacheMap())
 		err := grpcfed.PrecompileCEL(ctx, envOpts, []*grpcfed.CELPrecompileEntry{
-			{CacheIndex: 1, Expr: `undefined_variable + 1`},
+			{Index: 1, Expr: `undefined_variable + 1`},
 		})
 		if err == nil {
 			t.Fatal("expected compile error")
@@ -65,7 +65,7 @@ func TestPrecompileCEL(t *testing.T) {
 		t.Parallel()
 		ctx := grpcfed.WithCELCacheMap(context.Background(), grpcfed.NewCELCacheMap())
 		err := grpcfed.PrecompileCEL(ctx, envOpts, []*grpcfed.CELPrecompileEntry{
-			{CacheIndex: 0, Expr: `1`},
+			{Index: 0, Expr: `1`},
 		})
 		if err == nil {
 			t.Fatal("expected error for cache index 0")
@@ -75,7 +75,7 @@ func TestPrecompileCEL(t *testing.T) {
 	t.Run("cache map is required", func(t *testing.T) {
 		t.Parallel()
 		err := grpcfed.PrecompileCEL(context.Background(), envOpts, []*grpcfed.CELPrecompileEntry{
-			{CacheIndex: 1, Expr: `1`},
+			{Index: 1, Expr: `1`},
 		})
 		if err == nil {
 			t.Fatal("expected error when cache map is missing")

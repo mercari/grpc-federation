@@ -308,11 +308,11 @@ func (s *InlineEnvService) initServiceVariables(ctx context.Context) error {
 func (s *InlineEnvService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{CacheIndex: 1, Expr: `grpc.federation.env.aaa`},
-		{CacheIndex: 2, Expr: `grpc.federation.env.aaa == 'xxx'`},
-		{CacheIndex: 3, Expr: `grpc.federation.env.bbb`},
-		{CacheIndex: 4, Expr: `[0, 0]`},
-		{CacheIndex: 5, Expr: `grpc.federation.env.bbb == 1`},
-		{CacheIndex: 6, Expr: `'error'`},
+		{Index: 1, Expr: `grpc.federation.env.aaa`},
+		{Index: 2, Expr: `grpc.federation.env.aaa == 'xxx'`},
+		{Index: 3, Expr: `grpc.federation.env.bbb`},
+		{Index: 4, Expr: `[0, 0]`},
+		{Index: 5, Expr: `grpc.federation.env.bbb == 1`},
+		{Index: 6, Expr: `'error'`},
 	})
 }

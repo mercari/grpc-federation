@@ -242,7 +242,7 @@ func (s *FederationService) resolve_Org_Federation_BindSource(ctx context.Contex
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'auto-bound'`,
-		CacheIndex: 1,
+		CacheIndex: 9,
 		Setter: func(v string) error {
 			ret.OptBind = v
 			return nil
@@ -288,7 +288,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil
 			},
 			By:           `7`,
-			ByCacheIndex: 2,
+			ByCacheIndex: 1,
 		})
 	}
 
@@ -307,7 +307,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 				return nil
 			},
 			By:           `org.federation.Color.value('COLOR_RED')`,
-			ByCacheIndex: 3,
+			ByCacheIndex: 2,
 		})
 	}
 
@@ -388,7 +388,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:          value,
 		Expr:           `opt_int`,
-		CacheIndex:     4,
+		CacheIndex:     3,
 		Proto3Optional: true,
 		Setter: func(v int64) error {
 			ret.OptInt = &v
@@ -402,7 +402,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[Color]{
 		Value:          value,
 		Expr:           `opt_color`,
-		CacheIndex:     5,
+		CacheIndex:     4,
 		Proto3Optional: true,
 		Setter: func(v Color) error {
 			ret.OptColor = &v
@@ -428,7 +428,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:          value,
 		Expr:           `$.id`,
-		CacheIndex:     6,
+		CacheIndex:     5,
 		Proto3Optional: true,
 		Setter: func(v string) error {
 			ret.OptId = &v
@@ -442,7 +442,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[[]byte]{
 		Value:      value,
 		Expr:       `b'abc'`,
-		CacheIndex: 7,
+		CacheIndex: 6,
 		Setter: func(v []byte) error {
 			ret.OptBytes = v
 			return nil
@@ -459,7 +459,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:          value,
 		Expr:           `false ? optional.of(opt_int) : optional.none()`,
-		CacheIndex:     8,
+		CacheIndex:     7,
 		Proto3Optional: true,
 		Setter: func(v int64) error {
 			ret.OptNone = &v
@@ -473,7 +473,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:          value,
 		Expr:           `true ? optional.of(opt_int) : optional.none()`,
-		CacheIndex:     9,
+		CacheIndex:     8,
 		Proto3Optional: true,
 		Setter: func(v int64) error {
 			ret.OptSome = &v
@@ -574,14 +574,14 @@ func (s *FederationService) logvalue_Org_Federation_SubMessage(v *SubMessage) sl
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{CacheIndex: 1, Expr: `'auto-bound'`},
-		{CacheIndex: 2, Expr: `7`},
-		{CacheIndex: 3, Expr: `org.federation.Color.value('COLOR_RED')`},
-		{CacheIndex: 4, Expr: `opt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
-		{CacheIndex: 5, Expr: `opt_color`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType)}},
-		{CacheIndex: 6, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 7, Expr: `b'abc'`},
-		{CacheIndex: 8, Expr: `false ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
-		{CacheIndex: 9, Expr: `true ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{Index: 1, Expr: `7`},
+		{Index: 2, Expr: `org.federation.Color.value('COLOR_RED')`},
+		{Index: 3, Expr: `opt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{Index: 4, Expr: `opt_color`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType)}},
+		{Index: 5, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 6, Expr: `b'abc'`},
+		{Index: 7, Expr: `false ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{Index: 8, Expr: `true ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{Index: 9, Expr: `'auto-bound'`},
 	})
 }

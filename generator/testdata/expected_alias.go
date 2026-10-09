@@ -399,12 +399,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 					Value:      value,
 					Expr:       `$.a != null`,
-					CacheIndex: 6,
+					CacheIndex: 7,
 					Body: func(value *localValueType) error {
 						return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionA]{
 							Value:      value,
 							Expr:       `$.a`,
-							CacheIndex: 7,
+							CacheIndex: 6,
 							Setter: func(v *GetPostRequest_ConditionA) error {
 								aValue, err := s.cast_Org_Federation_GetPostRequest_ConditionA__to__Org_Post_PostConditionA(v)
 								if err != nil {
@@ -424,12 +424,12 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 					Value:      value,
 					Expr:       `$.b != null`,
-					CacheIndex: 8,
+					CacheIndex: 9,
 					Body: func(value *localValueType) error {
 						return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostRequest_ConditionB]{
 							Value:      value,
 							Expr:       `$.b`,
-							CacheIndex: 9,
+							CacheIndex: 8,
 							Setter: func(v *GetPostRequest_ConditionB) error {
 								bValue, err := s.cast_Org_Federation_GetPostRequest_ConditionB__to__Org_Post_PostConditionB(v)
 								if err != nil {
@@ -845,15 +845,15 @@ func (s *FederationService) logvalue_Org_Post_PostConditionB(v *post.PostConditi
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{CacheIndex: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 2, Expr: `$.a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 3, Expr: `$.b`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{CacheIndex: 4, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
-		{CacheIndex: 5, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
-		{CacheIndex: 6, Expr: `$.a != null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
-		{CacheIndex: 7, Expr: `$.a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
-		{CacheIndex: 8, Expr: `$.b != null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
-		{CacheIndex: 9, Expr: `$.b`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
-		{CacheIndex: 10, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse"))}},
+		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 2, Expr: `$.a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 3, Expr: `$.b`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 4, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 5, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 6, Expr: `$.a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 7, Expr: `$.a != null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 8, Expr: `$.b`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 9, Expr: `$.b != null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 10, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse"))}},
 	})
 }

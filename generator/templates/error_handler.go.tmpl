@@ -41,7 +41,7 @@ stat, handleErr := func() (*localStatusType, error) {
 		if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 			Value: value,
 			Expr: `{{ .If.Expr }}`,
-			CacheIndex: {{ $def.CELCacheIndex .If }},
+			CacheIndex: {{ .If.Index }},
 			Body: func(value *localValueType) error {
 				{{- if .Ignore }}
 				stat = grpcfed.NewGRPCStatus(grpcfed.OKCode, "ignore error")
@@ -57,7 +57,7 @@ stat, handleErr := func() (*localStatusType, error) {
 						return nil
 					},
 					By: `{{ .IgnoreAndResponse.Expr }}`,
-					ByCacheIndex: {{ $def.CELCacheIndex .IgnoreAndResponse }},
+					ByCacheIndex: {{ .IgnoreAndResponse.Index }},
 				}); err != nil {
 					grpcfed.Logger(ctx).ErrorContext(ctx, "failed to set response when ignored", slog.String("error", err.Error()))
 					return nil
@@ -70,7 +70,7 @@ stat, handleErr := func() (*localStatusType, error) {
 					Value: value,
 					Expr: `{{ .Message.Expr }}`,
 					OutType: reflect.TypeOf(""),
-					CacheIndex: {{ $def.CELCacheIndex .Message }},
+					CacheIndex: {{ .Message.Index }},
 				})
 				if err != nil {
 					return err
@@ -100,7 +100,7 @@ stat, handleErr := func() (*localStatusType, error) {
 				if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 					Value: value,
 					Expr: `{{ .If.Expr }}`,
-					CacheIndex: {{ $def.CELCacheIndex .If }},
+					CacheIndex: {{ .If.Index }},
 					Body: func(value *localValueType) error {
 						{{- if .MessageSet }}
 						if _, err := func() (any, error){
@@ -113,7 +113,7 @@ stat, handleErr := func() (*localStatusType, error) {
 						if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
 							Value: value,
 							MessageValueName: "{{ $def.Name }}",
-							CacheIndex: {{ $def.CustomMessageCELCacheIndex }},
+							CacheIndex: {{ $def.NameValue.Index }},
 							MessageIndex: {{ $idx }},
 						}); detail != nil {
 							details = append(details, detail)
@@ -127,7 +127,7 @@ stat, handleErr := func() (*localStatusType, error) {
 								Value: value,
 								Expr: `{{ .Expr }}`,
 								OutType: reflect.TypeOf({{ .Type }}),
-								CacheIndex: {{ $def.CELCacheIndex .CEL }},
+								CacheIndex: {{ .CEL.Index }},
 							})
 							if err != nil {
 								grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -253,7 +253,7 @@ func(){
 	if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
 		Value: value,
 		MessageValueName: "{{ $message.Name }}",
-		CacheIndex: {{ $message.CustomMessageCELCacheIndex }},
+		CacheIndex: {{ $message.NameValue.Index }},
 		MessageIndex: {{ $i }},
 	}); detail != nil {
 		details = append(details, detail)
@@ -270,9 +270,9 @@ if detail := grpcfed.PreconditionFailure(ctx, value, []*grpcfed.PreconditionFail
 		Type:    `{{ .Type.Expr }}`,
 		Subject: `{{ .Subject.Expr }}`,
 		Desc:    `{{ .Description.Expr }}`,
-		TypeCacheIndex: {{ .CELCacheIndex .Type }},
-		SubjectCacheIndex: {{ .CELCacheIndex .Subject }},
-		DescCacheIndex: {{ .CELCacheIndex .Description }},
+		TypeCacheIndex: {{ .Type.Index }},
+		SubjectCacheIndex: {{ .Subject.Index }},
+		DescCacheIndex: {{ .Description.Index }},
 	},
 	{{- end }}
 }); detail != nil {
@@ -286,8 +286,8 @@ if detail := grpcfed.BadRequest(ctx, value, []*grpcfed.BadRequestFieldViolation{
 	{
 		Field: `{{ .Field.Expr }}`,
 		Desc:  `{{ .Description.Expr }}`,
-		FieldCacheIndex: {{ .CELCacheIndex .Field }},
-		DescCacheIndex: {{ .CELCacheIndex .Description }},
+		FieldCacheIndex: {{ .Field.Index }},
+		DescCacheIndex: {{ .Description.Index }},
 	},
 	{{- end }}
 }); detail != nil {
@@ -300,7 +300,7 @@ if detail := grpcfed.LocalizedMessage(ctx, &grpcfed.LocalizedMessageParam{
 	Value: value,
 	Locale: "{{ .Locale }}",
 	Message: `{{ .Message.Expr }}`,
-	CacheIndex: {{ .CELCacheIndex .Message }},
+	CacheIndex: {{ .Message.Index }},
 }); detail != nil {
 	details = append(details, detail)
 }
