@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/cel-go/cel"
 	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/genproto/googleapis/rpc/code"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -79,6 +80,9 @@ type Service struct {
 	Messages    []*Message
 	MessageArgs []*Message
 	CELPlugins  []*CELPlugin
+	// CELValues are the CEL expressions resolved for this service itself, such as service variables.
+	// The expressions of the messages used by the service are in Message.CELValues.
+	CELValues []*CELValue
 }
 
 type Method struct {
@@ -154,6 +158,8 @@ type Message struct {
 	Fields         []*Field
 	Oneofs         []*Oneof
 	Rule           *MessageRule
+	// CELValues are the CEL expressions resolved for this message.
+	CELValues []*CELValue
 }
 
 type Enum struct {
@@ -211,7 +217,10 @@ type VariableDefinition struct {
 	AutoBind bool
 	Used     bool
 	Expr     *VariableExpr
-	builder  *source.VariableDefinitionOptionBuilder
+	// NameValue is the expression that evaluates the variable by its name.
+	// It is set only for variables that the generated code evaluates that way (error detail messages).
+	NameValue *CELValue
+	builder   *source.VariableDefinitionOptionBuilder
 }
 
 type VariableDefinitions []*VariableDefinition
@@ -574,6 +583,18 @@ type CELValue struct {
 	Expr        string
 	Out         *Type
 	CheckedExpr *exprv1.CheckedExpr
+	// Index identifies the expression in the CEL program cache of the generated service.
+	// It is unique among all expressions of a resolver and assigned when the expression is resolved.
+	Index int
+	// Variables are the user-defined variables the expression references, sorted by name.
+	// Variables provided by the service-wide env (error, context, grpc.federation.env/var) are excluded.
+	Variables []*CELVariable
+}
+
+// CELVariable is a variable referenced by a CEL expression.
+type CELVariable struct {
+	Name string
+	Type *cel.Type
 }
 
 type EnvKey string

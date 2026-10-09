@@ -179,8 +179,9 @@ func TestFederation(t *testing.T) {
 		Level: slog.LevelDebug,
 	}))
 	federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
-		Client: new(clientConfig),
-		Logger: logger,
+		Client:        new(clientConfig),
+		Logger:        logger,
+		PrecompileCEL: true,
 	})
 	if err != nil {
 		t.Fatal(err)

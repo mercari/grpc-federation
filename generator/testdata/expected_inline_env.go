@@ -31,6 +31,9 @@ type InlineEnvServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // InlineEnvServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -180,6 +183,11 @@ func NewInlineEnvService(cfg InlineEnvServiceConfig) (*InlineEnvService, error) 
 		svcVar:          new(InlineEnvServiceVariable),
 		client:          &InlineEnvServiceDependentClientSet{},
 	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
 	}
@@ -294,4 +302,17 @@ func (s *InlineEnvService) initServiceVariables(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// precompileCEL compiles every CEL expression used by InlineEnvService ahead of the first request.
+func (s *InlineEnvService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `grpc.federation.env.aaa`},
+		{Index: 2, Expr: `grpc.federation.env.aaa == 'xxx'`},
+		{Index: 3, Expr: `grpc.federation.env.bbb`},
+		{Index: 4, Expr: `[0, 0]`},
+		{Index: 5, Expr: `grpc.federation.env.bbb == 1`},
+		{Index: 6, Expr: `'error'`},
+	})
 }

@@ -106,6 +106,9 @@ type {{ $serviceName }}Config struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // {{ $serviceName }}ClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -439,6 +442,11 @@ func New{{ $serviceName }}(cfg {{ $serviceName }}Config) (*{{ $serviceName }}, e
 			{{- end }}
 		},
 	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
+	}
 	{{- if $svcVars }}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
@@ -494,13 +502,13 @@ func (s *{{ $serviceName }}) initServiceVariables(ctx context.Context) error {
 	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 		Value: value,
 		Expr: `{{ .Expr.Validation.Error.If.Expr }}`,
-		CacheIndex: {{ .CELCacheIndex }},
+		CacheIndex: {{ .Expr.Validation.Error.If.Index }},
 		Body: func(value *localValueType) error {
 			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 				Value: value,
 				Expr: `{{ .Expr.Validation.Error.Message.Expr }}`,
 				OutType: reflect.TypeOf(""),
-				CacheIndex: {{ .CELCacheIndex }},
+				CacheIndex: {{ .Expr.Validation.Error.Message.Index }},
 			})
 			if err != nil {
 				return err
@@ -756,6 +764,18 @@ func (s *{{ $serviceName }}) {{ .Name }}(v {{ .ValueType }}) slog.Value {
 {{- end }}
 {{ end }}
 
+// precompileCEL compiles every CEL expression used by {{ $serviceName }} ahead of the first request.
+func (s *{{ $serviceName }}) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{{- range .CELPrecompileEntries }}
+		{Index: {{ .Index }}, Expr: `{{ .Expr }}`{{ if .Variables }}, Variables: []grpcfed.CELEnvOption{
+			{{- range .Variables }}grpcfed.NewCELVariable(`{{ .Name }}`, {{ .CELType }}), {{ end -}}
+		}{{ end }}},
+		{{- end }}
+	})
+}
+
 {{- end }}
 
 {{- template "plugin" .CELPlugins }}
@@ -792,7 +812,7 @@ oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 	Value: value,
 	Expr: `{{ .Expr }}`,
 	OutType: reflect.TypeOf(true),
-	CacheIndex: {{ $msg.CELCacheIndex }},
+	CacheIndex: {{ .FieldOneofRule.If.Index }},
 })
 if err != nil {
 	grpcfed.RecordErrorToSpan(ctx, err)
@@ -823,7 +843,7 @@ if false {
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.By }}`,
-	CacheIndex: {{ $msg.CELCacheIndex }},
+	CacheIndex: {{ $value.FieldOneofRule.By.Index }},
 	Setter: func(v {{ $value.Type }}) error {
 		{{- template "setReturnValueBySetter" $value.SetterParam }}
 		return nil
@@ -850,7 +870,7 @@ ret.{{ $name }} = {{ $value.Value }}
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.CEL.Expr }}`,
-	CacheIndex: {{ $msg.CELCacheIndex }},
+	CacheIndex: {{ $value.CEL.Index }},
 	{{- if $value.Proto3Optional }}
 	Proto3Optional: true,
 	{{- end }}

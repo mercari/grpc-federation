@@ -123,6 +123,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -282,6 +285,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
@@ -700,7 +708,7 @@ func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'foo'`,
-		CacheIndex: 15,
+		CacheIndex: 27,
 		Setter: func(v string) error {
 			ret.Foo = v
 			return nil
@@ -713,7 +721,7 @@ func (s *FederationService) resolve_Org_Federation_M(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[int64]{
 		Value:      value,
 		Expr:       `1`,
-		CacheIndex: 16,
+		CacheIndex: 28,
 		Setter: func(v int64) error {
 			ret.Bar = v
 			return nil
@@ -769,7 +777,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.id`,
-					CacheIndex: 17,
+					CacheIndex: 15,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -785,7 +793,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 					return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[post.GetPostResponse]{
 						Value:      value,
 						If:         `true`,
-						CacheIndex: 18,
+						CacheIndex: 16,
 						BackOff:    b,
 						Body: func() (*post.GetPostResponse, error) {
 							return s.client.Org_Post_PostServiceClient.GetPost(ctx, args)
@@ -818,7 +826,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				return nil
 			},
 			By:           `res.post`,
-			ByCacheIndex: 19,
+			ByCacheIndex: 17,
 		})
 	}
 
@@ -845,7 +853,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*post.Post]{
 					Value:      value,
 					Expr:       `post`,
-					CacheIndex: 20,
+					CacheIndex: 18,
 					Setter: func(v *post.Post) error {
 						args.Id = v.GetId()
 						args.Title = v.GetTitle()
@@ -919,7 +927,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
 					Value:      value,
 					Expr:       `10`,
-					CacheIndex: 21,
+					CacheIndex: 19,
 					Setter: func(v uint64) error {
 						args.X = v
 						return nil
@@ -931,7 +939,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 					Value:      value,
 					Expr:       `1`,
-					CacheIndex: 22,
+					CacheIndex: 20,
 					Setter: func(v user.Item_ItemType) error {
 						args.Y = v
 						return nil
@@ -1011,7 +1019,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*User]{
 		Value:      value,
 		Expr:       `user`,
-		CacheIndex: 23,
+		CacheIndex: 21,
 		Setter: func(v *User) error {
 			ret.User = v
 			return nil
@@ -1067,7 +1075,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.user_id`,
-					CacheIndex: 24,
+					CacheIndex: 22,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -1089,7 +1097,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 					return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[user.GetUserResponse]{
 						Value:      value,
 						If:         `error.code != google.rpc.Code.UNIMPLEMENTED`,
-						CacheIndex: 25,
+						CacheIndex: 23,
 						BackOff:    b,
 						Body: func() (*user.GetUserResponse, error) {
 							return s.client.Org_User_UserServiceClient.GetUser(ctx, args)
@@ -1122,7 +1130,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				return nil
 			},
 			By:           `res.user`,
-			ByCacheIndex: 26,
+			ByCacheIndex: 24,
 		})
 	}
 
@@ -1152,7 +1160,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[uint64]{
 					Value:      value,
 					Expr:       `uint(2)`,
-					CacheIndex: 27,
+					CacheIndex: 25,
 					Setter: func(v uint64) error {
 						args.X = v
 						return nil
@@ -1164,7 +1172,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[user.Item_ItemType]{
 					Value:      value,
 					Expr:       `org.user.Item.ItemType.value('ITEM_TYPE_2')`,
-					CacheIndex: 28,
+					CacheIndex: 26,
 					Setter: func(v user.Item_ItemType) error {
 						args.Y = v
 						return nil
@@ -1859,4 +1867,39 @@ func (s *FederationService) logvalue_repeated_Org_Federation_Item(v []*Item) slo
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 2, Expr: `grpc.federation.uuid.newRandom()`},
+		{Index: 3, Expr: `{1:'a', 2:'b', 3:'c'}`},
+		{Index: 4, Expr: `org.user.Item.ItemType.value('ITEM_TYPE_2')`},
+		{Index: 5, Expr: `100`},
+		{Index: 6, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 7, Expr: `'foo'`},
+		{Index: 8, Expr: `uuid.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 9, Expr: `org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)`},
+		{Index: 10, Expr: `org.federation.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 11, Expr: `map_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`map_value`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType))}},
+		{Index: 12, Expr: `e`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 13, Expr: `Item.ItemType.attr(e, 'en')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 14, Expr: `id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id`, grpcfed.CELIntType)}},
+		{Index: 15, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 16, Expr: `true`},
+		{Index: 17, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse"))}},
+		{Index: 18, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.post.Post"))}},
+		{Index: 19, Expr: `10`},
+		{Index: 20, Expr: `1`},
+		{Index: 21, Expr: `user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User"))}},
+		{Index: 22, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
+		{Index: 23, Expr: `error.code != google.rpc.Code.UNIMPLEMENTED`},
+		{Index: 24, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.user.GetUserResponse"))}},
+		{Index: 25, Expr: `uint(2)`},
+		{Index: 26, Expr: `org.user.Item.ItemType.value('ITEM_TYPE_2')`},
+		{Index: 27, Expr: `'foo'`},
+		{Index: 28, Expr: `1`},
+	})
 }

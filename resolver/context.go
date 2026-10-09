@@ -9,6 +9,7 @@ type context struct {
 	allWarnings  *allWarnings
 	fileRef      *File
 	msg          *Message
+	svc          *Service
 	enum         *Enum
 	plugin       *CELPlugin
 	defIdx       int
@@ -34,6 +35,7 @@ func (c *context) clone() *context {
 		allWarnings:  c.allWarnings,
 		fileRef:      c.fileRef,
 		msg:          c.msg,
+		svc:          c.svc,
 		enum:         c.enum,
 		plugin:       c.plugin,
 		defIdx:       c.defIdx,
@@ -60,6 +62,12 @@ func (c *context) withFile(file *File) *context {
 func (c *context) withMessage(msg *Message) *context {
 	ctx := c.clone()
 	ctx.msg = msg
+	return ctx
+}
+
+func (c *context) withService(svc *Service) *context {
+	ctx := c.clone()
+	ctx.svc = svc
 	return ctx
 }
 
