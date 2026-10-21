@@ -1,6 +1,6 @@
 module github.com/mercari/grpc-federation
 
-go 1.24.0
+go 1.26.10
 
 require (
 	github.com/bufbuild/protocompile v0.9.0
