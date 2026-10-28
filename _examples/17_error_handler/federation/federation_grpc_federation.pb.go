@@ -107,6 +107,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -226,6 +229,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Post_PostServiceClient: Post_PostServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -981,7 +989,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 													if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 														Value:      value,
 														Expr:       `id`,
-														CacheIndex: 17,
+														CacheIndex: 18,
 														Setter: func(v string) error {
 															args.Value = v
 															return nil
@@ -1021,7 +1029,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 													if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*grpcfedcel.Error]{
 														Value:      value,
 														Expr:       `error`,
-														CacheIndex: 18,
+														CacheIndex: 19,
 														Setter: func(v *grpcfedcel.Error) error {
 															args.ErrorInfo = v
 															return nil
@@ -1071,7 +1079,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 									if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 										Value:      value,
 										Expr:       `true`,
-										CacheIndex: 19,
+										CacheIndex: 17,
 										Body: func(value *localValueType) error {
 											if _, err := func() (any, error) {
 												/*
@@ -1097,7 +1105,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 															if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*grpcfedcel.Error]{
 																Value:      value,
 																Expr:       `error`,
-																CacheIndex: 20,
+																CacheIndex: 21,
 																Setter: func(v *grpcfedcel.Error) error {
 																	args.ErrorInfo = v
 																	return nil
@@ -1125,7 +1133,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 											if detail := grpcfed.CustomMessage(ctx, &grpcfed.CustomMessageParam{
 												Value:            value,
 												MessageValueName: "_def0_err_detail0_msg0",
-												CacheIndex:       21,
+												CacheIndex:       22,
 												MessageIndex:     0,
 											}); detail != nil {
 												details = append(details, detail)
@@ -1135,7 +1143,7 @@ func (s *FederationService) resolve_Org_Federation_Post(ctx context.Context, req
 													Value:      value,
 													Expr:       `post.Post{id: 'foo'}`,
 													OutType:    reflect.TypeOf((*post.Post)(nil)),
-													CacheIndex: 22,
+													CacheIndex: 20,
 												})
 												if err != nil {
 													grpcfed.Logger(ctx).ErrorContext(ctx, "failed setting error details", slog.String("error", err.Error()))
@@ -1675,4 +1683,49 @@ func (s *FederationService) logvalue_Post_GetPostRequest(v *post.GetPostRequest)
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `'custom error message:' + $.error_info.message`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CustomMessageArgument"))}},
+		{Index: 2, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPost2ResponseArgument"))}},
+		{Index: 3, Expr: `google.rpc.Code.from(error.code)`},
+		{Index: 4, Expr: `error.message`},
+		{Index: 5, Expr: `code == google.rpc.Code.FAILED_PRECONDITION`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`code`, grpcfed.CELIntType)}},
+		{Index: 6, Expr: `google.rpc.Code.from(error.code)`},
+		{Index: 7, Expr: `error.message`},
+		{Index: 8, Expr: `code2 == google.rpc.Code.INTERNAL`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`code2`, grpcfed.CELIntType)}},
+		{Index: 9, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 10, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 11, Expr: `'localized value:' + $.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.LocalizedMessageArgument"))}},
+		{Index: 12, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 13, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 14, Expr: `error`},
+		{Index: 15, Expr: `error.precondition_failures[?0].violations[?0].subject == optional.of('bar') && error.localized_messages[?0].message == optional.of('hello') && error.custom_messages[?0].id == optional.of('xxx')`},
+		{Index: 16, Expr: `'this is custom error message'`},
+		{Index: 17, Expr: `true`},
+		{Index: 18, Expr: `id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id`, grpcfed.CELStringType)}},
+		{Index: 19, Expr: `error`},
+		{Index: 20, Expr: `post.Post{id: 'foo'}`},
+		{Index: 21, Expr: `error`},
+		{Index: 22, Expr: `_def0_err_detail0_msg0`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def0_err_detail0_msg0`, grpcfed.NewCELObjectType("org.federation.CustomMessage"))}},
+		{Index: 23, Expr: `'some-type'`},
+		{Index: 24, Expr: `'some-subject'`},
+		{Index: 25, Expr: `'some-description'`},
+		{Index: 26, Expr: `localized_msg.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`localized_msg`, grpcfed.CELObjectType("org.federation.LocalizedMessage"))}},
+		{Index: 27, Expr: `error.code == google.rpc.Code.INVALID_ARGUMENT`},
+		{Index: 28, Expr: `'this is custom log level'`},
+		{Index: 29, Expr: `error.code == google.rpc.Code.UNIMPLEMENTED`},
+		{Index: 30, Expr: `post.GetPostResponse{post: post.Post{id: 'anonymous'}}`},
+		{Index: 31, Expr: `true`},
+		{Index: 32, Expr: `true`},
+		{Index: 33, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 34, Expr: `res.hasIgnoredError()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 35, Expr: `res.ignoredError().code`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 36, Expr: `code`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`code`, grpcfed.CELIntType)}},
+		{Index: 37, Expr: `$.error_info.code`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.ZArgument"))}},
+		{Index: 38, Expr: `code`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`code`, grpcfed.CELIntType)}},
+	})
 }

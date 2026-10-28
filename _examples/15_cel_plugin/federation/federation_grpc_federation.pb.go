@@ -75,6 +75,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -258,6 +261,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:          tracer,
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -788,4 +796,24 @@ func (s *FederationService) logvalue_Org_Federation_IsMatchResponseArgument(v *F
 		slog.String("expr", v.Expr),
 		slog.String("target", v.Target),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `$.value + 1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.example.regexp.ExampleArgument"))}},
+		{Index: 2, Expr: `v`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`v`, grpcfed.CELIntType)}},
+		{Index: 3, Expr: `example.regexp.newExamples()`},
+		{Index: 4, Expr: `example.regexp.filterExamples(exps)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`exps`, grpcfed.CELListType(grpcfed.CELObjectType("example.regexp.Example")))}},
+		{Index: 5, Expr: `example.regexp.newExample()`},
+		{Index: 6, Expr: `exp.concat(exp.split('/a/b/c', '/'))`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`exp`, grpcfed.CELObjectType("example.regexp.Example"))}},
+		{Index: 7, Expr: `2`},
+		{Index: 8, Expr: `v.size()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`v`, grpcfed.CELListType(grpcfed.CELObjectType("example.regexp.Example")))}},
+		{Index: 9, Expr: `str`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`str`, grpcfed.CELStringType)}},
+		{Index: 10, Expr: `exp_msg.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`exp_msg`, grpcfed.CELObjectType("example.regexp.Example"))}},
+		{Index: 11, Expr: `example.regexp.compile($.expr)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.IsMatchResponseArgument"))}},
+		{Index: 12, Expr: `re.matchString($.target)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.IsMatchResponseArgument")), grpcfed.NewCELVariable(`re`, grpcfed.CELObjectType("example.regexp.Regexp"))}},
+		{Index: 13, Expr: `matched`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`matched`, grpcfed.CELBoolType)}},
+	})
 }

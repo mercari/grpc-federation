@@ -46,6 +46,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -175,6 +178,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:          tracer,
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -357,4 +365,15 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `example.account.get_id()`},
+		{Index: 2, Expr: `grpc.federation.metadata.incoming()['id'][0]`},
+		{Index: 3, Expr: `id_from_plugin`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id_from_plugin`, grpcfed.CELStringType)}},
+		{Index: 4, Expr: `id_from_metadata`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id_from_metadata`, grpcfed.CELStringType)}},
+	})
 }
