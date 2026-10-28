@@ -40,6 +40,7 @@ type File struct {
 	*resolver.File
 	pkgMap   map[*resolver.GoPackage]struct{}
 	aliasMap map[*resolver.GoPackage]string
+	indexer  *celIndexer
 }
 
 func NewFile(file *resolver.File) *File {
@@ -329,7 +330,6 @@ type Service struct {
 	*resolver.Service
 	file              *File
 	nameToLogValueMap map[string]*LogValue
-	celCacheIndex     int
 }
 
 func newService(svc *resolver.Service, file *File) *Service {
@@ -338,11 +338,6 @@ func newService(svc *resolver.Service, file *File) *Service {
 		file:              file,
 		nameToLogValueMap: make(map[string]*LogValue),
 	}
-}
-
-func (s *Service) CELCacheIndex() int {
-	s.celCacheIndex++
-	return s.celCacheIndex
 }
 
 func (s *Service) Env() *Env {
@@ -1757,10 +1752,6 @@ type Message struct {
 	file    *File
 }
 
-func (m *Message) CELCacheIndex() int {
-	return m.Service.CELCacheIndex()
-}
-
 func (m *Message) ProtoFQDN() string {
 	return m.FQDN()
 }
@@ -2809,10 +2800,6 @@ type VariableDefinition struct {
 	file *File
 }
 
-func (d *VariableDefinition) CELCacheIndex() int {
-	return d.Service.CELCacheIndex()
-}
-
 func (d *VariableDefinition) Key() string {
 	return d.VariableDefinition.Name
 }
@@ -2991,10 +2978,6 @@ type GRPCError struct {
 	svc *Service
 }
 
-func (e *GRPCError) CELCacheIndex() int {
-	return e.svc.CELCacheIndex()
-}
-
 // GoGRPCStatusCode converts a gRPC status code to a corresponding Go const name
 // e.g. FAILED_PRECONDITION -> FailedPrecondition.
 func (e *GRPCError) GoGRPCStatusCode() string {
@@ -3088,6 +3071,7 @@ func (detail *GRPCErrorDetail) MessageSet() *VariableDefinitionSet {
 type GRPCErrorDetailBy struct {
 	Expr string
 	Type string
+	CEL  *resolver.CELValue
 }
 
 func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
@@ -3096,6 +3080,7 @@ func (detail *GRPCErrorDetail) By() []*GRPCErrorDetailBy {
 		ret = append(ret, &GRPCErrorDetailBy{
 			Expr: by.Expr,
 			Type: toMakeZeroValue(detail.svc.file, by.Out),
+			CEL:  by,
 		})
 	}
 	return ret
@@ -3155,10 +3140,6 @@ func (pf *PreconditionFailure) Violations() []*PreconditionFailureViolation {
 	return ret
 }
 
-func (v *PreconditionFailureViolation) CELCacheIndex() int {
-	return v.svc.CELCacheIndex()
-}
-
 type BadRequest struct {
 	*resolver.BadRequest
 	svc *Service
@@ -3180,17 +3161,9 @@ func (b *BadRequest) FieldViolations() []*BadRequestFieldViolation {
 	return ret
 }
 
-func (v *BadRequestFieldViolation) CELCacheIndex() int {
-	return v.svc.CELCacheIndex()
-}
-
 type LocalizedMessage struct {
 	svc *Service
 	*resolver.LocalizedMessage
-}
-
-func (m *LocalizedMessage) CELCacheIndex() int {
-	return m.svc.CELCacheIndex()
 }
 
 func (d *VariableDefinition) ServiceName() string {
@@ -3507,10 +3480,6 @@ type SwitchResolver struct {
 
 func (r *SwitchResolver) Type() string {
 	return r.file.toTypeText(r.SwitchExpr.Type)
-}
-
-func (r *SwitchResolver) CELCacheIndex() int {
-	return r.Service.CELCacheIndex()
 }
 
 type SwitchCaseResolver struct {
@@ -3854,6 +3823,9 @@ func loadTemplate() (*template.Template, error) {
 			"map":             CreateMap,
 			"parentCtx":       ParentCtx,
 			"toLocalVariable": LocalVariable,
+			// cacheIndex and nameCacheIndex are bound to the file in generateGoContent.
+			"cacheIndex":     func(*resolver.CELValue) (int, error) { return 0, nil },
+			"nameCacheIndex": func(any) (int, error) { return 0, nil },
 		},
 	).ParseFS(tmpls, "templates/*.tmpl")
 	if err != nil {
@@ -3863,6 +3835,10 @@ func loadTemplate() (*template.Template, error) {
 }
 
 func generateGoContent(tmpl *template.Template, f *File) ([]byte, error) {
+	tmpl = tmpl.Funcs(map[string]any{
+		"cacheIndex":     f.cacheIndex,
+		"nameCacheIndex": f.nameCacheIndex,
+	})
 	// TODO: Change to evaluate only once.
 	var b bytes.Buffer
 
