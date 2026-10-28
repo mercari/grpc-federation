@@ -11,9 +11,9 @@
 		},
 		{{- end }}
 		If: `{{ .If.Expr }}`,
-		IfCacheIndex: {{ .If.Index }},
+		IfCacheIndex: {{ cacheIndex .If }},
 		By: `{{ .By.Expr }}`,
-		ByCacheIndex: {{ .By.Index }},
+		ByCacheIndex: {{ cacheIndex .By }},
 	})
 	{{- end }}
 	return grpcfed.EvalSwitch[{{ .Type }}](ctx, value, cases, &grpcfed.EvalSwitchDefault[*localValueType]{
@@ -24,6 +24,6 @@
 		},
 		{{- end }}
 		By: `{{ $switch.Default.By.Expr }}`,
-		ByCacheIndex: {{ $switch.Default.By.Index }},
+		ByCacheIndex: {{ cacheIndex $switch.Default.By }},
 	})
 {{- end }}

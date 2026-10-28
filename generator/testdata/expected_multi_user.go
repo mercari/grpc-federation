@@ -536,7 +536,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `$.user_id`,
-					CacheIndex: 6,
+					CacheIndex: 5,
 					Setter: func(v string) error {
 						args.Id = v
 						return nil
@@ -572,7 +572,7 @@ func (s *FederationService) resolve_Org_Federation_User(ctx context.Context, req
 				return nil
 			},
 			By:           `res.user`,
-			ByCacheIndex: 7,
+			ByCacheIndex: 6,
 		})
 	}
 
@@ -717,7 +717,7 @@ func (s *FederationService) resolve_Org_Federation_UserID(ctx context.Context, r
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'xxx'`,
-		CacheIndex: 5,
+		CacheIndex: 7,
 		Setter: func(v string) error {
 			ret.Value = v
 			return nil
@@ -855,8 +855,8 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 		{Index: 2, Expr: `uid.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uid`, grpcfed.CELObjectType("org.federation.UserID"))}},
 		{Index: 3, Expr: `user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User"))}},
 		{Index: 4, Expr: `user2`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`user2`, grpcfed.CELObjectType("org.federation.User"))}},
-		{Index: 5, Expr: `'xxx'`},
-		{Index: 6, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
-		{Index: 7, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.user.GetUserResponse"))}},
+		{Index: 5, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
+		{Index: 6, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.user.GetUserResponse"))}},
+		{Index: 7, Expr: `'xxx'`},
 	})
 }

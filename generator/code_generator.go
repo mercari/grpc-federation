@@ -43,6 +43,46 @@ type File struct {
 	*resolver.File
 	pkgMap   map[*resolver.GoPackage]struct{}
 	aliasMap map[*resolver.GoPackage]string
+	indexer  *celIndexer
+}
+
+// celIndexer returns the CEL expression indexes of the file. They are computed once per File,
+// so rendering the file template more than once gives the same indexes.
+func (f *File) celIndexer() (*celIndexer, error) {
+	if f.indexer != nil {
+		return f.indexer, nil
+	}
+	indexer, err := newCELIndexer(f.File)
+	if err != nil {
+		return nil, err
+	}
+	f.indexer = indexer
+	return indexer, nil
+}
+
+// cacheIndex is the template function that returns the program cache index of the CEL expression.
+func (f *File) cacheIndex(v *resolver.CELValue) (int, error) {
+	indexer, err := f.celIndexer()
+	if err != nil {
+		return 0, err
+	}
+	return indexer.valueIndex(v)
+}
+
+// nameCacheIndex is the template function that returns the program cache index of the expression
+// that evaluates a variable definition by its name.
+func (f *File) nameCacheIndex(def any) (int, error) {
+	indexer, err := f.celIndexer()
+	if err != nil {
+		return 0, err
+	}
+	switch d := def.(type) {
+	case *VariableDefinition:
+		return indexer.nameIndex(d.VariableDefinition)
+	case *resolver.VariableDefinition:
+		return indexer.nameIndex(d)
+	}
+	return 0, fmt.Errorf("grpc-federation: unexpected variable definition type %T", def)
 }
 
 func NewFile(file *resolver.File) *File {
@@ -357,30 +397,11 @@ type CELPrecompileVariable struct {
 
 // CELPrecompileEntries returns every CEL expression used by the service, ordered by index.
 func (s *Service) CELPrecompileEntries() ([]*CELPrecompileEntry, error) {
-	values := append([]*resolver.CELValue{}, s.CELValues...)
-	for _, msg := range s.Messages() {
-		values = append(values, msg.CELValues...)
+	indexer, err := s.file.celIndexer()
+	if err != nil {
+		return nil, err
 	}
-	sort.Slice(values, func(i, j int) bool { return values[i].Index < values[j].Index })
-
-	entries := make([]*CELPrecompileEntry, 0, len(values))
-	seen := make(map[int]struct{}, len(values))
-	for _, value := range values {
-		if _, exists := seen[value.Index]; exists {
-			continue
-		}
-		seen[value.Index] = struct{}{}
-		vars := make([]*CELPrecompileVariable, 0, len(value.Variables))
-		for _, variable := range value.Variables {
-			celType, err := celTypeToNativeType(variable.Type)
-			if err != nil {
-				return nil, fmt.Errorf("grpc-federation: variable %q of CEL expression %q: %w", variable.Name, value.Expr, err)
-			}
-			vars = append(vars, &CELPrecompileVariable{Name: variable.Name, CELType: celType})
-		}
-		entries = append(entries, &CELPrecompileEntry{Index: value.Index, Expr: value.Expr, Variables: vars})
-	}
-	return entries, nil
+	return indexer.svcEntries[s.Service], nil
 }
 
 func (s *Service) Env() *Env {
@@ -3934,6 +3955,9 @@ func loadTemplate() (*template.Template, error) {
 			"map":             CreateMap,
 			"parentCtx":       ParentCtx,
 			"toLocalVariable": LocalVariable,
+			// cacheIndex and nameCacheIndex are bound to the file in generateGoContent.
+			"cacheIndex":     func(*resolver.CELValue) (int, error) { return 0, nil },
+			"nameCacheIndex": func(any) (int, error) { return 0, nil },
 		},
 	).ParseFS(tmpls, "templates/*.tmpl")
 	if err != nil {
@@ -3943,6 +3967,10 @@ func loadTemplate() (*template.Template, error) {
 }
 
 func generateGoContent(tmpl *template.Template, f *File) ([]byte, error) {
+	tmpl = tmpl.Funcs(map[string]any{
+		"cacheIndex":     f.cacheIndex,
+		"nameCacheIndex": f.nameCacheIndex,
+	})
 	// TODO: Change to evaluate only once.
 	var b bytes.Buffer
 

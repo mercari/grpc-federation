@@ -433,7 +433,7 @@ func (s *FederationService) resolve_Org_Federation_A(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'a'`,
-		CacheIndex: 13,
+		CacheIndex: 1,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -470,7 +470,7 @@ func (s *FederationService) resolve_Org_Federation_AA(ctx context.Context, req *
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'aa'`,
-		CacheIndex: 14,
+		CacheIndex: 2,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -507,7 +507,7 @@ func (s *FederationService) resolve_Org_Federation_AB(ctx context.Context, req *
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'ab'`,
-		CacheIndex: 15,
+		CacheIndex: 3,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -544,7 +544,7 @@ func (s *FederationService) resolve_Org_Federation_B(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'b'`,
-		CacheIndex: 16,
+		CacheIndex: 4,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -581,7 +581,7 @@ func (s *FederationService) resolve_Org_Federation_C(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'c'`,
-		CacheIndex: 17,
+		CacheIndex: 5,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -618,7 +618,7 @@ func (s *FederationService) resolve_Org_Federation_D(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'d'`,
-		CacheIndex: 18,
+		CacheIndex: 6,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -655,7 +655,7 @@ func (s *FederationService) resolve_Org_Federation_E(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'e'`,
-		CacheIndex: 19,
+		CacheIndex: 7,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -692,7 +692,7 @@ func (s *FederationService) resolve_Org_Federation_F(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'f'`,
-		CacheIndex: 20,
+		CacheIndex: 8,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -729,7 +729,7 @@ func (s *FederationService) resolve_Org_Federation_G(ctx context.Context, req *F
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'g'`,
-		CacheIndex: 21,
+		CacheIndex: 9,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -844,7 +844,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `a.name`,
-					CacheIndex: 1,
+					CacheIndex: 10,
 					Setter: func(v string) error {
 						args.A = v
 						return nil
@@ -884,7 +884,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `b.name`,
-					CacheIndex: 2,
+					CacheIndex: 11,
 					Setter: func(v string) error {
 						args.B = v
 						return nil
@@ -927,7 +927,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `c.name`,
-					CacheIndex: 3,
+					CacheIndex: 12,
 					Setter: func(v string) error {
 						args.C = v
 						return nil
@@ -939,7 +939,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `d.name`,
-					CacheIndex: 4,
+					CacheIndex: 13,
 					Setter: func(v string) error {
 						args.D = v
 						return nil
@@ -982,7 +982,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `c.name`,
-					CacheIndex: 5,
+					CacheIndex: 14,
 					Setter: func(v string) error {
 						args.C = v
 						return nil
@@ -994,7 +994,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `d.name`,
-					CacheIndex: 6,
+					CacheIndex: 15,
 					Setter: func(v string) error {
 						args.D = v
 						return nil
@@ -1065,7 +1065,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `e.name`,
-					CacheIndex: 7,
+					CacheIndex: 16,
 					Setter: func(v string) error {
 						args.E = v
 						return nil
@@ -1077,7 +1077,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `f.name`,
-					CacheIndex: 8,
+					CacheIndex: 17,
 					Setter: func(v string) error {
 						args.F = v
 						return nil
@@ -1089,7 +1089,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `g.name`,
-					CacheIndex: 9,
+					CacheIndex: 18,
 					Setter: func(v string) error {
 						args.G = v
 						return nil
@@ -1156,7 +1156,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 				if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 					Value:      value,
 					Expr:       `i.name`,
-					CacheIndex: 10,
+					CacheIndex: 19,
 					Setter: func(v string) error {
 						args.I = v
 						return nil
@@ -1313,7 +1313,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `h.name`,
-		CacheIndex: 11,
+		CacheIndex: 20,
 		Setter: func(v string) error {
 			ret.Hname = v
 			return nil
@@ -1326,7 +1326,7 @@ func (s *FederationService) resolve_Org_Federation_GetResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `j.name`,
-		CacheIndex: 12,
+		CacheIndex: 21,
 		Setter: func(v string) error {
 			ret.Jname = v
 			return nil
@@ -1758,27 +1758,27 @@ func (s *FederationService) logvalue_Org_Federation_JArgument(v *FederationServi
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{Index: 1, Expr: `a.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("org.federation.A"))}},
-		{Index: 2, Expr: `b.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("org.federation.B"))}},
-		{Index: 3, Expr: `c.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`c`, grpcfed.CELObjectType("org.federation.C"))}},
-		{Index: 4, Expr: `d.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`d`, grpcfed.CELObjectType("org.federation.D"))}},
-		{Index: 5, Expr: `c.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`c`, grpcfed.CELObjectType("org.federation.C"))}},
-		{Index: 6, Expr: `d.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`d`, grpcfed.CELObjectType("org.federation.D"))}},
-		{Index: 7, Expr: `e.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELObjectType("org.federation.E"))}},
-		{Index: 8, Expr: `f.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`f`, grpcfed.CELObjectType("org.federation.F"))}},
-		{Index: 9, Expr: `g.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`g`, grpcfed.CELObjectType("org.federation.G"))}},
-		{Index: 10, Expr: `i.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`i`, grpcfed.CELObjectType("org.federation.I"))}},
-		{Index: 11, Expr: `h.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`h`, grpcfed.CELObjectType("org.federation.H"))}},
-		{Index: 12, Expr: `j.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`j`, grpcfed.CELObjectType("org.federation.J"))}},
-		{Index: 13, Expr: `'a'`},
-		{Index: 14, Expr: `'aa'`},
-		{Index: 15, Expr: `'ab'`},
-		{Index: 16, Expr: `'b'`},
-		{Index: 17, Expr: `'c'`},
-		{Index: 18, Expr: `'d'`},
-		{Index: 19, Expr: `'e'`},
-		{Index: 20, Expr: `'f'`},
-		{Index: 21, Expr: `'g'`},
+		{Index: 1, Expr: `'a'`},
+		{Index: 2, Expr: `'aa'`},
+		{Index: 3, Expr: `'ab'`},
+		{Index: 4, Expr: `'b'`},
+		{Index: 5, Expr: `'c'`},
+		{Index: 6, Expr: `'d'`},
+		{Index: 7, Expr: `'e'`},
+		{Index: 8, Expr: `'f'`},
+		{Index: 9, Expr: `'g'`},
+		{Index: 10, Expr: `a.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("org.federation.A"))}},
+		{Index: 11, Expr: `b.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("org.federation.B"))}},
+		{Index: 12, Expr: `c.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`c`, grpcfed.CELObjectType("org.federation.C"))}},
+		{Index: 13, Expr: `d.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`d`, grpcfed.CELObjectType("org.federation.D"))}},
+		{Index: 14, Expr: `c.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`c`, grpcfed.CELObjectType("org.federation.C"))}},
+		{Index: 15, Expr: `d.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`d`, grpcfed.CELObjectType("org.federation.D"))}},
+		{Index: 16, Expr: `e.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELObjectType("org.federation.E"))}},
+		{Index: 17, Expr: `f.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`f`, grpcfed.CELObjectType("org.federation.F"))}},
+		{Index: 18, Expr: `g.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`g`, grpcfed.CELObjectType("org.federation.G"))}},
+		{Index: 19, Expr: `i.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`i`, grpcfed.CELObjectType("org.federation.I"))}},
+		{Index: 20, Expr: `h.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`h`, grpcfed.CELObjectType("org.federation.H"))}},
+		{Index: 21, Expr: `j.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`j`, grpcfed.CELObjectType("org.federation.J"))}},
 		{Index: 22, Expr: `'h'`},
 		{Index: 23, Expr: `'i'`},
 		{Index: 24, Expr: `'j'`},

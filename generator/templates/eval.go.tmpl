@@ -9,7 +9,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 	return grpcfed.EvalDefMap(ctx, value, grpcfed.DefMap[{{ .Type }}, {{ $mapResolver.IteratorSourceType }}, *localValueType]{
 		{{- if .UseIf }}
 		If: `{{ .If }}`,
-		IfCacheIndex: {{ .VariableDefinition.If.Index }},
+		IfCacheIndex: {{ cacheIndex .VariableDefinition.If }},
 		{{- end }}
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
@@ -27,7 +27,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 				Value: value,
 				Expr: `{{ $by.Expr }}`,
 				OutType: reflect.TypeOf({{ $mapResolver.IteratorZeroValue }}),
-				CacheIndex: {{ $by.Index }},
+				CacheIndex: {{ cacheIndex $by }},
 			})
 			{{- else if $mapResolver.IsEnum }}
 			{{- $enumExpr := $mapResolver.MapExpr.Expr.Enum }}
@@ -36,7 +36,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 				Value: value,
 				Expr: `{{ $mapResolver.MapExpr.Expr.Enum.By.Expr }}`,
 				OutType: reflect.TypeOf({{ $mapResolver.EnumSrcZeroValue }}),
-				CacheIndex: {{ $mapResolver.MapExpr.Expr.Enum.By.Index }},
+				CacheIndex: {{ cacheIndex $mapResolver.MapExpr.Expr.Enum.By }},
 			})
 			if err != nil {
 				return 0, err
@@ -74,7 +74,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 	return grpcfed.EvalDef(ctx, value, grpcfed.Def[{{ .Type }}, *localValueType]{
 		{{- if .UseIf }}
 		If: `{{ .If }}`,
-		IfCacheIndex: {{ .VariableDefinition.If.Index }},
+		IfCacheIndex: {{ cacheIndex .VariableDefinition.If }},
 		{{- end }}
 		Name:   `{{ .Key }}`,
 		Type:   {{ .CELType }},
@@ -84,7 +84,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 		},
 		{{- if .IsBy }}
 		By:     `{{ .By.Expr }}`,
-		ByCacheIndex: {{ .By.Index }},
+		ByCacheIndex: {{ cacheIndex .By }},
 		{{- else if .IsValidation }}
 		Validation:  func(ctx context.Context, value *localValueType) error {
 			{{- template "messageValidation" (map "Ctx" "ctx" "Error" .ValidationError) }}
@@ -100,7 +100,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 				Value: value,
 				Expr: `{{ .Enum.By.Expr }}`,
 				OutType: reflect.TypeOf({{ .EnumSrcZeroValue }}),
-				CacheIndex: {{ .Enum.By.Index }},
+				CacheIndex: {{ cacheIndex .Enum.By }},
 			})
 			if err != nil {
 				return 0, err
@@ -141,7 +141,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 				Value: value,
 				Expr: `{{ .Metadata }}`,
 				OutType: reflect.TypeOf(map[string][]string{}),
-				CacheIndex: {{ .VariableDefinition.Expr.Call.Metadata.Index }},
+				CacheIndex: {{ cacheIndex .VariableDefinition.Expr.Call.Metadata }},
 			})
 			if err != nil {
 				return nil, err
@@ -161,7 +161,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 				return grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ .ReturnType }}]{
 					Value: value,
 					If: `{{ .Retry.If.Expr }}`,
-					CacheIndex: {{ .Retry.If.Index }},
+					CacheIndex: {{ cacheIndex .Retry.If }},
 					BackOff: b,
 					Body: func() (*{{ .ReturnType }}, error) {
 						{{- if .UseCallOption }}
@@ -184,7 +184,7 @@ def_{{ .Key }} := func(ctx context.Context) error {
 			ret, err := grpcfed.WithRetry(ctx, &grpcfed.RetryParam[{{ .ReturnType }}]{
 				Value: value,
 				If: `{{ .Retry.If.Expr }}`,
-				CacheIndex: {{ .Retry.If.Index }},
+				CacheIndex: {{ cacheIndex .Retry.If }},
 				BackOff: b,
 				Body: func() (*{{ .ReturnType }}, error) {
 					{{- if .UseCallOption }}
@@ -347,12 +347,12 @@ if err := eg.Wait(); err != nil {
 if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 	Value: value,
 	Expr: `{{ $arg.If.Expr }}`,
-	CacheIndex: {{ $arg.If.Index }},
+	CacheIndex: {{ cacheIndex $arg.If }},
 	Body: func(value *localValueType) error {
 		return grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 			Value: value,
 			Expr: `{{ $arg.CEL.Expr }}`,
-			CacheIndex: {{ $arg.CEL.Index }},
+			CacheIndex: {{ cacheIndex $arg.CEL }},
 			Setter: func(v {{ $arg.Type }}) error {
 				{{- template "setArgumentBySetter" $arg }}
 			},
@@ -366,7 +366,7 @@ if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 	Value: value,
 	Expr: `{{ $arg.CEL.Expr }}`,
-	CacheIndex: {{ $arg.CEL.Index }},
+	CacheIndex: {{ cacheIndex $arg.CEL }},
 	Setter: func(v {{ $arg.Type }}) error {
 		{{- template "setArgumentBySetter" $arg }}
 	},
@@ -385,7 +385,7 @@ if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $arg.Type }}]{
 	Value: value,
 	Expr: `{{ $arg.CEL.Expr }}`,
-	CacheIndex: {{ $arg.CEL.Index }},
+	CacheIndex: {{ cacheIndex $arg.CEL }},
 	Setter: func(v {{ $arg.Type }}) error {
 		{{- template "setArgumentBySetter" $arg }}
 	},

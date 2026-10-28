@@ -502,13 +502,13 @@ func (s *{{ $serviceName }}) initServiceVariables(ctx context.Context) error {
 	if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 		Value: value,
 		Expr: `{{ .Expr.Validation.Error.If.Expr }}`,
-		CacheIndex: {{ .Expr.Validation.Error.If.Index }},
+		CacheIndex: {{ cacheIndex .Expr.Validation.Error.If }},
 		Body: func(value *localValueType) error {
 			errmsg, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 				Value: value,
 				Expr: `{{ .Expr.Validation.Error.Message.Expr }}`,
 				OutType: reflect.TypeOf(""),
-				CacheIndex: {{ .Expr.Validation.Error.Message.Index }},
+				CacheIndex: {{ cacheIndex .Expr.Validation.Error.Message }},
 			})
 			if err != nil {
 				return err
@@ -812,7 +812,7 @@ oneof_{{ .Name }}, err := grpcfed.EvalCEL(ctx, &grpcfed.EvalCELRequest{
 	Value: value,
 	Expr: `{{ .Expr }}`,
 	OutType: reflect.TypeOf(true),
-	CacheIndex: {{ .FieldOneofRule.If.Index }},
+	CacheIndex: {{ cacheIndex .FieldOneofRule.If }},
 })
 if err != nil {
 	grpcfed.RecordErrorToSpan(ctx, err)
@@ -843,7 +843,7 @@ if false {
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.By }}`,
-	CacheIndex: {{ $value.FieldOneofRule.By.Index }},
+	CacheIndex: {{ cacheIndex $value.FieldOneofRule.By }},
 	Setter: func(v {{ $value.Type }}) error {
 		{{- template "setReturnValueBySetter" $value.SetterParam }}
 		return nil
@@ -870,7 +870,7 @@ ret.{{ $name }} = {{ $value.Value }}
 if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[{{ $value.Type }}]{
 	Value: value,
 	Expr: `{{ $value.CEL.Expr }}`,
-	CacheIndex: {{ $value.CEL.Index }},
+	CacheIndex: {{ cacheIndex $value.CEL }},
 	{{- if $value.Proto3Optional }}
 	Proto3Optional: true,
 	{{- end }}
