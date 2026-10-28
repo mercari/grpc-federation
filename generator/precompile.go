@@ -3,13 +3,150 @@ package generator
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/google/cel-go/cel"
+	celtypes "github.com/google/cel-go/common/types"
 	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
+	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/resolver"
 )
+
+// This file generates the table of CEL expressions that a service compiles ahead of the first request.
+// Every expression gets an index, the key of the program cache of the generated service,
+// by walking the service once. The templates look the index up instead of issuing it,
+// so an expression the walk does not reach fails the generation.
+
+// CELPrecompileEntry is a CEL expression compiled by the generated precompileCEL method.
+type CELPrecompileEntry struct {
+	Index     int
+	Expr      string
+	Variables []*CELPrecompileVariable
+}
+
+// CELPrecompileVariable is a variable referenced by a precompiled expression.
+type CELPrecompileVariable struct {
+	Name    string
+	CELType string
+}
+
+// CELPrecompileEntries returns every CEL expression used by the service, ordered by index.
+func (s *Service) CELPrecompileEntries() ([]*CELPrecompileEntry, error) {
+	indexer, err := s.file.celIndexer()
+	if err != nil {
+		return nil, err
+	}
+	return indexer.svcEntries[s.Service], nil
+}
+
+// celIndexer returns the CEL expression indexes of the file. They are computed once per File,
+// so rendering the file template more than once gives the same indexes.
+func (f *File) celIndexer() (*celIndexer, error) {
+	if f.indexer != nil {
+		return f.indexer, nil
+	}
+	indexer, err := newCELIndexer(f.File)
+	if err != nil {
+		return nil, err
+	}
+	f.indexer = indexer
+	return indexer, nil
+}
+
+// cacheIndex is the template function that returns the program cache index of the CEL expression.
+func (f *File) cacheIndex(v *resolver.CELValue) (int, error) {
+	indexer, err := f.celIndexer()
+	if err != nil {
+		return 0, err
+	}
+	return indexer.valueIndex(v)
+}
+
+// nameCacheIndex is the template function that returns the program cache index of the expression
+// that evaluates a variable definition by its name.
+func (f *File) nameCacheIndex(def any) (int, error) {
+	indexer, err := f.celIndexer()
+	if err != nil {
+		return 0, err
+	}
+	switch d := def.(type) {
+	case *VariableDefinition:
+		return indexer.nameIndex(d.VariableDefinition)
+	case *resolver.VariableDefinition:
+		return indexer.nameIndex(d)
+	}
+	return 0, fmt.Errorf("grpc-federation: unexpected variable definition type %T", def)
+}
+
+// celTypeToNativeType renders the Go source that declares the given CEL type in the runtime env.
+// It must produce the same type as toCELNativeType does for the variable's declaration.
+func celTypeToNativeType(t *cel.Type) (string, error) {
+	if name := t.DeclaredTypeName(); strings.HasPrefix(name, "wrapper(") {
+		wrappers := map[string]string{
+			"wrapper(bool)":   "google.protobuf.BoolValue",
+			"wrapper(bytes)":  "google.protobuf.BytesValue",
+			"wrapper(double)": "google.protobuf.DoubleValue",
+			"wrapper(int)":    "google.protobuf.Int64Value",
+			"wrapper(string)": "google.protobuf.StringValue",
+			"wrapper(uint)":   "google.protobuf.UInt64Value",
+		}
+		if msg, ok := wrappers[name]; ok {
+			return fmt.Sprintf("grpcfed.CELObjectType(%q)", msg), nil
+		}
+	}
+	switch t.Kind() {
+	case celtypes.BoolKind:
+		return "grpcfed.CELBoolType", nil
+	case celtypes.BytesKind:
+		return "grpcfed.CELBytesType", nil
+	case celtypes.DoubleKind:
+		return "grpcfed.CELDoubleType", nil
+	case celtypes.IntKind:
+		return "grpcfed.CELIntType", nil
+	case celtypes.UintKind:
+		return "grpcfed.CELUintType", nil
+	case celtypes.StringKind:
+		return "grpcfed.CELStringType", nil
+	case celtypes.NullTypeKind:
+		return "grpcfed.CELNullType", nil
+	case celtypes.AnyKind:
+		return `grpcfed.CELObjectType("google.protobuf.Any")`, nil
+	case celtypes.DurationKind:
+		return `grpcfed.CELObjectType("google.protobuf.Duration")`, nil
+	case celtypes.TimestampKind:
+		return `grpcfed.CELObjectType("google.protobuf.Timestamp")`, nil
+	case celtypes.StructKind:
+		return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.TypeName()), nil
+	case celtypes.OpaqueKind:
+		// The runtime env declares an enum selector as a plain object type.
+		if t.TypeName() == grpcfedcel.EnumSelectorFQDN {
+			return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.TypeName()), nil
+		}
+		// An enum is declared as an opaque type with an int parameter, but the runtime env declares it as int.
+		if params := t.Parameters(); len(params) == 1 && params[0].Kind() == celtypes.IntKind && t.TypeName() != "optional_type" {
+			return "grpcfed.CELIntType", nil
+		}
+	case celtypes.ListKind:
+		elem, err := celTypeToNativeType(t.Parameters()[0])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("grpcfed.CELListType(%s)", elem), nil
+	case celtypes.MapKind:
+		key, err := celTypeToNativeType(t.Parameters()[0])
+		if err != nil {
+			return "", err
+		}
+		value, err := celTypeToNativeType(t.Parameters()[1])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("grpcfed.NewCELMapType(%s, %s)", key, value), nil
+	}
+	return "", fmt.Errorf("unsupported CEL type %s", t)
+}
 
 // celVariable is a variable referenced by a CEL expression.
 type celVariable struct {

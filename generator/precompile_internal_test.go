@@ -1,10 +1,15 @@
 package generator
 
 import (
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/ext"
+
+	"github.com/mercari/grpc-federation/internal/testutil"
+	"github.com/mercari/grpc-federation/resolver"
 )
 
 func TestReferencedCELVariables(t *testing.T) {
@@ -66,4 +71,61 @@ func TestReferencedCELVariables(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCELIndexerMissedExpression(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	files := testutil.Compile(t, filepath.Join(testdataDir, "simple_aggregation.proto"))
+	result, err := resolver.New(files, resolver.ImportPathOption(testdataDir)).Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := result.Files[0]
+	file.Name = filepath.Base(file.Name)
+
+	generate := func(f *File) error {
+		tmpl, err := loadTemplate()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = generateGoContent(tmpl, f)
+		return err
+	}
+
+	t.Run("every expression is reached", func(t *testing.T) {
+		t.Parallel()
+		if err := generate(NewFile(file)); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("an expression the walker did not reach fails generation", func(t *testing.T) {
+		t.Parallel()
+		f := NewFile(file)
+		indexer, err := f.celIndexer()
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Forget the first expression, as if the walker had not visited it.
+		var missed *resolver.CELValue
+		for value, idx := range indexer.values {
+			if idx == 1 {
+				missed = value
+			}
+		}
+		if missed == nil {
+			t.Fatal("no expression was indexed")
+		}
+		delete(indexer.values, missed)
+
+		err = generate(f)
+		if err == nil {
+			t.Fatal("expected generation to fail")
+		}
+		if !strings.Contains(err.Error(), "not reachable") || !strings.Contains(err.Error(), missed.Expr) {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
