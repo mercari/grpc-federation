@@ -163,6 +163,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -305,6 +308,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Post_PostServiceClient: Post_PostServiceClient,
 			User_UserServiceClient: User_UserServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -4002,4 +4010,120 @@ func (s *FederationService) logvalue_repeated_Federation_Item(v []*Item) slog.Va
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `b`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("federation.A.B"))}},
+		{Index: 2, Expr: `true`},
+		{Index: 3, Expr: `A.B.C{}`},
+		{Index: 4, Expr: `'foo'`},
+		{Index: 5, Expr: `'bar'`},
+		{Index: 6, Expr: `foo.type == 'foo'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 7, Expr: `grpc.federation.log.info('output federation log', {'messages': [foo, bar], 'message_map': {'foo': foo, 'bar': bar}})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 8, Expr: `grpc.federation.log.add({'foo_type': foo.type, 'bar_type': bar.type})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C")), grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 9, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 10, Expr: `bar`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`bar`, grpcfed.CELObjectType("federation.A.B.C"))}},
+		{Index: 11, Expr: `$.type`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.A_B_CArgument"))}},
+		{Index: 12, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}},
+		{Index: 13, Expr: `grpc.federation.strings.join(['1234567'.substring(1, 3), '2'], '.')`},
+		{Index: 14, Expr: `grpc.federation.strings.parseFloat(strings_join, 64)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`strings_join`, grpcfed.CELStringType)}},
+		{Index: 15, Expr: `grpc.federation.url.parse('https://test_user:password@example.com/path')`},
+		{Index: 16, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, grpc.federation.time.UTC())`},
+		{Index: 17, Expr: `grpc.federation.rand.newSource(date.unix())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`date`, grpcfed.CELObjectType("grpc.federation.time.Time"))}},
+		{Index: 18, Expr: `grpc.federation.rand.new(rand_source)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`rand_source`, grpcfed.CELObjectType("grpc.federation.rand.Source"))}},
+		{Index: 19, Expr: `.grpc.federation.uuid.newRandomFromRand(fixed_rand)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`fixed_rand`, grpcfed.CELObjectType("grpc.federation.rand.Rand"))}},
+		{Index: 20, Expr: `grpc.federation.time.loadLocation('Asia/Tokyo')`},
+		{Index: 21, Expr: `grpc.federation.time.date(2023, 12, 25, 12, 10, 5, 0, loc)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`loc`, grpcfed.CELObjectType("grpc.federation.time.Location"))}},
+		{Index: 22, Expr: `grpc.federation.metadata.incoming()['key1'][0]`},
+		{Index: 23, Expr: `[4, 1, 3, 2].sortAsc(v, v)`},
+		{Index: 24, Expr: `[user.Item{location:user.Item.Location{addr1:'a'}}, user.Item{location:user.Item.Location{addr1:'b'}}].sortDesc(v, v.location.addr1)`},
+		{Index: 25, Expr: `{1: 'a', 2: 'b', 3: 'c'}`},
+		{Index: 26, Expr: `null`},
+		{Index: 27, Expr: `grpc.federation.log.info('output federation log', {'post_message': post})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 28, Expr: `true ? user.Item.ItemType.value('ITEM_TYPE_2') : user.Item.ItemType.from(1)`},
+		{Index: 29, Expr: `grpc.federation.math.sqrt(3.0*3.0+4.0*4.0)`},
+		{Index: 30, Expr: `grpc.federation.math.sqrt(3*3+4*4)`},
+		{Index: 31, Expr: `grpc.federation.math.pow(2.0, 3.0)`},
+		{Index: 32, Expr: `grpc.federation.math.floor(1.51)`},
+		{Index: 33, Expr: `[[1], [2], [3]].flatten()`},
+		{Index: 34, Expr: `grpc.federation.math.round(1.5)`},
+		{Index: 35, Expr: `[1, 2, 3, 4].filter(dup, dup % 2 == 0)`},
+		{Index: 36, Expr: `grpc.federation.any.new(post)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 37, Expr: `'%d-%d-%d-world'.format([1, 2, 3])`},
+		{Index: 38, Expr: `fmt.replace('world', 'grpc')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`fmt`, grpcfed.CELStringType)}},
+		{Index: 39, Expr: `[1, 2, 3].transformMap(idx, v, idx % 2 == 0, (idx * v) + v)`},
+		{Index: 40, Expr: `grpc.federation.uuid.parse(uuid.string())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 41, Expr: `grpc.federation.uuid.validate(uuid.string())`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 42, Expr: `grpc.federation.regexp.compile('[a-z]+\\d\\d')`},
+		{Index: 43, Expr: `grpc.federation.regexp.mustCompile('([a-z]+)\\d(\\d)')`},
+		{Index: 44, Expr: `grpc.federation.regexp.quoteMeta('[a-z]+\\d')`},
+		{Index: 45, Expr: `must_compile.findStringSubmatch('abc123')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`must_compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 46, Expr: `compile.matchString('abc12')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 47, Expr: `grpc.federation.regexp.compile('mackerel').replaceAllString('mackerel is tasty', 'salmon')`},
+		{Index: 48, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 49, Expr: `'hello'`},
+		{Index: 50, Expr: `uuid.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 51, Expr: `loc.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`loc`, grpcfed.CELObjectType("grpc.federation.time.Location"))}},
+		{Index: 52, Expr: `value1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`value1`, grpcfed.CELStringType)}},
+		{Index: 53, Expr: `Item.ItemType.name(Item.ItemType.ITEM_TYPE_1)`},
+		{Index: 54, Expr: `Item.Location.LocationType.name(Item.Location.LocationType.LOCATION_TYPE_1)`},
+		{Index: 55, Expr: `user.Item.ItemType.name(user.Item.ItemType.ITEM_TYPE_2)`},
+		{Index: 56, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 57, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 58, Expr: `user.Item.ItemType.from(1)`},
+		{Index: 59, Expr: `Item.Location.LocationType.value('LOCATION_TYPE_1')`},
+		{Index: 60, Expr: `user.Item.ItemType.value('ITEM_TYPE_2')`},
+		{Index: 61, Expr: `a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("federation.A"))}},
+		{Index: 62, Expr: `sorted_values`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sorted_values`, grpcfed.CELListType(grpcfed.CELIntType))}},
+		{Index: 63, Expr: `sorted_items`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sorted_items`, grpcfed.CELListType(grpcfed.CELObjectType("user.Item")))}},
+		{Index: 64, Expr: `map_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`map_value`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType))}},
+		{Index: 65, Expr: `google.protobuf.DoubleValue{value: 1.23}`},
+		{Index: 66, Expr: `google.protobuf.FloatValue{value: 3.45}`},
+		{Index: 67, Expr: `google.protobuf.Int64Value{value: 1}`},
+		{Index: 68, Expr: `google.protobuf.UInt64Value{value: uint(2)}`},
+		{Index: 69, Expr: `google.protobuf.Int32Value{value: 3}`},
+		{Index: 70, Expr: `google.protobuf.UInt32Value{value: uint(4)}`},
+		{Index: 71, Expr: `google.protobuf.BoolValue{value: true}`},
+		{Index: 72, Expr: `google.protobuf.StringValue{value: 'hello'}`},
+		{Index: 73, Expr: `google.protobuf.BytesValue{value: bytes('world')}`},
+		{Index: 74, Expr: `'hello\nworld'`},
+		{Index: 75, Expr: `null`},
+		{Index: 76, Expr: `null_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`null_value`, grpcfed.CELNullType)}},
+		{Index: 77, Expr: `true ? null : google.protobuf.Timestamp{}`},
+		{Index: 78, Expr: `jp_time.location().string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`jp_time`, grpcfed.CELObjectType("grpc.federation.time.Time"))}},
+		{Index: 79, Expr: `strings_join`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`strings_join`, grpcfed.CELStringType)}},
+		{Index: 80, Expr: `parse_float`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`parse_float`, grpcfed.CELDoubleType)}},
+		{Index: 81, Expr: `url.userinfo().username()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`url`, grpcfed.CELObjectType("grpc.federation.url.URL"))}},
+		{Index: 82, Expr: `e`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 83, Expr: `Item.ItemType.attr(e, 'en')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 84, Expr: `sqrt_double`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sqrt_double`, grpcfed.CELDoubleType)}},
+		{Index: 85, Expr: `sqrt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`sqrt_int`, grpcfed.CELDoubleType)}},
+		{Index: 86, Expr: `pow`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`pow`, grpcfed.CELDoubleType)}},
+		{Index: 87, Expr: `floor`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`floor`, grpcfed.CELDoubleType)}},
+		{Index: 88, Expr: `flatten`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`flatten`, grpcfed.CELListType(grpcfed.CELIntType))}},
+		{Index: 89, Expr: `round`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`round`, grpcfed.CELDoubleType)}},
+		{Index: 90, Expr: `any`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`any`, grpcfed.CELObjectType("google.protobuf.Any"))}},
+		{Index: 91, Expr: `replaced`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`replaced`, grpcfed.CELStringType)}},
+		{Index: 92, Expr: `list_to_map`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`list_to_map`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELIntType))}},
+		{Index: 93, Expr: `uuid_parse.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid_parse`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 94, Expr: `uuid_validate`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid_validate`, grpcfed.CELBoolType)}},
+		{Index: 95, Expr: `compile.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 96, Expr: `must_compile.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`must_compile`, grpcfed.CELObjectType("grpc.federation.regexp.Regexp"))}},
+		{Index: 97, Expr: `quote_meta`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`quote_meta`, grpcfed.CELStringType)}},
+		{Index: 98, Expr: `find_string_submatch`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`find_string_submatch`, grpcfed.CELListType(grpcfed.CELStringType))}},
+		{Index: 99, Expr: `match_string`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`match_string`, grpcfed.CELBoolType)}},
+		{Index: 100, Expr: `replace_all_string`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`replace_all_string`, grpcfed.CELStringType)}},
+		{Index: 101, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}},
+		{Index: 102, Expr: `true`},
+		{Index: 103, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 104, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post"))}},
+		{Index: 105, Expr: `user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.User"))}},
+		{Index: 106, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}},
+		{Index: 107, Expr: `user.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 108, Expr: `true`},
+		{Index: 109, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("user.GetUserResponse"))}},
+	})
 }
