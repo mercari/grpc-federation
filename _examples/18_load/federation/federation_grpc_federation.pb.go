@@ -371,9 +371,9 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{Index: 1, Expr: `example.account.get_id()`},
-		{Index: 2, Expr: `grpc.federation.metadata.incoming()['id'][0]`},
-		{Index: 3, Expr: `id_from_plugin`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id_from_plugin`, grpcfed.CELStringType)}},
-		{Index: 4, Expr: `id_from_metadata`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id_from_metadata`, grpcfed.CELStringType)}},
+		{Index: 1, Expr: `example.account.get_id()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}},
+		{Index: 2, Expr: `grpc.federation.metadata.incoming()['id'][0]`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`id_from_plugin`, grpcfed.CELStringType)}},
+		{Index: 3, Expr: `id_from_plugin`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`id_from_plugin`, grpcfed.CELStringType), grpcfed.NewCELVariable(`id_from_metadata`, grpcfed.CELStringType)}},
+		{Index: 4, Expr: `id_from_metadata`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`id_from_plugin`, grpcfed.CELStringType), grpcfed.NewCELVariable(`id_from_metadata`, grpcfed.CELStringType)}},
 	})
 }

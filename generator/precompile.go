@@ -3,14 +3,7 @@ package generator
 import (
 	"fmt"
 	"sort"
-	"strings"
 
-	"github.com/google/cel-go/cel"
-	celtypes "github.com/google/cel-go/common/types"
-	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
-
-	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
-	grpcfedcel "github.com/mercari/grpc-federation/grpc/federation/cel"
 	"github.com/mercari/grpc-federation/resolver"
 )
 
@@ -78,173 +71,6 @@ func (f *File) nameCacheIndex(def any) (int, error) {
 		return indexer.nameIndex(d)
 	}
 	return 0, fmt.Errorf("grpc-federation: unexpected variable definition type %T", def)
-}
-
-// celTypeToNativeType renders the Go source that declares the given CEL type in the runtime env.
-// It must produce the same type as toCELNativeType does for the variable's declaration.
-func celTypeToNativeType(t *cel.Type) (string, error) {
-	if name := t.DeclaredTypeName(); strings.HasPrefix(name, "wrapper(") {
-		wrappers := map[string]string{
-			"wrapper(bool)":   "google.protobuf.BoolValue",
-			"wrapper(bytes)":  "google.protobuf.BytesValue",
-			"wrapper(double)": "google.protobuf.DoubleValue",
-			"wrapper(int)":    "google.protobuf.Int64Value",
-			"wrapper(string)": "google.protobuf.StringValue",
-			"wrapper(uint)":   "google.protobuf.UInt64Value",
-		}
-		if msg, ok := wrappers[name]; ok {
-			return fmt.Sprintf("grpcfed.CELObjectType(%q)", msg), nil
-		}
-	}
-	switch t.Kind() {
-	case celtypes.BoolKind:
-		return "grpcfed.CELBoolType", nil
-	case celtypes.BytesKind:
-		return "grpcfed.CELBytesType", nil
-	case celtypes.DoubleKind:
-		return "grpcfed.CELDoubleType", nil
-	case celtypes.IntKind:
-		return "grpcfed.CELIntType", nil
-	case celtypes.UintKind:
-		return "grpcfed.CELUintType", nil
-	case celtypes.StringKind:
-		return "grpcfed.CELStringType", nil
-	case celtypes.NullTypeKind:
-		return "grpcfed.CELNullType", nil
-	case celtypes.AnyKind:
-		return `grpcfed.CELObjectType("google.protobuf.Any")`, nil
-	case celtypes.DurationKind:
-		return `grpcfed.CELObjectType("google.protobuf.Duration")`, nil
-	case celtypes.TimestampKind:
-		return `grpcfed.CELObjectType("google.protobuf.Timestamp")`, nil
-	case celtypes.StructKind:
-		return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.TypeName()), nil
-	case celtypes.OpaqueKind:
-		// The runtime env declares an enum selector as a plain object type.
-		if t.TypeName() == grpcfedcel.EnumSelectorFQDN {
-			return fmt.Sprintf("grpcfed.CELObjectType(%q)", t.TypeName()), nil
-		}
-		// An enum is declared as an opaque type with an int parameter, but the runtime env declares it as int.
-		if params := t.Parameters(); len(params) == 1 && params[0].Kind() == celtypes.IntKind && t.TypeName() != "optional_type" {
-			return "grpcfed.CELIntType", nil
-		}
-	case celtypes.ListKind:
-		elem, err := celTypeToNativeType(t.Parameters()[0])
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("grpcfed.CELListType(%s)", elem), nil
-	case celtypes.MapKind:
-		key, err := celTypeToNativeType(t.Parameters()[0])
-		if err != nil {
-			return "", err
-		}
-		value, err := celTypeToNativeType(t.Parameters()[1])
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("grpcfed.NewCELMapType(%s, %s)", key, value), nil
-	}
-	return "", fmt.Errorf("unsupported CEL type %s", t)
-}
-
-// celVariable is a variable referenced by a CEL expression.
-type celVariable struct {
-	Name string
-	Type *cel.Type
-}
-
-// referencedCELVariables returns the user-defined variables referenced by the checked expression.
-func referencedCELVariables(checked *exprv1.CheckedExpr) ([]*celVariable, error) {
-	seen := map[string]struct{}{}
-	notVariable := nonVariableReferenceIDs(checked.GetExpr())
-	var vars []*celVariable
-	for id, ref := range checked.GetReferenceMap() {
-		// An identifier reference has neither overloads nor a constant value (enum values).
-		if len(ref.GetOverloadId()) != 0 || ref.GetValue() != nil {
-			continue
-		}
-		if _, skip := notVariable[id]; skip {
-			continue
-		}
-		name := ref.GetName()
-		if isServiceWideCELVariable(name) {
-			continue
-		}
-		if _, exists := seen[name]; exists {
-			continue
-		}
-		seen[name] = struct{}{}
-		celType, err := cel.ExprTypeToType(checked.GetTypeMap()[id])
-		if err != nil {
-			return nil, err
-		}
-		vars = append(vars, &celVariable{Name: name, Type: celType})
-	}
-	sort.Slice(vars, func(i, j int) bool { return vars[i].Name < vars[j].Name })
-	return vars, nil
-}
-
-// nonVariableReferenceIDs returns the ids of expressions that have an entry in the reference map
-// but are not variables declared in the env: identifiers bound by a comprehension
-// (macro iteration and accumulator variables) and the type names of message literals.
-func nonVariableReferenceIDs(root *exprv1.Expr) map[int64]struct{} {
-	ret := map[int64]struct{}{}
-	var walk func(e *exprv1.Expr, bound map[string]struct{})
-	walkAll := func(es []*exprv1.Expr, bound map[string]struct{}) {
-		for _, e := range es {
-			walk(e, bound)
-		}
-	}
-	walk = func(e *exprv1.Expr, bound map[string]struct{}) {
-		switch k := e.GetExprKind().(type) {
-		case *exprv1.Expr_IdentExpr:
-			if _, ok := bound[k.IdentExpr.GetName()]; ok {
-				ret[e.GetId()] = struct{}{}
-			}
-		case *exprv1.Expr_SelectExpr:
-			walk(k.SelectExpr.GetOperand(), bound)
-		case *exprv1.Expr_CallExpr:
-			walk(k.CallExpr.GetTarget(), bound)
-			walkAll(k.CallExpr.GetArgs(), bound)
-		case *exprv1.Expr_ListExpr:
-			walkAll(k.ListExpr.GetElements(), bound)
-		case *exprv1.Expr_StructExpr:
-			ret[e.GetId()] = struct{}{}
-			for _, entry := range k.StructExpr.GetEntries() {
-				if key := entry.GetMapKey(); key != nil {
-					walk(key, bound)
-				}
-				walk(entry.GetValue(), bound)
-			}
-		case *exprv1.Expr_ComprehensionExpr:
-			c := k.ComprehensionExpr
-			walk(c.GetIterRange(), bound)
-			walk(c.GetAccuInit(), bound)
-			inner := map[string]struct{}{}
-			for name := range bound {
-				inner[name] = struct{}{}
-			}
-			for _, name := range []string{c.GetIterVar(), c.GetIterVar2(), c.GetAccuVar()} {
-				if name != "" {
-					inner[name] = struct{}{}
-				}
-			}
-			walk(c.GetLoopCondition(), inner)
-			walk(c.GetLoopStep(), inner)
-			walk(c.GetResult(), inner)
-		}
-	}
-	walk(root, map[string]struct{}{})
-	return ret
-}
-
-func isServiceWideCELVariable(name string) bool {
-	switch name {
-	case "error", grpcfed.ContextVariableName, "grpc.federation.env", "grpc.federation.var":
-		return true
-	}
-	return false
 }
 
 // celIndexer assigns an index to every CEL expression of a file, which is the key of the program cache
@@ -346,19 +172,13 @@ func (w *celWalker) value(v *resolver.CELValue) {
 	if _, exists := w.seen[idx]; exists {
 		return
 	}
-	variables, err := referencedCELVariables(v.CheckedExpr)
-	if err != nil {
-		w.err = err
-		return
-	}
-	vars := make([]*CELPrecompileVariable, 0, len(variables))
-	for _, variable := range variables {
-		celType, err := celTypeToNativeType(variable.Type)
-		if err != nil {
-			w.err = fmt.Errorf("grpc-federation: variable %q of CEL expression %q: %w", variable.Name, v.Expr, err)
-			return
+	// Variables are the user-defined variables the compiler recorded as visible to the expression.
+	vars := make([]*CELPrecompileVariable, 0, len(v.Variables))
+	for _, variable := range v.Variables {
+		if variable == nil || variable.Name == "" || variable.Type == nil {
+			continue
 		}
-		vars = append(vars, &CELPrecompileVariable{Name: variable.Name, CELType: celType})
+		vars = append(vars, &CELPrecompileVariable{Name: variable.Name, CELType: toCELNativeType(variable.Type)})
 	}
 	w.add(idx, v.Expr, vars)
 }

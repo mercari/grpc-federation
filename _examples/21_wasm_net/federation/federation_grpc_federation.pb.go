@@ -498,12 +498,12 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
 		{Index: 1, Expr: `example.net.httpGet($.url)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}},
-		{Index: 2, Expr: `example.net.getFooEnv()`},
-		{Index: 3, Expr: `example.net.getGOGCEnv()`},
-		{Index: 4, Expr: `example.net.getFileContent($.path)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}},
-		{Index: 5, Expr: `body`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`body`, grpcfed.CELStringType)}},
-		{Index: 6, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType)}},
-		{Index: 7, Expr: `file`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`file`, grpcfed.CELStringType)}},
-		{Index: 8, Expr: `gogc`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType)}},
+		{Index: 2, Expr: `example.net.getFooEnv()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`body`, grpcfed.CELStringType)}},
+		{Index: 3, Expr: `example.net.getGOGCEnv()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`body`, grpcfed.CELStringType), grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType)}},
+		{Index: 4, Expr: `example.net.getFileContent($.path)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`body`, grpcfed.CELStringType), grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType), grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType)}},
+		{Index: 5, Expr: `body`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`body`, grpcfed.CELStringType), grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType), grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType), grpcfed.NewCELVariable(`file`, grpcfed.CELStringType)}},
+		{Index: 6, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`body`, grpcfed.CELStringType), grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType), grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType), grpcfed.NewCELVariable(`file`, grpcfed.CELStringType)}},
+		{Index: 7, Expr: `file`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`body`, grpcfed.CELStringType), grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType), grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType), grpcfed.NewCELVariable(`file`, grpcfed.CELStringType)}},
+		{Index: 8, Expr: `gogc`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`body`, grpcfed.CELStringType), grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType), grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType), grpcfed.NewCELVariable(`file`, grpcfed.CELStringType)}},
 	})
 }

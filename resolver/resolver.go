@@ -63,6 +63,10 @@ type Resolver struct {
 	cachedEnumAccessorMap      map[string][]cel.EnvOption
 	cachedGRPCErrorAccessorMap map[string][]cel.EnvOption
 
+	// celEnvVars tracks the user-defined variables declared in each cel.Env.
+	// cel.Env is immutable and Extend() returns a new instance, so the pointer identifies a scope.
+	celEnvVars map[*cel.Env][]*CELVariable
+
 	// celLibraries is the set of externally-defined CEL libraries to add to the
 	// codegen-time CEL environment for type-checking CEL expressions. This same
 	// set of libraries must also be specified in your service config, to avoid
@@ -127,8 +131,34 @@ func New(files []*descriptorpb.FileDescriptorProto, opts ...Option) *Resolver {
 		cachedEnumAccessorMap:      make(map[string][]cel.EnvOption),
 		cachedGRPCErrorAccessorMap: make(map[string][]cel.EnvOption),
 
+		celEnvVars: make(map[*cel.Env][]*CELVariable),
+
 		celLibraries: opt.celLibraries,
 	}
+}
+
+// extendCELEnvWithVariable declares a user-defined variable in the env and records it
+// so that resolveCELValue can attach the visible variables to each CELValue.
+func (r *Resolver) extendCELEnvWithVariable(env *cel.Env, name string, typ *Type) (*cel.Env, error) {
+	newEnv, err := env.Extend(cel.Variable(name, ToCELType(typ)))
+	if err != nil {
+		return nil, err
+	}
+	r.setCELEnvVariables(newEnv, append(r.celEnvVariables(env), &CELVariable{Name: name, Type: typ}))
+	return newEnv, nil
+}
+
+func (r *Resolver) celEnvVariables(env *cel.Env) []*CELVariable {
+	vars := r.celEnvVars[env]
+	ret := make([]*CELVariable, 0, len(vars)+1)
+	return append(ret, vars...)
+}
+
+func (r *Resolver) setCELEnvVariables(env *cel.Env, vars []*CELVariable) {
+	if env == nil {
+		return
+	}
+	r.celEnvVars[env] = vars
 }
 
 func cloneFileDefs(files []*descriptorpb.FileDescriptorProto) []*descriptorpb.FileDescriptorProto {
@@ -2272,7 +2302,7 @@ func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env,
 			continue
 		}
 		if svcVar.Name != "" && svcVar.Expr != nil && svcVar.Expr.Type != nil {
-			newEnv, err := celEnv.Extend(cel.Variable(svcVar.Name, ToCELType(svcVar.Expr.Type)))
+			newEnv, err := r.extendCELEnvWithVariable(celEnv, svcVar.Name, svcVar.Expr.Type)
 			if err != nil {
 				ctx.addError(
 					ErrWithLocation(
@@ -4242,6 +4272,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		}
 		if field.Rule.Oneof != nil {
 			fieldEnv, _ := env.Extend()
+			r.setCELEnvVariables(fieldEnv, r.celEnvVariables(env))
 			oneof := field.Rule.Oneof
 			oneofBuilder := fieldOptBuilder.WithOneOf()
 			if oneof.If != nil {
@@ -4307,7 +4338,7 @@ func (r *Resolver) resolveVariableDefinitionCELValues(ctx *context, env *cel.Env
 	}
 	r.resolveVariableExprCELValues(ctx, env, def.Expr, builder)
 	if def.Name != "" && def.Expr.Type != nil {
-		newEnv, err := env.Extend(cel.Variable(def.Name, ToCELType(def.Expr.Type)))
+		newEnv, err := r.extendCELEnvWithVariable(env, def.Name, def.Expr.Type)
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -4376,7 +4407,7 @@ func (r *Resolver) resolveMapExprCELValues(ctx *context, env *cel.Env, expr *Map
 		}
 		iterType := iter.Source.Expr.Type.Clone()
 		iterType.Repeated = false
-		newEnv, err := env.Extend(cel.Variable(iter.Name, ToCELType(iterType)))
+		newEnv, err := r.extendCELEnvWithVariable(env, iter.Name, iterType)
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -4457,6 +4488,8 @@ func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *Ca
 	grpcErrEnv, _ := env.Extend(
 		cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
 	)
+	// "error" is always declared by the runtime's default env options, so only inherit user-defined variables.
+	r.setCELEnvVariables(grpcErrEnv, r.celEnvVariables(env))
 	if expr.Retry != nil {
 		retryBuilder := builder.WithRetry()
 		retry := expr.Retry
@@ -4970,6 +5003,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 
 	value.Out = out
 	value.CheckedExpr = checkedExpr
+	value.Variables = r.celEnvVariables(env)
 	return nil
 }
 
@@ -5014,11 +5048,21 @@ func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map
 		envOpts = append(envOpts, cel.Variable("grpc.federation.var", cel.ObjectType(svcVarsMsg.FQDN())))
 	}
 
+	var vars []*CELVariable
 	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
 		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
+		vars = append(vars, &CELVariable{
+			Name: federation.MessageArgumentVariableName,
+			Type: NewMessageType(msg.Rule.MessageArgument, false),
+		})
 	}
 
-	return r.createCELEnv(ctx, envOpts...)
+	env, err := r.createCELEnv(ctx, envOpts...)
+	if err != nil {
+		return nil, err
+	}
+	r.setCELEnvVariables(env, vars)
+	return env, nil
 }
 
 func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.Env, error) {
