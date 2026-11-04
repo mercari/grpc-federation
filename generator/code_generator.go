@@ -3842,8 +3842,9 @@ func generateGoContent(tmpl *template.Template, f *File) ([]byte, error) {
 	// TODO: Change to evaluate only once.
 	var b bytes.Buffer
 
-	// Evaluate template once to create File.pkgMap.
+	// Evaluate template once to create File.pkgMap and File.indexer.
 	// pkgMap is created when evaluating typeToText, so all values must be evaluated once.
+	// indexer is created by the first cacheIndex or CELPrecompileEntries call and is reused by the second evaluation.
 	if err := tmpl.Execute(&b, f); err != nil {
 		return nil, fmt.Errorf("failed to execute template: %w", err)
 	}
