@@ -44,6 +44,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -185,6 +188,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		env:             &env,
 		svcVar:          new(FederationServiceVariable),
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
@@ -485,4 +493,23 @@ func (s *FederationService) logvalue_Org_Federation_GetPostResponseArgument(v *F
 	return slog.GroupValue(
 		slog.String("id", v.Id),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `grpc.federation.env.a == 'red'`},
+		{Index: 2, Expr: `1`},
+		{Index: 3, Expr: `2`},
+		{Index: 4, Expr: `$.id == 'blue'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 5, Expr: `3`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 6, Expr: `4`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 7, Expr: `$.id == 'red'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`red`, grpcfed.CELIntType)}},
+		{Index: 8, Expr: `red`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`red`, grpcfed.CELIntType)}},
+		{Index: 9, Expr: `5`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`red`, grpcfed.CELIntType)}},
+		{Index: 10, Expr: `default`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`red`, grpcfed.CELIntType), grpcfed.NewCELVariable(`default`, grpcfed.CELIntType)}},
+		{Index: 11, Expr: `grpc.federation.var.svar`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`switch`, grpcfed.CELIntType)}},
+		{Index: 12, Expr: `switch`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`switch`, grpcfed.CELIntType)}},
+	})
 }

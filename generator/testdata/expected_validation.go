@@ -63,6 +63,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -152,6 +155,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -428,7 +436,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										return nil
 									},
 									By:           `'mackerel'`,
-									ByCacheIndex: 7,
+									ByCacheIndex: 8,
 								})
 							}
 
@@ -443,7 +451,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 							Value:      value,
 							Expr:       `post.title != 'some-title'`,
-							CacheIndex: 8,
+							CacheIndex: 7,
 							Body: func(value *localValueType) error {
 								if _, err := func() (any, error) {
 									/*
@@ -798,4 +806,33 @@ func (s *FederationService) logvalue_Org_Federation_PostArgument(v *FederationSe
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `$.message`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CustomMessageArgument"))}},
+		{Index: 2, Expr: `73`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 3, Expr: `post.id != 'some-id'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`a`, grpcfed.CELIntType)}},
+		{Index: 4, Expr: `'validation message 1'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`a`, grpcfed.CELIntType)}},
+		{Index: 5, Expr: `true`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType)}},
+		{Index: 6, Expr: `'validation message 2'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType)}},
+		{Index: 7, Expr: `post.title != 'some-title'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType)}},
+		{Index: 8, Expr: `'mackerel'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType)}},
+		{Index: 9, Expr: `'message1'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType)}},
+		{Index: 10, Expr: `'message2'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType), grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
+		{Index: 11, Expr: `_def2_err_detail0_msg0`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.NewCELObjectType("org.federation.CustomMessage"))}},
+		{Index: 12, Expr: `_def2_err_detail0_msg1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.NewCELObjectType("org.federation.CustomMessage"))}},
+		{Index: 13, Expr: `'some-type'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType), grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")), grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
+		{Index: 14, Expr: `'some-subject'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType), grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")), grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
+		{Index: 15, Expr: `'some-description'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType), grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")), grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
+		{Index: 16, Expr: `'some-field'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType), grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")), grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
+		{Index: 17, Expr: `'some-description'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType), grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")), grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
+		{Index: 18, Expr: `'some-message'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`b`, grpcfed.CELStringType), grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage")), grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
+		{Index: 19, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`_def2`, grpcfed.CELBoolType)}},
+		{Index: 20, Expr: `'some-id'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 21, Expr: `'some-title'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 22, Expr: `'some-content'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+	})
 }

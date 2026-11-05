@@ -2256,7 +2256,7 @@ func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env,
 
 	svcVars := make([]*ServiceVariable, 0, len(def))
 	nameMap := make(map[string]struct{})
-	celEnv, err := r.createServiceCELEnv(ctx, svc, env)
+	scope, err := r.createServiceCELScope(ctx, svc, env)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -2267,12 +2267,12 @@ func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env,
 		return nil
 	}
 	for idx, v := range def {
-		svcVar := r.resolveServiceVariable(ctx, celEnv, v, nameMap, builder.WithVar(idx))
+		svcVar := r.resolveServiceVariable(ctx, scope, v, nameMap, builder.WithVar(idx))
 		if svcVar == nil {
 			continue
 		}
 		if svcVar.Name != "" && svcVar.Expr != nil && svcVar.Expr.Type != nil {
-			newEnv, err := celEnv.Extend(cel.Variable(svcVar.Name, ToCELType(svcVar.Expr.Type)))
+			newScope, err := scope.extend(svcVar.Name, svcVar.Expr.Type)
 			if err != nil {
 				ctx.addError(
 					ErrWithLocation(
@@ -2282,7 +2282,7 @@ func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env,
 				)
 				return nil
 			}
-			celEnv = newEnv
+			scope = newScope
 		}
 		ctx.addVariableDefinition(svcVar.ToVariableDefinition())
 		nameMap[svcVar.Name] = struct{}{}
@@ -2291,7 +2291,7 @@ func (r *Resolver) resolveServiceVariables(ctx *context, svc *Service, env *Env,
 	return svcVars
 }
 
-func (r *Resolver) resolveServiceVariable(ctx *context, env *cel.Env, def *federation.ServiceVariable, nameMap map[string]struct{}, builder *source.ServiceVariableBuilder) *ServiceVariable {
+func (r *Resolver) resolveServiceVariable(ctx *context, scope *celScope, def *federation.ServiceVariable, nameMap map[string]struct{}, builder *source.ServiceVariableBuilder) *ServiceVariable {
 	name := def.GetName()
 	if name == "" && def.GetValidation() == nil {
 		ctx.addError(
@@ -2323,7 +2323,7 @@ func (r *Resolver) resolveServiceVariable(ctx *context, env *cel.Env, def *feder
 	var ifValue *CELValue
 	if def.GetIf() != "" {
 		ifValue = &CELValue{Expr: def.GetIf()}
-		if err := r.resolveCELValue(ctx, env, ifValue); err != nil {
+		if err := r.resolveCELValue(ctx, scope, ifValue); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -2348,7 +2348,7 @@ func (r *Resolver) resolveServiceVariable(ctx *context, env *cel.Env, def *feder
 	expr := r.resolveServiceVariableExpr(ctx, def, builder)
 	switch {
 	case expr.By != nil:
-		if err := r.resolveCELValue(ctx, env, expr.By); err != nil {
+		if err := r.resolveCELValue(ctx, scope, expr.By); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -2359,17 +2359,17 @@ func (r *Resolver) resolveServiceVariable(ctx *context, env *cel.Env, def *feder
 		}
 		expr.Type = expr.By.Out
 	case expr.Message != nil:
-		expr.Type = r.resolveMessageExprCELValues(ctx, env, expr.Message, builder.WithMessage())
+		expr.Type = r.resolveMessageExprCELValues(ctx, scope, expr.Message, builder.WithMessage())
 	case expr.Enum != nil:
-		expr.Type = r.resolveEnumExprCELValues(ctx, env, expr.Enum, builder.WithEnum())
+		expr.Type = r.resolveEnumExprCELValues(ctx, scope, expr.Enum, builder.WithEnum())
 	case expr.Map != nil:
-		expr.Type = r.resolveMapExprCELValues(ctx, env, expr.Map, builder.WithMap())
+		expr.Type = r.resolveMapExprCELValues(ctx, scope, expr.Map, builder.WithMap())
 	case expr.Switch != nil:
-		expr.Type = r.resolveSwitchExprCELValues(ctx, env, expr.Switch, builder.WithSwitch())
+		expr.Type = r.resolveSwitchExprCELValues(ctx, scope, expr.Switch, builder.WithSwitch())
 	case expr.Validation != nil:
 		validationIfValue := expr.Validation.If
 		builder := builder.WithValidation()
-		if err := r.resolveCELValue(ctx, env, validationIfValue); err != nil {
+		if err := r.resolveCELValue(ctx, scope, validationIfValue); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -2390,7 +2390,7 @@ func (r *Resolver) resolveServiceVariable(ctx *context, env *cel.Env, def *feder
 			}
 		}
 		msgValue := expr.Validation.Message
-		if err := r.resolveCELValue(ctx, env, msgValue); err != nil {
+		if err := r.resolveCELValue(ctx, scope, msgValue); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4041,7 +4041,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(
 		)
 		return nil
 	}
-	env, err := r.createMessageCELEnv(ctx, msg, svcMsgSet, builder)
+	scope, err := r.createMessageCELScope(ctx, msg, svcMsgSet, builder)
 	if err != nil {
 		ctx.addError(
 			ErrWithLocation(
@@ -4051,7 +4051,7 @@ func (r *Resolver) resolveMessageArgumentRecursive(
 		)
 		return nil
 	}
-	r.resolveMessageCELValues(ctx, env, msg, builder)
+	r.resolveMessageCELValues(ctx, scope, msg, builder)
 
 	msgs := []*Message{msg}
 	msgToDefsMap := msg.Rule.DefSet.MessageToDefsMap()
@@ -4216,13 +4216,13 @@ func (r *Resolver) validateMessageDependencyArgumentName(ctx *context, argNameMa
 	}
 }
 
-func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Message, builder *source.MessageBuilder) {
+func (r *Resolver) resolveMessageCELValues(ctx *context, scope *celScope, msg *Message, builder *source.MessageBuilder) {
 	if msg.Rule == nil {
 		return
 	}
 	for idx, def := range msg.Rule.DefSet.Definitions() {
 		ctx := ctx.withDefIndex(idx)
-		env = r.resolveVariableDefinitionCELValues(ctx, env, def, def.builder)
+		scope = r.resolveVariableDefinitionCELValues(ctx, scope, def, def.builder)
 	}
 	for _, field := range msg.Fields {
 		if !field.HasRule() {
@@ -4231,7 +4231,7 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 		fieldOptBuilder := toFieldBuilder(builder, field).WithOption()
 
 		if field.Rule.Value != nil {
-			if err := r.resolveCELValue(ctx, env, field.Rule.Value.CEL); err != nil {
+			if err := r.resolveCELValue(ctx, scope, field.Rule.Value.CEL); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4241,11 +4241,11 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 			}
 		}
 		if field.Rule.Oneof != nil {
-			fieldEnv, _ := env.Extend()
+			fieldScope := scope
 			oneof := field.Rule.Oneof
 			oneofBuilder := fieldOptBuilder.WithOneOf()
 			if oneof.If != nil {
-				if err := r.resolveCELValue(ctx, fieldEnv, oneof.If); err != nil {
+				if err := r.resolveCELValue(ctx, fieldScope, oneof.If); err != nil {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
@@ -4265,9 +4265,9 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 				}
 			}
 			for idx, varDef := range oneof.DefSet.Definitions() {
-				fieldEnv = r.resolveVariableDefinitionCELValues(ctx, fieldEnv, varDef, oneofBuilder.WithDef(idx))
+				fieldScope = r.resolveVariableDefinitionCELValues(ctx, fieldScope, varDef, oneofBuilder.WithDef(idx))
 			}
-			if err := r.resolveCELValue(ctx, fieldEnv, oneof.By); err != nil {
+			if err := r.resolveCELValue(ctx, fieldScope, oneof.By); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4281,9 +4281,9 @@ func (r *Resolver) resolveMessageCELValues(ctx *context, env *cel.Env, msg *Mess
 	r.resolveUsedNameReference(msg)
 }
 
-func (r *Resolver) resolveVariableDefinitionCELValues(ctx *context, env *cel.Env, def *VariableDefinition, builder *source.VariableDefinitionOptionBuilder) *cel.Env {
+func (r *Resolver) resolveVariableDefinitionCELValues(ctx *context, scope *celScope, def *VariableDefinition, builder *source.VariableDefinitionOptionBuilder) *celScope {
 	if def.If != nil {
-		if err := r.resolveCELValue(ctx, env, def.If); err != nil {
+		if err := r.resolveCELValue(ctx, scope, def.If); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4303,11 +4303,11 @@ func (r *Resolver) resolveVariableDefinitionCELValues(ctx *context, env *cel.Env
 		}
 	}
 	if def.Expr == nil {
-		return env
+		return scope
 	}
-	r.resolveVariableExprCELValues(ctx, env, def.Expr, builder)
+	r.resolveVariableExprCELValues(ctx, scope, def.Expr, builder)
 	if def.Name != "" && def.Expr.Type != nil {
-		newEnv, err := env.Extend(cel.Variable(def.Name, ToCELType(def.Expr.Type)))
+		newScope, err := scope.extend(def.Name, def.Expr.Type)
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -4315,17 +4315,17 @@ func (r *Resolver) resolveVariableDefinitionCELValues(ctx *context, env *cel.Env
 					builder.Location(),
 				),
 			)
-			return env
+			return scope
 		}
-		return newEnv
+		return newScope
 	}
-	return env
+	return scope
 }
 
-func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr *VariableExpr, builder *source.VariableDefinitionOptionBuilder) {
+func (r *Resolver) resolveVariableExprCELValues(ctx *context, scope *celScope, expr *VariableExpr, builder *source.VariableDefinitionOptionBuilder) {
 	switch {
 	case expr.By != nil:
-		if err := r.resolveCELValue(ctx, env, expr.By); err != nil {
+		if err := r.resolveCELValue(ctx, scope, expr.By); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4335,25 +4335,25 @@ func (r *Resolver) resolveVariableExprCELValues(ctx *context, env *cel.Env, expr
 		}
 		expr.Type = expr.By.Out
 	case expr.Map != nil:
-		expr.Type = r.resolveMapExprCELValues(ctx, env, expr.Map, builder.WithMap())
+		expr.Type = r.resolveMapExprCELValues(ctx, scope, expr.Map, builder.WithMap())
 	case expr.Call != nil:
-		expr.Type = r.resolveCallExprCELValues(ctx, env, expr.Call, builder.WithCall())
+		expr.Type = r.resolveCallExprCELValues(ctx, scope, expr.Call, builder.WithCall())
 	case expr.Message != nil:
-		expr.Type = r.resolveMessageExprCELValues(ctx, env, expr.Message, builder.WithMessage())
+		expr.Type = r.resolveMessageExprCELValues(ctx, scope, expr.Message, builder.WithMessage())
 	case expr.Enum != nil:
-		expr.Type = r.resolveEnumExprCELValues(ctx, env, expr.Enum, builder.WithEnum())
+		expr.Type = r.resolveEnumExprCELValues(ctx, scope, expr.Enum, builder.WithEnum())
 	case expr.Validation != nil:
 		validationBuilder := builder.WithValidation()
-		r.resolveGRPCErrorCELValues(ctx, env, expr.Validation.Error, nil, validationBuilder.WithError())
+		r.resolveGRPCErrorCELValues(ctx, scope, expr.Validation.Error, nil, validationBuilder.WithError())
 		// This is a dummy type since the output from the validation is not supposed to be used (at least for now)
 		expr.Type = BoolType
 	case expr.Switch != nil:
-		expr.Type = r.resolveSwitchExprCELValues(ctx, env, expr.Switch, builder.WithSwitch())
+		expr.Type = r.resolveSwitchExprCELValues(ctx, scope, expr.Switch, builder.WithSwitch())
 	}
 }
 
-func (r *Resolver) resolveMapExprCELValues(ctx *context, env *cel.Env, expr *MapExpr, builder *source.MapExprOptionBuilder) *Type {
-	mapEnv := env
+func (r *Resolver) resolveMapExprCELValues(ctx *context, scope *celScope, expr *MapExpr, builder *source.MapExprOptionBuilder) *Type {
+	mapScope := scope
 	iter := expr.Iterator
 	if iter != nil && iter.Name != "" && iter.Source != nil {
 		if iter.Source.Expr == nil || iter.Source.Expr.Type == nil {
@@ -4376,7 +4376,7 @@ func (r *Resolver) resolveMapExprCELValues(ctx *context, env *cel.Env, expr *Map
 		}
 		iterType := iter.Source.Expr.Type.Clone()
 		iterType.Repeated = false
-		newEnv, err := env.Extend(cel.Variable(iter.Name, ToCELType(iterType)))
+		newScope, err := scope.extend(iter.Name, iterType)
 		if err != nil {
 			ctx.addError(
 				ErrWithLocation(
@@ -4384,10 +4384,11 @@ func (r *Resolver) resolveMapExprCELValues(ctx *context, env *cel.Env, expr *Map
 					builder.WithIteratorSource().Location(),
 				),
 			)
+			return nil
 		}
-		mapEnv = newEnv
+		mapScope = newScope
 	}
-	typ := r.resolveMapIteratorExprCELValues(ctx, mapEnv, expr.Expr, builder)
+	typ := r.resolveMapIteratorExprCELValues(ctx, mapScope, expr.Expr, builder)
 	if typ == nil {
 		return nil
 	}
@@ -4396,10 +4397,10 @@ func (r *Resolver) resolveMapExprCELValues(ctx *context, env *cel.Env, expr *Map
 	return varType
 }
 
-func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, expr *MapIteratorExpr, mapBuilder *source.MapExprOptionBuilder) *Type {
+func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, scope *celScope, expr *MapIteratorExpr, mapBuilder *source.MapExprOptionBuilder) *Type {
 	switch {
 	case expr.By != nil:
-		if err := r.resolveCELValue(ctx, env, expr.By); err != nil {
+		if err := r.resolveCELValue(ctx, scope, expr.By); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4409,20 +4410,20 @@ func (r *Resolver) resolveMapIteratorExprCELValues(ctx *context, env *cel.Env, e
 		}
 		expr.Type = expr.By.Out
 	case expr.Message != nil:
-		expr.Type = r.resolveMessageExprCELValues(ctx, env, expr.Message, mapBuilder.WithMessage())
+		expr.Type = r.resolveMessageExprCELValues(ctx, scope, expr.Message, mapBuilder.WithMessage())
 	case expr.Enum != nil:
-		expr.Type = r.resolveEnumExprCELValues(ctx, env, expr.Enum, mapBuilder.WithEnum())
+		expr.Type = r.resolveEnumExprCELValues(ctx, scope, expr.Enum, mapBuilder.WithEnum())
 	}
 	return expr.Type
 }
 
-func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *CallExpr, builder *source.CallExprOptionBuilder) *Type {
+func (r *Resolver) resolveCallExprCELValues(ctx *context, scope *celScope, expr *CallExpr, builder *source.CallExprOptionBuilder) *Type {
 	if expr.Request != nil {
 		for idx, arg := range expr.Request.Args {
 			if arg.Value == nil {
 				continue
 			}
-			if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
+			if err := r.resolveCELValue(ctx, scope, arg.Value.CEL); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4435,7 +4436,7 @@ func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *Ca
 				r.validateRequestFieldType(ctx, arg.Value.CEL.Out, field, builder.WithRequest(idx))
 			}
 			if arg.If != nil {
-				if err := r.resolveCELValue(ctx, env, arg.If); err != nil {
+				if err := r.resolveCELValue(ctx, scope, arg.If); err != nil {
 					ctx.addError(
 						ErrWithLocation(
 							err.Error(),
@@ -4454,13 +4455,13 @@ func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *Ca
 			}
 		}
 	}
-	grpcErrEnv, _ := env.Extend(
+	errScope, _ := scope.extendEnv(
 		cel.Variable("error", cel.ObjectType("grpc.federation.private.Error")),
 	)
 	if expr.Retry != nil {
 		retryBuilder := builder.WithRetry()
 		retry := expr.Retry
-		if err := r.resolveCELValue(ctx, grpcErrEnv, retry.If); err != nil {
+		if err := r.resolveCELValue(ctx, errScope, retry.If); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4515,7 +4516,7 @@ func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *Ca
 		}
 	}
 	if expr.Metadata != nil {
-		if err := r.resolveCELValue(ctx, env, expr.Metadata); err != nil {
+		if err := r.resolveCELValue(ctx, scope, expr.Metadata); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4533,7 +4534,7 @@ func (r *Resolver) resolveCallExprCELValues(ctx *context, env *cel.Env, expr *Ca
 		}
 	}
 	for idx, grpcErr := range expr.Errors {
-		r.resolveGRPCErrorCELValues(ctx, grpcErrEnv, grpcErr, expr.Method.Response, builder.WithError(idx))
+		r.resolveGRPCErrorCELValues(ctx, errScope, grpcErr, expr.Method.Response, builder.WithError(idx))
 	}
 	return NewMessageType(expr.Method.Response, false)
 }
@@ -4562,12 +4563,12 @@ func (r *Resolver) isMetadataType(typ *Type) bool {
 	return true
 }
 
-func (r *Resolver) resolveMessageExprCELValues(ctx *context, env *cel.Env, expr *MessageExpr, builder *source.MessageExprOptionBuilder) *Type {
+func (r *Resolver) resolveMessageExprCELValues(ctx *context, scope *celScope, expr *MessageExpr, builder *source.MessageExprOptionBuilder) *Type {
 	for argIdx, arg := range expr.Args {
 		if arg.Value == nil {
 			continue
 		}
-		if err := r.resolveCELValue(ctx, env, arg.Value.CEL); err != nil {
+		if err := r.resolveCELValue(ctx, scope, arg.Value.CEL); err != nil {
 			if arg.Value.Inline {
 				ctx.addError(
 					ErrWithLocation(
@@ -4588,14 +4589,14 @@ func (r *Resolver) resolveMessageExprCELValues(ctx *context, env *cel.Env, expr 
 	return NewMessageType(expr.Message, false)
 }
 
-func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr *GRPCError, response *Message, builder *source.GRPCErrorOptionBuilder) {
+func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, scope *celScope, grpcErr *GRPCError, response *Message, builder *source.GRPCErrorOptionBuilder) {
 	if grpcErr == nil {
 		return
 	}
 	for idx, def := range grpcErr.DefSet.Definitions() {
-		env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithDef(idx))
+		scope = r.resolveVariableDefinitionCELValues(ctx, scope, def, builder.WithDef(idx))
 	}
-	if err := r.resolveCELValue(ctx, env, grpcErr.If); err != nil {
+	if err := r.resolveCELValue(ctx, scope, grpcErr.If); err != nil {
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
@@ -4612,7 +4613,7 @@ func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr
 		)
 	}
 	if grpcErr.IgnoreAndResponse != nil {
-		if err := r.resolveCELValue(ctx, env, grpcErr.IgnoreAndResponse); err != nil {
+		if err := r.resolveCELValue(ctx, scope, grpcErr.IgnoreAndResponse); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4633,7 +4634,7 @@ func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr
 		}
 	}
 	if grpcErr.Message != nil {
-		if err := r.resolveCELValue(ctx, env, grpcErr.Message); err != nil {
+		if err := r.resolveCELValue(ctx, scope, grpcErr.Message); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4651,16 +4652,16 @@ func (r *Resolver) resolveGRPCErrorCELValues(ctx *context, env *cel.Env, grpcErr
 		}
 	}
 	for idx, detail := range grpcErr.Details {
-		r.resolveGRPCErrorDetailCELValues(ctx, env, detail, builder.WithDetail(idx))
+		r.resolveGRPCErrorDetailCELValues(ctx, scope, detail, builder.WithDetail(idx))
 	}
 }
 
-func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, detail *GRPCErrorDetail, builder *source.GRPCErrorDetailOptionBuilder) {
+func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, scope *celScope, detail *GRPCErrorDetail, builder *source.GRPCErrorDetailOptionBuilder) {
 	for idx, def := range detail.DefSet.Definitions() {
-		env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithDef(idx))
+		scope = r.resolveVariableDefinitionCELValues(ctx, scope, def, builder.WithDef(idx))
 	}
 
-	if err := r.resolveCELValue(ctx, env, detail.If); err != nil {
+	if err := r.resolveCELValue(ctx, scope, detail.If); err != nil {
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
@@ -4677,7 +4678,7 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 		)
 	}
 	for _, by := range detail.By {
-		if err := r.resolveCELValue(ctx, env, by); err != nil {
+		if err := r.resolveCELValue(ctx, scope, by); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4695,12 +4696,12 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 		}
 	}
 	for idx, def := range detail.Messages.Definitions() {
-		env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithDef(idx))
+		scope = r.resolveVariableDefinitionCELValues(ctx, scope, def, builder.WithDef(idx))
 	}
 
 	for fIdx, failure := range detail.PreconditionFailures {
 		for fvIdx, violation := range failure.Violations {
-			if err := r.resolveCELValue(ctx, env, violation.Type); err != nil {
+			if err := r.resolveCELValue(ctx, scope, violation.Type); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4716,7 +4717,7 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 					),
 				)
 			}
-			if err := r.resolveCELValue(ctx, env, violation.Subject); err != nil {
+			if err := r.resolveCELValue(ctx, scope, violation.Subject); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4732,7 +4733,7 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 					),
 				)
 			}
-			if err := r.resolveCELValue(ctx, env, violation.Description); err != nil {
+			if err := r.resolveCELValue(ctx, scope, violation.Description); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4753,7 +4754,7 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 
 	for bIdx, badRequest := range detail.BadRequests {
 		for fvIdx, violation := range badRequest.FieldViolations {
-			if err := r.resolveCELValue(ctx, env, violation.Field); err != nil {
+			if err := r.resolveCELValue(ctx, scope, violation.Field); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4769,7 +4770,7 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 					),
 				)
 			}
-			if err := r.resolveCELValue(ctx, env, violation.Description); err != nil {
+			if err := r.resolveCELValue(ctx, scope, violation.Description); err != nil {
 				ctx.addError(
 					ErrWithLocation(
 						err.Error(),
@@ -4789,7 +4790,7 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 	}
 
 	for lIdx, message := range detail.LocalizedMessages {
-		if err := r.resolveCELValue(ctx, env, message.Message); err != nil {
+		if err := r.resolveCELValue(ctx, scope, message.Message); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4808,11 +4809,11 @@ func (r *Resolver) resolveGRPCErrorDetailCELValues(ctx *context, env *cel.Env, d
 	}
 }
 
-func (r *Resolver) resolveEnumExprCELValues(ctx *context, env *cel.Env, expr *EnumExpr, builder *source.EnumExprOptionBuilder) *Type {
+func (r *Resolver) resolveEnumExprCELValues(ctx *context, scope *celScope, expr *EnumExpr, builder *source.EnumExprOptionBuilder) *Type {
 	toEnum := expr.Enum
 	enumType := NewEnumType(toEnum, false)
 
-	if err := r.resolveCELValue(ctx, env, expr.By); err != nil {
+	if err := r.resolveCELValue(ctx, scope, expr.By); err != nil {
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
@@ -4855,12 +4856,12 @@ func (r *Resolver) resolveEnumExprCELValues(ctx *context, env *cel.Env, expr *En
 	return enumType
 }
 
-func (r *Resolver) resolveSwitchExprCELValues(ctx *context, env *cel.Env, expr *SwitchExpr, builder *source.SwitchExprOptionBuilder) *Type {
+func (r *Resolver) resolveSwitchExprCELValues(ctx *context, scope *celScope, expr *SwitchExpr, builder *source.SwitchExprOptionBuilder) *Type {
 	for idx, cse := range expr.Cases {
 		for defIdx, def := range cse.DefSet.Definitions() {
-			env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithCase(idx).WithDef(defIdx))
+			scope = r.resolveVariableDefinitionCELValues(ctx, scope, def, builder.WithCase(idx).WithDef(defIdx))
 		}
-		if err := r.resolveCELValue(ctx, env, cse.If); err != nil {
+		if err := r.resolveCELValue(ctx, scope, cse.If); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4876,7 +4877,7 @@ func (r *Resolver) resolveSwitchExprCELValues(ctx *context, env *cel.Env, expr *
 				),
 			)
 		}
-		if err := r.resolveCELValue(ctx, env, cse.By); err != nil {
+		if err := r.resolveCELValue(ctx, scope, cse.By); err != nil {
 			ctx.addError(
 				ErrWithLocation(
 					err.Error(),
@@ -4896,9 +4897,9 @@ func (r *Resolver) resolveSwitchExprCELValues(ctx *context, env *cel.Env, expr *
 		}
 	}
 	for defIdx, def := range expr.Default.DefSet.Definitions() {
-		env = r.resolveVariableDefinitionCELValues(ctx, env, def, builder.WithDefault().WithDef(defIdx))
+		scope = r.resolveVariableDefinitionCELValues(ctx, scope, def, builder.WithDefault().WithDef(defIdx))
 	}
-	if err := r.resolveCELValue(ctx, env, expr.Default.By); err != nil {
+	if err := r.resolveCELValue(ctx, scope, expr.Default.By); err != nil {
 		ctx.addError(
 			ErrWithLocation(
 				err.Error(),
@@ -4942,7 +4943,7 @@ func (r *Resolver) resolveUsedNameReference(msg *Message) {
 	}
 }
 
-func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) error {
+func (r *Resolver) resolveCELValue(ctx *context, scope *celScope, value *CELValue) error {
 	if value == nil {
 		return nil
 	}
@@ -4951,7 +4952,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 	}
 	expr := strings.Replace(value.Expr, "$", federation.MessageArgumentVariableName, -1)
 	r.celRegistry.clear()
-	ast, issues := env.Compile(expr)
+	ast, issues := scope.env.Compile(expr)
 	if issues.Err() != nil {
 		for _, err := range issues.Errors() {
 			r.removeContextArgumentFromErrorText(err)
@@ -4970,6 +4971,7 @@ func (r *Resolver) resolveCELValue(ctx *context, env *cel.Env, value *CELValue) 
 
 	value.Out = out
 	value.CheckedExpr = checkedExpr
+	value.Variables = scope.vars
 	return nil
 }
 
@@ -4978,7 +4980,7 @@ func (r *Resolver) removeContextArgumentFromErrorText(err *cel.Error) {
 	err.Message = strings.Replace(err.Message, federation.ContextTypeName, "", -1)
 }
 
-func (r *Resolver) createServiceCELEnv(ctx *context, svc *Service, env *Env) (*cel.Env, error) {
+func (r *Resolver) createServiceCELScope(ctx *context, svc *Service, env *Env) (*celScope, error) {
 	envOpts := []cel.EnvOption{
 		cel.Container(svc.PackageName()),
 	}
@@ -4990,10 +4992,14 @@ func (r *Resolver) createServiceCELEnv(ctx *context, svc *Service, env *Env) (*c
 		}
 		envOpts = append(envOpts, cel.Variable("grpc.federation.env", cel.ObjectType(envMsg.FQDN())))
 	}
-	return r.createCELEnv(ctx, envOpts...)
+	celEnv, err := r.createCELEnv(ctx, envOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return &celScope{env: celEnv}, nil
 }
 
-func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*cel.Env, error) {
+func (r *Resolver) createMessageCELScope(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*celScope, error) {
 	envOpts := []cel.EnvOption{
 		cel.Container(msg.Package().Name),
 	}
@@ -5014,11 +5020,20 @@ func (r *Resolver) createMessageCELEnv(ctx *context, msg *Message, svcMsgSet map
 		envOpts = append(envOpts, cel.Variable("grpc.federation.var", cel.ObjectType(svcVarsMsg.FQDN())))
 	}
 
+	var vars []*CELVariable
 	if msg.Rule != nil && msg.Rule.MessageArgument != nil {
 		envOpts = append(envOpts, cel.Variable(federation.MessageArgumentVariableName, cel.ObjectType(msg.Rule.MessageArgument.FQDN())))
+		vars = append(vars, &CELVariable{
+			Name: federation.MessageArgumentVariableName,
+			Type: NewMessageType(msg.Rule.MessageArgument, false),
+		})
 	}
 
-	return r.createCELEnv(ctx, envOpts...)
+	celEnv, err := r.createCELEnv(ctx, envOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return &celScope{env: celEnv, vars: vars}, nil
 }
 
 func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.Env, error) {

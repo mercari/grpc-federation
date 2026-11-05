@@ -135,6 +135,9 @@ type FederationV2DevServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationV2DevServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -390,6 +393,11 @@ func NewFederationV2DevService(cfg FederationV2DevServiceConfig) (*FederationV2D
 			Post_PostServiceClient: Post_PostServiceClient,
 			User_UserServiceClient: User_UserServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if err := svc.initServiceVariables(ctx); err != nil {
 		return nil, err
@@ -1576,4 +1584,32 @@ func (s *FederationV2DevService) logvalue_User_GetUsersRequest(v *user.GetUsersR
 	return slog.GroupValue(
 		slog.Any("ids", v.GetIds()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationV2DevService ahead of the first request.
+func (s *FederationV2DevService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `1`},
+		{Index: 2, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument"))}},
+		{Index: 3, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.v2dev.PostV2dev")), grpcfed.NewCELVariable(`r`, grpcfed.CELObjectType("federation.v2dev.Ref"))}},
+		{Index: 4, Expr: `PostV2devType.value('POST_V2_DEV_TYPE')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.v2dev.PostV2dev")), grpcfed.NewCELVariable(`r`, grpcfed.CELObjectType("federation.v2dev.Ref"))}},
+		{Index: 5, Expr: `grpc.federation.env.a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.v2dev.PostV2dev")), grpcfed.NewCELVariable(`r`, grpcfed.CELObjectType("federation.v2dev.Ref"))}},
+		{Index: 6, Expr: `grpc.federation.env.b[1]`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.v2dev.PostV2dev")), grpcfed.NewCELVariable(`r`, grpcfed.CELObjectType("federation.v2dev.Ref"))}},
+		{Index: 7, Expr: `grpc.federation.env.c['z']`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.v2dev.PostV2dev")), grpcfed.NewCELVariable(`r`, grpcfed.CELObjectType("federation.v2dev.Ref"))}},
+		{Index: 8, Expr: `r`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.GetPostV2devResponseArgument")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("federation.v2dev.PostV2dev")), grpcfed.NewCELVariable(`r`, grpcfed.CELObjectType("federation.v2dev.Ref"))}},
+		{Index: 9, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument"))}},
+		{Index: 10, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 11, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post"))}},
+		{Index: 12, Expr: `'foo'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User"))}},
+		{Index: 13, Expr: `'bar'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User")), grpcfed.NewCELVariable(`unused`, grpcfed.CELObjectType("federation.v2dev.Unused"))}},
+		{Index: 14, Expr: `typed_nil == null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User")), grpcfed.NewCELVariable(`unused`, grpcfed.CELObjectType("federation.v2dev.Unused")), grpcfed.NewCELVariable(`_def4`, grpcfed.CELObjectType("federation.v2dev.ForNameless")), grpcfed.NewCELVariable(`typed_nil`, grpcfed.CELObjectType("federation.v2dev.TypedNil"))}},
+		{Index: 15, Expr: `true`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User")), grpcfed.NewCELVariable(`unused`, grpcfed.CELObjectType("federation.v2dev.Unused")), grpcfed.NewCELVariable(`_def4`, grpcfed.CELObjectType("federation.v2dev.ForNameless")), grpcfed.NewCELVariable(`typed_nil`, grpcfed.CELObjectType("federation.v2dev.TypedNil"))}},
+		{Index: 16, Expr: `typed_nil == null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User")), grpcfed.NewCELVariable(`unused`, grpcfed.CELObjectType("federation.v2dev.Unused")), grpcfed.NewCELVariable(`_def4`, grpcfed.CELObjectType("federation.v2dev.ForNameless")), grpcfed.NewCELVariable(`typed_nil`, grpcfed.CELObjectType("federation.v2dev.TypedNil")), grpcfed.NewCELVariable(`null_check`, grpcfed.CELBoolType)}},
+		{Index: 17, Expr: `grpc.federation.log.info('output typed_nil', {'result': typed_nil == null})`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User")), grpcfed.NewCELVariable(`unused`, grpcfed.CELObjectType("federation.v2dev.Unused")), grpcfed.NewCELVariable(`_def4`, grpcfed.CELObjectType("federation.v2dev.ForNameless")), grpcfed.NewCELVariable(`typed_nil`, grpcfed.CELObjectType("federation.v2dev.TypedNil")), grpcfed.NewCELVariable(`null_check`, grpcfed.CELBoolType)}},
+		{Index: 18, Expr: `null_check`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.PostV2devArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("post.Post")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("federation.v2dev.User")), grpcfed.NewCELVariable(`unused`, grpcfed.CELObjectType("federation.v2dev.Unused")), grpcfed.NewCELVariable(`_def4`, grpcfed.CELObjectType("federation.v2dev.ForNameless")), grpcfed.NewCELVariable(`typed_nil`, grpcfed.CELObjectType("federation.v2dev.TypedNil")), grpcfed.NewCELVariable(`null_check`, grpcfed.CELBoolType), grpcfed.NewCELVariable(`_def7`, grpcfed.CELBoolType)}},
+		{Index: 19, Expr: `grpc.federation.env.a`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.RefArgument"))}},
+		{Index: 20, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.UserArgument"))}},
+		{Index: 21, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.v2dev.UserArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("user.GetUserResponse"))}},
+	})
 }

@@ -87,6 +87,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -217,6 +220,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			User_UserServiceClient: User_UserServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
@@ -821,4 +829,18 @@ func (s *FederationService) logvalue_User_GetUserRequest(v *user.GetUserRequest)
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `uid.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`uid`, grpcfed.CELObjectType("org.federation.UserID"))}},
+		{Index: 2, Expr: `uid.value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`uid`, grpcfed.CELObjectType("org.federation.UserID")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User"))}},
+		{Index: 3, Expr: `user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`uid`, grpcfed.CELObjectType("org.federation.UserID")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User")), grpcfed.NewCELVariable(`user2`, grpcfed.CELObjectType("org.federation.User"))}},
+		{Index: 4, Expr: `user2`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument")), grpcfed.NewCELVariable(`uid`, grpcfed.CELObjectType("org.federation.UserID")), grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User")), grpcfed.NewCELVariable(`user2`, grpcfed.CELObjectType("org.federation.User"))}},
+		{Index: 5, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
+		{Index: 6, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("user.GetUserResponse"))}},
+		{Index: 7, Expr: `'xxx'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserIDArgument")), grpcfed.NewCELVariable(`_def0`, grpcfed.CELObjectType("org.federation.Sub"))}},
+	})
 }
