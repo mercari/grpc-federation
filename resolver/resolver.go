@@ -4996,7 +4996,7 @@ func (r *Resolver) createServiceCELScope(ctx *context, svc *Service, env *Env) (
 	if err != nil {
 		return nil, err
 	}
-	return newCELScope(celEnv), nil
+	return &celScope{env: celEnv}, nil
 }
 
 func (r *Resolver) createMessageCELScope(ctx *context, msg *Message, svcMsgSet map[*Service]map[*Message]struct{}, builder *source.MessageBuilder) (*celScope, error) {
@@ -5033,7 +5033,7 @@ func (r *Resolver) createMessageCELScope(ctx *context, msg *Message, svcMsgSet m
 	if err != nil {
 		return nil, err
 	}
-	return newCELScope(celEnv, vars...), nil
+	return &celScope{env: celEnv, vars: vars}, nil
 }
 
 func (r *Resolver) createCELEnv(ctx *context, envOpts ...cel.EnvOption) (*cel.Env, error) {

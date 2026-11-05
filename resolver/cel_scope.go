@@ -15,10 +15,6 @@ type celScope struct {
 	vars []*CELVariable
 }
 
-func newCELScope(env *cel.Env, vars ...*CELVariable) *celScope {
-	return &celScope{env: env, vars: vars}
-}
-
 // extend declares the variable in a new scope.
 func (s *celScope) extend(name string, typ *Type) (*celScope, error) {
 	env, err := s.env.Extend(cel.Variable(name, ToCELType(typ)))
@@ -31,8 +27,9 @@ func (s *celScope) extend(name string, typ *Type) (*celScope, error) {
 	}, nil
 }
 
-// extendEnv adds the options to a new scope without recording variables declared by them.
-// It is for the variables that the runtime declares itself, like "error".
+// extendEnv adds the options to a new scope without recording the variables declared by them.
+// It is for the variables that the runtime declares in every env regardless of the scope
+// (like "error"), so a precompiled expression must not declare them again.
 func (s *celScope) extendEnv(opts ...cel.EnvOption) (*celScope, error) {
 	env, err := s.env.Extend(opts...)
 	if err != nil {
