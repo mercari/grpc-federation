@@ -574,6 +574,19 @@ type CELValue struct {
 	Expr        string
 	Out         *Type
 	CheckedExpr *exprv1.CheckedExpr
+	// Variables are the variables that the expression references among the ones declared on top of the env
+	// that the runtime starts every expression from, in declaration order: the message argument and the variables
+	// defined, or iterated over, before the expression. In a service variable expression, they are the service
+	// variables defined before it. The runtime already declares ctx, error, grpc.federation.env and
+	// grpc.federation.var in every env, so they are not included.
+	// A precompiled expression must declare these to compile.
+	Variables []*CELVariable
+}
+
+// CELVariable represents a variable that is declared in a CEL env.
+type CELVariable struct {
+	Name string
+	Type *Type
 }
 
 type EnvKey string

@@ -63,6 +63,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -152,6 +155,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -428,7 +436,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 										return nil
 									},
 									By:           `'mackerel'`,
-									ByCacheIndex: 7,
+									ByCacheIndex: 8,
 								})
 							}
 
@@ -443,7 +451,7 @@ func (s *FederationService) resolve_Org_Federation_GetPostResponse(ctx context.C
 						if err := grpcfed.If(ctx, &grpcfed.IfParam[*localValueType]{
 							Value:      value,
 							Expr:       `post.title != 'some-title'`,
-							CacheIndex: 8,
+							CacheIndex: 7,
 							Body: func(value *localValueType) error {
 								if _, err := func() (any, error) {
 									/*
@@ -798,4 +806,33 @@ func (s *FederationService) logvalue_Org_Federation_PostArgument(v *FederationSe
 		return slog.GroupValue()
 	}
 	return slog.GroupValue()
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `$.message`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.CustomMessageArgument"))}},
+		{Index: 2, Expr: `73`},
+		{Index: 3, Expr: `post.id != 'some-id'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 4, Expr: `'validation message 1'`},
+		{Index: 5, Expr: `true`},
+		{Index: 6, Expr: `'validation message 2'`},
+		{Index: 7, Expr: `post.title != 'some-title'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 8, Expr: `'mackerel'`},
+		{Index: 9, Expr: `'message1'`},
+		{Index: 10, Expr: `'message2'`},
+		{Index: 11, Expr: `_def2_err_detail0_msg0`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def2_err_detail0_msg0`, grpcfed.NewCELObjectType("org.federation.CustomMessage"))}},
+		{Index: 12, Expr: `_def2_err_detail0_msg1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def2_err_detail0_msg1`, grpcfed.NewCELObjectType("org.federation.CustomMessage"))}},
+		{Index: 13, Expr: `'some-type'`},
+		{Index: 14, Expr: `'some-subject'`},
+		{Index: 15, Expr: `'some-description'`},
+		{Index: 16, Expr: `'some-field'`},
+		{Index: 17, Expr: `'some-description'`},
+		{Index: 18, Expr: `'some-message'`},
+		{Index: 19, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 20, Expr: `'some-id'`},
+		{Index: 21, Expr: `'some-title'`},
+		{Index: 22, Expr: `'some-content'`},
+	})
 }

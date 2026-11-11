@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/google/cel-go/cel"
 	celast "github.com/google/cel-go/common/ast"
@@ -328,6 +329,94 @@ func NewCELCacheMap() *CELCacheMap {
 	return &CELCacheMap{
 		cacheMap: make(map[int]*CELCache),
 	}
+}
+
+// CELPrecompileEntry is a CEL expression to compile ahead of the first request.
+// The code generator emits one entry per cache index.
+type CELPrecompileEntry struct {
+	// Index is the cache key of the expression. It must match the index used at evaluation time.
+	Index int
+	// Expr is the CEL expression text as written in the proto definition.
+	Expr string
+	// Variables are the variables the expression references on top of the base env options: the message argument
+	// and the variables defined before the expression. Service-wide declarations (libraries, enum accessors,
+	// error, context, grpc.federation.env, grpc.federation.var, etc.) must be in the base env options.
+	Variables []cel.EnvOption
+}
+
+// precompileCELConcurrency is the number of goroutines that compile the expressions in PrecompileCEL.
+const precompileCELConcurrency = 8
+
+// PrecompileCEL compiles all given expressions and stores them in the CELCacheMap bound to the context,
+// so that no request has to pay the compilation cost.
+// It must run before the cache is used: the cache is expected to be empty.
+//
+// The expressions are compiled by several goroutines, because compiling a large service takes a noticeable time.
+// All of them are compiled even if one fails, and the error of the first failing entry in the given order is returned,
+// so the error does not depend on which goroutine got there first.
+//
+// The entries include the expressions of service variables, although those are evaluated only once,
+// in the constructor right after this function, so compiling them here gains nothing.
+// It is harmless: evaluating them finds the programs in the cache, so they are not compiled twice.
+// It is also simpler than leaving them out, because then the entries would no longer cover every cache index.
+func PrecompileCEL(ctx context.Context, envOpts []cel.EnvOption, entries []*CELPrecompileEntry) error {
+	celCacheMap := getCELCacheMap(ctx)
+	if celCacheMap == nil {
+		return ErrCELCacheMap
+	}
+	if len(entries) == 0 {
+		return nil
+	}
+	for _, entry := range entries {
+		if entry.Index == 0 {
+			return ErrCELCacheIndex
+		}
+	}
+	baseEnv, err := NewCELEnv(envOpts...)
+	if err != nil {
+		return fmt.Errorf("failed to create cel env for precompile: %w", err)
+	}
+
+	errs := make([]error, len(entries))
+	var (
+		next atomic.Int64
+		wg   sync.WaitGroup
+	)
+	for range min(precompileCELConcurrency, len(entries)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				i := int(next.Add(1)) - 1
+				if i >= len(entries) {
+					return
+				}
+				errs[i] = precompileCELEntry(baseEnv, celCacheMap, entries[i])
+			}
+		}()
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func precompileCELEntry(baseEnv *cel.Env, celCacheMap *CELCacheMap, entry *CELPrecompileEntry) error {
+	// Every entry gets its own env, even without variables. Type checking records the message types
+	// an expression names in the env it checks against, so concurrent checks must not share one.
+	env, err := baseEnv.Extend(entry.Variables...)
+	if err != nil {
+		return fmt.Errorf("failed to extend cel env for %q: %w", entry.Expr, err)
+	}
+	program, err := compileCELProgram(env, entry.Expr)
+	if err != nil {
+		return fmt.Errorf("failed to precompile cel expression %q: %w", entry.Expr, err)
+	}
+	celCacheMap.set(entry.Index, &CELCache{program: program})
+	return nil
 }
 
 func (m *CELCacheMap) get(index int) *CELCache {
@@ -912,17 +1001,21 @@ func createCELProgram(ctx context.Context, expr string, cacheIndex int, envOpts 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cel env: %w", err)
 	}
-	ast, err := createCELAst(expr, env)
-	if err != nil {
-		return nil, err
-	}
-	program, err := env.Program(ast)
+	program, err := compileCELProgram(env, expr)
 	if err != nil {
 		return nil, err
 	}
 
 	setCELProgramCache(ctx, cacheIndex, program)
 	return program, nil
+}
+
+func compileCELProgram(env *cel.Env, expr string) (cel.Program, error) {
+	ast, err := createCELAst(expr, env)
+	if err != nil {
+		return nil, err
+	}
+	return env.Program(ast)
 }
 
 func createCELAst(expr string, env *cel.Env) (*cel.Ast, error) {
