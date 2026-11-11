@@ -4795,3 +4795,89 @@ func TestOptional(t *testing.T) {
 		t.Errorf("(-got, +want)\n%s", diff)
 	}
 }
+
+func TestCELValueVariables(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	files := testutil.Compile(t, filepath.Join(testdataDir, "cel_variables.proto"))
+	result, err := resolver.New(files, resolver.ImportPathOption(testdataDir)).Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := result.Files[0]
+
+	names := func(v *resolver.CELValue) string {
+		t.Helper()
+		if v == nil {
+			t.Fatal("expression not found")
+		}
+		ret := make([]string, 0, len(v.Variables))
+		for _, variable := range v.Variables {
+			ret = append(ret, variable.Name)
+		}
+		return strings.Join(ret, ",")
+	}
+	check := func(t *testing.T, v *resolver.CELValue, wantExpr, want string) {
+		t.Helper()
+		if v == nil {
+			t.Fatalf("expression %q not found", wantExpr)
+		}
+		if v.Expr != wantExpr {
+			t.Fatalf("expected expression %q but got %q", wantExpr, v.Expr)
+		}
+		if got := names(v); got != want {
+			t.Fatalf("variables of %q: got %q, want %q", wantExpr, got, want)
+		}
+	}
+
+	t.Run("service variables see the ones defined before them", func(t *testing.T) {
+		t.Parallel()
+		vars := file.Services[0].Rule.Vars
+		check(t, vars[0].Expr.By, `'a'`, "")
+		check(t, vars[1].Expr.By, `'b'`, "")
+		// c references b and not a, which is defined before it too.
+		check(t, vars[2].Expr.By, `b + 'c'`, "b")
+	})
+
+	var response *resolver.Message
+	for _, msg := range file.Messages {
+		if msg.Name == "GetResponse" {
+			response = msg
+		}
+	}
+	if response == nil {
+		t.Fatal("GetResponse not found")
+	}
+	defs := response.Rule.DefSet.Definitions()
+
+	t.Run("message argument", func(t *testing.T) {
+		t.Parallel()
+		check(t, defs[0].Expr.By, `$.id`, "__ARG__")
+	})
+
+	t.Run("only the referenced variables, in declaration order", func(t *testing.T) {
+		t.Parallel()
+		check(t, defs[1].Expr.By, `x + '1'`, "x")
+		check(t, defs[2].Expr.By, `[x, y]`, "x,y")
+	})
+
+	t.Run("map iterator", func(t *testing.T) {
+		t.Parallel()
+		// The iterator is declared after y, and the expression references both of them.
+		check(t, defs[3].Expr.Map.Expr.By, `it + y`, "y,it")
+	})
+
+	t.Run("field values see every definition", func(t *testing.T) {
+		t.Parallel()
+		for _, field := range response.Fields {
+			switch field.Name {
+			case "ys":
+				check(t, field.Rule.Value.CEL, `ys`, "ys")
+			case "last":
+				// x and xs are not neighbours in the declaration order.
+				check(t, field.Rule.Value.CEL, `x + xs[0]`, "x,xs")
+			}
+		}
+	})
+}
