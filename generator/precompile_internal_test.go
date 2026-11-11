@@ -11,6 +11,30 @@ import (
 	"github.com/mercari/grpc-federation/types"
 )
 
+func TestTemplateFuncsAreBoundToAFile(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	files := testutil.Compile(t, filepath.Join(testdataDir, "simple_aggregation.proto"))
+	result, err := resolver.New(files, resolver.ImportPathOption(testdataDir)).Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := result.Files[0]
+	file.Name = filepath.Base(file.Name)
+
+	// Executing the template without binding the functions must fail instead of rendering a cache index of 0.
+	tmpl, err := loadTemplate()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b strings.Builder
+	err = tmpl.Execute(&b, NewFile(file))
+	if err == nil || !strings.Contains(err.Error(), "is not bound to a file") {
+		t.Fatalf("expected an error about the unbound function, got %v", err)
+	}
+}
+
 func TestCELIndexerDeterministic(t *testing.T) {
 	t.Parallel()
 

@@ -3834,8 +3834,13 @@ func loadTemplate() (*template.Template, error) {
 			"parentCtx":       ParentCtx,
 			"toLocalVariable": LocalVariable,
 			// cacheIndex and nameCacheIndex are bound to the file in generateGoContent.
-			"cacheIndex":     func(*resolver.CELValue) (int, error) { return 0, nil },
-			"nameCacheIndex": func(any) (int, error) { return 0, nil },
+			// The template cannot be parsed without them, so these only fail when they are used before that.
+			"cacheIndex": func(*resolver.CELValue) (int, error) {
+				return 0, fmt.Errorf("grpc-federation: cacheIndex is not bound to a file")
+			},
+			"nameCacheIndex": func(any) (int, error) {
+				return 0, fmt.Errorf("grpc-federation: nameCacheIndex is not bound to a file")
+			},
 		},
 	).ParseFS(tmpls, "templates/*.tmpl")
 	if err != nil {
@@ -3844,6 +3849,8 @@ func loadTemplate() (*template.Template, error) {
 	return tmpl, nil
 }
 
+// generateGoContent binds the template functions that depend on the file to tmpl itself,
+// so a template must not be used for more than one file.
 func generateGoContent(tmpl *template.Template, f *File) ([]byte, error) {
 	tmpl = tmpl.Funcs(map[string]any{
 		"cacheIndex":     f.cacheIndex,
