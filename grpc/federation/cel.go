@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/google/cel-go/cel"
 	celast "github.com/google/cel-go/common/ast"
@@ -343,9 +344,16 @@ type CELPrecompileEntry struct {
 	Variables []cel.EnvOption
 }
 
+// precompileCELConcurrency is the number of goroutines that compile the expressions in PrecompileCEL.
+const precompileCELConcurrency = 8
+
 // PrecompileCEL compiles all given expressions and stores them in the CELCacheMap bound to the context,
 // so that no request has to pay the compilation cost.
 // It must run before the cache is used: the cache is expected to be empty.
+//
+// The expressions are compiled by several goroutines, because compiling a large service takes a noticeable time.
+// All of them are compiled even if one fails, and the error of the first failing entry in the given order is returned,
+// so the error does not depend on which goroutine got there first.
 //
 // The entries include the expressions of service variables, although those are evaluated only once,
 // in the constructor right after this function, so compiling them here gains nothing.
@@ -359,27 +367,55 @@ func PrecompileCEL(ctx context.Context, envOpts []cel.EnvOption, entries []*CELP
 	if len(entries) == 0 {
 		return nil
 	}
-	baseEnv, err := NewCELEnv(envOpts...)
-	if err != nil {
-		return fmt.Errorf("failed to create cel env for precompile: %w", err)
-	}
 	for _, entry := range entries {
 		if entry.Index == 0 {
 			return ErrCELCacheIndex
 		}
-		env := baseEnv
-		if len(entry.Variables) != 0 {
-			env, err = baseEnv.Extend(entry.Variables...)
-			if err != nil {
-				return fmt.Errorf("failed to extend cel env for %q: %w", entry.Expr, err)
-			}
-		}
-		program, err := compileCELProgram(env, entry.Expr)
-		if err != nil {
-			return fmt.Errorf("failed to precompile cel expression %q: %w", entry.Expr, err)
-		}
-		celCacheMap.set(entry.Index, &CELCache{program: program})
 	}
+	baseEnv, err := NewCELEnv(envOpts...)
+	if err != nil {
+		return fmt.Errorf("failed to create cel env for precompile: %w", err)
+	}
+
+	errs := make([]error, len(entries))
+	var (
+		next atomic.Int64
+		wg   sync.WaitGroup
+	)
+	for range min(precompileCELConcurrency, len(entries)) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				i := int(next.Add(1)) - 1
+				if i >= len(entries) {
+					return
+				}
+				errs[i] = precompileCELEntry(baseEnv, celCacheMap, entries[i])
+			}
+		}()
+	}
+	wg.Wait()
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func precompileCELEntry(baseEnv *cel.Env, celCacheMap *CELCacheMap, entry *CELPrecompileEntry) error {
+	// Every entry gets its own env, even without variables. Type checking records the message types
+	// an expression names in the env it checks against, so concurrent checks must not share one.
+	env, err := baseEnv.Extend(entry.Variables...)
+	if err != nil {
+		return fmt.Errorf("failed to extend cel env for %q: %w", entry.Expr, err)
+	}
+	program, err := compileCELProgram(env, entry.Expr)
+	if err != nil {
+		return fmt.Errorf("failed to precompile cel expression %q: %w", entry.Expr, err)
+	}
+	celCacheMap.set(entry.Index, &CELCache{program: program})
 	return nil
 }
 
