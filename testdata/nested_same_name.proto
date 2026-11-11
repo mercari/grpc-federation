@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {};
+  rpc GetA(GetARequest) returns (GetAResponse) {};
+  rpc GetB(GetBRequest) returns (GetBResponse) {};
+}
+
+message GetARequest {}
+
+message GetAResponse {
+  option (grpc.federation.message) = {
+    def { name: "foo" message { name: "GetAResponse.Foo" } }
+  };
+  message Foo {
+    string x = 1 [(grpc.federation.field).by = "'a'"];
+  }
+  GetAResponse.Foo foo = 1 [(grpc.federation.field).by = "foo"];
+}
+
+message GetBRequest {}
+
+message GetBResponse {
+  option (grpc.federation.message) = {
+    def { name: "foo" message { name: "GetBResponse.Foo" } }
+  };
+  message Foo {
+    string x = 1 [(grpc.federation.field).by = "'b'"];
+  }
+  GetBResponse.Foo foo = 1 [(grpc.federation.field).by = "foo"];
+}

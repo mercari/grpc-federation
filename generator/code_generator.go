@@ -8,6 +8,7 @@ import (
 	"go/format"
 	"log"
 	"log/slog"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
@@ -3760,18 +3761,27 @@ func argument(file *File, msgArg *resolver.Message, arg *resolver.Argument) []*A
 }
 
 func (s *Service) Messages() []*Message {
-	msgs := make([]*Message, 0, len(s.Service.Messages))
-	for _, msg := range s.Service.Messages {
+	sorted := sortedMessages(s.Service.Messages)
+	msgs := make([]*Message, 0, len(sorted))
+	for _, msg := range sorted {
 		msgs = append(msgs, &Message{
 			Message: msg,
 			Service: s,
 			file:    s.file,
 		})
 	}
-	sort.Slice(msgs, func(i, j int) bool {
-		return msgs[i].ResolverName() < msgs[j].ResolverName()
-	})
 	return msgs
+}
+
+// sortedMessages returns the messages ordered by their full names, which are unique.
+// The messages of a resolver.Service are ordered by their short names only, so messages that share one,
+// like nested messages with the same name, are in an unspecified order.
+func sortedMessages(msgs []*resolver.Message) []*resolver.Message {
+	sorted := slices.Clone(msgs)
+	sort.Slice(sorted, func(i, j int) bool {
+		return fullMessageName(sorted[i]) < fullMessageName(sorted[j])
+	})
+	return sorted
 }
 
 func (s *Service) CastFields() []*CastField {

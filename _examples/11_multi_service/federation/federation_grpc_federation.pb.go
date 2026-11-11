@@ -516,7 +516,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.env.name`,
-		CacheIndex: 8,
+		CacheIndex: 6,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -529,7 +529,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetNameResponse_Foo]{
 		Value:      value,
 		Expr:       `foo`,
-		CacheIndex: 9,
+		CacheIndex: 7,
 		Setter: func(v *GetNameResponse_Foo) error {
 			ret.Foo = v
 			return nil
@@ -568,7 +568,7 @@ func (s *FederationService) resolve_Federation_GetNameResponse_Foo(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'y'`,
-		CacheIndex: 6,
+		CacheIndex: 8,
 		Setter: func(v string) error {
 			ret.Y = v
 			return nil
@@ -693,7 +693,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `p`,
-		CacheIndex: 10,
+		CacheIndex: 9,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -706,7 +706,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.var.upper_name`,
-		CacheIndex: 11,
+		CacheIndex: 10,
 		Setter: func(v string) error {
 			ret.UpperName = v
 			return nil
@@ -719,7 +719,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse(ctx context.Conte
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostResponse_Foo]{
 		Value:      value,
 		Expr:       `foo`,
-		CacheIndex: 12,
+		CacheIndex: 11,
 		Setter: func(v *GetPostResponse_Foo) error {
 			ret.Foo = v
 			return nil
@@ -758,7 +758,7 @@ func (s *FederationService) resolve_Federation_GetPostResponse_Foo(ctx context.C
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'x'`,
-		CacheIndex: 7,
+		CacheIndex: 12,
 		Setter: func(v string) error {
 			ret.X = v
 			return nil
@@ -1449,13 +1449,13 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 		{Index: 3, Expr: `grpc.federation.env.name == ''`},
 		{Index: 4, Expr: `'name environment variable is unspecified'`},
 		{Index: 5, Expr: `{'a': true}`},
-		{Index: 6, Expr: `'y'`},
-		{Index: 7, Expr: `'x'`},
-		{Index: 8, Expr: `grpc.federation.env.name`},
-		{Index: 9, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetNameResponse.Foo"))}},
-		{Index: 10, Expr: `p`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`p`, grpcfed.CELObjectType("federation.Post"))}},
-		{Index: 11, Expr: `grpc.federation.var.upper_name`},
-		{Index: 12, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetPostResponse.Foo"))}},
+		{Index: 6, Expr: `grpc.federation.env.name`},
+		{Index: 7, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetNameResponse.Foo"))}},
+		{Index: 8, Expr: `'y'`},
+		{Index: 9, Expr: `p`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`p`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 10, Expr: `grpc.federation.var.upper_name`},
+		{Index: 11, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetPostResponse.Foo"))}},
+		{Index: 12, Expr: `'x'`},
 		{Index: 13, Expr: `'foo'`},
 		{Index: 14, Expr: `'bar'`},
 		{Index: 15, Expr: `favorite.FavoriteType.value('TYPE1')`},
@@ -2084,7 +2084,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse(ctx context.Context,
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.env.name`,
-		CacheIndex: 8,
+		CacheIndex: 6,
 		Setter: func(v string) error {
 			ret.Name = v
 			return nil
@@ -2097,7 +2097,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse(ctx context.Context,
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetNameResponse_Foo]{
 		Value:      value,
 		Expr:       `foo`,
-		CacheIndex: 9,
+		CacheIndex: 7,
 		Setter: func(v *GetNameResponse_Foo) error {
 			ret.Foo = v
 			return nil
@@ -2136,7 +2136,7 @@ func (s *PrivateService) resolve_Federation_GetNameResponse_Foo(ctx context.Cont
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'y'`,
-		CacheIndex: 6,
+		CacheIndex: 8,
 		Setter: func(v string) error {
 			ret.Y = v
 			return nil
@@ -2261,7 +2261,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*Post]{
 		Value:      value,
 		Expr:       `p`,
-		CacheIndex: 10,
+		CacheIndex: 9,
 		Setter: func(v *Post) error {
 			ret.Post = v
 			return nil
@@ -2274,7 +2274,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `grpc.federation.var.upper_name`,
-		CacheIndex: 11,
+		CacheIndex: 10,
 		Setter: func(v string) error {
 			ret.UpperName = v
 			return nil
@@ -2287,7 +2287,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse(ctx context.Context,
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[*GetPostResponse_Foo]{
 		Value:      value,
 		Expr:       `foo`,
-		CacheIndex: 12,
+		CacheIndex: 11,
 		Setter: func(v *GetPostResponse_Foo) error {
 			ret.Foo = v
 			return nil
@@ -2326,7 +2326,7 @@ func (s *PrivateService) resolve_Federation_GetPostResponse_Foo(ctx context.Cont
 	if err := grpcfed.SetCELValue(ctx, &grpcfed.SetCELValueParam[string]{
 		Value:      value,
 		Expr:       `'x'`,
-		CacheIndex: 7,
+		CacheIndex: 12,
 		Setter: func(v string) error {
 			ret.X = v
 			return nil
@@ -3012,13 +3012,13 @@ func (s *PrivateService) logvalue_Federation_UserArgument(v *PrivateService_Fede
 func (s *PrivateService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{Index: 6, Expr: `'y'`},
-		{Index: 7, Expr: `'x'`},
-		{Index: 8, Expr: `grpc.federation.env.name`},
-		{Index: 9, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetNameResponse.Foo"))}},
-		{Index: 10, Expr: `p`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`p`, grpcfed.CELObjectType("federation.Post"))}},
-		{Index: 11, Expr: `grpc.federation.var.upper_name`},
-		{Index: 12, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetPostResponse.Foo"))}},
+		{Index: 6, Expr: `grpc.federation.env.name`},
+		{Index: 7, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetNameResponse.Foo"))}},
+		{Index: 8, Expr: `'y'`},
+		{Index: 9, Expr: `p`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`p`, grpcfed.CELObjectType("federation.Post"))}},
+		{Index: 10, Expr: `grpc.federation.var.upper_name`},
+		{Index: 11, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELObjectType("federation.GetPostResponse.Foo"))}},
+		{Index: 12, Expr: `'x'`},
 		{Index: 13, Expr: `'foo'`},
 		{Index: 14, Expr: `'bar'`},
 		{Index: 15, Expr: `favorite.FavoriteType.value('TYPE1')`},

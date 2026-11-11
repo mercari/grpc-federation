@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -9,6 +10,45 @@ import (
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
 )
+
+func TestCELIndexerDeterministic(t *testing.T) {
+	t.Parallel()
+
+	// The resolver orders the messages of a service by their short names only, and breaks ties
+	// in an unspecified order. Two nested messages named Foo must still get the same indexes on every run.
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	files := testutil.Compile(t, filepath.Join(testdataDir, "nested_same_name.proto"))
+
+	table := func() string {
+		result, err := resolver.New(files, resolver.ImportPathOption(testdataDir)).Resolve()
+		if err != nil {
+			t.Fatal(err)
+		}
+		file := result.Files[0]
+		file.Name = filepath.Base(file.Name)
+		var b strings.Builder
+		for _, svc := range NewFile(file).Services() {
+			entries, err := svc.CELPrecompileEntries()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, entry := range entries {
+				fmt.Fprintf(&b, "%d:%s\n", entry.Index, entry.Expr)
+			}
+		}
+		return b.String()
+	}
+
+	want := table()
+	if !strings.Contains(want, "'a'") || !strings.Contains(want, "'b'") {
+		t.Fatalf("unexpected table:\n%s", want)
+	}
+	for i := 0; i < 40; i++ {
+		if got := table(); got != want {
+			t.Fatalf("the indexes changed between runs:\n%s\nversus\n%s", want, got)
+		}
+	}
+}
 
 func TestCELIndexerMissedExpression(t *testing.T) {
 	t.Parallel()

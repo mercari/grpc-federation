@@ -210,7 +210,8 @@ func (w *celWalker) service(svc *resolver.Service) {
 			w.serviceVariableExpr(svcVar.Expr)
 		}
 	}
-	for _, msg := range svc.Messages {
+	// The templates render the messages in this order too, so the indexes do not depend on how the resolver orders them.
+	for _, msg := range sortedMessages(svc.Messages) {
 		w.message(msg)
 	}
 }
