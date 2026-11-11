@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service AService {
+  option (grpc.federation.service) = {
+    var { name: "a" by: "'a'" }
+  };
+  rpc Get(GetARequest) returns (GetAResponse) {};
+}
+
+service BService {
+  option (grpc.federation.service) = {
+    var { name: "b" by: "'b'" }
+    var { name: "c" by: "b + 'c'" }
+  };
+  rpc Get(GetBRequest) returns (GetBResponse) {};
+}
+
+message GetARequest {}
+
+message GetAResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "shared"
+      message {
+        name: "Shared"
+        args { name: "id" by: "grpc.federation.var.a" }
+      }
+    }
+    def { name: "own" by: "'own-a'" }
+  };
+  Shared shared = 1 [(grpc.federation.field).by = "shared"];
+  string own = 2 [(grpc.federation.field).by = "own"];
+}
+
+message GetBRequest {}
+
+message GetBResponse {
+  option (grpc.federation.message) = {
+    def {
+      name: "shared"
+      message {
+        name: "Shared"
+        args { name: "id" by: "grpc.federation.var.c" }
+      }
+    }
+  };
+  Shared shared = 1 [(grpc.federation.field).by = "shared"];
+}
+
+// Shared is used by both services, so each of them renders and precompiles its expressions.
+message Shared {
+  option (grpc.federation.message) = {
+    def { name: "n" by: "size($.id)" }
+  };
+  string id = 1 [(grpc.federation.field).by = "$.id"];
+  int64 n = 2 [(grpc.federation.field).by = "n"];
+}
