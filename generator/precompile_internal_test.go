@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/cel-go/cel"
+	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 
@@ -415,5 +416,152 @@ func TestCELNativeType(t *testing.T) {
 				t.Fatalf("the runtime declares %s but expected %s", got, want)
 			}
 		})
+	}
+}
+
+func TestCELWalkerSkipsMissingNodes(t *testing.T) {
+	t.Parallel()
+
+	indexer, err := newCELIndexer(&resolver.File{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := &celWalker{indexer: indexer, seen: make(map[int]struct{})}
+	// An expression field that is not set is not an error.
+	w.value(nil)
+	w.name(nil)
+	w.name(&resolver.VariableDefinition{})
+	w.serviceVariableExpr(nil)
+	w.message(&resolver.Message{Fields: []*resolver.Field{{}}})
+	w.defSet(nil)
+	w.def(nil)
+	w.def(&resolver.VariableDefinition{Name: "no_expr"})
+	w.mapExpr(nil)
+	w.callExpr(nil)
+	w.messageExpr(nil)
+	w.enumExpr(nil)
+	w.switchExpr(nil)
+	w.grpcError(nil)
+	if w.err != nil || len(w.entries) != 0 {
+		t.Fatalf("expected no entries and no error, got %d entries and %v", len(w.entries), w.err)
+	}
+}
+
+func TestCELWalkerVisitsAValueOnce(t *testing.T) {
+	t.Parallel()
+
+	indexer, err := newCELIndexer(&resolver.File{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := &celWalker{indexer: indexer, seen: make(map[int]struct{})}
+	value := &resolver.CELValue{Expr: "1", CheckedExpr: &exprv1.CheckedExpr{}}
+	// A CELValue that is reachable by two paths, like the ones a service variable shares with its definition,
+	// has one index and one entry.
+	w.value(value)
+	w.value(value)
+	if len(w.entries) != 1 || indexer.values[value] != w.entries[0].Index {
+		t.Fatalf("expected one entry for the value, got %d", len(w.entries))
+	}
+}
+
+func TestCELWalkerSkipsIncompleteVariables(t *testing.T) {
+	t.Parallel()
+
+	indexer, err := newCELIndexer(&resolver.File{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := &celWalker{indexer: indexer, seen: make(map[int]struct{})}
+	w.value(&resolver.CELValue{
+		Expr:        "ok",
+		CheckedExpr: &exprv1.CheckedExpr{},
+		Variables: []*resolver.CELVariable{
+			nil,
+			{Type: &resolver.Type{Kind: types.String}},
+			{Name: "no_type"},
+			{Name: "ok", Type: &resolver.Type{Kind: types.String}},
+		},
+	})
+	if len(w.entries) != 1 || len(w.entries[0].Variables) != 1 || w.entries[0].Variables[0].Name != "ok" {
+		t.Fatalf("expected one entry with the variable ok, got %+v", w.entries)
+	}
+}
+
+func TestCELIndexerErrorsAreReturned(t *testing.T) {
+	t.Parallel()
+
+	// An expression the compiler did not resolve makes the indexer fail, and each function that needs it returns that.
+	unresolved := &resolver.CELValue{Expr: "unresolved"}
+	svc := &resolver.Service{
+		Rule: &resolver.ServiceRule{
+			Vars: []*resolver.ServiceVariable{{Name: "v", Expr: &resolver.ServiceVariableExpr{By: unresolved}}},
+		},
+	}
+	file := NewFile(&resolver.File{Services: []*resolver.Service{svc}})
+
+	if _, err := file.cacheIndex(unresolved); err == nil || !strings.Contains(err.Error(), "not resolved") {
+		t.Fatalf("cacheIndex: got %v", err)
+	}
+	def := &resolver.VariableDefinition{Name: "v", Expr: &resolver.VariableExpr{Type: &resolver.Type{Kind: types.String}}}
+	if _, err := file.nameCacheIndex(def); err == nil || !strings.Contains(err.Error(), "not resolved") {
+		t.Fatalf("nameCacheIndex: got %v", err)
+	}
+	if _, err := file.Services()[0].CELPrecompileEntries(); err == nil || !strings.Contains(err.Error(), "not resolved") {
+		t.Fatalf("CELPrecompileEntries: got %v", err)
+	}
+}
+
+func TestNameCacheIndexArguments(t *testing.T) {
+	t.Parallel()
+
+	// A definition of the message block of an error detail is evaluated by its name.
+	def := &resolver.VariableDefinition{
+		Name: "v",
+		Expr: &resolver.VariableExpr{
+			Type: &resolver.Type{Kind: types.String},
+			By:   &resolver.CELValue{Expr: "'v'", CheckedExpr: &exprv1.CheckedExpr{}},
+		},
+	}
+	outer := &resolver.VariableDefinition{
+		Name: "outer",
+		Expr: &resolver.VariableExpr{
+			Validation: &resolver.ValidationExpr{
+				Error: &resolver.GRPCError{
+					Details: resolver.GRPCErrorDetails{
+						{Messages: &resolver.VariableDefinitionSet{Defs: resolver.VariableDefinitions{def}}},
+					},
+				},
+			},
+		},
+	}
+	svc := &resolver.Service{
+		Messages: []*resolver.Message{{
+			Name: "M",
+			Rule: &resolver.MessageRule{
+				DefSet: &resolver.VariableDefinitionSet{Defs: resolver.VariableDefinitions{outer}},
+			},
+		}},
+	}
+	file := NewFile(&resolver.File{Services: []*resolver.Service{svc}})
+
+	// The template functions accept the definition both of the resolver and of the generator.
+	fromResolver, err := file.nameCacheIndex(def)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fromGenerator, err := file.nameCacheIndex(&VariableDefinition{VariableDefinition: def})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fromResolver != fromGenerator || fromResolver == 0 {
+		t.Fatalf("got %d and %d", fromResolver, fromGenerator)
+	}
+	if _, err := file.nameCacheIndex("v"); err == nil || !strings.Contains(err.Error(), "unexpected variable definition type") {
+		t.Fatalf("got %v", err)
+	}
+	// A definition without a type cannot be evaluated by its name.
+	if _, err := file.nameCacheIndex(&resolver.VariableDefinition{Name: "typeless", Expr: &resolver.VariableExpr{}}); err == nil {
+		t.Fatal("expected an error for a definition without a type")
 	}
 }
