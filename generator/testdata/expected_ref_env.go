@@ -322,6 +322,6 @@ func (s *RefEnvService) logvalue_Org_Federation_ConstantArgument(v *RefEnvServic
 func (s *RefEnvService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{Index: 1, Expr: `grpc.federation.env.aaa + 'xxx'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.ConstantArgument"))}},
+		{Index: 1, Expr: `grpc.federation.env.aaa + 'xxx'`},
 	})
 }

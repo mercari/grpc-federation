@@ -177,7 +177,7 @@ func (w *celWalker) value(v *resolver.CELValue) {
 	if _, exists := w.seen[idx]; exists {
 		return
 	}
-	// Variables are the user-defined variables the compiler recorded as visible to the expression.
+	// Variables are the variables the compiler found the expression to reference.
 	vars := make([]*CELPrecompileVariable, 0, len(v.Variables))
 	for _, variable := range v.Variables {
 		if variable == nil || variable.Name == "" || variable.Type == nil {

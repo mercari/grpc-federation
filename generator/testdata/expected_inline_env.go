@@ -309,10 +309,10 @@ func (s *InlineEnvService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
 		{Index: 1, Expr: `grpc.federation.env.aaa`},
-		{Index: 2, Expr: `grpc.federation.env.aaa == 'xxx'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`x`, grpcfed.CELStringType)}},
-		{Index: 3, Expr: `grpc.federation.env.bbb`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`x`, grpcfed.CELStringType)}},
-		{Index: 4, Expr: `[0, 0]`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`x`, grpcfed.CELStringType)}},
-		{Index: 5, Expr: `grpc.federation.env.bbb == 1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`x`, grpcfed.CELStringType), grpcfed.NewCELVariable(`y`, grpcfed.CELListType(grpcfed.CELIntType))}},
-		{Index: 6, Expr: `'error'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`x`, grpcfed.CELStringType), grpcfed.NewCELVariable(`y`, grpcfed.CELListType(grpcfed.CELIntType))}},
+		{Index: 2, Expr: `grpc.federation.env.aaa == 'xxx'`},
+		{Index: 3, Expr: `grpc.federation.env.bbb`},
+		{Index: 4, Expr: `[0, 0]`},
+		{Index: 5, Expr: `grpc.federation.env.bbb == 1`},
+		{Index: 6, Expr: `'error'`},
 	})
 }

@@ -4971,7 +4971,7 @@ func (r *Resolver) resolveCELValue(ctx *context, scope *celScope, value *CELValu
 
 	value.Out = out
 	value.CheckedExpr = checkedExpr
-	value.Variables = scope.vars
+	value.Variables = scope.referenced(checkedExpr)
 	return nil
 }
 

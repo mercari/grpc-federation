@@ -337,7 +337,7 @@ type CELPrecompileEntry struct {
 	Index int
 	// Expr is the CEL expression text as written in the proto definition.
 	Expr string
-	// Variables are the variables the expression needs on top of the base env options: the message argument
+	// Variables are the variables the expression references on top of the base env options: the message argument
 	// and the variables defined before the expression. Service-wide declarations (libraries, enum accessors,
 	// error, context, grpc.federation.env, grpc.federation.var, etc.) must be in the base env options.
 	Variables []cel.EnvOption

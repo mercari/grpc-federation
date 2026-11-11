@@ -574,14 +574,14 @@ func (s *FederationService) logvalue_Org_Federation_SubMessage(v *SubMessage) sl
 func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
-		{Index: 1, Expr: `'auto-bound'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.BindSourceArgument"))}},
-		{Index: 2, Expr: `7`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
-		{Index: 3, Expr: `org.federation.Color.value('COLOR_RED')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
-		{Index: 4, Expr: `opt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType), grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType), grpcfed.NewCELVariable(`bind_source`, grpcfed.CELObjectType("org.federation.BindSource"))}},
-		{Index: 5, Expr: `opt_color`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType), grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType), grpcfed.NewCELVariable(`bind_source`, grpcfed.CELObjectType("org.federation.BindSource"))}},
-		{Index: 6, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType), grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType), grpcfed.NewCELVariable(`bind_source`, grpcfed.CELObjectType("org.federation.BindSource"))}},
-		{Index: 7, Expr: `b'abc'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType), grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType), grpcfed.NewCELVariable(`bind_source`, grpcfed.CELObjectType("org.federation.BindSource"))}},
-		{Index: 8, Expr: `false ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType), grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType), grpcfed.NewCELVariable(`bind_source`, grpcfed.CELObjectType("org.federation.BindSource"))}},
-		{Index: 9, Expr: `true ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument")), grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType), grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType), grpcfed.NewCELVariable(`bind_source`, grpcfed.CELObjectType("org.federation.BindSource"))}},
+		{Index: 1, Expr: `'auto-bound'`},
+		{Index: 2, Expr: `7`},
+		{Index: 3, Expr: `org.federation.Color.value('COLOR_RED')`},
+		{Index: 4, Expr: `opt_int`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{Index: 5, Expr: `opt_color`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_color`, grpcfed.CELIntType)}},
+		{Index: 6, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 7, Expr: `b'abc'`},
+		{Index: 8, Expr: `false ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
+		{Index: 9, Expr: `true ? optional.of(opt_int) : optional.none()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`opt_int`, grpcfed.CELIntType)}},
 	})
 }

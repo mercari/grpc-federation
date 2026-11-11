@@ -314,6 +314,6 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
 		{Index: 1, Expr: `example.ext.upper($.name)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GreetResponseArgument"))}},
-		{Index: 2, Expr: `'hello, ' + outputted`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GreetResponseArgument")), grpcfed.NewCELVariable(`outputted`, grpcfed.CELStringType)}},
+		{Index: 2, Expr: `'hello, ' + outputted`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`outputted`, grpcfed.CELStringType)}},
 	})
 }

@@ -612,8 +612,8 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
 		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
 		{Index: 2, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
-		{Index: 3, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
-		{Index: 4, Expr: `'foo'`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument")), grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse")), grpcfed.NewCELVariable(`_def1`, grpcfed.CELObjectType("post.Post"))}},
+		{Index: 3, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 4, Expr: `'foo'`},
 		{Index: 5, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
 	})
 }

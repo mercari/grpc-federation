@@ -438,6 +438,6 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
 		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}},
 		{Index: 2, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}},
-		{Index: 3, Expr: `error.code != google.rpc.Code.UNIMPLEMENTED`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.PostArgument"))}},
+		{Index: 3, Expr: `error.code != google.rpc.Code.UNIMPLEMENTED`},
 	})
 }
