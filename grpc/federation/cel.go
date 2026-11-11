@@ -337,14 +337,20 @@ type CELPrecompileEntry struct {
 	Index int
 	// Expr is the CEL expression text as written in the proto definition.
 	Expr string
-	// Variables are the user-defined variables the expression references.
-	// Service-wide declarations (libraries, enum accessors, error, context, etc.) must be in the base env options.
+	// Variables are the variables the expression needs on top of the base env options: the message argument
+	// and the variables defined before the expression. Service-wide declarations (libraries, enum accessors,
+	// error, context, grpc.federation.env, grpc.federation.var, etc.) must be in the base env options.
 	Variables []cel.EnvOption
 }
 
 // PrecompileCEL compiles all given expressions and stores them in the CELCacheMap bound to the context,
 // so that no request has to pay the compilation cost.
 // It must run before the cache is used: the cache is expected to be empty.
+//
+// The entries include the expressions of service variables, although those are evaluated only once,
+// in the constructor right after this function, so compiling them here gains nothing.
+// It is harmless: evaluating them finds the programs in the cache, so they are not compiled twice.
+// It is also simpler than leaving them out, because then the entries would no longer cover every cache index.
 func PrecompileCEL(ctx context.Context, envOpts []cel.EnvOption, entries []*CELPrecompileEntry) error {
 	celCacheMap := getCELCacheMap(ctx)
 	if celCacheMap == nil {

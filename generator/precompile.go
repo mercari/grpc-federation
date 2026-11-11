@@ -163,6 +163,11 @@ func (w *celWalker) value(v *resolver.CELValue) {
 	if v == nil || w.err != nil {
 		return
 	}
+	// The compiler fills in CheckedExpr, and Variables with it, when it resolves the expression.
+	if v.CheckedExpr == nil {
+		w.err = fmt.Errorf("grpc-federation: CEL expression %q was not resolved by the compiler", v.Expr)
+		return
+	}
 	idx, exists := w.indexer.values[v]
 	if !exists {
 		w.indexer.next++

@@ -6,12 +6,16 @@ import (
 	"github.com/google/cel-go/cel"
 )
 
-// celScope is a CEL env together with the user-defined variables declared in it.
+// celScope is a CEL env together with the variables declared in it.
 // cel.Env does not expose the variables declared in it, so the scope records them
-// to attach the variables visible to each CEL expression to its CELValue.
+// to attach them to the CELValue of each expression compiled in it.
 // A celScope is immutable: extending it returns a new one.
 type celScope struct {
-	env  *cel.Env
+	env *cel.Env
+	// vars are the variables declared in this scope on top of the env that the runtime starts every
+	// expression from: the message argument and the variables defined, or iterated over, before this point.
+	// They are what a precompiled expression must declare to compile. The runtime already declares
+	// ctx, error, grpc.federation.env and grpc.federation.var in every env, so they are not included.
 	vars []*CELVariable
 }
 

@@ -574,13 +574,15 @@ type CELValue struct {
 	Expr        string
 	Out         *Type
 	CheckedExpr *exprv1.CheckedExpr
-	// Variables is the set of user-defined variables (message argument, variable definitions, map iterator)
-	// that are visible to this expression at compile time, in declaration order.
-	// It is used by the code generator to emit the CEL env for precompiling this expression on startup.
+	// Variables are the variables declared on top of the env that the runtime starts every expression from,
+	// in declaration order: the message argument and the variables defined, or iterated over, before the expression.
+	// In a service variable expression, they are the service variables defined before it.
+	// They are what a precompiled expression must declare to compile. The runtime already declares
+	// ctx, error, grpc.federation.env and grpc.federation.var in every env, so they are not included.
 	Variables []*CELVariable
 }
 
-// CELVariable represents a user-defined variable that is declared in a CEL env.
+// CELVariable represents a variable that is declared in a CEL env.
 type CELVariable struct {
 	Name string
 	Type *Type

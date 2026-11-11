@@ -67,6 +67,43 @@ func TestCELIndexerMissedExpression(t *testing.T) {
 	})
 }
 
+func TestCELIndexerUnresolvedExpression(t *testing.T) {
+	t.Parallel()
+
+	testdataDir := filepath.Join(testutil.RepoRoot(), "testdata")
+	files := testutil.Compile(t, filepath.Join(testdataDir, "simple_aggregation.proto"))
+	result, err := resolver.New(files, resolver.ImportPathOption(testdataDir)).Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := result.Files[0]
+	file.Name = filepath.Base(file.Name)
+
+	indexer, err := NewFile(file).celIndexer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Make an expression look as if the compiler had not resolved it.
+	var unresolved *resolver.CELValue
+	for value, idx := range indexer.values {
+		if idx == 1 {
+			unresolved = value
+		}
+	}
+	if unresolved == nil {
+		t.Fatal("no expression was indexed")
+	}
+	unresolved.CheckedExpr = nil
+
+	_, err = NewFile(file).celIndexer()
+	if err == nil {
+		t.Fatal("expected indexing to fail")
+	}
+	if !strings.Contains(err.Error(), "not resolved") || !strings.Contains(err.Error(), unresolved.Expr) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestCELIndexerNames(t *testing.T) {
 	t.Parallel()
 
