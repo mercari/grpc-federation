@@ -1710,7 +1710,7 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 		{Index: 19, Expr: `error`},
 		{Index: 20, Expr: `post.Post{id: 'foo'}`},
 		{Index: 21, Expr: `error`},
-		{Index: 22, Expr: `_def0_err_detail0_msg0`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def0_err_detail0_msg0`, grpcfed.NewCELObjectType("org.federation.CustomMessage"))}},
+		{Index: 22, Expr: `_def0_err_detail0_msg0`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def0_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
 		{Index: 23, Expr: `'some-type'`},
 		{Index: 24, Expr: `'some-subject'`},
 		{Index: 25, Expr: `'some-description'`},

@@ -84,17 +84,17 @@ type celIndexer struct {
 	// The message blocks of an error detail are resolved to variable definitions named like
 	// "_def0_err_detail0_msg0" (see resolveGRPCDetailMessages). The generated code evaluates such a definition
 	// with evalDefSet, which stores the result in the local value, and then reads it back with grpcfed.CustomMessage.
-	// CustomMessage does this by evaluating the CEL expression "_def0_err_detail0_msg0", with only that
-	// variable declared. This expression is written by the template, not by the user, so the resolver never
-	// creates a *resolver.CELValue for it and it cannot be looked up by pointer as values can.
+	// CustomMessage does this by evaluating the CEL expression "_def0_err_detail0_msg0", a lookup of that variable
+	// in the env of the local value. The expression is written by the template, not by the user, so the resolver
+	// never creates a *resolver.CELValue for it and it cannot be looked up by pointer as values can.
 	//
 	// The compiled program depends only on the expression text (the variable name) and the declared type
 	// of the variable, so the key is exactly those two (see nameKey). Definitions with the same key share one
 	// index and one precompile entry. Definitions that differ in either get separate ones. The key does not need to
 	// identify a definition, and it is not unique per definition: the names are built from counters of the
 	// enclosing context, so different messages can have a definition with the same name and a different type.
-	// The type is rendered with toCELTypeDeclare, which is what the lazy path declares, so a type that maps to the
-	// same declaration (for example an enum and an int64) correctly shares a program.
+	// The type is rendered with toCELNativeType, which is how the lazy path declares the variable of a definition
+	// (VariableDefinition.CELType), so the precompiled program is declared the same way.
 	//
 	// TODO: CustomMessage could read the variable from the value directly instead of evaluating CEL. Then this map,
 	// nameKey, celWalker.name and CustomMessageParam.CacheIndex would not be needed.
@@ -141,7 +141,7 @@ func (i *celIndexer) nameIndex(def *resolver.VariableDefinition) (int, error) {
 }
 
 func nameKey(def *resolver.VariableDefinition) string {
-	return def.Name + "|" + toCELTypeDeclare(def.Expr.Type)
+	return def.Name + "|" + toCELNativeType(def.Expr.Type)
 }
 
 type celWalker struct {
@@ -200,7 +200,7 @@ func (w *celWalker) name(def *resolver.VariableDefinition) {
 		idx = w.indexer.next
 		w.indexer.names[key] = idx
 	}
-	w.add(idx, def.Name, []*CELPrecompileVariable{{Name: def.Name, CELType: toCELTypeDeclare(def.Expr.Type)}})
+	w.add(idx, def.Name, []*CELPrecompileVariable{{Name: def.Name, CELType: toCELNativeType(def.Expr.Type)}})
 }
 
 func (w *celWalker) service(svc *resolver.Service) {

@@ -1022,7 +1022,7 @@ func (s *FederationService) precompileCEL(ctx context.Context) error {
 		{Index: 11, Expr: `org.post.Post{id: 'foo'}`},
 		{Index: 12, Expr: `org.post.CreatePost{title: 'bar'}`},
 		{Index: 13, Expr: `id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id`, grpcfed.CELStringType)}},
-		{Index: 14, Expr: `_def0_err_detail0_msg0`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def0_err_detail0_msg0`, grpcfed.NewCELObjectType("org.federation.CustomMessage"))}},
+		{Index: 14, Expr: `_def0_err_detail0_msg0`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`_def0_err_detail0_msg0`, grpcfed.CELObjectType("org.federation.CustomMessage"))}},
 		{Index: 15, Expr: `'some-type'`},
 		{Index: 16, Expr: `'some-subject'`},
 		{Index: 17, Expr: `'some-description'`},

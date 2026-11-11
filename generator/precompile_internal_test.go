@@ -248,17 +248,6 @@ func TestCELIndexerNames(t *testing.T) {
 		}
 	})
 
-	t.Run("types with the same declaration share an index", func(t *testing.T) {
-		t.Parallel()
-		// An enum is declared as an int by toCELTypeDeclare, so the programs are identical.
-		a, b := def("v", types.Enum), def("v", types.Int64)
-		indexer, entries := register(t, a, b)
-		got := indexes(t, indexer, a, b)
-		if got[0] != got[1] || len(entries) != 1 {
-			t.Fatalf("expected one shared index and entry, got %v and %d entries", got, len(entries))
-		}
-	})
-
 	t.Run("an unregistered variable is an error", func(t *testing.T) {
 		t.Parallel()
 		indexer, _ := register(t, def("a", types.String))
