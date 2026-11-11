@@ -2,6 +2,8 @@ package federation_test
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/cel-go/cel"
@@ -69,6 +71,30 @@ func TestPrecompileCEL(t *testing.T) {
 		})
 		if err == nil {
 			t.Fatal("expected error for cache index 0")
+		}
+	})
+
+	failing := func(e *cel.Env) (*cel.Env, error) { return nil, errors.New("option failed") }
+
+	t.Run("the base env cannot be created", func(t *testing.T) {
+		t.Parallel()
+		ctx := grpcfed.WithCELCacheMap(context.Background(), grpcfed.NewCELCacheMap())
+		err := grpcfed.PrecompileCEL(ctx, append([]cel.EnvOption{failing}, envOpts...), []*grpcfed.CELPrecompileEntry{
+			{Index: 1, Expr: `1`},
+		})
+		if err == nil || !strings.Contains(err.Error(), "option failed") {
+			t.Fatalf("expected the error of the option, got %v", err)
+		}
+	})
+
+	t.Run("the variables of an entry cannot be declared", func(t *testing.T) {
+		t.Parallel()
+		ctx := grpcfed.WithCELCacheMap(context.Background(), grpcfed.NewCELCacheMap())
+		err := grpcfed.PrecompileCEL(ctx, envOpts, []*grpcfed.CELPrecompileEntry{
+			{Index: 1, Expr: `1`, Variables: []cel.EnvOption{failing}},
+		})
+		if err == nil || !strings.Contains(err.Error(), "option failed") || !strings.Contains(err.Error(), `"1"`) {
+			t.Fatalf("expected the error of the option naming the expression, got %v", err)
 		}
 	})
 
