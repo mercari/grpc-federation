@@ -123,7 +123,7 @@ func newCELIndexer(file *resolver.File) (*celIndexer, error) {
 func (i *celIndexer) valueIndex(v *resolver.CELValue) (int, error) {
 	idx, exists := i.values[v]
 	if !exists {
-		return 0, fmt.Errorf("grpc-federation: CEL expression %q is not reachable from any service", v.Expr)
+		return 0, fmt.Errorf("grpc-federation: internal error: celWalker in generator/precompile.go did not visit the CEL expression %q, so it has no index; a new expression field must be added to it", v.Expr)
 	}
 	return idx, nil
 }
@@ -135,7 +135,7 @@ func (i *celIndexer) nameIndex(def *resolver.VariableDefinition) (int, error) {
 	}
 	idx, exists := i.names[nameKey(def)]
 	if !exists {
-		return 0, fmt.Errorf("grpc-federation: variable %q is not reachable from any service", def.Name)
+		return 0, fmt.Errorf("grpc-federation: internal error: celWalker in generator/precompile.go did not visit the variable %q, so it has no index; a new expression field must be added to it", def.Name)
 	}
 	return idx, nil
 }
@@ -297,10 +297,6 @@ func (w *celWalker) callExpr(expr *resolver.CallExpr) {
 	}
 	if expr.Retry != nil {
 		w.value(expr.Retry.If)
-	}
-	if expr.Option != nil {
-		w.def(expr.Option.Header)
-		w.def(expr.Option.Trailer)
 	}
 	w.value(expr.Metadata)
 	for _, grpcErr := range expr.Errors {

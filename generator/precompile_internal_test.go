@@ -101,7 +101,7 @@ func TestCELIndexerMissedExpression(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected generation to fail")
 		}
-		if !strings.Contains(err.Error(), "not reachable") || !strings.Contains(err.Error(), missed.Expr) {
+		if !strings.Contains(err.Error(), "did not visit") || !strings.Contains(err.Error(), missed.Expr) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
