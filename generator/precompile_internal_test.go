@@ -2,9 +2,16 @@ package generator
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/google/cel-go/cel"
+
+	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
 
 	"github.com/mercari/grpc-federation/internal/testutil"
 	"github.com/mercari/grpc-federation/resolver"
@@ -258,4 +265,155 @@ func TestCELIndexerNames(t *testing.T) {
 			t.Fatal("expected an error for a registered name with a different type")
 		}
 	})
+}
+
+// evalNativeType evaluates the Go expression that toCELNativeType renders into the CEL type it declares.
+func evalNativeType(t *testing.T, src string) *cel.Type {
+	t.Helper()
+
+	expr, err := parser.ParseExpr(src)
+	if err != nil {
+		t.Fatalf("failed to parse %q: %v", src, err)
+	}
+	var eval func(ast.Expr) *cel.Type
+	eval = func(e ast.Expr) *cel.Type {
+		switch e := e.(type) {
+		case *ast.SelectorExpr:
+			if pkg, ok := e.X.(*ast.Ident); !ok || pkg.Name != "grpcfed" {
+				t.Fatalf("unexpected selector in %q", src)
+			}
+			switch e.Sel.Name {
+			case "CELDoubleType":
+				return grpcfed.CELDoubleType
+			case "CELIntType":
+				return grpcfed.CELIntType
+			case "CELUintType":
+				return grpcfed.CELUintType
+			case "CELBoolType":
+				return grpcfed.CELBoolType
+			case "CELStringType":
+				return grpcfed.CELStringType
+			case "CELBytesType":
+				return grpcfed.CELBytesType
+			case "CELNullType":
+				return grpcfed.CELNullType
+			}
+		case *ast.CallExpr:
+			sel, ok := e.Fun.(*ast.SelectorExpr)
+			if !ok {
+				break
+			}
+			switch sel.Sel.Name {
+			case "CELListType", "NewCELListType":
+				return cel.ListType(eval(e.Args[0]))
+			case "NewCELMapType":
+				return cel.MapType(eval(e.Args[0]), eval(e.Args[1]))
+			case "CELObjectType", "NewCELObjectType":
+				name, err := strconv.Unquote(e.Args[0].(*ast.BasicLit).Value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return cel.ObjectType(name)
+			}
+		}
+		t.Fatalf("cannot evaluate %q", src)
+		return nil
+	}
+	return eval(expr)
+}
+
+func TestCELNativeType(t *testing.T) {
+	t.Parallel()
+
+	message := &resolver.Message{
+		Name: "Foo",
+		File: &resolver.File{Package: &resolver.Package{Name: "org.federation"}},
+	}
+	wellKnown := func(name string) *resolver.Message {
+		return &resolver.Message{
+			Name: name,
+			File: &resolver.File{Package: &resolver.Package{Name: "google.protobuf"}},
+		}
+	}
+	scalar := func(kind types.Kind) *resolver.Type { return &resolver.Type{Kind: kind} }
+	repeated := func(t *resolver.Type) *resolver.Type {
+		t = t.Clone()
+		t.Repeated = true
+		return t
+	}
+
+	// The variables a precompiled expression declares must be the types the lazy path declares,
+	// and both are what toCELNativeType renders. The compiler declares the same variables
+	// with resolver.ToCELType when it checks the expression.
+	for _, test := range []struct {
+		name string
+		typ  *resolver.Type
+		// differsFromCompiler is set for the types the runtime declares differently from the compiler,
+		// and want is then the type of the runtime.
+		differsFromCompiler bool
+		want                *cel.Type
+	}{
+		{name: "double", typ: scalar(types.Double)},
+		{name: "float", typ: scalar(types.Float)},
+		{name: "int32", typ: scalar(types.Int32)},
+		{name: "int64", typ: scalar(types.Int64)},
+		{name: "sint32", typ: scalar(types.Sint32)},
+		{name: "sint64", typ: scalar(types.Sint64)},
+		{name: "sfixed32", typ: scalar(types.Sfixed32)},
+		{name: "sfixed64", typ: scalar(types.Sfixed64)},
+		{name: "uint32", typ: scalar(types.Uint32)},
+		{name: "uint64", typ: scalar(types.Uint64)},
+		{name: "fixed32", typ: scalar(types.Fixed32)},
+		{name: "fixed64", typ: scalar(types.Fixed64)},
+		{name: "bool", typ: scalar(types.Bool)},
+		{name: "string", typ: scalar(types.String)},
+		{name: "bytes", typ: scalar(types.Bytes)},
+		{name: "message", typ: resolver.NewMessageType(message, false)},
+		{name: "repeated message", typ: resolver.NewMessageType(message, true)},
+		{name: "repeated string", typ: repeated(scalar(types.String))},
+		{name: "list of lists", typ: repeated(repeated(scalar(types.Int64)))},
+		// No example uses these, and CEL treats most of them specially.
+		{name: "duration", typ: resolver.NewMessageType(wellKnown("Duration"), false)},
+		{name: "timestamp", typ: resolver.NewMessageType(wellKnown("Timestamp"), false)},
+		{name: "any", typ: resolver.NewMessageType(wellKnown("Any"), false)},
+		{name: "wrapper", typ: resolver.NewMessageType(wellKnown("Int64Value"), false)},
+		{name: "repeated duration", typ: resolver.NewMessageType(wellKnown("Duration"), true)},
+		{name: "map", typ: resolver.NewMapType(scalar(types.String), scalar(types.Int64))},
+		{name: "map of messages", typ: resolver.NewMapType(scalar(types.String), resolver.NewMessageType(message, false))},
+		{name: "map of lists", typ: resolver.NewMapType(scalar(types.String), repeated(scalar(types.String)))},
+		{
+			// The compiler declares an enum as an opaque type named after it, and the runtime as an int.
+			name:                "enum",
+			typ:                 &resolver.Type{Kind: types.Enum, Enum: &resolver.Enum{Name: "E", File: message.File}},
+			differsFromCompiler: true,
+			want:                cel.IntType,
+		},
+		{
+			name:                "repeated enum",
+			typ:                 &resolver.Type{Kind: types.Enum, Repeated: true, Enum: &resolver.Enum{Name: "E", File: message.File}},
+			differsFromCompiler: true,
+			want:                cel.ListType(cel.IntType),
+		},
+		{
+			name:                "null",
+			typ:                 &resolver.Type{IsNull: true},
+			differsFromCompiler: false,
+			want:                cel.NullType,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			got := evalNativeType(t, toCELNativeType(test.typ))
+			want := resolver.ToCELType(test.typ)
+			if test.differsFromCompiler {
+				if got.IsExactType(want) {
+					t.Fatalf("%s no longer differs from the compiler; update the test", test.name)
+				}
+				want = test.want
+			}
+			if !got.IsExactType(want) {
+				t.Fatalf("the runtime declares %s but expected %s", got, want)
+			}
+		})
+	}
 }
