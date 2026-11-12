@@ -473,7 +473,7 @@ Also, there are settings for customizing error handling on method calls or logge
 
 ### Precompiling CEL expressions
 
-By default, each CEL expression is compiled the first time it is evaluated. Set `PrecompileCEL` to compile all of them while the service is being initialized instead.
+By default, each CEL expression is compiled the first time it is evaluated ("lazily"). Set `PrecompileCEL` in the service config to compile all of them while the service is being initialized instead.
 
 ```go
 federationServer, err := federation.NewFederationService(federation.FederationServiceConfig{
@@ -482,7 +482,7 @@ federationServer, err := federation.NewFederationService(federation.FederationSe
 })
 ```
 
-With `PrecompileCEL`, `NewFederationService` takes longer and returns an error if any expression fails to compile, rather than failing on the first request that uses it. See [_examples/25_cel_precompile](../_examples/25_cel_precompile) for a working sample.
+With `PrecompileCEL`, `NewFederationService` is slower to run, and returns an error if any expression fails to compile, rather than an error being returned for expression compilation during the execution of the first request that uses it. See [_examples/25_cel_precompile](../_examples/25_cel_precompile) for a working sample.
 
 ## 9. Other Examples
 

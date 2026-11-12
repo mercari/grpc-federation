@@ -7,10 +7,34 @@ import (
 	"github.com/mercari/grpc-federation/resolver"
 )
 
-// This file generates the table of CEL expressions that a service compiles ahead of the first request.
+// OVERVIEW OF CEL EXPRESSION PRECOMPILATION
+//
+// This file generates the table of CEL expressions that a service precompiles during its New...() initialization.
 // Every expression gets an index, the key of the program cache of the generated service,
-// by walking the service once. The templates look the index up instead of issuing it,
-// so an expression the walk does not reach fails the generation.
+// by walking the service once.
+//
+//  1. Compilation (the resolver). It type-checks every CEL expression against a celScope and stores the
+//     CELVariables used by the expression. The result is a *resolver.File AST.
+//  2. Per file: NewCodeGenerator().Generate(file) (generator.go:721) is called for each file in the result.
+//  3. loadTemplate(). It parses templates/*.tmpl. cacheIndex and nameCacheIndex are registered as placeholders
+//     that return an error, because the parser needs the names.
+//  4. NewFile(file). It wraps the AST in a generator File whose indexer field is nil.
+//  5. generateGoContent. It rebinds the two template functions to f.cacheIndex and f.nameCacheIndex,
+//     closures over this file.
+//  6. Template pass 1 (Execute): the indexer is created here. The first template call to cacheIndex,
+//     nameCacheIndex or Service.CELPrecompileEntries reaches f.celIndexer(), which finds f.indexer == nil and
+//     calls newCELIndexer(f.File). That does three things:
+//     - It walks each service with a celWalker: the service variables first, then the service's messages in
+//     full-name order.
+//     - It assigns every *resolver.CELValue an index (map keyed by pointer) and registers the name-keyed ones.
+//     - It builds each service's entry table in svcEntries.
+//     It then stores the result in f.indexer. If the walker misses an expression, or one is unresolved,
+//     this is where generation fails, and the error comes out of the template as
+//     "error calling cacheIndex: ...".
+//  7. Rest of pass 1. Every later call is a lookup in the stored indexer. This pass fills pkgMap for the
+//     imports, and its output is discarded.
+//  8. Template pass 2. It uses the same stored indexer, so the indexes are identical.
+//  9. Output the generated file.
 
 // CELPrecompileEntry is a CEL expression compiled by the generated precompileCEL method.
 type CELPrecompileEntry struct {
