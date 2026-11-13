@@ -10,12 +10,10 @@ import (
 // OVERVIEW OF CEL EXPRESSION PRECOMPILATION
 //
 // This file generates the table of CEL expressions that a service precompiles during its New...() initialization.
-// Every expression gets an index, the key of the program cache of the generated service,
-// by walking the service once.
 //
 //  1. Compilation (the resolver). It type-checks every CEL expression against a celScope and stores the
 //     CELVariables used by the expression. The result is a *resolver.File AST.
-//  2. Per file: NewCodeGenerator().Generate(file) (generator.go:721) is called for each file in the result.
+//  2. Per file: NewCodeGenerator().Generate(file) (generator.go) is called for each file in the result.
 //  3. loadTemplate(). It parses templates/*.tmpl. cacheIndex and nameCacheIndex are registered as placeholders
 //     that return an error, because the parser needs the names.
 //  4. NewFile(file). It wraps the AST in a generator File whose indexer field is nil.
@@ -26,7 +24,9 @@ import (
 //     calls newCELIndexer(f.File). That does three things:
 //     - It walks each service with a celWalker: the service variables first, then the service's messages in
 //     full-name order.
-//     - It assigns every *resolver.CELValue an index (map keyed by pointer) and registers the name-keyed ones.
+//     - It assigns every expression an index (the key of celCacheMap in grpc/federation/cel.go).
+//       How an expression is looked up depends on how the AST specifies it:
+//       a *resolver.CELValue by pointer, an error detail message (name only) by its name.
 //     - It builds each service's entry table in svcEntries.
 //     It then stores the result in f.indexer. If the walker misses an expression, or one is unresolved,
 //     this is where generation fails, and the error comes out of the template as

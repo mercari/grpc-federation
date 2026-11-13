@@ -13,7 +13,6 @@ import (
 	exprv1 "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 
 	grpcfed "github.com/mercari/grpc-federation/grpc/federation"
-
 	"github.com/mercari/grpc-federation/internal/testutil"
 	"github.com/mercari/grpc-federation/resolver"
 	"github.com/mercari/grpc-federation/types"
@@ -164,6 +163,7 @@ func TestCELIndexerUnresolvedExpression(t *testing.T) {
 	}
 	if unresolved == nil {
 		t.Fatal("no expression was indexed")
+		return
 	}
 	unresolved.CheckedExpr = nil
 

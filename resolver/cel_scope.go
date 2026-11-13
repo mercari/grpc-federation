@@ -35,7 +35,7 @@ func (s *celScope) extend(name string, typ *Type) (*celScope, error) {
 
 // extendEnv adds the options to a new scope without recording the variables declared by them.
 // It is for the variables that the runtime declares in every env regardless of the scope
-// (like "error"), so a precompiled expression must not declare them again.
+// (like "error").
 func (s *celScope) extendEnv(opts ...cel.EnvOption) (*celScope, error) {
 	env, err := s.env.Extend(opts...)
 	if err != nil {
@@ -49,7 +49,8 @@ func (s *celScope) extendEnv(opts ...cel.EnvOption) (*celScope, error) {
 //
 // A CELValue gets only these, not all the variables of the scope. The scope grows with every definition above
 // the expression, so keeping all of them on every CELValue would make the lists quadratic in the number of pointers
-// for a message with many definitions, and a precompiled expression only has to declare the variables it references.
+// for a message with many definitions. The only use of the list is the generator's CEL expression precompilation,
+// which only needs the variables that the expression references to be declared, not all that are in scope.
 //
 // The reference map can contain names that are not variables, such as comprehension variables.
 // That is harmless because they are only used to select from the variables of the scope.

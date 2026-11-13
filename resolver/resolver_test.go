@@ -4811,6 +4811,7 @@ func TestCELValueVariables(t *testing.T) {
 		t.Helper()
 		if v == nil {
 			t.Fatal("expression not found")
+			return ""
 		}
 		ret := make([]string, 0, len(v.Variables))
 		for _, variable := range v.Variables {
@@ -4822,6 +4823,7 @@ func TestCELValueVariables(t *testing.T) {
 		t.Helper()
 		if v == nil {
 			t.Fatalf("expression %q not found", wantExpr)
+			return
 		}
 		if v.Expr != wantExpr {
 			t.Fatalf("expected expression %q but got %q", wantExpr, v.Expr)
@@ -4848,6 +4850,7 @@ func TestCELValueVariables(t *testing.T) {
 	}
 	if response == nil {
 		t.Fatal("GetResponse not found")
+		return
 	}
 	defs := response.Rule.DefSet.Definitions()
 
@@ -4875,7 +4878,7 @@ func TestCELValueVariables(t *testing.T) {
 			case "ys":
 				check(t, field.Rule.Value.CEL, `ys`, "ys")
 			case "last":
-				// x and xs are not neighbours in the declaration order.
+				// x and xs are not neighbors in the declaration order.
 				check(t, field.Rule.Value.CEL, `x + xs[0]`, "x,xs")
 			}
 		}
