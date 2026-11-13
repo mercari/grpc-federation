@@ -87,6 +87,9 @@ type OtherServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // OtherServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -196,6 +199,11 @@ func NewOtherService(cfg OtherServiceConfig) (*OtherService, error) {
 		tracer:          tracer,
 		resolver:        cfg.Resolver,
 		client:          &OtherServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
@@ -907,4 +915,29 @@ func (s *OtherService) logvalue_Federation_UserArgument(v *OtherService_Federati
 		slog.String("id", v.Id),
 		slog.String("name", v.Name),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by OtherService ahead of the first request.
+func (s *OtherService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `'foo'`},
+		{Index: 2, Expr: `'bar'`},
+		{Index: 3, Expr: `favorite.FavoriteType.value('TYPE1')`},
+		{Index: 4, Expr: `favorite_value == favorite.FavoriteType.TYPE1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`favorite_value`, grpcfed.CELIntType)}},
+		{Index: 5, Expr: `favorite_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`favorite_value`, grpcfed.CELIntType)}},
+		{Index: 6, Expr: `'post-id'`},
+		{Index: 7, Expr: `'title'`},
+		{Index: 8, Expr: `'content'`},
+		{Index: 9, Expr: `u`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`u`, grpcfed.CELObjectType("federation.User"))}},
+		{Index: 10, Expr: `reaction`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`reaction`, grpcfed.CELObjectType("federation.Reaction"))}},
+		{Index: 11, Expr: `favorite_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`favorite_value`, grpcfed.CELIntType)}},
+		{Index: 12, Expr: `cmp`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType)}},
+		{Index: 13, Expr: `$.v == favorite.FavoriteType.TYPE1`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.ReactionArgument"))}},
+		{Index: 14, Expr: `favorite.FavoriteType.value('TYPE1')`},
+		{Index: 15, Expr: `favorite.FavoriteType.name(favorite.FavoriteType.value('TYPE1'))`},
+		{Index: 16, Expr: `cmp`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`cmp`, grpcfed.CELBoolType)}},
+		{Index: 17, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}},
+		{Index: 18, Expr: `$.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.UserArgument"))}},
+	})
 }

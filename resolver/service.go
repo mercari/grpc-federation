@@ -187,6 +187,9 @@ func (sv *ServiceVariable) MessageExprs() []*MessageExpr {
 	return nil
 }
 
+// ToVariableDefinition converts the service variable to a variable definition.
+// The CELValues of the service variable are shared with the definition, not copied.
+// The code generator indexes the CELValues by pointer, so it finds the ones of the definition by the same pointers.
 func (sv *ServiceVariable) ToVariableDefinition() *VariableDefinition {
 	def := &VariableDefinition{
 		Name: sv.Name,
