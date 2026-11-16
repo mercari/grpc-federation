@@ -44,7 +44,7 @@ func TestCodeGenerate(t *testing.T) {
 		"ref_env",
 		"switch",
 		"optional",
-    "multi_service",
+		"multi_service",
 		"alias_optional",
 	}
 	for _, test := range tests {
