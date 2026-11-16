@@ -26,6 +26,7 @@ if from == nil {
 	return nil, nil
 }
 {{- range .Fields }}
+{{- if not .HasPresence }}
 {{- $fieldName := toLocalVariable .ToFieldName }}
 {{- if .RequiredCast }}
 {{ $fieldName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
@@ -36,11 +37,34 @@ if err != nil {
 {{ $fieldName }} := from.Get{{ .FromFieldName }}()
 {{- end }}
 {{- end }}
+{{- end }}
 ret := &{{ .Name }}{
 	{{- range .Fields }}
+	{{- if not .HasPresence }}
+	{{- if .NeedsPointerWrap }}
+	{{ .ToFieldName }}: &{{ toLocalVariable .ToFieldName }},
+	{{- else }}
 	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
 	{{- end }}
+	{{- end }}
+	{{- end }}
 }
+{{- range .Fields }}
+{{- if .HasPresence }}
+{{- $fieldName := toLocalVariable .ToFieldName }}
+if from.{{ .FromFieldName }} != nil {
+	{{- if .RequiredCast }}
+	{{ $fieldName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
+	if err != nil {
+		return nil, err
+	}
+	{{- else }}
+	{{ $fieldName }} := from.Get{{ .FromFieldName }}()
+	{{- end }}
+	ret.{{ .ToFieldName }} = &{{ $fieldName }}
+}
+{{- end }}
+{{- end }}
 
 
 {{ $oneofs := .Oneofs }}

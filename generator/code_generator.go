@@ -2262,6 +2262,11 @@ type CastStructField struct {
 	FromFieldName string
 	CastName      string
 	RequiredCast  bool
+	// NeedsPointerWrap is true if the destination field is proto3 optional and is represented as a pointer in Go.
+	NeedsPointerWrap bool
+	// HasPresence is true if the source field is also proto3 optional.
+	// In this case, the destination is set only if the source field is set.
+	HasPresence bool
 }
 
 func (f *CastField) ToStruct() *CastStruct {
@@ -2332,6 +2337,9 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 				FromFieldName: util.ToPublicGoVariable(fromField.Name),
 				RequiredCast:  requiredCast,
 				CastName:      castFuncName(fromType, toType),
+
+				NeedsPointerWrap: toField.ProtoNeedsPointerWrap(),
+				HasPresence:      toField.ProtoNeedsPointerWrap() && fromField.ProtoNeedsPointerWrap(),
 			}
 		}
 	}
@@ -2348,6 +2356,9 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 		FromFieldName: util.ToPublicGoVariable(fromField.Name),
 		RequiredCast:  requiredCast,
 		CastName:      castFuncName(fromType, toType),
+
+		NeedsPointerWrap: toField.ProtoNeedsPointerWrap(),
+		HasPresence:      toField.ProtoNeedsPointerWrap() && fromField.ProtoNeedsPointerWrap(),
 	}
 }
 
