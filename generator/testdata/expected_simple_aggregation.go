@@ -123,6 +123,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -282,6 +285,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 			Org_Post_PostServiceClient: Org_Post_PostServiceClient,
 			Org_User_UserServiceClient: Org_User_UserServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if resolver, ok := cfg.Resolver.(grpcfed.CustomResolverInitializer); ok {
 		ctx := context.Background()
@@ -1859,4 +1867,39 @@ func (s *FederationService) logvalue_repeated_Org_Federation_Item(v []*Item) slo
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetPostResponseArgument"))}},
+		{Index: 2, Expr: `grpc.federation.uuid.newRandom()`},
+		{Index: 3, Expr: `{1:'a', 2:'b', 3:'c'}`},
+		{Index: 4, Expr: `org.user.Item.ItemType.value('ITEM_TYPE_2')`},
+		{Index: 5, Expr: `100`},
+		{Index: 6, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.federation.Post"))}},
+		{Index: 7, Expr: `'foo'`},
+		{Index: 8, Expr: `uuid.string()`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`uuid`, grpcfed.CELObjectType("grpc.federation.uuid.UUID"))}},
+		{Index: 9, Expr: `org.federation.Item.ItemType.name(org.federation.Item.ItemType.ITEM_TYPE_1)`},
+		{Index: 10, Expr: `org.federation.Item.ItemType.value('ITEM_TYPE_1')`},
+		{Index: 11, Expr: `map_value`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`map_value`, grpcfed.NewCELMapType(grpcfed.CELIntType, grpcfed.CELStringType))}},
+		{Index: 12, Expr: `e`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 13, Expr: `Item.ItemType.attr(e, 'en')`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELIntType)}},
+		{Index: 14, Expr: `id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`id`, grpcfed.CELIntType)}},
+		{Index: 15, Expr: `'foo'`},
+		{Index: 16, Expr: `1`},
+		{Index: 17, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.PostArgument"))}},
+		{Index: 18, Expr: `true`},
+		{Index: 19, Expr: `res.post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.post.GetPostResponse"))}},
+		{Index: 20, Expr: `post`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`post`, grpcfed.CELObjectType("org.post.Post"))}},
+		{Index: 21, Expr: `10`},
+		{Index: 22, Expr: `1`},
+		{Index: 23, Expr: `user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`user`, grpcfed.CELObjectType("org.federation.User"))}},
+		{Index: 24, Expr: `$.user_id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.UserArgument"))}},
+		{Index: 25, Expr: `error.code != google.rpc.Code.UNIMPLEMENTED`},
+		{Index: 26, Expr: `res.user`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("org.user.GetUserResponse"))}},
+		{Index: 27, Expr: `uint(2)`},
+		{Index: 28, Expr: `org.user.Item.ItemType.value('ITEM_TYPE_2')`},
+	})
 }

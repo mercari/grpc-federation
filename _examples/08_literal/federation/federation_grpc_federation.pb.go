@@ -48,6 +48,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -154,6 +157,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Content_ContentServiceClient: Content_ContentServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -1275,4 +1283,49 @@ func (s *FederationService) logvalue_repeated_Org_Federation_ContentType(v []Con
 		})
 	}
 	return slog.GroupValue(attrs...)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}},
+		{Index: 2, Expr: `1.23`},
+		{Index: 3, Expr: `[4.56, 7.89]`},
+		{Index: 4, Expr: `4.56`},
+		{Index: 5, Expr: `[7.89, 1.23]`},
+		{Index: 6, Expr: `-1`},
+		{Index: 7, Expr: `[-2, -3]`},
+		{Index: 8, Expr: `-4`},
+		{Index: 9, Expr: `[-5, -6]`},
+		{Index: 10, Expr: `1u`},
+		{Index: 11, Expr: `[2u, 3u]`},
+		{Index: 12, Expr: `4u`},
+		{Index: 13, Expr: `[5u, 6u]`},
+		{Index: 14, Expr: `-7`},
+		{Index: 15, Expr: `[-8, -9]`},
+		{Index: 16, Expr: `-10`},
+		{Index: 17, Expr: `[-11, -12]`},
+		{Index: 18, Expr: `10u`},
+		{Index: 19, Expr: `[11u, 12u]`},
+		{Index: 20, Expr: `13u`},
+		{Index: 21, Expr: `[14u, 15u]`},
+		{Index: 22, Expr: `-14`},
+		{Index: 23, Expr: `[-15, -16]`},
+		{Index: 24, Expr: `-17`},
+		{Index: 25, Expr: `[-18, -19]`},
+		{Index: 26, Expr: `true`},
+		{Index: 27, Expr: `[true, false]`},
+		{Index: 28, Expr: `'foo'`},
+		{Index: 29, Expr: `['hello', 'world']`},
+		{Index: 30, Expr: `b'foo'`},
+		{Index: 31, Expr: `[b'foo', b'bar']`},
+		{Index: 32, Expr: `content.ContentType.CONTENT_TYPE_1`},
+		{Index: 33, Expr: `[content.ContentType.CONTENT_TYPE_2, content.ContentType.CONTENT_TYPE_3]`},
+		{Index: 34, Expr: `content.Content{double_field: 1.23, doubles_field: [4.56, 7.89]}`},
+		{Index: 35, Expr: `[content.Content{}, content.Content{}]`},
+		{Index: 36, Expr: `res.content`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("content.GetContentResponse"))}},
+		{Index: 37, Expr: `content`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`content`, grpcfed.CELObjectType("content.Content"))}},
+		{Index: 38, Expr: `content.int32_field + content.sint32_field`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`content`, grpcfed.CELObjectType("content.Content"))}},
+	})
 }

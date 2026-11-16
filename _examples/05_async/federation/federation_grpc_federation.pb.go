@@ -168,6 +168,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -279,6 +282,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		celCacheMap:     grpcfed.NewCELCacheMap(),
 		tracer:          tracer,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -1744,4 +1752,35 @@ func (s *FederationService) logvalue_Org_Federation_JArgument(v *FederationServi
 	return slog.GroupValue(
 		slog.String("i", v.I),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `'a'`},
+		{Index: 2, Expr: `'aa'`},
+		{Index: 3, Expr: `'ab'`},
+		{Index: 4, Expr: `'b'`},
+		{Index: 5, Expr: `'c'`},
+		{Index: 6, Expr: `'d'`},
+		{Index: 7, Expr: `'e'`},
+		{Index: 8, Expr: `'f'`},
+		{Index: 9, Expr: `'g'`},
+		{Index: 10, Expr: `a.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`a`, grpcfed.CELObjectType("org.federation.A"))}},
+		{Index: 11, Expr: `b.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`b`, grpcfed.CELObjectType("org.federation.B"))}},
+		{Index: 12, Expr: `c.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`c`, grpcfed.CELObjectType("org.federation.C"))}},
+		{Index: 13, Expr: `d.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`d`, grpcfed.CELObjectType("org.federation.D"))}},
+		{Index: 14, Expr: `c.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`c`, grpcfed.CELObjectType("org.federation.C"))}},
+		{Index: 15, Expr: `d.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`d`, grpcfed.CELObjectType("org.federation.D"))}},
+		{Index: 16, Expr: `e.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`e`, grpcfed.CELObjectType("org.federation.E"))}},
+		{Index: 17, Expr: `f.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`f`, grpcfed.CELObjectType("org.federation.F"))}},
+		{Index: 18, Expr: `g.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`g`, grpcfed.CELObjectType("org.federation.G"))}},
+		{Index: 19, Expr: `i.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`i`, grpcfed.CELObjectType("org.federation.I"))}},
+		{Index: 20, Expr: `h.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`h`, grpcfed.CELObjectType("org.federation.H"))}},
+		{Index: 21, Expr: `j.name`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`j`, grpcfed.CELObjectType("org.federation.J"))}},
+		{Index: 22, Expr: `'h'`},
+		{Index: 23, Expr: `'i'`},
+		{Index: 24, Expr: `'j'`},
+	})
 }

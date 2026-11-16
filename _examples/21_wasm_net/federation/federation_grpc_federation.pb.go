@@ -50,6 +50,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -207,6 +210,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		tracer:          tracer,
 		celPlugins:      celPlugins,
 		client:          &FederationServiceDependentClientSet{},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -483,4 +491,19 @@ func (s *FederationService) logvalue_Org_Federation_GetResponseArgument(v *Feder
 		slog.String("url", v.Url),
 		slog.String("path", v.Path),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `example.net.httpGet($.url)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}},
+		{Index: 2, Expr: `example.net.getFooEnv()`},
+		{Index: 3, Expr: `example.net.getGOGCEnv()`},
+		{Index: 4, Expr: `example.net.getFileContent($.path)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.org.federation.GetResponseArgument"))}},
+		{Index: 5, Expr: `body`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`body`, grpcfed.CELStringType)}},
+		{Index: 6, Expr: `foo`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`foo`, grpcfed.CELStringType)}},
+		{Index: 7, Expr: `file`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`file`, grpcfed.CELStringType)}},
+		{Index: 8, Expr: `gogc`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`gogc`, grpcfed.CELStringType)}},
+	})
 }
