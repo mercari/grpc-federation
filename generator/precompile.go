@@ -145,6 +145,9 @@ func newCELIndexer(file *resolver.File) (*celIndexer, error) {
 }
 
 func (i *celIndexer) valueIndex(v *resolver.CELValue) (int, error) {
+	if v == nil {
+		return 0, fmt.Errorf("grpc-federation: internal error: a template asked for the index of a CEL expression that does not exist")
+	}
 	idx, exists := i.values[v]
 	if !exists {
 		return 0, fmt.Errorf("grpc-federation: internal error: celWalker in generator/precompile.go did not visit the CEL expression %q, so it has no index; a new expression field must be added to it", v.Expr)

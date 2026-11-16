@@ -310,8 +310,8 @@ func NewDefaultEnvOptions(celHelper *CELTypeHelper) []cel.EnvOption {
 	return opts
 }
 
-// CELCache used to speed up CEL evaluation from the second time onward.
-// cel.Program cannot be reused to evaluate contextual libraries or plugins, so cel.Ast is reused to speed up the process.
+// CELCache holds the compiled program of a CEL expression, so that the expression is compiled once
+// and the program is reused from the second evaluation onward.
 type CELCache struct {
 	program cel.Program // cache for simple expressions.
 }

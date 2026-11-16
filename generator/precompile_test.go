@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,14 +28,24 @@ func assertPrecompileCoversCacheIndexes(t *testing.T, generated string) {
 
 // precompileProblems parses the generated Go code and returns what is wrong with the precompile tables.
 // A service is identified by the receiver of the methods, and its table is its precompileCEL method.
+//
+// An index is used by a composite literal that also holds the text of the expression, in a key named after the
+// index key: ByCacheIndex goes with By, IfCacheIndex with If. CacheIndex goes with whichever of expressionKeys
+// the literal has. The text must be the one of the table entry with that index.
 func precompileProblems(generated string) ([]string, error) {
 	file, err := parser.ParseFile(token.NewFileSet(), "", generated, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse the generated code: %w", err)
 	}
 
-	used := map[string]map[int]struct{}{}
-	entries := map[string]map[int]int{} // service -> index -> number of entries
+	type use struct {
+		key   string
+		index int
+		expr  string
+		found bool // whether the literal has the text of the expression
+	}
+	used := map[string][]use{}
+	entries := map[string]map[int][]string{} // service -> index -> expressions of the entries
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Body == nil {
@@ -42,29 +53,43 @@ func precompileProblems(generated string) ([]string, error) {
 		}
 		service := receiverName(fn)
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			kv, ok := n.(*ast.KeyValueExpr)
+			lit, ok := n.(*ast.CompositeLit)
 			if !ok {
 				return true
 			}
-			key, ok := kv.Key.(*ast.Ident)
-			if !ok {
-				return true
+			fields := map[string]ast.Expr{}
+			for _, elt := range lit.Elts {
+				kv, ok := elt.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				if key, ok := kv.Key.(*ast.Ident); ok {
+					fields[key.Name] = kv.Value
+				}
 			}
-			index, ok := intLiteral(kv.Value)
-			if !ok {
-				return true
-			}
-			switch {
-			case fn.Name.Name == "precompileCEL" && key.Name == "Index":
+			if index, ok := intLiteral(fields["Index"]); ok && fn.Name.Name == "precompileCEL" {
 				if entries[service] == nil {
-					entries[service] = map[int]int{}
+					entries[service] = map[int][]string{}
 				}
-				entries[service][index]++
-			case strings.HasSuffix(key.Name, "CacheIndex"):
-				if used[service] == nil {
-					used[service] = map[int]struct{}{}
+				expr, _ := stringLiteral(fields["Expr"])
+				entries[service][index] = append(entries[service][index], expr)
+			}
+			for _, key := range sortedKeys(fields) {
+				if !strings.HasSuffix(key, "CacheIndex") {
+					continue
 				}
-				used[service][index] = struct{}{}
+				index, ok := intLiteral(fields[key])
+				if !ok {
+					continue
+				}
+				u := use{key: key, index: index}
+				for _, textKey := range textKeys(key, fields) {
+					if expr, ok := stringLiteral(fields[textKey]); ok {
+						u.expr, u.found = expr, true
+						break
+					}
+				}
+				used[service] = append(used[service], u)
 			}
 			return true
 		})
@@ -72,21 +97,46 @@ func precompileProblems(generated string) ([]string, error) {
 
 	var problems []string
 	for _, service := range sortedKeys(used) {
-		for _, index := range sortedIndexes(used[service]) {
-			if entries[service][index] == 0 {
-				problems = append(problems, fmt.Sprintf("%s: cache index %d is used but is not precompiled", serviceLabel(service), index))
+		for _, u := range used[service] {
+			exprs := entries[service][u.index]
+			switch {
+			case len(exprs) == 0:
+				problems = append(problems, fmt.Sprintf("%s: cache index %d is used but is not precompiled", serviceLabel(service), u.index))
+			case !u.found:
+				problems = append(problems, fmt.Sprintf("%s: %s %d has no expression text next to it", serviceLabel(service), u.key, u.index))
+			case !slices.Contains(exprs, u.expr):
+				problems = append(problems, fmt.Sprintf("%s: cache index %d is used by %q but is precompiled as %q", serviceLabel(service), u.index, u.expr, exprs))
 			}
 		}
 	}
 	for _, service := range sortedKeys(entries) {
-		for index, count := range entries[service] {
-			if count > 1 {
-				problems = append(problems, fmt.Sprintf("%s: cache index %d has %d precompile entries", serviceLabel(service), index, count))
+		for index, exprs := range entries[service] {
+			if len(exprs) > 1 {
+				problems = append(problems, fmt.Sprintf("%s: cache index %d has %d precompile entries", serviceLabel(service), index, len(exprs)))
 			}
 		}
 	}
 	sort.Strings(problems)
 	return problems, nil
+}
+
+// expressionKeys are the keys that hold the text of the expression next to a plain CacheIndex.
+// MessageValueName is the name of the variable that error detail messages are evaluated by.
+var expressionKeys = []string{"Expr", "If", "Message", "MessageValueName"}
+
+// textKeys returns the keys that can hold the text of the expression that an index key refers to.
+func textKeys(indexKey string, fields map[string]ast.Expr) []string {
+	prefix := strings.TrimSuffix(indexKey, "CacheIndex")
+	if prefix != "" {
+		return []string{prefix}
+	}
+	var keys []string
+	for _, key := range expressionKeys {
+		if _, ok := fields[key]; ok {
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
 
 func receiverName(fn *ast.FuncDecl) string {
@@ -101,6 +151,18 @@ func receiverName(fn *ast.FuncDecl) string {
 		return ident.Name
 	}
 	return ""
+}
+
+func stringLiteral(expr ast.Expr) (string, bool) {
+	lit, ok := expr.(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		return "", false
+	}
+	v, err := strconv.Unquote(lit.Value)
+	if err != nil {
+		return "", false
+	}
+	return v, true
 }
 
 func intLiteral(expr ast.Expr) (int, bool) {
@@ -131,15 +193,6 @@ func sortedKeys[V any](m map[string]V) []string {
 	return keys
 }
 
-func sortedIndexes(m map[int]struct{}) []int {
-	keys := make([]int, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
-	return keys
-}
-
 func TestPrecompileProblems(t *testing.T) {
 	t.Parallel()
 
@@ -153,7 +206,7 @@ func TestPrecompileProblems(t *testing.T) {
 			name: "every used index has an entry",
 			src: header + `
 func (s *A) resolve(ctx context.Context) {
-	_ = p{CacheIndex: 1, ByCacheIndex: 2}
+	_ = p{Expr: "a", CacheIndex: 1, By: "b", ByCacheIndex: 2}
 }
 func (s *A) precompileCEL(ctx context.Context) error {
 	_ = []e{{Index: 1, Expr: "a"}, {Index: 2, Expr: "b"}}
@@ -165,7 +218,9 @@ func (s *A) precompileCEL(ctx context.Context) error {
 			src: header + `
 func (s *A) resolve(ctx context.Context) {
 	_ = p{
+		Expr:           "a",
 		CacheIndex:     1,
+		Type:           "t",
 		TypeCacheIndex: 2,
 	}
 }
@@ -179,7 +234,7 @@ func (s *A) precompileCEL(ctx context.Context) error {
 			name: "an index that only another service has an entry for is missing",
 			src: header + `
 func (s *A) resolve(ctx context.Context) {
-	_ = p{CacheIndex: 1}
+	_ = p{Expr: "a", CacheIndex: 1}
 }
 func (s *A) precompileCEL(ctx context.Context) error {
 	_ = []e{{Index: 5, Expr: "a"}}
@@ -195,7 +250,7 @@ func (s *B) precompileCEL(ctx context.Context) error {
 			name: "a duplicated entry",
 			src: header + `
 func (s *A) resolve(ctx context.Context) {
-	_ = p{CacheIndex: 1}
+	_ = p{Expr: "a", CacheIndex: 1}
 }
 func (s *A) precompileCEL(ctx context.Context) error {
 	_ = []e{{Index: 1, Expr: "a"}, {Index: 1, Expr: "b"}}
@@ -207,7 +262,7 @@ func (s *A) precompileCEL(ctx context.Context) error {
 			name: "an index used outside of a service",
 			src: header + `
 func helper() {
-	_ = p{CacheIndex: 3}
+	_ = p{Expr: "a", CacheIndex: 3}
 }
 func (s *A) precompileCEL(ctx context.Context) error {
 	_ = []e{{Index: 3, Expr: "a"}}
@@ -222,6 +277,67 @@ func (s *A) resolve(ctx context.Context) {
 	_ = p{MessageIndex: 7, Index: 8}
 }
 func (s *A) precompileCEL(ctx context.Context) error {
+	return nil
+}`,
+		},
+		{
+			name: "an index used for another expression than the entry has",
+			src: header + `
+func (s *A) resolve(ctx context.Context) {
+	_ = p{Expr: "b", CacheIndex: 1}
+}
+func (s *A) precompileCEL(ctx context.Context) error {
+	_ = []e{{Index: 1, Expr: "a"}}
+	return nil
+}`,
+			want: []string{`A: cache index 1 is used by "b" but is precompiled as ["a"]`},
+		},
+		{
+			name: "the text of each index key is the key it is named after",
+			src: header + `
+func (s *A) resolve(ctx context.Context) {
+	_ = p{Expr: "x", If: "a", IfCacheIndex: 1, By: "b", ByCacheIndex: 2}
+}
+func (s *A) precompileCEL(ctx context.Context) error {
+	_ = []e{{Index: 1, Expr: "a"}, {Index: 2, Expr: "a"}}
+	return nil
+}`,
+			want: []string{`A: cache index 2 is used by "b" but is precompiled as ["a"]`},
+		},
+		{
+			name: "the expression of a plain index can be in any of the expression keys",
+			src: header + `
+func (s *A) resolve(ctx context.Context) {
+	_ = p{If: "a", CacheIndex: 1}
+	_ = p{Message: "b", Locale: "en", CacheIndex: 2}
+	_ = p{MessageValueName: "c", CacheIndex: 3}
+}
+func (s *A) precompileCEL(ctx context.Context) error {
+	_ = []e{{Index: 1, Expr: "a"}, {Index: 2, Expr: "b"}, {Index: 3, Expr: "c"}}
+	return nil
+}`,
+		},
+		{
+			name: "an index without the text of the expression",
+			src: header + `
+func (s *A) resolve(ctx context.Context) {
+	_ = p{CacheIndex: 1}
+	_ = p{ByCacheIndex: 1, Expr: "a"}
+}
+func (s *A) precompileCEL(ctx context.Context) error {
+	_ = []e{{Index: 1, Expr: "a"}}
+	return nil
+}`,
+			want: []string{"A: ByCacheIndex 1 has no expression text next to it", "A: CacheIndex 1 has no expression text next to it"},
+		},
+		{
+			name: "raw and quoted strings are compared by value",
+			src: header + `
+func (s *A) resolve(ctx context.Context) {
+	_ = p{Expr: ` + "`a\\nb`" + `, CacheIndex: 1}
+}
+func (s *A) precompileCEL(ctx context.Context) error {
+	_ = []e{{Index: 1, Expr: ` + "`a\\nb`" + `}}
 	return nil
 }`,
 		},

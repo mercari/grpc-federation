@@ -512,6 +512,16 @@ func TestCELIndexerErrorsAreReturned(t *testing.T) {
 	}
 }
 
+func TestCacheIndexOfMissingExpression(t *testing.T) {
+	t.Parallel()
+
+	var missing *resolver.CELValue
+	_, err := NewFile(&resolver.File{}).cacheIndex(missing)
+	if err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func TestNameCacheIndexArguments(t *testing.T) {
 	t.Parallel()
 
