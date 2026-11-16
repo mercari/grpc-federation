@@ -96,8 +96,8 @@ message PostContent {
     CATEGORY_C = 2 [(grpc.federation.enum_value).noalias = true];
   };
 
-  Category category = 1;
-  string head = 2;
+  optional Category category = 1;
+  optional string head = 2;
   string body = 3;
   string dup_body = 4 [(grpc.federation.field).alias = "body"];
   map<int32, int32> counts = 5;

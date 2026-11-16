@@ -554,7 +554,6 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 	if err != nil {
 		return nil, err
 	}
-	headValue := from.GetHead()
 	bodyValue := from.GetBody()
 	dupBodyValue := from.GetBody()
 	countsValue := from.GetCounts()
@@ -563,12 +562,15 @@ func (s *FederationService) cast_Org_Post_PostContent__to__Org_Federation_PostCo
 		return nil, err
 	}
 	ret := &PostContent{
-		Category:   categoryValue,
-		Head:       headValue,
+		Category:   &categoryValue,
 		Body:       bodyValue,
 		DupBody:    dupBodyValue,
 		Counts:     countsValue,
 		CastCounts: castCountsValue,
+	}
+	if from.Head != nil {
+		headValue := from.GetHead()
+		ret.Head = &headValue
 	}
 
 	return ret, nil
