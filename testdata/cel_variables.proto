@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package org.federation;
+
+import "grpc/federation/federation.proto";
+
+option go_package = "example/federation;federation";
+
+service FederationService {
+  option (grpc.federation.service) = {
+    var { name: "a" by: "'a'" }
+    var { name: "b" by: "'b'" }
+    var { name: "c" by: "b + 'c'" }
+  };
+  rpc Get(GetRequest) returns (GetResponse) {};
+}
+
+message GetRequest {
+  string id = 1;
+}
+
+message GetResponse {
+  option (grpc.federation.message) = {
+    def { name: "x" by: "$.id" }
+    def { name: "y" by: "x + '1'" }
+    def { name: "xs" by: "[x, y]" }
+    def {
+      name: "ys"
+      map {
+        iterator { name: "it" src: "xs" }
+        by: "it + y"
+      }
+    }
+  };
+  repeated string ys = 1 [(grpc.federation.field).by = "ys"];
+  string last = 2 [(grpc.federation.field).by = "x + xs[0]"];
+}

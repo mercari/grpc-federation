@@ -44,6 +44,7 @@ func TestCodeGenerate(t *testing.T) {
 		"ref_env",
 		"switch",
 		"optional",
+    "multi_service",
 		"alias_optional",
 	}
 	for _, test := range tests {
@@ -87,6 +88,7 @@ func TestCodeGenerate(t *testing.T) {
 			if diff := cmp.Diff(string(out), string(data)); diff != "" {
 				t.Errorf("(-got, +want)\n%s", diff)
 			}
+			assertPrecompileCoversCacheIndexes(t, string(out))
 			for _, importFile := range result.Files[0].ImportFiles {
 				if strings.HasPrefix(importFile.Name, "google/protobuf") || strings.HasPrefix(importFile.Name, "grpc/federation") {
 					continue

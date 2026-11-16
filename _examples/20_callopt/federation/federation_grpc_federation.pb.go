@@ -52,6 +52,9 @@ type FederationServiceConfig struct {
 	ErrorHandler grpcfed.ErrorHandler
 	// Logger sets the logger used to output Debug/Info/Error information.
 	Logger *slog.Logger
+	// PrecompileCEL compiles all CEL expressions during initialization instead of lazily on first use.
+	// Initialization takes longer and fails if any expression cannot be compiled.
+	PrecompileCEL bool
 }
 
 // FederationServiceClientFactory provides a factory that creates the gRPC Client needed to invoke methods of the gRPC Service on which the Federation Service depends.
@@ -156,6 +159,11 @@ func NewFederationService(cfg FederationServiceConfig) (*FederationService, erro
 		client: &FederationServiceDependentClientSet{
 			Post_PostServiceClient: Post_PostServiceClient,
 		},
+	}
+	if cfg.PrecompileCEL {
+		if err := svc.precompileCEL(ctx); err != nil {
+			return nil, err
+		}
 	}
 	return svc, nil
 }
@@ -701,4 +709,24 @@ func (s *FederationService) logvalue_Post_GetPostRequest(v *post.GetPostRequest)
 	return slog.GroupValue(
 		slog.String("id", v.GetId()),
 	)
+}
+
+// precompileCEL compiles every CEL expression used by FederationService ahead of the first request.
+func (s *FederationService) precompileCEL(ctx context.Context) error {
+	ctx = grpcfed.WithCELCacheMap(ctx, s.celCacheMap)
+	return grpcfed.PrecompileCEL(ctx, s.celEnvOpts, []*grpcfed.CELPrecompileEntry{
+		{Index: 1, Expr: `grpc.federation.metadata.new()`},
+		{Index: 2, Expr: `grpc.federation.metadata.new()`},
+		{Index: 3, Expr: `{'authorization': ['Bearer xxx']}`},
+		{Index: 4, Expr: `$.id`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`__ARG__`, grpcfed.CELObjectType("grpc.federation.private.federation.GetPostResponseArgument"))}},
+		{Index: 5, Expr: `md`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`md`, grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELListType(grpcfed.CELStringType)))}},
+		{Index: 6, Expr: `1`},
+		{Index: 7, Expr: `true`},
+		{Index: 8, Expr: `res != null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 9, Expr: `hdr.map(k, k)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`hdr`, grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELListType(grpcfed.CELStringType)))}},
+		{Index: 10, Expr: `res != null`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`res`, grpcfed.CELObjectType("post.GetPostResponse"))}},
+		{Index: 11, Expr: `tlr.map(k, k)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`tlr`, grpcfed.NewCELMapType(grpcfed.CELStringType, grpcfed.CELListType(grpcfed.CELStringType)))}},
+		{Index: 12, Expr: `hdr_keys.sortAsc(v, v)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`hdr_keys`, grpcfed.CELListType(grpcfed.CELStringType))}},
+		{Index: 13, Expr: `tlr_keys.sortAsc(v, v)`, Variables: []grpcfed.CELEnvOption{grpcfed.NewCELVariable(`tlr_keys`, grpcfed.CELListType(grpcfed.CELStringType))}},
+	})
 }
