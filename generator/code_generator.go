@@ -2262,11 +2262,12 @@ type CastStructField struct {
 	FromFieldName string
 	CastName      string
 	RequiredCast  bool
-	// DestIsOptional is true if the destination field is proto3 optional and is represented as a pointer in Go.
-	DestIsOptional bool
-	// SourceIsOptional is true if the source field is proto3 optional and is represented as a pointer in Go.
-	// If both DestIsOptional and SourceIsOptional are true, the destination is set only if the source is set.
-	SourceIsOptional bool
+	// DestNeedsPointerWrap is true if the destination field is proto3 optional and is represented as a pointer in Go
+	// (see resolver.Field.ProtoNeedsPointerWrap).
+	DestNeedsPointerWrap bool
+	// SourceNeedsPointerWrap is true if the source field is proto3 optional and is represented as a pointer in Go.
+	// If both DestNeedsPointerWrap and SourceNeedsPointerWrap are true, the destination is set only if the source is set.
+	SourceNeedsPointerWrap bool
 }
 
 func (f *CastField) ToStruct() *CastStruct {
@@ -2338,8 +2339,8 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 				RequiredCast:  requiredCast,
 				CastName:      castFuncName(fromType, toType),
 
-				DestIsOptional:   toField.ProtoNeedsPointerWrap(),
-				SourceIsOptional: fromField.ProtoNeedsPointerWrap(),
+				DestNeedsPointerWrap:   toField.ProtoNeedsPointerWrap(),
+				SourceNeedsPointerWrap: fromField.ProtoNeedsPointerWrap(),
 			}
 		}
 	}
@@ -2357,8 +2358,8 @@ func (f *CastField) toStructField(toField *resolver.Field, fromMsg *resolver.Mes
 		RequiredCast:  requiredCast,
 		CastName:      castFuncName(fromType, toType),
 
-		DestIsOptional:   toField.ProtoNeedsPointerWrap(),
-		SourceIsOptional: fromField.ProtoNeedsPointerWrap(),
+		DestNeedsPointerWrap:   toField.ProtoNeedsPointerWrap(),
+		SourceNeedsPointerWrap: fromField.ProtoNeedsPointerWrap(),
 	}
 }
 

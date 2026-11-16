@@ -26,7 +26,7 @@ if from == nil {
 	return nil, nil
 }
 {{- range .Fields }}
-{{- if not (and .DestIsOptional .SourceIsOptional) }}
+{{- if not (and .DestNeedsPointerWrap .SourceNeedsPointerWrap) }}
 {{- $fieldName := toLocalVariable .ToFieldName }}
 {{- if .RequiredCast }}
 {{ $fieldName }}, err := s.{{ .CastName }}(from.Get{{ .FromFieldName }}())
@@ -40,8 +40,8 @@ if err != nil {
 {{- end }}
 ret := &{{ .Name }}{
 	{{- range .Fields }}
-	{{- if not (and .DestIsOptional .SourceIsOptional) }}
-	{{- if .DestIsOptional }}
+	{{- if not (and .DestNeedsPointerWrap .SourceNeedsPointerWrap) }}
+	{{- if .DestNeedsPointerWrap }}
 	{{ .ToFieldName }}: &{{ toLocalVariable .ToFieldName }},
 	{{- else }}
 	{{ .ToFieldName }}: {{ toLocalVariable .ToFieldName }},
@@ -50,7 +50,7 @@ ret := &{{ .Name }}{
 	{{- end }}
 }
 {{- range .Fields }}
-{{- if and .DestIsOptional .SourceIsOptional }}
+{{- if and .DestNeedsPointerWrap .SourceNeedsPointerWrap }}
 {{- $fieldName := toLocalVariable .ToFieldName }}
 if from.{{ .FromFieldName }} != nil {
 	{{- if .RequiredCast }}
